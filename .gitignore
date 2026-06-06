@@ -5,8 +5,15 @@ node_modules/
 .npm/
 .yarn/
 pnpm-debug.log*
+.next/
 
-## Logs / reports
+## Runtime / tool noise
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+## Logs and reports
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -17,8 +24,7 @@ yarn-error.log*
 *.pid.lock
 *.tsbuildinfo
 
-## Build and cache artifacts
-.next/
+## Build, cache, and output artifacts
 .next/cache/
 out/
 build/
@@ -34,12 +40,12 @@ prisma/generated/
 
 ## Framework-specific outputs
 .vercel/
-next-env.d.ts
-expo-env.d.ts
 .expo/
 .expo-shared/
 expo/
 expo-start/
+expo-env.d.ts
+next-env.d.ts
 ios/
 android/
 web-build/
@@ -49,13 +55,6 @@ playwright-report/
 test-results/
 .nyc_output/
 .vitest/
-.turbo/
-
-## Runtime / tool noise
-.DS_Store
-Thumbs.db
-ehthumbs.db
-Desktop.ini
 
 ## Editors / local config
 .vscode/

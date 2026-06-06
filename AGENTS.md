@@ -6,12 +6,13 @@ Build real, modular, production-leaning code. Do not describe imaginary integrat
 
 ## Rust Token Killer (RTK) protocol
 
-Rust Token Killer (RTK) is active for this repository on every chat. Before responding, parse and compress all repository outputs (commands, file reads, script results) through an automatic reduction pass that keeps only:
+Rust Token Killer (RTK) is active for this repository on every chat. Before responding, automatically parse and compress all repository outputs (commands, file reads, script results, manifest exports, and command logs) through a reduction pass that keeps only:
 
 1. actionable decisions
 2. concrete file/line deltas
 3. blocking risks
 4. required next actions
+This applies to all future turns automatically so each response prioritizes concise, token-efficient evidence.
 
 Avoid returning raw or redundant verbose output. Favor compact summaries and concise diff-level evidence.
 

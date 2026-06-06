@@ -383,3 +383,29 @@ Lockfile status: `pnpm-lock.yaml` exists at repo root and is tracked (already pr
 
 Current status after this rerun remains blocked by production-gap coverage:
 - `GAP-132`, `GAP-130`, `GAP-133`, `GAP-121`, `GAP-122`, `GAP-124`, `GAP-126`.
+
+### Verification status (2026-06-06 rerun at 2026-06-06T15:43:37Z)
+
+Executed full `docs/workspace/CODEX_WORKSPACE_PROMPT.md` command chain with exact results:
+
+- `corepack enable` PASS (`0`)
+- `pnpm install` PASS (`0`; `pnpm-lock.yaml` present and tracked)
+- `pnpm workspace:all` PASS (`0`)
+  - `docs/workspace/manifests/workspace-import-audit.json` regenerated
+  - `docs/workspace/manifests/package-script-audit.json` regenerated
+  - `docs/workspace/manifests/runtime-readiness.json` regenerated (`production-blockers: 126 across 133 gap rows`)
+- `pnpm handoff:all` PASS (`0`)
+  - `docs/handoff/manifests/phase-documentation-audit.json` regenerated
+  - `docs/handoff/manifests/gap-audit-report.json` regenerated
+- `pnpm quality:all` PASS (`0`)
+  - `docs/quality/manifests/markdown-link-audit.json` regenerated
+  - `docs/quality/manifests/gap-evidence-audit.json` regenerated
+  - `docs/quality/manifests/quality-gates.json` regenerated
+- `pnpm typecheck` PASS (`0`)
+- `pnpm test:unit` PASS (`14 passed`, `0 failed`)
+- `pnpm test:manifest` PASS (`{"ok":true,"manifestCount":7,"requiredFileCount":15,"declaredSuites":28}`)
+- `pnpm --filter '@inkroute/web' build` PASS (`0`)
+- `pnpm --filter '@inkroute/dashboard' build` PASS (`0`)
+
+Current verification status: targeted runtime, quality, and build checks pass; remaining blocker evidence remains in `GAP_TRACKER.md` (`GAP-130`, `GAP-131`, `GAP-132`, `GAP-133`).
+

@@ -200,3 +200,32 @@ Current phase state:
   - `docs/quality/manifests/quality-gates.json`
 - Initial malformed filtered-build commands without quoted package scope produced script-level `Unknown option` parse errors in `pnpm`; commands were retried with proper quoting and passed.
 - Current phase status: command chain passes; runtime readiness remains `fail` due `126` production blockers in `docs/workspace/manifests/runtime-readiness.json`.
+
+## 2026-06-06 command-driven workspace verification rerun (15:43:59Z)
+
+- Executed `docs/workspace/CODEX_WORKSPACE_PROMPT.md` in full sequence from `C:\dev\InkRoute`.
+- Log: `docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-43-37.log`.
+- Outcomes:
+  - `corepack enable` — PASS (`0`)
+  - `pnpm install` — PASS (`0`)
+  - `pnpm workspace:all` — PASS (`0`)
+  - `pnpm handoff:all` — PASS (`0`)
+  - `pnpm quality:all` — PASS (`0`)
+  - `pnpm typecheck` — PASS (`0`)
+  - `pnpm test:unit` — PASS (`14 passed, 0 failed`)
+  - `pnpm test:manifest` — PASS (`{"ok":true,"manifestCount":7,"requiredFileCount":15,"declaredSuites":28}`)
+  - `pnpm --filter '@inkroute/web' build` — PASS (`0`)
+  - `pnpm --filter '@inkroute/dashboard' build` — PASS (`0`)
+- Evidence artifacts generated/updated:
+  - `docs/workspace/manifests/workspace-import-audit.json`
+  - `docs/workspace/manifests/package-script-audit.json`
+  - `docs/workspace/manifests/runtime-readiness.json`
+  - `docs/handoff/manifests/phase-documentation-audit.json`
+  - `docs/handoff/manifests/gap-audit-report.json`
+  - `docs/quality/manifests/markdown-link-audit.json`
+  - `docs/quality/manifests/gap-evidence-audit.json`
+  - `docs/quality/manifests/quality-gates.json`
+- Current readiness statement:
+  - Import and package script checks pass; runtime readiness remains `fail` due production blocker count (`126/133`).
+
+

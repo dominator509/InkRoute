@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-06T15:34:33.061Z",
+  "generatedAt": "2026-06-06T15:43:44.495Z",
   "status": "warn",
   "docsChecked": 36,
   "missing": [],
@@ -31,14 +31,14 @@
     {
       "path": "AGENTS.md",
       "status": "pass",
-      "lineCount": 130,
+      "lineCount": 131,
       "hasStatus": true,
       "message": "Present."
     },
     {
       "path": "GAP_TRACKER.md",
       "status": "pass",
-      "lineCount": 356,
+      "lineCount": 381,
       "hasStatus": true,
       "message": "Present."
     },
@@ -66,7 +66,7 @@
     {
       "path": "TESTING_PLAN.md",
       "status": "pass",
-      "lineCount": 365,
+      "lineCount": 386,
       "hasStatus": true,
       "message": "Present."
     },
