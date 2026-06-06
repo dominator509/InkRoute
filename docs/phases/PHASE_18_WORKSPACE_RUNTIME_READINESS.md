@@ -264,3 +264,17 @@ Current phase state:
 - GitHub-first execution status:
   - `.gitignore` updated on this run for TypeScript/Next.js/Expo monorepo noise.
   - Repo push not yet performed in this step.
+
+## 2026-06-06 command-driven workspace verification rerun (09:06:38Z)
+
+Executed docs/workspace/CODEX_WORKSPACE_PROMPT.md and captured docs/workspace/manifests/workspace-prompt-run-2026-06-06T09-06-38.log.
+
+- pnpm workspace:all PASS ( ), regenerating:
+  - docs/workspace/manifests/workspace-import-audit.json (generatedAt: 2026-06-06T16:06:48.531Z)
+  - docs/workspace/manifests/package-script-audit.json (generatedAt: 2026-06-06T16:06:49.101Z)
+  - docs/workspace/manifests/runtime-readiness.json (generatedAt: 2026-06-06T16:06:49.734Z, fail)
+- pnpm handoff:all and pnpm quality:all fail due unresolved evidence-blocker audit (126 blocking gaps).
+- Runtime-readiness checks currently report:
+  - 4 pass checks and 1 production-blockers fail.
+  - Evidence-level blocker: 126 production-blocking gaps remain across 133 gap rows.
+- pnpm typecheck, pnpm test:unit, pnpm test:manifest, pnpm --filter @inkroute/web build, pnpm --filter @inkroute/dashboard build all PASS.

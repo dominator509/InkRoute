@@ -440,3 +440,22 @@ Current verification status after this run:
 - Command chain is green on runtime/typecheck/unit/tests/build.
 - `pnpm handoff:all` and `pnpm quality:all` remain blocked by unresolved evidence/state checks in `gap-evidence`.
 - Remaining blockers in runtime tracker remain unresolved production-gap wise (`GAP-130`, `GAP-132`, `GAP-133`, `GAP-121`, `GAP-122`, `GAP-124`, `GAP-126`, `GAP-131`).
+
+## 2026-06-06 workspace verification status (rerun at 09:06:38 PDT)
+
+Executed full prompt chain from docs/workspace/CODEX_WORKSPACE_PROMPT.md with exact command outputs preserved in
+docs/workspace/manifests/workspace-prompt-run-2026-06-06T09-06-38.log.
+
+- corepack enable — PASS
+- pnpm install — PASS
+- pnpm workspace:all — PASS
+- pnpm handoff:all — FAIL (1; gap evidence audit still reports 126 blocking items)
+- pnpm quality:all — FAIL (1; gap evidence audit still reports 126 blocking items)
+- pnpm typecheck — PASS
+- pnpm test:unit — PASS (14 passed,   failed)
+- pnpm test:manifest — PASS
+- pnpm --filter @inkroute/web build — PASS
+- pnpm --filter @inkroute/dashboard build — PASS
+
+Open production evidence blockers recorded in GAP_TRACKER.md and runtime readiness remains 
+eeds-attention.
