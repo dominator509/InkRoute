@@ -5,7 +5,8 @@ node_modules/
 .npm/
 .yarn/
 pnpm-debug.log*
-.next/
+.npm/_logs/
+*.log*
 
 ## Runtime / tool noise
 .DS_Store
@@ -24,37 +25,37 @@ yarn-error.log*
 *.pid.lock
 *.tsbuildinfo
 
-## Build, cache, and output artifacts
+## Next.js / web output
+.next/
 .next/cache/
 out/
 build/
 dist/
-coverage/
-coverage.lcov-report/
+.next-tsbuildinfo
+.webpack/
+
+## Workspace / tooling cache
 .cache/
 .vercel/
 .serverless/
+.turbo/
+coverage/
+coverage.lcov-report/
 prisma/generated/
-.webpack/
-.next-tsbuildinfo
+playwright-report/
+test-results/
+.nyc_output/
+.vitest/
 
-## Framework-specific outputs
-.vercel/
+## Expo / mobile
 .expo/
 .expo-shared/
 expo/
 expo-start/
 expo-env.d.ts
-next-env.d.ts
 ios/
 android/
 web-build/
-
-## Testing and lint artifacts
-playwright-report/
-test-results/
-.nyc_output/
-.vitest/
 
 ## Editors / local config
 .vscode/
@@ -69,6 +70,7 @@ test-results/
 .env.*
 !.env.example
 !.env*.example
+!.env.local.example
 
 ## Security-sensitive files
 *.pem

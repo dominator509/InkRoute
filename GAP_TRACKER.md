@@ -444,4 +444,44 @@ This file is the production honesty ledger. Do not remove a gap until the verifi
 - Gap outcome updates:
   - GAP-001 now evidence-backed as installed (lockfile present, dependency chain executed).
   - GAP-020, GAP-027, GAP-031, GAP-039, GAP-104, GAP-105, GAP-113, GAP-121, GAP-126, GAP-130 statuses updated in this tracker to reflect completed local verification steps.
-  - GAP-122, GAP-124, GAP-132, GAP-133 remain open for workflow/branch-enforcement or provider-level proof.
+  - GAP-122, GAP-124, GAP-132, GAP-133 remain open for workflow/branch-enforcement or provider-level proof.## 2026-06-06 workspace verification evidence (rerun at 2026-06-06T08:58:20Z)
+
+- Executed chain from `docs/workspace/CODEX_WORKSPACE_PROMPT.md` in full sequence from `C:\dev\InkRoute`.
+- Command log: `docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-58-20.log`.
+
+- Command outcomes:
+  - `corepack enable` — exit `0`
+  - `pnpm install` — exit `0`
+  - `pnpm workspace:all` — exit `0`
+    - `docs/workspace/manifests/workspace-import-audit.json` regenerated
+    - `docs/workspace/manifests/package-script-audit.json` regenerated
+    - `docs/workspace/manifests/runtime-readiness.json` regenerated
+    - Runtime readiness remains `fail` with `126` production blockers across `133` gap rows
+  - `pnpm handoff:all` — exit `1`
+    - `docs/quality/manifests/gap-evidence-audit.json` and `docs/handoff/manifests/gap-audit-report.json` show blocking state
+    - Failure context: `Gap evidence audit status: fail` with `Gaps: 133`, `blocking: 126`, `critical blockers: 42` in `scripts/quality/audit-gap-evidence.mjs`
+  - `pnpm quality:all` — exit `1`
+    - `docs/quality/manifests/gap-evidence-audit.json` updated with current blocker evidence
+    - Failure context mirrors above (`Gap evidence audit status: fail`, `blocking: 126`)
+  - `pnpm typecheck` — exit `0`
+  - `pnpm test:unit` — exit `0` (`14 passed`, `0 failed`)
+  - `pnpm test:manifest` — exit `0`
+    - Output: `{`"ok"`: true, `"manifestCount"`: 7, `"requiredFileCount"`: 15, `"declaredSuites"`: 28}`
+  - `pnpm --filter "@inkroute/web" build` — exit `0`
+  - `pnpm --filter "@inkroute/dashboard" build` — exit `0`
+
+- Files modified by this execution:
+  - `pnpm-lock.yaml` (already present and tracked in repo)
+  - `docs/workspace/manifests/workspace-import-audit.json`
+  - `docs/workspace/manifests/package-script-audit.json`
+  - `docs/workspace/manifests/runtime-readiness.json`
+  - `docs/handoff/manifests/phase-documentation-audit.json`
+  - `docs/handoff/manifests/gap-audit-report.json`
+  - `docs/quality/manifests/markdown-link-audit.json`
+  - `docs/quality/manifests/gap-evidence-audit.json`
+  - `docs/quality/manifests/quality-gates.json`
+  - `.gitignore`
+
+- Remaining blockers after this run:
+  - `GAP-130`, `GAP-132`, `GAP-133`, `GAP-121`, `GAP-122`, `GAP-124`, `GAP-126`
+  - `GAP-131` unchanged from earlier run state and remains evidence-backed as runtime-blocker in the workspace readiness manifest.

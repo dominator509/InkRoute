@@ -229,3 +229,38 @@ Current phase state:
   - Import and package script checks pass; runtime readiness remains `fail` due production blocker count (`126/133`).
 
 
+## 2026-06-06 command-driven workspace verification rerun (2026-06-06T08:58:20Z)
+
+- Source of truth: `docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-58-20.log`.
+- Command status summary:
+  - `corepack enable` — `0`
+  - `pnpm install` — `0`
+  - `pnpm workspace:all` — `0`
+  - `pnpm handoff:all` — `1`
+  - `pnpm quality:all` — `1`
+  - `pnpm typecheck` — `0`
+  - `pnpm test:unit` — `0`
+  - `pnpm test:manifest` — `0`
+  - `pnpm --filter "@inkroute/web" build` — `0`
+  - `pnpm --filter "@inkroute/dashboard" build` — `0`
+- Workspace manifests refreshed:
+  - `docs/workspace/manifests/workspace-import-audit.json`
+  - `docs/workspace/manifests/package-script-audit.json`
+  - `docs/workspace/manifests/runtime-readiness.json`
+- Handoff manifests refreshed:
+  - `docs/handoff/manifests/phase-documentation-audit.json`
+  - `docs/handoff/manifests/gap-audit-report.json`
+- Quality manifests refreshed:
+  - `docs/quality/manifests/markdown-link-audit.json`
+  - `docs/quality/manifests/gap-evidence-audit.json`
+  - `docs/quality/manifests/quality-gates.json`
+- Runtime status snapshot:
+  - Import check: pass
+  - Package-script check: pass
+  - `pnpm-lockfile`: pass
+  - `env-example`: pass
+  - `production-blockers`: fail (`126` across `133`)
+  - `GAP-131` remains open; blocker surface remains evidence-backed and unchanged.
+- GitHub-first execution status:
+  - `.gitignore` updated on this run for TypeScript/Next.js/Expo monorepo noise.
+  - Repo push not yet performed in this step.

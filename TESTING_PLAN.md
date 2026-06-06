@@ -409,3 +409,34 @@ Executed full `docs/workspace/CODEX_WORKSPACE_PROMPT.md` command chain with exac
 
 Current verification status: targeted runtime, quality, and build checks pass; remaining blocker evidence remains in `GAP_TRACKER.md` (`GAP-130`, `GAP-131`, `GAP-132`, `GAP-133`).
 
+## 2026-06-06 verification status (rerun at 2026-06-06T08:58:20Z)
+
+Executed via `docs/workspace/CODEX_WORKSPACE_PROMPT.md`:
+
+- `corepack enable` PASS (`0`)
+- `pnpm install` PASS (`0`)
+- `pnpm workspace:all` PASS (`0`)
+  - `docs/workspace/manifests/workspace-import-audit.json` updated
+  - `docs/workspace/manifests/package-script-audit.json` updated
+  - `docs/workspace/manifests/runtime-readiness.json` updated (`production-blockers: 126 across 133 gaps`)
+- `pnpm handoff:all` FAIL (`1`)
+  - `Gap evidence audit status: fail`
+  - `docs/handoff/manifests/phase-documentation-audit.json` updated
+  - `docs/handoff/manifests/gap-audit-report.json` updated
+- `pnpm quality:all` FAIL (`1`)
+  - `Gap evidence audit status: fail`
+  - `docs/quality/manifests/markdown-link-audit.json` updated
+  - `docs/quality/manifests/gap-evidence-audit.json` updated
+  - `docs/quality/manifests/quality-gates.json` updated
+- `pnpm typecheck` PASS (`0`)
+- `pnpm test:unit` PASS (`14 passed`, `0 failed`)
+- `pnpm test:manifest` PASS (`{"ok":true,"manifestCount":7,"requiredFileCount":15,"declaredSuites":28}`)
+- `pnpm --filter "@inkroute/web" build` PASS (`0`)
+- `pnpm --filter "@inkroute/dashboard" build` PASS (`0`)
+
+Log artifact: `docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-58-20.log`.
+
+Current verification status after this run:
+- Command chain is green on runtime/typecheck/unit/tests/build.
+- `pnpm handoff:all` and `pnpm quality:all` remain blocked by unresolved evidence/state checks in `gap-evidence`.
+- Remaining blockers in runtime tracker remain unresolved production-gap wise (`GAP-130`, `GAP-132`, `GAP-133`, `GAP-121`, `GAP-122`, `GAP-124`, `GAP-126`, `GAP-131`).
