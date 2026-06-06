@@ -53,26 +53,21 @@ Also passed dependency-light typechecks for helper packages already used in prev
 
 As part of the GitHub-first + workspace startup plan, the following were executed from this environment:
 
-- `corepack enable`
-- `pnpm install` (lockfile committed)
-- `pnpm workspace:all`
-- `pnpm handoff:all`
-- `pnpm quality:all`
-- `pnpm typecheck`
-- `pnpm test:unit`
-- `pnpm test:manifest`
-- `pnpm --filter @inkroute/web build`
-- `pnpm --filter @inkroute/dashboard build`
+On `2026-06-06T07:55:35Z`, executed in sequence:
 
-Observed status:
-- `workspace:all` pass (import/scriptaudits pass, readiness fail due open production-blocking gaps).
-- `handoff:all` pass.
-- `quality:all` pass with warnings (`docs/quality/quality-gates` currently warn on known blockers).
-- `typecheck` blocked by `@inkroute/ui` typing issues.
-- `test:unit` has 4 failing tests.
-- `test:manifest` pass.
-- `@inkroute/web` build fails with unresolved `seoEngine` import paths.
-- `@inkroute/dashboard` build fails under Next typecheck for optional `destination` argument in dashboard draft notification data.
+- `corepack enable` (exit `0`)
+- `pnpm install` (exit `0`; `pnpm-lock.yaml` present at repo root)
+- `pnpm workspace:all` (exit `0`)
+  - `docs/workspace/manifests/workspace-import-audit.json` (`generatedAt: 2026-06-06T14:55:44.361Z`, pass)
+  - `docs/workspace/manifests/package-script-audit.json` (`generatedAt: 2026-06-06T14:55:44.943Z`, pass)
+  - `docs/workspace/manifests/runtime-readiness.json` (`generatedAt: 2026-06-06T14:55:45.536Z`, fail; 126 blockers across 133 gaps)
+- `pnpm handoff:all` (exit `0`)
+- `pnpm quality:all` (exit `0`)
+- `pnpm typecheck` (exit `2`; blocked by `@inkroute/ui` React JSX typing)
+- `pnpm test:unit` (exit `1`; 4 failures)
+- `pnpm test:manifest` (exit `0`)
+- `pnpm --filter @inkroute/web build` (exit `1`; unresolved import path `../../../../lib/seoEngine`)
+- `pnpm --filter @inkroute/dashboard build` (exit `1`; `exactOptionalPropertyTypes` `destination` mismatch)
 
 Current report state update:
 - `docs/workspace/manifests/runtime-readiness.json` should be interpreted as evidence-only blocked by production gaps.
@@ -82,7 +77,7 @@ Current report state update:
 
 - Workspace import audit: pass.
 - Package script audit: pass.
-- Runtime readiness report: blocked/fail by design because `pnpm-lock.yaml` is now present; production-blocking gaps remain open.
+- Runtime readiness report: blocked/fail by design because `pnpm-lock.yaml` is now present; `126` production-blocking gaps remain open.
 - `pnpm-lock.yaml` is now present (generated and committed).
 - Remaining blocker list remains tied to unresolved domain and app/package production gaps listed in `GAP_TRACKER.md`.
 

@@ -6,21 +6,26 @@ Dependencies are now installed in this environment, and the workspace verificati
 
 ### Verification status (2026-06-06)
 
-Executed command chain from `docs/workspace/CODEX_WORKSPACE_PROMPT.md`:
+Executed command chain from `docs/workspace/CODEX_WORKSPACE_PROMPT.md` (rerun at `2026-06-06T07:55:35Z`):
 
-- `corepack enable` PASS
-- `pnpm install` PASS (`pnpm-lock.yaml` created)
-- `pnpm workspace:all` PASS (`docs/workspace/manifests/*` updated)
-- `pnpm handoff:all` PASS (`docs/handoff/manifests/*` updated)
-- `pnpm quality:all` PASS (`docs/quality/manifests/*` updated)
-- `pnpm typecheck` FAIL at `@inkroute/ui`:
-  - missing React type declarations and `className` typing for `ButtonProps` and `CardProps`
-- `pnpm test:unit` FAIL 4/14 tests failed.
+- `corepack enable` PASS (exit `0`)
+- `pnpm install` PASS (exit `0`; `pnpm-lock.yaml` present)
+- `pnpm workspace:all` PASS (exit `0`)
+  - `docs/workspace/manifests/workspace-import-audit.json` (`generatedAt=2026-06-06T14:55:44.361Z`)
+  - `docs/workspace/manifests/package-script-audit.json` (`generatedAt=2026-06-06T14:55:44.943Z`)
+  - `docs/workspace/manifests/runtime-readiness.json` (`generatedAt=2026-06-06T14:55:45.536Z`, fail)
+- `pnpm handoff:all` PASS (exit `0`)
+- `pnpm quality:all` PASS (exit `0`)
+- `pnpm typecheck` FAIL (`exit 2`)
+  - `@inkroute/ui#typecheck` fails with missing `react` types and JSX intrinsic typings in `packages/ui/src/button.tsx` and `packages/ui/src/card.tsx`.
+- `pnpm test:unit` FAIL (`exit 1`; 4 of 14 tests failed)
+  - `packages/booking/tests/booking-readiness.test.ts` (`Invalid booking lifecycle action complete from status draft`)
+  - `packages/releases/tests/feature-flags.test.ts` (`expected 'critical' to be 'high'`)
+  - `packages/payments/tests/deposit-policy.test.ts` (`expected 'MARAVALE-2026-00012' to contain 'MARA-VALE'`)
+  - `packages/observability/tests/redaction-report.test.ts` (`expected 'high' to be 'critical'`)
 - `pnpm test:manifest` PASS (`{"ok":true,"manifestCount":7,"requiredFileCount":15,"declaredSuites":28}`)
-- `pnpm --filter @inkroute/web build` FAIL module resolution failures in:
-  - `apps/web/app/api/public/[tenantSlug]/seo-preview/route.ts`
-  - `apps/web/app/api/public/[tenantSlug]/sitemap-preview/route.ts`
-- `pnpm --filter @inkroute/dashboard build` FAIL `exactOptionalPropertyTypes` failure in `apps/dashboard/lib/demo.ts` (`destination` type mismatch in `createProviderSendDraft`).
+- `pnpm --filter @inkroute/web build` FAIL (`exit 1`; unresolved `../../../../lib/seoEngine` imports in public seo preview and sitemap preview routes).
+- `pnpm --filter @inkroute/dashboard build` FAIL (`exit 1`; `destination` exact-optional-type mismatch in `apps/dashboard/lib/demo.ts`).
 
 Current test posture after this run: not production-verified; unit and app build failures are scoped and evidence-backed.
 ## Phase 14 implemented testing files
