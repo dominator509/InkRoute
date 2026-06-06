@@ -49,11 +49,42 @@ tsc --noEmit -p packages/workspace/tsconfig.json
 
 Also passed dependency-light typechecks for helper packages already used in previous phases.
 
+## 2026-06-06 command-driven workspace verification run
+
+As part of the GitHub-first + workspace startup plan, the following were executed from this environment:
+
+- `corepack enable`
+- `pnpm install` (lockfile committed)
+- `pnpm workspace:all`
+- `pnpm handoff:all`
+- `pnpm quality:all`
+- `pnpm typecheck`
+- `pnpm test:unit`
+- `pnpm test:manifest`
+- `pnpm --filter @inkroute/web build`
+- `pnpm --filter @inkroute/dashboard build`
+
+Observed status:
+- `workspace:all` pass (import/scriptaudits pass, readiness fail due open production-blocking gaps).
+- `handoff:all` pass.
+- `quality:all` pass with warnings (`docs/quality/quality-gates` currently warn on known blockers).
+- `typecheck` blocked by `@inkroute/ui` typing issues.
+- `test:unit` has 4 failing tests.
+- `test:manifest` pass.
+- `@inkroute/web` build fails with unresolved `seoEngine` import paths.
+- `@inkroute/dashboard` build fails under Next typecheck for optional `destination` argument in dashboard draft notification data.
+
+Current report state update:
+- `docs/workspace/manifests/runtime-readiness.json` should be interpreted as evidence-only blocked by production gaps.
+- Do not treat this state as deployment-ready; it is an execution audit capture.
+
 ## Current Phase 18 report state
 
 - Workspace import audit: pass.
 - Package script audit: pass.
-- Runtime readiness report: blocked/fail by design because `pnpm-lock.yaml` is still absent and production-blocking gaps remain open.
+- Runtime readiness report: blocked/fail by design because `pnpm-lock.yaml` is now present; production-blocking gaps remain open.
+- `pnpm-lock.yaml` is now present (generated and committed).
+- Remaining blocker list remains tied to unresolved domain and app/package production gaps listed in `GAP_TRACKER.md`.
 
 The readiness script exits successfully while writing the blocked report so CI and external agents can capture evidence without treating known launch blockers as script failures.
 
@@ -65,9 +96,6 @@ The readiness script exits successfully while writing the blocked report so CI a
 
 ## Still blocked
 
-- `pnpm install`.
-- Lockfile generation.
-- Installed monorepo `pnpm workspace:all` execution.
 - Vitest execution for `@inkroute/workspace`.
 - Full `pnpm typecheck`, app builds, and provider tests.
 - Branch protection/required check enforcement.
@@ -82,3 +110,5 @@ The readiness script exits successfully while writing the blocked report so CI a
 ## Next best external task
 
 Run the Codex workspace prompt in `docs/workspace/CODEX_WORKSPACE_PROMPT.md`, commit the generated lockfile, run the full verification chain, and update `GAP_TRACKER.md` with exact output.
+
+

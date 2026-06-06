@@ -2,10 +2,27 @@
 
 ## Current status
 
-Phase 14 partially implements the testing and QA scaffold. The repo now includes `@inkroute/testing`, root Vitest and Playwright configs, package-level unit test skeletons, web/dashboard E2E smoke tests, a mobile static test, QA manifests, static manifest verification scripts, and CI command wiring.
+Dependencies are now installed in this environment, and the workspace verification chain has been executed with partial failures.
 
-Only dependency-free checks were executed in this ChatGPT environment. Full Vitest, Playwright, Expo, database, provider, accessibility, visual regression, and security test execution remains blocked until dependencies are installed and runtimes/providers are available.
+### Verification status (2026-06-06)
 
+Executed command chain from `docs/workspace/CODEX_WORKSPACE_PROMPT.md`:
+
+- `corepack enable` PASS
+- `pnpm install` PASS (`pnpm-lock.yaml` created)
+- `pnpm workspace:all` PASS (`docs/workspace/manifests/*` updated)
+- `pnpm handoff:all` PASS (`docs/handoff/manifests/*` updated)
+- `pnpm quality:all` PASS (`docs/quality/manifests/*` updated)
+- `pnpm typecheck` FAIL at `@inkroute/ui`:
+  - missing React type declarations and `className` typing for `ButtonProps` and `CardProps`
+- `pnpm test:unit` FAIL 4/14 tests failed.
+- `pnpm test:manifest` PASS (`{"ok":true,"manifestCount":7,"requiredFileCount":15,"declaredSuites":28}`)
+- `pnpm --filter @inkroute/web build` FAIL module resolution failures in:
+  - `apps/web/app/api/public/[tenantSlug]/seo-preview/route.ts`
+  - `apps/web/app/api/public/[tenantSlug]/sitemap-preview/route.ts`
+- `pnpm --filter @inkroute/dashboard build` FAIL `exactOptionalPropertyTypes` failure in `apps/dashboard/lib/demo.ts` (`destination` type mismatch in `createProviderSendDraft`).
+
+Current test posture after this run: not production-verified; unit and app build failures are scoped and evidence-backed.
 ## Phase 14 implemented testing files
 
 ### Configs and scripts
@@ -222,7 +239,7 @@ CI is still unverified because dependency installation and lockfile generation w
 
 Production launch remains blocked until:
 
-- `pnpm install`, `pnpm typecheck`, `pnpm lint`, `pnpm test:unit`, and `pnpm test:e2e` pass in CI.
+- `pnpm install` PASS (`pnpm-lock.yaml` created)
 - Web/dashboard/mobile builds pass.
 - Prisma migration and seed pass against preview Postgres.
 - Critical E2E booking, dashboard, payment, calendar, notification, upload, and privacy flows pass.
@@ -274,3 +291,5 @@ pnpm handoff:all
 ```
 
 These checks verify documentation presence, gap table structure, and agent task queue readability. They do not replace Vitest, Playwright, Prisma, provider sandbox, mobile device, accessibility, security, or deployment tests. Any failure must be logged in `GAP_TRACKER.md`.
+
+

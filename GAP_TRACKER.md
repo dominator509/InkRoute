@@ -144,3 +144,43 @@ This file is the production honesty ledger. Do not remove a gap until the verifi
 | GAP-131 | Phase 18 | Static dependency audit | Workspace import audit is static and regex-based, so it does not prove runtime bundling, generated imports, package export behavior, peer dependency compatibility, or dependency version correctness. | Medium | Yes | Open â€” Phase 18 catches declared `@inkroute/*` import issues only; real package resolution and version compatibility remain dependency-install gated. | `scripts/workspace/audit-workspace-imports.mjs`, `packages/workspace/src/index.ts`, `docs/workspace/manifests/workspace-import-audit.json`, `package.json`, `pnpm-lock.yaml` future file | Run real `pnpm install`, inspect peer/version warnings, run TypeScript, run app builds, and update the audit if real resolution failures appear. | Codex/local terminal | Extend static workspace audit only after real install/build evidence shows remaining dependency graph issues. | `pnpm install`, `pnpm typecheck`, `pnpm build`, and app builds prove package resolution beyond the static audit. |
 | GAP-132 | Phase 18 | Runtime readiness evidence | Runtime readiness report is useful for handoff, but it is not production proof and currently reports blocked because the lockfile is absent and production blockers remain open. | High | Yes | Open â€” `docs/workspace/manifests/runtime-readiness.json` reports blocked/fail by design while exiting successfully for evidence capture. | `scripts/workspace/print-runtime-readiness.mjs`, `docs/workspace/manifests/runtime-readiness.json`, `GAP_TRACKER.md`, `package.json` | Generate lockfile, rerun readiness after install, record exact remaining blockers, and keep readiness status distinct from deployment approval. | Codex/local terminal/GitHub Actions | Produce real runtime readiness evidence after dependency install without claiming production-ready status. | `pnpm workspace:readiness`, `pnpm handoff:all`, `pnpm quality:all`, `pnpm typecheck`, app builds, and gap evidence show readiness state. |
 | GAP-133 | Phase 18 | Required workspace checks | Workspace audit scripts are referenced by package scripts and CI scaffold, but repository branch protection does not require them and PR diff enforcement is still absent. | High | Yes | Open â€” Phase 18 added scripts and CI scaffold step only; no GitHub repository settings or required checks were configured in this sandbox. | `.github/workflows/ci.yml`, `package.json`, `docs/workspace/WORKSPACE_AUDIT_PROTOCOL.md`, future branch protection settings | Run CI, configure branch protection required checks, add CODEOWNERS if needed, and prove a PR cannot merge when workspace audits fail. | GitHub repository settings + Codex | Enforce Phase 18 workspace audits in GitHub branch protection and document redacted evidence. | GitHub branch protection shows required workspace and quality checks; a failing PR cannot merge; logs contain no secrets. |
+
+## 2026-06-06 workspace verification evidence
+
+- Executed via root workspace prompt chain from `docs/workspace/CODEX_WORKSPACE_PROMPT.md`.
+- Commands and outcomes:
+  - `corepack enable` — exit 0.
+  - `pnpm install` — exit 0; `pnpm-lock.yaml` generated.
+  - `pnpm workspace:all` — exit 0; generated/updated:
+    - `docs/workspace/manifests/workspace-import-audit.json`
+    - `docs/workspace/manifests/package-script-audit.json`
+    - `docs/workspace/manifests/runtime-readiness.json`
+    - Runtime status: `fail` (`production-blockers: 126 across 133 gap rows`).
+  - `pnpm handoff:all` — exit 0; updated:
+    - `docs/handoff/manifests/phase-documentation-audit.json`
+    - `docs/handoff/manifests/gap-audit-report.json`
+  - `pnpm quality:all` — exit 0; updated:
+    - `docs/quality/manifests/markdown-link-audit.json`
+    - `docs/quality/manifests/gap-evidence-audit.json`
+    - `docs/quality/manifests/quality-gates.json`
+  - `pnpm typecheck` — exit 2; first blocker:
+    - `@inkroute/ui` React typings and `className` prop type issues in `packages/ui/src/button.tsx` and `packages/ui/src/card.tsx`.
+  - `pnpm test:unit` — exit 1; 4 failing tests:
+    - `packages/booking/tests/booking-readiness.test.ts`
+    - `packages/releases/tests/feature-flags.test.ts`
+    - `packages/payments/tests/deposit-policy.test.ts`
+    - `packages/observability/tests/redaction-report.test.ts`
+  - `pnpm test:manifest` — exit 0.
+  - `pnpm --filter @inkroute/web build` — exit 1; missing module resolution:
+    - `app/api/public/[tenantSlug]/seo-preview/route.ts` -> `../../../../lib/seoEngine`
+    - `app/api/public/[tenantSlug]/sitemap-preview/route.ts` -> `../../../../lib/seoEngine`
+  - `pnpm --filter @inkroute/dashboard build` — exit 1; Next lint/typecheck step failed in `apps/dashboard/lib/demo.ts`:
+    - `destination` argument incompatible with exact optional type in `createProviderSendDraft` call.
+
+- Files changed by this execution:
+  - Added: `pnpm-lock.yaml`
+  - Modified: workspace/quality/handoff manifests and all outputs above.
+
+- Remaining blockers (open):
+  - `GAP-001` dependency install/lockfile verification now partially resolved (lockfile exists), but unresolved type/build/runtime gaps remain.
+  - `GAP-121`, `GAP-122`, `GAP-124`, `GAP-126`, `GAP-130`, `GAP-132`, `GAP-133` remain open with command evidence attached in outputs.

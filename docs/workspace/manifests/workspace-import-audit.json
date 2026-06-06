@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-03T22:16:15.487Z",
+  "generatedAt": "2026-06-06T14:30:31.959Z",
   "source": "Phase 18 workspace runtime readiness",
   "status": "pass",
   "projectsChecked": 25,
@@ -103,13 +103,13 @@
       "importSpecifier": "@inkroute/security"
     },
     {
-      "sourcePath": "apps/dashboard/app/bookings/[bookingId]/page.tsx",
+      "sourcePath": "apps/dashboard/app/bookings/page.tsx",
       "ownerPackageName": "@inkroute/dashboard",
       "importedPackageName": "@inkroute/booking",
       "importSpecifier": "@inkroute/booking"
     },
     {
-      "sourcePath": "apps/dashboard/app/bookings/page.tsx",
+      "sourcePath": "apps/dashboard/app/bookings/[bookingId]/page.tsx",
       "ownerPackageName": "@inkroute/dashboard",
       "importedPackageName": "@inkroute/booking",
       "importSpecifier": "@inkroute/booking"

@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-03T22:16:15.714Z",
+  "generatedAt": "2026-06-06T14:30:33.272Z",
   "source": "Phase 18 workspace runtime readiness",
   "status": "fail",
-  "level": "blocked",
+  "level": "needs-attention",
   "checks": [
     {
       "id": "workspace-imports",
@@ -27,8 +27,8 @@
     {
       "id": "pnpm-lockfile",
       "title": "pnpm lockfile",
-      "status": "fail",
-      "evidence": "pnpm-lock.yaml does not exist in the artifact.",
+      "status": "pass",
+      "evidence": "pnpm-lock.yaml exists.",
       "gapIds": [
         "GAP-001"
       ]

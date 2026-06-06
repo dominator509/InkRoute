@@ -1,16 +1,18 @@
 {
-  "generatedAt": "2026-06-03T22:16:15.837Z",
-  "status": "pass",
+  "generatedAt": "2026-06-06T14:30:29.293Z",
+  "status": "warn",
   "docsChecked": 36,
   "missing": [],
-  "warnings": [],
+  "warnings": [
+    "README.md"
+  ],
   "results": [
     {
       "path": "README.md",
-      "status": "pass",
-      "lineCount": 276,
-      "hasStatus": true,
-      "message": "Present."
+      "status": "warn",
+      "lineCount": 3,
+      "hasStatus": false,
+      "message": "Present but lacks status keywords."
     },
     {
       "path": "ROADMAP.md",
@@ -29,7 +31,7 @@
     {
       "path": "AGENTS.md",
       "status": "pass",
-      "lineCount": 119,
+      "lineCount": 130,
       "hasStatus": true,
       "message": "Present."
     },
