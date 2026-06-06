@@ -1,0 +1,25 @@
+{
+  "phase": "14",
+  "status": "runtime_gated",
+  "command": "pnpm test:e2e",
+  "baseUrls": {
+    "web": "WEB_BASE_URL or http://127.0.0.1:3000",
+    "dashboard": "DASHBOARD_BASE_URL or http://127.0.0.1:3001"
+  },
+  "suites": [
+    {
+      "id": "e2e-public-booking",
+      "file": "apps/web/tests/e2e/public-booking.spec.ts",
+      "priority": "critical",
+      "requires": ["Next.js web runtime", "Playwright browsers"],
+      "evidence": ["homepage CTA visible", "booking intake visible", "trust/privacy reachable"]
+    },
+    {
+      "id": "e2e-dashboard-smoke",
+      "file": "apps/dashboard/tests/e2e/dashboard-smoke.spec.ts",
+      "priority": "high",
+      "requires": ["Next.js dashboard runtime", "auth bypass or seeded preview tenant", "Playwright browsers"],
+      "evidence": ["overview renders", "boundary pages render", "booking detail renders"]
+    }
+  ]
+}

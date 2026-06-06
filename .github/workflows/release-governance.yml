@@ -1,0 +1,64 @@
+name: Release Governance Scaffold
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: InkRoute release version to evaluate
+        required: true
+        default: 0.12.0-phase12
+      release_channel:
+        description: Target channel
+        required: true
+        type: choice
+        options:
+          - preview
+          - staging
+          - production
+          - mobile-preview
+          - mobile-production
+        default: preview
+
+concurrency:
+  group: release-governance-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+
+jobs:
+  release-dry-run:
+    name: Release dry run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify release scaffold files
+        run: |
+          test -f RELEASE_AND_AUTO_UPDATE_PLAN.md
+          test -f GAP_TRACKER.md
+          test -f packages/releases/src/index.ts
+          test -f apps/dashboard/app/releases/page.tsx
+          echo "Release scaffold present for ${{ inputs.release_version }} on ${{ inputs.release_channel }}"
+      - name: Print deployment gates
+        run: |
+          echo "Production deployment remains gated until dependencies, app builds, DB migrations, EAS project, Vercel project, and provider credentials are verified."
+
+  deployment-gated-preview:
+    name: Deployment-gated preview release
+    needs: release-dry-run
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    environment: preview
+    steps:
+      - run: echo "Wire Vercel preview, Prisma migration dry run, Sentry release artifacts, and EAS preview update in a real CI environment."
+
+  deployment-gated-production:
+    name: Deployment-gated production release
+    needs: release-dry-run
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - run: echo "Wire protected production deploy, audited ReleaseRecord mutation, rollback proof, and incident channel notification in a real CI environment."

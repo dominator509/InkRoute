@@ -1,0 +1,30 @@
+{
+  "phase": "14",
+  "status": "manual_and_runtime_gated",
+  "checks": [
+    {
+      "id": "a11y-keyboard-booking",
+      "surface": "web",
+      "priority": "critical",
+      "description": "Complete booking flow using keyboard only with visible focus states and no trapped focus.",
+      "tooling": ["Playwright", "axe", "manual screen-reader pass"],
+      "evidenceRequired": "Video or trace plus axe report"
+    },
+    {
+      "id": "a11y-dashboard-tables",
+      "surface": "dashboard",
+      "priority": "high",
+      "description": "Dashboard tables/cards expose accessible names, landmarks, headings, and keyboard navigation.",
+      "tooling": ["Playwright", "axe", "manual keyboard pass"],
+      "evidenceRequired": "axe output plus tab-order notes"
+    },
+    {
+      "id": "a11y-mobile-touch-targets",
+      "surface": "mobile",
+      "priority": "high",
+      "description": "Mobile tabs and primary actions meet touch target and dynamic text expectations on physical devices.",
+      "tooling": ["Expo device QA", "iOS Accessibility Inspector", "Android Accessibility Scanner"],
+      "evidenceRequired": "Device screenshots and scanner report"
+    }
+  ]
+}

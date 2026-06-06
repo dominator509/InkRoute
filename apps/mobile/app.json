@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "InkRoute Artist",
+    "slug": "inkroute-artist",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "inkroute",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0c0a09"
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "deployment-gated-see-GAP-008"
+      },
+      "phase6Status": "scaffolded; requires Expo/EAS project configuration before OTA updates are usable"
+    },
+    "description": "InkRoute Suite artist mobile app scaffold for booking review, Nomad Mode, portfolio updates, offline notes, and operational alerts.",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/deployment-gated-see-GAP-047"
+    }
+  }
+}

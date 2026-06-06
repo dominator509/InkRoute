@@ -1,0 +1,128 @@
+[
+  {
+    "name": "NODE_ENV",
+    "group": "core",
+    "requiredForProduction": true,
+    "secret": false,
+    "description": "Runtime mode."
+  },
+  {
+    "name": "NEXT_PUBLIC_APP_URL",
+    "group": "web",
+    "requiredForProduction": true,
+    "secret": false,
+    "description": "Public canonical app URL."
+  },
+  {
+    "name": "NEXT_PUBLIC_DASHBOARD_URL",
+    "group": "dashboard",
+    "requiredForProduction": true,
+    "secret": false,
+    "description": "Dashboard base URL."
+  },
+  {
+    "name": "DATABASE_URL",
+    "group": "database",
+    "requiredForProduction": true,
+    "secret": true,
+    "description": "Application Postgres connection."
+  },
+  {
+    "name": "DIRECT_URL",
+    "group": "database",
+    "requiredForProduction": true,
+    "secret": true,
+    "description": "Direct migration Postgres connection."
+  },
+  {
+    "name": "AUTH_SECRET",
+    "group": "auth",
+    "requiredForProduction": true,
+    "secret": true,
+    "description": "Auth/session secret."
+  },
+  {
+    "name": "STRIPE_SECRET_KEY",
+    "group": "payments",
+    "requiredForProduction": true,
+    "secret": true,
+    "description": "Stripe server key."
+  },
+  {
+    "name": "STRIPE_WEBHOOK_SECRET",
+    "group": "payments",
+    "requiredForProduction": true,
+    "secret": true,
+    "description": "Stripe webhook signing secret."
+  },
+  {
+    "name": "NEXT_PUBLIC_SENTRY_DSN",
+    "group": "observability",
+    "requiredForProduction": true,
+    "secret": false,
+    "description": "Client Sentry DSN."
+  },
+  {
+    "name": "SENTRY_AUTH_TOKEN",
+    "group": "observability",
+    "requiredForProduction": true,
+    "secret": true,
+    "description": "Sentry source-map upload token."
+  },
+  {
+    "name": "VERCEL_TOKEN",
+    "group": "deployment",
+    "requiredForProduction": true,
+    "secret": true,
+    "description": "Vercel deployment automation token."
+  },
+  {
+    "name": "VERCEL_ORG_ID",
+    "group": "deployment",
+    "requiredForProduction": true,
+    "secret": true,
+    "description": "Vercel organization id."
+  },
+  {
+    "name": "VERCEL_WEB_PROJECT_ID",
+    "group": "deployment",
+    "requiredForProduction": true,
+    "secret": true,
+    "description": "Vercel public web project id."
+  },
+  {
+    "name": "VERCEL_DASHBOARD_PROJECT_ID",
+    "group": "deployment",
+    "requiredForProduction": true,
+    "secret": true,
+    "description": "Vercel dashboard project id."
+  },
+  {
+    "name": "EAS_PROJECT_ID",
+    "group": "mobile",
+    "requiredForProduction": true,
+    "secret": false,
+    "description": "Expo/EAS project id."
+  },
+  {
+    "name": "CSRF_SECRET",
+    "group": "security",
+    "requiredForProduction": true,
+    "secret": true,
+    "description": "CSRF signing secret."
+  },
+  {
+    "name": "SECURITY_ENCRYPTION_PRIMARY_KEY",
+    "group": "security",
+    "requiredForProduction": true,
+    "secret": true,
+    "description": "Primary application-level encryption key."
+  },
+  {
+    "name": "LEGAL_REVIEW_STATUS",
+    "group": "legal",
+    "requiredForProduction": true,
+    "secret": false,
+    "description": "Must be reviewed_approved before public launch."
+  }
+]

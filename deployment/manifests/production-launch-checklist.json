@@ -1,0 +1,58 @@
+[
+  {
+    "id": "install-lockfile",
+    "area": "tooling",
+    "blocksProduction": true,
+    "status": "blocked",
+    "evidence": "pnpm-lock.yaml and passing typecheck/test commands"
+  },
+  {
+    "id": "migrate-database",
+    "area": "database",
+    "blocksProduction": true,
+    "status": "deployment_gated",
+    "evidence": "Prisma migration and seed logs against non-production Postgres"
+  },
+  {
+    "id": "auth-tenant-rbac",
+    "area": "security",
+    "blocksProduction": true,
+    "status": "blocked",
+    "evidence": "two-tenant isolation tests and protected dashboard/API routes"
+  },
+  {
+    "id": "web-dashboard-preview",
+    "area": "web/dashboard",
+    "blocksProduction": true,
+    "status": "deployment_gated",
+    "evidence": "Vercel preview URLs and route smoke tests"
+  },
+  {
+    "id": "provider-sandboxes",
+    "area": "providers",
+    "blocksProduction": true,
+    "status": "credential_gated",
+    "evidence": "Stripe/email/SMS/push/calendar/storage/Sentry test transcripts"
+  },
+  {
+    "id": "mobile-preview-build",
+    "area": "mobile",
+    "blocksProduction": true,
+    "status": "deployment_gated",
+    "evidence": "EAS preview builds and device QA artifacts"
+  },
+  {
+    "id": "legal-review",
+    "area": "legal",
+    "blocksProduction": true,
+    "status": "manual",
+    "evidence": "approved legal/privacy/consent/SMS/deposit language"
+  },
+  {
+    "id": "production-rollback-drill",
+    "area": "release",
+    "blocksProduction": true,
+    "status": "manual",
+    "evidence": "documented rollback drill for web/dashboard/mobile/database"
+  }
+]

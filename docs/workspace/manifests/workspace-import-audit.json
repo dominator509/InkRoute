@@ -1,0 +1,677 @@
+{
+  "generatedAt": "2026-06-03T22:16:15.487Z",
+  "source": "Phase 18 workspace runtime readiness",
+  "status": "pass",
+  "projectsChecked": 25,
+  "sourceFilesChecked": 176,
+  "workspacePackages": [
+    "@inkroute/analytics",
+    "@inkroute/auth",
+    "@inkroute/booking",
+    "@inkroute/calendar",
+    "@inkroute/config",
+    "@inkroute/dashboard",
+    "@inkroute/db",
+    "@inkroute/deployment",
+    "@inkroute/handoff",
+    "@inkroute/mobile",
+    "@inkroute/mobile-support",
+    "@inkroute/notifications",
+    "@inkroute/observability",
+    "@inkroute/payments",
+    "@inkroute/quality",
+    "@inkroute/releases",
+    "@inkroute/security",
+    "@inkroute/seo",
+    "@inkroute/testing",
+    "@inkroute/types",
+    "@inkroute/ui",
+    "@inkroute/validators",
+    "@inkroute/web",
+    "@inkroute/workspace"
+  ],
+  "tsconfigAliases": [
+    "@inkroute/analytics",
+    "@inkroute/auth",
+    "@inkroute/booking",
+    "@inkroute/calendar",
+    "@inkroute/config",
+    "@inkroute/db",
+    "@inkroute/deployment",
+    "@inkroute/handoff",
+    "@inkroute/mobile-support",
+    "@inkroute/notifications",
+    "@inkroute/observability",
+    "@inkroute/payments",
+    "@inkroute/quality",
+    "@inkroute/releases",
+    "@inkroute/security",
+    "@inkroute/seo",
+    "@inkroute/testing",
+    "@inkroute/types",
+    "@inkroute/ui",
+    "@inkroute/validators",
+    "@inkroute/workspace"
+  ],
+  "importRecords": [
+    {
+      "sourcePath": "apps/dashboard/app/api/deployment/readiness/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/deployment",
+      "importSpecifier": "@inkroute/deployment"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/error-reports/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/observability",
+      "importSpecifier": "@inkroute/observability"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/feature-flags/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/feature-flags/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/releases",
+      "importSpecifier": "@inkroute/releases"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/releases/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/releases/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/releases",
+      "importSpecifier": "@inkroute/releases"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/security/privacy-requests/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/security/trust-status/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/bookings/[bookingId]/page.tsx",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/booking",
+      "importSpecifier": "@inkroute/booking"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/bookings/page.tsx",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/booking",
+      "importSpecifier": "@inkroute/booking"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/layout.tsx",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/page.tsx",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/settings/page.tsx",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/auth",
+      "importSpecifier": "@inkroute/auth"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/travel/page.tsx",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/dashboard/lib/demo.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/booking",
+      "importSpecifier": "@inkroute/booking"
+    },
+    {
+      "sourcePath": "apps/dashboard/lib/demo.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/calendar",
+      "importSpecifier": "@inkroute/calendar"
+    },
+    {
+      "sourcePath": "apps/dashboard/lib/demo.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/dashboard/lib/demo.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/notifications",
+      "importSpecifier": "@inkroute/notifications"
+    },
+    {
+      "sourcePath": "apps/dashboard/lib/demo.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/payments",
+      "importSpecifier": "@inkroute/payments"
+    },
+    {
+      "sourcePath": "apps/dashboard/lib/demo.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "apps/dashboard/lib/deploymentDemo.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/deployment",
+      "importSpecifier": "@inkroute/deployment"
+    },
+    {
+      "sourcePath": "apps/dashboard/lib/errorDemo.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/dashboard/lib/errorDemo.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/observability",
+      "importSpecifier": "@inkroute/observability"
+    },
+    {
+      "sourcePath": "apps/dashboard/lib/releaseDemo.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/dashboard/lib/releaseDemo.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/releases",
+      "importSpecifier": "@inkroute/releases"
+    },
+    {
+      "sourcePath": "apps/dashboard/lib/securityDemo.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/dashboard/lib/seoDemo.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/dashboard/lib/seoDemo.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/seo",
+      "importSpecifier": "@inkroute/seo"
+    },
+    {
+      "sourcePath": "apps/mobile/App.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "@inkroute/mobile-support",
+      "importSpecifier": "@inkroute/mobile-support"
+    },
+    {
+      "sourcePath": "apps/mobile/src/components/BoundaryCard.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "@inkroute/mobile-support",
+      "importSpecifier": "@inkroute/mobile-support"
+    },
+    {
+      "sourcePath": "apps/mobile/src/components/ScreenTabs.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "@inkroute/mobile-support",
+      "importSpecifier": "@inkroute/mobile-support"
+    },
+    {
+      "sourcePath": "apps/mobile/src/lib/mobileDemo.ts",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "@inkroute/auth",
+      "importSpecifier": "@inkroute/auth"
+    },
+    {
+      "sourcePath": "apps/mobile/src/lib/mobileDemo.ts",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "@inkroute/booking",
+      "importSpecifier": "@inkroute/booking"
+    },
+    {
+      "sourcePath": "apps/mobile/src/lib/mobileDemo.ts",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "@inkroute/calendar",
+      "importSpecifier": "@inkroute/calendar"
+    },
+    {
+      "sourcePath": "apps/mobile/src/lib/mobileDemo.ts",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/mobile/src/lib/mobileDemo.ts",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "@inkroute/mobile-support",
+      "importSpecifier": "@inkroute/mobile-support"
+    },
+    {
+      "sourcePath": "apps/mobile/src/lib/mobileDemo.ts",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "@inkroute/notifications",
+      "importSpecifier": "@inkroute/notifications"
+    },
+    {
+      "sourcePath": "apps/mobile/src/lib/mobileDemo.ts",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "@inkroute/observability",
+      "importSpecifier": "@inkroute/observability"
+    },
+    {
+      "sourcePath": "apps/mobile/src/lib/mobileDemo.ts",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "@inkroute/releases",
+      "importSpecifier": "@inkroute/releases"
+    },
+    {
+      "sourcePath": "apps/mobile/src/lib/mobileDemo.ts",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/mobile/src/screens/HomeScreen.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/mobile/tests/mobile-static.test.ts",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "@inkroute/mobile-support",
+      "importSpecifier": "@inkroute/mobile-support"
+    },
+    {
+      "sourcePath": "apps/web/app/about/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/about/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/seo",
+      "importSpecifier": "@inkroute/seo"
+    },
+    {
+      "sourcePath": "apps/web/app/aftercare/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/availability-preview/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/calendar",
+      "importSpecifier": "@inkroute/calendar"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/availability-preview/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/availability-preview/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/validators",
+      "importSpecifier": "@inkroute/validators"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/calendar/[artistSlug]/travel.ics/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/calendar",
+      "importSpecifier": "@inkroute/calendar"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/calendar/[artistSlug]/travel.ics/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/deposit-sessions/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/payments",
+      "importSpecifier": "@inkroute/payments"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/messages/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/notifications",
+      "importSpecifier": "@inkroute/notifications"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/notification-previews/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/notifications",
+      "importSpecifier": "@inkroute/notifications"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/privacy-requests/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/release-health/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/releases",
+      "importSpecifier": "@inkroute/releases"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/secure-upload-intents/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/upload-policy/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/web/app/api/webhooks/email/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/notifications",
+      "importSpecifier": "@inkroute/notifications"
+    },
+    {
+      "sourcePath": "apps/web/app/api/webhooks/sentry/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/observability",
+      "importSpecifier": "@inkroute/observability"
+    },
+    {
+      "sourcePath": "apps/web/app/api/webhooks/sms/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/notifications",
+      "importSpecifier": "@inkroute/notifications"
+    },
+    {
+      "sourcePath": "apps/web/app/api/webhooks/stripe/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/payments",
+      "importSpecifier": "@inkroute/payments"
+    },
+    {
+      "sourcePath": "apps/web/app/booking/BookingFlowClient.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/booking",
+      "importSpecifier": "@inkroute/booking"
+    },
+    {
+      "sourcePath": "apps/web/app/booking/BookingFlowClient.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/booking/BookingFlowClient.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "apps/web/app/booking/confirmation/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/booking/deposit-preview/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/payments",
+      "importSpecifier": "@inkroute/payments"
+    },
+    {
+      "sourcePath": "apps/web/app/booking/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/booking",
+      "importSpecifier": "@inkroute/booking"
+    },
+    {
+      "sourcePath": "apps/web/app/booking/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/cities/[citySlug]/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/cities/[citySlug]/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/seo",
+      "importSpecifier": "@inkroute/seo"
+    },
+    {
+      "sourcePath": "apps/web/app/contact/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/faq/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/faq/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/seo",
+      "importSpecifier": "@inkroute/seo"
+    },
+    {
+      "sourcePath": "apps/web/app/layout.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/seo",
+      "importSpecifier": "@inkroute/seo"
+    },
+    {
+      "sourcePath": "apps/web/app/portfolio/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/portfolio/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/seo",
+      "importSpecifier": "@inkroute/seo"
+    },
+    {
+      "sourcePath": "apps/web/app/sitemap.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/seo",
+      "importSpecifier": "@inkroute/seo"
+    },
+    {
+      "sourcePath": "apps/web/app/styles/[styleSlug]/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/styles/[styleSlug]/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/seo",
+      "importSpecifier": "@inkroute/seo"
+    },
+    {
+      "sourcePath": "apps/web/app/travel/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/calendar",
+      "importSpecifier": "@inkroute/calendar"
+    },
+    {
+      "sourcePath": "apps/web/app/travel/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/travel/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/seo",
+      "importSpecifier": "@inkroute/seo"
+    },
+    {
+      "sourcePath": "apps/web/components/PortfolioCard.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "apps/web/components/TravelStopCard.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "apps/web/lib/errorReporting.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/lib/errorReporting.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/observability",
+      "importSpecifier": "@inkroute/observability"
+    },
+    {
+      "sourcePath": "apps/web/lib/securityDemo.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/web/lib/seoEngine.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/lib/seoEngine.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/seo",
+      "importSpecifier": "@inkroute/seo"
+    },
+    {
+      "sourcePath": "packages/analytics/src/index.ts",
+      "ownerPackageName": "@inkroute/analytics",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "packages/auth/src/index.ts",
+      "ownerPackageName": "@inkroute/auth",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "packages/booking/src/index.ts",
+      "ownerPackageName": "@inkroute/booking",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "packages/calendar/src/index.ts",
+      "ownerPackageName": "@inkroute/calendar",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "packages/calendar/tests/availability-conflicts.test.ts",
+      "ownerPackageName": "@inkroute/calendar",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "packages/config/src/index.ts",
+      "ownerPackageName": "@inkroute/config",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "packages/notifications/src/index.ts",
+      "ownerPackageName": "@inkroute/notifications",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "packages/observability/src/index.ts",
+      "ownerPackageName": "@inkroute/observability",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "packages/payments/src/index.ts",
+      "ownerPackageName": "@inkroute/payments",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "packages/security/src/index.ts",
+      "ownerPackageName": "@inkroute/security",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "packages/seo/src/index.ts",
+      "ownerPackageName": "@inkroute/seo",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    }
+  ],
+  "findings": []
+}

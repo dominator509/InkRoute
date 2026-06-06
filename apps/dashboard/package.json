@@ -1,0 +1,36 @@
+{
+  "name": "@inkroute/dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "playwright test --project=dashboard-chromium"
+  },
+  "dependencies": {
+    "@inkroute/auth": "workspace:*",
+    "@inkroute/config": "workspace:*",
+    "@inkroute/types": "workspace:*",
+    "next": "^15.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "@inkroute/booking": "workspace:*",
+    "@inkroute/calendar": "workspace:*",
+    "@inkroute/notifications": "workspace:*",
+    "@inkroute/payments": "workspace:*",
+    "@inkroute/observability": "workspace:*",
+    "@inkroute/releases": "workspace:*",
+    "@inkroute/security": "workspace:*",
+    "@inkroute/deployment": "workspace:*",
+    "@inkroute/seo": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.5.0"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "phase": "14",
+  "status": "manual_and_runtime_gated",
+  "checks": [
+    {
+      "id": "sec-tenant-isolation",
+      "priority": "critical",
+      "description": "Seed two tenants and prove every dashboard/API query denies cross-tenant records.",
+      "evidenceRequired": "Automated integration test transcript and failed cross-tenant fixture output",
+      "gaps": ["GAP-022", "GAP-095"]
+    },
+    {
+      "id": "sec-upload-hardening",
+      "priority": "critical",
+      "description": "Verify signed private uploads reject bad extensions, MIME mismatch, oversize files, and suspicious names before object persistence.",
+      "evidenceRequired": "Route tests plus storage bucket policy proof",
+      "gaps": ["GAP-096", "GAP-097"]
+    },
+    {
+      "id": "sec-payment-webhook",
+      "priority": "critical",
+      "description": "Replay Stripe webhook fixtures with valid and invalid signatures and verify only trusted events mutate payment state.",
+      "evidenceRequired": "Stripe CLI transcript and payment audit log rows",
+      "gaps": ["GAP-050", "GAP-051", "GAP-052"]
+    },
+    {
+      "id": "sec-csrf-rate-limit",
+      "priority": "high",
+      "description": "Exercise public mutation routes with missing CSRF/rate-limit context and verify safe rejection semantics.",
+      "evidenceRequired": "Integration route test output",
+      "gaps": ["GAP-101", "GAP-102"]
+    }
+  ]
+}

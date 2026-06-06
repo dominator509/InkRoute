@@ -1,0 +1,53 @@
+[
+  {
+    "id": "codex-install-ci",
+    "target": "Codex",
+    "priority": "critical",
+    "prompt": "Install dependencies, generate lockfile, run typecheck/test/build, and update gaps with exact output.",
+    "gapIds": [
+      "GAP-001",
+      "GAP-105",
+      "GAP-111"
+    ]
+  },
+  {
+    "id": "jules-db-auth-storage",
+    "target": "Jules",
+    "priority": "critical",
+    "prompt": "Provision non-production Postgres/auth/storage, run Prisma migrations, and prove tenant isolation/private storage.",
+    "gapIds": [
+      "GAP-002",
+      "GAP-003",
+      "GAP-005",
+      "GAP-095",
+      "GAP-097"
+    ]
+  },
+  {
+    "id": "claude-provider-sandboxes",
+    "target": "Claude Code",
+    "priority": "high",
+    "prompt": "Wire test-mode Stripe, notifications, Google Calendar, and Sentry providers using existing route boundaries.",
+    "gapIds": [
+      "GAP-004",
+      "GAP-050",
+      "GAP-057",
+      "GAP-061",
+      "GAP-062",
+      "GAP-080"
+    ]
+  },
+  {
+    "id": "provider-preview-deploy",
+    "target": "Provider console",
+    "priority": "high",
+    "prompt": "Create preview web/dashboard deployments, EAS preview build, and GitHub protected environments.",
+    "gapIds": [
+      "GAP-014",
+      "GAP-089",
+      "GAP-091",
+      "GAP-113",
+      "GAP-114"
+    ]
+  }
+]

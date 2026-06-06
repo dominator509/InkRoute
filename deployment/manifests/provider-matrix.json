@@ -1,0 +1,68 @@
+[
+  {
+    "id": "vercel",
+    "surface": "web/dashboard",
+    "recommendedForMvp": true,
+    "status": "deployment_gated",
+    "evidence": [
+      "preview URLs",
+      "production URLs",
+      "rollback drill"
+    ]
+  },
+  {
+    "id": "neon_or_supabase_postgres",
+    "surface": "database",
+    "recommendedForMvp": true,
+    "status": "deployment_gated",
+    "evidence": [
+      "migration logs",
+      "backup/restore evidence",
+      "tenant isolation tests"
+    ]
+  },
+  {
+    "id": "supabase_or_s3_storage",
+    "surface": "storage",
+    "recommendedForMvp": true,
+    "status": "deployment_gated",
+    "evidence": [
+      "private ACL proof",
+      "signed upload proof",
+      "malware/EXIF process"
+    ]
+  },
+  {
+    "id": "stripe",
+    "surface": "payments",
+    "recommendedForMvp": true,
+    "status": "credential_gated",
+    "evidence": [
+      "Checkout test",
+      "webhook replay",
+      "audit rows"
+    ]
+  },
+  {
+    "id": "expo_eas",
+    "surface": "mobile",
+    "recommendedForMvp": true,
+    "status": "deployment_gated",
+    "evidence": [
+      "preview build",
+      "device QA",
+      "OTA rollback"
+    ]
+  },
+  {
+    "id": "sentry",
+    "surface": "observability",
+    "recommendedForMvp": true,
+    "status": "credential_gated",
+    "evidence": [
+      "sample issues",
+      "source maps",
+      "redaction proof"
+    ]
+  }
+]

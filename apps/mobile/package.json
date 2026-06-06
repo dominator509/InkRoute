@@ -1,0 +1,37 @@
+{
+  "name": "@inkroute/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "App.tsx",
+  "scripts": {
+    "dev": "expo start",
+    "ios": "expo start --ios",
+    "android": "expo start --android",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "build": "tsc --noEmit",
+    "test": "vitest run apps/mobile/tests/**/*.test.ts"
+  },
+  "dependencies": {
+    "@inkroute/config": "workspace:*",
+    "@inkroute/types": "workspace:*",
+    "expo": "^55.0.0",
+    "expo-status-bar": "^2.0.0",
+    "react": "^19.2.0",
+    "react-native": "^0.83.1",
+    "@inkroute/auth": "workspace:*",
+    "@inkroute/booking": "workspace:*",
+    "@inkroute/calendar": "workspace:*",
+    "@inkroute/mobile-support": "workspace:*",
+    "@inkroute/notifications": "workspace:*",
+    "@inkroute/observability": "workspace:*",
+    "@inkroute/releases": "workspace:*",
+    "@inkroute/security": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.0"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "phase": "14",
+  "status": "manual",
+  "releaseExitCriteria": [
+    "All critical public booking flows pass on mobile and desktop browsers.",
+    "Dashboard protected-route behavior is proven with authenticated tenant fixtures.",
+    "Stripe, notifications, calendar, storage, and Sentry provider tests pass in sandbox or preview environments.",
+    "Accessibility, privacy, and security checklists have attached evidence.",
+    "Attorney-reviewed legal copy replaces placeholders before any public launch."
+  ],
+  "manualRuns": [
+    {
+      "id": "manual-public-site-conversion",
+      "owner": "Product/UX",
+      "priority": "high",
+      "steps": ["Review homepage", "Review portfolio", "Open city page", "Start booking", "Read aftercare/trust/legal pages"],
+      "evidenceRequired": "Annotated screenshots and conversion friction notes"
+    },
+    {
+      "id": "manual-artist-dashboard-day-in-life",
+      "owner": "Artist operator",
+      "priority": "high",
+      "steps": ["Review new booking", "Check calendar conflicts", "Review payment policy", "Send message preview", "Open client timeline"],
+      "evidenceRequired": "Operator feedback notes and blocked-action inventory"
+    },
+    {
+      "id": "manual-nomad-mode",
+      "owner": "Traveling artist",
+      "priority": "high",
+      "steps": ["Open mobile travel update", "Preview dashboard travel manager", "Open public travel page", "Inspect ICS feed", "Inspect waitlist notification plan"],
+      "evidenceRequired": "Screenshots and city availability correctness notes"
+    }
+  ]
+}

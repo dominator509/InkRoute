@@ -1,0 +1,50 @@
+## Node / package manager
+node_modules/
+.pnpm-store/
+.turbo/
+
+## Yarn / pnpm / npm logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+## Next.js and web build output
+.next/
+.next/cache/
+out/
+build/
+dist/
+coverage/
+
+## Expo / React Native
+.expo/
+.expo-shared/
+expo-env.d.ts
+ios/
+android/
+
+## Tooling/build artifacts
+.vercel/
+.supabase/
+prisma/generated/
+playwright-report/
+test-results/
+.nyc_output/
+.vitest/
+
+## Environment and secrets
+.env
+.env.*
+!.env.example
+!.env.local.example
+!.env.*.example
+
+## IDE / OS noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

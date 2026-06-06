@@ -1,0 +1,53 @@
+{
+  "name": "inkroute-suite",
+  "version": "0.1.0",
+  "private": true,
+  "description": "InkRoute Suite multi-tenant tattoo artist SaaS monorepo scaffold.",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "format": "prettier --write .",
+    "db:generate": "pnpm --filter @inkroute/db db:generate",
+    "db:migrate": "pnpm --filter @inkroute/db db:migrate",
+    "db:studio": "pnpm --filter @inkroute/db db:studio",
+    "db:seed": "pnpm --filter @inkroute/db db:seed",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "test:manifest": "node testing/scripts/verify-test-manifest.mjs",
+    "test:phase14:static": "node testing/scripts/phase14-static-check.mjs",
+    "qa:checklists": "node testing/scripts/print-qa-checklists.mjs",
+    "deploy:check-env": "node deployment/scripts/check-env.mjs",
+    "deploy:check-env:strict": "node deployment/scripts/check-env.mjs --env .env.local --target production --strict-values",
+    "deploy:checklist": "node deployment/scripts/print-launch-checklist.mjs",
+    "deploy:gaps": "node deployment/scripts/final-gap-summary.mjs",
+    "handoff:verify-docs": "node scripts/handoff/verify-phase-docs.mjs",
+    "handoff:audit": "node scripts/handoff/audit-gap-tracker.mjs",
+    "handoff:next": "node scripts/handoff/print-next-agent-tasks.mjs",
+    "handoff:all": "pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next && pnpm workspace:all && pnpm quality:all",
+    "quality:docs": "node scripts/quality/audit-doc-links.mjs",
+    "quality:gaps": "node scripts/quality/audit-gap-evidence.mjs",
+    "quality:gates": "node scripts/quality/print-quality-gates.mjs",
+    "quality:all": "pnpm quality:docs && pnpm quality:gaps && pnpm quality:gates",
+    "workspace:imports": "node scripts/workspace/audit-workspace-imports.mjs",
+    "workspace:scripts": "node scripts/workspace/audit-package-scripts.mjs",
+    "workspace:readiness": "node scripts/workspace/print-runtime-readiness.mjs",
+    "workspace:all": "pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "prettier": "^3.3.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.5.0",
+    "@playwright/test": "^1.49.0",
+    "vitest": "^2.1.0",
+    "@vitest/coverage-v8": "^2.1.0"
+  }
+}

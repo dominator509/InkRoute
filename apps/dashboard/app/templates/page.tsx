@@ -1,0 +1,122 @@
+import { DashboardPageHeader } from "../../components/DashboardPageHeader";
+import { DisabledActionPanel } from "../../components/DisabledActionPanel";
+import { IntegrationBoundaryCard } from "../../components/IntegrationBoundaryCard";
+import { StatusPill } from "../../components/StatusPill";
+import {
+  dashboardNotificationAutomationSequence,
+  dashboardNotificationPlans,
+  dashboardProviderBoundaryMatrix,
+  dashboardProviderSendDrafts,
+  dashboardTemplates,
+} from "../../lib/demo";
+
+function toneForStatus(status: string) {
+  if (status === "allowed" || status === "ready_to_queue") return "success" as const;
+  if (status === "requires_provider" || status === "requires_review") return "warning" as const;
+  if (status === "blocked" || status === "requires_destination") return "danger" as const;
+  return "neutral" as const;
+}
+
+export default function TemplatesPage() {
+  return (
+    <main>
+      <DashboardPageHeader
+        eyebrow="Notifications"
+        title="Template, consent, and delivery command center"
+        description="Email, SMS, push, and in-app notification templates with consent-aware delivery plans, automation sequences, and provider boundaries. No provider sends are enabled."
+      />
+
+      <section className="grid two">
+        {dashboardTemplates.map((template) => (
+          <article className="card" key={`${template.key}-${template.channel}`}>
+            <div className="section-heading-row">
+              <h2>{template.key.replace(/_/g, " ")}</h2>
+              <StatusPill label={template.channel} tone="info" />
+            </div>
+            <p>{template.preview}</p>
+            <small>{template.complianceNote}</small>
+          </article>
+        ))}
+      </section>
+
+      <section className="dashboard-grid two">
+        <div className="card">
+          <p className="eyebrow">Consent routing preview</p>
+          <h2>Channel decisions before provider handoff</h2>
+          <div className="stacked-list">
+            {dashboardNotificationPlans.map((plan) => (
+              <div className="stacked-item" key={plan.template.key}>
+                <strong>{plan.template.key.replace(/_/g, " ")}</strong>
+                <span>{plan.template.subject}</span>
+                <div className="gap-row">
+                  {plan.candidates.map((candidate) => (
+                    <StatusPill key={`${plan.template.key}-${candidate.channel}`} label={`${candidate.channel}: ${candidate.status}`} tone={toneForStatus(candidate.status)} />
+                  ))}
+                </div>
+                <small>{plan.complianceNotes[0]}</small>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card">
+          <p className="eyebrow">Automation lifecycle</p>
+          <h2>Booking, deposit, prep, aftercare, travel, and review sequence</h2>
+          <div className="stacked-list">
+            {dashboardNotificationAutomationSequence.slice(0, 10).map((step) => (
+              <div className="stacked-item" key={step.id}>
+                <strong>{step.templateKey.replace(/_/g, " ")}</strong>
+                <span>{step.trigger} · offset {step.scheduledOffsetMinutes} min · {step.recommendedChannels.join(", ")}</span>
+                <StatusPill label={step.status} tone={toneForStatus(step.status)} />
+                <small>{step.reason}</small>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="dashboard-grid two">
+        <div className="card">
+          <p className="eyebrow">Provider send drafts</p>
+          <h2>Disabled send payload previews</h2>
+          <div className="stacked-list">
+            {dashboardProviderSendDrafts.map((draft) => (
+              <div className="stacked-item" key={`${draft.provider}-${draft.channel}`}>
+                <strong>{draft.provider} · {draft.channel}</strong>
+                <span>{draft.toMasked} · env: {draft.credentialEnvVar}</span>
+                <small>{draft.disabledReason}</small>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="card">
+          <p className="eyebrow">Provider matrix</p>
+          <h2>What must exist before live delivery</h2>
+          <div className="stacked-list">
+            {dashboardProviderBoundaryMatrix.map((boundary) => (
+              <div className="stacked-item" key={`${boundary.provider}-${boundary.channel}`}>
+                <strong>{boundary.provider} · {boundary.channel}</strong>
+                <span>{boundary.credentialEnvVars.join(", ")}</span>
+                <small>{boundary.productionRequirement}</small>
+                <code>{boundary.gapId}</code>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <IntegrationBoundaryCard
+        title="Notification provider boundary"
+        status="Credential-gated"
+        description="Phase 9 renders templates and delivery plans only. Production still needs provider SDKs, verified webhooks, queue workers, suppression lists, delivery logs, token registration, audit logging, and SMS/legal review."
+        gapIds={["GAP-061", "GAP-062", "GAP-063", "GAP-064", "GAP-065", "GAP-066"]}
+      />
+
+      <DisabledActionPanel
+        title="Notification actions"
+        description="Template saving, test sends, scheduled delivery, queue retries, suppression changes, and provider delivery reconciliation require authenticated APIs and provider credentials."
+        actions={["Save template", "Send test email", "Send SMS preview", "Queue aftercare sequence", "Register push token", "Sync provider status"]}
+      />
+    </main>
+  );
+}

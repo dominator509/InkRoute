@@ -1,0 +1,391 @@
+{
+  "generatedAt": "2026-06-03T22:16:15.604Z",
+  "source": "Phase 18 workspace runtime readiness",
+  "status": "pass",
+  "projectsChecked": 25,
+  "requiredRootScripts": [
+    "typecheck",
+    "test:unit",
+    "test:manifest",
+    "deploy:check-env",
+    "handoff:all",
+    "quality:all",
+    "workspace:all"
+  ],
+  "requiredProjectScripts": [
+    "build",
+    "typecheck",
+    "lint",
+    "test"
+  ],
+  "projects": [
+    {
+      "name": "inkroute-suite",
+      "path": ".",
+      "kind": "root",
+      "packageManager": "pnpm@9.15.0",
+      "engines": {
+        "node": ">=20.11.0",
+        "pnpm": ">=9.0.0"
+      },
+      "scripts": {
+        "dev": "turbo dev",
+        "build": "turbo build",
+        "lint": "turbo lint",
+        "typecheck": "turbo typecheck",
+        "test": "turbo test",
+        "format": "prettier --write .",
+        "db:generate": "pnpm --filter @inkroute/db db:generate",
+        "db:migrate": "pnpm --filter @inkroute/db db:migrate",
+        "db:studio": "pnpm --filter @inkroute/db db:studio",
+        "db:seed": "pnpm --filter @inkroute/db db:seed",
+        "test:unit": "vitest run",
+        "test:e2e": "playwright test",
+        "test:manifest": "node testing/scripts/verify-test-manifest.mjs",
+        "test:phase14:static": "node testing/scripts/phase14-static-check.mjs",
+        "qa:checklists": "node testing/scripts/print-qa-checklists.mjs",
+        "deploy:check-env": "node deployment/scripts/check-env.mjs",
+        "deploy:check-env:strict": "node deployment/scripts/check-env.mjs --env .env.local --target production --strict-values",
+        "deploy:checklist": "node deployment/scripts/print-launch-checklist.mjs",
+        "deploy:gaps": "node deployment/scripts/final-gap-summary.mjs",
+        "handoff:verify-docs": "node scripts/handoff/verify-phase-docs.mjs",
+        "handoff:audit": "node scripts/handoff/audit-gap-tracker.mjs",
+        "handoff:next": "node scripts/handoff/print-next-agent-tasks.mjs",
+        "handoff:all": "pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next && pnpm workspace:all && pnpm quality:all",
+        "quality:docs": "node scripts/quality/audit-doc-links.mjs",
+        "quality:gaps": "node scripts/quality/audit-gap-evidence.mjs",
+        "quality:gates": "node scripts/quality/print-quality-gates.mjs",
+        "quality:all": "pnpm quality:docs && pnpm quality:gaps && pnpm quality:gates",
+        "workspace:imports": "node scripts/workspace/audit-workspace-imports.mjs",
+        "workspace:scripts": "node scripts/workspace/audit-package-scripts.mjs",
+        "workspace:readiness": "node scripts/workspace/print-runtime-readiness.mjs",
+        "workspace:all": "pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness"
+      }
+    },
+    {
+      "name": "@inkroute/dashboard",
+      "path": "apps/dashboard",
+      "kind": "app",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "dev": "next dev --port 3001",
+        "build": "next build",
+        "start": "next start --port 3001",
+        "lint": "next lint",
+        "typecheck": "tsc --noEmit",
+        "test": "playwright test --project=dashboard-chromium"
+      }
+    },
+    {
+      "name": "@inkroute/mobile",
+      "path": "apps/mobile",
+      "kind": "app",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "dev": "expo start",
+        "ios": "expo start --ios",
+        "android": "expo start --android",
+        "web": "expo start --web",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "build": "tsc --noEmit",
+        "test": "vitest run apps/mobile/tests/**/*.test.ts"
+      }
+    },
+    {
+      "name": "@inkroute/web",
+      "path": "apps/web",
+      "kind": "app",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "dev": "next dev --port 3000",
+        "build": "next build",
+        "start": "next start --port 3000",
+        "lint": "next lint",
+        "typecheck": "tsc --noEmit",
+        "test": "playwright test --project=web-chromium --project=web-mobile"
+      }
+    },
+    {
+      "name": "@inkroute/analytics",
+      "path": "packages/analytics",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/auth",
+      "path": "packages/auth",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/booking",
+      "path": "packages/booking",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/calendar",
+      "path": "packages/calendar",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/config",
+      "path": "packages/config",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/db",
+      "path": "packages/db",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests",
+        "db:generate": "prisma generate --schema prisma/schema.prisma",
+        "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
+        "db:studio": "prisma studio --schema prisma/schema.prisma",
+        "db:seed": "tsx prisma/seed.ts"
+      }
+    },
+    {
+      "name": "@inkroute/deployment",
+      "path": "packages/deployment",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "typecheck": "tsc --noEmit",
+        "build": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/handoff",
+      "path": "packages/handoff",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "typecheck": "tsc --noEmit",
+        "build": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/mobile-support",
+      "path": "packages/mobile",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/notifications",
+      "path": "packages/notifications",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/observability",
+      "path": "packages/observability",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/payments",
+      "path": "packages/payments",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/quality",
+      "path": "packages/quality",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "typecheck": "tsc --noEmit",
+        "build": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/releases",
+      "path": "packages/releases",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/security",
+      "path": "packages/security",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/seo",
+      "path": "packages/seo",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/testing",
+      "path": "packages/testing",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "typecheck": "tsc --noEmit",
+        "build": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/types",
+      "path": "packages/types",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/ui",
+      "path": "packages/ui",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/validators",
+      "path": "packages/validators",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "build": "tsc --noEmit",
+        "typecheck": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    },
+    {
+      "name": "@inkroute/workspace",
+      "path": "packages/workspace",
+      "kind": "package",
+      "packageManager": null,
+      "engines": {},
+      "scripts": {
+        "typecheck": "tsc --noEmit",
+        "build": "tsc --noEmit",
+        "lint": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests"
+      }
+    }
+  ],
+  "findings": []
+}

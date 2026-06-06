@@ -1,0 +1,70 @@
+{
+  "phase": "14",
+  "status": "scaffolded",
+  "command": "pnpm test:unit",
+  "suites": [
+    {
+      "id": "unit-booking-readiness",
+      "file": "packages/booking/tests/booking-readiness.test.ts",
+      "priority": "critical",
+      "verifies": ["Tattoo Readiness Score", "booking lifecycle transitions"],
+      "blockedBy": ["Vitest dependency installation", "workspace lockfile"]
+    },
+    {
+      "id": "unit-payment-policy",
+      "file": "packages/payments/tests/deposit-policy.test.ts",
+      "priority": "critical",
+      "verifies": ["deposit policy", "refund logic", "no-show logic", "checkout draft"],
+      "blockedBy": ["Vitest dependency installation", "Stripe live integration remains credential-gated"]
+    },
+    {
+      "id": "unit-calendar-availability",
+      "file": "packages/calendar/tests/availability-conflicts.test.ts",
+      "priority": "critical",
+      "verifies": ["availability slots", "buffer conflicts", "ICS feed draft"],
+      "blockedBy": ["Vitest dependency installation", "timezone/DST hardening pending"]
+    },
+    {
+      "id": "unit-notification-plans",
+      "file": "packages/notifications/tests/delivery-plan.test.ts",
+      "priority": "high",
+      "verifies": ["template rendering", "consent gates", "provider boundary status"],
+      "blockedBy": ["Vitest dependency installation", "providers remain credential-gated"]
+    },
+    {
+      "id": "unit-seo-engine",
+      "file": "packages/seo/tests/seo-engine.test.ts",
+      "priority": "high",
+      "verifies": ["metadata drafts", "sitemap planning", "internal links"],
+      "blockedBy": ["Vitest dependency installation", "rendered structured-data validation pending"]
+    },
+    {
+      "id": "unit-observability-redaction",
+      "file": "packages/observability/tests/redaction-report.test.ts",
+      "priority": "high",
+      "verifies": ["PII redaction", "severity classification", "agentic bug-fix workflow"],
+      "blockedBy": ["Vitest dependency installation", "Sentry SDK remains credential-gated"]
+    },
+    {
+      "id": "unit-release-governance",
+      "file": "packages/releases/tests/feature-flags.test.ts",
+      "priority": "high",
+      "verifies": ["feature flags", "migration gates", "OTA compatibility"],
+      "blockedBy": ["Vitest dependency installation", "real CI/CD execution pending"]
+    },
+    {
+      "id": "unit-security-policy",
+      "file": "packages/security/tests/upload-policy.test.ts",
+      "priority": "critical",
+      "verifies": ["upload policy", "redaction", "rate-limit draft", "tenant fixtures"],
+      "blockedBy": ["Vitest dependency installation", "runtime security middleware pending"]
+    },
+    {
+      "id": "unit-testing-manifest",
+      "file": "packages/testing/tests/testing-manifest.test.ts",
+      "priority": "medium",
+      "verifies": ["testing manifest", "QA checklist", "CI gates"],
+      "blockedBy": ["Vitest dependency installation"]
+    }
+  ]
+}

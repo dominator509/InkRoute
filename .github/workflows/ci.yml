@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify Phase 14 testing manifests
+        run: pnpm test:phase14:static && pnpm test:manifest
+      - name: Verify Phase 15 deployment manifests
+        run: pnpm deploy:check-env && pnpm deploy:checklist && pnpm deploy:gaps
+      - name: Verify Phase 16 handoff manifests
+        run: pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next
+      - name: Verify Phase 18 workspace runtime readiness
+        run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness || true
+      - name: Verify Phase 17 quality gates
+        run: pnpm quality:all
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test:unit
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run Playwright smoke tests
+        run: pnpm test:e2e

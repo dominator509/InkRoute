@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2026-06-03T22:16:15.714Z",
+  "source": "Phase 18 workspace runtime readiness",
+  "status": "fail",
+  "level": "blocked",
+  "checks": [
+    {
+      "id": "workspace-imports",
+      "title": "Workspace import declarations",
+      "status": "pass",
+      "evidence": "Import audit exists with 0 findings.",
+      "gapIds": [
+        "GAP-001",
+        "GAP-130"
+      ]
+    },
+    {
+      "id": "package-scripts",
+      "title": "Package script contract",
+      "status": "pass",
+      "evidence": "Package script audit exists with 0 findings.",
+      "gapIds": [
+        "GAP-130",
+        "GAP-132"
+      ]
+    },
+    {
+      "id": "pnpm-lockfile",
+      "title": "pnpm lockfile",
+      "status": "fail",
+      "evidence": "pnpm-lock.yaml does not exist in the artifact.",
+      "gapIds": [
+        "GAP-001"
+      ]
+    },
+    {
+      "id": "env-example",
+      "title": "Environment template",
+      "status": "pass",
+      "evidence": ".env.example exists.",
+      "gapIds": [
+        "GAP-115"
+      ]
+    },
+    {
+      "id": "production-blockers",
+      "title": "Open production blockers",
+      "status": "fail",
+      "evidence": "126 production-blocking gaps remain across 133 gap rows.",
+      "gapIds": [
+        "GAP-001",
+        "GAP-002",
+        "GAP-003",
+        "GAP-014"
+      ]
+    }
+  ],
+  "firstExternalCommands": [
+    "corepack enable",
+    "pnpm install",
+    "pnpm workspace:all",
+    "pnpm handoff:all",
+    "pnpm quality:all",
+    "pnpm typecheck",
+    "pnpm test:unit",
+    "pnpm --filter @inkroute/web build",
+    "pnpm --filter @inkroute/dashboard build"
+  ],
+  "notes": [
+    "This readiness report is static and pre-install only.",
+    "Production remains blocked until install/build/test/provider/deployment evidence is recorded in GAP_TRACKER.md."
+  ]
+}

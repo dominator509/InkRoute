@@ -1,0 +1,261 @@
+{
+  "generatedAt": "2026-06-03T22:16:15.837Z",
+  "status": "pass",
+  "docsChecked": 36,
+  "missing": [],
+  "warnings": [],
+  "results": [
+    {
+      "path": "README.md",
+      "status": "pass",
+      "lineCount": 276,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "ROADMAP.md",
+      "status": "pass",
+      "lineCount": 403,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "ARCHITECTURE.md",
+      "status": "pass",
+      "lineCount": 319,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "AGENTS.md",
+      "status": "pass",
+      "lineCount": 119,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "GAP_TRACKER.md",
+      "status": "pass",
+      "lineCount": 147,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "HANDOFF_TO_CODEX.md",
+      "status": "pass",
+      "lineCount": 134,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "HANDOFF_TO_JULES.md",
+      "status": "pass",
+      "lineCount": 76,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "HANDOFF_TO_CLAUDE_CODE.md",
+      "status": "pass",
+      "lineCount": 62,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "TESTING_PLAN.md",
+      "status": "pass",
+      "lineCount": 277,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "ENVIRONMENT_VARIABLES.md",
+      "status": "pass",
+      "lineCount": 200,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "SECURITY.md",
+      "status": "pass",
+      "lineCount": 213,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "DEPLOYMENT.md",
+      "status": "pass",
+      "lineCount": 223,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "SEO_PLAN.md",
+      "status": "pass",
+      "lineCount": 131,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "PRODUCT_REQUIREMENTS.md",
+      "status": "pass",
+      "lineCount": 195,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "DATABASE_SCHEMA.md",
+      "status": "pass",
+      "lineCount": 125,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "API_CONTRACTS.md",
+      "status": "pass",
+      "lineCount": 408,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "status": "pass",
+      "lineCount": 174,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "BUG_CRASH_REPORTING_PLAN.md",
+      "status": "pass",
+      "lineCount": 155,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_0_PRODUCT_DEFINITION.md",
+      "status": "pass",
+      "lineCount": 13,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_1_MONOREPO_ARCHITECTURE.md",
+      "status": "pass",
+      "lineCount": 20,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "status": "pass",
+      "lineCount": 63,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "status": "pass",
+      "lineCount": 105,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "status": "pass",
+      "lineCount": 95,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_5_DASHBOARD.md",
+      "status": "pass",
+      "lineCount": 126,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "status": "pass",
+      "lineCount": 115,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "status": "pass",
+      "lineCount": 137,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "status": "pass",
+      "lineCount": 141,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_9_NOTIFICATIONS_MESSAGING.md",
+      "status": "pass",
+      "lineCount": 159,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "status": "pass",
+      "lineCount": 154,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "status": "pass",
+      "lineCount": 176,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "status": "pass",
+      "lineCount": 164,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_13_SECURITY_PRIVACY_TRUST.md",
+      "status": "pass",
+      "lineCount": 165,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_14_TESTING_QA.md",
+      "status": "pass",
+      "lineCount": 140,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "status": "pass",
+      "lineCount": 151,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "status": "pass",
+      "lineCount": 167,
+      "hasStatus": true,
+      "message": "Present."
+    },
+    {
+      "path": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "status": "pass",
+      "lineCount": 150,
+      "hasStatus": true,
+      "message": "Present."
+    }
+  ]
+}

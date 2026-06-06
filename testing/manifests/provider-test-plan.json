@@ -1,0 +1,30 @@
+{
+  "phase": "14",
+  "status": "credential_gated",
+  "providers": [
+    {
+      "name": "Stripe",
+      "commands": ["stripe listen --forward-to localhost:3000/api/webhooks/stripe", "stripe trigger checkout.session.completed"],
+      "evidenceRequired": "Verified signature, persisted payment audit log, idempotency proof",
+      "gaps": ["GAP-049", "GAP-050", "GAP-051", "GAP-052"]
+    },
+    {
+      "name": "Google Calendar",
+      "commands": ["Run OAuth consent in preview", "Execute FreeBusy query", "Insert/update/delete event draft"],
+      "evidenceRequired": "Token storage proof, sync-token handling, conflict prevention proof",
+      "gaps": ["GAP-057", "GAP-058", "GAP-059"]
+    },
+    {
+      "name": "Email/SMS/Push",
+      "commands": ["Send sandbox Resend email", "Send Twilio test SMS", "Send Expo push receipt test"],
+      "evidenceRequired": "Delivery logs, opt-out handling, webhook signature proof",
+      "gaps": ["GAP-061", "GAP-062", "GAP-063", "GAP-066", "GAP-067"]
+    },
+    {
+      "name": "Sentry",
+      "commands": ["Trigger web error", "Trigger dashboard error", "Trigger mobile crash in preview"],
+      "evidenceRequired": "Sentry event ids, source map mapping, redacted metadata proof",
+      "gaps": ["GAP-080", "GAP-081", "GAP-082", "GAP-083"]
+    }
+  ]
+}

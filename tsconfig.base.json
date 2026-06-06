@@ -1,0 +1,87 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "preserve",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@inkroute/types": [
+        "packages/types/src/index.ts"
+      ],
+      "@inkroute/validators": [
+        "packages/validators/src/index.ts"
+      ],
+      "@inkroute/config": [
+        "packages/config/src/index.ts"
+      ],
+      "@inkroute/seo": [
+        "packages/seo/src/index.ts"
+      ],
+      "@inkroute/auth": [
+        "packages/auth/src/index.ts"
+      ],
+      "@inkroute/db": [
+        "packages/db/src/index.ts"
+      ],
+      "@inkroute/ui": [
+        "packages/ui/src/index.ts"
+      ],
+      "@inkroute/calendar": [
+        "packages/calendar/src/index.ts"
+      ],
+      "@inkroute/payments": [
+        "packages/payments/src/index.ts"
+      ],
+      "@inkroute/notifications": [
+        "packages/notifications/src/index.ts"
+      ],
+      "@inkroute/analytics": [
+        "packages/analytics/src/index.ts"
+      ],
+      "@inkroute/booking": [
+        "packages/booking/src/index.ts"
+      ],
+      "@inkroute/mobile-support": [
+        "packages/mobile/src/index.ts"
+      ],
+      "@inkroute/observability": [
+        "packages/observability/src/index.ts"
+      ],
+      "@inkroute/releases": [
+        "packages/releases/src/index.ts"
+      ],
+      "@inkroute/security": [
+        "packages/security/src/index.ts"
+      ],
+      "@inkroute/testing": [
+        "packages/testing/src/index.ts"
+      ],
+      "@inkroute/deployment": [
+        "packages/deployment/src/index.ts"
+      ],
+      "@inkroute/handoff": [
+        "packages/handoff/src/index.ts"
+      ],
+      "@inkroute/quality": [
+        "packages/quality/src/index.ts"
+      ],
+      "@inkroute/workspace": [
+        "packages/workspace/src/index.ts"
+      ]
+    }
+  }
+}

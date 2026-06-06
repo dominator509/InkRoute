@@ -1,0 +1,27 @@
+{
+  "phase": "14",
+  "status": "device_gated",
+  "checks": [
+    {
+      "id": "mobile-auth-lock",
+      "priority": "critical",
+      "description": "Verify signed-in, signed-out, expired, and biometric-locked states once auth is wired.",
+      "platforms": ["iOS physical device", "Android physical device"],
+      "gaps": ["GAP-042", "GAP-048"]
+    },
+    {
+      "id": "mobile-offline-queue",
+      "priority": "high",
+      "description": "Create offline notes, reference metadata, and travel status updates while disconnected, then verify sync reconciliation.",
+      "platforms": ["iOS simulator", "Android emulator", "one physical device"],
+      "gaps": ["GAP-045", "GAP-048"]
+    },
+    {
+      "id": "mobile-push-notifications",
+      "priority": "high",
+      "description": "Register device token, send Expo push test, and verify opt-out and redaction behavior.",
+      "platforms": ["iOS physical device", "Android physical device"],
+      "gaps": ["GAP-044", "GAP-063"]
+    }
+  ]
+}
