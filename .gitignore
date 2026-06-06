@@ -2,19 +2,22 @@
 node_modules/
 .pnpm-store/
 .turbo/
-.yarn/
 .npm/
+.yarn/
 pnpm-debug.log*
 
-## Yarn / pnpm / npm logs
+## Logs / reports
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 *.log
 *.log.*
+*.pid
+*.seed
+*.pid.lock
 *.tsbuildinfo
 
-## Next.js and web build output
+## Build and cache artifacts
 .next/
 .next/cache/
 out/
@@ -22,41 +25,53 @@ build/
 dist/
 coverage/
 coverage.lcov-report/
+.cache/
+.vercel/
+.serverless/
+prisma/generated/
+.webpack/
+.next-tsbuildinfo
 
-## Expo / React Native
+## Framework-specific outputs
+.vercel/
+next-env.d.ts
+expo-env.d.ts
 .expo/
 .expo-shared/
-expo-env.d.ts
 expo/
 expo-start/
 ios/
 android/
 web-build/
 
-## Tooling/build artifacts
-.vercel/
-.supabase/
-prisma/generated/
-next-env.d.ts
+## Testing and lint artifacts
 playwright-report/
 test-results/
 .nyc_output/
 .vitest/
-.cache/
-.serverless/
+.turbo/
+
+## Runtime / tool noise
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+## Editors / local config
+.vscode/
+.idea/
+.history/
+*.swp
+*.swo
+*~
 
 ## Environment and secrets
 .env
 .env.*
 !.env.example
-!.env.local.example
-!.env.*.example
+!.env*.example
 
-## IDE / OS noise
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+## Security-sensitive files
+*.pem
+*.p12
+*.key

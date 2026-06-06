@@ -362,3 +362,24 @@ Current verification status: command chain now green under the same existing pro
 - Exact command output captured in `docs/workspace/manifests/workspace-prompt-run-2026-06-06-plan.log`.
 - Lockfile status: `pnpm-lock.yaml` exists and is tracked.
 - Remaining production blockers: still tracked in `GAP_TRACKER.md` (`GAP-132` and other Phase 17/18 gaps).
+### Verification status (2026-06-06 rerun at 15:34:26Z)
+
+Executed full `docs/workspace/CODEX_WORKSPACE_PROMPT.md` chain from `C:\dev\InkRoute`:
+
+- `corepack enable` PASS (`0`)
+- `pnpm install` PASS (`0`)
+- `pnpm workspace:all` PASS (`0`)
+- `pnpm handoff:all` PASS (`0`)
+- `pnpm quality:all` PASS (`0`)
+- `pnpm typecheck` PASS (`0`)
+- `pnpm test:unit` PASS (`14 passed, 0 failed`)
+- `pnpm test:manifest` PASS (`{"ok":true,"manifestCount":7,"requiredFileCount":15,"declaredSuites":28}`)
+- `pnpm --filter @inkroute/web build` PASS (`0`) after rerun with quoted scope.
+- `pnpm --filter @inkroute/dashboard build` PASS (`0`) after rerun with quoted scope.
+
+Evidence file: `docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-34-26Z.log`.
+
+Lockfile status: `pnpm-lock.yaml` exists at repo root and is tracked (already present from prior successful install).
+
+Current status after this rerun remains blocked by production-gap coverage:
+- `GAP-132`, `GAP-130`, `GAP-133`, `GAP-121`, `GAP-122`, `GAP-124`, `GAP-126`.

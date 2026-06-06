@@ -353,3 +353,28 @@ This file is the production honesty ledger. Do not remove a gap until the verifi
   - `env-example`: pass
   - `production-blockers`: fail — 126 production-blocking gaps across 133 gap rows
 - Remaining blockers after this run remain evidence-backed in existing gap rows; no new blockers were introduced by this pass.
+
+## 2026-06-06 workspace verification evidence (rerun at 15:34:26Z)
+
+- Executed from `C:\dev\InkRoute` with exact command stream captured at `docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-34-26Z.log`.
+- Chain executed from `docs/workspace/CODEX_WORKSPACE_PROMPT.md`:
+  - `corepack enable` — PASS (`exit 0`)
+  - `pnpm install` — PASS (`exit 0`)
+  - `pnpm workspace:all` — PASS (`exit 0`)
+    - `docs/workspace/manifests/workspace-import-audit.json` regenerated (`generatedAt=2026-06-06T15:34:36.153Z`, pass, 0 findings)
+    - `docs/workspace/manifests/package-script-audit.json` regenerated (`generatedAt=2026-06-06T15:34:36.781Z`, pass)
+    - `docs/workspace/manifests/runtime-readiness.json` regenerated (`generatedAt=2026-06-06T15:34:37.518Z`, fail; `126` production blockers remain across `133` gap rows)
+  - `pnpm handoff:all` — PASS (`exit 0`)
+    - `docs/handoff/manifests/phase-documentation-audit.json` regenerated
+    - `docs/handoff/manifests/gap-audit-report.json` regenerated
+  - `pnpm quality:all` — PASS (`exit 0`)
+    - `docs/quality/manifests/markdown-link-audit.json` regenerated
+    - `docs/quality/manifests/gap-evidence-audit.json` regenerated
+    - `docs/quality/manifests/quality-gates.json` regenerated
+  - `pnpm typecheck` — PASS (`exit 0`)
+  - `pnpm test:unit` — PASS (`14 passed, 0 failed`)
+  - `pnpm test:manifest` — PASS (`{"ok":true,"manifestCount":7,"requiredFileCount":15,"declaredSuites":28}`)
+  - `pnpm --filter @inkroute/web build` — PASS (`exit 0`, after corrected PowerShell quoting)
+  - `pnpm --filter @inkroute/dashboard build` — PASS (`exit 0`, after corrected PowerShell quoting)
+- First attempted `@inkroute/web` / `@inkroute/dashboard` build invocations in the local log stream were malformed (missing quoted package scope), producing `Unknown option: 'filter @inkroute/web build'` and `Unknown option: 'filter @inkroute/dashboard build'`; command was retried safely with `'@inkroute/web'` and `'@inkroute/dashboard'` and then passed.
+- Remaining blockers from this run: `GAP-132`, `GAP-130`, `GAP-133`, `GAP-121`, `GAP-122`, `GAP-124`, `GAP-126` (production-blocking landscape unchanged).
