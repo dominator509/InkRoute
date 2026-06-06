@@ -28,6 +28,36 @@ Executed command chain from `docs/workspace/CODEX_WORKSPACE_PROMPT.md` (rerun at
 - `pnpm --filter @inkroute/dashboard build` FAIL (`exit 1`; `destination` exact-optional-type mismatch in `apps/dashboard/lib/demo.ts`).
 
 Current test posture after this run: not production-verified; unit and app build failures are scoped and evidence-backed.
+
+### Verification status (2026-06-06 rerun at 08:02:09Z)
+
+Executed command chain from `docs/workspace/CODEX_WORKSPACE_PROMPT.md`:
+
+- `corepack enable` PASS (`exit 0`)
+- `pnpm install` PASS (`exit 0`)
+- `pnpm workspace:all` PASS (`exit 0`)
+- `pnpm handoff:all` PASS (`exit 0`)
+- `pnpm quality:all` PASS (`exit 0`)
+- `pnpm typecheck` FAIL (`exit 2`)
+  - `@inkroute/ui` blocked on `Could not find a declaration file for module 'react'` in `packages/ui/src/button.tsx` and `packages/ui/src/card.tsx`.
+- `pnpm test:unit` FAIL (`exit 1`)
+  - `packages/booking/tests/booking-readiness.test.ts` — `Invalid booking lifecycle action complete from status draft`
+  - `packages/releases/tests/feature-flags.test.ts` — `expected 'critical' to be 'high'`
+  - `packages/payments/tests/deposit-policy.test.ts` — `expected 'MARAVALE-2026-00012' to contain 'MARA-VALE'`
+  - `packages/observability/tests/redaction-report.test.ts` — `expected 'high' to be 'critical'`
+- `pnpm test:manifest` PASS (`exit 0`)
+- `pnpm --filter @inkroute/web build` FAIL (`exit 1`)
+  - unresolved `../../../../lib/seoEngine` imports in:
+    - `app/api/public/[tenantSlug]/seo-preview/route.ts`
+    - `app/api/public/[tenantSlug]/sitemap-preview/route.ts`
+- `pnpm --filter @inkroute/dashboard build` FAIL (`exit 1`)
+  - `apps/dashboard/lib/demo.ts:605:27` exact-optional-property-types mismatch on `destination`.
+
+Current status after this rerun:
+
+- Evidence artifacts captured from the rerun command stream and embedded in `GAP_TRACKER.md`.
+- `pnpm-lock.yaml` remains present and tracked.
+- Active open blockers remain: `GAP-001`, `GAP-121`, `GAP-122`, `GAP-124`, `GAP-126`, `GAP-130`, `GAP-132`, `GAP-133`.
 ## Phase 14 implemented testing files
 
 ### Configs and scripts

@@ -73,6 +73,24 @@ Current report state update:
 - `docs/workspace/manifests/runtime-readiness.json` should be interpreted as evidence-only blocked by production gaps.
 - Do not treat this state as deployment-ready; it is an execution audit capture.
 
+## 2026-06-06 command-driven workspace verification rerun (08:02:09Z)
+
+- `corepack enable` — exit `0`.
+- `pnpm install` — exit `0`.
+- `pnpm workspace:all` — exit `0`.
+  - `docs/workspace/manifests/workspace-import-audit.json` updated (`generatedAt=2026-06-06T15:02:18.610Z`, pass, 0 findings).
+  - `docs/workspace/manifests/package-script-audit.json` updated (`generatedAt=2026-06-06T15:02:19.401Z`, pass, 0 findings).
+  - `docs/workspace/manifests/runtime-readiness.json` updated (`generatedAt=2026-06-06T15:02:20.060Z`, fail; 126 production blockers).
+- `pnpm handoff:all` — exit `0`.
+- `pnpm quality:all` — exit `0`.
+- `pnpm typecheck` — exit `2` (first blocker remains `@inkroute/ui` React JSX typings).
+- `pnpm test:unit` — exit `1` (4 failures in booking/payments/releases/observability tests).
+- `pnpm test:manifest` — exit `0`.
+- `pnpm --filter @inkroute/web build` — exit `1` (`apps/web` unresolved import `../../../../lib/seoEngine` in two SEO preview routes).
+- `pnpm --filter @inkroute/dashboard build` — exit `1` (exact optional property mismatch in `apps/dashboard/lib/demo.ts` `destination` argument).
+- Evidence source: full command stream in session logs (embedded in `GAP_TRACKER.md`).
+- `pnpm-lock.yaml` remains present and unchanged for this run.
+
 ## Current Phase 18 report state
 
 - Workspace import audit: pass.

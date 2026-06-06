@@ -207,8 +207,8 @@ This file is the production honesty ledger. Do not remove a gap until the verifi
   - `pnpm --filter @inkroute/web build` — exit `1`.
     - `apps/web/app/api/public/[tenantSlug]/seo-preview/route.ts`: unresolved `../../../../lib/seoEngine`.
     - `apps/web/app/api/public/[tenantSlug]/sitemap-preview/route.ts`: unresolved `../../../../lib/seoEngine`.
-  - `pnpm --filter @inkroute/dashboard build` — exit `1`.
-    - `apps/dashboard/lib/demo.ts`: `createProviderSendDraft({ destination: dashboardNotificationConsent.email })` passes `string | undefined` to `destination?: string` with `exactOptionalPropertyTypes: true`.
+- `pnpm --filter @inkroute/dashboard build` — exit `1`.
+  - `apps/dashboard/lib/demo.ts`: `createProviderSendDraft({ destination: dashboardNotificationConsent.email })` passes `string | undefined` to `destination?: string` with `exactOptionalPropertyTypes: true`.
 
 - Command summary was generated during execution and used for evidence reporting; raw per-command logs were removed before commit.
 - Files modified by this execution:
@@ -227,4 +227,49 @@ This file is the production honesty ledger. Do not remove a gap until the verifi
   - `GAP-001` (dependency install now partially resolved; `pnpm-lock.yaml` exists).
   - `GAP-130`, `GAP-131`, `GAP-132`, `GAP-133` remain open for workspace/runtime evidence and enforcement.
   - `GAP-121`, `GAP-122`, `GAP-124`, `GAP-126` remain open for quality/handoff verification coverage.
+
+## 2026-06-06 workspace verification evidence (rerun at 08:02:09Z)
+
+- Executed from `C:\dev\InkRoute` with remote `origin` set to `https://github.com/dominator509/InkRoute.git` on branch `main`.
+- Run artifacts:
+  - full command stream captured in local execution session output (including exact command exit codes and failure excerpts).
+- Chain executed:
+  - `corepack enable` — exit `0`
+  - `pnpm install` — exit `0`
+  - `pnpm workspace:all` — exit `0`
+  - `pnpm handoff:all` — exit `0`
+  - `pnpm quality:all` — exit `0`
+  - `pnpm typecheck` — exit `2`
+  - `pnpm test:unit` — exit `1`
+  - `pnpm test:manifest` — exit `0`
+  - `pnpm --filter @inkroute/web build` — exit `1`
+  - `pnpm --filter @inkroute/dashboard build` — exit `1`
+- Generated/updated manifests from this chain:
+  - `docs/workspace/manifests/workspace-import-audit.json`
+  - `docs/workspace/manifests/package-script-audit.json`
+  - `docs/workspace/manifests/runtime-readiness.json`
+  - `docs/handoff/manifests/phase-documentation-audit.json`
+  - `docs/handoff/manifests/gap-audit-report.json`
+  - `docs/quality/manifests/markdown-link-audit.json`
+  - `docs/quality/manifests/gap-evidence-audit.json`
+  - `docs/quality/manifests/quality-gates.json`
+- Exact first-failure evidence:
+  - `pnpm typecheck`:
+    - `@inkroute/ui/src/button.tsx(1,54)` — `Could not find a declaration file for module 'react'.`
+    - `@inkroute/ui/src/button.tsx(11,36)` — `Property 'className' does not exist on type 'ButtonProps'.`
+    - `@inkroute/ui/src/card.tsx(8,34)` — `Property 'className' does not exist on type 'CardProps'.`
+  - `pnpm test:unit`:
+    - `packages/booking/tests/booking-readiness.test.ts` — `Invalid booking lifecycle action complete from status draft`
+    - `packages/releases/tests/feature-flags.test.ts` — `expected 'critical' to be 'high'`
+    - `packages/payments/tests/deposit-policy.test.ts` — `expected 'MARAVALE-2026-00012' to contain 'MARA-VALE'`
+    - `packages/observability/tests/redaction-report.test.ts` — `expected 'high' to be 'critical'`
+  - `pnpm --filter @inkroute/web build`:
+    - `./app/api/public/[tenantSlug]/seo-preview/route.ts` — `Module not found: Can't resolve '../../../../lib/seoEngine'`
+    - `./app/api/public/[tenantSlug]/sitemap-preview/route.ts` — `Module not found: Can't resolve '../../../../lib/seoEngine'`
+  - `pnpm --filter @inkroute/dashboard build`:
+    - `./lib/demo.ts:605:27` — `Type error: Argument of type '{ channel: "email"; destination: string | undefined; ... }' is not assignable to parameter ... destination: string with exactOptionalPropertyTypes`
+- `pnpm-lock.yaml` remains present; no lockfile diff in this run.
+- Blockers after rerun:
+  - `GAP-001` dependency-install blocker now evidence-backed as present but incomplete.
+  - `GAP-121`, `GAP-122`, `GAP-124`, `GAP-126`, `GAP-130`, `GAP-131`, `GAP-132`, `GAP-133` remain open with exact output retained in this evidence row.
 
