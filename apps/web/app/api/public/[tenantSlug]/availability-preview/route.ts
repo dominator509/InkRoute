@@ -30,8 +30,10 @@ const demoBusyBlocks: CalendarTimeBlock[] = [
   },
 ];
 
-export function GET(_request: Request, context: { params: { tenantSlug: string } }) {
-  if (context.params.tenantSlug !== inkrouteDemoTenant.slug) {
+export async function GET(_request: Request, context: { params: Promise<{ tenantSlug: string }> }) {
+  const { tenantSlug } = await context.params;
+
+  if (tenantSlug !== inkrouteDemoTenant.slug) {
     return Response.json({ ok: false, error: { code: "NOT_FOUND", message: "No demo availability exists for this tenant." } }, { status: 404 });
   }
 

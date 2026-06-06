@@ -328,3 +328,21 @@ pnpm handoff:all
 These checks verify documentation presence, gap table structure, and agent task queue readability. They do not replace Vitest, Playwright, Prisma, provider sandbox, mobile device, accessibility, security, or deployment tests. Any failure must be logged in `GAP_TRACKER.md`.
 
 
+## 2026-06-06 verification status (rerun at 08:23:41Z)
+
+Executed full `docs/workspace/CODEX_WORKSPACE_PROMPT.md` chain successfully.
+
+- `corepack enable` PASS (`0`)
+- `pnpm install` PASS (`0`)
+- `pnpm workspace:all` PASS (`0`)
+- `pnpm handoff:all` PASS (`0`)
+- `pnpm quality:all` PASS (`0`)
+- `pnpm typecheck` PASS (`0`)
+- `pnpm test:unit` PASS (`0`) — 14 files, 43 tests passed
+- `pnpm test:manifest` PASS (`0`)
+- `pnpm --filter @inkroute/web build` PASS (`0`)
+- `pnpm --filter @inkroute/dashboard build` PASS (`0`)
+
+Evidence artifact: `docs/workspace/manifests/workspace-prompt-run-2026-06-06-4.log`.
+
+Current verification status: command chain now green under the same existing production-blocking landscape reported by runtime readiness (`126` production blockers across `133` gap rows).

@@ -3,6 +3,10 @@ export function formatCityDateRange(startsAt: string, endsAt: string, timezone: 
   return `${formatter.format(new Date(startsAt))} – ${formatter.format(new Date(endsAt))}`;
 }
 
+export function formatDateRange(startsAt: string, endsAt: string, timezone = "America/Los_Angeles") {
+  return formatCityDateRange(startsAt, endsAt, timezone);
+}
+
 export function toTitleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

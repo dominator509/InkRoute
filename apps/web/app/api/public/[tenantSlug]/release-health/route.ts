@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { demoFeatureFlagDecisions, demoReleaseCandidate, demoReleaseHealthChecks } from "@inkroute/releases";
 
-export async function GET(_request: Request, context: { params: { tenantSlug: string } }) {
+export async function GET(_request: Request, context: { params: Promise<{ tenantSlug: string }> }) {
+  const { tenantSlug } = await context.params;
+
   return NextResponse.json({
-    tenantSlug: context.params.tenantSlug,
+    tenantSlug,
     status: "scaffolded",
     release: {
       version: demoReleaseCandidate.version,

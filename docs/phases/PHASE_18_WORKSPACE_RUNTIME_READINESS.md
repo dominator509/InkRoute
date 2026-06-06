@@ -125,3 +125,25 @@ The readiness script exits successfully while writing the blocked report so CI a
 Run the Codex workspace prompt in `docs/workspace/CODEX_WORKSPACE_PROMPT.md`, commit the generated lockfile, run the full verification chain, and update `GAP_TRACKER.md` with exact output.
 
 
+## 2026-06-06 command-driven workspace verification rerun (08:23:41Z)
+
+Executed from this environment with full command log:
+- `docs/workspace/manifests/workspace-prompt-run-2026-06-06-4.log`
+
+Observed outcomes:
+- `corepack enable` ? exit `0`
+- `pnpm install` ? exit `0`
+- `pnpm workspace:all` ? exit `0`
+  - `docs/workspace/manifests/workspace-import-audit.json` and `docs/workspace/manifests/package-script-audit.json` generated/updated and passing
+  - `docs/workspace/manifests/runtime-readiness.json` generated/updated and still blocked only by production gaps
+- `pnpm handoff:all` ? exit `0`
+- `pnpm quality:all` ? exit `0`
+- `pnpm typecheck` ? exit `0`
+- `pnpm test:unit` ? exit `0`
+- `pnpm test:manifest` ? exit `0`
+- `pnpm --filter @inkroute/web build` ? exit `0`
+- `pnpm --filter @inkroute/dashboard build` ? exit `0`
+
+Current phase state:
+- Workspace import and package-script audits are green.
+- Runtime readiness remains flagged as `needs-attention` until production blockers are resolved with evidence-backed gap reductions.

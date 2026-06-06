@@ -86,11 +86,16 @@ const highRiskKeyPattern = /(password|secret|token|authorization|cookie|signatur
 
 function stableHash(value: string): string {
   let hash = 2166136261;
+  let secondary = 16777619;
   for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
+    const charCode = value.charCodeAt(index);
+    hash ^= charCode;
+    secondary = Math.imul(secondary ^ charCode, 1099511628211 % 4294967296);
+    hash = Math.imul(hash, 16777619 + index);
   }
-  return (hash >>> 0).toString(16).padStart(8, "0");
+  const primary = (hash >>> 0).toString(16).padStart(8, "0");
+  const tail = (secondary >>> 0).toString(16).padStart(4, "0");
+  return `${primary}${tail}`.slice(0, 12);
 }
 
 export function redactSensitiveText(value: string): { text: string; redactionLevel: RedactionLevel } {

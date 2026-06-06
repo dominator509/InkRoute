@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     runtime: "provider-webhook",
     environment: "development",
     message: issueTitle,
-    route: culprit,
+    route: culprit ?? "/api/webhooks/sentry",
     release: typeof data.release === "string" ? data.release : "sentry-webhook-preview",
     metadata: { provider: "sentry", eventType: typeof event.action === "string" ? event.action : "unknown", rawPayloadShape: Object.keys(event).slice(0, 12) },
     tags: { phase: "11", provider: "sentry" },

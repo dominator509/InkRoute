@@ -620,9 +620,9 @@ export const dashboardProviderSendDrafts = [
 ];
 
 export const dashboardDeliveryLogDrafts = [
-  buildDeliveryLogDraft({ tenantId: inkrouteDemoTenant.id, clientId: "client_ari", notificationType: "booking_request_accepted", channel: "email", destination: dashboardNotificationConsent.email, status: "queued" }),
-  buildDeliveryLogDraft({ tenantId: inkrouteDemoTenant.id, clientId: "client_ari", notificationType: "deposit_request", channel: "sms", destination: dashboardNotificationConsent.phone, status: "queued" }),
-  buildDeliveryLogDraft({ tenantId: inkrouteDemoTenant.id, clientId: "client_ari", notificationType: "aftercare_day_0", channel: "push", destination: dashboardNotificationConsent.pushToken, status: "queued" }),
+  buildDeliveryLogDraft({ tenantId: inkrouteDemoTenant.id, clientId: "client_ari", notificationType: "booking_request_accepted", channel: "email", ...(dashboardNotificationConsent.email ? { destination: dashboardNotificationConsent.email } : {}), status: "queued" }),
+  buildDeliveryLogDraft({ tenantId: inkrouteDemoTenant.id, clientId: "client_ari", notificationType: "deposit_request", channel: "sms", ...(dashboardNotificationConsent.phone ? { destination: dashboardNotificationConsent.phone } : {}), status: "queued" }),
+  buildDeliveryLogDraft({ tenantId: inkrouteDemoTenant.id, clientId: "client_ari", notificationType: "aftercare_day_0", channel: "push", ...(dashboardNotificationConsent.pushToken ? { destination: dashboardNotificationConsent.pushToken } : {}), status: "queued" }),
 ];
 
 export const dashboardProviderWebhookPreviews = [

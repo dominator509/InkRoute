@@ -8,6 +8,7 @@ import {
   getTravelBookingCta,
   type BookingDraft,
   type BookingDraftReferenceImage,
+  type BookingFlowStep,
   type BookingFlowStepId,
 } from "@inkroute/booking";
 import {
@@ -41,7 +42,7 @@ export function BookingFlowClient() {
   const [draft, setDraft] = useState<BookingDraft>(emptyBookingDraft);
   const [previewSubmitted, setPreviewSubmitted] = useState(false);
 
-  const activeStep = bookingFlowSteps[clampStep(stepIndex)];
+  const activeStep = (bookingFlowSteps[clampStep(stepIndex)] as BookingFlowStep) ?? bookingFlowSteps[0];
   const readiness = useMemo(() => calculateTattooReadinessScore(draft), [draft]);
   const selectedTravelStop = demoTravelStops.find((stop) => stop.id === draft.preferredCitySlug);
   const selectedPortfolio = demoPortfolioItems.find((item) => item.attributionKey === draft.portfolioAttributionId);
@@ -95,7 +96,7 @@ export function BookingFlowClient() {
             <div className="booking-highlight-card">
               <p className="eyebrow">{getTravelBookingCta(selectedTravelStop.bookingStatus)}</p>
               <h3>{selectedTravelStop.city}, {selectedTravelStop.region}</h3>
-              <p>{formatDateRange(selectedTravelStop.startsAt, selectedTravelStop.endsAt)} · {selectedTravelStop.studioName}</p>
+              <p>{formatDateRange(selectedTravelStop.startsAt, selectedTravelStop.endsAt, selectedTravelStop.timezone)} · {selectedTravelStop.studioName}</p>
               <p>{selectedTravelStop.publicNotes}</p>
             </div>
           ) : null}
@@ -344,3 +345,4 @@ export function BookingFlowClient() {
     </div>
   );
 }
+

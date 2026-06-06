@@ -17,7 +17,7 @@ export function buildPublicErrorReportPreview(input: Partial<ObservabilityEventI
     message: input.message ?? "Client-side public web error preview",
     route: input.route ?? "/booking",
     release: input.release ?? "phase11-demo",
-    userAgent: input.userAgent,
+    ...(input.userAgent ? { userAgent: input.userAgent } : {}),
     handled: input.handled ?? false,
     metadata: input.metadata ?? { boundary: "fallback-route-preview", clientEmail: "demo@example.test" },
     tags: { phase: "11", product: "public-web", ...(input.tags ?? {}) },

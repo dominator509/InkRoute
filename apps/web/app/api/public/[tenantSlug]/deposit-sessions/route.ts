@@ -54,9 +54,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     );
   }
 
+  const city = asOptionalString(body.city);
   const policy = calculateDepositPolicy({
     estimatedSessionHours: asNumber(body.estimatedSessionHours, 2),
-    city: asOptionalString(body.city),
+    ...(city ? { city } : {}),
     appointmentType: asOptionalString(body.appointmentType) === "flash" ? "flash" : asOptionalString(body.appointmentType) === "large_scale" ? "large_scale" : "custom",
     travelRiskTier: asOptionalString(body.travelRiskTier) === "high_demand_guest_spot" ? "high_demand_guest_spot" : "standard_travel",
     cityDemandScore: asNumber(body.cityDemandScore, 2),

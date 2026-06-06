@@ -288,3 +288,37 @@ This file is the production honesty ledger. Do not remove a gap until the verifi
   - Full rerun of `docs/workspace/CODEX_WORKSPACE_PROMPT.md` command chain has not been executed after this patch yet.
   - Expected next command: rerun the same chain and refresh `GAP_TRACKER.md` blocked-rows using that exact output.
 
+## 2026-06-06 workspace verification evidence (rerun at 08:23:41Z - all pass)
+
+- Executed from `docs/workspace/CODEX_WORKSPACE_PROMPT.md`.
+- Exact run log: `docs/workspace/manifests/workspace-prompt-run-2026-06-06-4.log`.
+- Command outcomes:
+  - `corepack enable` — exit `0`
+  - `pnpm install` — exit `0`
+  - `pnpm workspace:all` — exit `0`
+  - `pnpm handoff:all` — exit `0`
+  - `pnpm quality:all` — exit `0`
+  - `pnpm typecheck` — exit `0`
+  - `pnpm test:unit` — exit `0`
+  - `pnpm test:manifest` — exit `0`
+  - `pnpm --filter @inkroute/web build` — exit `0`
+  - `pnpm --filter @inkroute/dashboard build` — exit `0`
+- Manifests updated by `workspace:all`:
+  - `docs/workspace/manifests/workspace-import-audit.json`
+  - `docs/workspace/manifests/package-script-audit.json`
+  - `docs/workspace/manifests/runtime-readiness.json`
+- Manifests updated by `handoff:all`:
+  - `docs/handoff/manifests/phase-documentation-audit.json`
+  - `docs/handoff/manifests/gap-audit-report.json`
+- Manifests updated by `quality:all`:
+  - `docs/quality/manifests/markdown-link-audit.json`
+  - `docs/quality/manifests/gap-evidence-audit.json`
+  - `docs/quality/manifests/quality-gates.json`
+- Lockfile status: `pnpm-lock.yaml` present and tracked at repo root.
+- Runtime readiness summary (from `docs/workspace/manifests/runtime-readiness.json`):
+  - `workspace-imports`: pass
+  - `package-scripts`: pass
+  - `pnpm-lockfile`: pass
+  - `env-example`: pass
+  - `production-blockers`: fail — 126 production-blocking gaps across 133 gap rows
+- Remaining blockers after this run remain evidence-backed in existing gap rows; no new blockers were introduced by this pass.

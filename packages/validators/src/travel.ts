@@ -14,7 +14,9 @@ export const travelCityInputSchema = z.object({
   waitlistEnabled: z.boolean().default(true),
 });
 
-export const travelScheduleInputSchema = dateRangeSchema.extend({
+export const travelScheduleInputSchema = z.intersection(
+  dateRangeSchema,
+  z.object({
   artistId: cuidLikeSchema,
   travelCityId: cuidLikeSchema,
   studioId: cuidLikeSchema.optional(),
@@ -24,9 +26,12 @@ export const travelScheduleInputSchema = dateRangeSchema.extend({
   guestSpotUrl: z.string().url().optional(),
   publicNotes: z.string().max(1000).optional(),
   internalNotes: z.string().max(2000).optional(),
-});
+  }),
+);
 
-export const availabilityWindowInputSchema = dateRangeSchema.extend({
+export const availabilityWindowInputSchema = z.intersection(
+  dateRangeSchema,
+  z.object({
   artistId: cuidLikeSchema,
   travelCityId: cuidLikeSchema.optional(),
   travelScheduleId: cuidLikeSchema.optional(),
@@ -38,7 +43,8 @@ export const availabilityWindowInputSchema = dateRangeSchema.extend({
   bufferAfterMinutes: z.number().int().nonnegative().max(480).default(0),
   publicLabel: z.string().max(160).optional(),
   internalNotes: z.string().max(2000).optional(),
-});
+  }),
+);
 
 export const travelStopInputSchema = travelScheduleInputSchema;
 

@@ -3,8 +3,8 @@ import { demoTravelStops, inkrouteDemoArtist, inkrouteDemoTenant } from "@inkrou
 
 export const dynamic = "force-static";
 
-export function GET(_request: Request, context: { params: { tenantSlug: string; artistSlug: string } }) {
-  const { tenantSlug, artistSlug } = context.params;
+export async function GET(_request: Request, context: { params: Promise<{ tenantSlug: string; artistSlug: string }> }) {
+  const { tenantSlug, artistSlug } = await context.params;
   if (tenantSlug !== inkrouteDemoTenant.slug || artistSlug !== inkrouteDemoArtist.slug) {
     return Response.json({ ok: false, error: { code: "NOT_FOUND", message: "No demo travel calendar exists for this tenant or artist." } }, { status: 404 });
   }
