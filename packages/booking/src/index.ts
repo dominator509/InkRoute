@@ -252,7 +252,7 @@ export function getAvailableBookingActions(status: BookingStatus): BookingLifecy
 export function transitionBookingStatus(status: BookingStatus, action: BookingLifecycleAction): BookingStatus {
   const transition = bookingLifecycleTransitions.find((item) => item.from === status && item.action === action);
   if (!transition) {
-    throw new Error(`Invalid booking lifecycle action ${action} from status ${status}`);
+    return status;
   }
   return transition.to;
 }

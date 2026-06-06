@@ -602,9 +602,21 @@ export const dashboardProviderBoundaryMatrix = providerBoundaryMatrix;
 const renderedDepositTemplate = renderTemplate("deposit_request", { ...notificationContext, depositUrl: "https://example.test/deposit/demo" });
 
 export const dashboardProviderSendDrafts = [
-  createProviderSendDraft({ channel: "email", destination: dashboardNotificationConsent.email, template: renderedDepositTemplate }),
-  createProviderSendDraft({ channel: "sms", destination: dashboardNotificationConsent.phone, template: renderedDepositTemplate }),
-  createProviderSendDraft({ channel: "push", destination: dashboardNotificationConsent.pushToken, template: renderedDepositTemplate }),
+  createProviderSendDraft({
+    channel: "email",
+    ...(dashboardNotificationConsent.email ? { destination: dashboardNotificationConsent.email } : {}),
+    template: renderedDepositTemplate,
+  }),
+  createProviderSendDraft({
+    channel: "sms",
+    ...(dashboardNotificationConsent.phone ? { destination: dashboardNotificationConsent.phone } : {}),
+    template: renderedDepositTemplate,
+  }),
+  createProviderSendDraft({
+    channel: "push",
+    ...(dashboardNotificationConsent.pushToken ? { destination: dashboardNotificationConsent.pushToken } : {}),
+    template: renderedDepositTemplate,
+  }),
 ];
 
 export const dashboardDeliveryLogDrafts = [

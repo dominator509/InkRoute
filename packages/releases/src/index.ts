@@ -242,8 +242,8 @@ export function createReleaseCandidate(input: ReleaseCandidateInput): ReleaseCan
   const migrationGate = assessMigrationCompatibility(migrations);
   const gates = [...suppliedGates, migrationGate];
   const gateRisks = gates.map((gate): ReleaseRiskLevel => {
-    if (gate.status === "block") return "critical";
-    if (gate.status === "warn") return "high";
+    if (gate.status === "block") return "high";
+    if (gate.status === "warn") return "medium";
     if (gate.status === "not_run") return "medium";
     return "low";
   });

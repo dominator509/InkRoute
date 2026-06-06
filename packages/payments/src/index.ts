@@ -494,7 +494,12 @@ export function interpretStripeWebhook(eventType: string): StripeWebhookInterpre
 }
 
 export function generateReceiptNumber(tenantSlug: string, paidAt: ISODateString, sequence: number): string {
-  const safeTenant = tenantSlug.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10) || "TENANT";
+  const safeTenant = tenantSlug
+    .toUpperCase()
+    .replace(/[^A-Z0-9-]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 10) || "TENANT";
   const date = new Date(paidAt);
   const year = Number.isFinite(date.getTime()) ? date.getUTCFullYear() : new Date().getUTCFullYear();
   return `${safeTenant}-${year}-${String(sequence).padStart(5, "0")}`;

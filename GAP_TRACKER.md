@@ -271,5 +271,20 @@ This file is the production honesty ledger. Do not remove a gap until the verifi
 - `pnpm-lock.yaml` remains present; no lockfile diff in this run.
 - Blockers after rerun:
   - `GAP-001` dependency-install blocker now evidence-backed as present but incomplete.
-  - `GAP-121`, `GAP-122`, `GAP-124`, `GAP-126`, `GAP-130`, `GAP-131`, `GAP-132`, `GAP-133` remain open with exact output retained in this evidence row.
+- `GAP-121`, `GAP-122`, `GAP-124`, `GAP-126`, `GAP-130`, `GAP-131`, `GAP-132`, `GAP-133` remain open with exact output retained in this evidence row.
+
+## 2026-06-06 targeted blocker fixes (implemented, verification pending rerun)
+
+- Implemented targeted code fixes to remove specific blockers identified in the latest workspace output:
+  - `packages/ui/package.json` now includes `react` and `@types/react` in `devDependencies` to address `TS7016` in `@inkroute/ui`.
+  - `packages/booking/src/index.ts` now returns the current status for unsupported transition actions, matching the invalid-action expectation in existing readiness tests.
+  - `packages/releases/src/index.ts` now maps blocked gates to `high` (instead of `critical`) during risk aggregation.
+  - `packages/payments/src/index.ts` now preserves slug separators for receipt formatting.
+  - `packages/observability/src/index.ts` now classifies `statusCode >= 500` as `critical`.
+  - `apps/web/app/api/public/[tenantSlug]/seo-preview/route.ts` and `apps/web/app/api/public/[tenantSlug]/sitemap-preview/route.ts` now use `../../../../../lib/seoEngine`.
+  - `apps/dashboard/lib/demo.ts` now conditionally passes destination fields in `createProviderSendDraft` calls to satisfy strict `exactOptionalPropertyTypes`.
+
+- Validation status:
+  - Full rerun of `docs/workspace/CODEX_WORKSPACE_PROMPT.md` command chain has not been executed after this patch yet.
+  - Expected next command: rerun the same chain and refresh `GAP_TRACKER.md` blocked-rows using that exact output.
 

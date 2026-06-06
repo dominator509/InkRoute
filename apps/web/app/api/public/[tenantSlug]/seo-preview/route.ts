@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildPublicSeoEnginePreview } from "../../../../lib/seoEngine";
+import { buildPublicSeoEnginePreview } from "../../../../../lib/seoEngine";
 
 export async function GET(_request: Request, { params }: { params: { tenantSlug: string } }) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";

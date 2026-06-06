@@ -170,7 +170,7 @@ export function redactMetadata(metadata: Record<string, unknown> = {}): { metada
 export function classifyErrorSeverity(input: Pick<ObservabilityEventInput, "source" | "message" | "statusCode" | "handled">): ErrorSeverity {
   const message = input.message.toLowerCase();
 
-  if (input.statusCode && input.statusCode >= 500) return "high";
+  if (input.statusCode && input.statusCode >= 500) return "critical";
   if (message.includes("payment") || message.includes("stripe") || message.includes("tenant isolation") || message.includes("auth bypass")) return "critical";
   if (message.includes("medical") || message.includes("consent") || message.includes("privacy") || message.includes("pii")) return "critical";
   if (input.source === "api" || input.source === "webhook") return input.handled === false ? "high" : "medium";
