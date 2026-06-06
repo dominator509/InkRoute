@@ -147,3 +147,30 @@ Observed outcomes:
 Current phase state:
 - Workspace import and package-script audits are green.
 - Runtime readiness remains flagged as `needs-attention` until production blockers are resolved with evidence-backed gap reductions.
+## 2026-06-06 command-driven workspace verification rerun (15:27:54Z)
+
+- Executed from `C:\dev\InkRoute` on branch `main`.
+- Full run log: `docs/workspace/manifests/workspace-prompt-run-2026-06-06-plan.log`.
+- Outcomes:
+  - `corepack enable` — exit `0`.
+  - `pnpm install` — exit `0`.
+  - `pnpm workspace:all` — exit `0`.
+  - `pnpm handoff:all` — exit `0`.
+  - `pnpm quality:all` — exit `0`.
+  - `pnpm typecheck` — exit `0`.
+  - `pnpm test:unit` — exit `0`.
+  - `pnpm test:manifest` — exit `0`.
+  - `pnpm --filter @inkroute/web build` — exit `0`.
+  - `pnpm --filter @inkroute/dashboard build` — exit `0`.
+- Manifest outputs refreshed (by command run):
+  - `docs/workspace/manifests/workspace-import-audit.json`
+  - `docs/workspace/manifests/package-script-audit.json`
+  - `docs/workspace/manifests/runtime-readiness.json`
+  - `docs/quality/manifests/markdown-link-audit.json`
+  - `docs/quality/manifests/gap-evidence-audit.json`
+  - `docs/quality/manifests/quality-gates.json`
+  - `docs/handoff/manifests/phase-documentation-audit.json`
+  - `docs/handoff/manifests/gap-audit-report.json`
+- Current status:
+  - Runtime build and test chain is green in this environment.
+  - Runtime readiness remains blocked by `126` production blockers.

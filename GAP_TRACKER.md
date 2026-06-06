@@ -228,6 +228,37 @@ This file is the production honesty ledger. Do not remove a gap until the verifi
   - `GAP-130`, `GAP-131`, `GAP-132`, `GAP-133` remain open for workspace/runtime evidence and enforcement.
   - `GAP-121`, `GAP-122`, `GAP-124`, `GAP-126` remain open for quality/handoff verification coverage.
 
+## 2026-06-06 workspace verification evidence (rerun at 2026-06-06 15:27:54-15:27:56Z)
+
+- Executed from `C:\dev\InkRoute` with `origin` remote validated as `https://github.com/dominator509/InkRoute.git` and branch `main`.
+- Full command stream and per-step outcomes are preserved in:
+  - `docs/workspace/manifests/workspace-prompt-run-2026-06-06-plan.log`
+- Command chain outcome:
+  - `corepack enable` — exit `0`
+  - `pnpm install` — exit `0`
+  - `pnpm workspace:all` — exit `0`
+    - regenerated:
+      - `docs/workspace/manifests/workspace-import-audit.json`
+      - `docs/workspace/manifests/package-script-audit.json`
+      - `docs/workspace/manifests/runtime-readiness.json`
+  - `pnpm handoff:all` — exit `0`
+    - regenerated:
+      - `docs/handoff/manifests/phase-documentation-audit.json`
+      - `docs/handoff/manifests/gap-audit-report.json`
+  - `pnpm quality:all` — exit `0`
+    - regenerated:
+      - `docs/quality/manifests/markdown-link-audit.json`
+      - `docs/quality/manifests/gap-evidence-audit.json`
+      - `docs/quality/manifests/quality-gates.json`
+  - `pnpm typecheck` — exit `0`
+  - `pnpm test:unit` — exit `0` (`14 passed, 0 failed`)
+  - `pnpm test:manifest` — exit `0` (`{\"ok\":true,\"manifestCount\":7,\"requiredFileCount\":15,\"declaredSuites\":28}`)
+  - `pnpm --filter @inkroute/web build` — exit `0`
+  - `pnpm --filter @inkroute/dashboard build` — exit `0`
+- Remaining blocker status after run:
+  - `GAP-132` remains blocked due `126` production blockers in `docs/workspace/manifests/runtime-readiness.json`.
+  - `GAP-121`, `GAP-122`, `GAP-124`, `GAP-126`, `GAP-130`, `GAP-133` remain open with unchanged blocker state.
+
 ## 2026-06-06 workspace verification evidence (rerun at 08:02:09Z)
 
 - Executed from `C:\dev\InkRoute` with remote `origin` set to `https://github.com/dominator509/InkRoute.git` on branch `main`.

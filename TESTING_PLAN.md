@@ -346,3 +346,19 @@ Executed full `docs/workspace/CODEX_WORKSPACE_PROMPT.md` chain successfully.
 Evidence artifact: `docs/workspace/manifests/workspace-prompt-run-2026-06-06-4.log`.
 
 Current verification status: command chain now green under the same existing production-blocking landscape reported by runtime readiness (`126` production blockers across `133` gap rows).
+### Verification status (2026-06-06 rerun at 15:27:54Z)
+
+- Full command chain was re-executed from `docs/workspace/CODEX_WORKSPACE_PROMPT.md`:
+  - `corepack enable` PASS (`0`)
+  - `pnpm install` PASS (`0`)
+  - `pnpm workspace:all` PASS (`0`)
+  - `pnpm handoff:all` PASS (`0`)
+  - `pnpm quality:all` PASS (`0`)
+  - `pnpm typecheck` PASS (`0`)
+  - `pnpm test:unit` PASS (`14 passed, 0 failed`, `0` failed)
+  - `pnpm test:manifest` PASS (`{"ok":true,"manifestCount":7,"requiredFileCount":15,"declaredSuites":28}`)
+  - `pnpm --filter @inkroute/web build` PASS (`0`)
+  - `pnpm --filter @inkroute/dashboard build` PASS (`0`)
+- Exact command output captured in `docs/workspace/manifests/workspace-prompt-run-2026-06-06-plan.log`.
+- Lockfile status: `pnpm-lock.yaml` exists and is tracked.
+- Remaining production blockers: still tracked in `GAP_TRACKER.md` (`GAP-132` and other Phase 17/18 gaps).

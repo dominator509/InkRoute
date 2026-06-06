@@ -27,6 +27,8 @@ coverage.lcov-report/
 .expo/
 .expo-shared/
 expo-env.d.ts
+expo/
+expo-start/
 ios/
 android/
 web-build/
