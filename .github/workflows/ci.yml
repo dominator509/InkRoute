@@ -28,6 +28,9 @@ jobs:
         run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness || true
       - name: Verify Phase 17 quality gates
         run: pnpm quality:all
+      - name: Verify PR GAP tracker diff evidence
+        if: github.event_name == 'pull_request'
+        run: pnpm quality:pr-gaps
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test:unit
