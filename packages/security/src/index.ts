@@ -77,6 +77,359 @@ export interface RateLimitEvaluationResult {
   warning: string;
 }
 
+export type EncryptionReadinessStatus = "ready" | "not_configured" | "invalid_key" | "unsupported_environment";
+export type EncryptionAttemptStatus = "stored" | "redacted";
+
+export interface EncryptionRuntimeContext {
+  status: EncryptionReadinessStatus;
+  keyVersion: string;
+  ready: boolean;
+  reason: string;
+}
+
+export interface EncryptionAttempt {
+  status: EncryptionAttemptStatus;
+  encryptedValue: string | null;
+  keyVersion: string;
+  reason?: string;
+}
+
+interface EncryptionEnvelope {
+  alg: "AES-256-GCM";
+  keyVersion: string;
+  iv: string;
+  data: string;
+}
+
+const ENCRYPTION_PREFIX = "ENC1:";
+
+type LoadedEncryptionKey = {
+  key: CryptoKey;
+  keyId: string;
+  source: "primary" | "secondary";
+};
+
+let cachedEncryptionKeys: LoadedEncryptionKey[] | null = null;
+
+function normalizeBase64(input: string): string {
+  return input.replace(/[\n\r\s]/g, "").replace(/-/g, "+").replace(/_/g, "/");
+}
+
+function decodeBase64ToBytes(input: string): Uint8Array | null {
+  const base64 = normalizeBase64(input);
+  if (!base64) return null;
+
+  const remainder = base64.length % 4;
+  const normalized = remainder === 0 ? base64 : remainder === 2 ? `${base64}==` : remainder === 3 ? `${base64}=` : "";
+  if (!normalized) return null;
+
+  try {
+    if (typeof atob === "function") {
+      const decoded = atob(normalized);
+      const bytes = new Uint8Array(decoded.length);
+      for (let index = 0; index < decoded.length; index += 1) {
+        bytes[index] = decoded.charCodeAt(index);
+      }
+      return bytes;
+    }
+
+    if (typeof Buffer !== "undefined") {
+      const decoded = Buffer.from(normalized, "base64");
+      return new Uint8Array(decoded);
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeHexToBytes(input: string): Uint8Array | null {
+  if (!/^[0-9a-fA-F]+$/.test(input) || input.length % 2 !== 0) return null;
+  const bytes = new Uint8Array(input.length / 2);
+  for (let index = 0; index < bytes.length; index += 1) {
+    const chunk = input.slice(index * 2, index * 2 + 2);
+    const value = Number.parseInt(chunk, 16);
+    if (Number.isNaN(value)) return null;
+    bytes[index] = value;
+  }
+  return bytes;
+}
+
+function normalizeKeyMaterial(raw: string): Uint8Array | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (trimmed.length === 64 && /^[0-9a-fA-F]+$/.test(trimmed)) return normalizeHexToBytes(trimmed);
+  if (trimmed.length >= 32) {
+    const base64Bytes = decodeBase64ToBytes(trimmed);
+    if (base64Bytes && base64Bytes.length >= 16) {
+      return base64Bytes.slice(0, 32);
+    }
+  }
+
+  const encoder = new TextEncoder();
+  return encoder.encode(trimmed);
+}
+
+async function ensureKeyLength(rawKey: string): Promise<Uint8Array | null> {
+  const decoded = normalizeKeyMaterial(rawKey);
+  if (!decoded) return null;
+  if (decoded.length === 32) return decoded;
+  if (decoded.length > 32) return decoded.slice(0, 32);
+
+  if (typeof globalThis.crypto === "undefined" || !globalThis.crypto.subtle) {
+    const normalized = new Uint8Array(32);
+    normalized.set(decoded);
+    return normalized;
+  }
+
+  try {
+    const digest = await globalThis.crypto.subtle.digest("SHA-256", decoded);
+    return new Uint8Array(digest);
+  } catch {
+    const normalized = new Uint8Array(32);
+    normalized.set(decoded);
+    return normalized;
+  }
+}
+
+function isCryptoUnavailable(): boolean {
+  return typeof globalThis.crypto === "undefined" || !globalThis.crypto.subtle;
+}
+
+function getConfiguredPrimaryKey(): string {
+  return process.env.SECURITY_ENCRYPTION_PRIMARY_KEY || process.env.SECURITY_ENCRYPTION_SECONDARY_KEY || "";
+}
+
+function getConfiguredEncryptionKeyEntries() {
+  const primary = process.env.SECURITY_ENCRYPTION_PRIMARY_KEY?.trim();
+  const secondary = process.env.SECURITY_ENCRYPTION_SECONDARY_KEY?.trim();
+  const primaryKeyId = process.env.SECURITY_ENCRYPTION_KEY_ID?.trim() || "primary";
+  const secondaryKeyId = process.env.SECURITY_ENCRYPTION_SECONDARY_KEY_ID?.trim() || "secondary";
+
+  const entries: { keyId: string; raw: string; source: LoadedEncryptionKey["source"] }[] = [];
+  if (primary) {
+    entries.push({ keyId: primaryKeyId, raw: primary, source: "primary" });
+  }
+  if (secondary) {
+    const resolvedSecondaryKeyId = secondaryKeyId === primaryKeyId ? `${secondaryKeyId}-secondary` : secondaryKeyId;
+    entries.push({ keyId: resolvedSecondaryKeyId, raw: secondary, source: "secondary" });
+  }
+  return entries;
+}
+
+async function loadEncryptionKeys(): Promise<LoadedEncryptionKey[] | null> {
+  if (cachedEncryptionKeys) return cachedEncryptionKeys;
+  if (typeof globalThis.crypto === "undefined" || !globalThis.crypto.subtle) return null;
+
+  const configuredKeys = getConfiguredEncryptionKeyEntries();
+  if (configuredKeys.length === 0) return null;
+
+  const importedKeys: LoadedEncryptionKey[] = [];
+  for (const candidate of configuredKeys) {
+    const keyBytes = await ensureKeyLength(candidate.raw);
+    if (!keyBytes) continue;
+
+    try {
+      const imported = await globalThis.crypto.subtle.importKey(
+        "raw",
+        keyBytes,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"],
+      );
+      importedKeys.push({ key: imported, keyId: candidate.keyId, source: candidate.source });
+    } catch {
+      continue;
+    }
+  }
+
+  if (!importedKeys.length) {
+    return null;
+  }
+
+  cachedEncryptionKeys = importedKeys;
+  return importedKeys;
+}
+
+async function loadEncryptionKey(): Promise<LoadedEncryptionKey | null> {
+  const keys = await loadEncryptionKeys();
+  return keys?.[0] ?? null;
+}
+
+function pickDecryptionOrder(keys: LoadedEncryptionKey[], keyVersion?: string) {
+  if (!keyVersion) return keys;
+  const preferred = keys.find((entry) => entry.keyId === keyVersion);
+  if (!preferred) return keys;
+  return [preferred, ...keys.filter((entry) => entry.keyId !== keyVersion)];
+}
+
+function isKeyConfigured(): boolean {
+  return getConfiguredEncryptionKeyEntries().length > 0;
+}
+
+export async function inspectConfiguredEncryptionKeys() {
+  const configured = getConfiguredEncryptionKeyEntries();
+  const imported = await loadEncryptionKeys();
+  return {
+    hasPrimary: configured.some((entry) => entry.source === "primary"),
+    hasSecondary: configured.some((entry) => entry.source === "secondary"),
+    activeKeyId: imported?.[0]?.keyId ?? null,
+    ready: Boolean(imported?.length),
+    totalConfigured: configured.length,
+    configuredIds: configured.map((entry) => entry.keyId),
+  };
+}
+
+function toBase64(bytes: Uint8Array): string {
+  let value = "";
+  for (let index = 0; index < bytes.length; index += 1) {
+    value += String.fromCharCode(bytes[index]);
+  }
+  if (typeof btoa === "function") return btoa(value);
+  if (typeof Buffer === "undefined") return "";
+  return Buffer.from(value, "binary").toString("base64");
+}
+
+function fromBase64(base64: string): Uint8Array {
+  if (typeof atob === "function") {
+    const decoded = atob(base64);
+    const bytes = new Uint8Array(decoded.length);
+    for (let index = 0; index < decoded.length; index += 1) {
+      bytes[index] = decoded.charCodeAt(index);
+    }
+    return bytes;
+  }
+
+  if (typeof Buffer !== "undefined") {
+    const decoded = Buffer.from(base64, "base64");
+    return new Uint8Array(decoded);
+  }
+  return new Uint8Array(0);
+}
+
+export async function getEncryptionReadiness(): Promise<EncryptionRuntimeContext> {
+  const keyId = process.env.SECURITY_ENCRYPTION_KEY_ID ?? "primary";
+  const config = isKeyConfigured();
+  if (!config) {
+    return {
+      status: "not_configured",
+      keyVersion: keyId,
+      ready: false,
+      reason: "No SECURITY_ENCRYPTION_* key is configured.",
+    };
+  }
+
+  if (isCryptoUnavailable()) {
+    return {
+      status: "unsupported_environment",
+      keyVersion: keyId,
+      ready: false,
+      reason: "Web Crypto API is not available in this execution environment.",
+    };
+  }
+
+  const loaded = await loadEncryptionKey();
+  if (!loaded) {
+    return {
+      status: "invalid_key",
+      keyVersion: keyId,
+      ready: false,
+      reason: "Encryption key material is present but could not be imported.",
+    };
+  }
+
+  return {
+    status: "ready",
+    keyVersion: loaded.keyId,
+    ready: true,
+    reason: loaded.source === "secondary" ? "Primary key unavailable; secondary key is active." : "Encryption key is configured.",
+  };
+}
+
+export async function encryptTextField(value?: string | null): Promise<EncryptionAttempt> {
+  if (!value) {
+    return {
+      status: "redacted",
+      encryptedValue: null,
+      keyVersion: process.env.SECURITY_ENCRYPTION_KEY_ID ?? "primary",
+      reason: "No input value provided.",
+    };
+  }
+
+  const readiness = await getEncryptionReadiness();
+  if (!readiness.ready) {
+    return {
+      status: "redacted",
+      encryptedValue: null,
+      keyVersion: readiness.keyVersion,
+      reason: readiness.reason,
+    };
+  }
+
+  const keyMaterial = await loadEncryptionKey();
+  if (!keyMaterial) {
+    return {
+      status: "redacted",
+      encryptedValue: null,
+      keyVersion: readiness.keyVersion,
+      reason: "Encryption key material was not available at runtime.",
+    };
+  }
+
+  try {
+    const iv = new Uint8Array(12);
+    globalThis.crypto.getRandomValues(iv);
+    const encoded = new TextEncoder().encode(value);
+    const encrypted = new Uint8Array(await globalThis.crypto.subtle.encrypt({ name: "AES-GCM", iv }, keyMaterial.key, encoded));
+    const envelope: EncryptionEnvelope = {
+      alg: "AES-256-GCM",
+      keyVersion: keyMaterial.keyId,
+      iv: toBase64(iv),
+      data: toBase64(encrypted),
+    };
+    return {
+      status: "stored",
+      encryptedValue: `${ENCRYPTION_PREFIX}${JSON.stringify(envelope)}`,
+      keyVersion: keyMaterial.keyId,
+    };
+  } catch {
+    return {
+      status: "redacted",
+      encryptedValue: null,
+      keyVersion: keyMaterial.keyId,
+      reason: "Failed to encrypt at runtime.",
+    };
+  }
+}
+
+export async function decryptTextField(value?: string | null): Promise<string | null> {
+  if (!value || !value.startsWith(ENCRYPTION_PREFIX)) return null;
+  const payload = value.slice(ENCRYPTION_PREFIX.length);
+  if (typeof globalThis.crypto === "undefined" || !globalThis.crypto.subtle) return null;
+  const keyMaterials = await loadEncryptionKeys();
+  if (!keyMaterials || keyMaterials.length === 0) return null;
+  try {
+    const envelope = JSON.parse(payload) as EncryptionEnvelope;
+    if (envelope.alg !== "AES-256-GCM") return null;
+    const iv = fromBase64(envelope.iv);
+    const data = fromBase64(envelope.data);
+
+    const orderedKeys = pickDecryptionOrder(keyMaterials, envelope.keyVersion);
+    for (const keyMaterial of orderedKeys) {
+      try {
+        const plain = await globalThis.crypto.subtle.decrypt({ name: "AES-GCM", iv }, keyMaterial.key, data);
+        return new TextDecoder().decode(plain);
+      } catch {
+        continue;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export interface CsrfControlPlan {
   id: string;
   routeFamily: string;

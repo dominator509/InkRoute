@@ -48,7 +48,7 @@ All route handlers must:
 | --- | --- | --- | --- | --- | --- |
 | `GET` | `/api/public/:tenantSlug/portfolio` | Public portfolio items | Query validator pending | No | Planned |
 | `GET` | `/api/public/:tenantSlug/travel` | Public travel schedule/city availability | Query validator pending | No | Planned |
-| `POST` | `/api/public/:tenantSlug/booking-requests` | Create booking request | `bookingRequestInputSchema` | No, must be rate-limited before production | Local runtime validation + draft persistence (not production DB) |
+| `POST` | `/api/public/:tenantSlug/booking-requests` | Create booking request | `bookingRequestInputSchema` | No, must be rate-limited before production | Tenant-scoped validation, local + DB persistence path, and fallback behavior if database is unavailable |
 | `POST` | `/api/public/:tenantSlug/waitlists` | City waitlist signup | Planned | No, rate-limited | Planned |
 | `GET` | `/api/public/:tenantSlug/seo/cities/:citySlug` | City SEO page data | `seoCityPageInputSchema` for admin writes | No | Planned |
 | `GET` | `/api/public/:tenantSlug/seo/styles/:styleSlug` | Style SEO page data | `seoStylePageInputSchema` for admin writes | No | Planned |
@@ -128,14 +128,15 @@ The public website now has static demo city/style routes and disabled booking/co
 
 ## Phase 4 implementation note
 
-`apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts` now exists as a non-persistent API boundary. It:
+`apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts` now includes production-oriented persistence behavior in the DB path:
 
 - Parses JSON.
 - Validates against `bookingRequestInputSchema`.
-- Returns `400` with flattened Zod issues for invalid input.
-- Returns local runtime draft persistence and readiness metadata for now; tenant resolution, Prisma writes, full reference upload handoff, notifications, deposits, and calendar holds remain non-production.
+- Resolves tenant by slug and applies local rate limiting.
+- Persists `BookingRequest`, `BookingStateEvent`, and `AuditLog` rows to Postgres when DB is available.
+- Falls back to local runtime draft persistence when DB is unavailable.
 
-Do not expose this as a production booking endpoint until `GAP-032`, `GAP-033`, and `GAP-034` are resolved.
+Do not expose this as a complete production booking endpoint until `GAP-019`, `GAP-020`, `GAP-021`, `GAP-031`, `GAP-032`, `GAP-033`, and `GAP-034` are fully validated.
 
 
 ## Phase 5 implementation note
@@ -283,7 +284,7 @@ Returns static sitemap-plan JSON for inspection. Production sitemap generation m
 
 ## Phase 11 observability contract notes
 
-Observability endpoints are intentionally non-production. They build sanitized drafts through `@inkroute/observability`, then return `501` until the following exist: rate limiting, tenant resolver, auth/RBAC for dashboard routes, Prisma persistence, provider signature verification, alert provider configuration, and automated tests.
+Observability endpoints are partially production-oriented. They build sanitized drafts through `@inkroute/observability`, apply rate limiting and tenant resolution, persist redacted `ErrorReport` rows on DB-available paths, and fall back to local runtime when DB is unavailable. Provider signature verification, dashboard query APIs, and alert provider configuration remain pending.
 
 Error-report responses must never include raw stack traces, client PII, medical notes, consent signatures, payment data, cookies, authorization headers, or provider tokens. Future persistent records should store redacted metadata only, plus `stackHash`, `fingerprint`, severity, source, route, release, runtime, and environment.
 
@@ -291,9 +292,9 @@ Error-report responses must never include raw stack traces, client PII, medical 
 
 ### `GET /api/releases`
 
-Dashboard-only scaffolded route returning a demo release candidate, rollback draft, and feature flag decisions.
+Dashboard-only route returning tenant-scoped release candidates, rollback drafts, and feature-flag decision context.
 
-Current status: scaffolded, read-only, not authenticated, not production-safe.
+Current status: authenticated (`release:read`) and tenant-scoped reads with DB-backed persistence and fallback behavior when DB is unavailable.
 
 Required production pipeline:
 
@@ -306,7 +307,7 @@ Required production pipeline:
 
 ### `POST /api/releases`
 
-Current status: returns `501 RELEASE_PERSISTENCE_NOT_IMPLEMENTED` after creating a draft release candidate from basic request shape.
+Current status: validates request schema, persists `ReleaseRecord` with audit metadata on DB-available paths, and falls back to local response without durable writes when DB is unavailable.
 
 Future production behavior:
 
@@ -319,7 +320,7 @@ Future production behavior:
 
 ### `GET /api/feature-flags`
 
-Current status: returns static `@inkroute/releases` flag definitions and preview/production decisions.
+Current status: resolves persisted global + tenant flag records from DB and evaluates tenant-scoped decisions before returning safe decision snapshots.
 
 Future production behavior:
 
@@ -330,7 +331,7 @@ Future production behavior:
 
 ### `POST /api/feature-flags`
 
-Current status: returns `501 FEATURE_FLAG_MUTATION_NOT_IMPLEMENTED`.
+Current status: validates mutation payloads, persists feature-flag updates with audit metadata on DB-available paths, and blocks provider-credentialed enables when required credentials are missing.
 
 Future production behavior:
 
@@ -343,7 +344,7 @@ Future production behavior:
 
 ### `GET /api/public/[tenantSlug]/release-health`
 
-Current status: returns limited static-demo release health data.
+Current status: returns release health from tenant-scoped persisted `ReleaseRecord` and `FeatureFlag` rows when DB is available, with a safe fallback snapshot otherwise.
 
 Future production behavior:
 
@@ -388,7 +389,7 @@ Builds a privacy request draft for internal review only. Production requires own
 
 ### `GET /api/deployment/readiness`
 
-**Status:** Scaffolded / unprotected / preview-only.
+**Status:** Auth-guarded and tenant-scoped readiness endpoint with DB fallback behavior.
 
 Returns a deployment readiness preview built from `@inkroute/deployment` helpers:
 
@@ -402,6 +403,4 @@ The route must not expose secret values. It is not production-safe until dashboa
 
 ### `POST /api/deployment/readiness`
 
-**Status:** Not implemented.
-
-Returns `501 DEPLOYMENT_MUTATION_NOT_IMPLEMENTED`. Deployment approvals, migrations, provider publishes, and rollbacks require protected CI/CD, RBAC, audit logs, provider credentials, and release records.
+**Status:** Request validation and audit-ready persistence behavior is in place; deployment execution (migration jobs, provider publishes, approvals, rollbacks) is intentionally out-of-band until CI/CD environments and credentials are provisioned.

@@ -1,12 +1,104 @@
+import { NextRequest, NextResponse } from "next/server";
+import {
+  buildDeploymentPlan,
+  buildHandoffTasks,
+  buildProductionLaunchChecklist,
+  evaluateEnvironmentReadiness,
+} from "@inkroute/deployment";
+import { deploymentReadinessMutationSchema, type DeploymentReadinessMutationInput } from "@inkroute/validators";
+import { prisma } from "@inkroute/db";
+import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
+
 declare const process: { env: Record<string, string | undefined> };
 
-import { buildDeploymentPlan, buildHandoffTasks, buildProductionLaunchChecklist, evaluateEnvironmentReadiness } from "@inkroute/deployment";
+type DeploymentOperationPolicy = {
+  implemented: boolean;
+  statusCode: number;
+  status: string;
+  boundary: string;
+  nextActions: string[];
+};
 
-export async function GET() {
-  const plan = buildDeploymentPlan("production");
-  const checklist = buildProductionLaunchChecklist();
-  const handoffTasks = buildHandoffTasks();
-  const environment = evaluateEnvironmentReadiness(
+type DeploymentGetPayload = {
+  ok: true;
+  source: string;
+  tenantId: string;
+  actorRole: string;
+  targetEnvironment: "production" | "preview" | "staging" | "local";
+  operationMode: "read-only";
+  productionBlocked: true | false;
+  environment: ReturnType<typeof evaluateEnvironmentReadiness>;
+  plan: ReturnType<typeof buildDeploymentPlan>;
+  checklist: ReturnType<typeof buildProductionLaunchChecklist>;
+  handoffTasks: ReturnType<typeof buildHandoffTasks>;
+  gapIds: string[];
+  boundary: string;
+};
+
+type DeploymentPostPayload = {
+  ok: true;
+  source: string;
+  tenantId: string;
+  actorRole: string;
+  targetEnvironment: DeploymentReadinessMutationInput["targetEnvironment"];
+  operation: DeploymentReadinessMutationInput["operation"];
+  operationResult: DeploymentOperationPolicy;
+  environment: ReturnType<typeof evaluateEnvironmentReadiness>;
+  plan: ReturnType<typeof buildDeploymentPlan>;
+  requestId?: string;
+  warning?: string;
+  auditId?: string;
+  persistence: "database" | "local-fallback";
+  gapIds: string[];
+};
+
+const deploymentGapIds = ["GAP-014", "GAP-015", "GAP-089", "GAP-114", "GAP-115"];
+
+const operationPolicies: Record<DeploymentReadinessMutationInput["operation"], DeploymentOperationPolicy> = {
+  "readiness-review": {
+    implemented: true,
+    statusCode: 200,
+    status: "requested",
+    boundary: "Readiness review request is accepted and persisted as an auditable control-plane action, but deployment execution remains external to this route.",
+    nextActions: [
+      "Attach signed CI/CD approval workflow before any rollout changes.",
+      "Record environment credentials in the provider secret store before production actions.",
+    ],
+  },
+  "request-release-plan": {
+    implemented: false,
+    statusCode: 409,
+    status: "blocked",
+    boundary: "Release job orchestration is intentionally blocked in this route until CI/CD provider jobs and environments are provisioned.",
+    nextActions: [
+      "Use the release governance workflow in GitHub Actions once deployment environments are provisioned.",
+      "Attach release artifacts and tenant-scoped migration evidence to the approval record.",
+    ],
+  },
+  "request-rollback-plan": {
+    implemented: true,
+    statusCode: 200,
+    status: "preflight-only",
+    boundary: "Rollback planning can be requested and recorded, but execution remains outside this API.",
+    nextActions: [
+      "Define the protected rollback window for production and publish a rehearsed rollback command list.",
+      "Attach post-deploy incident evidence before approving a manual rollback.",
+    ],
+  },
+  "request-production-approval": {
+    implemented: false,
+    statusCode: 409,
+    status: "blocked",
+    boundary: "Production approvals, migrations, and provider publishes require protected CI/CD environments and legal/ops gates.",
+    nextActions: [
+      "Require signed approval from the on-call approver in the deployment workflow.",
+      "Store approval evidence in an immutable audit chain before production execution.",
+    ],
+  },
+};
+
+function buildEnvironmentSnapshot(targetEnvironment: DeploymentReadinessMutationInput["targetEnvironment"] = "production") {
+  return evaluateEnvironmentReadiness(
     {
       NODE_ENV: process.env.NODE_ENV,
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
@@ -24,26 +116,138 @@ export async function GET() {
       SECURITY_ENCRYPTION_PRIMARY_KEY: process.env.SECURITY_ENCRYPTION_PRIMARY_KEY,
       LEGAL_REVIEW_STATUS: process.env.LEGAL_REVIEW_STATUS,
     },
-    "production",
+    targetEnvironment,
   );
-
-  return Response.json({
-    status: "DEPLOYMENT_READINESS_PREVIEW_ONLY",
-    productionBlocked: true,
-    environment,
-    plan,
-    checklist,
-    handoffTasks,
-    note: "This route is a read-only scaffold. It is not protected by production auth/RBAC yet and must not expose secret values.",
-  });
 }
 
-export async function POST() {
-  return Response.json(
-    {
-      error: "DEPLOYMENT_MUTATION_NOT_IMPLEMENTED",
-      message: "Deployment approvals, migrations, provider publishes, and rollbacks require protected CI/CD, RBAC, audit logs, and provider credentials.",
+function buildPayload(actor: ReturnType<typeof resolveDashboardActor>, environment: ReturnType<typeof buildEnvironmentSnapshot>): DeploymentGetPayload {
+  return {
+    ok: true,
+    source: actor.source,
+    tenantId: actor.tenantId,
+    actorRole: actor.role,
+    targetEnvironment: "production",
+    operationMode: "read-only",
+    productionBlocked: true,
+    environment,
+    plan: buildDeploymentPlan("production"),
+    checklist: buildProductionLaunchChecklist(),
+    handoffTasks: buildHandoffTasks(),
+    gapIds: deploymentGapIds,
+    boundary:
+      "Readiness route is now auth-guarded with tenant scope and audit-ready metadata, but deployment actions remain external to this API until CI/CD environments and provider credentials are provisioned.",
+  };
+}
+
+function buildPostSuccessPayload(
+  actor: ReturnType<typeof resolveDashboardActor>,
+  input: DeploymentReadinessMutationInput,
+  auditId?: string,
+  environment?: ReturnType<typeof buildEnvironmentSnapshot>,
+): DeploymentPostPayload {
+  const resolvedEnvironment = environment ?? buildEnvironmentSnapshot(input.targetEnvironment);
+  const policy = operationPolicies[input.operation];
+
+  return {
+    ok: true,
+    source: actor.source,
+    tenantId: actor.tenantId,
+    actorRole: actor.role,
+    targetEnvironment: input.targetEnvironment,
+    operation: input.operation,
+    operationResult: {
+      ...policy,
+      statusCode: policy.statusCode,
     },
-    { status: 501 },
-  );
+    environment: resolvedEnvironment,
+    plan: buildDeploymentPlan(input.targetEnvironment),
+    requestId: input.requestId,
+    persistence: actor.source === "local-fallback" ? "local-fallback" : "database",
+    ...(auditId ? { auditId } : {}),
+    gapIds: deploymentGapIds,
+    ...(policy.implemented ? {} : {
+      warning:
+        "This response indicates blocked or staged workflow actions only; this API records request metadata for auditability but does not perform external provider calls.",
+    }),
+  };
+}
+
+export async function GET(request: NextRequest) {
+  const actor = resolveDashboardActor(request);
+  try {
+    assertPermission(actor, "release:read");
+  } catch {
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read deployment readiness." } }, { status: 403 });
+  }
+
+  const environment = buildEnvironmentSnapshot("production");
+  return NextResponse.json(buildPayload(actor, environment));
+}
+
+export async function POST(request: NextRequest) {
+  const actor = resolveDashboardActor(request);
+  try {
+    assertPermission(actor, "release:write");
+  } catch {
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to trigger deployment operations." } }, { status: 403 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Deployment readiness body must be valid JSON." } }, { status: 400 });
+  }
+
+  const parsed = deploymentReadinessMutationSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "VALIDATION_FAILED",
+          message: "Deployment readiness payload did not pass schema.",
+          issues: parsed.error.flatten(),
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  const input = parsed.data;
+  const policy = operationPolicies[input.operation];
+  const environment = buildEnvironmentSnapshot(input.targetEnvironment);
+
+  if (actor.source === "local-fallback") {
+    return NextResponse.json(buildPostSuccessPayload(actor, input, undefined, environment), { status: policy.statusCode });
+  }
+
+  try {
+    const audit = await prisma.auditLog.create({
+      data: {
+        tenantId: actor.tenantId,
+        actorUserId: actor.actorUserId,
+        action: `deployment:${input.operation}`,
+        entityType: "DeploymentReadiness",
+        metadata: {
+          operation: input.operation,
+          targetEnvironment: input.targetEnvironment,
+          reason: input.reason,
+          requestId: input.requestId,
+          blockerIds: input.blockerIds ?? [],
+          source: actor.source,
+          implemented: policy.implemented,
+        },
+      },
+    });
+
+    const payload = buildPostSuccessPayload(actor, input, audit.id, environment);
+    return NextResponse.json(payload, { status: policy.statusCode });
+  } catch (error) {
+    if (isDatabaseUnavailable(error)) {
+      return NextResponse.json(buildPostSuccessPayload(actor, input, undefined, environment), { status: 200 });
+    }
+
+    return NextResponse.json({ ok: false, error: { code: "DEPLOYMENT_READINESS_FAILED", message: "Could not persist deployment readiness request." } }, { status: 500 });
+  }
 }

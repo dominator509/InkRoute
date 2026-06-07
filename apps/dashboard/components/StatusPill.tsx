@@ -1,3 +1,5 @@
+import { Badge } from "@inkroute/ui";
+
 interface StatusPillProps {
   key?: string;
   label: string;
@@ -5,5 +7,5 @@ interface StatusPillProps {
 }
 
 export function StatusPill({ label, tone = "neutral" }: StatusPillProps) {
-  return <span className={`status-pill ${tone}`}>{label.replace(/_/g, " ")}</span>;
+  return <Badge label={label} tone={tone} />;
 }
