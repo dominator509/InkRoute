@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { validateUploadDraft, type UploadAssetKind } from "@inkroute/security";
+import { checkRateLimit, getClientIp, persistUploadIntent, resolveTenant } from "../../../../lib/localRuntimeState";
 
 const uploadKinds: UploadAssetKind[] = ["portfolio_public", "reference_private", "consent_signature", "healed_follow_up", "document_private"];
 
@@ -29,27 +30,70 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     sizeBytes: input.sizeBytes,
     declaredByAuthenticatedUser: Boolean(input.declaredByAuthenticatedUser),
   });
+  const resolvedTenant = resolveTenant(tenantSlug);
+  if (!resolvedTenant) {
+    return NextResponse.json(
+      { ok: false, error: { code: "TENANT_NOT_FOUND", message: "Upload intents are available for local demo tenant slug only." } },
+      { status: 404 },
+    );
+  }
+
+  if (!validation.accepted) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "UPLOAD_VALIDATION_FAILED",
+          message: "Upload metadata did not pass scaffolded validation rules.",
+          reasons: validation.reasons,
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  const rateLimit = checkRateLimit("public-upload-intent", tenantSlug, `${getClientIp(Object.fromEntries(request.headers.entries()))}:${resolvedTenant.tenantId}`);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "RATE_LIMIT_EXCEEDED",
+          details: { gapIds: ["GAP-005", "GAP-096", "GAP-097"], remaining: rateLimit.remaining, retryAfterSeconds: rateLimit.retryAfterSeconds },
+        },
+      },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
+  const draft = persistUploadIntent(tenantSlug, {
+    kind: input.kind,
+    filename: input.filename,
+    mimeType: input.mimeType,
+    sizeBytes: input.sizeBytes,
+    visibility: validation.storageVisibility,
+  });
 
   return NextResponse.json(
     {
-      ok: false,
-      error: {
-        code: "SIGNED_UPLOAD_NOT_IMPLEMENTED",
-        message: "Upload metadata was evaluated, but Phase 13 does not create signed URLs or persist FileAsset records.",
-      },
+      ok: true,
       data: {
         tenantSlug,
+        tenantId: resolvedTenant.tenantId,
         validation,
-        requiredNextWork: [
-          "Resolve tenant by trusted domain/slug before issuing upload URLs.",
-          "Require authenticated dashboard/mobile user or short-lived public booking upload token.",
-          "Generate server-side object keys and signed private upload URLs.",
-          "Verify magic bytes, strip EXIF/GPS metadata, scan/quarantine files, and create public derivatives only when approved.",
-          "Persist tenant-scoped FileAsset and AuditLog records after upload completion.",
+        draft,
+        nextWork: [
+          "Persist FileAsset record and link to booking/message context.",
+          "Use provider-signed upload URL and verify multipart boundaries.",
+          "Scan and strip metadata from media before status transitions.",
+          "Generate public derivative only after private visibility checks.",
         ],
-        gapIds: ["GAP-005", "GAP-033", "GAP-096", "GAP-097"],
+        localRuntime: {
+          status: "queued",
+          gapIds: ["GAP-005", "GAP-033", "GAP-096", "GAP-097"],
+        },
       },
     },
-    { status: 501 },
+    { status: 201 },
   );
 }

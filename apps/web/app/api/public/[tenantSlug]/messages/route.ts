@@ -1,5 +1,6 @@
 import { buildMessageThreadDraft } from "@inkroute/notifications";
 import { NextResponse, type NextRequest } from "next/server";
+import { checkRateLimit, getClientIp, persistMessage, resolveTenant } from "../../../../lib/localRuntimeState";
 
 export async function POST(request: NextRequest, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;
@@ -26,21 +27,47 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     );
   }
 
+  const resolvedTenant = resolveTenant(tenantSlug);
+  if (!resolvedTenant) {
+    return NextResponse.json(
+      { ok: false, error: { code: "TENANT_NOT_FOUND", message: "Messages endpoint is available for local demo tenant slug only." } },
+      { status: 404 },
+    );
+  }
+
+  const clientIp = getClientIp(Object.fromEntries(request.headers.entries()));
+  const rateLimit = checkRateLimit("public-message", tenantSlug, `${clientIp}:${resolvedTenant.tenantId}`);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "RATE_LIMIT_EXCEEDED",
+          details: {
+            gapIds: ["GAP-064", "GAP-068", "GAP-031"],
+            remaining: rateLimit.remaining,
+            retryAfterSeconds: rateLimit.retryAfterSeconds,
+          },
+        },
+      },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
   const draft = buildMessageThreadDraft({
     subject: candidate.subject,
     body: candidate.body,
     relatedBookingRequestId: typeof candidate.bookingRequestId === "string" ? candidate.bookingRequestId : undefined,
   });
+  const persisted = persistMessage(tenantSlug, { subject: draft.subject, body: candidate.body, channel: draft.channel, relatedBookingRequestId: draft.relatedBookingRequestId });
 
   return NextResponse.json(
     {
-      ok: false,
-      error: {
-        code: "MESSAGE_PERSISTENCE_NOT_IMPLEMENTED",
-        message: "The message shape can be previewed, but Phase 9 does not persist message threads, notify artists, or send email/SMS/push replies.",
-      },
+      ok: true,
       data: {
         tenantSlug,
+        id: persisted.id,
+        status: persisted.status,
         draft,
         requiredNextWork: [
           "Resolve public tenant and client identity safely.",
@@ -50,7 +77,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           "Queue consent-aware notifications for the artist and client.",
         ],
       },
+      runtimeBoundary: {
+        tenantId: resolvedTenant.tenantId,
+        messageCount: 1,
+        savedInLocalRuntime: true,
+        gapIds: ["GAP-009", "GAP-061", "GAP-064", "GAP-066"],
+      },
     },
-    { status: 501 },
+    { status: 201 },
   );
 }

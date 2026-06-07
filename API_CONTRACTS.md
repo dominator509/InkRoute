@@ -2,7 +2,7 @@
 
 ## Current status
 
-API contracts are documented and one Phase 4 public booking route boundary exists, but production API persistence is not implemented. Phase 2 expanded the Prisma domain model and validators that future API handlers should use. Phase 3 public pages still read static demo config. Phase 4 adds a validation-only booking request route that intentionally returns `501` after shape validation. All future API endpoints must validate inputs with `@inkroute/validators`, enforce auth where required, scope tenant-owned data, and return a predictable response envelope.
+API contracts are documented and multiple public boundaries now run local-runtime behavior, but production persistence and provider wiring are not implemented. Phase 2 expanded the Prisma domain model and validators that future API handlers should use. Phase 3 public pages still read static demo config. All future API endpoints must validate inputs with `@inkroute/validators`, enforce auth where required, scope tenant-owned data, and return a predictable response envelope.
 
 ## Response envelope
 
@@ -48,14 +48,14 @@ All route handlers must:
 | --- | --- | --- | --- | --- | --- |
 | `GET` | `/api/public/:tenantSlug/portfolio` | Public portfolio items | Query validator pending | No | Planned |
 | `GET` | `/api/public/:tenantSlug/travel` | Public travel schedule/city availability | Query validator pending | No | Planned |
-| `POST` | `/api/public/:tenantSlug/booking-requests` | Create booking request | `bookingRequestInputSchema` | No, must be rate-limited before production | Scaffolded validation-only route returns `501`; no persistence |
+| `POST` | `/api/public/:tenantSlug/booking-requests` | Create booking request | `bookingRequestInputSchema` | No, must be rate-limited before production | Local runtime validation + draft persistence (not production DB) |
 | `POST` | `/api/public/:tenantSlug/waitlists` | City waitlist signup | Planned | No, rate-limited | Planned |
 | `GET` | `/api/public/:tenantSlug/seo/cities/:citySlug` | City SEO page data | `seoCityPageInputSchema` for admin writes | No | Planned |
 | `GET` | `/api/public/:tenantSlug/seo/styles/:styleSlug` | Style SEO page data | `seoStylePageInputSchema` for admin writes | No | Planned |
 | `GET` | `/api/public/:tenantSlug/reviews` | Approved public testimonials | Query validator pending | No | Planned |
 | `GET` | `/api/public/:tenantSlug/notification-previews` | Static notification/template delivery-plan previews | Static Phase 9 helper output | No | Scaffolded preview route; no send/queue |
-| `POST` | `/api/public/:tenantSlug/messages` | Public client message/contact thread draft | Manual minimal shape in Phase 9; future `messageInputSchema` | No, must be rate-limited before production | Scaffolded route returns `501`; no persistence |
-| `POST` | `/api/public/:tenantSlug/error-reports` | Public fallback client error-report draft | Manual minimal Phase 11 shape; future observability validator | No, must be rate-limited/bot-protected before production | Scaffolded route returns `501`; no persistence or alerts |
+| `POST` | `/api/public/:tenantSlug/messages` | Public client message/contact thread draft | Manual minimal shape in Phase 9; future `messageInputSchema` | No, must be rate-limited before production | Local runtime draft persistence and routing draft returned |
+| `POST` | `/api/public/:tenantSlug/error-reports` | Public fallback client error-report draft | Manual minimal Phase 11 shape; future observability validator | No, must be rate-limited/bot-protected before production | Local runtime redacted draft persistence and preview response |
 
 ## Dashboard endpoints planned
 
@@ -100,8 +100,8 @@ The mobile app should consume tenant-scoped dashboard APIs. A thin mobile BFF ca
 | `POST` | `/api/webhooks/stripe` | Stripe payment/deposit status | Stripe signature | Planned |
 | `POST` | `/api/webhooks/sentry` | Optional issue sync and provider issue reconciliation | Sentry signature/secret header | Scaffolded boundary returns `501`; signature verification/persistence missing |
 | `POST` | `/api/webhooks/calendar` | Google calendar updates | Provider verification | Planned |
-| `POST` | `/api/webhooks/email` | Email delivery status | Provider signature | Scaffolded boundary returns `501`; signature verification/persistence missing |
-| `POST` | `/api/webhooks/sms` | SMS delivery/inbound messages and STOP preview | Provider signature | Scaffolded boundary returns `501`; signature verification/persistence missing |
+| `POST` | `/api/webhooks/email` | Email delivery status | Provider signature | Scaffolded boundary persists interpreted local webhook state in-memory; production signature verification/persistence still required |
+| `POST` | `/api/webhooks/sms` | SMS delivery/inbound messages and STOP preview | Provider signature | Scaffolded boundary persists interpreted local webhook state in-memory; production signature verification/persistence still required |
 
 ## State transition rules
 
@@ -133,7 +133,7 @@ The public website now has static demo city/style routes and disabled booking/co
 - Parses JSON.
 - Validates against `bookingRequestInputSchema`.
 - Returns `400` with flattened Zod issues for invalid input.
-- Returns `501 BOOKING_PERSISTENCE_NOT_IMPLEMENTED` for valid input because tenant resolution, rate limiting, Prisma writes, reference uploads, notifications, deposits, and calendar holds are not wired.
+- Returns local runtime draft persistence and readiness metadata for now; tenant resolution, Prisma writes, full reference upload handoff, notifications, deposits, and calendar holds remain non-production.
 
 Do not expose this as a production booking endpoint until `GAP-032`, `GAP-033`, and `GAP-034` are resolved.
 
@@ -154,7 +154,7 @@ Mobile production endpoints must enforce the same handler pipeline documented ab
 
 ### `POST /api/public/[tenantSlug]/deposit-sessions`
 
-Status: **Scaffolded, credential-gated, intentionally returns 501**.
+Status: **Local-runtime draft implemented; production SDK flow remains credential-gated**.
 
 Purpose:
 - Calculate a deposit policy preview for an accepted booking or signed deposit handoff.
@@ -165,7 +165,7 @@ Current implementation:
 - Parses JSON manually in `apps/web/app/api/public/[tenantSlug]/deposit-sessions/route.ts`.
 - Requires `bookingRequestId`, `successUrl`, and `cancelUrl`.
 - Calls `calculateDepositPolicy` and `buildStripeCheckoutSessionDraft` from `@inkroute/payments`.
-- Returns `501 STRIPE_CHECKOUT_NOT_IMPLEMENTED` with `GAP-004`, `GAP-049`, and `GAP-050` listed.
+- Returns local-session payloads and local records with `GAP-004`, `GAP-049`, and `GAP-050` listed as production blockers.
 
 Production requirements:
 1. Require authenticated dashboard action or a signed short-lived deposit token generated only after artist acceptance.
@@ -177,7 +177,7 @@ Production requirements:
 
 ### `POST /api/webhooks/stripe`
 
-Status: **Scaffolded, credential-gated, intentionally returns 501**.
+Status: **Local runtime parses and stores interpreted Stripe webhook events; production signature verification/reconciliation is still pending**.
 
 Purpose:
 - Reserve the webhook endpoint boundary.
@@ -188,7 +188,7 @@ Current implementation:
 - Reads `request.text()`.
 - Requires the `Stripe-Signature` header.
 - Parses JSON only to inspect event type.
-- Returns `501 STRIPE_WEBHOOK_NOT_IMPLEMENTED` with reconciliation requirements.
+- Returns `200` with interpreted stripe event metadata and persisted local webhook intake.
 
 Production requirements:
 1. Use the Stripe SDK webhook helper with raw request body, signature header, and `STRIPE_WEBHOOK_SECRET`.
@@ -235,7 +235,7 @@ Production requirements:
 
 ### `POST /api/public/[tenantSlug]/messages`
 
-Status: **Scaffolded and intentionally returns `501 MESSAGE_PERSISTENCE_NOT_IMPLEMENTED`**.
+Status: **Local runtime returns message-thread draft persistence and queue hint; production persistence is still required.**
 
 Purpose:
 - Reserve a future public-safe client message/contact boundary.
@@ -250,7 +250,7 @@ Production requirements:
 
 ### `POST /api/webhooks/email` and `POST /api/webhooks/sms`
 
-Status: **Scaffolded, credential-gated, intentionally return `501`**.
+Status: **Local runtime interpretation and persistence implemented; provider verification and delivery-log persistence remain production work**.
 
 Purpose:
 - Reserve provider callback URLs.
@@ -362,13 +362,13 @@ Returns tenant slug, upload policy drafts, public rate-limit drafts, security he
 
 ### `POST /api/public/[tenantSlug]/secure-upload-intents`
 
-Status: **Scaffolded, intentionally returns 501**.
+Status: **Local runtime validation + mock intent persistence implemented**.
 
-Expected JSON fields: `kind`, `filename`, `mimeType`, `sizeBytes`, and optional `declaredByAuthenticatedUser`. The route validates metadata with `@inkroute/security` and returns `501 SIGNED_UPLOAD_NOT_IMPLEMENTED` with required next work. Production must resolve tenant by trusted domain/slug, require an authenticated user or short-lived booking upload token, generate server-side object keys, create signed private uploads, verify magic bytes, strip metadata, scan/quarantine files, persist `FileAsset`, and write audit logs.
+Expected JSON fields: `kind`, `filename`, `mimeType`, `sizeBytes`, and optional `declaredByAuthenticatedUser`. The route validates metadata with `@inkroute/security`, applies local rate limiting, and persists mock intent data in local runtime state. Production must resolve tenant by trusted domain/slug, require an authenticated user or short-lived booking upload token, generate server-side object keys, create signed private uploads, verify magic bytes, strip metadata, scan/quarantine files, persist `FileAsset`, and write audit logs.
 
 ### `POST /api/public/[tenantSlug]/privacy-requests`
 
-Status: **Scaffolded, intentionally returns 501**.
+Status: **Local draft intake now persists redacted privacy request payloads in local runtime**.
 
 Expected JSON fields: `type` and `email`. The route returns a redacted submission and privacy request draft. Production requires identity verification, persistence, attorney-reviewed deadlines and language, export/delete/rectification workers, legal retention holds, and audit logs.
 

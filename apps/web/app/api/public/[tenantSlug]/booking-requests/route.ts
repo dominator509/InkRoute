@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { bookingRequestInputSchema } from "@inkroute/validators";
+import { checkRateLimit, getClientIp, persistBookingRequest, resolveTenant } from "../../../../lib/localRuntimeState";
 
 export async function POST(request: NextRequest, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;
@@ -20,6 +21,38 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     );
   }
 
+  const resolvedTenant = resolveTenant(tenantSlug);
+  if (!resolvedTenant) {
+    return NextResponse.json({ ok: false, error: { code: "TENANT_NOT_FOUND", message: "Booking API is not available for this tenant slug in local runtime." } }, { status: 404 });
+  }
+
+  const clientIp = getClientIp(Object.fromEntries(request.headers.entries()));
+  const rateLimit = checkRateLimit("public-booking-submit", tenantSlug, `${clientIp}:${resolvedTenant.tenantId}`);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "RATE_LIMIT_EXCEEDED",
+          message: "Booking submission is temporarily limited by local API guardrails.",
+          details: {
+            gapIds: ["GAP-031", "GAP-095"],
+            maxRequests: rateLimit.maxRequests,
+            windowSeconds: rateLimit.windowSeconds,
+            remaining: rateLimit.remaining,
+            retryAfterSeconds: rateLimit.retryAfterSeconds,
+          },
+        },
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(rateLimit.retryAfterSeconds),
+        },
+      },
+    );
+  }
+
   const parsed = bookingRequestInputSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -36,31 +69,26 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     );
   }
 
+  const persisted = persistBookingRequest(tenantSlug, parsed.data);
+
   return NextResponse.json(
     {
-      ok: false,
-      error: {
-        code: "BOOKING_PERSISTENCE_NOT_IMPLEMENTED",
-        message: "The booking request shape is valid, but Phase 4 does not persist requests, upload reference files, collect deposits, or send notifications yet.",
-      },
+      ok: true,
       data: {
         tenantSlug,
-        acceptedShapePreview: {
-          preferredCity: parsed.data.preferredCity,
-          style: parsed.data.style,
-          placement: parsed.data.placement,
-          policyAccepted: parsed.data.policyAccepted,
-        },
+        tenantId: resolvedTenant.tenantId,
+        booking: persisted.request,
+        readinessScore: persisted.readinessScore,
+        events: persisted.events,
         requiredNextWork: [
-          "Resolve public tenant by domain or slug.",
-          "Rate limit and bot-protect public booking submissions.",
-          "Persist BookingRequest and BookingStateEvent in a transaction.",
-          "Create signed upload flow for private reference files.",
-          "Queue client and artist notifications.",
-          "Create Stripe deposit handoff only after policy rules are configured.",
+          "Replace in-memory demo persistence with tenant-scoped DB writes in a transaction.",
+          "Add signature-based anti-bot challenge before write.",
+          "Persist reference uploads in private object storage before artist review.",
+          "Queue notification draft to client and studio when artist policy rules are enabled.",
         ],
+        gapIds: ["GAP-001", "GAP-002", "GAP-003", "GAP-004", "GAP-005", "GAP-008", "GAP-017"],
       },
     },
-    { status: 501 },
+    { status: 201 },
   );
 }

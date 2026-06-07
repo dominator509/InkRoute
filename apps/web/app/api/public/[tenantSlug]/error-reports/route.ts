@@ -1,5 +1,6 @@
 import { buildPublicErrorReportPreview } from "../../../../../lib/errorReporting";
 import { NextResponse, type NextRequest } from "next/server";
+import { checkRateLimit, getClientIp, persistErrorReport, resolveTenant } from "../../../../../lib/localRuntimeState";
 
 export async function POST(request: NextRequest, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;
@@ -29,15 +30,39 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     ...(typeof candidate.userAgent === "string" ? { userAgent: candidate.userAgent } : request.headers.get("user-agent") ? { userAgent: request.headers.get("user-agent") as string } : {}),
   };
 
+  const resolvedTenant = resolveTenant(tenantSlug);
+  if (!resolvedTenant) {
+    return NextResponse.json(
+      { ok: false, error: { code: "TENANT_NOT_FOUND", message: "Error reports are available for local demo tenant slug only." } },
+      { status: 404 },
+    );
+  }
+
+  const clientIp = getClientIp(Object.fromEntries(request.headers.entries()));
+  const rateLimit = checkRateLimit("fallback-error-report", tenantSlug, `${clientIp}:${resolvedTenant.tenantId}`);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "RATE_LIMIT_EXCEEDED",
+          details: {
+            gapIds: ["GAP-081", "GAP-095", "GAP-101"],
+            remaining: rateLimit.remaining,
+            retryAfterSeconds: rateLimit.retryAfterSeconds,
+          },
+        },
+      },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
   const preview = buildPublicErrorReportPreview(reportInput);
+  const persisted = persistErrorReport(tenantSlug, reportInput);
 
   return NextResponse.json(
     {
-      ok: false,
-      error: {
-        code: "ERROR_REPORT_PERSISTENCE_NOT_IMPLEMENTED",
-        message: "The fallback error-report route builds a redacted draft, but Phase 11 does not persist reports, rate-limit traffic, or send alerts.",
-      },
+      ok: true,
       data: {
         tenantSlug,
         ...preview,
@@ -47,8 +72,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           "Forward sanitized events to Sentry/OpenTelemetry only after DSNs, source maps, sampling, and redaction are verified.",
           "Create issue/alert automation only after repository and alerting credentials are configured.",
         ],
+        persisted,
+        localBoundary: {
+          tenantId: resolvedTenant.tenantId,
+          rateLimitRule: "fallback-error-report",
+        },
       },
     },
-    { status: 501 },
+    { status: 201 },
   );
 }

@@ -1,4 +1,6 @@
 import { buildStripeCheckoutSessionDraft, calculateDepositPolicy } from "@inkroute/payments";
+import { createDepositSession } from "@inkroute/payments";
+import { checkRateLimit, getBookingRequest, getClientIp, persistDepositSession, resolveTenant } from "../../../../lib/localRuntimeState";
 import { NextResponse, type NextRequest } from "next/server";
 
 interface DepositSessionPreviewBody {
@@ -26,6 +28,10 @@ function asNumber(value: unknown, fallback: number): number {
 
 export async function POST(request: NextRequest, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;
+  const resolvedTenant = resolveTenant(tenantSlug);
+  if (!resolvedTenant) {
+    return NextResponse.json({ ok: false, error: { code: "TENANT_NOT_FOUND", message: "Deposit sessions are available only for local demo tenant slug." } }, { status: 404 });
+  }
 
   let body: DepositSessionPreviewBody;
   try {
@@ -83,18 +89,69 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     ...(clientEmail ? { clientEmail } : {}),
     ...(clientName ? { clientName } : {}),
   });
+  const createClient = getClientIp(Object.fromEntries(request.headers.entries()));
+  const rateLimit = checkRateLimit("public-booking-submit", tenantSlug, `${createClient}:${resolvedTenant.tenantId}`);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "RATE_LIMIT_EXCEEDED",
+          message: "Deposit session creation is temporarily limited by local API guardrails.",
+          details: {
+            gapIds: ["GAP-004", "GAP-031"],
+            maxRequests: rateLimit.maxRequests,
+            windowSeconds: rateLimit.windowSeconds,
+            remaining: rateLimit.remaining,
+            retryAfterSeconds: rateLimit.retryAfterSeconds,
+          },
+        },
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+      },
+    );
+  }
+
+  const existingBooking = getBookingRequest(tenantSlug, bookingRequestId);
+  if (!existingBooking) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "BOOKING_NOT_FOUND",
+          message: "No matching booking request exists in local runtime for this tenant. Persist the booking request first.",
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  const session = await createDepositSession({
+    tenantId: resolvedTenant.tenantId,
+    bookingRequestId,
+    amountCents: policy.depositAmountCents,
+    currency: policy.currency,
+    successUrl,
+    cancelUrl,
+    clientEmail,
+    clientName,
+    artistDisplayName: existingBooking.request.clientName,
+    description: `Deposit preview for ${existingBooking.request.style} tattoo request`,
+    policyVersion: policy.policyVersion,
+  });
+
+  const storedSession = persistDepositSession(tenantSlug, bookingRequestId, policy.depositAmountCents, session.currency);
 
   return NextResponse.json(
     {
-      ok: false,
-      error: {
-        code: "STRIPE_CHECKOUT_NOT_IMPLEMENTED",
-        message:
-          "Deposit policy calculation and a Stripe Checkout session draft are available, but live Checkout creation is credential-gated and must be protected by a signed booking token or dashboard auth before production.",
-      },
+      ok: true,
       data: {
         policy,
         sessionDraft,
+        session,
+        storedSession,
         productionBoundary: {
           gapIds: ["GAP-004", "GAP-049", "GAP-050"],
           requiredBeforeEnablement: [
@@ -105,8 +162,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             "Webhook reconciliation and idempotency tested",
           ],
         },
+        localRuntime: {
+          status: "local-demo",
+          bookingFound: true,
+          bookingId: existingBooking.request.id,
+          readinessScore: existingBooking.readinessScore,
+        },
       },
     },
-    { status: 501 },
+    { status: 201 },
   );
 }

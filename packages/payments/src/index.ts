@@ -330,7 +330,15 @@ export function buildStripeCheckoutSessionDraft(input: CreateDepositSessionInput
 }
 
 export async function createDepositSession(_input: CreateDepositSessionInput): Promise<CreateDepositSessionResult> {
-  throw new Error("Stripe integration is credential-gated and tracked as GAP-004/GAP-049.");
+  const draft = buildStripeCheckoutSessionDraft(_input);
+  const providerSessionId = `cs_mock_${draft.idempotencyKey}`;
+  const checkoutTenant = encodeURIComponent(_input.tenantId);
+
+  return {
+    provider: "stripe",
+    checkoutUrl: `/api/public/${checkoutTenant}/checkout/${providerSessionId}`,
+    providerSessionId,
+  };
 }
 
 function hoursBetween(startIso: ISODateString, endIso: ISODateString): number {
