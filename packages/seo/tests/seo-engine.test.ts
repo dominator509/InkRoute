@@ -7,6 +7,7 @@ import {
   buildFaqSchema,
   buildInternalLinkPlan,
   buildMetadataDraft,
+  buildSeoPublicationMutationPlan,
   buildSitemapPlan,
   buildStyleSeoBrief,
   buildWebPageSchema,
@@ -327,5 +328,70 @@ describe("SEO engine helpers", () => {
     expect(styleBrief.primaryKeyword).toBe("Blackwork tattoo artist");
     expect(styleBrief.internalLinks.length).toBeGreaterThan(0);
     expect(styleBrief.secondaryKeywords[0]).toBe("blackwork tattoo booking");
+  });
+
+  it("plans tenant-scoped SEO publish mutations with audit and revalidation writes", () => {
+    const route = createSeoRouteRecord({
+      path: "/cities/seattle-wa",
+      kind: "city",
+      title: "Seattle Tattoo Booking with Mara Vale",
+      description: "Book blackwork and ornamental tattoo sessions during Mara Vale's Seattle guest spot with clear travel details.",
+      city: "Seattle",
+      region: "WA",
+      status: "draft",
+    });
+
+    const plan = buildSeoPublicationMutationPlan({
+      action: "publish",
+      model: "SeoCityPage",
+      tenantId: "tenant_001",
+      actorId: "user_owner",
+      actorRole: "owner",
+      route,
+      existingTenantId: "tenant_001",
+      now: "2026-06-08T00:00:00.000Z",
+      relatedFaqIds: ["faq_001"],
+      relatedReviewIds: ["review_001"],
+      relatedImageIds: ["image_001"],
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.canCommit).toBe(true);
+    expect(plan.targetStatus).toBe("published");
+    expect(plan.requiresTenantScope).toBe(true);
+    expect(plan.requiresRbac).toBe(true);
+    expect(plan.requiresAuditLog).toBe(true);
+    expect(plan.writes.map((write) => write.model)).toEqual(["SeoCityPage", "SeoAssociation", "AuditLog", "RevalidationJob"]);
+    expect(plan.auditAction).toBe("seo.SeoCityPage.publish");
+    expect(plan.revalidation.paths).toContain("/cities/seattle-wa");
+    expect(plan.idempotencyKey).toContain("tenant_001");
+  });
+
+  it("blocks SEO mutations for cross-tenant records and unauthorized dashboard roles", () => {
+    const route = createSeoRouteRecord({
+      path: "/styles/blackwork",
+      kind: "style",
+      title: "Blackwork Tattoos by Mara Vale",
+      description: "Blackwork tattoo booking page with style education, healed examples, and consultation calls to action.",
+      style: "Blackwork",
+      status: "draft",
+    });
+
+    const plan = buildSeoPublicationMutationPlan({
+      action: "update",
+      model: "SeoStylePage",
+      tenantId: "tenant_001",
+      actorId: "user_artist",
+      actorRole: "artist",
+      route,
+      existingTenantId: "tenant_other",
+      now: "2026-06-08T00:00:00.000Z",
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.canCommit).toBe(false);
+    expect(plan.blockers.join(" ")).toContain("owner or studio_manager");
+    expect(plan.blockers.join(" ")).toContain("different tenant");
+    expect(plan.writes.some((write) => write.model === "AuditLog")).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import type { ArtistProfile, PortfolioItem, Review, SeoCityPage, SeoPageStatus, SeoStylePage, TravelStop } from "@inkroute/types";
+import type { ArtistProfile, PortfolioItem, Review, Role, SeoCityPage, SeoPageStatus, SeoStylePage, TravelStop } from "@inkroute/types";
 
 type JsonLd = Record<string, unknown>;
 
@@ -128,6 +128,57 @@ export interface SeoRevalidationPlan {
   tags: string[];
   requiresRuntime: boolean;
   providerBoundary: "next_revalidate_path" | "next_revalidate_tag" | "cms_webhook" | "manual_preview";
+}
+
+export type SeoPublicationAction = "create" | "update" | "publish" | "archive" | "redirect";
+export type SeoPublishableModel = "SeoCityPage" | "SeoStylePage" | "SeoRedirect";
+export type SeoPublicationWriteModel = SeoPublishableModel | "AuditLog" | "RevalidationJob" | "SeoAssociation";
+export type SeoPublicationPlanStatus = "ready" | "blocked" | "invalid";
+
+export interface SeoPublicationMutationInput {
+  action: SeoPublicationAction;
+  model: SeoPublishableModel;
+  tenantId: string;
+  actorId: string;
+  actorRole: Role;
+  route: SeoRouteRecord;
+  now: string;
+  existingTenantId?: string;
+  targetStatus?: SeoPageStatus;
+  idempotencyKey?: string;
+  relatedFaqIds?: string[];
+  relatedReviewIds?: string[];
+  relatedImageIds?: string[];
+  redirectFromPath?: string;
+  redirectToPath?: string;
+}
+
+export interface SeoPublicationWrite {
+  model: SeoPublicationWriteModel;
+  operation: "create" | "update" | "upsert" | "delete" | "enqueue";
+  tenantId: string;
+  summary: string;
+  requiresTransaction: boolean;
+}
+
+export interface SeoPublicationMutationPlan {
+  status: SeoPublicationPlanStatus;
+  action: SeoPublicationAction;
+  model: SeoPublishableModel;
+  tenantId: string;
+  actorId: string;
+  actorRole: Role;
+  targetStatus: SeoPageStatus;
+  canCommit: boolean;
+  requiresTenantScope: true;
+  requiresRbac: true;
+  requiresAuditLog: true;
+  requiresTransaction: true;
+  idempotencyKey: string;
+  blockers: string[];
+  writes: SeoPublicationWrite[];
+  auditAction: string;
+  revalidation: SeoRevalidationPlan;
 }
 
 export interface SearchConsolePropertyDraft {
@@ -627,6 +678,93 @@ export function buildPublicationChecklist(route: SeoRouteRecord): string[] {
   if (route.kind === "city") checklist.push("Confirm travel dates, waitlist status, studio/guest spot details, and local legal wording.");
   if (route.kind === "style") checklist.push("Confirm style descriptions accurately represent artist scope and healed-result expectations.");
   return checklist;
+}
+
+function canMutateSeo(role: Role): boolean {
+  return role === "owner" || role === "studio_manager";
+}
+
+function resolvePublicationStatus(action: SeoPublicationAction, targetStatus?: SeoPageStatus): SeoPageStatus {
+  if (action === "publish") return "published";
+  if (action === "archive") return "archived";
+  return targetStatus ?? "draft";
+}
+
+export function buildSeoPublicationMutationPlan(input: SeoPublicationMutationInput): SeoPublicationMutationPlan {
+  const targetStatus = resolvePublicationStatus(input.action, input.targetStatus);
+  const blockers: string[] = [];
+  const audit = auditSeoRoute({ ...input.route, status: targetStatus });
+
+  if (!input.tenantId.trim()) blockers.push("Tenant id is required before mutating SEO content.");
+  if (!input.actorId.trim()) blockers.push("Actor id is required for SEO audit logging.");
+  if (!canMutateSeo(input.actorRole)) blockers.push("Actor role must be owner or studio_manager for SEO publishing mutations.");
+  if (input.existingTenantId && input.existingTenantId !== input.tenantId) blockers.push("Existing SEO record belongs to a different tenant.");
+  if (input.action === "publish" && audit.issues.some((issue) => issue.severity === "error")) blockers.push("SEO route has blocking audit errors and cannot be published.");
+  if (input.action === "redirect" && (!input.redirectFromPath || !input.redirectToPath)) blockers.push("Redirect mutations require source and destination paths.");
+
+  const routeWithTargetStatus = { ...input.route, status: targetStatus };
+  const idempotencyKey = input.idempotencyKey ?? `seo:${input.tenantId}:${input.model}:${input.action}:${routeWithTargetStatus.canonicalPath}`;
+  const associationCount = (input.relatedFaqIds?.length ?? 0) + (input.relatedReviewIds?.length ?? 0) + (input.relatedImageIds?.length ?? 0);
+  const writes: SeoPublicationWrite[] = [
+    {
+      model: input.model,
+      operation: input.action === "create" ? "create" : input.action === "redirect" ? "upsert" : "update",
+      tenantId: input.tenantId,
+      summary: `${input.action} ${input.model} at ${routeWithTargetStatus.canonicalPath} with status ${targetStatus}.`,
+      requiresTransaction: true,
+    },
+  ];
+
+  if (associationCount > 0) {
+    writes.push({
+      model: "SeoAssociation",
+      operation: "upsert",
+      tenantId: input.tenantId,
+      summary: `Attach ${associationCount} FAQ/review/image association(s) within the same tenant transaction.`,
+      requiresTransaction: true,
+    });
+  }
+
+  writes.push(
+    {
+      model: "AuditLog",
+      operation: "create",
+      tenantId: input.tenantId,
+      summary: `Record actor ${input.actorId} ${input.action} mutation for ${input.model}.`,
+      requiresTransaction: true,
+    },
+    {
+      model: "RevalidationJob",
+      operation: "enqueue",
+      tenantId: input.tenantId,
+      summary: "Queue sitemap, canonical route, and tag revalidation after transaction commit.",
+      requiresTransaction: false,
+    },
+  );
+
+  return {
+    status: blockers.length > 0 ? (audit.issues.some((issue) => issue.severity === "error") ? "invalid" : "blocked") : "ready",
+    action: input.action,
+    model: input.model,
+    tenantId: input.tenantId,
+    actorId: input.actorId,
+    actorRole: input.actorRole,
+    targetStatus,
+    canCommit: blockers.length === 0,
+    requiresTenantScope: true,
+    requiresRbac: true,
+    requiresAuditLog: true,
+    requiresTransaction: true,
+    idempotencyKey,
+    blockers,
+    writes,
+    auditAction: `seo.${input.model}.${input.action}`,
+    revalidation: buildRevalidationPlan({
+      reason: `SEO ${input.action} mutation for ${input.model}`,
+      routes: [routeWithTargetStatus],
+      contentIds: [input.model, routeWithTargetStatus.canonicalPath],
+    }),
+  };
 }
 
 export function buildWebsiteSchema(args: { name: string; url: string; description?: string }): JsonLd {
