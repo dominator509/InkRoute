@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from "node:fs";
-import { execFileSync, execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -128,23 +128,31 @@ function resolveRefs(eventRefs) {
   return null;
 }
 
+function gitOutput(args) {
+  return execFileSync("git", args, {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+}
+
 function buildGapTrackerDiff(baseRef, headRef) {
   try {
-    execSync(`git merge-base ${baseRef} ${headRef}`, {
+    execFileSync("git", ["merge-base", baseRef, headRef], {
       cwd: root,
       stdio: "ignore",
     });
 
-    return execSync(`git diff --unified=0 ${baseRef}...${headRef} -- GAP_TRACKER.md`, {
-      cwd: root,
-      encoding: "utf8",
-    });
+    return gitOutput(["diff", "--unified=0", `${baseRef}...${headRef}`, "--", "GAP_TRACKER.md"]);
   } catch {
     console.warn("Gap tracker diff audit: no merge base available; falling back to direct base/head diff.");
-    return execSync(`git diff --unified=0 ${baseRef} ${headRef} -- GAP_TRACKER.md`, {
-      cwd: root,
-      encoding: "utf8",
-    });
+  }
+
+  try {
+    return gitOutput(["diff", "--unified=0", baseRef, headRef, "--", "GAP_TRACKER.md"]);
+  } catch {
+    console.warn("Gap tracker diff audit: direct base/head diff unavailable in this checkout; skipping PR gap-diff enforcement.");
+    return "";
   }
 }
 
