@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPrivacyLifecyclePlan,
+  buildPrivacyCaseWorkflowPlan,
   buildSignedUploadIntentPlan,
   buildPrivateStorageAccessPlan,
   buildUploadScanPipelinePlan,
@@ -373,5 +374,56 @@ describe("security and privacy helpers", () => {
       "deletion:message:anonymize",
       "deletion:error_report:anonymize",
     ]);
+  });
+
+  it("blocks privacy cases until identity, tenant relationship, workers, notifications, and audits are configured", () => {
+    const plan = buildPrivacyCaseWorkflowPlan({
+      requestType: "export",
+      categories: ["client_profile", "reference_file"],
+      requesterVerified: false,
+      tenantMembershipVerified: false,
+      caseStoreConfigured: false,
+      exportWorkerConfigured: false,
+      deletionWorkerConfigured: false,
+      notificationProviderConfigured: false,
+      auditLogConfigured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.caseStatus).toBe("awaiting_identity_verification");
+    expect(plan.lifecycle.canExecute).toBe(false);
+    expect(plan.blockers).toEqual(
+      expect.arrayContaining([
+        "Requester identity must be verified before privacy case execution.",
+        "Tenant/client relationship must be verified before privacy case execution.",
+        "Tenant-scoped privacy case store must be configured before production intake.",
+        "Export worker must be configured before access/export requests can execute.",
+        "Notification provider must be configured for receipt, identity, completion, and denial updates.",
+        "Audit logging must be configured for every privacy case state transition.",
+      ]),
+    );
+    expect(plan.requiredCaseFields).toContain("identityVerificationStatus");
+    expect(plan.requiredWorkers).toContain("privacy-export");
+    expect(plan.auditEvents).toContain("privacy.case_closed");
+  });
+
+  it("marks verified privacy cases ready when lifecycle workers and legal review are configured", () => {
+    const plan = buildPrivacyCaseWorkflowPlan({
+      requestType: "deletion",
+      categories: ["client_profile", "reference_file", "message"],
+      requesterVerified: true,
+      tenantMembershipVerified: true,
+      caseStoreConfigured: true,
+      exportWorkerConfigured: true,
+      deletionWorkerConfigured: true,
+      notificationProviderConfigured: true,
+      auditLogConfigured: true,
+      legalReviewApproved: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.caseStatus).toBe("ready_for_execution");
+    expect(plan.lifecycle.canExecute).toBe(true);
+    expect(plan.notificationSteps.join(" ")).toContain("attorney-reviewed copy");
   });
 });

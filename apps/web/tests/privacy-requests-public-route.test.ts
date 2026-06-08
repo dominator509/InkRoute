@@ -14,7 +14,7 @@ describe("public privacy request route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expect(body.error).toBe("INVALID_JSON");
+    expect(body.error).toMatchObject({ code: "INVALID_JSON" });
   });
 
   it("returns 400 when required fields are missing", async () => {
@@ -28,8 +28,7 @@ describe("public privacy request route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expect(body.error).toBe("VALIDATION_FAILED");
-    expect(body.message).toContain("Expected type and email.");
+    expect(body.error).toMatchObject({ code: "VALIDATION_FAILED", message: "Expected type and email." });
   });
 
   it("returns 404 for unknown tenant slug", async () => {
@@ -47,7 +46,7 @@ describe("public privacy request route", () => {
   });
 
   it("persists demo-scope privacy requests", async () => {
-    const request = new NextRequest("https://local.test/api/public/demo-studio-alpha/privacy-requests", {
+    const request = new NextRequest("https://local.test/api/public/inkroute-demo/privacy-requests", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -57,15 +56,16 @@ describe("public privacy request route", () => {
       }),
     });
 
-    const response = await POST(request, { params: Promise.resolve({ tenantSlug: "demo-studio-alpha" }) });
+    const response = await POST(request, { params: Promise.resolve({ tenantSlug: "inkroute-demo" }) });
     const body = await response.json();
 
     expect(response.status).toBe(201);
     expect(body.ok).toBe(true);
-    expect(body.data.tenantSlug).toBe("demo-studio-alpha");
+    expect(body.data.tenantSlug).toBe("inkroute-demo");
     expect(body.data.persisted.requestType).toBe("export");
-    expect(body.data.persisted).toMatchObject({ requestType: "export", email: "client@example.test" });
-    expect(body.data.persisted.id).toMatch(/^pr_\d{6}$/);
+    expect(body.data.persisted).toMatchObject({ requestType: "export" });
+    expect(body.data.redactedSubmission.email).not.toBe("client@example.test");
+    expect(body.data.persisted.id).toMatch(/^privacy_[a-f0-9-]+$/);
     expect(body.data.gapIds).toContain("GAP-098");
   });
 });

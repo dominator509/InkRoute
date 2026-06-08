@@ -773,6 +773,30 @@ export interface PrivacyLifecyclePlan {
   productionBlockers: string[];
 }
 
+export interface PrivacyCaseWorkflowInput {
+  requestType: PrivacyRequestType;
+  categories: PrivacyDataCategory[];
+  requesterVerified: boolean;
+  tenantMembershipVerified: boolean;
+  caseStoreConfigured: boolean;
+  exportWorkerConfigured: boolean;
+  deletionWorkerConfigured: boolean;
+  notificationProviderConfigured: boolean;
+  auditLogConfigured: boolean;
+  legalReviewApproved?: boolean;
+}
+
+export interface PrivacyCaseWorkflowPlan {
+  status: "ready" | "blocked";
+  caseStatus: "intake_received" | "awaiting_identity_verification" | "awaiting_worker_configuration" | "ready_for_execution";
+  lifecycle: PrivacyLifecyclePlan;
+  blockers: readonly string[];
+  requiredCaseFields: readonly string[];
+  requiredWorkers: readonly string[];
+  notificationSteps: readonly string[];
+  auditEvents: readonly string[];
+}
+
 export interface LegalDocumentPlaceholder {
   slug: string;
   title: string;
@@ -1568,6 +1592,58 @@ export function buildPrivacyLifecyclePlan(input: PrivacyLifecyclePlanInput): Pri
     steps,
     requiredAudits,
     productionBlockers,
+  };
+}
+
+export function buildPrivacyCaseWorkflowPlan(input: PrivacyCaseWorkflowInput): PrivacyCaseWorkflowPlan {
+  const lifecycle = buildPrivacyLifecyclePlan({
+    requestType: input.requestType,
+    categories: input.categories,
+    requesterVerified: input.requesterVerified && input.tenantMembershipVerified,
+    ...(input.legalReviewApproved !== undefined ? { legalReviewApproved: input.legalReviewApproved } : {}),
+  });
+  const blockers: string[] = [];
+
+  if (!input.requesterVerified) blockers.push("Requester identity must be verified before privacy case execution.");
+  if (!input.tenantMembershipVerified) blockers.push("Tenant/client relationship must be verified before privacy case execution.");
+  if (!input.caseStoreConfigured) blockers.push("Tenant-scoped privacy case store must be configured before production intake.");
+  if ((input.requestType === "access" || input.requestType === "export") && !input.exportWorkerConfigured) blockers.push("Export worker must be configured before access/export requests can execute.");
+  if ((input.requestType === "deletion" || input.requestType === "rectification" || input.requestType === "restriction") && !input.deletionWorkerConfigured) blockers.push("Deletion/rectification/restriction worker must be configured before mutation requests can execute.");
+  if (!input.notificationProviderConfigured) blockers.push("Notification provider must be configured for receipt, identity, completion, and denial updates.");
+  if (!input.auditLogConfigured) blockers.push("Audit logging must be configured for every privacy case state transition.");
+  blockers.push(...lifecycle.productionBlockers.filter((blocker) => blocker.includes("Attorney-approved") || blocker.startsWith("Requester identity")));
+
+  const uniqueBlockers = [...new Set(blockers)];
+  const caseStatus =
+    !input.requesterVerified || !input.tenantMembershipVerified
+      ? "awaiting_identity_verification"
+      : uniqueBlockers.length > 0
+        ? "awaiting_worker_configuration"
+        : "ready_for_execution";
+
+  return {
+    status: uniqueBlockers.length === 0 && lifecycle.canExecute ? "ready" : "blocked",
+    caseStatus,
+    lifecycle,
+    blockers: uniqueBlockers,
+    requiredCaseFields: [
+      "tenantId",
+      "requesterEmailHash",
+      "requestType",
+      "identityVerificationStatus",
+      "caseStatus",
+      "deadlineAt",
+      "legalHoldStatus",
+      "assignedOwnerId",
+      "completedAt",
+    ],
+    requiredWorkers: ["identity-verification", "privacy-export", "privacy-delete-or-anonymize", "privacy-notification", "audit-log"],
+    notificationSteps: [
+      "Send receipt without exposing sensitive request details.",
+      "Request identity verification before export/delete execution.",
+      "Notify completion, denial, or legal-hold delay with attorney-reviewed copy.",
+    ],
+    auditEvents: ["privacy.intake", "privacy.identity_verified", "privacy.worker_started", "privacy.worker_completed", "privacy.notification_sent", "privacy.case_closed"],
   };
 }
 
