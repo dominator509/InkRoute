@@ -1,3 +1,4 @@
+import { getPortfolioImageDerivative } from "@inkroute/config";
 import type { PortfolioItem } from "@inkroute/types";
 
 const styleLabel: Record<string, string> = {
@@ -40,10 +41,12 @@ interface PortfolioCardProps {
 
 export function PortfolioCard({ item, priority = false }: PortfolioCardProps) {
   const tags = [item.freshness.replace("_", " "), placementLabel[item.placement] ?? item.placement, item.city].filter(Boolean);
+  const image = getPortfolioImageDerivative(item);
 
   return (
     <article className={priority ? "portfolio-card featured" : "portfolio-card"} aria-label={`${item.title} portfolio item`}>
-      <div className="portfolio-art" role="img" aria-label={item.altText}>
+      <div className="portfolio-art">
+        <img src={image.src} alt={image.altText} width={image.width} height={image.height} loading={priority ? "eager" : "lazy"} sizes={image.sizes} />
         <span>{item.title}</span>
       </div>
       <div className="portfolio-card-body">

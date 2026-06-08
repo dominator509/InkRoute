@@ -516,6 +516,19 @@ export interface PublicPortfolioItem {
   imageUrl: string;
   altText: string;
   isFeatured: boolean;
+  image: PublicPortfolioImageDerivative;
+}
+
+export interface PublicPortfolioImageDerivative {
+  src: string;
+  width: number;
+  height: number;
+  aspectRatio: `${number}:${number}`;
+  altText: string;
+  storageVisibility: "public_derivative";
+  privateOriginalAvailable: false;
+  sizes: string;
+  cacheControl: string;
 }
 
 export interface PublicTravelStop {
@@ -563,8 +576,89 @@ const publicContentRedactedFields = [
   "travel.artistId",
 ];
 
+const portfolioImageDerivatives: Record<string, Omit<PublicPortfolioImageDerivative, "altText">> = {
+  "orbital-serpent": {
+    src: "/demo/portfolio/orbital-serpent.jpg",
+    width: 1200,
+    height: 1500,
+    aspectRatio: "4:5",
+    storageVisibility: "public_derivative",
+    privateOriginalAvailable: false,
+    sizes: "(min-width: 960px) 33vw, (min-width: 640px) 50vw, 100vw",
+    cacheControl: "public, max-age=300, stale-while-revalidate=86400",
+  },
+  "ritual-floral": {
+    src: "/demo/portfolio/ritual-floral.jpg",
+    width: 1200,
+    height: 1500,
+    aspectRatio: "4:5",
+    storageVisibility: "public_derivative",
+    privateOriginalAvailable: false,
+    sizes: "(min-width: 960px) 33vw, (min-width: 640px) 50vw, 100vw",
+    cacheControl: "public, max-age=300, stale-while-revalidate=86400",
+  },
+  "black-sun-flash": {
+    src: "/demo/portfolio/black-sun.jpg",
+    width: 1200,
+    height: 1500,
+    aspectRatio: "4:5",
+    storageVisibility: "public_derivative",
+    privateOriginalAvailable: false,
+    sizes: "(min-width: 960px) 33vw, (min-width: 640px) 50vw, 100vw",
+    cacheControl: "public, max-age=300, stale-while-revalidate=86400",
+  },
+  "silent-gate": {
+    src: "/demo/portfolio/silent-gate.jpg",
+    width: 1200,
+    height: 1500,
+    aspectRatio: "4:5",
+    storageVisibility: "public_derivative",
+    privateOriginalAvailable: false,
+    sizes: "(min-width: 960px) 33vw, (min-width: 640px) 50vw, 100vw",
+    cacheControl: "public, max-age=300, stale-while-revalidate=86400",
+  },
+  "moon-thread": {
+    src: "/demo/portfolio/moon-thread.jpg",
+    width: 1200,
+    height: 1500,
+    aspectRatio: "4:5",
+    storageVisibility: "public_derivative",
+    privateOriginalAvailable: false,
+    sizes: "(min-width: 960px) 33vw, (min-width: 640px) 50vw, 100vw",
+    cacheControl: "public, max-age=300, stale-while-revalidate=86400",
+  },
+  "bone-orchid": {
+    src: "/demo/portfolio/bone-orchid.jpg",
+    width: 1200,
+    height: 1500,
+    aspectRatio: "4:5",
+    storageVisibility: "public_derivative",
+    privateOriginalAvailable: false,
+    sizes: "(min-width: 960px) 33vw, (min-width: 640px) 50vw, 100vw",
+    cacheControl: "public, max-age=300, stale-while-revalidate=86400",
+  },
+};
+
 export function normalizeTenantSlug(slug: string): string {
   return decodeURIComponent(slug).trim().toLowerCase();
+}
+
+export function getPortfolioImageDerivative(item: Pick<PortfolioItem, "slug" | "imageUrl" | "altText">): PublicPortfolioImageDerivative {
+  const derivative = portfolioImageDerivatives[item.slug] ?? {
+    src: item.imageUrl,
+    width: 1200,
+    height: 1500,
+    aspectRatio: "4:5" as const,
+    storageVisibility: "public_derivative" as const,
+    privateOriginalAvailable: false as const,
+    sizes: "(min-width: 960px) 33vw, (min-width: 640px) 50vw, 100vw",
+    cacheControl: "public, max-age=300, stale-while-revalidate=86400",
+  };
+
+  return {
+    ...derivative,
+    altText: item.altText,
+  };
 }
 
 export function buildPublicContentBundle(tenantSlug: string): PublicContentBundle | null {
@@ -602,6 +696,7 @@ export function buildPublicContentBundle(tenantSlug: string): PublicContentBundl
         imageUrl: item.imageUrl,
         altText: item.altText,
         isFeatured: item.isFeatured,
+        image: getPortfolioImageDerivative(item),
         ...(item.city ? { city: item.city } : {}),
       })),
     travelStops: demoTravelStops
