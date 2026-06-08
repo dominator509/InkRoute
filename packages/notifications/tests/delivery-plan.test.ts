@@ -4,7 +4,9 @@ import {
   buildDeliveryPlan,
   buildEmailProviderSendPlan,
   buildExpoPushDeliveryPlan,
+  buildExpoPushReceiptProcessingPlan,
   buildExpoPushRegistrationPlan,
+  buildExpoPushTapRoutingPlan,
   buildProviderEventReconciliationPlan,
   buildSmsProviderSendPlan,
   interpretSmsWebhook,
@@ -397,5 +399,94 @@ describe("notification delivery planning", () => {
     expect(plan.status).toBe("blocked");
     expect(plan.toMasked).toBeNull();
     expect(plan.blockers.join(" ")).toContain("Destination missing for this channel.");
+  });
+
+  it("plans Expo push receipt processing with delivery-log updates and invalid-token suppression", () => {
+    const delivered = buildExpoPushReceiptProcessingPlan({
+      tenantId: "tenant_001",
+      deliveryId: "delivery_push_001",
+      receiptId: "receipt_001",
+      receiptStatus: "ok",
+      requestId: "req_receipt_001",
+    });
+    const invalidToken = buildExpoPushReceiptProcessingPlan({
+      tenantId: "tenant_001",
+      deliveryId: "delivery_push_002",
+      receiptId: "receipt_002",
+      receiptStatus: "error",
+      errorCode: "DeviceNotRegistered",
+      errorMessage: "The recipient device is not registered.",
+      requestId: "req_receipt_002",
+    });
+
+    expect(delivered).toMatchObject({
+      status: "ready",
+      provider: "expo",
+      normalizedStatus: "delivered",
+      shouldUpdateDeliveryLog: true,
+      shouldMarkPushTokenInactive: false,
+      idempotencyKey: "expo-receipt:tenant_001:receipt_001:req_receipt_001",
+    });
+    expect(delivered.requiredWrites).toEqual(["NotificationDelivery", "ProviderEvent", "PushToken", "AuditLog", "IdempotencyKey"]);
+    expect(invalidToken).toMatchObject({
+      status: "ready",
+      normalizedStatus: "failed",
+      shouldUpdateDeliveryLog: true,
+      shouldMarkPushTokenInactive: true,
+    });
+    expect(invalidToken.requiredControls).toContain("Mark push tokens inactive when Expo reports DeviceNotRegistered or invalid token errors.");
+  });
+
+  it("blocks replayed or incomplete Expo push receipt processing", () => {
+    const plan = buildExpoPushReceiptProcessingPlan({
+      tenantId: "",
+      deliveryId: "",
+      receiptId: "receipt_001",
+      receiptStatus: "ok",
+      requestId: "",
+      alreadyProcessedReceiptIds: ["receipt_001"],
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.shouldUpdateDeliveryLog).toBe(false);
+    expect(plan.blockers).toEqual([
+      "Tenant scope is required before processing Expo push receipts.",
+      "Notification delivery id is required before processing Expo push receipts.",
+      "Request id is required for Expo receipt traceability.",
+      "Expo receipt id was already processed.",
+    ]);
+  });
+
+  it("plans Expo push tap routing only for safe internal deep links", () => {
+    const ready = buildExpoPushTapRoutingPlan({
+      tenantId: "tenant_001",
+      notificationId: "notification_push_001",
+      userId: "user_001",
+      deepLinkPath: "/bookings/booking_001",
+      pushOptIn: true,
+      requestId: "req_tap_001",
+    });
+    const unsafe = buildExpoPushTapRoutingPlan({
+      tenantId: "tenant_001",
+      notificationId: "notification_push_002",
+      userId: "user_001",
+      deepLinkPath: "https://storage.example/private.jpg?token=secret",
+      pushOptIn: false,
+      requestId: "req_tap_002",
+    });
+
+    expect(ready).toMatchObject({
+      status: "ready",
+      routePath: "/bookings/booking_001",
+      idempotencyKey: "expo-push-tap:tenant_001:notification_push_001:req_tap_001",
+      requiredWrites: ["NotificationInteraction", "AuditLog", "IdempotencyKey"],
+    });
+    expect(ready.requiredControls).toContain("Allow only internal relative deep links.");
+    expect(unsafe.status).toBe("blocked");
+    expect(unsafe.blockers).toEqual([
+      "Push opt-in is required before honoring push tap routing.",
+      "Push deep-link path must be an internal relative route.",
+      "Push deep-link path must not contain private URLs, tokens, signatures, or secrets.",
+    ]);
   });
 });

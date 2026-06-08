@@ -1006,6 +1006,53 @@ export interface ExpoPushDeliveryPlan {
   blockers: string[];
 }
 
+export interface ExpoPushReceiptProcessingPlanInput {
+  tenantId: string;
+  deliveryId: string;
+  receiptId: string;
+  receiptStatus: "ok" | "error";
+  requestId: string;
+  alreadyProcessedReceiptIds?: readonly string[];
+  errorCode?: string;
+  errorMessage?: string;
+}
+
+export interface ExpoPushReceiptProcessingPlan {
+  status: "ready" | "blocked";
+  provider: "expo";
+  tenantId: string;
+  deliveryId: string;
+  receiptId: string;
+  normalizedStatus: NotificationStatus;
+  idempotencyKey: string;
+  shouldUpdateDeliveryLog: boolean;
+  shouldMarkPushTokenInactive: boolean;
+  requiredWrites: string[];
+  requiredControls: string[];
+  blockers: string[];
+}
+
+export interface ExpoPushTapRoutingPlanInput {
+  tenantId: string;
+  notificationId: string;
+  userId: string;
+  deepLinkPath?: string;
+  pushOptIn: boolean;
+  requestId: string;
+}
+
+export interface ExpoPushTapRoutingPlan {
+  status: "ready" | "blocked";
+  tenantId: string;
+  notificationId: string;
+  userId: string;
+  routePath: string | null;
+  idempotencyKey: string;
+  requiredWrites: string[];
+  requiredControls: string[];
+  blockers: string[];
+}
+
 export function buildExpoPushRegistrationPlan(input: ExpoPushRegistrationPlanInput): ExpoPushRegistrationPlan {
   const blockers: string[] = [];
   if (!input.tenantId.trim()) blockers.push("Tenant scope is required before registering Expo push tokens.");
@@ -1071,6 +1118,73 @@ export function buildExpoPushDeliveryPlan(input: ExpoPushDeliveryPlanInput): Exp
       "Persist delivery log before provider send.",
       "Attach deep-link target for tap routing without embedding private file URLs.",
       "Process Expo receipts for delivery state and invalid-token suppression.",
+    ],
+    blockers,
+  };
+}
+
+export function buildExpoPushReceiptProcessingPlan(input: ExpoPushReceiptProcessingPlanInput): ExpoPushReceiptProcessingPlan {
+  const blockers: string[] = [];
+  const invalidToken = /DeviceNotRegistered|InvalidCredentials|MessageTooBig|invalid|notregistered/i.test(input.errorCode ?? input.errorMessage ?? "");
+
+  if (!input.tenantId.trim()) blockers.push("Tenant scope is required before processing Expo push receipts.");
+  if (!input.deliveryId.trim()) blockers.push("Notification delivery id is required before processing Expo push receipts.");
+  if (!input.receiptId.trim()) blockers.push("Expo receipt id is required before processing receipts.");
+  if (!input.requestId.trim()) blockers.push("Request id is required for Expo receipt traceability.");
+  if (input.alreadyProcessedReceiptIds?.includes(input.receiptId)) blockers.push("Expo receipt id was already processed.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    provider: "expo",
+    tenantId: input.tenantId,
+    deliveryId: input.deliveryId,
+    receiptId: input.receiptId,
+    normalizedStatus: input.receiptStatus === "ok" ? "delivered" : "failed",
+    idempotencyKey: `expo-receipt:${input.tenantId}:${input.receiptId}:${input.requestId}`,
+    shouldUpdateDeliveryLog: blockers.length === 0,
+    shouldMarkPushTokenInactive: blockers.length === 0 && invalidToken,
+    requiredWrites: ["NotificationDelivery", "ProviderEvent", "PushToken", "AuditLog", "IdempotencyKey"],
+    requiredControls: [
+      "Persist Expo receipt id before mutating delivery state to prevent replay.",
+      "Update NotificationDelivery from Expo receipt status exactly once.",
+      "Mark push tokens inactive when Expo reports DeviceNotRegistered or invalid token errors.",
+      "Store only masked token references and redacted receipt error summaries.",
+      "Alert or retry worker failures without reusing processed receipt ids.",
+    ],
+    blockers,
+  };
+}
+
+export function buildExpoPushTapRoutingPlan(input: ExpoPushTapRoutingPlanInput): ExpoPushTapRoutingPlan {
+  const blockers: string[] = [];
+  const routePath = input.deepLinkPath?.trim() ? input.deepLinkPath.trim() : null;
+
+  if (!input.tenantId.trim()) blockers.push("Tenant scope is required before push tap routing.");
+  if (!input.notificationId.trim()) blockers.push("Notification id is required before push tap routing.");
+  if (!input.userId.trim()) blockers.push("User id is required before push tap routing.");
+  if (!input.requestId.trim()) blockers.push("Request id is required for push tap traceability.");
+  if (!input.pushOptIn) blockers.push("Push opt-in is required before honoring push tap routing.");
+  if (!routePath) blockers.push("Push tap routing requires a deep-link path.");
+  if (routePath && (!routePath.startsWith("/") || routePath.startsWith("//") || /^https?:\/\//i.test(routePath))) {
+    blockers.push("Push deep-link path must be an internal relative route.");
+  }
+  if (routePath && /token=|signature=|secret=|https?:\/\//i.test(routePath)) {
+    blockers.push("Push deep-link path must not contain private URLs, tokens, signatures, or secrets.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    tenantId: input.tenantId,
+    notificationId: input.notificationId,
+    userId: input.userId,
+    routePath,
+    idempotencyKey: `expo-push-tap:${input.tenantId}:${input.notificationId}:${input.requestId}`,
+    requiredWrites: ["NotificationInteraction", "AuditLog", "IdempotencyKey"],
+    requiredControls: [
+      "Resolve tap routes only after tenant/user authorization checks.",
+      "Allow only internal relative deep links.",
+      "Never embed private file URLs, provider payloads, tokens, or signatures in push tap paths.",
+      "Persist NotificationInteraction for tap analytics and troubleshooting.",
     ],
     blockers,
   };
