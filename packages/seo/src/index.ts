@@ -138,6 +138,20 @@ export interface SearchConsolePropertyDraft {
   nextAction: string;
 }
 
+export interface SeoTechnicalAuditInput {
+  baseUrl: string;
+  routes: SeoRouteRecord[];
+  jsonLdGraphs?: JsonLd[];
+}
+
+export interface SeoTechnicalAuditSummary {
+  status: "pass" | "warn" | "fail";
+  routeCount: number;
+  sitemapEntryCount: number;
+  duplicateSitemapUrls: string[];
+  findings: SeoIssue[];
+}
+
 export function normalizePath(path: string): string {
   const trimmed = path.trim();
   if (trimmed === "") return "/";
@@ -344,6 +358,15 @@ export function buildInternalLinkPlan(routes: SeoRouteRecord[]): InternalLinkSug
   }
 
   for (const style of styleRoutes) {
+    if (booking) {
+      suggestions.push({
+        fromPath: style.path,
+        toPath: booking.path,
+        anchorText: `Book a ${(style.style ?? "style").toString()} tattoo consultation`,
+        reason: "Style pages should provide a direct booking call to action even before city landing pages are available.",
+        priority: "high",
+      });
+    }
     for (const city of cityRoutes.slice(0, 3)) {
       suggestions.push({
         fromPath: style.path,
@@ -424,6 +447,7 @@ export function buildStyleSeoBrief(args: {
   cityRoutes?: SeoRouteRecord[];
 }): SeoContentBrief {
   const styleKey = args.stylePage.styleName.toLowerCase().replace(/\s+/g, "_");
+  const normalizedStyleName = args.stylePage.styleName.toLowerCase();
   const matchingPortfolio = args.portfolioItems.filter((item) => item.styles.some((style) => style === styleKey));
   const route = createSeoRouteRecord({
     path: args.stylePage.canonicalPath,
@@ -441,9 +465,9 @@ export function buildStyleSeoBrief(args: {
     canonicalPath: route.canonicalPath,
     primaryKeyword: `${args.stylePage.styleName} tattoo artist`,
     secondaryKeywords: [
-      `${args.stylePage.styleName} tattoo booking`,
-      `${args.stylePage.styleName} tattoo portfolio`,
-      `healed ${args.stylePage.styleName} tattoo examples`,
+      `${normalizedStyleName} tattoo booking`,
+      `${normalizedStyleName} tattoo portfolio`,
+      `healed ${normalizedStyleName} tattoo examples`,
     ],
     recommendedSections: [
       "Style overview and fit criteria",
@@ -481,6 +505,112 @@ export function buildSearchConsolePropertyDraft(siteUrl: string, propertyType: "
     verificationMethod: propertyType === "domain" ? "dns_txt" : "html_file",
     status: "credential_gated",
     nextAction: "Verify ownership in Google Search Console, submit sitemap, and connect query/page metrics to the SEO dashboard.",
+  };
+}
+
+function addTechnicalFinding(findings: SeoIssue[], input: Omit<SeoIssue, "severity" | "nextAction"> & { severity?: SeoIssueSeverity; nextAction?: string }): void {
+  findings.push({
+    severity: input.severity ?? "error",
+    nextAction: input.nextAction ?? "Fix the SEO technical audit finding before treating the route as launch-ready.",
+    code: input.code,
+    message: input.message,
+    ...(input.field ? { field: input.field } : {}),
+  });
+}
+
+function findDuplicateValues(values: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const value of values) {
+    if (seen.has(value)) {
+      duplicates.add(value);
+    }
+    seen.add(value);
+  }
+  return [...duplicates].sort();
+}
+
+function isJsonLdGraph(value: JsonLd): value is { "@graph": unknown[] } {
+  return Array.isArray(value["@graph"]);
+}
+
+export function auditSeoTechnicalReadiness(input: SeoTechnicalAuditInput): SeoTechnicalAuditSummary {
+  const findings: SeoIssue[] = [];
+  const sitemap = buildSitemapPlan({ baseUrl: input.baseUrl, routes: input.routes });
+  const duplicateSitemapUrls = findDuplicateValues(sitemap.entries.map((entry) => entry.url));
+
+  for (const duplicate of duplicateSitemapUrls) {
+    addTechnicalFinding(findings, {
+      code: "DUPLICATE_SITEMAP_URL",
+      field: "sitemap",
+      message: `Duplicate sitemap URL detected: ${duplicate}.`,
+      nextAction: "Deduplicate route canonical paths before publishing the sitemap.",
+    });
+  }
+
+  for (const route of input.routes) {
+    const metadata = buildMetadataDraft({ baseUrl: input.baseUrl, route });
+    const expectedCanonical = createCanonicalUrl(input.baseUrl, route.canonicalPath);
+    if (metadata.canonicalUrl !== expectedCanonical || metadata.alternates.canonical !== expectedCanonical || metadata.openGraph.url !== expectedCanonical) {
+      addTechnicalFinding(findings, {
+        code: "CANONICAL_METADATA_MISMATCH",
+        field: "canonicalUrl",
+        message: `Metadata canonical fields do not agree for ${route.path}.`,
+        nextAction: "Regenerate metadata from the normalized route canonical path.",
+      });
+    }
+    if (metadata.robots.index !== (route.indexMode === "index")) {
+      addTechnicalFinding(findings, {
+        code: "ROBOTS_INDEX_MISMATCH",
+        field: "robots",
+        message: `Robots index flag does not match route indexMode for ${route.path}.`,
+        nextAction: "Regenerate robots metadata from route.indexMode.",
+      });
+    }
+
+    const routeAudit = auditSeoRoute(route);
+    for (const issue of routeAudit.issues.filter((issue) => issue.severity === "error")) {
+      findings.push(issue);
+    }
+  }
+
+  for (const graph of input.jsonLdGraphs ?? []) {
+    if (!isJsonLdGraph(graph)) {
+      addTechnicalFinding(findings, {
+        code: "JSON_LD_GRAPH_MISSING",
+        field: "jsonLd",
+        message: "Composed JSON-LD output must use an @graph array.",
+        nextAction: "Wrap structured data items with composeJsonLdGraph before rendering.",
+      });
+      continue;
+    }
+    if (graph["@graph"].length === 0) {
+      addTechnicalFinding(findings, {
+        code: "JSON_LD_GRAPH_EMPTY",
+        field: "jsonLd",
+        message: "JSON-LD graph is empty.",
+        nextAction: "Include WebSite, WebPage, Person, Service, FAQ, Event, or ImageObject schema items where relevant.",
+      });
+    }
+    for (const item of graph["@graph"]) {
+      if (!item || typeof item !== "object" || !("@type" in item)) {
+        addTechnicalFinding(findings, {
+          code: "JSON_LD_ITEM_TYPE_MISSING",
+          field: "jsonLd",
+          message: "Every JSON-LD graph item must include @type.",
+          nextAction: "Add a schema.org @type to each structured data object.",
+        });
+      }
+    }
+  }
+
+  const status = findings.some((finding) => finding.severity === "error") ? "fail" : findings.some((finding) => finding.severity === "warning") ? "warn" : "pass";
+  return {
+    status,
+    routeCount: input.routes.length,
+    sitemapEntryCount: sitemap.entries.length,
+    duplicateSitemapUrls,
+    findings,
   };
 }
 

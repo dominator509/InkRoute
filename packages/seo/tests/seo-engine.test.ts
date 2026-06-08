@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ArtistProfile, PortfolioItem, SeoCityPage, SeoStylePage, TravelStop } from "@inkroute/types";
 import {
   auditSeoRoute,
+  auditSeoTechnicalReadiness,
   buildCitySeoBrief,
   buildFaqSchema,
   buildInternalLinkPlan,
@@ -178,6 +179,66 @@ describe("SEO engine helpers", () => {
     expect(graph["@graph"]).toHaveLength(3);
     expect(graph["@graph"][1]?.["@type"]).toBe("WebPage");
     expect((graph["@graph"][1] as Record<string, unknown>).name).toBe("Seattle Tattoo Booking");
+  });
+
+  it("audits technical SEO readiness for sitemap, canonical, and JSON-LD invariants", () => {
+    const goodRoute = createSeoRouteRecord({
+      path: "/cities/portland-or",
+      kind: "city",
+      title: "Portland Oregon Tattoo Booking with Mara Vale",
+      description: "Book blackwork and ornamental tattoo sessions during Mara Vale's Portland guest spot with clear travel availability.",
+      city: "Portland",
+      region: "OR",
+      status: "published",
+      lastModified: "2026-06-01T00:00:00.000Z",
+    });
+    const goodGraph = composeJsonLdGraph([
+      buildWebsiteSchema({ name: "InkRoute Studio", url: "https://inkroute.example" }),
+      buildWebPageSchema({
+        name: "Portland Tattoo Booking",
+        description: "Landing page for Portland guest spot booking.",
+        url: createCanonicalUrl("https://inkroute.example", goodRoute.path),
+      }),
+    ]);
+
+    const passing = auditSeoTechnicalReadiness({
+      baseUrl: "https://inkroute.example",
+      routes: [goodRoute],
+      jsonLdGraphs: [goodGraph],
+    });
+
+    expect(passing.status).toBe("pass");
+    expect(passing.sitemapEntryCount).toBe(1);
+    expect(passing.findings).toHaveLength(0);
+
+    const duplicate = createSeoRouteRecord({
+      path: "/cities/portland-or/",
+      kind: "city",
+      title: "Portland Oregon Tattoo Booking with Mara Vale",
+      description: "Duplicate canonical route used to prove sitemap duplicate detection in the technical audit helper.",
+      city: "Portland",
+      region: "OR",
+      status: "published",
+    });
+    const missingRegion = createSeoRouteRecord({
+      path: "/cities/missing-region",
+      kind: "city",
+      title: "Missing Region Tattoo Booking Page",
+      description: "This city page has enough description text but lacks required region context for local SEO checks.",
+      city: "Portland",
+      status: "published",
+    });
+    const failing = auditSeoTechnicalReadiness({
+      baseUrl: "https://inkroute.example",
+      routes: [goodRoute, duplicate, missingRegion],
+      jsonLdGraphs: [composeJsonLdGraph([{ name: "Missing type" }])],
+    });
+
+    expect(failing.status).toBe("fail");
+    expect(failing.duplicateSitemapUrls).toContain("https://inkroute.example/cities/portland-or");
+    expect(failing.findings.some((finding) => finding.code === "DUPLICATE_SITEMAP_URL")).toBe(true);
+    expect(failing.findings.some((finding) => finding.code === "CITY_CONTEXT_MISSING")).toBe(true);
+    expect(failing.findings.some((finding) => finding.code === "JSON_LD_ITEM_TYPE_MISSING")).toBe(true);
   });
 
   it("creates city and style SEO briefs with internal link plans", () => {
