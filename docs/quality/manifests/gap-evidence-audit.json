@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T18:56:08.162Z",
+  "generatedAt": "2026-06-08T19:03:27.219Z",
   "source": "Phase 17 quality gate hardening",
   "status": "warn",
   "totalGaps": 133,
@@ -326,11 +326,6 @@
       "status": "warn",
       "gapId": "GAP-085",
       "message": "Blocks production uses qualified value: No for MVP demo; yes for agentic ops."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-085",
-      "message": "Verification/test field lacks concrete evidence detail."
     },
     {
       "status": "warn",
