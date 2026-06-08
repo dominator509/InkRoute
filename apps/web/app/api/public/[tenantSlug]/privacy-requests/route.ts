@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { buildPrivacyRequestDraft, redactRecord, type PrivacyRequestType } from "@inkroute/security";
-import { persistPrivacyRequest, resolveTenant } from "../../../../../lib/localRuntimeState";
+import { checkRateLimit, getClientIp, persistPrivacyRequest, resolveTenant } from "../../../../../lib/localRuntimeState";
 
 const requestTypes: PrivacyRequestType[] = ["access", "export", "rectification", "deletion", "restriction"];
 
@@ -28,6 +28,22 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   if (!resolvedTenant) {
     return NextResponse.json({ ok: false, error: { code: "TENANT_NOT_FOUND", message: "Privacy requests are available for local demo tenant slug only." } }, { status: 404 });
   }
+
+  const rateLimit = checkRateLimit("public-privacy-request", tenantSlug, `${getClientIp(Object.fromEntries(request.headers.entries()))}:${resolvedTenant.tenantId}`);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "RATE_LIMIT_EXCEEDED",
+          message: "Too many privacy requests were submitted for this tenant and client.",
+          details: { gapIds: ["GAP-098", "GAP-101"], remaining: rateLimit.remaining, retryAfterSeconds: rateLimit.retryAfterSeconds },
+        },
+      },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
   const persisted = persistPrivacyRequest(tenantSlug, { type: input.type, email: input.email, details: typeof input.details === "object" && input.details !== null ? (input.details as Record<string, unknown>) : {} });
   return NextResponse.json(
     {

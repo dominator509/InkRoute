@@ -1,16 +1,37 @@
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
+import { rateLimitRules } from "@inkroute/security";
 import { POST } from "../../dashboard/app/api/security/privacy-requests/route";
+
+function dashboardPrivacyRequest(
+  body: unknown,
+  clientIp = "203.0.113.180",
+  userId = "dashboard-user-1",
+  tenantId = "demo-studio-alpha",
+  role = "studio_manager",
+): NextRequest {
+  return new NextRequest("https://local.test/api/dashboard/security/privacy-requests", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-client-ip": clientIp,
+      "x-user-id": userId,
+      "x-tenant-id": tenantId,
+      "x-user-role": role,
+    },
+    body: typeof body === "string" ? body : JSON.stringify(body),
+  });
+}
+
+const validDashboardPrivacyBody = {
+  type: "access",
+  email: "client@example.test",
+  details: { reason: "customer request", requestCategory: "data-export", phone: "555-0101" },
+};
 
 describe("dashboard privacy request route", () => {
   it("returns 400 for malformed JSON", async () => {
-    const request = new NextRequest("https://local.test/api/dashboard/security/privacy-requests", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: "not-json",
-    });
-
-    const response = await POST(request);
+    const response = await POST(dashboardPrivacyRequest("not-json"));
     const body = await response.json();
 
     expect(response.status).toBe(400);
@@ -18,13 +39,7 @@ describe("dashboard privacy request route", () => {
   });
 
   it("returns 400 when required fields are missing", async () => {
-    const request = new NextRequest("https://local.test/api/dashboard/security/privacy-requests", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ type: "access" }),
-    });
-
-    const response = await POST(request);
+    const response = await POST(dashboardPrivacyRequest({ type: "access" }));
     const body = await response.json();
 
     expect(response.status).toBe(400);
@@ -32,18 +47,8 @@ describe("dashboard privacy request route", () => {
     expect(body.message).toContain("Expected valid type and email");
   });
 
-  it("persists demo-scope privacy requests with tenant context", async () => {
-    const request = new NextRequest("https://local.test/api/dashboard/security/privacy-requests", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        type: "access",
-        email: "client@example.test",
-        details: { reason: "customer request", requestCategory: "data-export" },
-      }),
-    });
-
-    const response = await POST(request);
+  it("persists demo-scope privacy requests with tenant context and redacted submission evidence", async () => {
+    const response = await POST(dashboardPrivacyRequest(validDashboardPrivacyBody));
     const body = await response.json();
 
     expect(response.status).toBe(201);
@@ -52,7 +57,59 @@ describe("dashboard privacy request route", () => {
     expect(body.data.persisted.requestType).toBe("access");
     expect(body.data.persisted.id).toMatch(/^pr_\d{6}$/);
     expect(body.data.persisted.receivedAt).toBeDefined();
+    expect(body.data.persisted.email).not.toBe("client@example.test");
+    expect(body.data.persisted.redactedSubmission.details.phone).not.toBe("555-0101");
+    expect(body.data.actor).toMatchObject({ userId: "dashboard-user-1", role: "studio_manager" });
     expect(body.data.nextStep).toContain("do not yet execute export/deletion/notification workflows");
     expect(body.data.gapIds).toContain("GAP-098");
+  });
+
+  it("denies dashboard privacy mutations without matching tenant scope", async () => {
+    const response = await POST(dashboardPrivacyRequest(validDashboardPrivacyBody, "203.0.113.182", "dashboard-user-cross", "other-tenant"));
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body).toMatchObject({
+      ok: false,
+      error: { code: "TENANT_SCOPE_REQUIRED" },
+    });
+  });
+
+  it("denies dashboard privacy mutations for roles outside the privacy operator allowlist", async () => {
+    const response = await POST(dashboardPrivacyRequest(validDashboardPrivacyBody, "203.0.113.183", "dashboard-user-assistant", "demo-studio-alpha", "assistant"));
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body).toMatchObject({
+      ok: false,
+      error: { code: "ROLE_NOT_AUTHORIZED" },
+    });
+  });
+
+  it("throttles repeated dashboard privacy mutations per tenant, actor, and client", async () => {
+    const dashboardRule = rateLimitRules.find((rule) => rule.id === "dashboard-mutation");
+    expect(dashboardRule).toBeDefined();
+
+    const responses = [];
+    for (let attempt = 0; attempt <= dashboardRule!.maxRequests; attempt += 1) {
+      responses.push(await POST(dashboardPrivacyRequest(validDashboardPrivacyBody, "203.0.113.181", "dashboard-user-rate-limit")));
+    }
+
+    const throttled = responses.at(-1)!;
+    const body = await throttled.json();
+
+    expect(responses.slice(0, -1).every((response) => response.status === 201)).toBe(true);
+    expect(throttled.status).toBe(429);
+    expect(throttled.headers.get("Retry-After")).toBeTruthy();
+    expect(body).toMatchObject({
+      ok: false,
+      error: {
+        code: "RATE_LIMIT_EXCEEDED",
+        details: {
+          gapIds: ["GAP-095", "GAP-098", "GAP-101"],
+          remaining: 0,
+        },
+      },
+    });
   });
 });

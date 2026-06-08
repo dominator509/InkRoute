@@ -48,7 +48,7 @@ All route handlers must:
 | --- | --- | --- | --- | --- | --- |
 | `GET` | `/api/public/:tenantSlug/portfolio` | Public portfolio items | Query validator pending | No | Planned |
 | `GET` | `/api/public/:tenantSlug/travel` | Public travel schedule/city availability | Query validator pending | No | Planned |
-| `POST` | `/api/public/:tenantSlug/booking-requests` | Create booking request | `bookingRequestInputSchema` | No, must be rate-limited before production | Tenant-scoped validation, local + DB persistence path, and fallback behavior if database is unavailable |
+| `POST` | `/api/public/:tenantSlug/booking-requests` | Create booking request | `bookingRequestInputSchema` | No, DB path requires bot proof + queue handoff readiness | Tenant-scoped validation, local + DB persistence path, anti-bot proof enforcement for DB writes, encryption-policy/rotation metadata, and signed reference-upload handoff contract in response. |
 | `POST` | `/api/public/:tenantSlug/waitlists` | City waitlist signup | Planned | No, rate-limited | Planned |
 | `GET` | `/api/public/:tenantSlug/seo/cities/:citySlug` | City SEO page data | `seoCityPageInputSchema` for admin writes | No | Planned |
 | `GET` | `/api/public/:tenantSlug/seo/styles/:styleSlug` | Style SEO page data | `seoStylePageInputSchema` for admin writes | No | Planned |
@@ -118,7 +118,7 @@ Examples:
 
 ## Phase 2 implementation note
 
-The schema and validators are expanded, but the API handlers themselves are still not implemented. This remains tracked under `GAP-017`.
+The schema and validators are expanded, and booking request handling is now production-oriented-in-progress; remaining public API handlers are still scaffolded. This remains tracked under `GAP-017`.
 
 
 ## Phase 3 implementation note
@@ -127,16 +127,19 @@ The public website now has static demo city/style routes and disabled booking/co
 
 
 ## Phase 4 implementation note
-
 `apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts` now includes production-oriented persistence behavior in the DB path:
 
 - Parses JSON.
 - Validates against `bookingRequestInputSchema`.
-- Resolves tenant by slug and applies local rate limiting.
+- Resolves tenant by slug, then applies fallback behavior when DB is unavailable.
+- Applies local rate limit and enforces anti-bot proof (`x-inkroute-bot-proof`) for DB-backed writes; DB persistence is denied with `BOT_PROTECTION_REQUIRED` when proof is absent/invalid.
 - Persists `BookingRequest`, `BookingStateEvent`, and `AuditLog` rows to Postgres when DB is available.
-- Falls back to local runtime draft persistence when DB is unavailable.
+- Enforces key-policy checks for sensitive persistence and emits encryption readiness, rotation-state/action, round-trip proof, key-cache refresh evidence, and provider-token readiness in response metadata + audit payloads.
+- Produces scope-aware post-persist workflow contracts (`notification`, `deposit`, `calendar`, `reference-upload`) with signed reference-upload handoff contract fields for downstream queue/worker handoff.
+- Captures provider-token-intake detection metadata and blocks DB persistence when encryption readiness is invalid for token-bearing payloads.
+- Falls back to local runtime draft persistence when DB is unavailable, with matching DB/local workflow plan shapes.
 
-Do not expose this as a complete production booking endpoint until `GAP-019`, `GAP-020`, `GAP-021`, `GAP-031`, `GAP-032`, `GAP-033`, and `GAP-034` are fully validated.
+Do not expose this as a complete production booking endpoint until `GAP-021`, `GAP-031`, `GAP-032`, `GAP-033`, `GAP-034`, `GAP-061`, and tenant-isolated integration tests are completed.
 
 
 ## Phase 5 implementation note

@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   buildMobileApiRequestPlan,
   buildMobileDeviceQaChecklist,
@@ -14,6 +16,12 @@ import {
   summarizeOfflineQueue,
   type OfflineQueueItem,
 } from "../src/index";
+
+const root = resolve(__dirname, "../../..");
+
+function readWorkspaceFile(path: string): string {
+  return readFileSync(resolve(root, path), "utf8");
+}
 
 describe("mobile support helpers", () => {
   it("registers every expected Phase 6 mobile screen once", () => {
@@ -288,6 +296,17 @@ describe("mobile support helpers", () => {
     expect(checklist.every((item) => item.gapIds.includes("GAP-048"))).toBe(true);
     expect(checklist.find((item) => item.area === "push_notifications")?.evidenceRequired).toContain("tap deep-link");
     expect(checklist.find((item) => item.area === "accessibility")?.platform).toBe("physical_device");
+  });
+
+  it("keeps the mobile device QA manifest aligned with generated checklist items", () => {
+    const manifest = JSON.parse(readWorkspaceFile("testing/manifests/mobile-device-qa-checklist.json")) as {
+      checks: Array<{ id: string; evidenceRequired: string; gaps: string[] }>;
+    };
+    const checklist = buildMobileDeviceQaChecklist();
+
+    expect(manifest.checks.map((check) => check.id)).toEqual(checklist.map((item) => item.id));
+    expect(manifest.checks.every((check) => check.evidenceRequired.length > 0)).toBe(true);
+    expect(manifest.checks.filter((check) => check.gaps.includes("GAP-108")).length).toBeGreaterThanOrEqual(9);
   });
 
   it("keeps production-blocking integration boundaries visible", () => {

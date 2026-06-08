@@ -8,6 +8,8 @@
       "priority": "critical",
       "description": "Complete booking flow using keyboard only with visible focus states and no trapped focus.",
       "tooling": ["Playwright", "axe", "manual screen-reader pass"],
+      "automatedSpec": "apps/web/tests/e2e/public-a11y.spec.ts",
+      "command": "pnpm test:e2e --project=web-chromium --grep @a11y",
       "evidenceRequired": "Video or trace plus axe report"
     },
     {
@@ -16,6 +18,8 @@
       "priority": "high",
       "description": "Dashboard tables/cards expose accessible names, landmarks, headings, and keyboard navigation.",
       "tooling": ["Playwright", "axe", "manual keyboard pass"],
+      "automatedSpec": "apps/dashboard/tests/e2e/dashboard-a11y.spec.ts",
+      "command": "pnpm test:e2e --project=dashboard-chromium --grep @a11y",
       "evidenceRequired": "axe output plus tab-order notes"
     },
     {

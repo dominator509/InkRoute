@@ -92,6 +92,8 @@ pnpm db:migrate
 pnpm db:seed
 ```
 
+The deployment evidence contract for database operations is `deployment/manifests/database-operations-evidence.json`; run `pnpm deploy:verify-database-ops` to confirm the required backup, migration, seed, branch promotion, destructive-change, and tenant-isolation evidence slots are present before attaching live provider proof.
+
 Recommended migration name:
 
 ```bash

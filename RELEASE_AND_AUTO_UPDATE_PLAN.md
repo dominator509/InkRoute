@@ -156,6 +156,8 @@ The mobile OTA helper classifies updates as:
 
 The current scaffold intentionally returns `blocked` because this repository still uses placeholder EAS project/update values. Do not enable OTA release automation until a real EAS project, preview binary, update channel, adoption monitoring, and rollback drill are verified.
 
+Mobile build and OTA evidence is tracked in `deployment/manifests/mobile-deployment-evidence.json` and verified with `pnpm deploy:verify-mobile`. Keep the committed `apps/mobile/app.json` project/update values deployment-gated until redacted EAS project/build/update evidence is recorded outside git.
+
 ## CI/CD guardrail scaffold
 
 `.github/workflows/release-governance.yml` currently performs only a manual dry run. The deployment jobs are intentionally disabled. Codex should convert those disabled jobs into real jobs only after GitHub environments, repository secrets, Vercel projects, database URLs, EAS token, and provider release credentials are configured.

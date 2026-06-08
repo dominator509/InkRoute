@@ -23,9 +23,35 @@ Scaffolded only. The current repo is not production-ready.
 
 ```bash
 pnpm deploy:check-env
+pnpm deploy:verify-provider-envs
+pnpm deploy:verify-secrets
+pnpm deploy:verify-mobile
+pnpm deploy:verify-database-ops
+pnpm deploy:verify-launch-evidence
+pnpm deploy:verify-ops
 pnpm deploy:checklist
 pnpm deploy:gaps
 ```
+
+## Launch evidence bundle
+
+Production launch evidence is tracked in `deployment/manifests/production-launch-evidence.json` and verified with:
+
+```bash
+pnpm deploy:verify-launch-evidence
+```
+
+This bundle is a redacted index of required proof across CI/build/test, database operations, providers/secrets, security/privacy, accessibility/SEO/performance, mobile release, legal approval, and rollback drills. It must not contain provider secrets, database URLs, private console links, client PII, medical notes, or payment payloads.
+
+## Launch operations evidence
+
+Incident response, support, privacy, monitoring, on-call, communications, and rollback operations are tracked in `deployment/manifests/launch-operations-evidence.json` and verified with:
+
+```bash
+pnpm deploy:verify-ops
+```
+
+The manifest must use role/team labels and redacted artifact labels only. Do not commit private phone numbers, personal emails, alert webhook URLs, raw support transcripts, client PII, medical notes, or payment payloads.
 
 ## Approval rule
 

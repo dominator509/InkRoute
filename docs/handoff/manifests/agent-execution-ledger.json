@@ -1,0 +1,87 @@
+{
+  "generatedAt": "2026-06-03T00:00:00.000-07:00",
+  "status": "not_executed",
+  "sourceQueue": "docs/handoff/manifests/agent-execution-queue.json",
+  "command": "pnpm handoff:verify-ledger",
+  "redactionPolicy": {
+    "forbiddenInLedger": [
+      "provider secrets",
+      "database URLs",
+      "auth tokens",
+      "webhook signing secrets",
+      "private client data",
+      "medical notes",
+      "payment payloads"
+    ],
+    "allowedEvidence": [
+      "command name",
+      "exit code",
+      "redacted log artifact label",
+      "changed file path",
+      "PR or commit label",
+      "remaining blocker summary"
+    ]
+  },
+  "executions": [
+    {
+      "taskId": "codex-workspace-runtime-readiness-001",
+      "status": "not_executed",
+      "assignedAgent": "Codex",
+      "commandsRun": [],
+      "filesChanged": [],
+      "evidenceArtifacts": [],
+      "remainingGaps": ["GAP-001", "GAP-130", "GAP-131", "GAP-132", "GAP-133"],
+      "secretSafety": "no_evidence_recorded"
+    },
+    {
+      "taskId": "codex-runtime-verification-001",
+      "status": "not_executed",
+      "assignedAgent": "Codex",
+      "commandsRun": [],
+      "filesChanged": [],
+      "evidenceArtifacts": [],
+      "remainingGaps": ["GAP-001", "GAP-105", "GAP-113", "GAP-121"],
+      "secretSafety": "no_evidence_recorded"
+    },
+    {
+      "taskId": "codex-quality-gate-enforcement-001",
+      "status": "not_executed",
+      "assignedAgent": "Codex",
+      "commandsRun": [],
+      "filesChanged": [],
+      "evidenceArtifacts": [],
+      "remainingGaps": ["GAP-122", "GAP-124", "GAP-126", "GAP-127", "GAP-129"],
+      "secretSafety": "no_evidence_recorded"
+    },
+    {
+      "taskId": "jules-database-auth-foundation-001",
+      "status": "not_executed",
+      "assignedAgent": "Jules",
+      "commandsRun": [],
+      "filesChanged": [],
+      "evidenceArtifacts": [],
+      "remainingGaps": ["GAP-002", "GAP-003", "GAP-005", "GAP-095", "GAP-117"],
+      "secretSafety": "no_evidence_recorded"
+    },
+    {
+      "taskId": "claude-provider-contract-001",
+      "status": "not_executed",
+      "assignedAgent": "Claude Code",
+      "commandsRun": [],
+      "filesChanged": [],
+      "evidenceArtifacts": [],
+      "remainingGaps": ["GAP-004", "GAP-049", "GAP-050", "GAP-061", "GAP-062", "GAP-063", "GAP-080", "GAP-110"],
+      "secretSafety": "no_evidence_recorded"
+    },
+    {
+      "taskId": "local-launch-readiness-001",
+      "status": "not_executed",
+      "assignedAgent": "Local terminal",
+      "commandsRun": [],
+      "filesChanged": [],
+      "evidenceArtifacts": [],
+      "remainingGaps": ["GAP-113", "GAP-118", "GAP-120", "GAP-121", "GAP-122"],
+      "secretSafety": "no_evidence_recorded"
+    }
+  ]
+}

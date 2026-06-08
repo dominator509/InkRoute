@@ -1,0 +1,81 @@
+{
+  "phase": "15",
+  "status": "evidence_contract_no_database",
+  "command": "pnpm deploy:verify-database-ops",
+  "providerStatus": "not_provisioned",
+  "redactionPolicy": {
+    "forbiddenInGit": [
+      "DATABASE_URL",
+      "DIRECT_URL",
+      "provider project id",
+      "backup download URL",
+      "database password",
+      "connection string"
+    ],
+    "allowedInGit": [
+      "redacted branch label",
+      "migration id",
+      "command name",
+      "artifact label",
+      "approval ticket id",
+      "status"
+    ]
+  },
+  "requiredCommands": [
+    "pnpm db:generate",
+    "pnpm --filter @inkroute/db db:validate",
+    "pnpm db:migrate",
+    "pnpm db:seed"
+  ],
+  "operationChecks": [
+    {
+      "id": "staging-branch-provisioned",
+      "status": "not_run",
+      "requiredBeforeProduction": true,
+      "evidenceRequired": ["redacted provider branch label", "database secret-store reference", "provider backup policy label"]
+    },
+    {
+      "id": "migration-dry-run",
+      "status": "not_run",
+      "requiredBeforeProduction": true,
+      "evidenceRequired": ["prisma validate output", "migrate diff output label", "generated SQL review label"]
+    },
+    {
+      "id": "destructive-change-scan",
+      "status": "not_run",
+      "requiredBeforeProduction": true,
+      "blockedSqlPatterns": ["DROP TABLE", "DROP COLUMN", "ALTER TABLE DROP", "TRUNCATE"],
+      "evidenceRequired": ["SQL scan artifact", "manual approval label if destructive", "restore plan label"]
+    },
+    {
+      "id": "staging-migration-apply",
+      "status": "not_run",
+      "requiredBeforeProduction": true,
+      "evidenceRequired": ["staging migration log", "migration id", "post-migration app compatibility smoke"]
+    },
+    {
+      "id": "seed-policy",
+      "status": "not_run",
+      "requiredBeforeProduction": true,
+      "evidenceRequired": ["seed command output", "synthetic data confirmation", "production seed disabled/approved policy"]
+    },
+    {
+      "id": "backup-restore-drill",
+      "status": "not_run",
+      "requiredBeforeProduction": true,
+      "evidenceRequired": ["backup snapshot label", "restore drill log label", "restore RTO/RPO note"]
+    },
+    {
+      "id": "tenant-isolation-smoke",
+      "status": "not_run",
+      "requiredBeforeProduction": true,
+      "evidenceRequired": ["cross-tenant denial test output", "tenant-scoped query audit label", "seeded tenant volume note"]
+    },
+    {
+      "id": "branch-promotion",
+      "status": "not_run",
+      "requiredBeforeProduction": true,
+      "evidenceRequired": ["promotion approval label", "production branch label", "rollback branch/restore label"]
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { buildPrivacyRequestDraft, redactRecord, type PrivacyRequestType } from "@inkroute/security";
+import { buildPrivacyRequestDraft, rateLimitRules, redactRecord, type PrivacyRequestType } from "@inkroute/security";
 
 type PrivacyRequestInput = {
   type: PrivacyRequestType;
@@ -17,9 +17,17 @@ type DemoPrivacyRequest = {
   receivedAt: string;
 };
 
+type DashboardActor = {
+  tenantId: string;
+  userId: string;
+  role: string;
+};
+
 const requestTypes: PrivacyRequestType[] = ["access", "export", "rectification", "deletion", "restriction"];
 const demoTenantId = "demo-studio-alpha";
+const allowedDashboardRoles = new Set(["owner", "studio_manager", "admin"]);
 const inMemoryPrivacyRequests: DemoPrivacyRequest[] = [];
+const rateLimitBuckets = new Map<string, { windowStart: number; count: number }>();
 let requestCounter = 1;
 
 function isPrivacyRequestType(value: unknown): value is PrivacyRequestType {
@@ -32,6 +40,60 @@ function nextRequestId() {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function getClientIp(request: NextRequest): string {
+  return request.headers.get("x-client-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown-ip";
+}
+
+function resolveDashboardActor(request: NextRequest): { actor?: DashboardActor; error?: { status: number; code: string; message: string } } {
+  const tenantId = request.headers.get("x-tenant-id");
+  const role = request.headers.get("x-user-role") ?? "viewer";
+  const userId = request.headers.get("x-user-id") ?? "demo-dashboard-user";
+
+  if (tenantId !== demoTenantId) {
+    return {
+      error: {
+        status: 403,
+        code: "TENANT_SCOPE_REQUIRED",
+        message: "Dashboard privacy mutations require an authenticated tenant scope.",
+      },
+    };
+  }
+
+  if (!allowedDashboardRoles.has(role)) {
+    return {
+      error: {
+        status: 403,
+        code: "ROLE_NOT_AUTHORIZED",
+        message: "Dashboard privacy mutations require owner, studio_manager, or admin role.",
+      },
+    };
+  }
+
+  return { actor: { tenantId, userId, role } };
+}
+
+function checkDashboardMutationRateLimit(request: NextRequest, actor: DashboardActor) {
+  const rule = rateLimitRules.find((candidate) => candidate.id === "dashboard-mutation");
+  if (!rule) {
+    return { allowed: true, remaining: 0, retryAfterSeconds: 0, maxRequests: 0 };
+  }
+
+  const key = `${rule.id}:${actor.tenantId}:${actor.userId}:${getClientIp(request)}`;
+  const now = Date.now();
+  const windowMs = rule.windowSeconds * 1000;
+  const bucket = rateLimitBuckets.get(key);
+  const nextBucket = !bucket || now - bucket.windowStart >= windowMs
+    ? { windowStart: now, count: 1 }
+    : { windowStart: bucket.windowStart, count: bucket.count + 1 };
+
+  rateLimitBuckets.set(key, nextBucket);
+
+  const allowed = nextBucket.count <= rule.maxRequests;
+  const remaining = Math.max(rule.maxRequests - nextBucket.count, 0);
+  const retryAfterSeconds = allowed ? 0 : Math.max(Math.ceil((windowMs - (now - nextBucket.windowStart)) / 1000), 1);
+  return { allowed, remaining, retryAfterSeconds, maxRequests: rule.maxRequests };
 }
 
 export async function POST(request: NextRequest) {
@@ -57,10 +119,34 @@ export async function POST(request: NextRequest) {
     ...(details ? { details } : {}),
   };
 
-  const redactedSubmission = redactRecord({ email: requestInput.email, ...requestInput.details });
+  const actorResolution = resolveDashboardActor(request);
+  if (actorResolution.error) {
+    return NextResponse.json(
+      { ok: false, error: { code: actorResolution.error.code, message: actorResolution.error.message, gapIds: ["GAP-095", "GAP-098"] } },
+      { status: actorResolution.error.status },
+    );
+  }
+
+  const actor = actorResolution.actor!;
+  const rateLimit = checkDashboardMutationRateLimit(request, actor);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "RATE_LIMIT_EXCEEDED",
+          message: "Too many dashboard privacy mutations were submitted for this tenant and actor.",
+          details: { gapIds: ["GAP-095", "GAP-098", "GAP-101"], remaining: rateLimit.remaining, retryAfterSeconds: rateLimit.retryAfterSeconds },
+        },
+      },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
+  const redactedSubmission = redactRecord({ email: requestInput.email, details: requestInput.details ?? {} });
   const persisted: DemoPrivacyRequest = {
     id: nextRequestId(),
-    tenantId: demoTenantId,
+    tenantId: actor.tenantId,
     requestType: requestInput.type,
     email: requestInput.email,
     redactedSubmission,
@@ -75,11 +161,16 @@ export async function POST(request: NextRequest) {
       ok: true,
       data: {
         tenantId: demoTenantId,
+        actor: {
+          userId: actor.userId,
+          role: actor.role,
+        },
         draft: buildPrivacyRequestDraft(requestInput.type),
         persisted: {
           id: persisted.id,
           requestType: persisted.requestType,
           email: persisted.redactedSubmission.email,
+          redactedSubmission: persisted.redactedSubmission,
           receivedAt: persisted.receivedAt,
         },
         nextStep: "Dashboard persistence and worker dispatch are demo-scoped and do not yet execute export/deletion/notification workflows.",

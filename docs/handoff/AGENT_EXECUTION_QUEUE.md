@@ -48,6 +48,8 @@ After dependencies are installed, use the package scripts:
 
 ```bash
 pnpm handoff:all
+pnpm handoff:verify-tooling
+pnpm handoff:verify-task-sync
 pnpm quality:all
 ```
 
@@ -57,6 +59,26 @@ pnpm quality:all
 - Treat the output as routing and quality evidence, not runtime proof.
 - Every external execution result must be written back to `GAP_TRACKER.md` with exact commands, files changed, and verification evidence.
 - Do not paste secrets, provider keys, database URLs, webhook secrets, or auth tokens into gap rows or handoff docs.
+
+## Execution ledger
+
+External agent execution results are tracked in `docs/handoff/manifests/agent-execution-ledger.json` and verified with:
+
+```bash
+pnpm handoff:verify-ledger
+```
+
+Keep each ledger entry redacted. A completed task must include commands run, files changed, evidence artifact labels, remaining gaps, and `secret_safe_redacted` status. Do not paste provider secrets, database URLs, auth tokens, private client data, medical notes, or payment payloads into the ledger.
+
+## GitHub task tracking sync
+
+GitHub issue/project tracking plans are mapped in `docs/handoff/manifests/agent-task-tracking-sync.json` and verified with:
+
+```bash
+pnpm handoff:verify-task-sync
+```
+
+The sync manifest defines one planned issue per queued task, with target labels, priority labels, gap IDs, and acceptance evidence fields. Keep issue and project URLs empty until the items are actually created in GitHub.
 
 ## Phase 18 addition — workspace readiness verification
 

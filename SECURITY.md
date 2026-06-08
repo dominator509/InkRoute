@@ -210,3 +210,5 @@ Phase 15 adds deployment and launch runbooks, but no production security control
 - incident/privacy/support runbook drills.
 
 These remain tracked in the gap tracker, especially `GAP-095` through `GAP-104` and `GAP-113` through `GAP-120`.
+
+Launch operations evidence is tracked in `deployment/manifests/launch-operations-evidence.json` and verified with `pnpm deploy:verify-ops`. This must remain blocked until incident, privacy, support, monitoring, on-call, communication, and rollback drills have redacted proof.

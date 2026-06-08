@@ -1,0 +1,52 @@
+{
+  "phase": "14",
+  "status": "database_runtime_gated",
+  "command": "pnpm --filter @inkroute/db test:integration",
+  "requires": [
+    "Postgres DATABASE_URL",
+    "DIRECT_URL",
+    "generated Prisma Client",
+    "migrated schema",
+    "seeded demo tenant",
+    "isolated test database or transaction rollback"
+  ],
+  "suites": [
+    {
+      "id": "db-prisma-schema-lifecycle",
+      "priority": "critical",
+      "commands": [
+        "pnpm --filter @inkroute/db db:validate",
+        "pnpm --filter @inkroute/db db:generate",
+        "pnpm --filter @inkroute/db db:migrate",
+        "pnpm --filter @inkroute/db db:seed"
+      ],
+      "evidence": ["schema validates", "client generates", "migrations apply", "seed tenant exists"]
+    },
+    {
+      "id": "db-tenant-isolation",
+      "priority": "critical",
+      "models": [
+        "Tenant",
+        "TenantMember",
+        "BookingRequest",
+        "Appointment",
+        "Payment",
+        "FileAsset",
+        "MessageThread",
+        "Message",
+        "Notification",
+        "SeoCityPage",
+        "ReleaseRecord",
+        "FeatureFlag",
+        "AuditLog"
+      ],
+      "evidence": ["cross-tenant reads deny records", "writes require tenantId", "unique indexes include tenantId where scoped"]
+    },
+    {
+      "id": "db-workflow-audit",
+      "priority": "critical",
+      "workflows": ["booking", "payment", "calendar", "notification", "privacy", "release"],
+      "evidence": ["state changes write audit rows", "audit rows include tenantId", "audit rows include actor/action/entity metadata"]
+    }
+  ]
+}

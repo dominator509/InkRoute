@@ -1658,7 +1658,22 @@ export function redactValue(fieldName: string, value: unknown): unknown {
 }
 
 export function redactRecord<T extends Record<string, unknown>>(record: T): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(record).map(([key, value]) => [key, redactValue(key, value)]));
+  return Object.fromEntries(Object.entries(record).map(([key, value]) => [key, redactUnknownValue(key, value)]));
+}
+
+function redactUnknownValue(fieldName: string, value: unknown): unknown {
+  const redacted = redactValue(fieldName, value);
+  if (redacted !== value) return redacted;
+
+  if (Array.isArray(value)) {
+    return value.map((item) => redactUnknownValue(fieldName, item));
+  }
+
+  if (typeof value === "object" && value !== null) {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, nested]) => [key, redactUnknownValue(key, nested)]));
+  }
+
+  return value;
 }
 
 export function evaluateRateLimitDraft(input: RateLimitEvaluationInput): RateLimitEvaluationResult {

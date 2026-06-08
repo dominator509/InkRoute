@@ -14,6 +14,7 @@ node scripts/handoff/audit-gap-tracker.mjs
 node scripts/quality/audit-doc-links.mjs
 node scripts/quality/audit-gap-evidence.mjs
 node scripts/quality/audit-gap-tracker-diff.mjs
+node scripts/quality/verify-pr-gap-diff-fixtures.mjs
 node scripts/quality/print-quality-gates.mjs
 ```
 

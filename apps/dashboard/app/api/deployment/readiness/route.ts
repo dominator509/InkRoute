@@ -7,7 +7,7 @@ import {
 } from "@inkroute/deployment";
 import { deploymentReadinessMutationSchema, type DeploymentReadinessMutationInput } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
-import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
+import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../../dashboardAuth";
 
 declare const process: { env: Record<string, string | undefined> };
 
@@ -161,7 +161,7 @@ function buildPostSuccessPayload(
     },
     environment: resolvedEnvironment,
     plan: buildDeploymentPlan(input.targetEnvironment),
-    requestId: input.requestId,
+    ...(input.requestId === undefined ? {} : { requestId: input.requestId }),
     persistence: actor.source === "local-fallback" ? "local-fallback" : "database",
     ...(auditId ? { auditId } : {}),
     gapIds: deploymentGapIds,

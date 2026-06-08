@@ -23,9 +23,9 @@ jobs:
       - name: Verify Phase 14 testing manifests
         run: pnpm test:phase14:static && pnpm test:manifest
       - name: Verify Phase 15 deployment manifests
-        run: pnpm deploy:check-env && pnpm deploy:checklist && pnpm deploy:gaps
+        run: pnpm deploy:check-env && pnpm deploy:verify-provider-envs && pnpm deploy:verify-secrets && pnpm deploy:verify-mobile && pnpm deploy:verify-database-ops && pnpm deploy:verify-launch-evidence && pnpm deploy:verify-ops && pnpm deploy:checklist && pnpm deploy:gaps
       - name: Verify Phase 16 handoff manifests
-        run: pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next
+        run: pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next && pnpm handoff:verify-ledger && pnpm handoff:verify-tooling && pnpm handoff:verify-task-sync
       - name: Verify Phase 18 workspace runtime readiness
         run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness || true
       - name: Verify Phase 17 quality gates
@@ -35,8 +35,30 @@ jobs:
         run: pnpm quality:pr-gaps
       - run: pnpm typecheck
       - run: pnpm lint
-      - run: pnpm test:unit
+      - name: Run unit tests with coverage
+        run: pnpm test:unit:coverage
+      - name: Upload Vitest coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-coverage
+          path: |
+            coverage/unit
+            coverage/**/*.json
+            coverage/**/*.lcov
+          if-no-files-found: warn
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
       - name: Run Playwright smoke tests
         run: pnpm test:e2e
+      - name: Upload Playwright report artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            coverage/playwright-report
+            coverage/playwright-results.json
+            coverage/playwright-junit.xml
+            test-results
+          if-no-files-found: warn

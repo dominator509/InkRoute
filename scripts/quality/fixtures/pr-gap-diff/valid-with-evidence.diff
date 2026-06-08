@@ -1,0 +1,5 @@
+--- a/GAP_TRACKER.md
++++ b/GAP_TRACKER.md
+@@ -1 +1 @@
+-| GAP-901 | Phase X | Demo | Demo gap. | High | Yes | Open | `demo.md` | Implement demo evidence. | Codex | Implement demo evidence. | `pnpm demo` passes. |
++| GAP-901 | Phase X | Demo | Demo gap. | High | Yes | Closed - evidence recorded from `pnpm demo` command output. | `demo.md` | Implement demo evidence. | Codex | Implement demo evidence. | `pnpm demo` passed with CI artifact evidence. |

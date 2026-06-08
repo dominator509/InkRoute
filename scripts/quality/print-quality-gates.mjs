@@ -18,9 +18,9 @@ const gates = [
     id: "quality-gap-evidence",
     title: "Gap tracker evidence audit",
     priority: "critical",
-    command: "node scripts/quality/audit-gap-evidence.mjs",
+    command: "node scripts/quality/audit-gap-evidence.mjs && node scripts/quality/verify-pr-gap-diff-fixtures.mjs",
     blocksGapIds: ["GAP-122", "GAP-119"],
-    acceptanceEvidence: ["Audit output", "gap-evidence-audit.json", "No fail findings before closing blockers"],
+    acceptanceEvidence: ["Audit output", "gap-evidence-audit.json", "Positive and negative PR gap-diff fixtures pass", "No fail findings before closing blockers"],
   },
   {
     id: "phase-docs",

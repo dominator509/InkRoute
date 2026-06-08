@@ -1,0 +1,190 @@
+{
+  "phase": "15",
+  "status": "evidence_contract_not_provisioned",
+  "command": "pnpm deploy:verify-provider-envs",
+  "redactionPolicy": {
+    "forbiddenInGit": [
+      "provider project ids",
+      "database connection strings",
+      "secret values",
+      "access tokens",
+      "private bucket names",
+      "webhook signing secrets"
+    ],
+    "allowedInGit": [
+      "provider type",
+      "environment name",
+      "redacted evidence label",
+      "required proof category",
+      "secret-store destination name",
+      "status"
+    ]
+  },
+  "environments": [
+    {
+      "name": "preview",
+      "requiredBeforeProduction": true,
+      "surfaces": [
+        {
+          "surface": "web",
+          "provider": "vercel",
+          "status": "not_provisioned",
+          "secretStore": "GitHub Actions preview environment and Vercel project settings",
+          "requiredEvidence": ["redacted preview URL", "build log artifact", "rollback target"]
+        },
+        {
+          "surface": "dashboard",
+          "provider": "vercel",
+          "status": "not_provisioned",
+          "secretStore": "GitHub Actions preview environment and Vercel project settings",
+          "requiredEvidence": ["redacted preview URL", "auth-protected route smoke", "build log artifact"]
+        },
+        {
+          "surface": "database",
+          "provider": "neon_or_supabase_postgres",
+          "status": "not_provisioned",
+          "secretStore": "GitHub Actions preview environment secrets",
+          "requiredEvidence": ["redacted branch name", "migration dry-run log", "backup/restore policy reference"]
+        },
+        {
+          "surface": "storage",
+          "provider": "supabase_or_s3_storage",
+          "status": "not_provisioned",
+          "secretStore": "GitHub Actions preview environment secrets",
+          "requiredEvidence": ["private ACL proof", "signed upload proof", "malware/EXIF process reference"]
+        },
+        {
+          "surface": "mobile",
+          "provider": "expo_eas",
+          "status": "not_provisioned",
+          "secretStore": "EAS secrets and GitHub Actions preview environment secrets",
+          "requiredEvidence": ["EAS project reference label", "preview build artifact", "device QA checklist"]
+        },
+        {
+          "surface": "observability",
+          "provider": "sentry",
+          "status": "not_provisioned",
+          "secretStore": "Sentry project settings and GitHub Actions preview environment secrets",
+          "requiredEvidence": ["redacted project slug label", "sample issue id label", "source-map upload artifact"]
+        },
+        {
+          "surface": "ci_cd",
+          "provider": "github_actions",
+          "status": "not_provisioned",
+          "secretStore": "GitHub Actions environments and repository settings",
+          "requiredEvidence": ["environment protection rule screenshot label", "required checks list", "artifact retention policy"]
+        }
+      ]
+    },
+    {
+      "name": "staging",
+      "requiredBeforeProduction": true,
+      "surfaces": [
+        {
+          "surface": "web",
+          "provider": "vercel",
+          "status": "not_provisioned",
+          "secretStore": "GitHub Actions staging environment and Vercel project settings",
+          "requiredEvidence": ["redacted staging URL", "build log artifact", "rollback target"]
+        },
+        {
+          "surface": "dashboard",
+          "provider": "vercel",
+          "status": "not_provisioned",
+          "secretStore": "GitHub Actions staging environment and Vercel project settings",
+          "requiredEvidence": ["redacted staging URL", "auth-protected route smoke", "build log artifact"]
+        },
+        {
+          "surface": "database",
+          "provider": "neon_or_supabase_postgres",
+          "status": "not_provisioned",
+          "secretStore": "GitHub Actions staging environment secrets",
+          "requiredEvidence": ["redacted branch/project label", "migration deploy log", "restore drill label"]
+        },
+        {
+          "surface": "storage",
+          "provider": "supabase_or_s3_storage",
+          "status": "not_provisioned",
+          "secretStore": "GitHub Actions staging environment secrets",
+          "requiredEvidence": ["private ACL proof", "signed upload proof", "retention policy proof"]
+        },
+        {
+          "surface": "mobile",
+          "provider": "expo_eas",
+          "status": "not_provisioned",
+          "secretStore": "EAS secrets and GitHub Actions staging environment secrets",
+          "requiredEvidence": ["EAS staging channel label", "internal build artifact", "OTA rollback dry-run"]
+        },
+        {
+          "surface": "observability",
+          "provider": "sentry",
+          "status": "not_provisioned",
+          "secretStore": "Sentry project settings and GitHub Actions staging environment secrets",
+          "requiredEvidence": ["redacted project slug label", "synthetic issue event label", "redaction proof"]
+        },
+        {
+          "surface": "ci_cd",
+          "provider": "github_actions",
+          "status": "not_provisioned",
+          "secretStore": "GitHub Actions environments and repository settings",
+          "requiredEvidence": ["environment approval policy", "required checks list", "artifact retention policy"]
+        }
+      ]
+    },
+    {
+      "name": "production",
+      "requiredBeforeProduction": true,
+      "surfaces": [
+        {
+          "surface": "web",
+          "provider": "vercel",
+          "status": "not_provisioned",
+          "secretStore": "GitHub Actions production environment and Vercel project settings",
+          "requiredEvidence": ["redacted production URL", "protected deployment approval", "rollback drill"]
+        },
+        {
+          "surface": "dashboard",
+          "provider": "vercel",
+          "status": "not_provisioned",
+          "secretStore": "GitHub Actions production environment and Vercel project settings",
+          "requiredEvidence": ["redacted dashboard URL", "auth-protected route smoke", "protected deployment approval"]
+        },
+        {
+          "surface": "database",
+          "provider": "neon_or_supabase_postgres",
+          "status": "not_provisioned",
+          "secretStore": "GitHub Actions production environment secrets",
+          "requiredEvidence": ["redacted project label", "migration deploy approval", "backup/restore proof"]
+        },
+        {
+          "surface": "storage",
+          "provider": "supabase_or_s3_storage",
+          "status": "not_provisioned",
+          "secretStore": "GitHub Actions production environment secrets",
+          "requiredEvidence": ["private ACL proof", "signed upload proof", "malware/EXIF process proof"]
+        },
+        {
+          "surface": "mobile",
+          "provider": "expo_eas",
+          "status": "not_provisioned",
+          "secretStore": "EAS secrets and GitHub Actions production environment secrets",
+          "requiredEvidence": ["EAS production channel label", "store build artifact", "OTA rollback drill"]
+        },
+        {
+          "surface": "observability",
+          "provider": "sentry",
+          "status": "not_provisioned",
+          "secretStore": "Sentry project settings and GitHub Actions production environment secrets",
+          "requiredEvidence": ["redacted project slug label", "production sample issue label", "source-map upload proof"]
+        },
+        {
+          "surface": "ci_cd",
+          "provider": "github_actions",
+          "status": "not_provisioned",
+          "secretStore": "GitHub Actions environments and repository settings",
+          "requiredEvidence": ["environment approval policy", "required checks list", "secret-scanning policy"]
+        }
+      ]
+    }
+  ]
+}

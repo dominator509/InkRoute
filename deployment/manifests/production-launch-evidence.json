@@ -1,0 +1,103 @@
+{
+  "phase": "15",
+  "status": "evidence_bundle_incomplete",
+  "command": "pnpm deploy:verify-launch-evidence",
+  "approvalStatus": "blocked",
+  "redactionPolicy": {
+    "forbiddenInGit": [
+      "provider secrets",
+      "database URLs",
+      "private console links",
+      "client PII",
+      "medical notes",
+      "payment payloads",
+      "legal reviewer private contact details"
+    ],
+    "allowedInGit": [
+      "artifact label",
+      "command name",
+      "CI run URL when public/repo-scoped",
+      "redacted provider evidence label",
+      "approval status",
+      "gap ids"
+    ]
+  },
+  "requiredBundles": [
+    {
+      "id": "ci-build-test",
+      "area": "tooling",
+      "status": "missing",
+      "requiredEvidence": ["pnpm install", "typecheck", "lint", "unit coverage", "web build", "dashboard build", "Playwright smoke"],
+      "sourceArtifacts": [".github/workflows/ci.yml", "coverage/unit", "coverage/playwright-report"],
+      "gapIds": ["GAP-001", "GAP-105", "GAP-106", "GAP-111"]
+    },
+    {
+      "id": "database-ops",
+      "area": "database",
+      "status": "missing",
+      "requiredEvidence": ["migration dry-run", "staging migration", "seed output", "backup restore drill", "tenant isolation smoke"],
+      "sourceArtifacts": ["deployment/manifests/database-operations-evidence.json"],
+      "gapIds": ["GAP-002", "GAP-019", "GAP-107", "GAP-117"]
+    },
+    {
+      "id": "provider-and-secret-readiness",
+      "area": "providers",
+      "status": "missing",
+      "requiredEvidence": ["provider environment evidence", "secret audit evidence", "provider sandbox transcripts", "signed webhook replay"],
+      "sourceArtifacts": [
+        "deployment/manifests/provider-environment-evidence.json",
+        "deployment/manifests/secret-management-audit.json",
+        "testing/manifests/provider-test-plan.json"
+      ],
+      "gapIds": ["GAP-004", "GAP-110", "GAP-114", "GAP-115"]
+    },
+    {
+      "id": "security-privacy-trust",
+      "area": "security",
+      "status": "missing",
+      "requiredEvidence": ["auth/RBAC route tests", "tenant isolation tests", "CSRF/header tests", "privacy workflow tests", "secure upload tests"],
+      "sourceArtifacts": ["testing/manifests/security-checklist.json", "apps/web/tests/security-runtime-middleware.test.ts"],
+      "gapIds": ["GAP-095", "GAP-096", "GAP-098", "GAP-103", "GAP-104"]
+    },
+    {
+      "id": "accessibility-seo-performance",
+      "area": "quality",
+      "status": "missing",
+      "requiredEvidence": ["axe/keyboard evidence", "Lighthouse/Core Web Vitals", "structured-data validation", "sitemap/crawl proof", "performance budget report"],
+      "sourceArtifacts": [
+        "testing/manifests/accessibility-checklist.json",
+        "testing/manifests/performance-budget.json",
+        "SEO_PLAN.md"
+      ],
+      "gapIds": ["GAP-030", "GAP-078", "GAP-109", "GAP-112"]
+    },
+    {
+      "id": "mobile-release",
+      "area": "mobile",
+      "status": "missing",
+      "requiredEvidence": ["EAS preview builds", "device QA", "push token test", "crash capture", "OTA rollback"],
+      "sourceArtifacts": ["deployment/manifests/mobile-deployment-evidence.json", "testing/manifests/mobile-device-qa-checklist.json"],
+      "gapIds": ["GAP-048", "GAP-108", "GAP-116"]
+    },
+    {
+      "id": "legal-approval",
+      "area": "legal",
+      "status": "missing",
+      "requiredEvidence": ["privacy policy approval", "terms approval", "consent/medical language approval", "SMS/deposit/refund copy approval"],
+      "sourceArtifacts": ["LEGAL_REVIEW_PLAN.md", "deployment/manifests/production-launch-checklist.json"],
+      "gapIds": ["GAP-099", "GAP-100", "GAP-118"]
+    },
+    {
+      "id": "rollback-and-operations",
+      "area": "release",
+      "status": "missing",
+      "requiredEvidence": ["web rollback drill", "dashboard rollback drill", "mobile OTA rollback", "database restore drill", "incident owner coverage"],
+      "sourceArtifacts": [
+        "deployment/manifests/database-operations-evidence.json",
+        "deployment/manifests/mobile-deployment-evidence.json",
+        "RELEASE_AND_AUTO_UPDATE_PLAN.md"
+      ],
+      "gapIds": ["GAP-089", "GAP-093", "GAP-116", "GAP-117", "GAP-118"]
+    }
+  ]
+}

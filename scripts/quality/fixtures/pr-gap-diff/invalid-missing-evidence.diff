@@ -1,0 +1,5 @@
+--- a/GAP_TRACKER.md
++++ b/GAP_TRACKER.md
+@@ -1 +1 @@
+-| GAP-900 | Phase X | Demo | Demo gap. | High | Yes | Open | `demo.md` | Implement demo evidence. | Codex | Implement demo evidence. | `pnpm demo` passes. |
++| GAP-900 | Phase X | Demo | Demo gap. | High | Yes | Closed | `demo.md` | Implement demo evidence. | Codex | Implement demo evidence. | done |

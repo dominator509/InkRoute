@@ -1,0 +1,109 @@
+{
+  "phase": "15",
+  "status": "evidence_contract_not_built",
+  "command": "pnpm deploy:verify-mobile",
+  "redactionPolicy": {
+    "forbiddenInGit": [
+      "Apple credentials",
+      "Google Play service account JSON",
+      "Expo access token",
+      "push provider token",
+      "Sentry auth token",
+      "private build URLs"
+    ],
+    "allowedInGit": [
+      "profile name",
+      "platform",
+      "channel",
+      "runtime policy",
+      "redacted build artifact label",
+      "redacted QA evidence label",
+      "status"
+    ]
+  },
+  "runtimePolicy": {
+    "expoRuntimeVersionPolicy": "appVersion",
+    "requiresStoreBuildWhen": [
+      "native dependencies change",
+      "permissions change",
+      "runtime version changes",
+      "app config changes affect native capabilities"
+    ],
+    "otaAllowedWhen": [
+      "preview binary is installed",
+      "runtime versions match",
+      "no native capability or permission changed",
+      "rollback update has been rehearsed on preview channel"
+    ]
+  },
+  "buildProfiles": [
+    {
+      "profile": "development",
+      "distribution": "internal",
+      "channel": "development",
+      "required": true,
+      "status": "not_built",
+      "evidenceRequired": ["development client build artifact label", "simulator/device smoke label"]
+    },
+    {
+      "profile": "preview",
+      "distribution": "internal",
+      "channel": "preview",
+      "required": true,
+      "status": "not_built",
+      "platforms": [
+        {
+          "platform": "ios",
+          "status": "not_built",
+          "evidenceRequired": ["redacted EAS build label", "iOS device QA checklist", "crash capture label"]
+        },
+        {
+          "platform": "android",
+          "status": "not_built",
+          "evidenceRequired": ["redacted EAS build label", "Android device QA checklist", "push token test label"]
+        }
+      ]
+    },
+    {
+      "profile": "production",
+      "distribution": "store",
+      "channel": "production",
+      "required": true,
+      "status": "not_built",
+      "platforms": [
+        {
+          "platform": "ios",
+          "status": "not_built",
+          "evidenceRequired": ["App Store Connect credential label", "TestFlight/internal build label", "privacy manifest review"]
+        },
+        {
+          "platform": "android",
+          "status": "not_built",
+          "evidenceRequired": ["Google Play credential label", "internal testing build label", "data safety review"]
+        }
+      ]
+    }
+  ],
+  "qaEvidence": [
+    {
+      "id": "device-qa",
+      "status": "not_run",
+      "requiredEvidence": ["iOS checklist artifact", "Android checklist artifact", "offline/reconnect notes"]
+    },
+    {
+      "id": "push-token",
+      "status": "not_run",
+      "requiredEvidence": ["Expo project label", "push token registration label", "test receipt label"]
+    },
+    {
+      "id": "crash-capture",
+      "status": "not_run",
+      "requiredEvidence": ["Sentry mobile project label", "synthetic crash event label", "redaction/source-map proof"]
+    },
+    {
+      "id": "ota-rollback",
+      "status": "not_run",
+      "requiredEvidence": ["preview update label", "rollback update label", "runtime compatibility decision"]
+    }
+  ]
+}

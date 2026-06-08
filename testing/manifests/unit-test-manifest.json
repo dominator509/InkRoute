@@ -56,8 +56,113 @@
       "id": "unit-security-policy",
       "file": "packages/security/tests/upload-policy.test.ts",
       "priority": "critical",
-      "verifies": ["upload policy", "redaction", "rate-limit draft", "tenant fixtures"],
+      "verifies": ["upload policy", "recursive redaction", "rate-limit draft", "tenant fixtures"],
       "blockedBy": ["Vitest dependency installation", "runtime security middleware pending"]
+    },
+    {
+      "id": "unit-secure-upload-route",
+      "file": "apps/web/tests/secure-upload-intents-route.test.ts",
+      "priority": "critical",
+      "verifies": ["secure upload intent route", "upload metadata rejection", "tenant-safe route errors", "private upload runtime evidence", "tenant-scoped object keys", "signed upload intent plan", "private storage ACL plan", "upload-intent rate limiting"],
+      "blockedBy": ["Route test execution pending", "storage provider integration remains credential-gated"]
+    },
+    {
+      "id": "unit-web-security-runtime-middleware",
+      "file": "apps/web/tests/security-runtime-middleware.test.ts",
+      "priority": "critical",
+      "verifies": ["web security middleware runtime", "security headers", "cookie-authenticated CSRF rejection", "valid CSRF pass-through"],
+      "blockedBy": ["Middleware runtime test execution pending", "browser header smoke test pending"]
+    },
+    {
+      "id": "unit-dashboard-security-runtime-middleware",
+      "file": "apps/web/tests/security-runtime-middleware.test.ts",
+      "priority": "critical",
+      "verifies": ["dashboard security middleware runtime", "dashboard security headers", "dashboard cookie-authenticated CSRF rejection", "valid CSRF pass-through"],
+      "blockedBy": ["Middleware runtime test execution pending", "browser header smoke test pending"]
+    },
+    {
+      "id": "unit-security-runtime-middleware-static",
+      "file": "apps/web/tests/security-runtime-middleware-static.test.ts",
+      "priority": "high",
+      "verifies": ["web security middleware wiring", "static asset matcher exclusions"],
+      "blockedBy": ["Static middleware wiring test execution pending"]
+    },
+    {
+      "id": "unit-dashboard-security-runtime-middleware-static",
+      "file": "apps/web/tests/dashboard-security-runtime-middleware-static.test.ts",
+      "priority": "high",
+      "verifies": ["dashboard security middleware wiring", "static asset matcher exclusions"],
+      "blockedBy": ["Static dashboard middleware wiring test execution pending"]
+    },
+    {
+      "id": "unit-public-privacy-route",
+      "file": "apps/web/tests/privacy-requests-public-route.test.ts",
+      "priority": "critical",
+      "verifies": ["public privacy request route", "tenant-safe errors", "privacy submission redaction", "privacy request rate limiting", "tenant-scoped persistence"],
+      "blockedBy": ["Route test execution pending", "database privacy workflow integration remains pending"]
+    },
+    {
+      "id": "unit-dashboard-privacy-route",
+      "file": "apps/web/tests/privacy-requests-dashboard-route.test.ts",
+      "priority": "critical",
+      "verifies": ["dashboard privacy request route", "dashboard privacy submission redaction", "dashboard mutation rate limiting", "tenant-scoped demo persistence", "cross-tenant denial", "role allowlist denial"],
+      "blockedBy": ["Route test execution pending", "authenticated dashboard DB workflow integration remains pending"]
+    },
+    {
+      "id": "unit-dashboard-trust-status-route",
+      "file": "apps/web/tests/dashboard-trust-status-route.test.ts",
+      "priority": "critical",
+      "verifies": ["dashboard trust status route", "tenant-scoped security posture", "cross-tenant denial", "role allowlist denial"],
+      "blockedBy": ["Route test execution pending", "authenticated dashboard DB workflow integration remains pending"]
+    },
+    {
+      "id": "unit-dashboard-deployment-readiness-route",
+      "file": "apps/web/tests/dashboard-deployment-readiness-route.test.ts",
+      "priority": "high",
+      "verifies": ["dashboard deployment readiness route", "local fallback deployment evidence payload", "deployment RBAC denial", "rollback preflight boundary", "blocked production approval boundary"],
+      "blockedBy": ["Route test execution pending", "dashboard Next.js build/runtime smoke pending", "real CI/CD provider execution remains deployment-gated"]
+    },
+    {
+      "id": "unit-security-next-config",
+      "file": "apps/web/tests/security-next-config-static.test.ts",
+      "priority": "high",
+      "verifies": ["web security package transpilation", "dashboard security package transpilation"],
+      "blockedBy": ["Static config test execution pending", "Next.js app build execution pending"]
+    },
+    {
+      "id": "unit-provider-webhook-contracts",
+      "file": "apps/web/tests/provider-webhook-contracts.test.ts",
+      "priority": "critical",
+      "verifies": ["provider test plan coverage", "Stripe webhook signature and raw-body contract", "email webhook signature and idempotency boundary", "SMS webhook signature and STOP/replay boundary", "Sentry webhook signature and delivery idempotency contract"],
+      "blockedBy": ["Provider contract test execution pending", "live provider sandbox deliveries remain credential-gated"]
+    },
+    {
+      "id": "static-performance-budget-verifier",
+      "file": "testing/scripts/verify-performance-budgets.mjs",
+      "priority": "high",
+      "verifies": ["Core Web Vitals budgets", "route performance budgets", "API load targets", "database query plan targets", "image optimization targets"],
+      "blockedBy": ["Static performance budget verifier execution pending", "Lighthouse/load/EXPLAIN/image benchmark execution pending"]
+    },
+    {
+      "id": "unit-mobile-security-static",
+      "file": "apps/mobile/tests/mobile-security-static.test.ts",
+      "priority": "high",
+      "verifies": ["mobile security posture surface", "mobile tenant isolation preview", "mobile privacy/upload preview", "mobile production blocker copy"],
+      "blockedBy": ["Static mobile security test execution pending", "Expo runtime/device verification pending"]
+    },
+    {
+      "id": "unit-mobile-support",
+      "file": "packages/mobile/tests/mobile-support.test.ts",
+      "priority": "critical",
+      "verifies": ["mobile screen registry", "offline sync planning", "mobile API request planning", "mobile device QA checklist", "mobile QA manifest alignment"],
+      "blockedBy": ["Mobile support package test execution pending", "Expo runtime/device verification pending"]
+    },
+    {
+      "id": "unit-db-integration-plan",
+      "file": "packages/db/tests/db-integration-plan.test.ts",
+      "priority": "critical",
+      "verifies": ["Prisma lifecycle commands", "tenant-scoped schema prerequisites", "audit log schema prerequisites", "seed workflow coverage"],
+      "blockedBy": ["Static DB integration plan test execution pending", "live Postgres integration execution pending"]
     },
     {
       "id": "unit-testing-manifest",

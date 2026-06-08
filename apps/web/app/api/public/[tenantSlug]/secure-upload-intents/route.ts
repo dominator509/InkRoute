@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { validateUploadDraft, type UploadAssetKind } from "@inkroute/security";
+import { buildPrivateStorageAccessPlan, buildSignedUploadIntentPlan, validateUploadDraft, type UploadAssetKind } from "@inkroute/security";
 import { checkRateLimit, getClientIp, persistUploadIntent, resolveTenant } from "../../../../../lib/localRuntimeState";
 
 const uploadKinds: UploadAssetKind[] = ["portfolio_public", "reference_private", "consent_signature", "healed_follow_up", "document_private"];
@@ -73,6 +73,29 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     sizeBytes: input.sizeBytes,
     visibility: validation.storageVisibility,
   });
+  const signedIntentPlan = buildSignedUploadIntentPlan({
+    kind: input.kind,
+    filename: input.filename,
+    mimeType: input.mimeType,
+    sizeBytes: input.sizeBytes,
+    declaredByAuthenticatedUser: Boolean(input.declaredByAuthenticatedUser),
+    tenantId: resolvedTenant.tenantId,
+    subjectId: draft.id,
+    expiresInSeconds: 20 * 60,
+  });
+  const privateStoragePlan = buildPrivateStorageAccessPlan({
+    kind: input.kind,
+    operation: "upload",
+    tenantId: resolvedTenant.tenantId,
+    subjectId: draft.id,
+    objectKey: signedIntentPlan.objectKey ?? draft.objectKey,
+    storageVisibility: validation.storageVisibility,
+    expiresInSeconds: signedIntentPlan.expiresInSeconds,
+    now: draft.createdAt,
+    expiresAt: draft.expiresAt,
+    scanApproved: false,
+    providerConfigured: false,
+  });
 
   return NextResponse.json(
     {
@@ -82,6 +105,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
         tenantId: resolvedTenant.tenantId,
         validation,
         draft,
+        signedIntentPlan,
+        privateStoragePlan,
         nextWork: [
           "Persist FileAsset record and link to booking/message context.",
           "Use provider-signed upload URL and verify multipart boundaries.",

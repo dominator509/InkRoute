@@ -32,3 +32,13 @@ eas build --profile preview --platform android
 ## OTA update guardrail
 
 Only publish EAS Update when no native capability, permission, or runtime-incompatible change is included. Native changes require a new store/preview build.
+
+## Evidence contract
+
+Mobile deployment evidence is tracked in `deployment/manifests/mobile-deployment-evidence.json` and verified with:
+
+```bash
+pnpm deploy:verify-mobile
+```
+
+Keep EAS project IDs, access tokens, App Store credentials, Google Play service-account JSON, push credentials, private build URLs, and Sentry tokens outside git. The manifest may record redacted build labels, profile/channel names, required proof categories, and QA status only.

@@ -31,3 +31,13 @@ pnpm db:seed
 - Seed or fixture load result.
 - Rollback/restore plan.
 - Tenant isolation tests after migration.
+
+## Evidence contract
+
+Database operation evidence is tracked in `deployment/manifests/database-operations-evidence.json` and verified with:
+
+```bash
+pnpm deploy:verify-database-ops
+```
+
+Keep database URLs, passwords, provider project IDs, backup download URLs, and private branch links outside git. The manifest may record command names, redacted branch labels, migration IDs, approval ticket labels, required evidence categories, and status only.

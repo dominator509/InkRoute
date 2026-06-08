@@ -3,25 +3,94 @@
   "status": "device_gated",
   "checks": [
     {
-      "id": "mobile-auth-lock",
+      "id": "mobile-static-screen-registry",
+      "priority": "high",
+      "description": "Verify the Phase 6 mobile screen registry is complete in dependency-light package tests.",
+      "platforms": ["CI static"],
+      "command": "pnpm --filter @inkroute/mobile-support test",
+      "evidenceRequired": "Package test output proving every expected screen is registered exactly once.",
+      "gaps": ["GAP-048", "GAP-108"]
+    },
+    {
+      "id": "ios-screen-smoke",
+      "priority": "critical",
+      "description": "Launch the Expo app on iOS simulator and capture every registered screen.",
+      "platforms": ["iOS simulator"],
+      "command": "pnpm --filter @inkroute/mobile ios",
+      "evidenceRequired": "iOS simulator screenshots or video covering auth, home, bookings, appointments, clients, travel, portfolio, notifications, offline, and system screens.",
+      "gaps": ["GAP-048", "GAP-108"]
+    },
+    {
+      "id": "android-screen-smoke",
+      "priority": "critical",
+      "description": "Launch the Expo app on Android emulator and capture every registered screen.",
+      "platforms": ["Android emulator"],
+      "command": "pnpm --filter @inkroute/mobile android",
+      "evidenceRequired": "Android emulator screenshots or video covering auth, home, bookings, appointments, clients, travel, portfolio, notifications, offline, and system screens.",
+      "gaps": ["GAP-048", "GAP-108"]
+    },
+    {
+      "id": "biometric-lock-unlock",
       "priority": "critical",
       "description": "Verify signed-in, signed-out, expired, and biometric-locked states once auth is wired.",
       "platforms": ["iOS physical device", "Android physical device"],
-      "gaps": ["GAP-042", "GAP-048"]
+      "command": "manual device QA with Expo LocalAuthentication",
+      "evidenceRequired": "Device transcript proving lock, unlock, logout, and expired-session behavior.",
+      "gaps": ["GAP-042", "GAP-048", "GAP-108"]
     },
     {
-      "id": "mobile-offline-queue",
+      "id": "tenant-api-sync",
+      "priority": "critical",
+      "description": "Verify mobile API calls include auth, tenant scope, request ids, idempotency, and safe error handling.",
+      "platforms": ["Physical device", "Preview API"],
+      "command": "manual device QA against preview API",
+      "evidenceRequired": "Seeded preview API transcript proving auth headers, tenant scope, request ids, and safe errors.",
+      "gaps": ["GAP-043", "GAP-048", "GAP-108"]
+    },
+    {
+      "id": "offline-reconnect-sync",
       "priority": "high",
       "description": "Create offline notes, reference metadata, and travel status updates while disconnected, then verify sync reconciliation.",
       "platforms": ["iOS simulator", "Android emulator", "one physical device"],
-      "gaps": ["GAP-045", "GAP-048"]
+      "command": "manual airplane-mode queue/reconnect QA",
+      "evidenceRequired": "Device logs proving encrypted queue persistence, idempotent replay, retry, and conflict handling.",
+      "gaps": ["GAP-045", "GAP-048", "GAP-108"]
     },
     {
-      "id": "mobile-push-notifications",
+      "id": "push-token-delivery",
       "priority": "high",
       "description": "Register device token, send Expo push test, and verify opt-out and redaction behavior.",
       "platforms": ["iOS physical device", "Android physical device"],
-      "gaps": ["GAP-044", "GAP-063"]
+      "command": "Expo push token registration and test push",
+      "evidenceRequired": "Push token registration proof, opt-out blocking proof, delivery receipt, and tap deep-link screenshot.",
+      "gaps": ["GAP-044", "GAP-048", "GAP-108"]
+    },
+    {
+      "id": "mobile-crash-capture",
+      "priority": "critical",
+      "description": "Force a safe mobile crash and verify sanitized crash capture in preview.",
+      "platforms": ["Physical device", "Preview build"],
+      "command": "forced safe mobile crash in preview build",
+      "evidenceRequired": "Sanitized crash event in Sentry/fallback report with no PII, medical, payment, or token data.",
+      "gaps": ["GAP-046", "GAP-048", "GAP-108"]
+    },
+    {
+      "id": "ota-preview-rollback",
+      "priority": "critical",
+      "description": "Publish a preview EAS update, verify adoption, and rehearse rollback by republishing a previous compatible update.",
+      "platforms": ["Physical device", "EAS preview channel"],
+      "command": "eas update --channel preview and rollback republish",
+      "evidenceRequired": "Preview update adoption screenshot and rollback republish proof on the same runtime.",
+      "gaps": ["GAP-047", "GAP-048", "GAP-108"]
+    },
+    {
+      "id": "mobile-accessibility-pass",
+      "priority": "high",
+      "description": "Run VoiceOver/TalkBack, text scaling, contrast, and touch-target QA on device.",
+      "platforms": ["iOS physical device", "Android physical device"],
+      "command": "manual VoiceOver/TalkBack and touch-target QA",
+      "evidenceRequired": "VoiceOver/TalkBack notes, text scaling screenshots, contrast/touch target findings.",
+      "gaps": ["GAP-048", "GAP-109"]
     }
   ]
 }

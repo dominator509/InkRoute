@@ -197,3 +197,13 @@ These variables are scaffolded in `.env.example` for deployment planning only. T
 | `SUPPORT_ESCALATION_EMAIL` | Support escalation inbox/address. | Not configured |
 
 The Phase 15 environment contract lives at `deployment/manifests/environment-contract.json`. Use `pnpm deploy:check-env` for a safe presence check and `pnpm deploy:check-env:strict` only against a real secret-backed environment.
+
+## Secret management audit contract
+
+Secret values must live in provider secret stores, not in git. The redacted secret-management audit contract lives at `deployment/manifests/secret-management-audit.json` and can be checked with:
+
+```bash
+pnpm deploy:verify-secrets
+```
+
+The verifier checks that required production secrets have destinations, rotation cadence, redacted evidence requirements, and no obvious live secret material in the committed audit manifest or `.env.example`. Passing this verifier does not prove provider secrets are configured; it proves the safe audit contract is present.

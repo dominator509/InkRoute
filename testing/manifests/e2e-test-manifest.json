@@ -15,11 +15,53 @@
       "evidence": ["homepage CTA visible", "booking intake visible", "trust/privacy reachable"]
     },
     {
+      "id": "e2e-web-security-runtime",
+      "file": "apps/web/tests/e2e/security-runtime.spec.ts",
+      "priority": "critical",
+      "requires": ["Next.js web runtime", "Playwright browsers", "web middleware enabled"],
+      "evidence": ["security headers visible on public page response", "cookie-authenticated API mutation rejects missing CSRF before route handler"]
+    },
+    {
+      "id": "e2e-public-seo-pages",
+      "file": "apps/web/tests/e2e/public-seo.spec.ts",
+      "priority": "high",
+      "requires": ["Next.js web runtime", "Playwright browsers", "demo SEO city/style routes"],
+      "evidence": ["city landing page renders local booking/travel context", "style landing page renders portfolio and booking path"]
+    },
+    {
+      "id": "e2e-public-accessibility-smoke",
+      "file": "apps/web/tests/e2e/public-a11y.spec.ts",
+      "priority": "critical",
+      "requires": ["Next.js web runtime", "Playwright browsers", "keyboard focus support"],
+      "evidence": ["booking flow has visible focus target", "public navigation and labelled regions are reachable"]
+    },
+    {
       "id": "e2e-dashboard-smoke",
       "file": "apps/dashboard/tests/e2e/dashboard-smoke.spec.ts",
       "priority": "high",
       "requires": ["Next.js dashboard runtime", "auth bypass or seeded preview tenant", "Playwright browsers"],
       "evidence": ["overview renders", "boundary pages render", "booking detail renders"]
+    },
+    {
+      "id": "e2e-dashboard-security-runtime",
+      "file": "apps/dashboard/tests/e2e/security-runtime.spec.ts",
+      "priority": "critical",
+      "requires": ["Next.js dashboard runtime", "Playwright browsers", "dashboard middleware enabled"],
+      "evidence": ["security headers visible on dashboard page response", "cookie-authenticated dashboard API mutation rejects missing CSRF before route handler"]
+    },
+    {
+      "id": "e2e-dashboard-operator-surfaces",
+      "file": "apps/dashboard/tests/e2e/operator-surfaces.spec.ts",
+      "priority": "high",
+      "requires": ["Next.js dashboard runtime", "Playwright browsers", "demo dashboard routes"],
+      "evidence": ["payments/release/error/message/template/SEO/trust surfaces render", "provider and production boundaries remain visible"]
+    },
+    {
+      "id": "e2e-dashboard-accessibility-smoke",
+      "file": "apps/dashboard/tests/e2e/dashboard-a11y.spec.ts",
+      "priority": "high",
+      "requires": ["Next.js dashboard runtime", "Playwright browsers", "keyboard focus support"],
+      "evidence": ["dashboard navigation and tenant context have accessible names", "booking dashboard exposes labelled request region"]
     }
   ]
 }

@@ -229,12 +229,19 @@ describe("security and privacy helpers", () => {
     expect(unsafeDerivative.reasons).toContain("Public portfolio access must use a separate safe derivative object key.");
   });
 
-  it("redacts PII, payment fields, and medical notes", () => {
-    const redacted = redactRecord({ email: "avery@example.com", stripePaymentIntentId: "pi_123", medicalNotes: "allergy details" });
+  it("redacts PII, payment fields, medical notes, and nested privacy details", () => {
+    const redacted = redactRecord({
+      email: "avery@example.com",
+      stripePaymentIntentId: "pi_123",
+      medicalNotes: "allergy details",
+      details: { phone: "555-0100", nested: [{ email: "client@example.test" }] },
+    });
 
     expect(redacted.email).not.toBe("avery@example.com");
     expect(redacted.stripePaymentIntentId).toBe("[redacted-payment]");
     expect(redacted.medicalNotes).toBe("[redacted-medical]");
+    expect((redacted.details as { phone: string }).phone).not.toBe("555-0100");
+    expect((redacted.details as { nested: { email: string }[] }).nested[0]?.email).not.toBe("client@example.test");
   });
 
   it("projects dashboard privacy records by role and field sensitivity", () => {
