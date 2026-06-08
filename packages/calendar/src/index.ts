@@ -120,6 +120,53 @@ export interface CalendarTimezoneAuditSummary {
   findings: CalendarTimezoneFinding[];
 }
 
+export type AvailabilityPersistenceAction =
+  | "create_availability_window"
+  | "create_slot_hold"
+  | "confirm_appointment"
+  | "release_slot_hold";
+
+export type AvailabilityPersistenceWriteModel =
+  | "AvailabilityWindow"
+  | "AvailabilityHold"
+  | "Appointment"
+  | "BookingRequest"
+  | "CalendarAuditLog"
+  | "IdempotencyKey";
+
+export interface AvailabilityPersistencePlanInput {
+  tenantId: string;
+  artistId: string;
+  action: AvailabilityPersistenceAction;
+  startsAt: ISODateString;
+  endsAt: ISODateString;
+  timezone: string;
+  actorId?: string;
+  bookingRequestId?: string;
+  availabilityWindowId?: string;
+  holdId?: string;
+  appointmentId?: string;
+  idempotencyKey?: string;
+  conflictIds?: readonly string[];
+  existingHoldIds?: readonly string[];
+}
+
+export interface AvailabilityPersistenceWrite {
+  model: AvailabilityPersistenceWriteModel;
+  tenantId: string;
+  payload: Record<string, unknown>;
+}
+
+export interface AvailabilityPersistencePlan {
+  status: "ready" | "blocked";
+  action: AvailabilityPersistenceAction;
+  requiresTransaction: true;
+  idempotencyKey: string | null;
+  writes: readonly AvailabilityPersistenceWrite[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 function escapeIcsText(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/,/g, "\\,").replace(/;/g, "\\;").replace(/\n/g, "\\n");
 }
@@ -477,6 +524,99 @@ export function evaluateSignedIcsFeedAccess(input: {
     cacheControl: allowCache,
     shouldLogAccess: true,
     reason: "Signed ICS feed token is valid for this tenant and artist.",
+  };
+}
+
+function availabilityPersistenceWriteModels(action: AvailabilityPersistenceAction): AvailabilityPersistenceWriteModel[] {
+  switch (action) {
+    case "create_availability_window":
+      return ["AvailabilityWindow", "CalendarAuditLog", "IdempotencyKey"];
+    case "create_slot_hold":
+      return ["AvailabilityHold", "BookingRequest", "CalendarAuditLog", "IdempotencyKey"];
+    case "confirm_appointment":
+      return ["Appointment", "AvailabilityHold", "BookingRequest", "CalendarAuditLog", "IdempotencyKey"];
+    case "release_slot_hold":
+      return ["AvailabilityHold", "CalendarAuditLog", "IdempotencyKey"];
+  }
+}
+
+export function buildAvailabilityPersistencePlan(input: AvailabilityPersistencePlanInput): AvailabilityPersistencePlan {
+  const blockers: string[] = [];
+  const startsAtMs = new Date(input.startsAt).getTime();
+  const endsAtMs = new Date(input.endsAt).getTime();
+
+  if (!input.tenantId.trim()) blockers.push("Missing tenant scope.");
+  if (!input.artistId.trim()) blockers.push("Missing artist id.");
+  if (!input.actorId?.trim()) blockers.push("Availability mutations require an actor id for audit attribution.");
+  if (!input.idempotencyKey?.trim()) blockers.push("Missing idempotency key for availability mutation.");
+  if (!Number.isFinite(startsAtMs) || !Number.isFinite(endsAtMs) || startsAtMs >= endsAtMs) blockers.push("Availability time range must have a valid start before end.");
+  if (!isValidIanaTimezone(input.timezone)) blockers.push("Availability timezone must be a valid IANA identifier.");
+  if ((input.conflictIds ?? []).length > 0) blockers.push("Availability mutation has blocking calendar conflicts.");
+
+  if ((input.action === "create_slot_hold" || input.action === "confirm_appointment") && !input.bookingRequestId?.trim()) {
+    blockers.push("Slot hold and appointment confirmation require a booking request id.");
+  }
+  if ((input.action === "create_slot_hold" || input.action === "confirm_appointment") && !input.availabilityWindowId?.trim()) {
+    blockers.push("Slot hold and appointment confirmation require an availability window id.");
+  }
+  if ((input.action === "confirm_appointment" || input.action === "release_slot_hold") && !input.holdId?.trim()) {
+    blockers.push("Appointment confirmation and hold release require a hold id.");
+  }
+  if (input.action === "confirm_appointment" && !input.appointmentId?.trim()) {
+    blockers.push("Appointment confirmation requires an appointment id.");
+  }
+  if (input.action === "create_slot_hold" && (input.existingHoldIds ?? []).length > 0) {
+    blockers.push("Concurrent slot hold already exists for this tenant, artist, and time range.");
+  }
+
+  const basePayload = {
+    artistId: input.artistId,
+    bookingRequestId: input.bookingRequestId ?? null,
+    availabilityWindowId: input.availabilityWindowId ?? null,
+    holdId: input.holdId ?? null,
+    appointmentId: input.appointmentId ?? null,
+    startsAt: input.startsAt,
+    endsAt: input.endsAt,
+    timezone: input.timezone,
+    conflictIds: input.conflictIds ?? [],
+    existingHoldIds: input.existingHoldIds ?? [],
+    actorId: input.actorId ?? null,
+    idempotencyKey: input.idempotencyKey ?? null,
+  };
+  const writes = availabilityPersistenceWriteModels(input.action).map((model): AvailabilityPersistenceWrite => ({
+    model,
+    tenantId: input.tenantId,
+    payload: model === "CalendarAuditLog"
+      ? {
+          ...basePayload,
+          action: input.action,
+        }
+      : model === "IdempotencyKey"
+        ? {
+            key: input.idempotencyKey ?? null,
+            action: input.action,
+            artistId: input.artistId,
+            bookingRequestId: input.bookingRequestId ?? null,
+            startsAt: input.startsAt,
+            endsAt: input.endsAt,
+          }
+        : basePayload,
+  }));
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    action: input.action,
+    requiresTransaction: true,
+    idempotencyKey: input.idempotencyKey?.trim() ? input.idempotencyKey : null,
+    writes,
+    requiredControls: [
+      "Execute availability mutations in one tenant-scoped database transaction.",
+      "Claim the idempotency key before creating holds or appointments.",
+      "Reject cross-tenant booking, window, hold, and appointment ids before writes.",
+      "Lock the tenant/artist/time range or use an equivalent exclusion constraint before inserting slot holds.",
+      "Write CalendarAuditLog for every window, hold, appointment, and release mutation.",
+    ],
+    blockers,
   };
 }
 

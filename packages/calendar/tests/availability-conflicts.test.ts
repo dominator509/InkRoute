@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAvailabilitySlots,
+  buildAvailabilityPersistencePlan,
   buildSignedIcsFeedDraft,
   buildSignedIcsFeedTokenHash,
   auditCalendarTimezones,
@@ -179,5 +180,105 @@ describe("calendar availability", () => {
       id: "block:bad_block",
       status: "fail",
     });
+  });
+
+  it("plans transactional availability window and slot hold persistence", () => {
+    const windowPlan = buildAvailabilityPersistencePlan({
+      tenantId: "tenant_demo",
+      artistId: "artist_demo",
+      action: "create_availability_window",
+      startsAt: "2026-06-10T16:00:00.000Z",
+      endsAt: "2026-06-10T22:00:00.000Z",
+      timezone: "America/Los_Angeles",
+      actorId: "artist_demo",
+      idempotencyKey: "availability-window:tenant_demo:artist_demo:2026-06-10",
+    });
+    const holdPlan = buildAvailabilityPersistencePlan({
+      tenantId: "tenant_demo",
+      artistId: "artist_demo",
+      action: "create_slot_hold",
+      startsAt: "2026-06-10T18:00:00.000Z",
+      endsAt: "2026-06-10T20:00:00.000Z",
+      timezone: "America/Los_Angeles",
+      actorId: "artist_demo",
+      bookingRequestId: "booking_demo",
+      availabilityWindowId: "window_demo",
+      idempotencyKey: "slot-hold:tenant_demo:artist_demo:booking_demo",
+    });
+
+    expect(windowPlan).toMatchObject({
+      status: "ready",
+      requiresTransaction: true,
+      idempotencyKey: "availability-window:tenant_demo:artist_demo:2026-06-10",
+    });
+    expect(windowPlan.writes.map((write) => write.model)).toEqual(["AvailabilityWindow", "CalendarAuditLog", "IdempotencyKey"]);
+    expect(holdPlan.writes.map((write) => write.model)).toEqual(["AvailabilityHold", "BookingRequest", "CalendarAuditLog", "IdempotencyKey"]);
+    expect(holdPlan.writes.every((write) => write.tenantId === "tenant_demo")).toBe(true);
+    expect(holdPlan.requiredControls).toContain("Lock the tenant/artist/time range or use an equivalent exclusion constraint before inserting slot holds.");
+    expect(holdPlan.blockers).toEqual([]);
+  });
+
+  it("plans appointment confirmation and hold release audit writes", () => {
+    const confirmation = buildAvailabilityPersistencePlan({
+      tenantId: "tenant_demo",
+      artistId: "artist_demo",
+      action: "confirm_appointment",
+      startsAt: "2026-06-10T18:00:00.000Z",
+      endsAt: "2026-06-10T20:00:00.000Z",
+      timezone: "America/Los_Angeles",
+      actorId: "artist_demo",
+      bookingRequestId: "booking_demo",
+      availabilityWindowId: "window_demo",
+      holdId: "hold_demo",
+      appointmentId: "appointment_demo",
+      idempotencyKey: "appointment-confirm:tenant_demo:appointment_demo",
+    });
+    const release = buildAvailabilityPersistencePlan({
+      tenantId: "tenant_demo",
+      artistId: "artist_demo",
+      action: "release_slot_hold",
+      startsAt: "2026-06-10T18:00:00.000Z",
+      endsAt: "2026-06-10T20:00:00.000Z",
+      timezone: "America/Los_Angeles",
+      actorId: "artist_demo",
+      holdId: "hold_demo",
+      idempotencyKey: "hold-release:tenant_demo:hold_demo",
+    });
+
+    expect(confirmation.writes.map((write) => write.model)).toEqual(["Appointment", "AvailabilityHold", "BookingRequest", "CalendarAuditLog", "IdempotencyKey"]);
+    expect(confirmation.writes.find((write) => write.model === "CalendarAuditLog")?.payload).toMatchObject({
+      action: "confirm_appointment",
+      bookingRequestId: "booking_demo",
+      holdId: "hold_demo",
+      appointmentId: "appointment_demo",
+    });
+    expect(release.writes.map((write) => write.model)).toEqual(["AvailabilityHold", "CalendarAuditLog", "IdempotencyKey"]);
+  });
+
+  it("blocks availability persistence without tenant scope, actor, valid time, timezone, and concurrency controls", () => {
+    const blocked = buildAvailabilityPersistencePlan({
+      tenantId: " ",
+      artistId: "",
+      action: "create_slot_hold",
+      startsAt: "2026-06-10T20:00:00.000Z",
+      endsAt: "2026-06-10T18:00:00.000Z",
+      timezone: "PST",
+      conflictIds: ["appointment_1"],
+      existingHoldIds: ["hold_1"],
+    });
+
+    expect(blocked.status).toBe("blocked");
+    expect(blocked.blockers).toEqual([
+      "Missing tenant scope.",
+      "Missing artist id.",
+      "Availability mutations require an actor id for audit attribution.",
+      "Missing idempotency key for availability mutation.",
+      "Availability time range must have a valid start before end.",
+      "Availability timezone must be a valid IANA identifier.",
+      "Availability mutation has blocking calendar conflicts.",
+      "Slot hold and appointment confirmation require a booking request id.",
+      "Slot hold and appointment confirmation require an availability window id.",
+      "Concurrent slot hold already exists for this tenant, artist, and time range.",
+    ]);
   });
 });
