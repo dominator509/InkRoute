@@ -213,6 +213,57 @@ export interface StripeWebhookReconciliationPlan {
   requiredChecks: readonly string[];
 }
 
+export type PaymentLifecycleAction =
+  | "create_deposit"
+  | "record_checkout_session"
+  | "mark_paid"
+  | "mark_failed"
+  | "mark_refunded"
+  | "mark_disputed";
+
+export type PaymentLifecycleWriteModel =
+  | "Deposit"
+  | "Payment"
+  | "Refund"
+  | "PaymentAuditLog"
+  | "BookingStateEvent"
+  | "IdempotencyKey";
+
+export interface PaymentLifecyclePlanInput {
+  tenantId: string;
+  bookingRequestId: string;
+  action: PaymentLifecycleAction;
+  amountCents: number;
+  currency: CurrencyCode;
+  provider: "stripe" | "manual";
+  occurredAt: ISODateString;
+  paymentId?: string;
+  depositId?: string;
+  providerSessionId?: string;
+  providerPaymentIntentId?: string;
+  providerChargeId?: string;
+  actorId?: string;
+  idempotencyKey?: string;
+}
+
+export interface PaymentLifecycleWrite {
+  model: PaymentLifecycleWriteModel;
+  tenantId: string;
+  payload: Record<string, unknown>;
+}
+
+export interface PaymentLifecyclePersistencePlan {
+  status: "ready" | "blocked";
+  action: PaymentLifecycleAction;
+  targetStatus: PaymentStatus;
+  auditAction: PaymentAuditAction;
+  requiresTransaction: true;
+  idempotencyKey: string | null;
+  writes: readonly PaymentLifecycleWrite[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 export interface PaymentReceiptExportRow {
   receiptNumber: string;
   tenantId: string;
@@ -624,6 +675,124 @@ export function buildStripeWebhookReconciliationPlan(input: StripeWebhookReconci
     shouldReconcile,
     blockers,
     requiredChecks,
+  };
+}
+
+function paymentLifecycleTargetStatus(action: PaymentLifecycleAction): PaymentStatus {
+  switch (action) {
+    case "mark_paid":
+      return "paid";
+    case "mark_failed":
+      return "failed";
+    case "mark_refunded":
+      return "refunded";
+    case "mark_disputed":
+      return "disputed";
+    case "create_deposit":
+    case "record_checkout_session":
+      return "pending";
+  }
+}
+
+function paymentLifecycleAuditAction(action: PaymentLifecycleAction): PaymentAuditAction {
+  switch (action) {
+    case "create_deposit":
+      return "deposit_requested";
+    case "record_checkout_session":
+      return "checkout_session_created";
+    case "mark_paid":
+      return "deposit_paid";
+    case "mark_failed":
+      return "payment_failed";
+    case "mark_refunded":
+      return "refund_succeeded";
+    case "mark_disputed":
+      return "webhook_received";
+  }
+}
+
+function paymentLifecycleWriteModels(action: PaymentLifecycleAction): PaymentLifecycleWriteModel[] {
+  switch (action) {
+    case "create_deposit":
+      return ["Deposit", "PaymentAuditLog", "IdempotencyKey"];
+    case "record_checkout_session":
+      return ["Deposit", "Payment", "PaymentAuditLog", "IdempotencyKey"];
+    case "mark_paid":
+      return ["Payment", "Deposit", "BookingStateEvent", "PaymentAuditLog", "IdempotencyKey"];
+    case "mark_failed":
+      return ["Payment", "PaymentAuditLog", "IdempotencyKey"];
+    case "mark_refunded":
+      return ["Refund", "Payment", "PaymentAuditLog", "IdempotencyKey"];
+    case "mark_disputed":
+      return ["Payment", "PaymentAuditLog", "IdempotencyKey"];
+  }
+}
+
+export function buildPaymentLifecyclePersistencePlan(input: PaymentLifecyclePlanInput): PaymentLifecyclePersistencePlan {
+  const blockers: string[] = [];
+  const targetStatus = paymentLifecycleTargetStatus(input.action);
+  const auditAction = paymentLifecycleAuditAction(input.action);
+
+  if (!input.tenantId.trim()) blockers.push("Missing tenant scope.");
+  if (!input.bookingRequestId.trim()) blockers.push("Missing booking request id.");
+  if (!Number.isFinite(input.amountCents) || input.amountCents <= 0) blockers.push("Payment amount must be positive.");
+  if (!input.idempotencyKey?.trim()) blockers.push("Missing idempotency key for lifecycle mutation.");
+  if (input.action === "record_checkout_session" && !input.providerSessionId?.trim()) blockers.push("Provider session id is required before recording checkout session state.");
+  if ((input.action === "mark_paid" || input.action === "mark_failed") && !input.providerPaymentIntentId?.trim()) blockers.push("Provider payment intent id is required before finalizing paid or failed state.");
+  if ((input.action === "mark_refunded" || input.action === "mark_disputed") && !input.providerChargeId?.trim() && !input.providerPaymentIntentId?.trim()) {
+    blockers.push("Provider charge or payment intent id is required before recording refund or dispute state.");
+  }
+  if (input.provider === "manual" && !input.actorId?.trim()) blockers.push("Manual payment mutations require an actor id for audit attribution.");
+
+  const basePayload = {
+    bookingRequestId: input.bookingRequestId,
+    depositId: input.depositId ?? null,
+    paymentId: input.paymentId ?? null,
+    amountCents: input.amountCents,
+    currency: input.currency,
+    provider: input.provider,
+    providerSessionId: input.providerSessionId ?? null,
+    providerPaymentIntentId: input.providerPaymentIntentId ?? null,
+    providerChargeId: input.providerChargeId ?? null,
+    targetStatus,
+    occurredAt: input.occurredAt,
+  };
+  const writes = paymentLifecycleWriteModels(input.action).map((model): PaymentLifecycleWrite => ({
+    model,
+    tenantId: input.tenantId,
+    payload: model === "PaymentAuditLog"
+      ? {
+          ...basePayload,
+          action: auditAction,
+          actorId: input.actorId ?? null,
+          idempotencyKey: input.idempotencyKey ?? null,
+        }
+      : model === "IdempotencyKey"
+        ? {
+            key: input.idempotencyKey ?? null,
+            action: input.action,
+            bookingRequestId: input.bookingRequestId,
+            occurredAt: input.occurredAt,
+          }
+        : basePayload,
+  }));
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    action: input.action,
+    targetStatus,
+    auditAction,
+    requiresTransaction: true,
+    idempotencyKey: input.idempotencyKey?.trim() ? input.idempotencyKey : null,
+    writes,
+    requiredControls: [
+      "Execute all writes in one tenant-scoped database transaction.",
+      "Insert or claim the idempotency key before mutating payment state.",
+      "Reject cross-tenant deposit, payment, refund, and booking ids before applying writes.",
+      "Write PaymentAuditLog for every lifecycle mutation, including failed and disputed outcomes.",
+      "Treat provider webhook ids as replay protection inputs and never as tenant authorization.",
+    ],
+    blockers,
   };
 }
 

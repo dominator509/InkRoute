@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildPaymentLifecyclePersistencePlan,
   buildStripeCheckoutExecutionReadiness,
   buildStripeCheckoutSessionDraft,
   buildStripeWebhookReconciliationPlan,
@@ -184,5 +185,101 @@ describe("payment policy engine", () => {
     expect(unknown.shouldReconcile).toBe(false);
     expect(unknown.blockers).toContain("Unsupported Stripe event type.");
     expect(unknown.shouldPersistAuditLog).toBe(true);
+  });
+
+  it("plans tenant-scoped provider session persistence with audit and idempotency writes", () => {
+    const plan = buildPaymentLifecyclePersistencePlan({
+      tenantId: "tenant_demo",
+      bookingRequestId: "booking_demo",
+      action: "record_checkout_session",
+      amountCents: 15000,
+      currency: "usd",
+      provider: "stripe",
+      occurredAt: "2026-06-06T10:00:00.000Z",
+      providerSessionId: "cs_test_001",
+      idempotencyKey: "deposit:tenant_demo:booking_demo:15000:usd",
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      targetStatus: "pending",
+      auditAction: "checkout_session_created",
+      requiresTransaction: true,
+      idempotencyKey: "deposit:tenant_demo:booking_demo:15000:usd",
+    });
+    expect(plan.writes.map((write) => write.model)).toEqual(["Deposit", "Payment", "PaymentAuditLog", "IdempotencyKey"]);
+    expect(plan.writes.every((write) => write.tenantId === "tenant_demo")).toBe(true);
+    expect(plan.writes.find((write) => write.model === "PaymentAuditLog")?.payload).toMatchObject({
+      action: "checkout_session_created",
+      providerSessionId: "cs_test_001",
+      bookingRequestId: "booking_demo",
+    });
+    expect(plan.requiredControls).toContain("Execute all writes in one tenant-scoped database transaction.");
+    expect(plan.blockers).toEqual([]);
+  });
+
+  it("plans paid, refunded, and disputed lifecycle writes through the audit transaction", () => {
+    const paid = buildPaymentLifecyclePersistencePlan({
+      tenantId: "tenant_demo",
+      bookingRequestId: "booking_demo",
+      action: "mark_paid",
+      amountCents: 15000,
+      currency: "usd",
+      provider: "stripe",
+      occurredAt: "2026-06-06T10:05:00.000Z",
+      providerPaymentIntentId: "pi_001",
+      idempotencyKey: "stripe-webhook:evt_paid_001",
+    });
+    const refunded = buildPaymentLifecyclePersistencePlan({
+      tenantId: "tenant_demo",
+      bookingRequestId: "booking_demo",
+      action: "mark_refunded",
+      amountCents: 15000,
+      currency: "usd",
+      provider: "stripe",
+      occurredAt: "2026-06-07T10:05:00.000Z",
+      providerChargeId: "ch_001",
+      idempotencyKey: "stripe-webhook:evt_refund_001",
+    });
+    const disputed = buildPaymentLifecyclePersistencePlan({
+      tenantId: "tenant_demo",
+      bookingRequestId: "booking_demo",
+      action: "mark_disputed",
+      amountCents: 15000,
+      currency: "usd",
+      provider: "stripe",
+      occurredAt: "2026-06-08T10:05:00.000Z",
+      providerChargeId: "ch_001",
+      idempotencyKey: "stripe-webhook:evt_dispute_001",
+    });
+
+    expect(paid.targetStatus).toBe("paid");
+    expect(paid.auditAction).toBe("deposit_paid");
+    expect(paid.writes.map((write) => write.model)).toEqual(["Payment", "Deposit", "BookingStateEvent", "PaymentAuditLog", "IdempotencyKey"]);
+    expect(refunded.targetStatus).toBe("refunded");
+    expect(refunded.writes.map((write) => write.model)).toEqual(["Refund", "Payment", "PaymentAuditLog", "IdempotencyKey"]);
+    expect(disputed.targetStatus).toBe("disputed");
+    expect(disputed.auditAction).toBe("webhook_received");
+  });
+
+  it("blocks lifecycle persistence plans missing scope, idempotency, amount, or provider ids", () => {
+    const plan = buildPaymentLifecyclePersistencePlan({
+      tenantId: " ",
+      bookingRequestId: "",
+      action: "mark_paid",
+      amountCents: 0,
+      currency: "usd",
+      provider: "stripe",
+      occurredAt: "2026-06-06T10:05:00.000Z",
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.blockers).toEqual([
+      "Missing tenant scope.",
+      "Missing booking request id.",
+      "Payment amount must be positive.",
+      "Missing idempotency key for lifecycle mutation.",
+      "Provider payment intent id is required before finalizing paid or failed state.",
+    ]);
   });
 });
