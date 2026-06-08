@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   calculateTattooReadinessScore,
+  createBookingTransitionPlan,
   emptyBookingDraft,
   getAvailableBookingActions,
   getTravelBookingCta,
@@ -65,6 +66,70 @@ describe("booking readiness", () => {
       eventType: "deposit_paid",
       actor: "system",
       requiresAudit: true,
+    });
+  });
+
+  it("plans booking status, state event, and audit writes as one atomic transition", () => {
+    const plan = createBookingTransitionPlan({
+      tenantId: "tenant_001",
+      bookingRequestId: "booking_001",
+      from: "submitted",
+      action: "accept",
+      actorId: "artist_001",
+      actorType: "artist",
+      occurredAt: "2026-06-08T12:00:00.000Z",
+      reason: "Accepted after reviewing references.",
+      idempotencyKey: "transition_001",
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      canCommit: true,
+      requiresAtomicTransaction: true,
+      transition: {
+        from: "submitted",
+        to: "accepted",
+        eventType: "accepted",
+      },
+    });
+    expect(plan.writes.map((write) => write.model)).toEqual(["BookingRequest", "BookingStateEvent", "AuditLog"]);
+    expect(plan.writes.every((write) => write.tenantId === "tenant_001")).toBe(true);
+    expect(plan.writes.find((write) => write.model === "AuditLog")?.payload).toMatchObject({
+      action: "booking.accept",
+      entityType: "BookingRequest",
+      entityId: "booking_001",
+      idempotencyKey: "transition_001",
+    });
+  });
+
+  it("refuses invalid or unauditable booking transition plans", () => {
+    expect(
+      createBookingTransitionPlan({
+        tenantId: "tenant_001",
+        bookingRequestId: "booking_001",
+        from: "draft",
+        action: "complete",
+        actorId: "artist_001",
+        occurredAt: "2026-06-08T12:00:00.000Z",
+      }),
+    ).toMatchObject({
+      status: "invalid_transition",
+      canCommit: false,
+      writes: [],
+    });
+
+    expect(
+      createBookingTransitionPlan({
+        tenantId: "tenant_001",
+        bookingRequestId: "booking_001",
+        from: "submitted",
+        action: "accept",
+        occurredAt: "2026-06-08T12:00:00.000Z",
+      }),
+    ).toMatchObject({
+      status: "missing_actor",
+      canCommit: false,
+      writes: [],
     });
   });
 

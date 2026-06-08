@@ -257,6 +257,126 @@ export function transitionBookingStatus(status: BookingStatus, action: BookingLi
   return transition.to;
 }
 
+export type BookingTransitionPlanStatus = "ready" | "invalid_transition" | "missing_actor" | "missing_tenant";
+
+export interface BookingTransitionPlanInput {
+  tenantId: string;
+  bookingRequestId: string;
+  from: BookingStatus;
+  action: BookingLifecycleAction;
+  actorId?: string;
+  actorType?: "client" | "artist" | "system" | "admin";
+  occurredAt: string;
+  reason?: string;
+  idempotencyKey?: string;
+}
+
+export interface BookingTransitionWritePlan {
+  operation: "updateBookingRequest" | "insertBookingStateEvent" | "insertAuditLog";
+  model: "BookingRequest" | "BookingStateEvent" | "AuditLog";
+  tenantId: string;
+  bookingRequestId: string;
+  payload: Record<string, string | boolean | null>;
+}
+
+export interface BookingTransitionPlan {
+  status: BookingTransitionPlanStatus;
+  canCommit: boolean;
+  reason: string;
+  transition?: BookingLifecycleTransition;
+  writes: BookingTransitionWritePlan[];
+  requiresAtomicTransaction: boolean;
+}
+
+export function createBookingTransitionPlan(input: BookingTransitionPlanInput): BookingTransitionPlan {
+  if (!input.tenantId.trim()) {
+    return {
+      status: "missing_tenant",
+      canCommit: false,
+      reason: "Tenant scope is required before a booking transition can be persisted.",
+      writes: [],
+      requiresAtomicTransaction: true,
+    };
+  }
+
+  if (!input.actorId?.trim()) {
+    return {
+      status: "missing_actor",
+      canCommit: false,
+      reason: "Actor identity is required for BookingStateEvent and AuditLog writes.",
+      writes: [],
+      requiresAtomicTransaction: true,
+    };
+  }
+
+  const transition = bookingLifecycleTransitions.find((item) => item.from === input.from && item.action === input.action);
+  if (!transition) {
+    return {
+      status: "invalid_transition",
+      canCommit: false,
+      reason: `Cannot apply booking action ${input.action} from status ${input.from}.`,
+      writes: [],
+      requiresAtomicTransaction: true,
+    };
+  }
+
+  const actorType = input.actorType ?? transition.actor;
+  const sharedPayload = {
+    tenantId: input.tenantId,
+    bookingRequestId: input.bookingRequestId,
+    actorId: input.actorId,
+    actorType,
+    occurredAt: input.occurredAt,
+    idempotencyKey: input.idempotencyKey ?? null,
+  };
+
+  return {
+    status: "ready",
+    canCommit: true,
+    reason: "Booking transition is valid and requires booking, state-event, and audit-log writes in one transaction.",
+    transition,
+    requiresAtomicTransaction: true,
+    writes: [
+      {
+        operation: "updateBookingRequest",
+        model: "BookingRequest",
+        tenantId: input.tenantId,
+        bookingRequestId: input.bookingRequestId,
+        payload: {
+          status: transition.to,
+          updatedAt: input.occurredAt,
+        },
+      },
+      {
+        operation: "insertBookingStateEvent",
+        model: "BookingStateEvent",
+        tenantId: input.tenantId,
+        bookingRequestId: input.bookingRequestId,
+        payload: {
+          ...sharedPayload,
+          eventType: transition.eventType,
+          fromStatus: input.from,
+          toStatus: transition.to,
+          reason: input.reason ?? null,
+        },
+      },
+      {
+        operation: "insertAuditLog",
+        model: "AuditLog",
+        tenantId: input.tenantId,
+        bookingRequestId: input.bookingRequestId,
+        payload: {
+          ...sharedPayload,
+          action: `booking.${input.action}`,
+          entityType: "BookingRequest",
+          entityId: input.bookingRequestId,
+          requiresAudit: transition.requiresAudit,
+        },
+      },
+    ],
+  };
+}
+
 export function getTravelBookingCta(status: TravelBookingStatus): string {
   if (status === "open") return "Request this city";
   if (status === "waitlist") return "Join the waitlist";
