@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { assessMigrationCompatibility, buildMobileUpdatePlan, createReleaseCandidate, evaluateFeatureFlag, type FeatureFlagDefinition } from "../src/index";
+import {
+  assessMigrationCompatibility,
+  buildGithubReleaseWorkflowPlan,
+  buildMobileUpdatePlan,
+  buildReleaseHealthChecks,
+  classifyMobileUpdate,
+  createReleaseCandidate,
+  createReleaseNotes,
+  createRollbackPlan,
+  evaluateFeatureFlag,
+  evaluateFeatureFlags,
+  type FeatureFlagDefinition,
+} from "../src/index";
 
 const flag: FeatureFlagDefinition = {
   key: "nomad-mode-live-publish",
@@ -18,6 +30,37 @@ describe("release and feature flag governance", () => {
 
     expect(decision.enabled).toBe(true);
     expect(decision.reason).toBe("tenant_allowlist");
+  });
+
+  it("applies environment disables and kill switches before rollout decisions", () => {
+    expect(evaluateFeatureFlag(flag, { tenantId: "tenant_allowed", role: "owner", environment: "development", stableIdentifier: "tenant_allowed" })).toMatchObject({
+      enabled: false,
+      reason: "environment_disabled",
+    });
+
+    expect(
+      evaluateFeatureFlag(
+        { ...flag, killSwitch: true, defaultEnabled: true },
+        { tenantId: "tenant_allowed", role: "owner", environment: "production", stableIdentifier: "tenant_allowed" },
+      ),
+    ).toMatchObject({
+      enabled: false,
+      reason: "kill_switch",
+    });
+  });
+
+  it("evaluates feature flag collections consistently", () => {
+    const decisions = evaluateFeatureFlags(
+      [
+        flag,
+        { ...flag, key: "dashboard.release_panel.enabled", defaultEnabled: true, tenantAllowlist: undefined },
+      ],
+      { tenantId: "tenant_unlisted", role: "assistant", environment: "production", stableIdentifier: "tenant_unlisted" },
+    );
+
+    expect(decisions).toHaveLength(2);
+    expect(decisions.map((decision) => decision.reason)).toEqual(["default_value", "default_value"]);
+    expect(decisions.map((decision) => decision.enabled)).toEqual([false, true]);
   });
 
   it("blocks destructive migration plans", () => {
@@ -41,6 +84,41 @@ describe("release and feature flag governance", () => {
     expect(plan.compatibility).toBe("requires_store_build");
   });
 
+  it("classifies safe, blocked, and manual-review mobile updates", () => {
+    expect(
+      classifyMobileUpdate({
+        channel: "preview",
+        runtimeVersion: "1.0.0",
+        nativeRuntimeVersion: "1.0.0",
+        changes: ["Copy-only update"],
+        expoProjectConfigured: true,
+      }),
+    ).toBe("safe");
+
+    expect(
+      classifyMobileUpdate({
+        channel: "preview",
+        runtimeVersion: "1.0.1",
+        nativeRuntimeVersion: "1.0.0",
+        changes: ["Runtime changed"],
+        expoProjectConfigured: true,
+      }),
+    ).toBe("requires_manual_review");
+
+    expect(
+      buildMobileUpdatePlan({
+        channel: "preview",
+        runtimeVersion: "1.0.0",
+        nativeRuntimeVersion: "1.0.0",
+        changes: ["Copy-only update"],
+        expoProjectConfigured: false,
+      }),
+    ).toMatchObject({
+      compatibility: "blocked",
+      gates: expect.arrayContaining([expect.objectContaining({ id: "eas-project-configured", status: "block" })]),
+    });
+  });
+
   it("creates release candidates with blocking gates", () => {
     const candidate = createReleaseCandidate({
       version: "0.14.0-phase14",
@@ -57,5 +135,39 @@ describe("release and feature flag governance", () => {
 
     expect(candidate.status).toBe("blocked");
     expect(candidate.risk).toBe("high");
+  });
+
+  it("creates release notes, health checks, and rollback plans from candidates", () => {
+    const candidate = createReleaseCandidate({
+      version: "0.15.0-phase15",
+      channel: "production",
+      surfaces: ["web", "dashboard", "mobile", "provider"],
+      artifacts: [{ name: "web", version: "0.15.0", commitSha: "abc123", surface: "web" }],
+      migrations: [{ id: "add-release-index", description: "Add release index", risk: "expand_only", backwardCompatible: true }],
+      commitSha: "abc123",
+      releaseNotes: ["Release control plane hardening"],
+      createdBy: "release-test",
+      createdAt: "2026-06-03T00:00:00.000Z",
+    });
+
+    const notes = createReleaseNotes(candidate);
+    const rollback = createRollbackPlan(candidate, "0.14.0");
+    const healthChecks = buildReleaseHealthChecks(candidate);
+
+    expect(notes).toContain("# 0.15.0-phase15");
+    expect(notes).toContain("Release control plane hardening");
+    expect(rollback.web).toContain("0.14.0");
+    expect(rollback.mobile).toContain("EAS update");
+    expect(rollback.featureFlags).toContain("Disable provider sends");
+    expect(healthChecks.map((check) => check.id)).toEqual(["dependencies-installed", "production-gates", "rollback-plan"]);
+  });
+
+  it("documents required workflow gates for release governance", () => {
+    const plan = buildGithubReleaseWorkflowPlan();
+
+    expect(plan.workflowName).toBe("Release Governance");
+    expect(plan.requiredSecrets).toContain("DATABASE_URL");
+    expect(plan.deploymentGatedSteps).toContain("Prisma migrate deploy");
+    expect(plan.environments).toEqual(["preview", "staging", "production"]);
   });
 });
