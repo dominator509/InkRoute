@@ -184,6 +184,44 @@ export interface GithubIssueAutomationPlan {
   };
 }
 
+export interface ReleaseIncidentLinkageInput {
+  releaseId: string;
+  releaseVersion: string;
+  environment: RuntimeEnvironment;
+  tenantId?: string;
+  reports: readonly ObservabilityReportDraft[];
+  rollbackRequested: boolean;
+  sentryReleaseConfigured: boolean;
+  incidentProviderConfigured: boolean;
+  tenantCommunicationOwner?: string;
+}
+
+export interface ReleaseIncidentLinkagePlan {
+  status: "ready" | "blocked";
+  releaseTags: Record<string, string>;
+  dashboardFilters: {
+    release: string;
+    environment: RuntimeEnvironment;
+    tenantId?: string;
+    severities: readonly ErrorSeverity[];
+  };
+  linkedReports: readonly {
+    id: string;
+    fingerprint: string;
+    severity: ErrorSeverity;
+    source: ErrorSurface;
+    route: string;
+    release: string;
+    redactedMessage: string;
+  }[];
+  incidentStatus: "none" | "monitoring" | "active_incident" | "rollback_required";
+  rollbackIncidentNote?: string;
+  tenantCommunicationDraft?: string;
+  blockers: readonly string[];
+  handoffRecords: readonly string[];
+  privacyChecklist: readonly string[];
+}
+
 const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const phonePattern = /(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)\d{3}[-.\s]?\d{4}/g;
 const tokenPattern = /(sk_live_|sk_test_|pk_live_|pk_test_|sntrys_|xox[baprs]-|Bearer\s+)[A-Za-z0-9_\-.]+/g;
@@ -579,6 +617,83 @@ export function buildGithubIssueAutomationPlan(input: GithubIssueAutomationInput
           },
         }
       : {}),
+  };
+}
+
+export function buildReleaseIncidentLinkagePlan(input: ReleaseIncidentLinkageInput): ReleaseIncidentLinkagePlan {
+  const matchingReports = input.reports.filter((report) => {
+    const releaseMatches = report.release === input.releaseVersion;
+    const environmentMatches = report.environment === input.environment;
+    const tenantMatches = !input.tenantId || report.tenantId === input.tenantId;
+    return releaseMatches && environmentMatches && tenantMatches;
+  });
+  const severities = [...new Set(matchingReports.map((report) => report.severity))];
+  const hasHighSeverity = matchingReports.some((report) => report.severity === "critical" || report.severity === "high");
+  const incidentStatus = input.rollbackRequested ? "rollback_required" : hasHighSeverity ? "active_incident" : matchingReports.length > 0 ? "monitoring" : "none";
+  const blockers: string[] = [];
+
+  if (!input.sentryReleaseConfigured) blockers.push("Sentry release tags must be configured before release-level error correlation is ready.");
+  if (incidentStatus !== "none" && !input.incidentProviderConfigured) blockers.push("Incident provider/workflow must be configured before release incidents can be opened.");
+  if ((input.rollbackRequested || hasHighSeverity) && !input.tenantCommunicationOwner?.trim()) blockers.push("Tenant communication owner must be assigned before rollback or high-severity incident messaging.");
+
+  const linkedReports = matchingReports.map((report) => ({
+    id: report.id,
+    fingerprint: report.fingerprint,
+    severity: report.severity,
+    source: report.source,
+    route: report.route ?? "unknown",
+    release: report.release ?? "unknown",
+    redactedMessage: report.redactedMessage,
+  }));
+  const topReport = linkedReports[0];
+  const owner = input.tenantCommunicationOwner?.trim() || "unassigned-release-owner";
+  const rollbackIncidentNote = input.rollbackRequested
+    ? [
+        `Rollback requested for release ${input.releaseVersion} (${input.releaseId}) in ${input.environment}.`,
+        topReport ? `Linked sanitized error fingerprint ${topReport.fingerprint} on ${topReport.route}.` : "No matching error report is linked yet.",
+        "Use rollback runbook and forward-fix notes; do not include raw PII, medical notes, payment payloads, cookies, or provider tokens.",
+      ].join(" ")
+    : undefined;
+  const tenantCommunicationDraft =
+    incidentStatus === "none"
+      ? undefined
+      : redactSensitiveText(
+          [
+            `Owner ${owner} will send a tenant-safe ${incidentStatus.replace(/_/g, " ")} update for release ${input.releaseVersion}.`,
+            topReport ? `Known impact is tracked as ${topReport.source} ${topReport.severity} on ${topReport.route}: ${topReport.redactedMessage}` : "Known impact is still under review.",
+            "Message must avoid client names, contact details, medical details, payment identifiers, screenshots, cookies, authorization headers, and provider payloads.",
+          ].join(" "),
+        ).text;
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    releaseTags: {
+      release: input.releaseVersion,
+      releaseId: input.releaseId,
+      environment: input.environment,
+      ...(input.tenantId ? { tenantId: input.tenantId } : {}),
+    },
+    dashboardFilters: {
+      release: input.releaseVersion,
+      environment: input.environment,
+      ...(input.tenantId ? { tenantId: input.tenantId } : {}),
+      severities,
+    },
+    linkedReports,
+    incidentStatus,
+    ...(rollbackIncidentNote ? { rollbackIncidentNote } : {}),
+    ...(tenantCommunicationDraft ? { tenantCommunicationDraft } : {}),
+    blockers,
+    handoffRecords: [
+      `Filter dashboard errors by release=${input.releaseVersion}, environment=${input.environment}${input.tenantId ? `, tenant=${input.tenantId}` : ""}.`,
+      "Attach linked error fingerprints, alert route, rollback decision, and sanitized tenant communication draft to the release record.",
+      "Create provider incident only after owner, Sentry release tags, and tenant-safe messaging are configured.",
+    ],
+    privacyChecklist: [
+      "Use ObservabilityReportDraft.redactedMessage and redactedMetadata only.",
+      "Do not include raw PII, medical notes, consent signatures, payment payloads, cookies, authorization headers, or provider tokens in incident notes.",
+      "Tenant communication drafts must describe user-visible impact without exposing client-specific details.",
+    ],
   };
 }
 

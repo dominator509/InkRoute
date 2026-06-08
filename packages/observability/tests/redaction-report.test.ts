@@ -6,6 +6,7 @@ import {
   buildGithubIssueAutomationPlan,
   buildGithubIssueDraft,
   buildObservabilityReportDraft,
+  buildReleaseIncidentLinkagePlan,
   buildSentrySdkConfigurationPlan,
   buildStackHash,
   buildTelemetryPipelinePlan,
@@ -354,6 +355,89 @@ describe("observability redaction and triage", () => {
     } else {
       process.env.GITHUB_REPOSITORY = previousRepository;
     }
+  });
+
+  it("links release-tagged reports to rollback incidents and tenant-safe communications", () => {
+    const matchingReport = buildObservabilityReportDraft({
+      tenantId: "tenant_release",
+      source: "api",
+      runtime: "server",
+      environment: "production",
+      message: "Release regression exposed booking failure for avery@example.com",
+      route: "/api/public/demo/booking-requests",
+      release: "release-2026.06.08.1",
+      handled: false,
+      statusCode: 500,
+      metadata: { authorization: "Bearer sk_live_secret", clientEmail: "avery@example.com" },
+    });
+    const otherReleaseReport = buildObservabilityReportDraft({
+      tenantId: "tenant_release",
+      source: "web",
+      runtime: "server",
+      environment: "production",
+      message: "Previous release warning",
+      route: "/old",
+      release: "release-older",
+    });
+    const plan = buildReleaseIncidentLinkagePlan({
+      releaseId: "rel_release_2026_06_08_1_production",
+      releaseVersion: "release-2026.06.08.1",
+      environment: "production",
+      tenantId: "tenant_release",
+      reports: [matchingReport, otherReleaseReport],
+      rollbackRequested: true,
+      sentryReleaseConfigured: true,
+      incidentProviderConfigured: true,
+      tenantCommunicationOwner: "release-owner",
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.incidentStatus).toBe("rollback_required");
+    expect(plan.releaseTags).toMatchObject({ release: "release-2026.06.08.1", environment: "production", tenantId: "tenant_release" });
+    expect(plan.dashboardFilters).toMatchObject({ release: "release-2026.06.08.1", environment: "production", tenantId: "tenant_release" });
+    expect(plan.linkedReports).toHaveLength(1);
+    expect(plan.linkedReports[0]).toMatchObject({
+      fingerprint: matchingReport.fingerprint,
+      route: "/api/public/demo/booking-requests",
+      release: "release-2026.06.08.1",
+    });
+    expect(plan.rollbackIncidentNote).toContain(matchingReport.fingerprint);
+    expect(plan.tenantCommunicationDraft).toContain("[redacted:email]");
+    expect(plan.tenantCommunicationDraft).not.toContain("avery@example.com");
+    expect(JSON.stringify(plan)).not.toContain("sk_live_secret");
+  });
+
+  it("blocks release incident workflows without Sentry tags, provider wiring, and communication owner", () => {
+    const report = buildObservabilityReportDraft({
+      tenantId: "tenant_release",
+      source: "mobile",
+      runtime: "react-native",
+      environment: "production",
+      message: "native crash after release",
+      route: "apps/mobile/Home",
+      release: "release-2026.06.08.2",
+      handled: false,
+    });
+    const plan = buildReleaseIncidentLinkagePlan({
+      releaseId: "rel_release_2026_06_08_2_production",
+      releaseVersion: "release-2026.06.08.2",
+      environment: "production",
+      tenantId: "tenant_release",
+      reports: [report],
+      rollbackRequested: false,
+      sentryReleaseConfigured: false,
+      incidentProviderConfigured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.incidentStatus).toBe("active_incident");
+    expect(plan.blockers).toEqual(
+      expect.arrayContaining([
+        "Sentry release tags must be configured before release-level error correlation is ready.",
+        "Incident provider/workflow must be configured before release incidents can be opened.",
+        "Tenant communication owner must be assigned before rollback or high-severity incident messaging.",
+      ]),
+    );
   });
 
   it("plans a ready Sentry Next.js runtime with redaction and source-map gates", () => {

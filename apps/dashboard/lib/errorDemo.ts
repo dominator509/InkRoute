@@ -4,6 +4,7 @@ import {
   buildAlertRoute,
   buildGithubIssueDraft,
   buildObservabilityReportDraft,
+  buildReleaseIncidentLinkagePlan,
   buildSentrySetupChecklist,
   demoErrorReports,
   observabilityProviderBoundaries,
@@ -55,6 +56,17 @@ export const dashboardObservabilitySummaries = {
 export const dashboardAlertRoutes = dashboardObservabilityReports.map((report) => ({ report, route: buildAlertRoute(report) }));
 export const dashboardAgentWorkflowPreview = buildAgenticBugFixWorkflow(dashboardObservabilityReports[0]!);
 export const dashboardIssueDraftPreview = buildGithubIssueDraft(dashboardObservabilityReports[0]!);
+export const dashboardReleaseIncidentLinkagePreview = buildReleaseIncidentLinkagePlan({
+  releaseId: "rel_phase7_payments_preview",
+  releaseVersion: "phase7-payments",
+  environment: "development",
+  tenantId: inkrouteDemoTenant.id,
+  reports: dashboardObservabilityReports,
+  rollbackRequested: true,
+  sentryReleaseConfigured: false,
+  incidentProviderConfigured: false,
+  tenantCommunicationOwner: "release-owner",
+});
 export const dashboardProviderBoundaries = observabilityProviderBoundaries;
 export const dashboardNextSentryChecklist = buildSentrySetupChecklist("nextjs");
 export const dashboardMobileSentryChecklist = buildSentrySetupChecklist("react-native");

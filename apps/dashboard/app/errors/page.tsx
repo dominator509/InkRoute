@@ -12,6 +12,7 @@ import {
   dashboardObservabilityReports,
   dashboardObservabilitySummaries,
   dashboardProviderBoundaries,
+  dashboardReleaseIncidentLinkagePreview,
 } from "../../lib/errorDemo";
 
 function severityTone(severity: string) {
@@ -107,6 +108,30 @@ export default function ErrorReportsPage() {
             {dashboardMobileSentryChecklist.slice(0, 2).map((item) => <li key={item}>{item}</li>)}
           </ul>
         </article>
+      </section>
+
+      <section className="card">
+        <p className="eyebrow">Release incident linkage</p>
+        <h2>{dashboardReleaseIncidentLinkagePreview.incidentStatus.replace(/_/g, " ")}</h2>
+        <p className="muted">
+          Release {dashboardReleaseIncidentLinkagePreview.releaseTags.release} links {dashboardReleaseIncidentLinkagePreview.linkedReports.length} redacted report(s)
+          through dashboard filters, rollback notes, and tenant-safe communication drafts. Provider actions remain blocked until Sentry release tags and incident workflow credentials are configured.
+        </p>
+        <div className="stack-list">
+          {dashboardReleaseIncidentLinkagePreview.linkedReports.map((report) => (
+            <div className="mini-card" key={report.fingerprint}>
+              <strong>{report.source} Â· {report.severity}</strong>
+              <p>{report.route} Â· {report.redactedMessage}</p>
+              <StatusPill label={report.release} tone="info" />
+            </div>
+          ))}
+          {dashboardReleaseIncidentLinkagePreview.blockers.map((blocker) => (
+            <div className="mini-card" key={blocker}>
+              <strong>Blocked provider step</strong>
+              <p>{blocker}</p>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="grid two">
