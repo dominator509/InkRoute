@@ -501,6 +501,75 @@ export function buildBookingPostSubmitPlan(input: BookingPostSubmitPlanInput): B
   };
 }
 
+export type BookingProviderFailureAction =
+  | "mark_workflow_failed"
+  | "write_audit_log"
+  | "revoke_signed_upload_intent"
+  | "void_deposit_session"
+  | "retry_notification"
+  | "cancel_calendar_hold"
+  | "queue_operator_review";
+
+export interface BookingProviderFailurePlanInput {
+  tenantId: string;
+  bookingRequestId: string;
+  failedWorkflow: BookingPostSubmitWorkflowType;
+  failedAt: string;
+  provider: "storage" | "stripe" | "notification" | "calendar";
+  providerErrorCode?: string;
+  retryable: boolean;
+}
+
+export interface BookingProviderFailurePlan {
+  status: "ready" | "blocked";
+  failedWorkflow: BookingPostSubmitWorkflowType;
+  canRetry: boolean;
+  requiresAudit: boolean;
+  rollbackRequired: boolean;
+  actions: BookingProviderFailureAction[];
+  auditPayload: Record<string, string | boolean | null>;
+  operatorMessage: string;
+  blockers: string[];
+}
+
+export function buildBookingProviderFailurePlan(input: BookingProviderFailurePlanInput): BookingProviderFailurePlan {
+  const blockers: string[] = [];
+  if (!input.tenantId.trim()) blockers.push("Tenant scope is required before provider failure handling.");
+  if (!input.bookingRequestId.trim()) blockers.push("Booking request id is required before provider failure handling.");
+
+  const rollbackActions: Record<BookingPostSubmitWorkflowType, BookingProviderFailureAction[]> = {
+    "reference-upload": ["mark_workflow_failed", "write_audit_log", "revoke_signed_upload_intent", "queue_operator_review"],
+    "deposit-handoff": ["mark_workflow_failed", "write_audit_log", "void_deposit_session", "queue_operator_review"],
+    "notification-bootstrap": input.retryable
+      ? ["mark_workflow_failed", "write_audit_log", "retry_notification"]
+      : ["mark_workflow_failed", "write_audit_log", "queue_operator_review"],
+    "calendar-hold": ["mark_workflow_failed", "write_audit_log", "cancel_calendar_hold", "queue_operator_review"],
+  };
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    failedWorkflow: input.failedWorkflow,
+    canRetry: input.retryable && input.failedWorkflow === "notification-bootstrap",
+    requiresAudit: true,
+    rollbackRequired: input.failedWorkflow !== "notification-bootstrap" || !input.retryable,
+    actions: rollbackActions[input.failedWorkflow],
+    auditPayload: {
+      tenantId: input.tenantId,
+      bookingRequestId: input.bookingRequestId,
+      failedWorkflow: input.failedWorkflow,
+      provider: input.provider,
+      providerErrorCode: input.providerErrorCode ?? null,
+      failedAt: input.failedAt,
+      retryable: input.retryable,
+    },
+    operatorMessage:
+      blockers.length > 0
+        ? "Provider failure handling is blocked until tenant and booking scope are available."
+        : `Handle ${input.failedWorkflow} failure through audit-first rollback before exposing a client-facing status change.`,
+    blockers,
+  };
+}
+
 export function getTravelBookingCta(status: TravelBookingStatus): string {
   if (status === "open") return "Request this city";
   if (status === "waitlist") return "Join the waitlist";

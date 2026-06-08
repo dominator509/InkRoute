@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildBookingPostSubmitPlan,
+  buildBookingProviderFailurePlan,
   calculateTattooReadinessScore,
   createBookingTransitionPlan,
   emptyBookingDraft,
@@ -197,6 +198,62 @@ describe("booking readiness", () => {
     ]);
     expect(plan.workflows.find((workflow) => workflow.type === "notification-bootstrap")?.status).toBe("blocked_missing_data");
     expect(plan.workflows.find((workflow) => workflow.type === "calendar-hold")?.required).toBe(false);
+  });
+
+  it("plans audit-first rollback for deposit and calendar provider failures", () => {
+    const depositFailure = buildBookingProviderFailurePlan({
+      tenantId: "tenant_001",
+      bookingRequestId: "booking_001",
+      failedWorkflow: "deposit-handoff",
+      failedAt: "2026-06-08T12:30:00.000Z",
+      provider: "stripe",
+      providerErrorCode: "stripe_timeout",
+      retryable: false,
+    });
+
+    expect(depositFailure).toMatchObject({
+      status: "ready",
+      canRetry: false,
+      requiresAudit: true,
+      rollbackRequired: true,
+      actions: ["mark_workflow_failed", "write_audit_log", "void_deposit_session", "queue_operator_review"],
+      auditPayload: {
+        tenantId: "tenant_001",
+        bookingRequestId: "booking_001",
+        failedWorkflow: "deposit-handoff",
+        provider: "stripe",
+        providerErrorCode: "stripe_timeout",
+      },
+    });
+
+    const calendarFailure = buildBookingProviderFailurePlan({
+      tenantId: "tenant_001",
+      bookingRequestId: "booking_001",
+      failedWorkflow: "calendar-hold",
+      failedAt: "2026-06-08T12:35:00.000Z",
+      provider: "calendar",
+      retryable: false,
+    });
+
+    expect(calendarFailure.actions).toEqual(["mark_workflow_failed", "write_audit_log", "cancel_calendar_hold", "queue_operator_review"]);
+  });
+
+  it("allows retryable notification failures without rollback-first handling", () => {
+    const plan = buildBookingProviderFailurePlan({
+      tenantId: "tenant_001",
+      bookingRequestId: "booking_001",
+      failedWorkflow: "notification-bootstrap",
+      failedAt: "2026-06-08T12:40:00.000Z",
+      provider: "notification",
+      retryable: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      canRetry: true,
+      rollbackRequired: false,
+      actions: ["mark_workflow_failed", "write_audit_log", "retry_notification"],
+    });
   });
 
   it("returns travel booking calls to action for open, waitlist, and closed statuses", () => {
