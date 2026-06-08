@@ -62,6 +62,34 @@ export interface AlertRouteDraft {
   escalationMinutes?: number;
 }
 
+export interface AlertEscalationInput {
+  report: Pick<ObservabilityReportDraft, "severity" | "source" | "route" | "release" | "fingerprint" | "redactedMessage" | "redactionLevel" | "alertRecommended">;
+  slackWebhookConfigured: boolean;
+  emailProviderConfigured: boolean;
+  pagerProviderConfigured: boolean;
+  onCallOwner?: string;
+  quietHoursActive?: boolean;
+  humanAcknowledgementMinutes?: number;
+}
+
+export interface AlertEscalationPlan {
+  status: "ready" | "blocked";
+  route: AlertRouteDraft;
+  provider: "dashboard" | "email" | "slack" | "pager";
+  blockers: readonly string[];
+  sanitizedPayload: {
+    fingerprint: string;
+    severity: ErrorSeverity;
+    source: ErrorSurface;
+    route: string;
+    release: string;
+    message: string;
+    redactionLevel: RedactionLevel;
+  };
+  escalationRunbook: readonly string[];
+  suppressExternalDelivery: boolean;
+}
+
 export interface AgenticBugFixStep {
   order: number;
   title: string;
@@ -306,6 +334,54 @@ export function buildAlertRoute(report: Pick<ObservabilityReportDraft, "severity
     shouldNotifyNow: true,
     reason: `High severity ${report.source} reports should notify the release owner and remain visible in dashboard triage.`,
     escalationMinutes: 60,
+  };
+}
+
+export function buildAlertEscalationPlan(input: AlertEscalationInput): AlertEscalationPlan {
+  const route = buildAlertRoute(input.report);
+  const blockers: string[] = [];
+  const suppressExternalDelivery = input.report.redactionLevel === "blocked_high_risk_payload";
+  const provider = suppressExternalDelivery ? "dashboard" : route.channel === "none" ? "dashboard" : route.channel;
+
+  if (route.channel === "pager" && !input.pagerProviderConfigured && !suppressExternalDelivery) {
+    blockers.push("Pager provider is required for critical production alerts.");
+  }
+  if (route.channel === "slack" && !input.slackWebhookConfigured && !suppressExternalDelivery) {
+    blockers.push("Slack webhook is required for high-severity alert delivery.");
+  }
+  if (route.channel === "email" && !input.emailProviderConfigured && !suppressExternalDelivery) {
+    blockers.push("Email provider is required before email alert delivery.");
+  }
+  if (!input.onCallOwner || input.onCallOwner.trim().length === 0) {
+    blockers.push("On-call owner must be assigned before production alert routing is ready.");
+  }
+  if (input.quietHoursActive && route.channel !== "pager") {
+    blockers.push("Quiet-hours policy must defer non-critical external alerts to dashboard triage.");
+  }
+
+  const acknowledgementMinutes = input.humanAcknowledgementMinutes ?? route.escalationMinutes ?? 120;
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    route,
+    provider,
+    blockers,
+    sanitizedPayload: {
+      fingerprint: input.report.fingerprint,
+      severity: input.report.severity,
+      source: input.report.source,
+      route: input.report.route ?? "unknown",
+      release: input.report.release ?? "unknown",
+      message: input.report.redactedMessage,
+      redactionLevel: input.report.redactionLevel,
+    },
+    escalationRunbook: [
+      `Notify ${input.onCallOwner?.trim() || "unassigned-on-call-owner"} via ${provider}.`,
+      `Acknowledge within ${acknowledgementMinutes} minute(s) and keep raw payloads out of chat/email/pager tools.`,
+      "Use seeded or synthetic reproduction data only; do not paste PII, medical notes, consent signatures, tokens, cookies, or payment data.",
+      "Escalate to dashboard-only review when redaction level is blocked_high_risk_payload.",
+    ],
+    suppressExternalDelivery,
   };
 }
 

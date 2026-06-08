@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAgenticBugFixWorkflow,
+  buildAlertEscalationPlan,
   buildAlertRoute,
   buildGithubIssueDraft,
   buildObservabilityReportDraft,
@@ -76,6 +77,87 @@ describe("observability redaction and triage", () => {
       channel: "dashboard",
       shouldNotifyNow: true,
     });
+  });
+
+  it("builds a ready critical alert escalation plan with sanitized pager payloads", () => {
+    const report = buildObservabilityReportDraft({
+      source: "api",
+      runtime: "server",
+      environment: "production",
+      message: "Payment privacy failure for avery@example.com",
+      route: "/api/payments/webhook",
+      release: "ops-2026.06.08.1",
+      handled: false,
+      metadata: { token: "sk_live_secret", bookingId: "booking_alert_test" },
+    });
+    const plan = buildAlertEscalationPlan({
+      report,
+      slackWebhookConfigured: true,
+      emailProviderConfigured: true,
+      pagerProviderConfigured: true,
+      onCallOwner: "release-owner",
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.provider).toBe("pager");
+    expect(plan.route.escalationMinutes).toBe(15);
+    expect(plan.sanitizedPayload.message).toContain("[redacted:email]");
+    expect(plan.sanitizedPayload.message).not.toContain("avery@example.com");
+    expect(JSON.stringify(plan.sanitizedPayload)).not.toContain("sk_live_secret");
+    expect(plan.escalationRunbook.join(" ")).toContain("release-owner");
+  });
+
+  it("blocks high-severity Slack escalation when provider config and quiet-hours policy are missing", () => {
+    const report = buildObservabilityReportDraft({
+      source: "mobile",
+      runtime: "react-native",
+      environment: "production",
+      message: "native crash on launch",
+      route: "apps/mobile/Home",
+      handled: false,
+    });
+    const plan = buildAlertEscalationPlan({
+      report,
+      slackWebhookConfigured: false,
+      emailProviderConfigured: false,
+      pagerProviderConfigured: true,
+      quietHoursActive: true,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.provider).toBe("slack");
+    expect(plan.blockers).toEqual(
+      expect.arrayContaining([
+        "Slack webhook is required for high-severity alert delivery.",
+        "On-call owner must be assigned before production alert routing is ready.",
+        "Quiet-hours policy must defer non-critical external alerts to dashboard triage.",
+      ]),
+    );
+  });
+
+  it("suppresses external alert delivery for blocked high-risk payloads", () => {
+    const report = buildObservabilityReportDraft({
+      source: "api",
+      runtime: "server",
+      environment: "production",
+      message: "tenant isolation critical incident",
+      route: "/api/private",
+      handled: false,
+      statusCode: 500,
+    });
+    const plan = buildAlertEscalationPlan({
+      report: { ...report, redactionLevel: "blocked_high_risk_payload" },
+      slackWebhookConfigured: false,
+      emailProviderConfigured: false,
+      pagerProviderConfigured: false,
+      onCallOwner: "privacy-lead",
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.provider).toBe("dashboard");
+    expect(plan.suppressExternalDelivery).toBe(true);
+    expect(plan.route.channel).toBe("dashboard");
+    expect(plan.escalationRunbook.join(" ")).toContain("dashboard-only review");
   });
 
   it("builds sanitized GitHub issue drafts without raw sensitive values", () => {
