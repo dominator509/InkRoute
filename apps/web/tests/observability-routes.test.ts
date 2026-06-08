@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createHmac } from "node:crypto";
 import { NextRequest } from "next/server";
 
 const dbMocks = vi.hoisted(() => ({
@@ -22,6 +23,7 @@ beforeEach(() => {
   dbMocks.tenantFindUnique.mockReset();
   dbMocks.transaction.mockReset();
   dbMocks.tenantFindUnique.mockRejectedValue(new Error("database unavailable in route contract test"));
+  delete process.env.SENTRY_WEBHOOK_SECRET;
 });
 
 function errorReportRequest(body: unknown, clientIp: string): NextRequest {
@@ -33,6 +35,16 @@ function errorReportRequest(body: unknown, clientIp: string): NextRequest {
       "user-agent": "vitest-observability-route",
     },
     body: typeof body === "string" ? body : JSON.stringify(body),
+  });
+}
+
+function signedSentryWebhookRequest(body: unknown, secret: string, signatureOverride?: string): NextRequest {
+  const rawBody = JSON.stringify(body);
+  const signature = signatureOverride ?? createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
+  return new NextRequest("https://local.test/api/webhooks/sentry", {
+    method: "POST",
+    headers: { "sentry-hook-signature": signature },
+    body: rawBody,
   });
 }
 
@@ -172,7 +184,7 @@ describe("observability route boundaries", () => {
     });
   });
 
-  it("keeps Sentry webhook ingestion credential-gated until provider verification is wired", async () => {
+  it("keeps Sentry webhook ingestion credential-gated until provider verification is configured", async () => {
     const missingSignature = await receiveSentryWebhook(
       new NextRequest("https://local.test/api/webhooks/sentry", {
         method: "POST",
@@ -196,7 +208,7 @@ describe("observability route boundaries", () => {
     const acceptedPayload = (await acceptedShape.json()) as {
       ok: boolean;
       error: { code: string };
-      data: { receivedSignatureHeader: string; report: { route: string; release: string }; requiredNextWork: string[] };
+      data: { receivedSignatureHeader: string; requiredNextWork: string[] };
     };
 
     expect(missingSignature.status).toBe(400);
@@ -206,12 +218,73 @@ describe("observability route boundaries", () => {
     });
     expect(acceptedShape.status).toBe(501);
     expect(acceptedPayload.ok).toBe(false);
-    expect(acceptedPayload.error.code).toBe("SENTRY_WEBHOOK_NOT_IMPLEMENTED");
+    expect(acceptedPayload.error.code).toBe("SENTRY_WEBHOOK_SECRET_NOT_CONFIGURED");
     expect(acceptedPayload.data.receivedSignatureHeader).toBe("present");
-    expect(acceptedPayload.data.report).toMatchObject({
+    expect(acceptedPayload.data.requiredNextWork.join(" ")).toContain("Configure SENTRY_WEBHOOK_SECRET");
+  });
+
+  it("rejects invalid Sentry webhook signatures before payload reconciliation", async () => {
+    process.env.SENTRY_WEBHOOK_SECRET = "sentry_webhook_secret_test";
+
+    const response = await receiveSentryWebhook(
+      signedSentryWebhookRequest(
+        {
+          action: "created",
+          data: { id: "issue_invalid_sig", title: "Invalid signature should not reconcile" },
+        },
+        process.env.SENTRY_WEBHOOK_SECRET,
+        "0".repeat(64),
+      ),
+    );
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      error: { code: "INVALID_SENTRY_SIGNATURE" },
+    });
+  });
+
+  it("accepts valid Sentry webhook signatures with idempotency and reconciliation metadata", async () => {
+    process.env.SENTRY_WEBHOOK_SECRET = "sentry_webhook_secret_test";
+
+    const response = await receiveSentryWebhook(
+      signedSentryWebhookRequest(
+        {
+          action: "resolved",
+          data: {
+            id: "issue_123",
+            title: "Unhandled booking crash for avery@example.com",
+            culprit: "/booking",
+            release: "phase11-route-test",
+          },
+        },
+        process.env.SENTRY_WEBHOOK_SECRET,
+      ),
+    );
+    const payload = (await response.json()) as {
+      ok: boolean;
+      data: {
+        providerDeliveryId: string;
+        idempotencyKey: string;
+        reconciliation: { targetErrorStatus: string; persistence: string };
+        report: { route: string; release: string; redactedMessage: string };
+        requiredNextWork: string[];
+      };
+    };
+
+    expect(response.status).toBe(202);
+    expect(payload.ok).toBe(true);
+    expect(payload.data.providerDeliveryId).toBe("sentry:resolved:issue_123");
+    expect(payload.data.idempotencyKey).toBe("sentry:resolved:issue_123");
+    expect(payload.data.reconciliation).toMatchObject({
+      targetErrorStatus: "resolved",
+      persistence: "not-yet-wired",
+    });
+    expect(payload.data.report).toMatchObject({
       route: "/booking",
       release: "phase11-route-test",
     });
-    expect(acceptedPayload.data.requiredNextWork.join(" ")).toContain("Verify provider webhook signatures");
+    expect(payload.data.report.redactedMessage).not.toContain("avery@example.com");
+    expect(payload.data.requiredNextWork.join(" ")).toContain("Persist webhook deliveries idempotently");
   });
 });

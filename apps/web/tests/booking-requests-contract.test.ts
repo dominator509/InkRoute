@@ -58,7 +58,7 @@ describe("booking request queue/consumer contracts", () => {
       budgetMin: 120000,
       ideaSummary: "Reference photo upload request for forearm floral ink style and placement alignment.",
       policyAccepted: true,
-    };
+    } as const;
 
     const localWorkflows = buildPostPersistWorkflowPlans(input, "inkroute-demo", "booking-local", "local-fallback");
     const dbWorkflows = buildPostPersistWorkflowPlans(input, "inkroute-demo", "booking-db", "database");
