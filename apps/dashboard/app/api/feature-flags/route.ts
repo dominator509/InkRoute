@@ -1,4 +1,3 @@
-import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { defaultFeatureFlags, evaluateFeatureFlags, type FeatureFlagDefinition } from "@inkroute/releases";
 import { featureFlagPatchInputSchema } from "@inkroute/validators";
@@ -66,10 +65,12 @@ function mergeDefinitionWithRecord(
     scope: DbFeatureScope;
     enabled: boolean;
     description: string | null;
-    rules: Prisma.JsonValue | null;
+    rules: unknown;
   },
 ): FeatureFlagDefinition {
   const rules = asRecord(record.rules);
+  const tenantAllowlist = normalizeStringArray(rules.tenantAllowlist);
+  const roleAllowlist = normalizeStringArray(rules.roleAllowlist);
   return {
     ...base,
     key: record.key,
@@ -77,8 +78,8 @@ function mergeDefinitionWithRecord(
     scope: normalizeScope(record.scope),
     defaultEnabled: typeof record.enabled === "boolean" ? record.enabled : base.defaultEnabled,
     environments: normalizeEnvironments(rules.environments),
-    tenantAllowlist: normalizeStringArray(rules.tenantAllowlist) ?? base.tenantAllowlist,
-    roleAllowlist: normalizeStringArray(rules.roleAllowlist) ?? base.roleAllowlist,
+    ...(tenantAllowlist ? { tenantAllowlist } : base.tenantAllowlist ? { tenantAllowlist: base.tenantAllowlist } : {}),
+    ...(roleAllowlist ? { roleAllowlist } : base.roleAllowlist ? { roleAllowlist: base.roleAllowlist } : {}),
     rolloutPercentage: normalizeNumber(rules.rolloutPercentage) ?? base.rolloutPercentage,
     killSwitch: typeof rules.killSwitch === "boolean" ? rules.killSwitch : base.killSwitch,
     expiresAt: typeof rules.expiresAt === "string" ? rules.expiresAt : base.expiresAt,
@@ -294,6 +295,7 @@ export async function POST(request: NextRequest) {
   }
 
   const rules = normalizeRulesInput(input.rules);
+  const persistedRules = rules as Record<string, unknown>;
 
   if (actor.source === "local-fallback") {
     return NextResponse.json(
@@ -307,7 +309,7 @@ export async function POST(request: NextRequest) {
           scope: input.scope,
           enabled: input.enabled,
           description: input.description,
-          rules,
+          rules: persistedRules,
         },
         warning: "Local fallback mode: flag mutation is not persisted in database mode.",
         gapIds: ["GAP-088", "GAP-090", "GAP-093"],
@@ -328,7 +330,7 @@ export async function POST(request: NextRequest) {
           enabled: input.enabled,
           scope: input.scope,
           description: input.description ?? existing?.description ?? "Tenant-defined feature flag.",
-          rules,
+          rules: persistedRules,
         },
         create: {
           tenantId,
@@ -336,7 +338,7 @@ export async function POST(request: NextRequest) {
           scope: input.scope,
           enabled: input.enabled,
           description: input.description ?? "Tenant-defined feature flag.",
-          rules,
+          rules: persistedRules,
         },
       });
       const audit = await tx.auditLog.create({

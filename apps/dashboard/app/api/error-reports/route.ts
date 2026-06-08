@@ -1,5 +1,10 @@
-import { buildAlertRoute, buildObservabilityReportDraft } from "@inkroute/observability";
-import { errorReportFilterSchema, errorReportInputSchema } from "@inkroute/validators";
+import {
+  buildAlertRoute,
+  buildObservabilityReportDraft,
+  type ErrorSurface,
+  type ObservabilityEventInput,
+} from "@inkroute/observability";
+import { errorReportFilterSchema, errorReportInputSchema, type ErrorReportInput } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
 import type { ErrorReportStatus, ErrorSeverity } from "@inkroute/types";
 import { NextResponse, type NextRequest } from "next/server";
@@ -10,7 +15,7 @@ type LocalErrorReport = {
   tenantId: string;
   severity: ErrorSeverity;
   status: ErrorReportStatus;
-  source: string;
+  source: ErrorSurface;
   message: string;
   redactionLevel: string;
   stackHash: string;
@@ -53,7 +58,7 @@ function storeLocalErrorReport(input: Omit<LocalErrorReport, "id" | "createdAt" 
   return report;
 }
 
-function buildDashboardReportInput(parsed: { data: { message: string } & Record<string, unknown> }, tenantId: string, request: NextRequest) {
+function buildDashboardReportInput(parsed: { data: ErrorReportInput }, tenantId: string, request: NextRequest): ObservabilityEventInput {
   const inputData = parsed.data;
   const userAgent = typeof inputData.userAgent === "string" ? inputData.userAgent : request.headers.get("user-agent") ?? undefined;
   return {
@@ -154,7 +159,7 @@ export async function GET(request: NextRequest) {
         stackHash: entry.stackHash,
         release: entry.release ?? undefined,
         route: entry.route ?? undefined,
-        metadata: entry.metadata ?? {},
+        metadata: typeof entry.metadata === "object" && entry.metadata !== null ? (entry.metadata as Record<string, unknown>) : {},
         createdAt: entry.createdAt.toISOString(),
       })),
       gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
