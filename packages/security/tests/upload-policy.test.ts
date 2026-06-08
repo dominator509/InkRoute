@@ -4,6 +4,7 @@ import {
   buildPrivacyCaseWorkflowPlan,
   buildRetentionEnforcementDryRun,
   buildLegalReviewPacketPlan,
+  buildAbuseControlPlan,
   buildSignedUploadIntentPlan,
   buildPrivateStorageAccessPlan,
   buildUploadScanPipelinePlan,
@@ -307,6 +308,102 @@ describe("security and privacy helpers", () => {
   it("provides tenant isolation and rate-limit fixtures for future integration tests", () => {
     expect(buildTenantIsolationFixtures().some((fixture) => fixture.expectedDecision === "deny")).toBe(true);
     expect(evaluateRateLimitDraft({ ruleId: "public-booking-submit", observedRequests: 12, windowSeconds: 60 }).status).toBe("throttle");
+  });
+
+  it("plans tenant-aware abuse throttling with privacy-safe logs and alert blockers", () => {
+    const plan = buildAbuseControlPlan({
+      ruleId: "public-booking-submit",
+      routePath: "/api/public/inkroute-demo/booking-requests",
+      tenantId: "Tenant Demo",
+      ipHash: "ip_test_hash",
+      userAgent: "",
+      observedRequests: 22,
+      windowSeconds: 3600,
+      providerWebhook: false,
+      redisConfigured: false,
+      botChallengeConfigured: false,
+      alertingConfigured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.action).toBe("throttle");
+    expect(plan.retryAfterSeconds).toBe(3600);
+    expect(plan.signals).toEqual(expect.arrayContaining(["high_request_count", "missing_user_agent", "known_test_fixture"]));
+    expect(plan.privacySafeLog).toMatchObject({
+      routePath: "/api/public/inkroute-demo/booking-requests",
+      tenantId: "tenant-demo",
+      ipHash: "ip_test_hash",
+      action: "throttle",
+    });
+    expect(JSON.stringify(plan.privacySafeLog)).not.toContain("127.0.0.1");
+    expect(plan.alert).toMatchObject({ shouldAlert: true });
+    expect(plan.blockers).toEqual(
+      expect.arrayContaining([
+        "Distributed Redis/edge rate limiter must be configured before production abuse controls are ready.",
+        "Bot challenge provider or proof-of-work strategy must be configured for suspicious public traffic.",
+        "Abuse alerting must be configured before throttling incidents can page or notify operators.",
+      ]),
+    );
+  });
+
+  it("challenges suspicious public traffic without leaking raw IPs or payloads", () => {
+    const plan = buildAbuseControlPlan({
+      ruleId: "public-upload-intent",
+      routePath: "/api/public/inkroute-demo/secure-upload-intents/../admin",
+      tenantId: "tenant_001",
+      ipHash: "hash_abc123",
+      userAgent: "Vitest bot fixture",
+      observedRequests: 3,
+      windowSeconds: 3600,
+      providerWebhook: false,
+      redisConfigured: true,
+      botChallengeConfigured: true,
+      alertingConfigured: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.action).toBe("challenge");
+    expect(plan.signals).toEqual(expect.arrayContaining(["suspicious_path", "known_test_fixture"]));
+    expect(plan.alert.shouldAlert).toBe(true);
+    expect(plan.key).toBe("public-upload-intent:tenant_001:hash_abc123");
+  });
+
+  it("allows valid provider webhooks to bypass public bot challenges while blocking invalid signatures", () => {
+    const valid = buildAbuseControlPlan({
+      ruleId: "provider-webhook",
+      routePath: "/api/webhooks/stripe",
+      tenantId: "tenant_provider",
+      ipHash: "provider_hash",
+      userAgent: "Stripe/1.0",
+      observedRequests: 500,
+      windowSeconds: 60,
+      providerWebhook: true,
+      providerSignatureValid: true,
+      redisConfigured: true,
+      botChallengeConfigured: true,
+      alertingConfigured: true,
+    });
+    const invalid = buildAbuseControlPlan({
+      ruleId: "provider-webhook",
+      routePath: "/api/webhooks/stripe",
+      tenantId: "tenant_provider",
+      ipHash: "provider_hash",
+      userAgent: "unknown",
+      observedRequests: 1,
+      windowSeconds: 60,
+      providerWebhook: true,
+      providerSignatureValid: false,
+      redisConfigured: true,
+      botChallengeConfigured: true,
+      alertingConfigured: true,
+    });
+
+    expect(valid.action).toBe("provider_bypass");
+    expect(valid.providerBypassAllowed).toBe(true);
+    expect(valid.signals).toContain("provider_signature_valid");
+    expect(invalid.action).toBe("challenge");
+    expect(invalid.signals).toContain("provider_signature_missing");
+    expect(invalid.alert.shouldAlert).toBe(true);
   });
 
   it("blocks privacy lifecycle plans until requester identity is verified", () => {

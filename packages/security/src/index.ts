@@ -173,6 +173,48 @@ export interface RateLimitEvaluationResult {
   warning: string;
 }
 
+export type BotChallengeAction = "allow" | "challenge" | "throttle" | "provider_bypass";
+export type AbuseSignal = "high_request_count" | "missing_user_agent" | "suspicious_path" | "provider_signature_valid" | "provider_signature_missing" | "known_test_fixture";
+
+export interface AbuseControlInput {
+  ruleId: string;
+  routePath: string;
+  tenantId?: string;
+  ipHash?: string;
+  userId?: string;
+  userAgent?: string;
+  observedRequests: number;
+  windowSeconds: number;
+  providerWebhook: boolean;
+  providerSignatureValid?: boolean;
+  redisConfigured: boolean;
+  botChallengeConfigured: boolean;
+  alertingConfigured: boolean;
+}
+
+export interface AbuseControlPlan {
+  status: "ready" | "blocked";
+  action: BotChallengeAction;
+  rateLimit: RateLimitEvaluationResult;
+  key: string;
+  signals: readonly AbuseSignal[];
+  retryAfterSeconds?: number;
+  providerBypassAllowed: boolean;
+  privacySafeLog: {
+    routePath: string;
+    tenantId: string;
+    ipHash: string;
+    userId?: string;
+    signals: readonly AbuseSignal[];
+    action: BotChallengeAction;
+  };
+  blockers: readonly string[];
+  alert: {
+    shouldAlert: boolean;
+    reason: string;
+  };
+}
+
 export type EncryptionReadinessStatus = "ready" | "not_configured" | "invalid_key" | "unsupported_environment";
 export type EncryptionAttemptStatus = "stored" | "redacted";
 export type EncryptionRotationState = "unconfigured" | "single_primary_only" | "single_secondary_only" | "dual_key_rotation_ready";
@@ -1065,8 +1107,10 @@ export const uploadPolicies: Record<UploadAssetKind, { allowedExtensions: string
 export const rateLimitRules: RateLimitRule[] = [
   { id: "public-booking-submit", routePattern: "/api/public/:tenantSlug/booking-requests", windowSeconds: 3600, maxRequests: 8, keyStrategy: "ip_tenant", status: "scaffolded", gapIds: ["GAP-032", "GAP-095"] },
   { id: "public-upload-intent", routePattern: "/api/public/:tenantSlug/secure-upload-intents", windowSeconds: 3600, maxRequests: 20, keyStrategy: "ip_tenant", status: "scaffolded", gapIds: ["GAP-096", "GAP-097"] },
+  { id: "public-privacy-request", routePattern: "/api/public/:tenantSlug/privacy-requests", windowSeconds: 3600, maxRequests: 6, keyStrategy: "ip_tenant", status: "scaffolded", gapIds: ["GAP-098", "GAP-101"] },
   { id: "public-message", routePattern: "/api/public/:tenantSlug/messages", windowSeconds: 3600, maxRequests: 10, keyStrategy: "ip_tenant", status: "scaffolded", gapIds: ["GAP-064", "GAP-068"] },
   { id: "fallback-error-report", routePattern: "/api/public/:tenantSlug/error-reports", windowSeconds: 900, maxRequests: 20, keyStrategy: "ip_tenant", status: "scaffolded", gapIds: ["GAP-081", "GAP-101"] },
+  { id: "provider-webhook", routePattern: "/api/webhooks/:provider", windowSeconds: 60, maxRequests: 1000, keyStrategy: "provider_signature", status: "scaffolded", gapIds: ["GAP-061", "GAP-079", "GAP-101"] },
   { id: "dashboard-mutation", routePattern: "/api/**", windowSeconds: 60, maxRequests: 120, keyStrategy: "user_tenant", status: "scaffolded", gapIds: ["GAP-036", "GAP-088", "GAP-095"] },
 ];
 
@@ -1604,6 +1648,67 @@ export function evaluateRateLimitDraft(input: RateLimitEvaluationInput): RateLim
     remaining,
     status: allowed ? "allow" : "throttle",
     warning: sameWindow ? "Scaffolded evaluation only; production requires distributed counters." : "Observed window does not match configured rule window.",
+  };
+}
+
+function normalizeAbuseKeyPart(value: string | undefined, fallback: string): string {
+  const cleaned = value?.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
+  return cleaned || fallback;
+}
+
+export function buildAbuseControlPlan(input: AbuseControlInput): AbuseControlPlan {
+  const rule = rateLimitRules.find((candidate) => candidate.id === input.ruleId);
+  const rateLimit = evaluateRateLimitDraft({
+    ruleId: input.ruleId,
+    observedRequests: input.observedRequests,
+    windowSeconds: input.windowSeconds,
+  });
+  const signals: AbuseSignal[] = [];
+  const blockers: string[] = [];
+  const tenantId = normalizeAbuseKeyPart(input.tenantId, "tenant_unknown");
+  const ipHash = normalizeAbuseKeyPart(input.ipHash, "ip_unavailable");
+
+  if (!input.redisConfigured) blockers.push("Distributed Redis/edge rate limiter must be configured before production abuse controls are ready.");
+  if (!input.botChallengeConfigured) blockers.push("Bot challenge provider or proof-of-work strategy must be configured for suspicious public traffic.");
+  if (!input.alertingConfigured) blockers.push("Abuse alerting must be configured before throttling incidents can page or notify operators.");
+  if (!input.userAgent?.trim()) signals.push("missing_user_agent");
+  if (input.routePath.includes("..") || input.routePath.includes("%2e") || input.routePath.includes("<script")) signals.push("suspicious_path");
+  if (rateLimit.status === "throttle") signals.push("high_request_count");
+  if (input.providerWebhook && input.providerSignatureValid) signals.push("provider_signature_valid");
+  if (input.providerWebhook && !input.providerSignatureValid) signals.push("provider_signature_missing");
+  if (ipHash.includes("test") || input.userAgent?.toLowerCase().includes("vitest")) signals.push("known_test_fixture");
+
+  const providerBypassAllowed = Boolean(input.providerWebhook && input.providerSignatureValid && rule?.keyStrategy === "provider_signature");
+  const action: BotChallengeAction = providerBypassAllowed
+    ? "provider_bypass"
+    : rateLimit.status === "throttle"
+      ? "throttle"
+      : signals.includes("missing_user_agent") || signals.includes("suspicious_path") || signals.includes("provider_signature_missing")
+        ? "challenge"
+        : "allow";
+  const shouldAlert = action === "throttle" || signals.includes("provider_signature_missing") || signals.includes("suspicious_path");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    action,
+    rateLimit,
+    key: `${input.ruleId}:${tenantId}:${rule?.keyStrategy === "user_tenant" ? normalizeAbuseKeyPart(input.userId, "user_unknown") : ipHash}`,
+    signals,
+    ...(action === "throttle" ? { retryAfterSeconds: rule?.windowSeconds ?? input.windowSeconds } : {}),
+    providerBypassAllowed,
+    privacySafeLog: {
+      routePath: input.routePath,
+      tenantId,
+      ipHash,
+      ...(input.userId ? { userId: input.userId } : {}),
+      signals,
+      action,
+    },
+    blockers,
+    alert: {
+      shouldAlert,
+      reason: shouldAlert ? "Abuse control detected throttling, suspicious path, or invalid provider signature." : "No abuse alert required for this request.",
+    },
   };
 }
 
