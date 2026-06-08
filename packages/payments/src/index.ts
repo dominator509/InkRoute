@@ -170,6 +170,30 @@ export interface StripeWebhookInterpretation {
   note: string;
 }
 
+export interface StripeWebhookReconciliationInput {
+  eventId: string;
+  eventType: string;
+  providerPaymentIntentId?: string;
+  providerChargeId?: string;
+  amountCents?: number;
+  currency?: CurrencyCode;
+  expectedAmountCents?: number;
+  expectedCurrency?: CurrencyCode;
+  alreadyProcessedEventIds?: readonly string[];
+}
+
+export interface StripeWebhookReconciliationPlan {
+  eventId: string;
+  interpretation: StripeWebhookInterpretation;
+  action: PaymentAuditAction;
+  targetStatus: PaymentStatus;
+  idempotencyKey: string;
+  shouldPersistAuditLog: boolean;
+  shouldReconcile: boolean;
+  blockers: readonly string[];
+  requiredChecks: readonly string[];
+}
+
 export interface PaymentReceiptExportRow {
   receiptNumber: string;
   tenantId: string;
@@ -499,6 +523,49 @@ export function interpretStripeWebhook(eventType: string): StripeWebhookInterpre
         note: "Unknown Stripe event should be logged with redaction and ignored unless explicitly supported.",
       };
   }
+}
+
+export function buildStripeWebhookReconciliationPlan(input: StripeWebhookReconciliationInput): StripeWebhookReconciliationPlan {
+  const interpretation = interpretStripeWebhook(input.eventType);
+  const blockers: string[] = [];
+  const requiredChecks = [
+    "Verify Stripe-Signature with STRIPE_WEBHOOK_SECRET before calling this reconciliation plan.",
+    "Resolve tenant and booking/deposit records from trusted provider metadata or persisted provider IDs.",
+    "Persist PaymentAuditLog with the raw provider event id and redacted payload summary.",
+  ];
+  const idempotencyKey = `stripe-webhook:${input.eventId}`;
+
+  if (!input.eventId.trim()) {
+    blockers.push("Missing Stripe event id.");
+  }
+  if (input.alreadyProcessedEventIds?.includes(input.eventId)) {
+    blockers.push("Stripe event id was already processed.");
+  }
+  if (interpretation.eventType === "unknown") {
+    blockers.push("Unsupported Stripe event type.");
+  }
+  if (interpretation.requiresProviderFetch && !input.providerPaymentIntentId && !input.providerChargeId) {
+    blockers.push("Supported event requires a provider payment intent or charge id for reconciliation.");
+  }
+  if (input.expectedAmountCents !== undefined && input.amountCents !== undefined && input.amountCents !== input.expectedAmountCents) {
+    blockers.push("Provider amount does not match expected payment amount.");
+  }
+  if (input.expectedCurrency !== undefined && input.currency !== undefined && input.currency !== input.expectedCurrency) {
+    blockers.push("Provider currency does not match expected payment currency.");
+  }
+
+  const shouldReconcile = blockers.length === 0 && interpretation.safeToAutoReconcile;
+  return {
+    eventId: input.eventId,
+    interpretation,
+    action: shouldReconcile ? interpretation.action : "webhook_received",
+    targetStatus: shouldReconcile ? interpretation.targetStatus : "pending",
+    idempotencyKey,
+    shouldPersistAuditLog: true,
+    shouldReconcile,
+    blockers,
+    requiredChecks,
+  };
 }
 
 export function generateReceiptNumber(tenantSlug: string, paidAt: ISODateString, sequence: number): string {

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { buildStripeCheckoutSessionDraft, calculateDepositPolicy, evaluateNoShowPolicy, evaluateRefundPolicy, generateReceiptNumber } from "../src/index";
+import {
+  buildStripeCheckoutSessionDraft,
+  buildStripeWebhookReconciliationPlan,
+  calculateDepositPolicy,
+  evaluateNoShowPolicy,
+  evaluateRefundPolicy,
+  generateReceiptNumber,
+  interpretStripeWebhook,
+} from "../src/index";
 
 describe("payment policy engine", () => {
   it("raises risk for high-demand travel and client no-show history", () => {
@@ -52,5 +60,66 @@ describe("payment policy engine", () => {
     expect(noShow.decision).toBe("forfeit_deposit");
     expect(noShow.requiresAudit).toBe(true);
     expect(generateReceiptNumber("mara-vale", "2026-06-06T10:45:00.000Z", 12)).toContain("MARA-VALE");
+  });
+
+  it("plans Stripe webhook reconciliation with idempotency and amount checks", () => {
+    const paid = buildStripeWebhookReconciliationPlan({
+      eventId: "evt_paid_001",
+      eventType: "checkout.session.completed",
+      providerPaymentIntentId: "pi_001",
+      amountCents: 15000,
+      currency: "usd",
+      expectedAmountCents: 15000,
+      expectedCurrency: "usd",
+    });
+
+    expect(paid.shouldReconcile).toBe(true);
+    expect(paid.action).toBe("deposit_paid");
+    expect(paid.targetStatus).toBe("paid");
+    expect(paid.idempotencyKey).toBe("stripe-webhook:evt_paid_001");
+    expect(paid.requiredChecks.some((check) => check.includes("Stripe-Signature"))).toBe(true);
+
+    const replay = buildStripeWebhookReconciliationPlan({
+      eventId: "evt_paid_001",
+      eventType: "payment_intent.succeeded",
+      providerPaymentIntentId: "pi_001",
+      alreadyProcessedEventIds: ["evt_paid_001"],
+    });
+    expect(replay.shouldReconcile).toBe(false);
+    expect(replay.blockers).toContain("Stripe event id was already processed.");
+
+    const mismatch = buildStripeWebhookReconciliationPlan({
+      eventId: "evt_mismatch_001",
+      eventType: "payment_intent.succeeded",
+      providerPaymentIntentId: "pi_002",
+      amountCents: 10000,
+      currency: "usd",
+      expectedAmountCents: 15000,
+      expectedCurrency: "usd",
+    });
+    expect(mismatch.shouldReconcile).toBe(false);
+    expect(mismatch.action).toBe("webhook_received");
+    expect(mismatch.blockers).toContain("Provider amount does not match expected payment amount.");
+  });
+
+  it("keeps refund, dispute, and unknown Stripe events gated for manual review", () => {
+    expect(interpretStripeWebhook("charge.refunded")).toMatchObject({
+      action: "refund_succeeded",
+      targetStatus: "refunded",
+      safeToAutoReconcile: false,
+    });
+    expect(interpretStripeWebhook("charge.dispute.created")).toMatchObject({
+      targetStatus: "disputed",
+      safeToAutoReconcile: false,
+    });
+
+    const unknown = buildStripeWebhookReconciliationPlan({
+      eventId: "evt_unknown_001",
+      eventType: "customer.created",
+    });
+
+    expect(unknown.shouldReconcile).toBe(false);
+    expect(unknown.blockers).toContain("Unsupported Stripe event type.");
+    expect(unknown.shouldPersistAuditLog).toBe(true);
   });
 });
