@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildAvailabilitySlots, buildSignedIcsFeedDraft, detectCalendarConflicts, type CalendarTimeBlock } from "../src/index";
+import {
+  buildAvailabilitySlots,
+  buildSignedIcsFeedDraft,
+  buildSignedIcsFeedTokenHash,
+  detectCalendarConflicts,
+  evaluateSignedIcsFeedAccess,
+  type CalendarTimeBlock,
+} from "../src/index";
 import type { AvailabilityWindow } from "@inkroute/types";
 
 const window: AvailabilityWindow = {
@@ -60,5 +67,78 @@ describe("calendar availability", () => {
 
     expect(draft.path).toContain("/calendar/mara/travel.ics");
     expect(draft.gapIds).toEqual(expect.arrayContaining(["GAP-055"]))
+  });
+
+  it("evaluates signed ICS feed token access and cache policy", () => {
+    const token = "feed-token-001";
+    const record = {
+      tokenHash: buildSignedIcsFeedTokenHash(token),
+      tenantSlug: "mara-vale",
+      artistSlug: "mara",
+      expiresAt: "2026-07-01T00:00:00.000Z",
+    };
+
+    expect(
+      evaluateSignedIcsFeedAccess({
+        token,
+        record,
+        tenantSlug: "mara-vale",
+        artistSlug: "mara",
+        now: "2026-06-08T00:00:00.000Z",
+      }),
+    ).toMatchObject({
+      allowed: true,
+      status: "allowed",
+      cacheControl: "private, max-age=300, stale-while-revalidate=60",
+      shouldLogAccess: true,
+    });
+
+    expect(
+      evaluateSignedIcsFeedAccess({
+        tenantSlug: "mara-vale",
+        artistSlug: "mara",
+        now: "2026-06-08T00:00:00.000Z",
+      }).status,
+    ).toBe("missing_token");
+
+    expect(
+      evaluateSignedIcsFeedAccess({
+        token: "wrong",
+        record,
+        tenantSlug: "mara-vale",
+        artistSlug: "mara",
+        now: "2026-06-08T00:00:00.000Z",
+      }).status,
+    ).toBe("invalid_token");
+
+    expect(
+      evaluateSignedIcsFeedAccess({
+        token,
+        record: { ...record, tenantSlug: "other" },
+        tenantSlug: "mara-vale",
+        artistSlug: "mara",
+        now: "2026-06-08T00:00:00.000Z",
+      }).status,
+    ).toBe("scope_mismatch");
+
+    expect(
+      evaluateSignedIcsFeedAccess({
+        token,
+        record: { ...record, revokedAt: "2026-06-01T00:00:00.000Z" },
+        tenantSlug: "mara-vale",
+        artistSlug: "mara",
+        now: "2026-06-08T00:00:00.000Z",
+      }).status,
+    ).toBe("revoked");
+
+    expect(
+      evaluateSignedIcsFeedAccess({
+        token,
+        record: { ...record, expiresAt: "2026-06-01T00:00:00.000Z" },
+        tenantSlug: "mara-vale",
+        artistSlug: "mara",
+        now: "2026-06-08T00:00:00.000Z",
+      }).status,
+    ).toBe("expired");
   });
 });

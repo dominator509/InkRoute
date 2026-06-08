@@ -90,6 +90,22 @@ export interface SignedIcsFeedDraft {
   gapIds: string[];
 }
 
+export interface SignedIcsFeedTokenRecord {
+  tokenHash: string;
+  tenantSlug: string;
+  artistSlug: string;
+  expiresAt: ISODateString;
+  revokedAt?: ISODateString;
+}
+
+export interface SignedIcsFeedAccessDecision {
+  allowed: boolean;
+  status: "allowed" | "missing_token" | "invalid_token" | "expired" | "revoked" | "scope_mismatch";
+  cacheControl: string;
+  shouldLogAccess: boolean;
+  reason: string;
+}
+
 function escapeIcsText(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/,/g, "\\,").replace(/;/g, "\\;").replace(/\n/g, "\\n");
 }
@@ -328,6 +344,80 @@ export function buildSignedIcsFeedDraft(input: { tenantSlug: string; artistSlug:
     tokenStorage: "not_implemented",
     visibility: "tenant_signed_feed",
     gapIds: ["GAP-009", "GAP-055"],
+  };
+}
+
+export function buildSignedIcsFeedTokenHash(token: string): string {
+  const normalized = token.trim();
+  let hash = 0;
+  for (let index = 0; index < normalized.length; index += 1) {
+    hash = (hash * 31 + normalized.charCodeAt(index)) >>> 0;
+  }
+  return `draft_hash_${hash.toString(16).padStart(8, "0")}`;
+}
+
+export function evaluateSignedIcsFeedAccess(input: {
+  token?: string;
+  record?: SignedIcsFeedTokenRecord;
+  tenantSlug: string;
+  artistSlug: string;
+  now: ISODateString;
+}): SignedIcsFeedAccessDecision {
+  const denyCache = "private, no-store";
+  const allowCache = "private, max-age=300, stale-while-revalidate=60";
+
+  if (!input.token?.trim()) {
+    return {
+      allowed: false,
+      status: "missing_token",
+      cacheControl: denyCache,
+      shouldLogAccess: true,
+      reason: "Signed ICS feed token is required.",
+    };
+  }
+  if (!input.record || buildSignedIcsFeedTokenHash(input.token) !== input.record.tokenHash) {
+    return {
+      allowed: false,
+      status: "invalid_token",
+      cacheControl: denyCache,
+      shouldLogAccess: true,
+      reason: "Signed ICS feed token does not match a stored token hash.",
+    };
+  }
+  if (input.record.tenantSlug !== input.tenantSlug || input.record.artistSlug !== input.artistSlug) {
+    return {
+      allowed: false,
+      status: "scope_mismatch",
+      cacheControl: denyCache,
+      shouldLogAccess: true,
+      reason: "Signed ICS feed token is not scoped to this tenant and artist.",
+    };
+  }
+  if (input.record.revokedAt) {
+    return {
+      allowed: false,
+      status: "revoked",
+      cacheControl: denyCache,
+      shouldLogAccess: true,
+      reason: "Signed ICS feed token has been revoked.",
+    };
+  }
+  if (new Date(input.record.expiresAt).getTime() <= new Date(input.now).getTime()) {
+    return {
+      allowed: false,
+      status: "expired",
+      cacheControl: denyCache,
+      shouldLogAccess: true,
+      reason: "Signed ICS feed token has expired.",
+    };
+  }
+
+  return {
+    allowed: true,
+    status: "allowed",
+    cacheControl: allowCache,
+    shouldLogAccess: true,
+    reason: "Signed ICS feed token is valid for this tenant and artist.",
   };
 }
 
