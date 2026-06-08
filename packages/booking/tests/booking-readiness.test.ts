@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { calculateTattooReadinessScore, emptyBookingDraft, transitionBookingStatus } from "../src/index";
+import {
+  calculateTattooReadinessScore,
+  emptyBookingDraft,
+  getAvailableBookingActions,
+  getTravelBookingCta,
+  transitionBookingStatus,
+} from "../src/index";
 
 describe("booking readiness", () => {
   it("flags an empty booking draft as not artist-ready", () => {
@@ -27,7 +33,7 @@ describe("booking readiness", () => {
       policyAccepted: true,
       ageAcknowledged: true,
       privacyAcknowledged: true,
-      depositBoundaryAcknowledged: true
+      depositBoundaryAcknowledged: true,
     });
 
     expect(result.label).toBe("Artist-ready");
@@ -38,5 +44,33 @@ describe("booking readiness", () => {
     expect(transitionBookingStatus("draft", "submit")).toBe("submitted");
     expect(transitionBookingStatus("submitted", "accept")).toBe("accepted");
     expect(transitionBookingStatus("draft", "complete")).toBe("draft");
+  });
+
+  it("lists available lifecycle actions by status", () => {
+    expect(getAvailableBookingActions("submitted").map((transition) => transition.action)).toEqual([
+      "request_more_info",
+      "accept",
+      "decline",
+    ]);
+    expect(getAvailableBookingActions("archived")).toEqual([]);
+  });
+
+  it("keeps lifecycle audit metadata attached to transitions", () => {
+    const depositTransition = getAvailableBookingActions("deposit_pending").find(
+      (transition) => transition.action === "record_deposit_paid",
+    );
+
+    expect(depositTransition).toMatchObject({
+      to: "deposit_paid",
+      eventType: "deposit_paid",
+      actor: "system",
+      requiresAudit: true,
+    });
+  });
+
+  it("returns travel booking calls to action for open, waitlist, and closed statuses", () => {
+    expect(getTravelBookingCta("open")).toBe("Request this city");
+    expect(getTravelBookingCta("waitlist")).toBe("Join the waitlist");
+    expect(getTravelBookingCta("closed")).toBe("View travel notes");
   });
 });
