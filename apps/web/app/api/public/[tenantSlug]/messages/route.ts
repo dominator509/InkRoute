@@ -57,9 +57,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   const draft = buildMessageThreadDraft({
     subject: candidate.subject,
     body: candidate.body,
-    relatedBookingRequestId: typeof candidate.bookingRequestId === "string" ? candidate.bookingRequestId : undefined,
+    ...(typeof candidate.bookingRequestId === "string" ? { relatedBookingRequestId: candidate.bookingRequestId } : {}),
   });
-  const persisted = persistMessage(tenantSlug, { subject: draft.subject, body: candidate.body, channel: draft.channel, relatedBookingRequestId: draft.relatedBookingRequestId });
+  const persisted = persistMessage(tenantSlug, {
+    subject: draft.subject,
+    body: candidate.body,
+    channel: draft.channel,
+    ...(draft.relatedBookingRequestId ? { relatedBookingRequestId: draft.relatedBookingRequestId } : {}),
+  });
 
   return NextResponse.json(
     {

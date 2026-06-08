@@ -50,10 +50,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const details = typeof input.details === "object" && input.details !== null ? (input.details as Record<string, unknown>) : undefined;
   const requestInput: PrivacyRequestInput = {
     type: input.type,
     email: input.email,
-    details: typeof input.details === "object" && input.details !== null ? (input.details as Record<string, unknown>) : undefined,
+    ...(details ? { details } : {}),
   };
 
   const redactedSubmission = redactRecord({ email: requestInput.email, ...requestInput.details });
@@ -62,9 +63,9 @@ export async function POST(request: NextRequest) {
     tenantId: demoTenantId,
     requestType: requestInput.type,
     email: requestInput.email,
-    details: requestInput.details,
     redactedSubmission,
     receivedAt: nowIso(),
+    ...(requestInput.details ? { details: requestInput.details } : {}),
   };
 
   inMemoryPrivacyRequests.push(persisted);

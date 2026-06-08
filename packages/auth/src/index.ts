@@ -135,7 +135,7 @@ export function resolveTenantPermissions(input: { role: Role; tenantId: string; 
       role: input.role,
       permissions: Array.from(permissions),
       customRoleId: customRole.id,
-      customRoleName: customRole.name,
+      ...(customRole.name ? { customRoleName: customRole.name } : {}),
       customRoleApplied: false,
       rejectedPermissions: [],
       ignoredReason: "tenant_mismatch",
@@ -147,7 +147,7 @@ export function resolveTenantPermissions(input: { role: Role; tenantId: string; 
       role: input.role,
       permissions: Array.from(permissions),
       customRoleId: customRole.id,
-      customRoleName: customRole.name,
+      ...(customRole.name ? { customRoleName: customRole.name } : {}),
       customRoleApplied: false,
       rejectedPermissions: [],
       ignoredReason: "inactive",
@@ -167,7 +167,7 @@ export function resolveTenantPermissions(input: { role: Role; tenantId: string; 
     role: input.role,
     permissions: Array.from(permissions),
     customRoleId: customRole.id,
-    customRoleName: customRole.name,
+    ...(customRole.name ? { customRoleName: customRole.name } : {}),
     customRoleApplied: true,
     rejectedPermissions,
   };
@@ -246,7 +246,7 @@ export function evaluateTenantAuthorization(input: {
     userId: context.userId,
     tenantId: context.tenantId,
     role: context.role,
-    customRoleId: context.customRole?.id,
+    ...(context.customRole?.id ? { customRoleId: context.customRole.id } : {}),
     permission: input.permission,
     auditAction,
   };
@@ -281,7 +281,7 @@ export function evaluateTenantAuthorization(input: {
   const resolution = resolveTenantPermissions({
     role: context.role,
     tenantId: context.tenantId,
-    customRole: context.customRole,
+    customRole: context.customRole ?? null,
   });
 
   if (!hasResolvedPermission(resolution, input.permission)) {
@@ -333,7 +333,7 @@ export interface DashboardRouteGuardDecision {
 export function evaluateDashboardRouteGuard(input: DashboardRouteGuardInput): DashboardRouteGuardDecision {
   const auditAction = `dashboard:${input.permission}:${input.routePath}`;
   const decision = evaluateTenantAuthorization({
-    context: input.context,
+    ...(input.context !== undefined ? { context: input.context } : {}),
     tenantId: input.tenantId,
     permission: input.permission,
     now: input.now,
@@ -468,7 +468,7 @@ export function evaluateMobileSessionGate(input: MobileSessionGateInput): Mobile
   }
 
   const decision = evaluateTenantAuthorization({
-    context: input.context,
+    ...(input.context !== undefined ? { context: input.context } : {}),
     tenantId: input.tenantId,
     permission: input.permission,
     now: input.now,

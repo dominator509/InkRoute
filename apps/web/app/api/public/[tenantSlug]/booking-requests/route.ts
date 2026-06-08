@@ -1,4 +1,3 @@
-import { Prisma } from "@prisma/client";
 import { NextResponse, type NextRequest } from "next/server";
 import { calculateTattooReadinessScore, emptyBookingDraft } from "@inkroute/booking";
 import { bookingRequestInputSchema, type BookingRequestInput } from "@inkroute/validators";
@@ -75,7 +74,7 @@ interface PostPersistWorkflowSummary {
 }
 
 type BookingInput = BookingRequestInput & {
-  medicalNotes?: string;
+  medicalNotes?: string | undefined;
 };
 
 function isDatabaseUnavailable(error: unknown): boolean {
@@ -109,10 +108,14 @@ function bytesToHex(bytes: Uint8Array | ArrayLike<number>): string {
     .join("");
 }
 
+function toJsonValue(value: unknown) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 async function computeSha256Hex(input: string): Promise<string> {
   const source = await toUtf8Bytes(input);
   if (globalThis.crypto?.subtle) {
-    const digest = await globalThis.crypto.subtle.digest("SHA-256", source);
+    const digest = await globalThis.crypto.subtle.digest("SHA-256", source.slice().buffer);
     return bytesToHex(new Uint8Array(digest));
   }
 
@@ -131,12 +134,12 @@ async function computeHmacSha256Hex(secret: string, message: string): Promise<st
   if (globalThis.crypto?.subtle) {
     const key = await globalThis.crypto.subtle.importKey(
       "raw",
-      keyMaterial,
+      keyMaterial.slice().buffer,
       { name: "HMAC", hash: "SHA-256" },
       false,
       ["sign", "verify"],
     );
-    const signature = await globalThis.crypto.subtle.sign("HMAC", key, payload);
+    const signature = await globalThis.crypto.subtle.sign("HMAC", key, payload.slice().buffer);
     return bytesToHex(new Uint8Array(signature));
   }
 
@@ -331,7 +334,7 @@ function buildReadinessScore(input: BookingInput): number {
 function buildKeyLifecycleSnapshot(
   encryptionPolicy: EncryptionPolicyResult,
   providerTokenPolicy: EncryptionPolicyResult,
-  cacheVersion?: { before: number; after?: number },
+  cacheVersion: { before: number; after?: number } | undefined,
 ) {
   const before = cacheVersion?.before ?? encryptionPolicy.rotation.cacheVersion;
   const after = cacheVersion?.after ?? before;
@@ -570,7 +573,7 @@ async function persistBookingRequestToDatabase(
   encryptionAttempt: EncryptionAttemptRecord,
   providerTokenPolicy: EncryptionPolicyResult,
   providerTokenIntake: ProviderTokenIntake,
-  cacheVersion?: { before: number; after?: number },
+  cacheVersion: { before: number; after?: number } | undefined,
   medicalNotesEncrypted: string | null,
   antiBot: BotProofResult,
 ) {
@@ -631,23 +634,23 @@ async function persistBookingRequestToDatabase(
         status: "submitted",
         clientNameSnapshot: input.clientName,
         clientEmailSnapshot: normalizedEmail,
-        clientPhoneSnapshot: input.clientPhone,
+        clientPhoneSnapshot: input.clientPhone ?? null,
         preferredCity: input.preferredCity,
         preferredDate: input.preferredDate ? new Date(input.preferredDate) : null,
         style: input.style,
-        placement: input.placement as Prisma.$Enums.BodyPlacement,
+        placement: input.placement,
         sizeEstimate: input.sizeEstimate,
         budgetMinCents: input.budgetMin ?? null,
         budgetMaxCents: input.budgetMax ?? null,
         ideaSummary: input.ideaSummary,
         medicalNotesEncrypted: medicalNotesEncrypted,
-          readinessScore: buildReadinessScore(input),
+        readinessScore: buildReadinessScore(input),
         policyAcceptedAt: new Date(),
         portfolioAttributionId,
         source: "public_site",
-        utmSource: input.utmSource,
-        utmMedium: input.utmMedium,
-        utmCampaign: input.utmCampaign,
+        utmSource: input.utmSource ?? null,
+        utmMedium: input.utmMedium ?? null,
+        utmCampaign: input.utmCampaign ?? null,
       },
     });
 
@@ -673,7 +676,7 @@ async function persistBookingRequestToDatabase(
         action: "booking_request:create",
         entityType: "BookingRequest",
         entityId: booking.id,
-        metadata: {
+        metadata: toJsonValue({
           source: "public_api",
           tenantId,
           artistId: input.artistId,
@@ -700,7 +703,7 @@ async function persistBookingRequestToDatabase(
             providerToken: providerTokenPolicy,
           },
           keyLifecycle: buildKeyLifecycleSnapshot(encryptionPolicy, providerTokenPolicy, cacheVersion),
-        },
+        }),
       },
     });
 
@@ -996,7 +999,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
       encryptionAttempt = {
         status: encryptAttempt.status,
         keyVersion: encryptAttempt.keyVersion,
-        reason: encryptAttempt.reason,
+        ...(encryptAttempt.reason ? { reason: encryptAttempt.reason } : {}),
         roundTripVerified: roundTripProof.ok,
       };
 
@@ -1195,16 +1198,18 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     }
 
     if (error instanceof Error) {
-      const knownCode = error.message === "ARTIST_NOT_FOUND" ? "ARTIST_NOT_FOUND" : error.message === "TRAVEL_CITY_NOT_FOUND" ? "TRAVEL_CITY_NOT_FOUND" : error.message === "PORTFOLIO_ITEM_NOT_FOUND" ? "PORTFOLIO_ITEM_NOT_FOUND" : undefined;
-      const knownMessage =
-        {
-          ARTIST_NOT_FOUND: "Selected artistId was not found for this tenant.",
-          TRAVEL_CITY_NOT_FOUND: "Selected travelCityId was not found for this tenant.",
-          PORTFOLIO_ITEM_NOT_FOUND: "Selected portfolioAttributionId was not found for this tenant.",
-        }[knownCode ?? ""] ?? "Unable to persist booking request.";
-
+      type KnownPersistenceCode = "ARTIST_NOT_FOUND" | "TRAVEL_CITY_NOT_FOUND" | "PORTFOLIO_ITEM_NOT_FOUND";
+      const knownMessages: Record<KnownPersistenceCode, string> = {
+        ARTIST_NOT_FOUND: "Selected artistId was not found for this tenant.",
+        TRAVEL_CITY_NOT_FOUND: "Selected travelCityId was not found for this tenant.",
+        PORTFOLIO_ITEM_NOT_FOUND: "Selected portfolioAttributionId was not found for this tenant.",
+      };
+      const knownCode: KnownPersistenceCode | undefined =
+        error.message === "ARTIST_NOT_FOUND" || error.message === "TRAVEL_CITY_NOT_FOUND" || error.message === "PORTFOLIO_ITEM_NOT_FOUND"
+          ? error.message
+          : undefined;
       if (knownCode) {
-        return NextResponse.json({ ok: false, error: { code: knownCode, message: knownMessage, antiBot: buildBotProofFailureDetails(antiBot) } }, { status: 400 });
+        return NextResponse.json({ ok: false, error: { code: knownCode, message: knownMessages[knownCode], antiBot: buildBotProofFailureDetails(antiBot) } }, { status: 400 });
       }
     }
 

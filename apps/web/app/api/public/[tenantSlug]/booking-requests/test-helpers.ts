@@ -18,7 +18,7 @@ interface BotProofResult {
 }
 
 type BookingInput = BookingRequestInput & {
-  medicalNotes?: string;
+  medicalNotes?: string | undefined;
 };
 
 type WorkflowScope = "database" | "local-fallback";
@@ -40,7 +40,7 @@ function bytesToHex(bytes: Uint8Array | ArrayLike<number>): string {
 async function computeSha256Hex(input: string): Promise<string> {
   const source = toUtf8Bytes(input);
   if (globalThis.crypto?.subtle) {
-    const digest = await globalThis.crypto.subtle.digest("SHA-256", source);
+    const digest = await globalThis.crypto.subtle.digest("SHA-256", source.slice().buffer);
     return bytesToHex(new Uint8Array(digest));
   }
 
@@ -59,12 +59,12 @@ async function computeHmacSha256Hex(secret: string, message: string): Promise<st
   if (globalThis.crypto?.subtle) {
     const key = await globalThis.crypto.subtle.importKey(
       "raw",
-      keyMaterial,
+      keyMaterial.slice().buffer,
       { name: "HMAC", hash: "SHA-256" },
       false,
       ["sign", "verify"],
     );
-    const signature = await globalThis.crypto.subtle.sign("HMAC", key, payload);
+    const signature = await globalThis.crypto.subtle.sign("HMAC", key, payload.slice().buffer);
     return bytesToHex(new Uint8Array(signature));
   }
 

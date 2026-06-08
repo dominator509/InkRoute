@@ -1,5 +1,5 @@
 import { prisma } from "@inkroute/db";
-import { demoReleaseCandidate, createReleaseCandidate, createRollbackPlan, defaultFeatureFlags, evaluateFeatureFlags, buildReleaseHealthChecks } from "@inkroute/releases";
+import { demoReleaseCandidate, createReleaseCandidate, createRollbackPlan, defaultFeatureFlags, evaluateFeatureFlags, buildReleaseHealthChecks, type FeatureFlagDefinition } from "@inkroute/releases";
 import { inkrouteDemoTenant } from "@inkroute/config";
 import { NextResponse } from "next/server";
 
@@ -116,8 +116,8 @@ export async function GET(_request: Request, context: { params: Promise<{ tenant
       }),
     ]);
 
-    const mergedDefinitions = defaultFeatureFlags.map((definition) => ({ ...definition }));
-    const byKey = new Map<string, (typeof mergedDefinitions)[number]> (mergedDefinitions.map((definition) => [definition.key, definition]));
+    const mergedDefinitions: FeatureFlagDefinition[] = defaultFeatureFlags.map((definition) => ({ ...definition }));
+    const byKey = new Map<string, FeatureFlagDefinition>(mergedDefinitions.map((definition) => [definition.key, definition]));
 
     for (const entry of featureFlags) {
       const base = byKey.get(entry.key) ?? {
@@ -133,18 +133,14 @@ export async function GET(_request: Request, context: { params: Promise<{ tenant
       const tenantAllowlist = extractReleaseBoundaryNotes(rules.tenantAllowlist);
       const roleAllowlist = extractReleaseBoundaryNotes(rules.roleAllowlist);
       const scope = entry.scope === "global" || entry.scope === "tenant" || entry.scope === "user" ? entry.scope : "tenant";
-      const merged = {
+      const merged: FeatureFlagDefinition = {
         ...base,
         description: entry.description,
         scope: isTenantScopeValue(scope === "user" ? "role" : scope) ? (scope === "user" ? "role" : scope) : "tenant",
         defaultEnabled: entry.enabled,
+        ...(tenantAllowlist ? { tenantAllowlist } : {}),
+        ...(roleAllowlist ? { roleAllowlist } : {}),
       };
-      if (tenantAllowlist) {
-        merged.tenantAllowlist = tenantAllowlist;
-      }
-      if (roleAllowlist) {
-        merged.roleAllowlist = roleAllowlist;
-      }
       byKey.set(entry.key, merged);
     }
 

@@ -1524,7 +1524,7 @@ export function projectDashboardPrivacyRecord<TRecord extends Record<string, unk
       fieldName,
       value,
       tenantScoped: input.tenantScoped,
-      requesterVerified: input.requesterVerified,
+      ...(input.requesterVerified !== undefined ? { requesterVerified: input.requesterVerified } : {}),
     });
 
     auditRequired = auditRequired || decision.auditRequired;

@@ -6,6 +6,10 @@ import { checkRateLimit, getClientIp, persistErrorReport, resolveTenant } from "
 
 type TenantResolution = { tenantId: string; source: "database" | "local-fallback" };
 
+function toJsonValue(value: unknown) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 function isDatabaseUnavailable(error: unknown): boolean {
   if (!process.env.DATABASE_URL) {
     return true;
@@ -91,12 +95,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     message: parsed.data.message,
     route: typeof parsed.data.route === "string" ? parsed.data.route : `/api/public/${tenantSlug}/error-reports`,
     release: typeof parsed.data.release === "string" ? parsed.data.release : "phase11-demo",
-    stack: parsed.data.stack,
-    userAgent: parsed.data.userAgent ?? request.headers.get("user-agent") ?? undefined,
-    statusCode: parsed.data.statusCode,
+    ...(parsed.data.stack ? { stack: parsed.data.stack } : {}),
+    ...(parsed.data.userAgent ? { userAgent: parsed.data.userAgent } : request.headers.get("user-agent") ? { userAgent: request.headers.get("user-agent") as string } : {}),
+    ...(parsed.data.statusCode ? { statusCode: parsed.data.statusCode } : {}),
     handled: parsed.data.handled ?? true,
-    metadata: parsed.data.metadata,
-    tags: parsed.data.tags,
+    ...(parsed.data.metadata ? { metadata: parsed.data.metadata } : {}),
+    ...(parsed.data.tags ? { tags: parsed.data.tags } : {}),
   };
 
   const preview = buildPublicErrorReportPreview(reportInput);
@@ -147,10 +151,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           source: report.source,
           message: report.redactedMessage,
           stackHash: report.stackHash,
-          release: report.release,
-          route: report.route,
-          userAgent: report.userAgent,
-          metadata: report.redactedMetadata,
+          release: report.release ?? null,
+          route: report.route ?? null,
+          userAgent: report.userAgent ?? null,
+          metadata: toJsonValue(report.redactedMetadata),
         },
       });
       const audit = await tx.auditLog.create({
@@ -159,13 +163,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           action: "observability:error_report.persist",
           entityType: "ErrorReport",
           entityId: persistedReport.id,
-          metadata: {
+          metadata: toJsonValue({
             source: report.source,
             severity: report.severity,
             route: report.route ?? "unknown",
             release: report.release ?? "unknown",
             gapIds: ["GAP-011", "GAP-081", "GAP-095", "GAP-101"],
-          },
+          }),
         },
       });
       return { persistedReport, audit };

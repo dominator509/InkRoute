@@ -13,7 +13,7 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
 
   const token = new URL(request.url).searchParams.get("token") ?? undefined;
   const access = evaluateSignedIcsFeedAccess({
-    token,
+    ...(token ? { token } : {}),
     record: {
       tokenHash: buildSignedIcsFeedTokenHash(localDemoFeedToken),
       tenantSlug: inkrouteDemoTenant.slug,

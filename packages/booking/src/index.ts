@@ -745,15 +745,21 @@ export function buildDashboardMutationPlan(input: DashboardMutationPlanInput): D
     };
   }
 
+  const transitionActorType =
+    input.actorType === "artist" || input.actorType === "system"
+      ? input.actorType
+      : input.actorType
+        ? "admin"
+        : undefined;
   const transitionPlan = createBookingTransitionPlan({
     tenantId: input.tenantId,
     bookingRequestId: input.bookingRequestId,
     from: input.currentStatus,
     action: input.action as BookingLifecycleAction,
-    actorId: input.actorId,
-    actorType: input.actorType,
+    ...(transitionActorType ? { actorType: transitionActorType } : {}),
+    ...(input.actorId ? { actorId: input.actorId } : {}),
     occurredAt: input.occurredAt,
-    idempotencyKey: input.idempotencyKey,
+    ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
   });
 
   if (!transitionPlan.canCommit) {
