@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildMobileApiRequestPlan,
+  buildMobileDeviceQaChecklist,
   buildMobileScreenSyncRequirements,
   getMobileScreen,
   buildOfflineIdempotencyKey,
@@ -9,6 +10,7 @@ import {
   phase6HealthChecks,
   phase6MobileBoundaries,
   planOfflineSync,
+  summarizeMobileDeviceQa,
   summarizeOfflineQueue,
   type OfflineQueueItem,
 } from "../src/index";
@@ -264,6 +266,28 @@ describe("mobile support helpers", () => {
     expect(requirements.find((requirement) => requirement.screenId === "portfolio")?.requiredEndpoints).toContain(
       "/api/mobile/portfolio/upload-intents",
     );
+  });
+
+  it("tracks mobile device QA requirements without claiming runtime readiness", () => {
+    const checklist = buildMobileDeviceQaChecklist();
+    const summary = summarizeMobileDeviceQa(checklist);
+
+    expect(summary.missingAreas).toEqual([]);
+    expect(summary.productionReady).toBe(false);
+    expect(summary.blockingItemIds).toEqual([
+      "ios-screen-smoke",
+      "android-screen-smoke",
+      "biometric-lock-unlock",
+      "tenant-api-sync",
+      "offline-reconnect-sync",
+      "push-token-delivery",
+      "mobile-crash-capture",
+      "ota-preview-rollback",
+      "mobile-accessibility-pass",
+    ]);
+    expect(checklist.every((item) => item.gapIds.includes("GAP-048"))).toBe(true);
+    expect(checklist.find((item) => item.area === "push_notifications")?.evidenceRequired).toContain("tap deep-link");
+    expect(checklist.find((item) => item.area === "accessibility")?.platform).toBe("physical_device");
   });
 
   it("keeps production-blocking integration boundaries visible", () => {

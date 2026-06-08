@@ -486,6 +486,153 @@ export function buildMobileScreenSyncRequirements(): MobileScreenSyncRequirement
   ];
 }
 
+export type MobileQaArea =
+  | "screen_smoke"
+  | "auth_biometric"
+  | "api_sync"
+  | "offline_sync"
+  | "push_notifications"
+  | "crash_reporting"
+  | "ota_updates"
+  | "accessibility";
+
+export type MobileQaPlatform = "ios_simulator" | "android_emulator" | "physical_device" | "ci_static";
+
+export interface MobileDeviceQaItem {
+  id: string;
+  area: MobileQaArea;
+  platform: MobileQaPlatform;
+  command: string;
+  evidenceRequired: string;
+  status: "planned" | "runtime_gated" | "provider_gated" | "manual_required" | "passed";
+  gapIds: string[];
+}
+
+export interface MobileDeviceQaSummary {
+  itemCount: number;
+  missingAreas: MobileQaArea[];
+  blockingItemIds: string[];
+  productionReady: boolean;
+}
+
+export function buildMobileDeviceQaChecklist(): MobileDeviceQaItem[] {
+  return [
+    {
+      id: "mobile-static-screen-registry",
+      area: "screen_smoke",
+      platform: "ci_static",
+      command: "pnpm --filter @inkroute/mobile-support test",
+      evidenceRequired: "Package test output proving the Phase 6 screen registry is complete.",
+      status: "passed",
+      gapIds: ["GAP-048", "GAP-108"],
+    },
+    {
+      id: "ios-screen-smoke",
+      area: "screen_smoke",
+      platform: "ios_simulator",
+      command: "pnpm --filter @inkroute/mobile ios",
+      evidenceRequired: "iOS simulator screenshots or video covering every registered screen.",
+      status: "runtime_gated",
+      gapIds: ["GAP-048", "GAP-108"],
+    },
+    {
+      id: "android-screen-smoke",
+      area: "screen_smoke",
+      platform: "android_emulator",
+      command: "pnpm --filter @inkroute/mobile android",
+      evidenceRequired: "Android emulator screenshots or video covering every registered screen.",
+      status: "runtime_gated",
+      gapIds: ["GAP-048", "GAP-108"],
+    },
+    {
+      id: "biometric-lock-unlock",
+      area: "auth_biometric",
+      platform: "physical_device",
+      command: "manual device QA with Expo LocalAuthentication",
+      evidenceRequired: "Device transcript proving lock, unlock, logout, and expired-session behavior.",
+      status: "provider_gated",
+      gapIds: ["GAP-042", "GAP-048", "GAP-108"],
+    },
+    {
+      id: "tenant-api-sync",
+      area: "api_sync",
+      platform: "physical_device",
+      command: "manual device QA against preview API",
+      evidenceRequired: "Seeded preview API transcript proving auth headers, tenant scope, request ids, and safe errors.",
+      status: "provider_gated",
+      gapIds: ["GAP-043", "GAP-048", "GAP-108"],
+    },
+    {
+      id: "offline-reconnect-sync",
+      area: "offline_sync",
+      platform: "physical_device",
+      command: "manual airplane-mode queue/reconnect QA",
+      evidenceRequired: "Device logs proving encrypted queue persistence, idempotent replay, retry, and conflict handling.",
+      status: "provider_gated",
+      gapIds: ["GAP-045", "GAP-048", "GAP-108"],
+    },
+    {
+      id: "push-token-delivery",
+      area: "push_notifications",
+      platform: "physical_device",
+      command: "Expo push token registration and test push",
+      evidenceRequired: "Push token registration proof, opt-out blocking proof, delivery receipt, and tap deep-link screenshot.",
+      status: "provider_gated",
+      gapIds: ["GAP-044", "GAP-048", "GAP-108"],
+    },
+    {
+      id: "mobile-crash-capture",
+      area: "crash_reporting",
+      platform: "physical_device",
+      command: "forced safe mobile crash in preview build",
+      evidenceRequired: "Sanitized crash event in Sentry/fallback report with no PII, medical, payment, or token data.",
+      status: "provider_gated",
+      gapIds: ["GAP-046", "GAP-048", "GAP-108"],
+    },
+    {
+      id: "ota-preview-rollback",
+      area: "ota_updates",
+      platform: "physical_device",
+      command: "eas update --channel preview and rollback republish",
+      evidenceRequired: "Preview update adoption screenshot and rollback republish proof on the same runtime.",
+      status: "provider_gated",
+      gapIds: ["GAP-047", "GAP-048", "GAP-108"],
+    },
+    {
+      id: "mobile-accessibility-pass",
+      area: "accessibility",
+      platform: "physical_device",
+      command: "manual VoiceOver/TalkBack and touch-target QA",
+      evidenceRequired: "VoiceOver/TalkBack notes, text scaling screenshots, contrast/touch target findings.",
+      status: "manual_required",
+      gapIds: ["GAP-048", "GAP-109"],
+    },
+  ];
+}
+
+export function summarizeMobileDeviceQa(items: readonly MobileDeviceQaItem[] = buildMobileDeviceQaChecklist()): MobileDeviceQaSummary {
+  const requiredAreas: MobileQaArea[] = [
+    "screen_smoke",
+    "auth_biometric",
+    "api_sync",
+    "offline_sync",
+    "push_notifications",
+    "crash_reporting",
+    "ota_updates",
+    "accessibility",
+  ];
+  const coveredAreas = new Set(items.map((item) => item.area));
+  const missingAreas = requiredAreas.filter((area) => !coveredAreas.has(area));
+  const blockingItemIds = items.filter((item) => item.status !== "passed").map((item) => item.id);
+
+  return {
+    itemCount: items.length,
+    missingAreas,
+    blockingItemIds,
+    productionReady: missingAreas.length === 0 && blockingItemIds.length === 0,
+  };
+}
+
 export interface MobileHealthCheck {
   id: string;
   label: string;
