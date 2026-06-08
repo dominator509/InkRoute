@@ -378,3 +378,155 @@ export function evaluateDashboardRouteGuard(input: DashboardRouteGuardInput): Da
     action: "deny",
   };
 }
+
+export type MobileSessionGateAction = "allow" | "prompt_login" | "refresh_session" | "prompt_biometric" | "deny" | "logout";
+
+export type MobileSessionGateStatus =
+  | AuthorizationDecisionStatus
+  | "biometric_locked"
+  | "secure_store_unavailable"
+  | "refresh_token_missing"
+  | "logout_requested";
+
+export interface MobileSessionGateInput {
+  context?: TenantAccessContext | null;
+  tenantId: string;
+  permission: Permission;
+  now: string;
+  biometricRequired: boolean;
+  biometricUnlocked: boolean;
+  secureStoreAvailable: boolean;
+  refreshTokenAvailable: boolean;
+  logoutRequested?: boolean;
+}
+
+export interface MobileSessionGateDecision {
+  action: MobileSessionGateAction;
+  allowed: boolean;
+  status: MobileSessionGateStatus;
+  tenantId: string;
+  permission: Permission;
+  auditAction: string;
+  requiresSecureStore: true;
+  requiresTenantMembership: true;
+  requiresRefreshToken: boolean;
+  requiresBiometricUnlock: boolean;
+  reason: string;
+  decision?: AuthorizationDecision;
+}
+
+export function evaluateMobileSessionGate(input: MobileSessionGateInput): MobileSessionGateDecision {
+  const auditAction = `mobile:${input.permission}:${input.tenantId}`;
+  const base = {
+    tenantId: input.tenantId,
+    permission: input.permission,
+    auditAction,
+    requiresSecureStore: true as const,
+    requiresTenantMembership: true as const,
+    requiresRefreshToken: false,
+    requiresBiometricUnlock: input.biometricRequired,
+  };
+
+  if (input.logoutRequested) {
+    return {
+      ...base,
+      action: "logout",
+      allowed: false,
+      status: "logout_requested",
+      reason: "Mobile logout requested; local session, biometric gate, and refresh token must be cleared.",
+    };
+  }
+
+  if (!input.secureStoreAvailable) {
+    return {
+      ...base,
+      action: "prompt_login",
+      allowed: false,
+      status: "secure_store_unavailable",
+      reason: "Secure device storage is required before mobile session tokens can be trusted.",
+    };
+  }
+
+  if (!input.context) {
+    return {
+      ...base,
+      action: "prompt_login",
+      allowed: false,
+      status: "unauthenticated",
+      reason: "No mobile session context is available.",
+    };
+  }
+
+  if (input.biometricRequired && !input.biometricUnlocked) {
+    return {
+      ...base,
+      action: "prompt_biometric",
+      allowed: false,
+      status: "biometric_locked",
+      reason: "Biometric unlock is required before using the cached mobile session.",
+    };
+  }
+
+  const decision = evaluateTenantAuthorization({
+    context: input.context,
+    tenantId: input.tenantId,
+    permission: input.permission,
+    now: input.now,
+    auditAction,
+  });
+
+  if (decision.status === "session_expired") {
+    if (!input.refreshTokenAvailable) {
+      return {
+        ...base,
+        action: "prompt_login",
+        allowed: false,
+        status: "refresh_token_missing",
+        requiresRefreshToken: true,
+        decision,
+        reason: "Mobile session expired and no refresh token is available in secure storage.",
+      };
+    }
+
+    return {
+      ...base,
+      action: "refresh_session",
+      allowed: false,
+      status: "session_expired",
+      requiresRefreshToken: true,
+      decision,
+      reason: "Mobile session expired and should be refreshed before tenant access continues.",
+    };
+  }
+
+  if (decision.status === "session_revoked") {
+    return {
+      ...base,
+      action: "logout",
+      allowed: false,
+      status: "session_revoked",
+      decision,
+      reason: "Revoked mobile session must be cleared locally.",
+    };
+  }
+
+  if (!decision.allowed) {
+    return {
+      ...base,
+      action: decision.status === "unauthenticated" ? "prompt_login" : "deny",
+      allowed: false,
+      status: decision.status,
+      decision,
+      reason: decision.reason,
+    };
+  }
+
+  return {
+    ...base,
+    action: "allow",
+    allowed: true,
+    status: "allowed",
+    decision,
+    reason: "Mobile session is secure-store backed, biometric-unlocked when required, tenant-scoped, and authorized.",
+  };
+}
