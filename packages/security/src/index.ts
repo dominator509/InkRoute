@@ -851,6 +851,55 @@ export interface LegalDocumentPlaceholder {
   blockedProductionActions: string[];
 }
 
+export type LegalReviewTopic =
+  | "privacy_policy"
+  | "terms_of_service"
+  | "tattoo_consent"
+  | "medical_safety_acknowledgment"
+  | "sms_opt_in_stop_help"
+  | "aftercare"
+  | "deposits_no_shows_refunds"
+  | "taxes"
+  | "liability"
+  | "saas_terms"
+  | "jurisdiction_studio_policy";
+
+export interface LegalReviewApprovalRecord {
+  topic: LegalReviewTopic;
+  approved: boolean;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  documentVersion?: string;
+}
+
+export interface LegalReviewPacketInput {
+  approvals: readonly LegalReviewApprovalRecord[];
+  jurisdiction: string;
+  studioPolicyVersion?: string;
+  consentVersion?: string;
+  acceptanceAuditConfigured: boolean;
+  noindexProtectionEnabled: boolean;
+}
+
+export interface LegalReviewPacketPlan {
+  status: "approved" | "blocked";
+  jurisdiction: string;
+  requiredTopics: readonly LegalReviewTopic[];
+  missingTopics: readonly LegalReviewTopic[];
+  approvedVersions: Record<string, string>;
+  productionBlockedActions: readonly string[];
+  pageProtections: {
+    noindexRequired: boolean;
+    placeholdersMustRemain: boolean;
+  };
+  acceptanceAudit: {
+    configured: boolean;
+    requiredFields: readonly string[];
+    consentVersion?: string;
+  };
+  reviewChecklist: readonly string[];
+}
+
 export interface SecurityHeaderDraft {
   name: string;
   value: string;
@@ -1089,6 +1138,72 @@ export const legalDocumentPlaceholders: LegalDocumentPlaceholder[] = [
     blockedProductionActions: ["Sending SMS", "Enrolling city waitlists", "Sending flash-drop campaigns"],
   },
 ];
+
+export const requiredLegalReviewTopics: readonly LegalReviewTopic[] = [
+  "privacy_policy",
+  "terms_of_service",
+  "tattoo_consent",
+  "medical_safety_acknowledgment",
+  "sms_opt_in_stop_help",
+  "aftercare",
+  "deposits_no_shows_refunds",
+  "taxes",
+  "liability",
+  "saas_terms",
+  "jurisdiction_studio_policy",
+];
+
+export function buildLegalReviewPacketPlan(input: LegalReviewPacketInput): LegalReviewPacketPlan {
+  const approvalsByTopic = new Map(input.approvals.map((approval) => [approval.topic, approval]));
+  const missingTopics = requiredLegalReviewTopics.filter((topic) => {
+    const approval = approvalsByTopic.get(topic);
+    return !approval?.approved || !approval.reviewedBy?.trim() || !approval.reviewedAt?.trim() || !approval.documentVersion?.trim();
+  });
+  const approvedVersions = Object.fromEntries(
+    input.approvals
+      .filter((approval) => approval.approved && approval.documentVersion)
+      .map((approval) => [approval.topic, approval.documentVersion as string]),
+  );
+  const blockers: string[] = [];
+  if (missingTopics.length > 0) blockers.push("Attorney approval is missing for one or more required legal topics.");
+  if (!input.studioPolicyVersion?.trim()) blockers.push("Jurisdiction-specific studio policy version is required.");
+  if (!input.consentVersion?.trim()) blockers.push("Versioned consent document is required before collecting consent signatures.");
+  if (!input.acceptanceAuditConfigured) blockers.push("Consent/terms/privacy acceptance audit tracking is not configured.");
+
+  return {
+    status: blockers.length === 0 ? "approved" : "blocked",
+    jurisdiction: input.jurisdiction,
+    requiredTopics: requiredLegalReviewTopics,
+    missingTopics,
+    approvedVersions,
+    productionBlockedActions:
+      blockers.length === 0
+        ? []
+        : [
+            "Remove noindex protections from legal pages",
+            "Collect consent signatures",
+            "Send SMS or marketing messages",
+            "Charge deposits or enforce no-show/refund policies",
+            "Launch SaaS signups or production booking flows",
+          ],
+    pageProtections: {
+      noindexRequired: blockers.length > 0,
+      placeholdersMustRemain: blockers.length > 0 || input.noindexProtectionEnabled,
+    },
+    acceptanceAudit: {
+      configured: input.acceptanceAuditConfigured,
+      requiredFields: ["tenantId", "clientId", "documentSlug", "documentVersion", "acceptedAt", "ipHash", "userAgentHash", "source"],
+      ...(input.consentVersion ? { consentVersion: input.consentVersion } : {}),
+    },
+    reviewChecklist: [
+      "Privacy policy covers live data flows, vendors, retention, exports/deletion, and jurisdiction-specific rights.",
+      "Terms cover SaaS usage, artist/studio responsibilities, deposits, no-shows, refunds, taxes, liability, and disputes.",
+      "Consent and medical/safety language is jurisdiction-specific and does not overstate medical advice.",
+      "SMS language includes opt-in, STOP, HELP, quiet hours, marketing/transactional boundaries, and retention.",
+      "Noindex protections stay enabled until all required topics are approved and versioned acceptance/audit tracking is live.",
+    ],
+  };
+}
 
 export const retentionPolicyRules: RetentionPolicyRule[] = [
   {

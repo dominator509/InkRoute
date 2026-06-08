@@ -3,6 +3,7 @@ import {
   buildPrivacyLifecyclePlan,
   buildPrivacyCaseWorkflowPlan,
   buildRetentionEnforcementDryRun,
+  buildLegalReviewPacketPlan,
   buildSignedUploadIntentPlan,
   buildPrivateStorageAccessPlan,
   buildUploadScanPipelinePlan,
@@ -493,5 +494,61 @@ describe("security and privacy helpers", () => {
       "retention:message:anonymize:notification_due",
     ]);
     expect(plan.requiredWorkers).toContain("backup-restore-reconciliation");
+  });
+
+  it("blocks legal review packets until every topic has attorney approval, versions, and acceptance audits", () => {
+    const plan = buildLegalReviewPacketPlan({
+      approvals: [
+        { topic: "privacy_policy", approved: true, reviewedBy: "Counsel", reviewedAt: "2026-06-08", documentVersion: "privacy-v1" },
+        { topic: "terms_of_service", approved: false },
+      ],
+      jurisdiction: "US-WA",
+      noindexProtectionEnabled: true,
+      acceptanceAuditConfigured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.requiredTopics).toContain("tattoo_consent");
+    expect(plan.missingTopics).toEqual(expect.arrayContaining(["terms_of_service", "tattoo_consent", "sms_opt_in_stop_help", "jurisdiction_studio_policy"]));
+    expect(plan.productionBlockedActions).toContain("Collect consent signatures");
+    expect(plan.pageProtections).toEqual({ noindexRequired: true, placeholdersMustRemain: true });
+    expect(plan.acceptanceAudit.requiredFields).toContain("documentVersion");
+  });
+
+  it("approves legal review packets only after all required topics and consent audit tracking are versioned", () => {
+    const approvals = [
+      "privacy_policy",
+      "terms_of_service",
+      "tattoo_consent",
+      "medical_safety_acknowledgment",
+      "sms_opt_in_stop_help",
+      "aftercare",
+      "deposits_no_shows_refunds",
+      "taxes",
+      "liability",
+      "saas_terms",
+      "jurisdiction_studio_policy",
+    ].map((topic) => ({
+      topic: topic as Parameters<typeof buildLegalReviewPacketPlan>[0]["approvals"][number]["topic"],
+      approved: true,
+      reviewedBy: "Counsel",
+      reviewedAt: "2026-06-08",
+      documentVersion: `${topic}-v1`,
+    }));
+    const plan = buildLegalReviewPacketPlan({
+      approvals,
+      jurisdiction: "US-WA",
+      studioPolicyVersion: "studio-us-wa-v1",
+      consentVersion: "consent-us-wa-v1",
+      noindexProtectionEnabled: false,
+      acceptanceAuditConfigured: true,
+    });
+
+    expect(plan.status).toBe("approved");
+    expect(plan.missingTopics).toEqual([]);
+    expect(plan.productionBlockedActions).toEqual([]);
+    expect(plan.pageProtections.noindexRequired).toBe(false);
+    expect(plan.acceptanceAudit).toMatchObject({ configured: true, consentVersion: "consent-us-wa-v1" });
+    expect(plan.approvedVersions.privacy_policy).toBe("privacy_policy-v1");
   });
 });
