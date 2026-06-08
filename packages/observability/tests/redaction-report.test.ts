@@ -7,6 +7,7 @@ import {
   buildObservabilityReportDraft,
   buildSentrySdkConfigurationPlan,
   buildStackHash,
+  buildTelemetryPipelinePlan,
   classifyErrorSeverity,
   redactMetadata,
   redactSensitiveText,
@@ -158,6 +159,98 @@ describe("observability redaction and triage", () => {
     expect(plan.suppressExternalDelivery).toBe(true);
     expect(plan.route.channel).toBe("dashboard");
     expect(plan.escalationRunbook.join(" ")).toContain("dashboard-only review");
+  });
+
+  it("builds privacy-safe telemetry correlation records with request and trace propagation", () => {
+    const report = buildObservabilityReportDraft({
+      tenantId: "tenant_telemetry",
+      source: "api",
+      runtime: "server",
+      environment: "production",
+      message: "Stripe webhook rejected for avery@example.com",
+      route: "/api/webhooks/stripe",
+      handled: false,
+      statusCode: 500,
+      metadata: { token: "sk_live_secret", bookingId: "booking_telemetry" },
+    });
+    const plan = buildTelemetryPipelinePlan({
+      serviceName: "api",
+      environment: "production",
+      requestId: "req-payment-1",
+      traceId: "4bf92f3577b34da6a3ce929d0e0e4736",
+      spanId: "00f067aa0ba902b7",
+      route: "/api/webhooks/stripe",
+      tenantId: "tenant_telemetry",
+      errorReport: report,
+      otlpEndpointConfigured: true,
+      structuredLoggingEnabled: true,
+      requestIdPropagationEnabled: true,
+      traceContextPropagationEnabled: true,
+      attributes: {
+        clientEmail: "avery@example.com",
+        authorization: "Bearer sk_live_secret",
+        bookingId: "booking_telemetry",
+      },
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.sampleRate).toBe(0.1);
+    expect(plan.exporter.requiredEnv).toContain("OTEL_EXPORTER_OTLP_ENDPOINT");
+    expect(plan.logRecord).toMatchObject({
+      serviceName: "api",
+      environment: "production",
+      requestId: "req-payment-1",
+      traceId: "4bf92f3577b34da6a3ce929d0e0e4736",
+      spanId: "00f067aa0ba902b7",
+      route: "/api/webhooks/stripe",
+      tenantId: "tenant_telemetry",
+      errorFingerprint: report.fingerprint,
+      stackHash: report.stackHash,
+      severity: "critical",
+    });
+    expect(plan.propagationHeaders["x-request-id"]).toBe("req-payment-1");
+    expect(plan.propagationHeaders.traceparent).toContain("4bf92f3577b34da6a3ce929d0e0e4736");
+    expect(JSON.stringify(plan.logRecord.attributes)).not.toContain("avery@example.com");
+    expect(JSON.stringify(plan.logRecord.attributes)).not.toContain("sk_live_secret");
+    expect(plan.logRecord.attributes.bookingId).toBe("booking_telemetry");
+  });
+
+  it("blocks telemetry export without OTLP wiring or when payload risk is too high", () => {
+    const report = buildObservabilityReportDraft({
+      source: "api",
+      runtime: "server",
+      environment: "production",
+      message: "tenant isolation incident",
+      route: "/api/private",
+      handled: false,
+      statusCode: 500,
+    });
+    const plan = buildTelemetryPipelinePlan({
+      serviceName: "api",
+      environment: "production",
+      route: "/api/private",
+      errorReport: { ...report, redactionLevel: "blocked_high_risk_payload" },
+      otlpEndpointConfigured: false,
+      structuredLoggingEnabled: false,
+      requestIdPropagationEnabled: false,
+      traceContextPropagationEnabled: false,
+      sampleRate: 2,
+      attributes: { medicalNotes: "client diagnosis details", route: "/api/private" },
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.sampleRate).toBe(1);
+    expect(plan.blockers).toEqual(
+      expect.arrayContaining([
+        "OTLP exporter endpoint must be configured before external trace/log export.",
+        "Structured logging must be enabled before request/error correlation is ready.",
+        "Request ID propagation must be enabled across routes, workers, and provider callbacks.",
+        "Trace context propagation must be enabled before distributed traces are useful.",
+        "High-risk payloads must remain local/dashboard-only and cannot be exported to external telemetry sinks.",
+      ]),
+    );
+    expect(plan.logRecord.attributes.medicalNotes).toBe("[redacted:sensitive-field]");
+    expect(plan.privacyGuards.join(" ")).toContain("Do not export blocked_high_risk_payload");
   });
 
   it("builds sanitized GitHub issue drafts without raw sensitive values", () => {

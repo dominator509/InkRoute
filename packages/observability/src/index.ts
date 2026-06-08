@@ -90,6 +90,52 @@ export interface AlertEscalationPlan {
   suppressExternalDelivery: boolean;
 }
 
+export interface TelemetryPipelineInput {
+  serviceName: "web" | "dashboard" | "mobile" | "api" | "worker";
+  environment: RuntimeEnvironment;
+  requestId?: string;
+  traceId?: string;
+  spanId?: string;
+  route?: string;
+  tenantId?: string;
+  errorReport?: Pick<ObservabilityReportDraft, "fingerprint" | "stackHash" | "severity" | "redactionLevel">;
+  otlpEndpointConfigured: boolean;
+  structuredLoggingEnabled: boolean;
+  requestIdPropagationEnabled: boolean;
+  traceContextPropagationEnabled: boolean;
+  sampleRate?: number;
+  attributes?: Record<string, unknown>;
+}
+
+export interface TelemetryPipelinePlan {
+  status: "ready" | "blocked";
+  blockers: readonly string[];
+  requestId: string;
+  traceId: string;
+  spanId: string;
+  sampleRate: number;
+  exporter: {
+    type: "otlp-http";
+    configured: boolean;
+    requiredEnv: readonly string[];
+  };
+  logRecord: {
+    serviceName: TelemetryPipelineInput["serviceName"];
+    environment: RuntimeEnvironment;
+    requestId: string;
+    traceId: string;
+    spanId: string;
+    route: string;
+    tenantId?: string;
+    errorFingerprint?: string;
+    stackHash?: string;
+    severity?: ErrorSeverity;
+    attributes: Record<string, unknown>;
+  };
+  propagationHeaders: Record<string, string>;
+  privacyGuards: readonly string[];
+}
+
 export interface AgenticBugFixStep {
   order: number;
   title: string;
@@ -558,6 +604,65 @@ function clampSampleRate(value: number | undefined, fallback: number): number {
   if (value < 0) return 0;
   if (value > 1) return 1;
   return value;
+}
+
+function normalizeTelemetryId(value: string | undefined, fallback: string): string {
+  const cleaned = value?.trim();
+  if (!cleaned) return fallback;
+  return cleaned.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64) || fallback;
+}
+
+export function buildTelemetryPipelinePlan(input: TelemetryPipelineInput): TelemetryPipelinePlan {
+  const requestId = normalizeTelemetryId(input.requestId, `req_${stableHash(`${input.serviceName}|${input.route ?? "unknown"}|${input.environment}`)}`);
+  const traceId = normalizeTelemetryId(input.traceId, `trace_${stableHash(`${requestId}|trace`)}`);
+  const spanId = normalizeTelemetryId(input.spanId, `span_${stableHash(`${requestId}|span`)}`);
+  const sampleRate = clampSampleRate(input.sampleRate, input.environment === "production" ? 0.1 : 1);
+  const blockers: string[] = [];
+
+  if (!input.otlpEndpointConfigured) blockers.push("OTLP exporter endpoint must be configured before external trace/log export.");
+  if (!input.structuredLoggingEnabled) blockers.push("Structured logging must be enabled before request/error correlation is ready.");
+  if (!input.requestIdPropagationEnabled) blockers.push("Request ID propagation must be enabled across routes, workers, and provider callbacks.");
+  if (!input.traceContextPropagationEnabled) blockers.push("Trace context propagation must be enabled before distributed traces are useful.");
+
+  const redactedAttributes = redactMetadata(input.attributes ?? {}).metadata;
+  const highRiskPayload = input.errorReport?.redactionLevel === "blocked_high_risk_payload";
+  if (highRiskPayload) blockers.push("High-risk payloads must remain local/dashboard-only and cannot be exported to external telemetry sinks.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    blockers,
+    requestId,
+    traceId,
+    spanId,
+    sampleRate,
+    exporter: {
+      type: "otlp-http",
+      configured: input.otlpEndpointConfigured,
+      requiredEnv: ["OTEL_EXPORTER_OTLP_ENDPOINT", "OTEL_SERVICE_NAME", "OTEL_TRACES_SAMPLER"],
+    },
+    logRecord: {
+      serviceName: input.serviceName,
+      environment: input.environment,
+      requestId,
+      traceId,
+      spanId,
+      route: input.route ?? "unknown",
+      ...(input.tenantId ? { tenantId: input.tenantId } : {}),
+      ...(input.errorReport?.fingerprint ? { errorFingerprint: input.errorReport.fingerprint } : {}),
+      ...(input.errorReport?.stackHash ? { stackHash: input.errorReport.stackHash } : {}),
+      ...(input.errorReport?.severity ? { severity: input.errorReport.severity } : {}),
+      attributes: redactedAttributes,
+    },
+    propagationHeaders: {
+      "x-request-id": requestId,
+      traceparent: `00-${traceId.padEnd(32, "0").slice(0, 32)}-${spanId.padEnd(16, "0").slice(0, 16)}-01`,
+    },
+    privacyGuards: [
+      "redactMetadata removes sensitive attributes before log export.",
+      "Do not export blocked_high_risk_payload events to external OTLP sinks.",
+      "Log records may include tenant IDs and fingerprints, but not raw PII, medical notes, consent data, tokens, cookies, or payment payloads.",
+    ],
+  };
 }
 
 export function buildSentrySdkConfigurationPlan(input: SentrySdkConfigurationInput): SentrySdkConfigurationPlan {
