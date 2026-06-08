@@ -1392,6 +1392,59 @@ export interface NotificationSchedulerPlan {
   blockers: readonly string[];
 }
 
+export type PreferenceMutationAction =
+  | "issue_preference_token"
+  | "update_email_preferences"
+  | "unsubscribe_email"
+  | "record_sms_stop"
+  | "record_sms_start"
+  | "update_tenant_channel_settings";
+
+export type PreferenceWriteModel =
+  | "PreferenceToken"
+  | "ClientNotificationPreference"
+  | "TenantNotificationSetting"
+  | "SuppressionListEntry"
+  | "NotificationAuditLog"
+  | "IdempotencyKey";
+
+export interface PreferenceMutationPlanInput {
+  tenantId: string;
+  action: PreferenceMutationAction;
+  clientId?: string;
+  actorId?: string;
+  email?: string;
+  phone?: string;
+  token?: string;
+  tokenHash?: string;
+  tokenExpiresAt?: string;
+  now: string;
+  idempotencyKey?: string;
+  emailOptIn?: boolean;
+  smsOptIn?: boolean;
+  pushOptIn?: boolean;
+  marketingOptIn?: boolean;
+  transactionalAllowed?: boolean;
+  tenantChannelSettingsConfigured?: boolean;
+  legalCopyApproved?: boolean;
+}
+
+export interface PreferenceMutationWrite {
+  model: PreferenceWriteModel;
+  tenantId: string;
+  payload: Record<string, unknown>;
+}
+
+export interface PreferenceMutationPlan {
+  status: "ready" | "blocked";
+  action: PreferenceMutationAction;
+  idempotencyKey: string | null;
+  tokenHash: string | null;
+  writes: readonly PreferenceMutationWrite[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 function notificationSchedulerWriteModels(action: NotificationSchedulerAction): NotificationSchedulerWriteModel[] {
   switch (action) {
     case "schedule_sequence":
@@ -1498,6 +1551,105 @@ export function buildNotificationSchedulerPlan(input: NotificationSchedulerPlanI
       "Use bounded exponential backoff and dead-letter jobs after max attempts.",
       "Persist NotificationWorkerAuditLog for queue decisions, retries, cancellations, and dead letters.",
       "Do not process due jobs until channel-specific provider send plans are ready.",
+    ],
+    blockers,
+  };
+}
+
+export function buildPreferenceTokenHash(token: string): string {
+  const normalized = token.trim();
+  let hash = 5381;
+  for (let index = 0; index < normalized.length; index += 1) {
+    hash = ((hash << 5) + hash + normalized.charCodeAt(index)) >>> 0;
+  }
+  return `preference_token_${hash.toString(16).padStart(8, "0")}`;
+}
+
+function preferenceWriteModels(action: PreferenceMutationAction): PreferenceWriteModel[] {
+  switch (action) {
+    case "issue_preference_token":
+      return ["PreferenceToken", "NotificationAuditLog", "IdempotencyKey"];
+    case "update_email_preferences":
+      return ["ClientNotificationPreference", "NotificationAuditLog", "IdempotencyKey"];
+    case "unsubscribe_email":
+      return ["ClientNotificationPreference", "SuppressionListEntry", "NotificationAuditLog", "IdempotencyKey"];
+    case "record_sms_stop":
+      return ["ClientNotificationPreference", "SuppressionListEntry", "NotificationAuditLog", "IdempotencyKey"];
+    case "record_sms_start":
+      return ["ClientNotificationPreference", "NotificationAuditLog", "IdempotencyKey"];
+    case "update_tenant_channel_settings":
+      return ["TenantNotificationSetting", "NotificationAuditLog", "IdempotencyKey"];
+  }
+}
+
+export function buildPreferenceMutationPlan(input: PreferenceMutationPlanInput): PreferenceMutationPlan {
+  const blockers: string[] = [];
+  const tokenHash = input.token?.trim() ? buildPreferenceTokenHash(input.token) : input.tokenHash?.trim() ? input.tokenHash : null;
+  const tokenExpiresAtMs = input.tokenExpiresAt ? new Date(input.tokenExpiresAt).getTime() : NaN;
+  const nowMs = new Date(input.now).getTime();
+  const isClientScoped = input.action !== "update_tenant_channel_settings";
+
+  if (!input.tenantId.trim()) blockers.push("Missing tenant scope.");
+  if (!input.idempotencyKey?.trim()) blockers.push("Missing idempotency key for preference mutation.");
+  if (isClientScoped && !input.clientId?.trim()) blockers.push("Client id is required for client preference mutations.");
+  if (!input.actorId?.trim() && input.action === "update_tenant_channel_settings") blockers.push("Tenant channel settings require an actor id.");
+  if (input.action === "issue_preference_token" && !input.token?.trim()) blockers.push("Preference token issuance requires a token value to hash.");
+  if (isClientScoped && input.action !== "issue_preference_token" && !tokenHash) blockers.push("Preference mutation requires a stored preference token hash.");
+  if (isClientScoped && input.action !== "issue_preference_token" && (!Number.isFinite(tokenExpiresAtMs) || tokenExpiresAtMs <= nowMs)) blockers.push("Preference token is expired or missing expiration.");
+  if ((input.action === "unsubscribe_email" || input.action === "update_email_preferences") && !input.email?.trim()) blockers.push("Email preference mutation requires an email destination.");
+  if ((input.action === "record_sms_stop" || input.action === "record_sms_start") && !input.phone?.trim()) blockers.push("SMS preference mutation requires a phone destination.");
+  if (input.action === "record_sms_start" && input.legalCopyApproved !== true) blockers.push("SMS START requires legal-approved consent copy before re-enabling SMS.");
+  if (input.action === "update_tenant_channel_settings" && !input.tenantChannelSettingsConfigured) blockers.push("Tenant channel settings payload must be configured before persistence.");
+  if (input.action === "update_tenant_channel_settings" && input.legalCopyApproved !== true) blockers.push("Tenant channel settings require legal-approved preference and consent copy.");
+
+  const basePayload = {
+    action: input.action,
+    clientId: input.clientId ?? null,
+    actorId: input.actorId ?? null,
+    emailHash: input.email ? stableDestinationHash(input.email) : null,
+    phoneHash: input.phone ? stableDestinationHash(input.phone) : null,
+    tokenHash,
+    tokenExpiresAt: input.tokenExpiresAt ?? null,
+    emailOptIn: input.emailOptIn ?? null,
+    smsOptIn: input.smsOptIn ?? null,
+    pushOptIn: input.pushOptIn ?? null,
+    marketingOptIn: input.marketingOptIn ?? null,
+    transactionalAllowed: input.transactionalAllowed ?? null,
+    idempotencyKey: input.idempotencyKey ?? null,
+  };
+  const writes = preferenceWriteModels(input.action).map((model): PreferenceMutationWrite => ({
+    model,
+    tenantId: input.tenantId,
+    payload: model === "PreferenceToken"
+      ? {
+          tokenHash,
+          clientId: input.clientId ?? null,
+          expiresAt: input.tokenExpiresAt ?? null,
+        }
+      : model === "NotificationAuditLog"
+        ? basePayload
+        : model === "IdempotencyKey"
+          ? {
+              key: input.idempotencyKey ?? null,
+              action: input.action,
+              clientId: input.clientId ?? null,
+            }
+          : basePayload,
+  }));
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    action: input.action,
+    idempotencyKey: input.idempotencyKey?.trim() ? input.idempotencyKey : null,
+    tokenHash,
+    writes,
+    requiredControls: [
+      "Hash preference tokens before persistence and compare only hashed values.",
+      "Expire preference tokens and reject forged, missing, or scope-mismatched tokens.",
+      "Persist audit logs for unsubscribe, STOP, START, and tenant setting changes.",
+      "Apply email unsubscribe and SMS STOP suppression before marketing or transactional sends as policy requires.",
+      "Separate transactional permission from marketing opt-in and preserve required service-message rules.",
+      "Require legal-approved consent copy before SMS START or tenant preference setting changes.",
     ],
     blockers,
   };

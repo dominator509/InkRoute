@@ -10,6 +10,8 @@ import {
   buildNotificationPersistencePlan,
   buildNotificationSchedulerPlan,
   buildAppointmentNotificationSequence,
+  buildPreferenceMutationPlan,
+  buildPreferenceTokenHash,
   buildProviderEventReconciliationPlan,
   buildSmsProviderSendPlan,
   interpretSmsWebhook,
@@ -713,5 +715,129 @@ describe("notification delivery planning", () => {
       "Provider send plan must be ready before processing due notification jobs.",
     ]);
     expect(retryBlocked.blockers).toEqual(["Retry attempt has reached max attempts and must be dead-lettered."]);
+  });
+
+  it("plans preference token issuance and email unsubscribe suppression writes", () => {
+    const token = "pref_token_001";
+    const issued = buildPreferenceMutationPlan({
+      tenantId: "tenant_001",
+      action: "issue_preference_token",
+      clientId: "client_001",
+      token,
+      tokenExpiresAt: "2026-07-08T10:00:00.000Z",
+      now: "2026-06-08T10:00:00.000Z",
+      idempotencyKey: "preference-token:tenant_001:client_001",
+    });
+    const unsubscribe = buildPreferenceMutationPlan({
+      tenantId: "tenant_001",
+      action: "unsubscribe_email",
+      clientId: "client_001",
+      email: "avery@example.com",
+      tokenHash: buildPreferenceTokenHash(token),
+      tokenExpiresAt: "2026-07-08T10:00:00.000Z",
+      now: "2026-06-08T10:00:00.000Z",
+      emailOptIn: false,
+      marketingOptIn: false,
+      transactionalAllowed: true,
+      idempotencyKey: "unsubscribe-email:tenant_001:client_001",
+    });
+
+    expect(issued.status).toBe("ready");
+    expect(issued.tokenHash).toBe(buildPreferenceTokenHash(token));
+    expect(issued.writes.map((write) => write.model)).toEqual(["PreferenceToken", "NotificationAuditLog", "IdempotencyKey"]);
+    expect(unsubscribe.status).toBe("ready");
+    expect(unsubscribe.writes.map((write) => write.model)).toEqual(["ClientNotificationPreference", "SuppressionListEntry", "NotificationAuditLog", "IdempotencyKey"]);
+    expect(unsubscribe.writes.find((write) => write.model === "SuppressionListEntry")?.payload).toMatchObject({
+      emailOptIn: false,
+      marketingOptIn: false,
+      transactionalAllowed: true,
+    });
+  });
+
+  it("plans SMS STOP and START preference mutations with legal consent gates", () => {
+    const stop = buildPreferenceMutationPlan({
+      tenantId: "tenant_001",
+      action: "record_sms_stop",
+      clientId: "client_001",
+      phone: "+12065550123",
+      tokenHash: "provider-inbound-stop",
+      tokenExpiresAt: "2026-07-08T10:00:00.000Z",
+      now: "2026-06-08T10:00:00.000Z",
+      smsOptIn: false,
+      marketingOptIn: false,
+      idempotencyKey: "sms-stop:tenant_001:client_001",
+    });
+    const start = buildPreferenceMutationPlan({
+      tenantId: "tenant_001",
+      action: "record_sms_start",
+      clientId: "client_001",
+      phone: "+12065550123",
+      tokenHash: "provider-inbound-start",
+      tokenExpiresAt: "2026-07-08T10:00:00.000Z",
+      now: "2026-06-08T10:00:00.000Z",
+      smsOptIn: true,
+      transactionalAllowed: true,
+      legalCopyApproved: true,
+      idempotencyKey: "sms-start:tenant_001:client_001",
+    });
+
+    expect(stop.status).toBe("ready");
+    expect(stop.writes.map((write) => write.model)).toEqual(["ClientNotificationPreference", "SuppressionListEntry", "NotificationAuditLog", "IdempotencyKey"]);
+    expect(start.status).toBe("ready");
+    expect(start.writes.map((write) => write.model)).toEqual(["ClientNotificationPreference", "NotificationAuditLog", "IdempotencyKey"]);
+  });
+
+  it("plans tenant channel settings with legal-approved preference copy", () => {
+    const plan = buildPreferenceMutationPlan({
+      tenantId: "tenant_001",
+      action: "update_tenant_channel_settings",
+      actorId: "admin_001",
+      now: "2026-06-08T10:00:00.000Z",
+      idempotencyKey: "tenant-channel-settings:tenant_001",
+      tenantChannelSettingsConfigured: true,
+      legalCopyApproved: true,
+      emailOptIn: true,
+      smsOptIn: true,
+      pushOptIn: true,
+      marketingOptIn: false,
+      transactionalAllowed: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.writes.map((write) => write.model)).toEqual(["TenantNotificationSetting", "NotificationAuditLog", "IdempotencyKey"]);
+    expect(plan.requiredControls).toContain("Require legal-approved consent copy before SMS START or tenant preference setting changes.");
+  });
+
+  it("blocks preference mutations with missing client scope, forged or expired tokens, and missing legal approval", () => {
+    const expired = buildPreferenceMutationPlan({
+      tenantId: "",
+      action: "unsubscribe_email",
+      email: "avery@example.com",
+      tokenHash: "",
+      tokenExpiresAt: "2026-06-01T10:00:00.000Z",
+      now: "2026-06-08T10:00:00.000Z",
+    });
+    const start = buildPreferenceMutationPlan({
+      tenantId: "tenant_001",
+      action: "record_sms_start",
+      clientId: "client_001",
+      phone: "+12065550123",
+      tokenHash: "provider-inbound-start",
+      tokenExpiresAt: "2026-07-08T10:00:00.000Z",
+      now: "2026-06-08T10:00:00.000Z",
+      idempotencyKey: "sms-start:tenant_001:client_001",
+      legalCopyApproved: false,
+    });
+
+    expect(expired.status).toBe("blocked");
+    expect(expired.blockers).toEqual([
+      "Missing tenant scope.",
+      "Missing idempotency key for preference mutation.",
+      "Client id is required for client preference mutations.",
+      "Preference mutation requires a stored preference token hash.",
+      "Preference token is expired or missing expiration.",
+    ]);
+    expect(start.status).toBe("blocked");
+    expect(start.blockers).toEqual(["SMS START requires legal-approved consent copy before re-enabling SMS."]);
   });
 });
