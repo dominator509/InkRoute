@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T19:33:12.430Z",
+  "generatedAt": "2026-06-08T19:53:28.226Z",
   "source": "Phase 17 quality gate hardening",
   "status": "warn",
   "totalGaps": 133,
@@ -341,11 +341,6 @@
       "status": "warn",
       "gapId": "GAP-091",
       "message": "Blocks production uses qualified value: Yes for mobile launch."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-091",
-      "message": "Verification/test field lacks concrete evidence detail."
     },
     {
       "status": "warn",
