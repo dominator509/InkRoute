@@ -88,6 +88,33 @@ export interface SignedUploadIntentPlan {
   requiredControls: string[];
 }
 
+export type MalwareScanVerdict = "not_run" | "clean" | "suspicious" | "malware";
+export type UploadScanStatus = "approved" | "quarantined" | "rejected";
+
+export interface UploadScanPipelineInput extends UploadValidationInput {
+  fileSignatureHex: string;
+  malwareVerdict: MalwareScanVerdict;
+  exifMetadataPresent: boolean;
+  normalizedDerivativeGenerated: boolean;
+  scanProviderConfigured: boolean;
+}
+
+export interface UploadScanPipelinePlan {
+  status: UploadScanStatus;
+  validation: UploadValidationResult;
+  detectedMimeType: string | null;
+  signatureMatches: boolean;
+  quarantineRequired: boolean;
+  metadataStrippingRequired: boolean;
+  publicDerivativeAllowed: boolean;
+  scanStatusPersistence: {
+    required: true;
+    fields: readonly string[];
+  };
+  requiredControls: readonly string[];
+  reasons: readonly string[];
+}
+
 export interface RateLimitRule {
   id: string;
   routePattern: string;
@@ -1161,6 +1188,85 @@ export function buildSignedUploadIntentPlan(input: SignedUploadIntentInput): Sig
       "Private upload objects must not be readable through public URLs before or after scan completion.",
       "Reference images must be associated to the booking request before artist review.",
     ],
+  };
+}
+
+const magicByteSignatures: Array<{ mimeType: string; signatures: readonly string[] }> = [
+  { mimeType: "image/jpeg", signatures: ["ffd8ff"] },
+  { mimeType: "image/png", signatures: ["89504e470d0a1a0a"] },
+  { mimeType: "image/webp", signatures: ["52494646"] },
+  { mimeType: "image/heic", signatures: ["000000186674797068656963", "0000001c6674797068656963", "000000206674797068656963"] },
+  { mimeType: "application/pdf", signatures: ["25504446"] },
+];
+
+function normalizeSignatureHex(value: string): string {
+  return value.toLowerCase().replace(/[^a-f0-9]/g, "");
+}
+
+export function detectMimeTypeFromSignature(fileSignatureHex: string): string | null {
+  const normalized = normalizeSignatureHex(fileSignatureHex);
+  if (!normalized) return null;
+  const match = magicByteSignatures.find((candidate) => candidate.signatures.some((signature) => normalized.startsWith(signature)));
+  return match?.mimeType ?? null;
+}
+
+export function buildUploadScanPipelinePlan(input: UploadScanPipelineInput): UploadScanPipelinePlan {
+  const validation = validateUploadDraft(input);
+  const detectedMimeType = detectMimeTypeFromSignature(input.fileSignatureHex);
+  const signatureMatches = Boolean(detectedMimeType && detectedMimeType === input.mimeType.toLowerCase());
+  const metadataStrippingRequired = input.exifMetadataPresent || input.kind === "portfolio_public" || input.kind === "healed_follow_up";
+  const reasons = [...validation.reasons];
+
+  if (!detectedMimeType) {
+    reasons.push("File signature is missing or not recognized.");
+  } else if (!signatureMatches) {
+    reasons.push(`File signature detected ${detectedMimeType}, which does not match declared MIME ${input.mimeType}.`);
+  }
+
+  if (!input.scanProviderConfigured) {
+    reasons.push("Malware scanning provider is not configured.");
+  }
+  if (input.malwareVerdict === "not_run") {
+    reasons.push("Malware scan has not run.");
+  }
+  if (input.malwareVerdict === "suspicious" || input.malwareVerdict === "malware") {
+    reasons.push(`Malware scan verdict is ${input.malwareVerdict}.`);
+  }
+  if (metadataStrippingRequired && !input.normalizedDerivativeGenerated) {
+    reasons.push("Safe normalized derivative is required before this asset can be approved.");
+  }
+
+  const quarantineRequired =
+    validation.accepted &&
+    (!signatureMatches ||
+      !input.scanProviderConfigured ||
+      input.malwareVerdict === "not_run" ||
+      input.malwareVerdict === "suspicious" ||
+      metadataStrippingRequired && !input.normalizedDerivativeGenerated);
+  const rejected = !validation.accepted || input.malwareVerdict === "malware";
+  const status: UploadScanStatus = rejected ? "rejected" : quarantineRequired ? "quarantined" : "approved";
+
+  return {
+    status,
+    validation,
+    detectedMimeType,
+    signatureMatches,
+    quarantineRequired: status === "quarantined",
+    metadataStrippingRequired,
+    publicDerivativeAllowed: status === "approved" && validation.storageVisibility === "public_derivative" && input.normalizedDerivativeGenerated,
+    scanStatusPersistence: {
+      required: true,
+      fields: ["tenantId", "fileAssetId", "scanStatus", "detectedMimeType", "malwareVerdict", "metadataStrippedAt", "derivativeObjectKey", "quarantinedAt"],
+    },
+    requiredControls: [
+      "Verify magic bytes server-side after upload completion.",
+      "Quarantine objects until malware scan returns clean.",
+      "Strip EXIF/GPS metadata and normalize image derivatives before public exposure.",
+      "Persist scan status and detected MIME type on the tenant-scoped FileAsset record.",
+      "Write AuditLog entries for approval, quarantine, rejection, and derivative publication.",
+      "Never expose original private uploads publicly; publish only safe derivatives when allowed.",
+    ],
+    reasons,
   };
 }
 

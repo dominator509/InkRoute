@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildPrivacyLifecyclePlan,
   buildSignedUploadIntentPlan,
+  buildUploadScanPipelinePlan,
+  detectMimeTypeFromSignature,
   buildTenantIsolationFixtures,
   evaluateDashboardPrivacyField,
   evaluateRateLimitDraft,
@@ -65,6 +67,70 @@ describe("security and privacy helpers", () => {
     expect(plan.expiresInSeconds).toBe(60);
     expect(plan.validation.reasons.join(" ")).toContain("allowlist");
     expect(plan.signedUploadUrlRequired).toBe(false);
+  });
+
+  it("detects known upload magic bytes before trusting declared MIME types", () => {
+    expect(detectMimeTypeFromSignature("ff d8 ff e0 00 10")).toBe("image/jpeg");
+    expect(detectMimeTypeFromSignature("89504E470D0A1A0A0000")).toBe("image/png");
+    expect(detectMimeTypeFromSignature("255044462d312e37")).toBe("application/pdf");
+    expect(detectMimeTypeFromSignature("4d5a9000")).toBeNull();
+  });
+
+  it("quarantines spoofed MIME uploads even when metadata validation passes", () => {
+    const plan = buildUploadScanPipelinePlan({
+      kind: "reference_private",
+      filename: "reference.jpg",
+      mimeType: "image/jpeg",
+      sizeBytes: 400000,
+      declaredByAuthenticatedUser: false,
+      fileSignatureHex: "89504e470d0a1a0a0000",
+      malwareVerdict: "clean",
+      exifMetadataPresent: false,
+      normalizedDerivativeGenerated: true,
+      scanProviderConfigured: true,
+    });
+
+    expect(plan.validation.accepted).toBe(true);
+    expect(plan.status).toBe("quarantined");
+    expect(plan.detectedMimeType).toBe("image/png");
+    expect(plan.signatureMatches).toBe(false);
+    expect(plan.reasons.join(" ")).toContain("does not match declared MIME");
+    expect(plan.scanStatusPersistence.fields).toContain("detectedMimeType");
+  });
+
+  it("rejects malware fixtures and blocks public derivatives until metadata is stripped", () => {
+    const malware = buildUploadScanPipelinePlan({
+      kind: "portfolio_public",
+      filename: "flash.jpg",
+      mimeType: "image/jpeg",
+      sizeBytes: 400000,
+      declaredByAuthenticatedUser: true,
+      fileSignatureHex: "ffd8ffe00010",
+      malwareVerdict: "malware",
+      exifMetadataPresent: true,
+      normalizedDerivativeGenerated: false,
+      scanProviderConfigured: true,
+    });
+    const cleanDerivative = buildUploadScanPipelinePlan({
+      kind: "portfolio_public",
+      filename: "flash.jpg",
+      mimeType: "image/jpeg",
+      sizeBytes: 400000,
+      declaredByAuthenticatedUser: true,
+      fileSignatureHex: "ffd8ffe00010",
+      malwareVerdict: "clean",
+      exifMetadataPresent: true,
+      normalizedDerivativeGenerated: true,
+      scanProviderConfigured: true,
+    });
+
+    expect(malware.status).toBe("rejected");
+    expect(malware.publicDerivativeAllowed).toBe(false);
+    expect(malware.reasons.join(" ")).toContain("malware");
+    expect(cleanDerivative.status).toBe("approved");
+    expect(cleanDerivative.metadataStrippingRequired).toBe(true);
+    expect(cleanDerivative.publicDerivativeAllowed).toBe(true);
+    expect(cleanDerivative.requiredControls).toContain("Never expose original private uploads publicly; publish only safe derivatives when allowed.");
   });
 
   it("redacts PII, payment fields, and medical notes", () => {
