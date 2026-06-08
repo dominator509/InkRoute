@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { auditPackageScripts, auditWorkspaceDependencies, extractWorkspaceImportSpecifiers, summarizeRuntimeReadiness } from "../src/index";
+import {
+  auditPackageScripts,
+  auditWorkspaceDependencies,
+  classifyWorkspacePath,
+  extractWorkspaceImportSpecifiers,
+  getWorkspacePackageNameFromSpecifier,
+  summarizeRuntimeReadiness,
+} from "../src/index";
 
 const baseProject = {
   name: "@inkroute/example",
@@ -13,14 +20,24 @@ const baseProject = {
 };
 
 describe("workspace audit helpers", () => {
+  it("classifies workspace paths and package import specifiers", () => {
+    expect(classifyWorkspacePath(".")).toBe("root");
+    expect(classifyWorkspacePath("apps/web")).toBe("app");
+    expect(classifyWorkspacePath("packages/db")).toBe("package");
+    expect(getWorkspacePackageNameFromSpecifier("@inkroute/types/foo")).toBe("@inkroute/types");
+    expect(getWorkspacePackageNameFromSpecifier("zod")).toBeNull();
+  });
+
   it("extracts static workspace import specifiers", () => {
     const source = [
       "import { x } from \"@inkroute/types\";",
       "const y = await import(\"@inkroute/config\");",
+      "const z = require(\"@inkroute/workspace/testing\");",
     ].join("\n");
     expect(extractWorkspaceImportSpecifiers(source)).toEqual([
       "@inkroute/config",
       "@inkroute/types",
+      "@inkroute/workspace/testing",
     ]);
   });
 
@@ -40,8 +57,49 @@ describe("workspace audit helpers", () => {
     expect(summary.status).toBe("pass");
   });
 
-  it("summarizes script and runtime readiness", () => {
+  it("flags missing declared workspace packages and undeclared imports", () => {
+    const summary = auditWorkspaceDependencies({
+      projects: [
+        { ...baseProject, dependencies: { "@inkroute/missing": "workspace:*" } },
+        { ...baseProject, name: "@inkroute/types", path: "packages/types", dependencies: {} },
+      ],
+      imports: [
+        {
+          sourcePath: "packages/example/src/index.ts",
+          ownerPackageName: "@inkroute/example",
+          importedPackageName: "@inkroute/types",
+          importSpecifier: "@inkroute/types",
+        },
+        {
+          sourcePath: "packages/example/src/other.ts",
+          ownerPackageName: "@inkroute/example",
+          importedPackageName: "@inkroute/ghost",
+          importSpecifier: "@inkroute/ghost",
+        },
+      ],
+      tsconfigPathAliases: ["@inkroute/example"],
+    });
+
+    expect(summary.status).toBe("fail");
+    expect(summary.findings.some((finding) => finding.message.includes("Declared workspace dependency @inkroute/missing does not exist"))).toBe(true);
+    expect(summary.findings.some((finding) => finding.message.includes("Imports missing workspace package @inkroute/ghost"))).toBe(true);
+    expect(summary.findings.some((finding) => finding.message.includes("missing from tsconfig.base.json paths"))).toBe(true);
+  });
+
+  it("audits package script contracts and duplicate names", () => {
     expect(auditPackageScripts([baseProject]).status).toBe("pass");
+    const audit = auditPackageScripts([
+      baseProject,
+      { ...baseProject, scripts: { build: "tsc --noEmit", typecheck: "tsc --noEmit", lint: "echo not configured" } },
+    ]);
+
+    expect(audit.status).toBe("fail");
+    expect(audit.findings.some((finding) => finding.message === "Duplicate package name in workspace.")).toBe(true);
+    expect(audit.findings.some((finding) => finding.message === "Missing test script.")).toBe(true);
+    expect(audit.findings.some((finding) => finding.message === "Lint script is an informational placeholder.")).toBe(true);
+  });
+
+  it("summarizes blocked and needs-attention runtime readiness", () => {
     expect(
       summarizeRuntimeReadiness({
         hasPnpmLockfile: false,
@@ -53,5 +111,19 @@ describe("workspace audit helpers", () => {
         hasCiWorkflow: true,
       }).level,
     ).toBe("blocked");
+
+    const withLockfile = summarizeRuntimeReadiness({
+      hasPnpmLockfile: true,
+      dependencyAuditStatus: "warn",
+      scriptAuditStatus: "pass",
+      gapCount: 129,
+      blockingGapCount: 2,
+      hasEnvExample: true,
+      hasCiWorkflow: true,
+    });
+
+    expect(withLockfile.level).toBe("needs-attention");
+    expect(withLockfile.firstExternalCommands).toContain("pnpm workspace:all");
+    expect(withLockfile.checks.some((check) => check.id === "production-blockers" && check.status === "fail")).toBe(true);
   });
 });
