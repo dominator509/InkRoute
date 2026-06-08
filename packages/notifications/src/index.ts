@@ -1053,6 +1053,59 @@ export interface ExpoPushTapRoutingPlan {
   blockers: string[];
 }
 
+export type NotificationPersistenceAction =
+  | "create_thread"
+  | "append_message"
+  | "create_notification"
+  | "record_delivery"
+  | "update_delivery_status"
+  | "mark_thread_read";
+
+export type NotificationPersistenceWriteModel =
+  | "MessageThread"
+  | "Message"
+  | "Notification"
+  | "NotificationDelivery"
+  | "NotificationReadState"
+  | "NotificationAuditLog"
+  | "IdempotencyKey";
+
+export interface NotificationPersistencePlanInput {
+  tenantId: string;
+  action: NotificationPersistenceAction;
+  actorId?: string;
+  threadId?: string;
+  messageId?: string;
+  notificationId?: string;
+  deliveryId?: string;
+  clientId?: string;
+  templateKey?: NotificationTemplateKey;
+  channel?: NotificationChannel;
+  provider?: NotificationProvider;
+  status?: NotificationStatus | MessageStatus;
+  destination?: string;
+  bodyPreview?: string;
+  idempotencyKey?: string;
+  destinationRedacted?: boolean;
+  bodyRedacted?: boolean;
+}
+
+export interface NotificationPersistenceWrite {
+  model: NotificationPersistenceWriteModel;
+  tenantId: string;
+  payload: Record<string, unknown>;
+}
+
+export interface NotificationPersistencePlan {
+  status: "ready" | "blocked";
+  action: NotificationPersistenceAction;
+  requiresTransaction: true;
+  idempotencyKey: string | null;
+  writes: readonly NotificationPersistenceWrite[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 export function buildExpoPushRegistrationPlan(input: ExpoPushRegistrationPlanInput): ExpoPushRegistrationPlan {
   const blockers: string[] = [];
   if (!input.tenantId.trim()) blockers.push("Tenant scope is required before registering Expo push tokens.");
@@ -1185,6 +1238,93 @@ export function buildExpoPushTapRoutingPlan(input: ExpoPushTapRoutingPlanInput):
       "Allow only internal relative deep links.",
       "Never embed private file URLs, provider payloads, tokens, or signatures in push tap paths.",
       "Persist NotificationInteraction for tap analytics and troubleshooting.",
+    ],
+    blockers,
+  };
+}
+
+function notificationPersistenceWriteModels(action: NotificationPersistenceAction): NotificationPersistenceWriteModel[] {
+  switch (action) {
+    case "create_thread":
+      return ["MessageThread", "NotificationAuditLog", "IdempotencyKey"];
+    case "append_message":
+      return ["Message", "MessageThread", "NotificationAuditLog", "IdempotencyKey"];
+    case "create_notification":
+      return ["Notification", "NotificationAuditLog", "IdempotencyKey"];
+    case "record_delivery":
+      return ["NotificationDelivery", "NotificationAuditLog", "IdempotencyKey"];
+    case "update_delivery_status":
+      return ["NotificationDelivery", "NotificationAuditLog", "IdempotencyKey"];
+    case "mark_thread_read":
+      return ["NotificationReadState", "MessageThread", "NotificationAuditLog", "IdempotencyKey"];
+  }
+}
+
+export function buildNotificationPersistencePlan(input: NotificationPersistencePlanInput): NotificationPersistencePlan {
+  const blockers: string[] = [];
+
+  if (!input.tenantId.trim()) blockers.push("Missing tenant scope.");
+  if (!input.actorId?.trim()) blockers.push("Notification persistence requires an actor id for audit attribution.");
+  if (!input.idempotencyKey?.trim()) blockers.push("Missing idempotency key for notification persistence mutation.");
+  if ((input.action === "append_message" || input.action === "mark_thread_read") && !input.threadId?.trim()) blockers.push("Message thread id is required for this persistence mutation.");
+  if (input.action === "append_message" && !input.messageId?.trim()) blockers.push("Message id is required before appending a message.");
+  if ((input.action === "create_notification" || input.action === "record_delivery" || input.action === "update_delivery_status") && !input.notificationId?.trim()) blockers.push("Notification id is required for notification delivery persistence.");
+  if ((input.action === "record_delivery" || input.action === "update_delivery_status") && !input.deliveryId?.trim()) blockers.push("Notification delivery id is required for delivery persistence.");
+  if ((input.action === "record_delivery" || input.action === "update_delivery_status") && !input.channel) blockers.push("Notification delivery channel is required.");
+  if ((input.action === "record_delivery" || input.action === "update_delivery_status") && !input.provider) blockers.push("Notification delivery provider is required.");
+  if ((input.action === "record_delivery" || input.action === "update_delivery_status") && !input.status) blockers.push("Notification delivery status is required.");
+  if (input.destination && !input.destinationRedacted) blockers.push("Notification destinations must be redacted or hashed before persistence.");
+  if (input.bodyPreview && !input.bodyRedacted) blockers.push("Message body previews must be redacted before persistence.");
+
+  const destinationHash = input.destination ? stableDestinationHash(input.destination) : null;
+  const bodyPreview = input.bodyPreview ? compactText(input.bodyPreview).slice(0, 240) : null;
+  const basePayload = {
+    threadId: input.threadId ?? null,
+    messageId: input.messageId ?? null,
+    notificationId: input.notificationId ?? null,
+    deliveryId: input.deliveryId ?? null,
+    clientId: input.clientId ?? null,
+    templateKey: input.templateKey ?? null,
+    channel: input.channel ?? null,
+    provider: input.provider ?? null,
+    status: input.status ?? null,
+    destinationHash,
+    bodyPreview,
+    actorId: input.actorId ?? null,
+    idempotencyKey: input.idempotencyKey ?? null,
+  };
+  const writes = notificationPersistenceWriteModels(input.action).map((model): NotificationPersistenceWrite => ({
+    model,
+    tenantId: input.tenantId,
+    payload: model === "NotificationAuditLog"
+      ? {
+          ...basePayload,
+          action: input.action,
+        }
+      : model === "IdempotencyKey"
+        ? {
+            key: input.idempotencyKey ?? null,
+            action: input.action,
+            threadId: input.threadId ?? null,
+            notificationId: input.notificationId ?? null,
+            deliveryId: input.deliveryId ?? null,
+          }
+        : basePayload,
+  }));
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    action: input.action,
+    requiresTransaction: true,
+    idempotencyKey: input.idempotencyKey?.trim() ? input.idempotencyKey : null,
+    writes,
+    requiredControls: [
+      "Execute message and notification persistence in one tenant-scoped transaction.",
+      "Claim idempotency key before creating or mutating threads, messages, notifications, or deliveries.",
+      "Reject cross-tenant thread, message, notification, delivery, and client ids before writes.",
+      "Persist NotificationAuditLog for every message, delivery status, and read/unread mutation.",
+      "Store only redacted body previews and hashed or masked destinations.",
+      "Update read/unread state per tenant user without exposing restricted message fields.",
     ],
     blockers,
   };

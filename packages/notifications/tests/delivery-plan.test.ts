@@ -7,6 +7,7 @@ import {
   buildExpoPushReceiptProcessingPlan,
   buildExpoPushRegistrationPlan,
   buildExpoPushTapRoutingPlan,
+  buildNotificationPersistencePlan,
   buildProviderEventReconciliationPlan,
   buildSmsProviderSendPlan,
   interpretSmsWebhook,
@@ -487,6 +488,108 @@ describe("notification delivery planning", () => {
       "Push opt-in is required before honoring push tap routing.",
       "Push deep-link path must be an internal relative route.",
       "Push deep-link path must not contain private URLs, tokens, signatures, or secrets.",
+    ]);
+  });
+
+  it("plans tenant-scoped message thread and message persistence with redaction and audit writes", () => {
+    const thread = buildNotificationPersistencePlan({
+      tenantId: "tenant_001",
+      action: "create_thread",
+      actorId: "artist_001",
+      threadId: "thread_001",
+      clientId: "client_001",
+      idempotencyKey: "message-thread:tenant_001:thread_001",
+    });
+    const message = buildNotificationPersistencePlan({
+      tenantId: "tenant_001",
+      action: "append_message",
+      actorId: "artist_001",
+      threadId: "thread_001",
+      messageId: "message_001",
+      clientId: "client_001",
+      bodyPreview: "Client asked about placement; payment URL redacted.",
+      bodyRedacted: true,
+      idempotencyKey: "message-append:tenant_001:message_001",
+    });
+
+    expect(thread).toMatchObject({
+      status: "ready",
+      requiresTransaction: true,
+      idempotencyKey: "message-thread:tenant_001:thread_001",
+    });
+    expect(thread.writes.map((write) => write.model)).toEqual(["MessageThread", "NotificationAuditLog", "IdempotencyKey"]);
+    expect(message.writes.map((write) => write.model)).toEqual(["Message", "MessageThread", "NotificationAuditLog", "IdempotencyKey"]);
+    expect(message.writes.find((write) => write.model === "NotificationAuditLog")?.payload).toMatchObject({
+      action: "append_message",
+      threadId: "thread_001",
+      messageId: "message_001",
+    });
+  });
+
+  it("plans notification delivery persistence, status transitions, and read-state writes", () => {
+    const delivery = buildNotificationPersistencePlan({
+      tenantId: "tenant_001",
+      action: "record_delivery",
+      actorId: "system",
+      notificationId: "notification_001",
+      deliveryId: "delivery_001",
+      clientId: "client_001",
+      templateKey: "deposit_request",
+      channel: "email",
+      provider: "resend",
+      status: "queued",
+      destination: "avery@example.com",
+      destinationRedacted: true,
+      idempotencyKey: "delivery-record:tenant_001:delivery_001",
+    });
+    const statusUpdate = buildNotificationPersistencePlan({
+      tenantId: "tenant_001",
+      action: "update_delivery_status",
+      actorId: "system",
+      notificationId: "notification_001",
+      deliveryId: "delivery_001",
+      channel: "email",
+      provider: "resend",
+      status: "delivered",
+      idempotencyKey: "delivery-status:tenant_001:delivery_001:delivered",
+    });
+    const readState = buildNotificationPersistencePlan({
+      tenantId: "tenant_001",
+      action: "mark_thread_read",
+      actorId: "client_001",
+      threadId: "thread_001",
+      clientId: "client_001",
+      status: "read",
+      idempotencyKey: "thread-read:tenant_001:client_001:thread_001",
+    });
+
+    expect(delivery.writes.map((write) => write.model)).toEqual(["NotificationDelivery", "NotificationAuditLog", "IdempotencyKey"]);
+    expect(delivery.writes.find((write) => write.model === "NotificationDelivery")?.payload.destinationHash).toMatch(/^masked_/);
+    expect(statusUpdate.writes.map((write) => write.model)).toEqual(["NotificationDelivery", "NotificationAuditLog", "IdempotencyKey"]);
+    expect(readState.writes.map((write) => write.model)).toEqual(["NotificationReadState", "MessageThread", "NotificationAuditLog", "IdempotencyKey"]);
+    expect(readState.requiredControls).toContain("Update read/unread state per tenant user without exposing restricted message fields.");
+  });
+
+  it("blocks notification persistence without tenant scope, audit actor, idempotency, ids, or redaction", () => {
+    const plan = buildNotificationPersistencePlan({
+      tenantId: " ",
+      action: "record_delivery",
+      destination: "avery@example.com",
+      bodyPreview: "Full unredacted client medical note and private file URL.",
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.blockers).toEqual([
+      "Missing tenant scope.",
+      "Notification persistence requires an actor id for audit attribution.",
+      "Missing idempotency key for notification persistence mutation.",
+      "Notification id is required for notification delivery persistence.",
+      "Notification delivery id is required for delivery persistence.",
+      "Notification delivery channel is required.",
+      "Notification delivery provider is required.",
+      "Notification delivery status is required.",
+      "Notification destinations must be redacted or hashed before persistence.",
+      "Message body previews must be redacted before persistence.",
     ]);
   });
 });
