@@ -264,6 +264,64 @@ export interface PaymentLifecyclePersistencePlan {
   blockers: readonly string[];
 }
 
+export type PaymentOperationsWorkflowAction =
+  | "execute_refund"
+  | "record_no_show_forfeiture"
+  | "prepare_dispute_evidence"
+  | "generate_receipt"
+  | "create_accounting_export";
+
+export type PaymentOperationsWriteModel =
+  | "Payment"
+  | "Refund"
+  | "PaymentAuditLog"
+  | "BookingStateEvent"
+  | "DisputeEvidence"
+  | "Receipt"
+  | "AccountingExport"
+  | "IdempotencyKey";
+
+export interface PaymentOperationsWorkflowPlanInput {
+  tenantId: string;
+  bookingRequestId: string;
+  paymentId: string;
+  action: PaymentOperationsWorkflowAction;
+  amountCents: number;
+  currency: CurrencyCode;
+  provider: "stripe" | "manual";
+  occurredAt: ISODateString;
+  actorId?: string;
+  idempotencyKey?: string;
+  providerPaymentIntentId?: string;
+  providerChargeId?: string;
+  refundAmountCents?: number;
+  noShowDecision?: NoShowDecision;
+  evidenceFileIds?: readonly string[];
+  clientEmail?: string;
+  receiptNumber?: string;
+  stripeRefundsEnabled?: boolean;
+  receiptDeliveryConfigured?: boolean;
+  exportReviewerId?: string;
+  taxReviewApproved?: boolean;
+}
+
+export interface PaymentOperationsWrite {
+  model: PaymentOperationsWriteModel;
+  tenantId: string;
+  payload: Record<string, unknown>;
+}
+
+export interface PaymentOperationsWorkflowPlan {
+  status: "ready" | "blocked";
+  action: PaymentOperationsWorkflowAction;
+  providerCall: string | null;
+  requiresTransaction: true;
+  idempotencyKey: string | null;
+  writes: readonly PaymentOperationsWrite[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 export interface PaymentReceiptExportRow {
   receiptNumber: string;
   tenantId: string;
@@ -791,6 +849,122 @@ export function buildPaymentLifecyclePersistencePlan(input: PaymentLifecyclePlan
       "Reject cross-tenant deposit, payment, refund, and booking ids before applying writes.",
       "Write PaymentAuditLog for every lifecycle mutation, including failed and disputed outcomes.",
       "Treat provider webhook ids as replay protection inputs and never as tenant authorization.",
+    ],
+    blockers,
+  };
+}
+
+function paymentOperationsWriteModels(action: PaymentOperationsWorkflowAction): PaymentOperationsWriteModel[] {
+  switch (action) {
+    case "execute_refund":
+      return ["Refund", "Payment", "PaymentAuditLog", "IdempotencyKey"];
+    case "record_no_show_forfeiture":
+      return ["Payment", "BookingStateEvent", "PaymentAuditLog", "IdempotencyKey"];
+    case "prepare_dispute_evidence":
+      return ["DisputeEvidence", "PaymentAuditLog", "IdempotencyKey"];
+    case "generate_receipt":
+      return ["Receipt", "PaymentAuditLog", "IdempotencyKey"];
+    case "create_accounting_export":
+      return ["AccountingExport", "PaymentAuditLog", "IdempotencyKey"];
+  }
+}
+
+function paymentOperationsProviderCall(input: PaymentOperationsWorkflowPlanInput): string | null {
+  if (input.action === "execute_refund" && input.provider === "stripe") return "stripe.refunds.create";
+  if (input.action === "prepare_dispute_evidence" && input.provider === "stripe") return "stripe.disputes.update";
+  if (input.action === "generate_receipt") return "receipt.delivery.send";
+  if (input.action === "create_accounting_export") return "accounting.export.write";
+  return null;
+}
+
+export function buildPaymentOperationsWorkflowPlan(input: PaymentOperationsWorkflowPlanInput): PaymentOperationsWorkflowPlan {
+  const blockers: string[] = [];
+
+  if (!input.tenantId.trim()) blockers.push("Missing tenant scope.");
+  if (!input.bookingRequestId.trim()) blockers.push("Missing booking request id.");
+  if (!input.paymentId.trim()) blockers.push("Missing payment id.");
+  if (!Number.isFinite(input.amountCents) || input.amountCents <= 0) blockers.push("Payment amount must be positive.");
+  if (!input.actorId?.trim()) blockers.push("Payment operations require an actor id for authorization and audit attribution.");
+  if (!input.idempotencyKey?.trim()) blockers.push("Missing idempotency key for payment operation.");
+
+  if (input.action === "execute_refund") {
+    const refundAmount = input.refundAmountCents ?? 0;
+    if (input.provider === "stripe" && !input.stripeRefundsEnabled) blockers.push("Stripe refunds must be enabled before executing provider refunds.");
+    if (input.provider === "stripe" && !input.providerChargeId?.trim() && !input.providerPaymentIntentId?.trim()) blockers.push("Stripe refund requires a provider charge or payment intent id.");
+    if (!Number.isFinite(refundAmount) || refundAmount <= 0 || refundAmount > input.amountCents) blockers.push("Refund amount must be positive and no greater than the captured payment amount.");
+  }
+
+  if (input.action === "record_no_show_forfeiture" && input.noShowDecision !== "forfeit_deposit") {
+    blockers.push("No-show forfeiture requires a forfeit_deposit policy decision.");
+  }
+
+  if (input.action === "prepare_dispute_evidence") {
+    if (!input.providerChargeId?.trim()) blockers.push("Dispute evidence requires a provider charge id.");
+    if ((input.evidenceFileIds ?? []).length === 0) blockers.push("Dispute evidence requires at least one evidence file id.");
+  }
+
+  if (input.action === "generate_receipt") {
+    if (!input.receiptNumber?.trim()) blockers.push("Receipt generation requires a receipt number.");
+    if (!input.clientEmail?.includes("@")) blockers.push("Receipt delivery requires a client email address.");
+    if (!input.receiptDeliveryConfigured) blockers.push("Receipt delivery provider must be configured before sending receipts.");
+  }
+
+  if (input.action === "create_accounting_export") {
+    if (!input.taxReviewApproved) blockers.push("Accounting export requires tax/accounting review approval.");
+    if (!input.exportReviewerId?.trim()) blockers.push("Accounting export requires a reviewer id.");
+  }
+
+  const providerCall = paymentOperationsProviderCall(input);
+  const basePayload = {
+    bookingRequestId: input.bookingRequestId,
+    paymentId: input.paymentId,
+    amountCents: input.amountCents,
+    currency: input.currency,
+    provider: input.provider,
+    providerPaymentIntentId: input.providerPaymentIntentId ?? null,
+    providerChargeId: input.providerChargeId ?? null,
+    refundAmountCents: input.refundAmountCents ?? null,
+    noShowDecision: input.noShowDecision ?? null,
+    evidenceFileIds: input.evidenceFileIds ?? [],
+    receiptNumber: input.receiptNumber ?? null,
+    exportReviewerId: input.exportReviewerId ?? null,
+    actorId: input.actorId ?? null,
+    idempotencyKey: input.idempotencyKey ?? null,
+    occurredAt: input.occurredAt,
+  };
+  const writes = paymentOperationsWriteModels(input.action).map((model): PaymentOperationsWrite => ({
+    model,
+    tenantId: input.tenantId,
+    payload: model === "IdempotencyKey"
+      ? {
+          key: input.idempotencyKey ?? null,
+          action: input.action,
+          bookingRequestId: input.bookingRequestId,
+          paymentId: input.paymentId,
+          occurredAt: input.occurredAt,
+        }
+      : model === "PaymentAuditLog"
+        ? {
+            ...basePayload,
+            action: input.action,
+            providerCall,
+          }
+        : basePayload,
+  }));
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    action: input.action,
+    providerCall,
+    requiresTransaction: true,
+    idempotencyKey: input.idempotencyKey?.trim() ? input.idempotencyKey : null,
+    writes,
+    requiredControls: [
+      "Authorize the actor against the tenant and payment before provider calls or local writes.",
+      "Claim the idempotency key before executing Stripe refunds, receipt delivery, or export creation.",
+      "Persist PaymentAuditLog and operation result in the same transaction as local state changes.",
+      "Store redacted provider references only; never persist secret keys or raw unredacted provider payloads.",
+      "Require accounting/tax review before enabling export files for production bookkeeping.",
     ],
     blockers,
   };

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPaymentLifecyclePersistencePlan,
+  buildPaymentOperationsWorkflowPlan,
   buildStripeCheckoutExecutionReadiness,
   buildStripeCheckoutSessionDraft,
   buildStripeWebhookReconciliationPlan,
@@ -280,6 +281,167 @@ describe("payment policy engine", () => {
       "Payment amount must be positive.",
       "Missing idempotency key for lifecycle mutation.",
       "Provider payment intent id is required before finalizing paid or failed state.",
+    ]);
+  });
+
+  it("plans authorized Stripe refund execution with provider, audit, and idempotency controls", () => {
+    const plan = buildPaymentOperationsWorkflowPlan({
+      tenantId: "tenant_demo",
+      bookingRequestId: "booking_demo",
+      paymentId: "payment_demo",
+      action: "execute_refund",
+      amountCents: 20000,
+      refundAmountCents: 12500,
+      currency: "usd",
+      provider: "stripe",
+      occurredAt: "2026-06-09T10:00:00.000Z",
+      actorId: "artist_001",
+      idempotencyKey: "refund:tenant_demo:payment_demo:12500",
+      providerChargeId: "ch_001",
+      stripeRefundsEnabled: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      action: "execute_refund",
+      providerCall: "stripe.refunds.create",
+      requiresTransaction: true,
+      idempotencyKey: "refund:tenant_demo:payment_demo:12500",
+    });
+    expect(plan.writes.map((write) => write.model)).toEqual(["Refund", "Payment", "PaymentAuditLog", "IdempotencyKey"]);
+    expect(plan.writes.every((write) => write.tenantId === "tenant_demo")).toBe(true);
+    expect(plan.writes.find((write) => write.model === "PaymentAuditLog")?.payload).toMatchObject({
+      action: "execute_refund",
+      providerCall: "stripe.refunds.create",
+      refundAmountCents: 12500,
+      actorId: "artist_001",
+    });
+    expect(plan.blockers).toEqual([]);
+  });
+
+  it("plans no-show forfeiture, dispute evidence, receipt delivery, and accounting export writes", () => {
+    const forfeiture = buildPaymentOperationsWorkflowPlan({
+      tenantId: "tenant_demo",
+      bookingRequestId: "booking_demo",
+      paymentId: "payment_demo",
+      action: "record_no_show_forfeiture",
+      amountCents: 20000,
+      currency: "usd",
+      provider: "manual",
+      occurredAt: "2026-06-09T10:15:00.000Z",
+      actorId: "artist_001",
+      idempotencyKey: "no-show:tenant_demo:payment_demo",
+      noShowDecision: "forfeit_deposit",
+    });
+    const dispute = buildPaymentOperationsWorkflowPlan({
+      tenantId: "tenant_demo",
+      bookingRequestId: "booking_demo",
+      paymentId: "payment_demo",
+      action: "prepare_dispute_evidence",
+      amountCents: 20000,
+      currency: "usd",
+      provider: "stripe",
+      occurredAt: "2026-06-09T10:20:00.000Z",
+      actorId: "artist_001",
+      idempotencyKey: "dispute:tenant_demo:payment_demo",
+      providerChargeId: "ch_001",
+      evidenceFileIds: ["file_policy", "file_messages"],
+    });
+    const receipt = buildPaymentOperationsWorkflowPlan({
+      tenantId: "tenant_demo",
+      bookingRequestId: "booking_demo",
+      paymentId: "payment_demo",
+      action: "generate_receipt",
+      amountCents: 20000,
+      currency: "usd",
+      provider: "stripe",
+      occurredAt: "2026-06-09T10:25:00.000Z",
+      actorId: "artist_001",
+      idempotencyKey: "receipt:tenant_demo:payment_demo",
+      clientEmail: "client@example.com",
+      receiptNumber: "MARA-2026-00001",
+      receiptDeliveryConfigured: true,
+    });
+    const accountingExport = buildPaymentOperationsWorkflowPlan({
+      tenantId: "tenant_demo",
+      bookingRequestId: "booking_demo",
+      paymentId: "payment_demo",
+      action: "create_accounting_export",
+      amountCents: 20000,
+      currency: "usd",
+      provider: "stripe",
+      occurredAt: "2026-06-09T10:30:00.000Z",
+      actorId: "artist_001",
+      idempotencyKey: "export:tenant_demo:2026-06",
+      exportReviewerId: "reviewer_001",
+      taxReviewApproved: true,
+    });
+
+    expect(forfeiture.writes.map((write) => write.model)).toEqual(["Payment", "BookingStateEvent", "PaymentAuditLog", "IdempotencyKey"]);
+    expect(dispute.providerCall).toBe("stripe.disputes.update");
+    expect(dispute.writes.map((write) => write.model)).toEqual(["DisputeEvidence", "PaymentAuditLog", "IdempotencyKey"]);
+    expect(receipt.providerCall).toBe("receipt.delivery.send");
+    expect(receipt.writes.map((write) => write.model)).toEqual(["Receipt", "PaymentAuditLog", "IdempotencyKey"]);
+    expect(accountingExport.providerCall).toBe("accounting.export.write");
+    expect(accountingExport.writes.map((write) => write.model)).toEqual(["AccountingExport", "PaymentAuditLog", "IdempotencyKey"]);
+  });
+
+  it("blocks payment operations that lack authorization, provider readiness, receipts, or accounting review", () => {
+    const refund = buildPaymentOperationsWorkflowPlan({
+      tenantId: "",
+      bookingRequestId: "",
+      paymentId: "",
+      action: "execute_refund",
+      amountCents: 10000,
+      refundAmountCents: 20000,
+      currency: "usd",
+      provider: "stripe",
+      occurredAt: "2026-06-09T10:00:00.000Z",
+    });
+    const receipt = buildPaymentOperationsWorkflowPlan({
+      tenantId: "tenant_demo",
+      bookingRequestId: "booking_demo",
+      paymentId: "payment_demo",
+      action: "generate_receipt",
+      amountCents: 10000,
+      currency: "usd",
+      provider: "stripe",
+      occurredAt: "2026-06-09T10:00:00.000Z",
+      actorId: "artist_001",
+      idempotencyKey: "receipt:tenant_demo:payment_demo",
+    });
+    const accountingExport = buildPaymentOperationsWorkflowPlan({
+      tenantId: "tenant_demo",
+      bookingRequestId: "booking_demo",
+      paymentId: "payment_demo",
+      action: "create_accounting_export",
+      amountCents: 10000,
+      currency: "usd",
+      provider: "stripe",
+      occurredAt: "2026-06-09T10:00:00.000Z",
+      actorId: "artist_001",
+      idempotencyKey: "export:tenant_demo:2026-06",
+    });
+
+    expect(refund.status).toBe("blocked");
+    expect(refund.blockers).toEqual([
+      "Missing tenant scope.",
+      "Missing booking request id.",
+      "Missing payment id.",
+      "Payment operations require an actor id for authorization and audit attribution.",
+      "Missing idempotency key for payment operation.",
+      "Stripe refunds must be enabled before executing provider refunds.",
+      "Stripe refund requires a provider charge or payment intent id.",
+      "Refund amount must be positive and no greater than the captured payment amount.",
+    ]);
+    expect(receipt.blockers).toEqual([
+      "Receipt generation requires a receipt number.",
+      "Receipt delivery requires a client email address.",
+      "Receipt delivery provider must be configured before sending receipts.",
+    ]);
+    expect(accountingExport.blockers).toEqual([
+      "Accounting export requires tax/accounting review approval.",
+      "Accounting export requires a reviewer id.",
     ]);
   });
 });
