@@ -145,17 +145,45 @@ function tryGitOutput(args) {
   }
 }
 
-function buildGapTrackerDiff(baseRef, headRef) {
+function tryGit(args) {
   try {
-    execFileSync("git", ["merge-base", baseRef, headRef], {
+    execFileSync("git", args, {
       cwd: root,
       stdio: "ignore",
     });
-
-    return gitOutput(["diff", "--unified=0", `${baseRef}...${headRef}`, "--", "GAP_TRACKER.md"]);
+    return true;
   } catch {
-    console.warn("Gap tracker diff audit: no merge base available; falling back to direct base/head diff.");
+    return false;
   }
+}
+
+function hasMergeBase(baseRef, headRef) {
+  return tryGit(["merge-base", baseRef, headRef]);
+}
+
+function deepenHistoryForMergeBase(baseRef, headRef) {
+  const before = hasMergeBase(baseRef, headRef);
+  if (before) {
+    return true;
+  }
+
+  console.warn("Gap tracker diff audit: no merge base available; trying to deepen PR checkout history.");
+
+  const unshallowOk = tryGit(["fetch", "--no-tags", "--unshallow", "origin"]);
+  if (unshallowOk && hasMergeBase(baseRef, headRef)) {
+    return true;
+  }
+
+  const deepenOk = tryGit(["fetch", "--no-tags", "--deepen=100", "origin"]);
+  return deepenOk && hasMergeBase(baseRef, headRef);
+}
+
+function buildGapTrackerDiff(baseRef, headRef) {
+  if (deepenHistoryForMergeBase(baseRef, headRef)) {
+    return gitOutput(["diff", "--unified=0", `${baseRef}...${headRef}`, "--", "GAP_TRACKER.md"]);
+  }
+
+  console.warn("Gap tracker diff audit: still no merge base available after fetch; falling back to direct base/head diff.");
 
   try {
     return gitOutput(["diff", "--unified=0", baseRef, headRef, "--", "GAP_TRACKER.md"]);
