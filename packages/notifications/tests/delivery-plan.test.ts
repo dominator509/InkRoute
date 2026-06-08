@@ -8,6 +8,8 @@ import {
   buildExpoPushRegistrationPlan,
   buildExpoPushTapRoutingPlan,
   buildNotificationPersistencePlan,
+  buildNotificationSchedulerPlan,
+  buildAppointmentNotificationSequence,
   buildProviderEventReconciliationPlan,
   buildSmsProviderSendPlan,
   interpretSmsWebhook,
@@ -591,5 +593,125 @@ describe("notification delivery planning", () => {
       "Notification destinations must be redacted or hashed before persistence.",
       "Message body previews must be redacted before persistence.",
     ]);
+  });
+
+  it("plans notification sequence scheduling with appointment-relative offsets and worker audit writes", () => {
+    const steps = buildAppointmentNotificationSequence().filter((step) => step.status === "ready_to_queue");
+    const plan = buildNotificationSchedulerPlan({
+      tenantId: "tenant_001",
+      action: "schedule_sequence",
+      now: "2026-06-08T10:00:00.000Z",
+      queueStrategy: "database_polling",
+      workerEnabled: true,
+      idempotencyStoreAvailable: true,
+      auditLogPersistenceAvailable: true,
+      idempotencyKey: "scheduler:tenant_001:appointment_001",
+      appointmentId: "appointment_001",
+      appointmentStartsAt: "2026-06-10T18:00:00.000Z",
+      sequenceSteps: steps,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.scheduledJobs.map((job) => job.templateKey)).toEqual(["appointment_prep_72h", "appointment_prep_24h", "reschedule_notice"]);
+    expect(plan.scheduledJobs[0]).toMatchObject({
+      scheduledAt: "2026-06-07T18:00:00.000Z",
+      scheduledOffsetMinutes: -4320,
+    });
+    expect(plan.writes.map((write) => write.model)).toEqual(["NotificationJob", "NotificationWorkerAuditLog", "IdempotencyKey"]);
+    expect(plan.requiredControls).toContain("Cancel future jobs when appointments are rescheduled, cancelled, or completed early.");
+  });
+
+  it("plans scheduler cancellation, retry backoff, and dead-letter audit writes", () => {
+    const cancellation = buildNotificationSchedulerPlan({
+      tenantId: "tenant_001",
+      action: "cancel_scheduled_jobs",
+      now: "2026-06-08T10:00:00.000Z",
+      queueStrategy: "managed_queue",
+      workerEnabled: true,
+      idempotencyStoreAvailable: true,
+      auditLogPersistenceAvailable: true,
+      idempotencyKey: "scheduler-cancel:tenant_001:appointment_001",
+      actorId: "artist_001",
+      appointmentId: "appointment_001",
+      cancellationReason: "Appointment was rescheduled.",
+    });
+    const retry = buildNotificationSchedulerPlan({
+      tenantId: "tenant_001",
+      action: "retry_failed_job",
+      now: "2026-06-08T10:00:00.000Z",
+      queueStrategy: "managed_queue",
+      workerEnabled: true,
+      idempotencyStoreAvailable: true,
+      auditLogPersistenceAvailable: true,
+      idempotencyKey: "scheduler-retry:tenant_001:job_001:2",
+      jobId: "job_001",
+      attempt: 2,
+      maxAttempts: 5,
+    });
+    const deadLetter = buildNotificationSchedulerPlan({
+      tenantId: "tenant_001",
+      action: "dead_letter_job",
+      now: "2026-06-08T10:00:00.000Z",
+      queueStrategy: "managed_queue",
+      workerEnabled: true,
+      idempotencyStoreAvailable: true,
+      auditLogPersistenceAvailable: true,
+      idempotencyKey: "scheduler-dead-letter:tenant_001:job_001",
+      actorId: "system",
+      jobId: "job_001",
+      cancellationReason: "Provider failed after max attempts.",
+    });
+
+    expect(cancellation.writes.map((write) => write.model)).toEqual(["NotificationJob", "NotificationWorkerAuditLog", "IdempotencyKey"]);
+    expect(retry.status).toBe("ready");
+    expect(retry.retryDelaySeconds).toBe(120);
+    expect(deadLetter.writes.map((write) => write.model)).toEqual(["NotificationJob", "DeadLetterJob", "NotificationWorkerAuditLog", "IdempotencyKey"]);
+  });
+
+  it("blocks scheduler work without queue strategy, worker, idempotency, audit logs, provider readiness, or dead-letter path", () => {
+    const scheduleBlocked = buildNotificationSchedulerPlan({
+      tenantId: "",
+      action: "schedule_sequence",
+      now: "2026-06-08T10:00:00.000Z",
+      queueStrategy: "none",
+      workerEnabled: false,
+      idempotencyStoreAvailable: false,
+      auditLogPersistenceAvailable: false,
+      sequenceSteps: buildAppointmentNotificationSequence(),
+    });
+    const processBlocked = buildNotificationSchedulerPlan({
+      tenantId: "tenant_001",
+      action: "process_due_job",
+      now: "2026-06-08T10:00:00.000Z",
+      queueStrategy: "managed_queue",
+      workerEnabled: true,
+      idempotencyStoreAvailable: true,
+      auditLogPersistenceAvailable: true,
+      idempotencyKey: "scheduler-process:tenant_001",
+      providerReady: false,
+    });
+    const retryBlocked = buildNotificationSchedulerPlan({
+      tenantId: "tenant_001",
+      action: "retry_failed_job",
+      now: "2026-06-08T10:00:00.000Z",
+      queueStrategy: "managed_queue",
+      workerEnabled: true,
+      idempotencyStoreAvailable: true,
+      auditLogPersistenceAvailable: true,
+      idempotencyKey: "scheduler-retry:tenant_001:job_001:5",
+      jobId: "job_001",
+      attempt: 5,
+      maxAttempts: 5,
+    });
+
+    expect(scheduleBlocked.status).toBe("blocked");
+    expect(scheduleBlocked.blockers).toContain("Notification queue strategy must be selected before scheduling jobs.");
+    expect(scheduleBlocked.blockers).toContain("Blocked automation sequence steps cannot be scheduled.");
+    expect(scheduleBlocked.blockers).toContain("Negative scheduled offsets require an appointment start timestamp.");
+    expect(processBlocked.blockers).toEqual([
+      "Scheduler job id is required for worker processing.",
+      "Provider send plan must be ready before processing due notification jobs.",
+    ]);
+    expect(retryBlocked.blockers).toEqual(["Retry attempt has reached max attempts and must be dead-lettered."]);
   });
 });

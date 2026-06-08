@@ -1330,6 +1330,179 @@ export function buildNotificationPersistencePlan(input: NotificationPersistenceP
   };
 }
 
+export type NotificationQueueStrategy = "none" | "database_polling" | "managed_queue";
+export type NotificationSchedulerAction =
+  | "schedule_sequence"
+  | "cancel_scheduled_jobs"
+  | "process_due_job"
+  | "retry_failed_job"
+  | "dead_letter_job";
+
+export type NotificationSchedulerWriteModel =
+  | "NotificationJob"
+  | "NotificationDelivery"
+  | "NotificationWorkerAuditLog"
+  | "DeadLetterJob"
+  | "IdempotencyKey";
+
+export interface ScheduledNotificationJobPlan {
+  templateKey: NotificationTemplateKey;
+  scheduledAt: string;
+  scheduledOffsetMinutes: number;
+  recommendedChannels: readonly NotificationChannel[];
+}
+
+export interface NotificationSchedulerPlanInput {
+  tenantId: string;
+  action: NotificationSchedulerAction;
+  now: string;
+  queueStrategy: NotificationQueueStrategy;
+  workerEnabled: boolean;
+  idempotencyStoreAvailable: boolean;
+  auditLogPersistenceAvailable: boolean;
+  idempotencyKey?: string;
+  actorId?: string;
+  jobId?: string;
+  appointmentId?: string;
+  bookingRequestId?: string;
+  appointmentStartsAt?: string;
+  sequenceSteps?: readonly NotificationSequenceStep[];
+  attempt?: number;
+  maxAttempts?: number;
+  providerReady?: boolean;
+  cancellationReason?: string;
+}
+
+export interface NotificationSchedulerWrite {
+  model: NotificationSchedulerWriteModel;
+  tenantId: string;
+  payload: Record<string, unknown>;
+}
+
+export interface NotificationSchedulerPlan {
+  status: "ready" | "blocked";
+  action: NotificationSchedulerAction;
+  queueStrategy: NotificationQueueStrategy;
+  requiresTransaction: true;
+  idempotencyKey: string | null;
+  scheduledJobs: readonly ScheduledNotificationJobPlan[];
+  retryDelaySeconds: number | null;
+  writes: readonly NotificationSchedulerWrite[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+function notificationSchedulerWriteModels(action: NotificationSchedulerAction): NotificationSchedulerWriteModel[] {
+  switch (action) {
+    case "schedule_sequence":
+      return ["NotificationJob", "NotificationWorkerAuditLog", "IdempotencyKey"];
+    case "cancel_scheduled_jobs":
+      return ["NotificationJob", "NotificationWorkerAuditLog", "IdempotencyKey"];
+    case "process_due_job":
+      return ["NotificationJob", "NotificationDelivery", "NotificationWorkerAuditLog", "IdempotencyKey"];
+    case "retry_failed_job":
+      return ["NotificationJob", "NotificationWorkerAuditLog", "IdempotencyKey"];
+    case "dead_letter_job":
+      return ["NotificationJob", "DeadLetterJob", "NotificationWorkerAuditLog", "IdempotencyKey"];
+  }
+}
+
+function addMinutesToIso(value: string, minutes: number): string {
+  return new Date(new Date(value).getTime() + minutes * 60_000).toISOString();
+}
+
+function retryDelaySeconds(attempt: number): number {
+  return Math.min(3600, Math.max(60, 60 * 2 ** Math.max(attempt - 1, 0)));
+}
+
+export function buildNotificationSchedulerPlan(input: NotificationSchedulerPlanInput): NotificationSchedulerPlan {
+  const blockers: string[] = [];
+  const attempt = input.attempt ?? 1;
+  const maxAttempts = input.maxAttempts ?? 5;
+  const steps = input.sequenceSteps ?? [];
+
+  if (!input.tenantId.trim()) blockers.push("Missing tenant scope.");
+  if (!input.idempotencyKey?.trim()) blockers.push("Missing idempotency key for notification scheduler operation.");
+  if (input.queueStrategy === "none") blockers.push("Notification queue strategy must be selected before scheduling jobs.");
+  if (!input.workerEnabled) blockers.push("Notification worker must be enabled before queue processing.");
+  if (!input.idempotencyStoreAvailable) blockers.push("Idempotency store must be available before scheduling or processing jobs.");
+  if (!input.auditLogPersistenceAvailable) blockers.push("Notification worker audit-log persistence must be available.");
+  if ((input.action === "cancel_scheduled_jobs" || input.action === "dead_letter_job") && !input.actorId?.trim()) blockers.push("Scheduler cancellation and dead-letter actions require an actor id.");
+  if ((input.action === "process_due_job" || input.action === "retry_failed_job" || input.action === "dead_letter_job") && !input.jobId?.trim()) blockers.push("Scheduler job id is required for worker processing.");
+  if (input.action === "process_due_job" && !input.providerReady) blockers.push("Provider send plan must be ready before processing due notification jobs.");
+  if (input.action === "schedule_sequence" && steps.length === 0) blockers.push("Scheduling requires at least one automation sequence step.");
+  if (input.action === "schedule_sequence" && steps.some((step) => step.status === "blocked")) blockers.push("Blocked automation sequence steps cannot be scheduled.");
+  if (input.action === "schedule_sequence" && steps.some((step) => step.scheduledOffsetMinutes < 0) && !input.appointmentStartsAt?.trim()) blockers.push("Negative scheduled offsets require an appointment start timestamp.");
+  if (input.action === "retry_failed_job" && attempt >= maxAttempts) blockers.push("Retry attempt has reached max attempts and must be dead-lettered.");
+  if (input.action === "dead_letter_job" && !input.cancellationReason?.trim()) blockers.push("Dead-lettering requires a failure reason.");
+  if (input.action === "cancel_scheduled_jobs" && !input.cancellationReason?.trim()) blockers.push("Cancelling scheduled jobs requires a cancellation reason.");
+
+  const scheduledJobs = input.action === "schedule_sequence"
+    ? steps
+        .filter((step) => step.status !== "blocked")
+        .map((step): ScheduledNotificationJobPlan => {
+          const base = step.scheduledOffsetMinutes < 0 ? input.appointmentStartsAt ?? input.now : input.now;
+          return {
+            templateKey: step.templateKey,
+            scheduledAt: addMinutesToIso(base, step.scheduledOffsetMinutes),
+            scheduledOffsetMinutes: step.scheduledOffsetMinutes,
+            recommendedChannels: step.recommendedChannels,
+          };
+        })
+    : [];
+  const retryDelay = input.action === "retry_failed_job" && attempt < maxAttempts ? retryDelaySeconds(attempt) : null;
+  const basePayload = {
+    action: input.action,
+    jobId: input.jobId ?? null,
+    appointmentId: input.appointmentId ?? null,
+    bookingRequestId: input.bookingRequestId ?? null,
+    actorId: input.actorId ?? null,
+    attempt,
+    maxAttempts,
+    retryDelaySeconds: retryDelay,
+    scheduledJobCount: scheduledJobs.length,
+    cancellationReason: input.cancellationReason ?? null,
+    idempotencyKey: input.idempotencyKey ?? null,
+  };
+  const writes = notificationSchedulerWriteModels(input.action).map((model): NotificationSchedulerWrite => ({
+    model,
+    tenantId: input.tenantId,
+    payload: model === "NotificationJob"
+      ? {
+          ...basePayload,
+          scheduledJobs,
+        }
+      : model === "IdempotencyKey"
+        ? {
+            key: input.idempotencyKey ?? null,
+            action: input.action,
+            jobId: input.jobId ?? null,
+            appointmentId: input.appointmentId ?? null,
+          }
+        : basePayload,
+  }));
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    action: input.action,
+    queueStrategy: input.queueStrategy,
+    requiresTransaction: true,
+    idempotencyKey: input.idempotencyKey?.trim() ? input.idempotencyKey : null,
+    scheduledJobs,
+    retryDelaySeconds: retryDelay,
+    writes,
+    requiredControls: [
+      "Persist scheduled NotificationJob rows before provider delivery attempts.",
+      "Claim idempotency keys for scheduling, cancellation, processing, retry, and dead-letter operations.",
+      "Cancel future jobs when appointments are rescheduled, cancelled, or completed early.",
+      "Use bounded exponential backoff and dead-letter jobs after max attempts.",
+      "Persist NotificationWorkerAuditLog for queue decisions, retries, cancellations, and dead letters.",
+      "Do not process due jobs until channel-specific provider send plans are ready.",
+    ],
+    blockers,
+  };
+}
+
 export const providerBoundaryMatrix: Array<{ provider: NotificationProvider; channel: NotificationChannel; credentialEnvVars: string[]; productionRequirement: string; gapId: string }> = [
   { provider: "resend", channel: "email", credentialEnvVars: ["RESEND_API_KEY", "EMAIL_FROM"], productionRequirement: "Transactional email domain, sender verification, provider webhooks, unsubscribe footer, delivery logs.", gapId: "GAP-061" },
   { provider: "twilio", channel: "sms", credentialEnvVars: ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_MESSAGING_SERVICE_SID"], productionRequirement: "SMS consent capture, STOP/HELP handling, quiet hours, delivery callbacks, phone number compliance.", gapId: "GAP-062" },
