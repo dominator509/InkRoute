@@ -154,6 +154,28 @@ export interface ProviderWebhookInterpretation {
   notes: string[];
 }
 
+export interface ProviderEventReconciliationInput {
+  provider: NotificationProvider;
+  eventId: string;
+  eventType: string;
+  providerMessageId?: string;
+  inboundBody?: string;
+  alreadyProcessedEventIds?: readonly string[];
+}
+
+export interface ProviderEventReconciliationPlan {
+  provider: NotificationProvider;
+  eventId: string;
+  idempotencyKey: string;
+  interpretation: ProviderWebhookInterpretation;
+  shouldUpdateDeliveryLog: boolean;
+  shouldSuppressDestination: boolean;
+  shouldCreateInboundThread: boolean;
+  shouldMarkPushTokenInactive: boolean;
+  blockers: readonly string[];
+  requiredChecks: readonly string[];
+}
+
 export const notificationTemplateCatalog: Record<NotificationTemplateKey, { purpose: MessagePurpose; defaultChannels: NotificationChannel[]; requiresHumanReview?: boolean; sensitive?: boolean }> = {
   booking_request_received: { purpose: "transactional", defaultChannels: ["email", "push", "in_app"] },
   booking_request_needs_info: { purpose: "transactional", defaultChannels: ["email", "sms", "push", "in_app"] },
@@ -688,6 +710,62 @@ export function interpretPushReceipt(status: string): ProviderWebhookInterpretat
     requiresSignatureVerification: false,
     requiresInboundMessageHandling: false,
     notes: ["Expo push receipts should be polled or processed by worker.", "Invalid tokens should be marked inactive without logging full token values."],
+  };
+}
+
+export function buildProviderEventReconciliationPlan(input: ProviderEventReconciliationInput): ProviderEventReconciliationPlan {
+  const interpretation = input.provider === "resend"
+    ? interpretEmailWebhook(input.eventType)
+    : input.provider === "twilio"
+      ? interpretSmsWebhook(input.eventType, input.inboundBody)
+      : input.provider === "expo"
+        ? interpretPushReceipt(input.eventType)
+        : {
+            provider: input.provider,
+            eventType: input.eventType,
+            normalizedStatus: "queued",
+            shouldUpdateDeliveryLog: false,
+            requiresSignatureVerification: false,
+            requiresInboundMessageHandling: false,
+            notes: ["Unsupported notification provider event should be logged and ignored."],
+          } satisfies ProviderWebhookInterpretation;
+  const blockers: string[] = [];
+  const requiredChecks = [
+    "Verify provider signature or trusted receipt source before reconciliation.",
+    "Resolve tenant-scoped NotificationDelivery by provider message id or internal idempotency key.",
+    "Persist provider event id for replay protection before mutating delivery state.",
+    "Store only redacted destinations and body previews in logs.",
+  ];
+  const normalizedInbound = input.inboundBody?.trim().toLowerCase();
+  const shouldSuppressDestination =
+    (input.provider === "twilio" && (normalizedInbound === "stop" || normalizedInbound === "unsubscribe")) ||
+    (input.provider === "resend" && /bounce|complaint|unsubscribe/i.test(input.eventType));
+  const shouldMarkPushTokenInactive = input.provider === "expo" && /DeviceNotRegistered|invalid|notregistered/i.test(input.eventType);
+
+  if (!input.eventId.trim()) {
+    blockers.push("Missing provider event id.");
+  }
+  if (input.alreadyProcessedEventIds?.includes(input.eventId)) {
+    blockers.push("Provider event id was already processed.");
+  }
+  if (interpretation.shouldUpdateDeliveryLog && !input.providerMessageId) {
+    blockers.push("Provider message id is required to update an existing delivery log.");
+  }
+  if (input.provider === "system" || input.provider === "in_app") {
+    blockers.push("Provider event reconciliation only supports external email, SMS, and push providers.");
+  }
+
+  return {
+    provider: input.provider,
+    eventId: input.eventId,
+    idempotencyKey: `notification-provider-event:${input.provider}:${input.eventId}`,
+    interpretation,
+    shouldUpdateDeliveryLog: blockers.length === 0 && interpretation.shouldUpdateDeliveryLog,
+    shouldSuppressDestination,
+    shouldCreateInboundThread: blockers.length === 0 && interpretation.requiresInboundMessageHandling && !shouldSuppressDestination,
+    shouldMarkPushTokenInactive,
+    blockers,
+    requiredChecks,
   };
 }
 
