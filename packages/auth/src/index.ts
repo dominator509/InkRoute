@@ -530,3 +530,243 @@ export function evaluateMobileSessionGate(input: MobileSessionGateInput): Mobile
     reason: "Mobile session is secure-store backed, biometric-unlocked when required, tenant-scoped, and authorized.",
   };
 }
+
+export type ApiRouteGuardAction = "allow" | "reject_401" | "reject_403" | "reject_409" | "reject_419";
+export type ApiRouteGuardStatus = AuthorizationDecisionStatus | "csrf_failed";
+
+export interface ApiRouteGuardInput {
+  context?: TenantAccessContext | null;
+  tenantId: string;
+  permission: Permission;
+  routePath: string;
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  now: string;
+  csrfRequired?: boolean;
+  csrfValid?: boolean;
+}
+
+export interface ApiRouteGuardDecision {
+  action: ApiRouteGuardAction;
+  allowed: boolean;
+  status: ApiRouteGuardStatus;
+  statusCode: 200 | 401 | 403 | 409 | 419;
+  tenantId: string;
+  permission: Permission;
+  routePath: string;
+  method: ApiRouteGuardInput["method"];
+  auditAction: string;
+  reason: string;
+  responseHeaders: Record<string, string>;
+  decision?: AuthorizationDecision;
+}
+
+function mutatesState(method: ApiRouteGuardInput["method"]): boolean {
+  return method !== "GET";
+}
+
+export function evaluateApiRouteGuard(input: ApiRouteGuardInput): ApiRouteGuardDecision {
+  const auditAction = `api:${input.method}:${input.permission}:${input.routePath}`;
+  const responseHeaders = {
+    "cache-control": "no-store",
+    "x-authz-audit-action": auditAction,
+  };
+
+  if ((input.csrfRequired ?? mutatesState(input.method)) && mutatesState(input.method) && !input.csrfValid) {
+    return {
+      action: "reject_419",
+      allowed: false,
+      status: "csrf_failed",
+      statusCode: 419,
+      tenantId: input.tenantId,
+      permission: input.permission,
+      routePath: input.routePath,
+      method: input.method,
+      auditAction,
+      reason: "Mutating API route requires a valid CSRF/session binding token.",
+      responseHeaders,
+    };
+  }
+
+  const decision = evaluateTenantAuthorization({
+    ...(input.context !== undefined ? { context: input.context } : {}),
+    tenantId: input.tenantId,
+    permission: input.permission,
+    now: input.now,
+    auditAction,
+  });
+
+  if (decision.allowed) {
+    return {
+      action: "allow",
+      allowed: true,
+      status: "allowed",
+      statusCode: 200,
+      tenantId: input.tenantId,
+      permission: input.permission,
+      routePath: input.routePath,
+      method: input.method,
+      auditAction,
+      reason: decision.reason,
+      responseHeaders,
+      decision,
+    };
+  }
+
+  if (decision.status === "tenant_mismatch") {
+    return {
+      action: "reject_409",
+      allowed: false,
+      status: "tenant_mismatch",
+      statusCode: 409,
+      tenantId: input.tenantId,
+      permission: input.permission,
+      routePath: input.routePath,
+      method: input.method,
+      auditAction,
+      reason: decision.reason,
+      responseHeaders,
+      decision,
+    };
+  }
+
+  if (decision.status === "unauthenticated" || decision.status === "session_expired") {
+    return {
+      action: "reject_401",
+      allowed: false,
+      status: decision.status,
+      statusCode: 401,
+      tenantId: input.tenantId,
+      permission: input.permission,
+      routePath: input.routePath,
+      method: input.method,
+      auditAction,
+      reason: decision.reason,
+      responseHeaders,
+      decision,
+    };
+  }
+
+  return {
+    action: "reject_403",
+    allowed: false,
+    status: decision.status,
+    statusCode: 403,
+    tenantId: input.tenantId,
+    permission: input.permission,
+    routePath: input.routePath,
+    method: input.method,
+    auditAction,
+    reason: decision.reason,
+    responseHeaders,
+    decision,
+  };
+}
+
+export interface FieldAuthorizationPolicy {
+  field: string;
+  permission: Permission;
+  sensitivity: "public" | "tenant" | "client_private" | "medical" | "payment" | "system";
+}
+
+export interface FieldAuthorizationInput {
+  context?: TenantAccessContext | null;
+  tenantId: string;
+  resource: string;
+  fields: readonly string[];
+  policies: readonly FieldAuthorizationPolicy[];
+  now: string;
+}
+
+export interface FieldAuthorizationDecision {
+  resource: string;
+  allowedFields: readonly string[];
+  deniedFields: readonly { field: string; permission: Permission; sensitivity: FieldAuthorizationPolicy["sensitivity"]; status: AuthorizationDecisionStatus }[];
+  redactionPolicy: "allow_all" | "redact_denied_fields";
+  auditActions: readonly string[];
+}
+
+export function evaluateFieldAuthorization(input: FieldAuthorizationInput): FieldAuthorizationDecision {
+  const policies = new Map(input.policies.map((policy) => [policy.field, policy]));
+  const allowedFields: string[] = [];
+  const deniedFields: Array<{ field: string; permission: Permission; sensitivity: FieldAuthorizationPolicy["sensitivity"]; status: AuthorizationDecisionStatus }> = [];
+  const auditActions: string[] = [];
+
+  for (const field of input.fields) {
+    const policy = policies.get(field);
+    if (!policy) {
+      allowedFields.push(field);
+      continue;
+    }
+
+    const auditAction = `field:${input.resource}:${field}:${policy.permission}`;
+    auditActions.push(auditAction);
+    const decision = evaluateTenantAuthorization({
+      ...(input.context !== undefined ? { context: input.context } : {}),
+      tenantId: input.tenantId,
+      permission: policy.permission,
+      now: input.now,
+      auditAction,
+    });
+
+    if (decision.allowed) {
+      allowedFields.push(field);
+    } else {
+      deniedFields.push({
+        field,
+        permission: policy.permission,
+        sensitivity: policy.sensitivity,
+        status: decision.status,
+      });
+    }
+  }
+
+  return {
+    resource: input.resource,
+    allowedFields,
+    deniedFields,
+    redactionPolicy: deniedFields.length === 0 ? "allow_all" : "redact_denied_fields",
+    auditActions,
+  };
+}
+
+export interface SessionPersistencePlanInput {
+  authProviderConfigured: boolean;
+  databaseSessionStoreConfigured: boolean;
+  secureCookieConfigured: boolean;
+  mobileSecureStoreConfigured: boolean;
+  revocationStoreConfigured: boolean;
+  auditLogConfigured: boolean;
+}
+
+export interface SessionPersistencePlan {
+  status: "ready" | "blocked";
+  blockers: readonly string[];
+  requiredTables: readonly string[];
+  requiredRuntimeControls: readonly string[];
+  auditEvents: readonly string[];
+}
+
+export function buildSessionPersistencePlan(input: SessionPersistencePlanInput): SessionPersistencePlan {
+  const blockers: string[] = [];
+  if (!input.authProviderConfigured) blockers.push("Auth provider must be selected and configured before provider-backed login/logout is ready.");
+  if (!input.databaseSessionStoreConfigured) blockers.push("Database session/member lookup must resolve tenant membership server-side.");
+  if (!input.secureCookieConfigured) blockers.push("Dashboard session cookies must be HttpOnly, Secure, SameSite, rotating, and CSRF-bound.");
+  if (!input.mobileSecureStoreConfigured) blockers.push("Mobile refresh tokens must be stored in secure device storage behind biometric gates when required.");
+  if (!input.revocationStoreConfigured) blockers.push("Session revocation persistence must be checked before every sensitive route decision.");
+  if (!input.auditLogConfigured) blockers.push("Auth decisions, denials, revocations, tenant switches, and provider callbacks must write audit logs.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    blockers,
+    requiredTables: ["User", "TenantMember", "CustomRole", "AuditLog"],
+    requiredRuntimeControls: [
+      "server-side tenant membership resolution",
+      "route-level permission guard",
+      "field-level authorization/redaction",
+      "CSRF-bound mutating API routes",
+      "secure mobile refresh token storage",
+      "session revocation check",
+    ],
+    auditEvents: ["auth.login", "auth.logout", "auth.refresh", "auth.revoked", "authz.allowed", "authz.denied", "tenant.switch"],
+  };
+}

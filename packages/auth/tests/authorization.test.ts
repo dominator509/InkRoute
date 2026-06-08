@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   assertPermission,
+  buildSessionPersistencePlan,
+  evaluateApiRouteGuard,
   evaluateDashboardRouteGuard,
+  evaluateFieldAuthorization,
   evaluateMobileSessionGate,
   evaluateTenantAuthorization,
   hasPermission,
@@ -374,5 +377,122 @@ describe("auth authorization helpers", () => {
       action: "logout",
       status: "logout_requested",
     });
+  });
+
+  it("maps API route guards to no-store 401, 403, 409, 419, or allow decisions", () => {
+    expect(
+      evaluateApiRouteGuard({
+        context: ownerContext,
+        tenantId: "tenant_001",
+        permission: "release:write",
+        routePath: "/api/releases",
+        method: "POST",
+        now: "2026-06-08T01:00:00.000Z",
+        csrfValid: false,
+      }),
+    ).toMatchObject({
+      action: "reject_419",
+      allowed: false,
+      statusCode: 419,
+      responseHeaders: { "cache-control": "no-store" },
+    });
+
+    expect(
+      evaluateApiRouteGuard({
+        context: null,
+        tenantId: "tenant_001",
+        permission: "booking:read",
+        routePath: "/api/bookings",
+        method: "GET",
+        now: "2026-06-08T01:00:00.000Z",
+      }),
+    ).toMatchObject({ action: "reject_401", status: "unauthenticated", statusCode: 401 });
+
+    expect(
+      evaluateApiRouteGuard({
+        context: ownerContext,
+        tenantId: "tenant_002",
+        permission: "booking:read",
+        routePath: "/api/bookings",
+        method: "GET",
+        now: "2026-06-08T01:00:00.000Z",
+      }),
+    ).toMatchObject({ action: "reject_409", status: "tenant_mismatch", statusCode: 409 });
+
+    expect(
+      evaluateApiRouteGuard({
+        context: { ...ownerContext, role: "assistant" },
+        tenantId: "tenant_001",
+        permission: "settings:write",
+        routePath: "/api/settings",
+        method: "PATCH",
+        now: "2026-06-08T01:00:00.000Z",
+        csrfValid: true,
+      }),
+    ).toMatchObject({ action: "reject_403", status: "permission_denied", statusCode: 403 });
+
+    expect(
+      evaluateApiRouteGuard({
+        context: ownerContext,
+        tenantId: "tenant_001",
+        permission: "release:write",
+        routePath: "/api/releases",
+        method: "POST",
+        now: "2026-06-08T01:00:00.000Z",
+        csrfValid: true,
+      }),
+    ).toMatchObject({
+      action: "allow",
+      allowed: true,
+      statusCode: 200,
+      auditAction: "api:POST:release:write:/api/releases",
+    });
+  });
+
+  it("redacts field-level data when a role lacks the required permission", () => {
+    const decision = evaluateFieldAuthorization({
+      context: { ...ownerContext, role: "assistant" },
+      tenantId: "tenant_001",
+      resource: "client-profile",
+      fields: ["preferredName", "email", "medicalNotes", "paymentProviderId"],
+      policies: [
+        { field: "email", permission: "client:read", sensitivity: "client_private" },
+        { field: "medicalNotes", permission: "client:write", sensitivity: "medical" },
+        { field: "paymentProviderId", permission: "payment:read", sensitivity: "payment" },
+      ],
+      now: "2026-06-08T01:00:00.000Z",
+    });
+
+    expect(decision.allowedFields).toEqual(["preferredName", "email"]);
+    expect(decision.redactionPolicy).toBe("redact_denied_fields");
+    expect(decision.deniedFields).toEqual([
+      { field: "medicalNotes", permission: "client:write", sensitivity: "medical", status: "permission_denied" },
+      { field: "paymentProviderId", permission: "payment:read", sensitivity: "payment", status: "permission_denied" },
+    ]);
+    expect(decision.auditActions).toContain("field:client-profile:medicalNotes:client:write");
+  });
+
+  it("documents provider-backed session persistence gates before production auth is ready", () => {
+    const plan = buildSessionPersistencePlan({
+      authProviderConfigured: false,
+      databaseSessionStoreConfigured: false,
+      secureCookieConfigured: false,
+      mobileSecureStoreConfigured: false,
+      revocationStoreConfigured: false,
+      auditLogConfigured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.requiredTables).toEqual(["User", "TenantMember", "CustomRole", "AuditLog"]);
+    expect(plan.requiredRuntimeControls).toEqual(
+      expect.arrayContaining(["field-level authorization/redaction", "CSRF-bound mutating API routes", "session revocation check"]),
+    );
+    expect(plan.auditEvents).toContain("authz.denied");
+    expect(plan.blockers).toEqual(
+      expect.arrayContaining([
+        "Auth provider must be selected and configured before provider-backed login/logout is ready.",
+        "Session revocation persistence must be checked before every sensitive route decision.",
+      ]),
+    );
   });
 });
