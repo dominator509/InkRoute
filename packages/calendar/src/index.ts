@@ -267,6 +267,52 @@ export interface TimezoneRecurrenceQaPlan {
   blockers: readonly string[];
 }
 
+export type TravelPublishMutationAction = "publish" | "update" | "unpublish" | "rollback";
+
+export type TravelPublishMutationWriteModel =
+  | "TravelStop"
+  | "PublicTravelPage"
+  | "CityWaitlistMatch"
+  | "NotificationJob"
+  | "MobileSyncEvent"
+  | "DashboardSyncEvent"
+  | "WebRevalidationEvent"
+  | "TravelAuditLog"
+  | "IdempotencyKey";
+
+export interface TravelPublishMutationPlanInput {
+  tenantId: string;
+  artistId: string;
+  actorId?: string;
+  action: TravelPublishMutationAction;
+  stop: TravelStop;
+  previousStop?: TravelStop;
+  idempotencyKey?: string;
+  consentedWaitlistClientIds?: readonly string[];
+  changedFieldNames?: readonly string[];
+  providerActionsSucceeded?: boolean;
+  rollbackReason?: string;
+}
+
+export interface TravelPublishMutationWrite {
+  model: TravelPublishMutationWriteModel;
+  tenantId: string;
+  payload: Record<string, unknown>;
+}
+
+export interface TravelPublishMutationPlan {
+  status: "ready" | "blocked";
+  action: TravelPublishMutationAction;
+  requiresTransaction: true;
+  idempotencyKey: string | null;
+  revalidationTags: readonly string[];
+  notificationJobCount: number;
+  writes: readonly TravelPublishMutationWrite[];
+  requiredControls: readonly string[];
+  rollbackPlan: readonly string[];
+  blockers: readonly string[];
+}
+
 function escapeIcsText(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/,/g, "\\,").replace(/;/g, "\\;").replace(/\n/g, "\\n");
 }
@@ -768,6 +814,119 @@ export function buildTravelPublishPlan(stop: TravelStop): TravelPublishPlan {
     revalidationTags: ["travel", `city:${citySlug}`, `artist:${stop.artistId}`, `tenant:${stop.tenantId}`],
     waitlistNotificationCandidate: stop.bookingStatus === "open" || stop.bookingStatus === "waitlist",
     calendarBlock: travelStopToCalendarBlock(stop),
+  };
+}
+
+function travelPublishMutationWriteModels(action: TravelPublishMutationAction): TravelPublishMutationWriteModel[] {
+  if (action === "rollback") {
+    return ["TravelStop", "PublicTravelPage", "WebRevalidationEvent", "MobileSyncEvent", "DashboardSyncEvent", "TravelAuditLog", "IdempotencyKey"];
+  }
+  if (action === "unpublish") {
+    return ["TravelStop", "PublicTravelPage", "WebRevalidationEvent", "MobileSyncEvent", "DashboardSyncEvent", "TravelAuditLog", "IdempotencyKey"];
+  }
+  return [
+    "TravelStop",
+    "PublicTravelPage",
+    "CityWaitlistMatch",
+    "NotificationJob",
+    "WebRevalidationEvent",
+    "MobileSyncEvent",
+    "DashboardSyncEvent",
+    "TravelAuditLog",
+    "IdempotencyKey",
+  ];
+}
+
+export function buildTravelPublishMutationPlan(input: TravelPublishMutationPlanInput): TravelPublishMutationPlan {
+  const blockers: string[] = [];
+  const publishPlan = buildTravelPublishPlan(input.stop);
+  const notifyClientIds = input.stop.bookingStatus === "open" || input.stop.bookingStatus === "waitlist"
+    ? [...new Set(input.consentedWaitlistClientIds ?? [])]
+    : [];
+
+  if (!input.tenantId.trim()) blockers.push("Missing tenant scope.");
+  if (!input.artistId.trim()) blockers.push("Missing artist id.");
+  if (!input.actorId?.trim()) blockers.push("Travel publish mutation requires an actor id for audit attribution.");
+  if (!input.idempotencyKey?.trim()) blockers.push("Missing idempotency key for travel publish mutation.");
+  if (input.stop.tenantId !== input.tenantId) blockers.push("Travel stop tenant does not match mutation tenant scope.");
+  if (input.stop.artistId !== input.artistId) blockers.push("Travel stop artist does not match mutation artist scope.");
+  if (!isValidIanaTimezone(input.stop.timezone)) blockers.push("Travel stop timezone must be a valid IANA identifier.");
+  if (new Date(input.stop.startsAt).getTime() >= new Date(input.stop.endsAt).getTime()) blockers.push("Travel stop must start before it ends.");
+  if ((input.action === "update" || input.action === "rollback") && !input.previousStop) blockers.push("Travel update and rollback require the previous travel stop snapshot.");
+  if (input.action === "rollback" && !input.rollbackReason?.trim()) blockers.push("Travel rollback requires a rollback reason.");
+  if (input.providerActionsSucceeded === false && input.action !== "rollback") blockers.push("Provider action failure requires rollback before publishing public state.");
+
+  const changedFields = input.changedFieldNames?.length
+    ? input.changedFieldNames
+    : input.previousStop
+      ? ["city", "region", "startsAt", "endsAt", "bookingStatus"].filter((field) => input.previousStop?.[field as keyof TravelStop] !== input.stop[field as keyof TravelStop])
+      : ["created"];
+  const basePayload = {
+    action: input.action,
+    stopId: input.stop.id,
+    artistId: input.artistId,
+    publicPath: publishPlan.publicPath,
+    cityLabel: publishPlan.cityLabel,
+    timezone: input.stop.timezone,
+    bookingStatus: input.stop.bookingStatus,
+    changedFields,
+    consentedWaitlistClientIds: notifyClientIds,
+    actorId: input.actorId ?? null,
+    idempotencyKey: input.idempotencyKey ?? null,
+    rollbackReason: input.rollbackReason ?? null,
+  };
+  const writes = travelPublishMutationWriteModels(input.action).map((model): TravelPublishMutationWrite => ({
+    model,
+    tenantId: input.tenantId,
+    payload: model === "NotificationJob"
+      ? {
+          ...basePayload,
+          clientIds: notifyClientIds,
+          count: notifyClientIds.length,
+          consentRequired: true,
+        }
+      : model === "WebRevalidationEvent"
+        ? {
+            ...basePayload,
+            tags: publishPlan.revalidationTags,
+          }
+        : model === "TravelAuditLog"
+          ? {
+              ...basePayload,
+              previousStopId: input.previousStop?.id ?? null,
+            }
+          : model === "IdempotencyKey"
+            ? {
+                key: input.idempotencyKey ?? null,
+                action: input.action,
+                stopId: input.stop.id,
+              }
+            : basePayload,
+  }));
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    action: input.action,
+    requiresTransaction: true,
+    idempotencyKey: input.idempotencyKey?.trim() ? input.idempotencyKey : null,
+    revalidationTags: publishPlan.revalidationTags,
+    notificationJobCount: notifyClientIds.length,
+    writes,
+    requiredControls: [
+      "Execute travel publish writes in one tenant-scoped transaction before cache revalidation.",
+      "Write TravelAuditLog with actor, previous snapshot, changed fields, and rollback reason when applicable.",
+      "Queue waitlist notifications only for clients with explicit matching city/travel consent.",
+      "Emit web, dashboard, and mobile sync events after the travel stop mutation commits.",
+      "Revalidate public travel, city, artist, tenant, sitemap, and schema cache tags after commit.",
+      "Rollback public state and queued provider actions if any provider mutation fails before publish completion.",
+    ],
+    rollbackPlan: [
+      "Restore previous TravelStop snapshot when provider or revalidation steps fail.",
+      "Cancel unsent waitlist NotificationJob rows created by the failed publish.",
+      "Emit compensating web/dashboard/mobile sync events with rollback status.",
+      "Persist TravelAuditLog with rollback reason and failed provider action summary.",
+    ],
+    blockers,
   };
 }
 

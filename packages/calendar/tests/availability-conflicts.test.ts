@@ -6,6 +6,7 @@ import {
   buildSignedIcsFeedDraft,
   buildSignedIcsFeedTokenHash,
   buildTimezoneRecurrenceQaPlan,
+  buildTravelPublishMutationPlan,
   auditCalendarTimezones,
   detectCalendarConflicts,
   evaluateSignedIcsFeedAccess,
@@ -13,6 +14,7 @@ import {
   type CalendarTimeBlock,
 } from "../src/index";
 import type { AvailabilityWindow } from "@inkroute/types";
+import type { TravelStop } from "@inkroute/types";
 
 const window: AvailabilityWindow = {
   id: "window_1",
@@ -37,6 +39,21 @@ const busy: CalendarTimeBlock = {
   bufferBeforeMinutes: 15,
   bufferAfterMinutes: 30,
   blocksBooking: true
+};
+
+const demoTravelStop: TravelStop = {
+  id: "travel_seattle_001",
+  tenantId: "tenant_demo",
+  artistId: "artist_demo",
+  city: "Seattle",
+  region: "WA",
+  country: "US",
+  startsAt: "2026-07-10T17:00:00.000Z",
+  endsAt: "2026-07-14T02:00:00.000Z",
+  timezone: "America/Los_Angeles",
+  bookingStatus: "open",
+  studioName: "Needle House",
+  publicNotes: "Books open for flash and custom work.",
 };
 
 describe("calendar availability", () => {
@@ -482,6 +499,104 @@ describe("calendar availability", () => {
       "Required timezone QA check is missing from the matrix.",
       "Recurring availability case must include a recurrence rule and expanded occurrence count.",
       "Timezone case must use a valid IANA timezone.",
+    ]);
+  });
+
+  it("plans real-time travel publish writes with revalidation, waitlist, and sync events", () => {
+    const plan = buildTravelPublishMutationPlan({
+      tenantId: "tenant_demo",
+      artistId: "artist_demo",
+      actorId: "artist_demo",
+      action: "publish",
+      stop: demoTravelStop,
+      idempotencyKey: "travel-publish:tenant_demo:travel_seattle_001",
+      consentedWaitlistClientIds: ["client_001", "client_001", "client_002"],
+      providerActionsSucceeded: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.requiresTransaction).toBe(true);
+    expect(plan.notificationJobCount).toBe(2);
+    expect(plan.revalidationTags).toEqual([
+      "travel",
+      "city:seattle-wa",
+      "artist:artist_demo",
+      "tenant:tenant_demo",
+    ]);
+    expect(plan.writes.map((write) => write.model)).toEqual([
+      "TravelStop",
+      "PublicTravelPage",
+      "CityWaitlistMatch",
+      "NotificationJob",
+      "WebRevalidationEvent",
+      "MobileSyncEvent",
+      "DashboardSyncEvent",
+      "TravelAuditLog",
+      "IdempotencyKey",
+    ]);
+    expect(plan.writes.find((write) => write.model === "NotificationJob")?.payload).toMatchObject({
+      clientIds: ["client_001", "client_002"],
+      consentRequired: true,
+      count: 2,
+    });
+    expect(plan.requiredControls).toContain("Revalidate public travel, city, artist, tenant, sitemap, and schema cache tags after commit.");
+    expect(plan.blockers).toEqual([]);
+  });
+
+  it("plans travel rollback with previous snapshot and compensating sync controls", () => {
+    const plan = buildTravelPublishMutationPlan({
+      tenantId: "tenant_demo",
+      artistId: "artist_demo",
+      actorId: "artist_demo",
+      action: "rollback",
+      stop: { ...demoTravelStop, bookingStatus: "closed" },
+      previousStop: demoTravelStop,
+      idempotencyKey: "travel-rollback:tenant_demo:travel_seattle_001",
+      rollbackReason: "Provider event insert failed.",
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.writes.map((write) => write.model)).toEqual([
+      "TravelStop",
+      "PublicTravelPage",
+      "WebRevalidationEvent",
+      "MobileSyncEvent",
+      "DashboardSyncEvent",
+      "TravelAuditLog",
+      "IdempotencyKey",
+    ]);
+    expect(plan.rollbackPlan).toContain("Restore previous TravelStop snapshot when provider or revalidation steps fail.");
+    expect(plan.writes.find((write) => write.model === "TravelAuditLog")?.payload).toMatchObject({
+      action: "rollback",
+      previousStopId: "travel_seattle_001",
+      rollbackReason: "Provider event insert failed.",
+    });
+  });
+
+  it("blocks unsafe travel publish mutations without scope, audit actor, idempotency, valid timezone, or rollback path", () => {
+    const blocked = buildTravelPublishMutationPlan({
+      tenantId: "tenant_demo",
+      artistId: "other_artist",
+      action: "update",
+      stop: {
+        ...demoTravelStop,
+        artistId: "artist_demo",
+        timezone: "PST",
+        startsAt: "2026-07-14T02:00:00.000Z",
+        endsAt: "2026-07-10T17:00:00.000Z",
+      },
+      providerActionsSucceeded: false,
+    });
+
+    expect(blocked.status).toBe("blocked");
+    expect(blocked.blockers).toEqual([
+      "Travel publish mutation requires an actor id for audit attribution.",
+      "Missing idempotency key for travel publish mutation.",
+      "Travel stop artist does not match mutation artist scope.",
+      "Travel stop timezone must be a valid IANA identifier.",
+      "Travel stop must start before it ends.",
+      "Travel update and rollback require the previous travel stop snapshot.",
+      "Provider action failure requires rollback before publishing public state.",
     ]);
   });
 });
