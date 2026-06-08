@@ -84,8 +84,102 @@ export interface TenantAccessContext {
   tenantId: string;
   userId: string;
   role: Role;
+  sessionId?: string;
+  expiresAt?: string;
+  revokedAt?: string;
 }
 
 export function canAccessTenant(context: TenantAccessContext, tenantId: string): boolean {
   return context.tenantId === tenantId;
+}
+
+export type AuthorizationDecisionStatus =
+  | "allowed"
+  | "unauthenticated"
+  | "session_expired"
+  | "session_revoked"
+  | "tenant_mismatch"
+  | "permission_denied";
+
+export interface AuthorizationDecision {
+  allowed: boolean;
+  status: AuthorizationDecisionStatus;
+  userId?: string;
+  tenantId?: string;
+  role?: Role;
+  permission?: Permission;
+  auditAction: string;
+  reason: string;
+}
+
+export function evaluateTenantAuthorization(input: {
+  context?: TenantAccessContext | null;
+  tenantId: string;
+  permission: Permission;
+  now: string;
+  auditAction?: string;
+}): AuthorizationDecision {
+  const auditAction = input.auditAction ?? `authz:${input.permission}`;
+  const context = input.context;
+
+  if (!context) {
+    return {
+      allowed: false,
+      status: "unauthenticated",
+      permission: input.permission,
+      auditAction,
+      reason: "No authenticated session context is available.",
+    };
+  }
+
+  const base = {
+    userId: context.userId,
+    tenantId: context.tenantId,
+    role: context.role,
+    permission: input.permission,
+    auditAction,
+  };
+
+  if (context.revokedAt) {
+    return {
+      ...base,
+      allowed: false,
+      status: "session_revoked",
+      reason: "Session has been revoked and must not authorize tenant access.",
+    };
+  }
+
+  if (context.expiresAt && new Date(context.expiresAt).getTime() <= new Date(input.now).getTime()) {
+    return {
+      ...base,
+      allowed: false,
+      status: "session_expired",
+      reason: "Session is expired and must be refreshed before tenant access.",
+    };
+  }
+
+  if (!canAccessTenant(context, input.tenantId)) {
+    return {
+      ...base,
+      allowed: false,
+      status: "tenant_mismatch",
+      reason: "Authenticated session is not scoped to the requested tenant.",
+    };
+  }
+
+  if (!hasPermission(context.role, input.permission)) {
+    return {
+      ...base,
+      allowed: false,
+      status: "permission_denied",
+      reason: `Role ${context.role} does not have permission ${input.permission}.`,
+    };
+  }
+
+  return {
+    ...base,
+    allowed: true,
+    status: "allowed",
+    reason: "Session is active, tenant-scoped, and role includes the required permission.",
+  };
 }
