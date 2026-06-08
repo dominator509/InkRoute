@@ -167,6 +167,63 @@ export interface AvailabilityPersistencePlan {
   blockers: readonly string[];
 }
 
+export type GoogleCalendarSyncAction =
+  | "oauth_connect"
+  | "freebusy_check"
+  | "upsert_event"
+  | "delete_event"
+  | "incremental_sync"
+  | "full_resync"
+  | "renew_push_channel";
+
+export type GoogleCalendarSyncWriteModel =
+  | "CalendarProviderConnection"
+  | "CalendarProviderToken"
+  | "CalendarProviderEvent"
+  | "CalendarSyncState"
+  | "CalendarPushChannel"
+  | "CalendarAuditLog"
+  | "IdempotencyKey";
+
+export interface GoogleCalendarSyncPlanInput {
+  tenantId: string;
+  artistId: string;
+  calendarId: string;
+  action: GoogleCalendarSyncAction;
+  occurredAt: ISODateString;
+  oauthClientConfigured: boolean;
+  requiredScopesGranted: boolean;
+  refreshTokenEncrypted: boolean;
+  providerWorkerEnabled: boolean;
+  idempotencyKey?: string;
+  appointmentId?: string;
+  providerEventId?: string;
+  syncToken?: string;
+  syncTokenInvalid?: boolean;
+  pushChannelId?: string;
+  pushResourceId?: string;
+  pushChannelExpiresAt?: ISODateString;
+  retryAttempt?: number;
+}
+
+export interface GoogleCalendarSyncWrite {
+  model: GoogleCalendarSyncWriteModel;
+  tenantId: string;
+  payload: Record<string, unknown>;
+}
+
+export interface GoogleCalendarProviderSyncPlan {
+  status: "ready" | "blocked";
+  action: GoogleCalendarSyncAction;
+  providerCall: string;
+  requiresTransaction: boolean;
+  idempotencyKey: string | null;
+  writes: readonly GoogleCalendarSyncWrite[];
+  nextAction: string;
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 function escapeIcsText(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/,/g, "\\,").replace(/;/g, "\\;").replace(/\n/g, "\\n");
 }
@@ -421,6 +478,134 @@ export function buildCalendarSyncPlan(provider: CalendarProviderKind): CalendarS
     supportsPushChannels: false,
     nextAction: "Use the internal appointment table as the source of truth before enabling provider sync.",
     riskNotes: ["Internal-only scheduling still needs tenant isolation, audit logs, and conflict tests."],
+  };
+}
+
+function googleCalendarProviderCall(action: GoogleCalendarSyncAction): string {
+  switch (action) {
+    case "oauth_connect":
+      return "google.oauth.exchangeCode";
+    case "freebusy_check":
+      return "google.freebusy.query";
+    case "upsert_event":
+      return "google.events.insertOrUpdate";
+    case "delete_event":
+      return "google.events.delete";
+    case "incremental_sync":
+      return "google.events.listIncremental";
+    case "full_resync":
+      return "google.events.listFull";
+    case "renew_push_channel":
+      return "google.channels.watch";
+  }
+}
+
+function googleCalendarSyncWriteModels(action: GoogleCalendarSyncAction): GoogleCalendarSyncWriteModel[] {
+  switch (action) {
+    case "oauth_connect":
+      return ["CalendarProviderConnection", "CalendarProviderToken", "CalendarAuditLog", "IdempotencyKey"];
+    case "freebusy_check":
+      return ["CalendarAuditLog", "IdempotencyKey"];
+    case "upsert_event":
+      return ["CalendarProviderEvent", "CalendarSyncState", "CalendarAuditLog", "IdempotencyKey"];
+    case "delete_event":
+      return ["CalendarProviderEvent", "CalendarSyncState", "CalendarAuditLog", "IdempotencyKey"];
+    case "incremental_sync":
+      return ["CalendarProviderEvent", "CalendarSyncState", "CalendarAuditLog", "IdempotencyKey"];
+    case "full_resync":
+      return ["CalendarProviderEvent", "CalendarSyncState", "CalendarAuditLog", "IdempotencyKey"];
+    case "renew_push_channel":
+      return ["CalendarPushChannel", "CalendarSyncState", "CalendarAuditLog", "IdempotencyKey"];
+  }
+}
+
+export function buildGoogleCalendarProviderSyncPlan(input: GoogleCalendarSyncPlanInput): GoogleCalendarProviderSyncPlan {
+  const blockers: string[] = [];
+
+  if (!input.tenantId.trim()) blockers.push("Missing tenant scope.");
+  if (!input.artistId.trim()) blockers.push("Missing artist id.");
+  if (!input.calendarId.trim()) blockers.push("Missing Google calendar id.");
+  if (!input.oauthClientConfigured) blockers.push("Google OAuth client and redirect URI must be configured.");
+  if (!input.requiredScopesGranted) blockers.push("Google Calendar scopes must be granted before provider sync.");
+  if (!input.providerWorkerEnabled) blockers.push("Google Calendar provider worker must be enabled before executing sync operations.");
+  if (!input.idempotencyKey?.trim()) blockers.push("Missing idempotency key for Google Calendar sync operation.");
+
+  const requiresStoredToken = input.action !== "oauth_connect";
+  if (requiresStoredToken && !input.refreshTokenEncrypted) {
+    blockers.push("Encrypted refresh token must be stored before Google Calendar provider calls.");
+  }
+  if ((input.action === "upsert_event" || input.action === "delete_event") && !input.appointmentId?.trim()) {
+    blockers.push("Appointment id is required before mutating Google Calendar events.");
+  }
+  if (input.action === "delete_event" && !input.providerEventId?.trim()) {
+    blockers.push("Provider event id is required before deleting Google Calendar events.");
+  }
+  if (input.action === "incremental_sync" && !input.syncToken?.trim()) {
+    blockers.push("Incremental sync requires a stored sync token.");
+  }
+  if (input.action === "incremental_sync" && input.syncTokenInvalid) {
+    blockers.push("Google returned an invalid sync token; run full_resync before incremental sync.");
+  }
+  if (input.action === "renew_push_channel") {
+    if (!input.pushChannelId?.trim()) blockers.push("Push channel renewal requires a channel id.");
+    if (!input.pushResourceId?.trim()) blockers.push("Push channel renewal requires a resource id.");
+    if (!input.pushChannelExpiresAt?.trim()) blockers.push("Push channel renewal requires an expiration timestamp.");
+  }
+
+  const providerCall = googleCalendarProviderCall(input.action);
+  const basePayload = {
+    artistId: input.artistId,
+    calendarId: input.calendarId,
+    appointmentId: input.appointmentId ?? null,
+    providerEventId: input.providerEventId ?? null,
+    syncToken: input.syncToken ?? null,
+    syncTokenInvalid: input.syncTokenInvalid ?? false,
+    pushChannelId: input.pushChannelId ?? null,
+    pushResourceId: input.pushResourceId ?? null,
+    pushChannelExpiresAt: input.pushChannelExpiresAt ?? null,
+    retryAttempt: input.retryAttempt ?? 0,
+    providerCall,
+    idempotencyKey: input.idempotencyKey ?? null,
+    occurredAt: input.occurredAt,
+  };
+  const writes = googleCalendarSyncWriteModels(input.action).map((model): GoogleCalendarSyncWrite => ({
+    model,
+    tenantId: input.tenantId,
+    payload: model === "CalendarAuditLog"
+      ? {
+          ...basePayload,
+          action: input.action,
+        }
+      : model === "IdempotencyKey"
+        ? {
+            key: input.idempotencyKey ?? null,
+            action: input.action,
+            calendarId: input.calendarId,
+            appointmentId: input.appointmentId ?? null,
+            occurredAt: input.occurredAt,
+          }
+        : basePayload,
+  }));
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    action: input.action,
+    providerCall,
+    requiresTransaction: writes.some((write) => write.model !== "CalendarAuditLog" && write.model !== "IdempotencyKey"),
+    idempotencyKey: input.idempotencyKey?.trim() ? input.idempotencyKey : null,
+    writes,
+    nextAction: input.action === "incremental_sync" && input.syncTokenInvalid
+      ? "Run full_resync, replace the stored sync token, and audit the invalid-token recovery."
+      : "Execute provider call through the Google Calendar worker, then persist redacted provider state and audit outcome.",
+    requiredControls: [
+      "Authorize tenant and artist ownership before using stored Google provider credentials.",
+      "Encrypt refresh tokens before persistence and never return provider tokens to clients.",
+      "Claim idempotency key before provider mutations or sync-state writes.",
+      "On Google 410 invalid sync token, stop incremental sync and run full resync.",
+      "Renew push channels before expiration and validate webhook resource/channel ids before processing notifications.",
+      "Persist redacted CalendarAuditLog for every provider call, retry, failure, and recovery path.",
+    ],
+    blockers,
   };
 }
 

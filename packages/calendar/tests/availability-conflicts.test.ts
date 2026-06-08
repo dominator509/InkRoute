@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildAvailabilitySlots,
   buildAvailabilityPersistencePlan,
+  buildGoogleCalendarProviderSyncPlan,
   buildSignedIcsFeedDraft,
   buildSignedIcsFeedTokenHash,
   auditCalendarTimezones,
@@ -279,6 +280,115 @@ describe("calendar availability", () => {
       "Slot hold and appointment confirmation require a booking request id.",
       "Slot hold and appointment confirmation require an availability window id.",
       "Concurrent slot hold already exists for this tenant, artist, and time range.",
+    ]);
+  });
+
+  it("plans Google OAuth connection and event upsert with encrypted token and audit writes", () => {
+    const oauth = buildGoogleCalendarProviderSyncPlan({
+      tenantId: "tenant_demo",
+      artistId: "artist_demo",
+      calendarId: "primary",
+      action: "oauth_connect",
+      occurredAt: "2026-06-08T10:00:00.000Z",
+      oauthClientConfigured: true,
+      requiredScopesGranted: true,
+      refreshTokenEncrypted: false,
+      providerWorkerEnabled: true,
+      idempotencyKey: "google-oauth:tenant_demo:artist_demo",
+    });
+    const upsert = buildGoogleCalendarProviderSyncPlan({
+      tenantId: "tenant_demo",
+      artistId: "artist_demo",
+      calendarId: "primary",
+      action: "upsert_event",
+      occurredAt: "2026-06-08T10:05:00.000Z",
+      oauthClientConfigured: true,
+      requiredScopesGranted: true,
+      refreshTokenEncrypted: true,
+      providerWorkerEnabled: true,
+      appointmentId: "appointment_demo",
+      providerEventId: "event_demo",
+      idempotencyKey: "google-event-upsert:tenant_demo:appointment_demo",
+    });
+
+    expect(oauth.status).toBe("ready");
+    expect(oauth.providerCall).toBe("google.oauth.exchangeCode");
+    expect(oauth.writes.map((write) => write.model)).toEqual(["CalendarProviderConnection", "CalendarProviderToken", "CalendarAuditLog", "IdempotencyKey"]);
+    expect(upsert.status).toBe("ready");
+    expect(upsert.providerCall).toBe("google.events.insertOrUpdate");
+    expect(upsert.writes.map((write) => write.model)).toEqual(["CalendarProviderEvent", "CalendarSyncState", "CalendarAuditLog", "IdempotencyKey"]);
+    expect(upsert.writes.find((write) => write.model === "CalendarAuditLog")?.payload).toMatchObject({
+      action: "upsert_event",
+      appointmentId: "appointment_demo",
+      providerCall: "google.events.insertOrUpdate",
+    });
+  });
+
+  it("plans incremental sync recovery and push channel renewal controls", () => {
+    const invalidIncremental = buildGoogleCalendarProviderSyncPlan({
+      tenantId: "tenant_demo",
+      artistId: "artist_demo",
+      calendarId: "primary",
+      action: "incremental_sync",
+      occurredAt: "2026-06-08T10:10:00.000Z",
+      oauthClientConfigured: true,
+      requiredScopesGranted: true,
+      refreshTokenEncrypted: true,
+      providerWorkerEnabled: true,
+      syncToken: "sync_token_001",
+      syncTokenInvalid: true,
+      idempotencyKey: "google-incremental:tenant_demo:sync_token_001",
+    });
+    const renewal = buildGoogleCalendarProviderSyncPlan({
+      tenantId: "tenant_demo",
+      artistId: "artist_demo",
+      calendarId: "primary",
+      action: "renew_push_channel",
+      occurredAt: "2026-06-08T10:15:00.000Z",
+      oauthClientConfigured: true,
+      requiredScopesGranted: true,
+      refreshTokenEncrypted: true,
+      providerWorkerEnabled: true,
+      pushChannelId: "channel_001",
+      pushResourceId: "resource_001",
+      pushChannelExpiresAt: "2026-06-09T10:15:00.000Z",
+      idempotencyKey: "google-channel-renew:tenant_demo:channel_001",
+    });
+
+    expect(invalidIncremental.status).toBe("blocked");
+    expect(invalidIncremental.blockers).toContain("Google returned an invalid sync token; run full_resync before incremental sync.");
+    expect(invalidIncremental.nextAction).toContain("Run full_resync");
+    expect(renewal.status).toBe("ready");
+    expect(renewal.providerCall).toBe("google.channels.watch");
+    expect(renewal.writes.map((write) => write.model)).toEqual(["CalendarPushChannel", "CalendarSyncState", "CalendarAuditLog", "IdempotencyKey"]);
+    expect(renewal.requiredControls).toContain("Renew push channels before expiration and validate webhook resource/channel ids before processing notifications.");
+  });
+
+  it("blocks Google sync when credentials, encrypted tokens, ids, or idempotency are missing", () => {
+    const blocked = buildGoogleCalendarProviderSyncPlan({
+      tenantId: "",
+      artistId: "",
+      calendarId: "",
+      action: "delete_event",
+      occurredAt: "2026-06-08T10:20:00.000Z",
+      oauthClientConfigured: false,
+      requiredScopesGranted: false,
+      refreshTokenEncrypted: false,
+      providerWorkerEnabled: false,
+    });
+
+    expect(blocked.status).toBe("blocked");
+    expect(blocked.blockers).toEqual([
+      "Missing tenant scope.",
+      "Missing artist id.",
+      "Missing Google calendar id.",
+      "Google OAuth client and redirect URI must be configured.",
+      "Google Calendar scopes must be granted before provider sync.",
+      "Google Calendar provider worker must be enabled before executing sync operations.",
+      "Missing idempotency key for Google Calendar sync operation.",
+      "Encrypted refresh token must be stored before Google Calendar provider calls.",
+      "Appointment id is required before mutating Google Calendar events.",
+      "Provider event id is required before deleting Google Calendar events.",
     ]);
   });
 });
