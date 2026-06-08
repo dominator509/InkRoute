@@ -5,6 +5,16 @@ export type DataSensitivity = "public" | "internal" | "pii" | "sensitive" | "med
 export type RedactionMode = "none" | "mask" | "hash_required" | "omit" | "encrypt_required";
 export type UploadAssetKind = "portfolio_public" | "reference_private" | "consent_signature" | "healed_follow_up" | "document_private";
 export type PrivacyRequestType = "access" | "export" | "rectification" | "deletion" | "restriction";
+export type PrivacyDataCategory =
+  | "client_profile"
+  | "medical_note"
+  | "reference_file"
+  | "consent_signature"
+  | "message"
+  | "payment_record"
+  | "audit_log"
+  | "error_report";
+export type RetentionAction = "export" | "delete" | "anonymize" | "retain_legal_hold" | "restrict_processing";
 export type SecurityControlArea =
   | "authentication"
   | "authorization"
@@ -639,6 +649,44 @@ export interface PrivacyRequestDraft {
   productionBlockers: string[];
 }
 
+export interface RetentionPolicyRule {
+  category: PrivacyDataCategory;
+  models: string[];
+  sensitivity: DataSensitivity;
+  defaultRetentionDays: number | "indefinite";
+  exportable: boolean;
+  deletable: boolean;
+  anonymizeOnDeletion: boolean;
+  legalHoldRequired: boolean;
+  auditRequired: boolean;
+  rationale: string;
+}
+
+export interface PrivacyLifecyclePlanInput {
+  requestType: PrivacyRequestType;
+  categories: PrivacyDataCategory[];
+  requesterVerified: boolean;
+  legalReviewApproved?: boolean;
+}
+
+export interface PrivacyLifecycleStep {
+  category: PrivacyDataCategory;
+  models: string[];
+  action: RetentionAction;
+  blocked: boolean;
+  reason: string;
+  auditRequired: boolean;
+}
+
+export interface PrivacyLifecyclePlan {
+  status: "ready" | "blocked_identity" | "blocked_legal_review" | "unsupported_category";
+  canExecute: boolean;
+  requestType: PrivacyRequestType;
+  steps: PrivacyLifecycleStep[];
+  requiredAudits: string[];
+  productionBlockers: string[];
+}
+
 export interface LegalDocumentPlaceholder {
   slug: string;
   title: string;
@@ -888,6 +936,105 @@ export const legalDocumentPlaceholders: LegalDocumentPlaceholder[] = [
   },
 ];
 
+export const retentionPolicyRules: RetentionPolicyRule[] = [
+  {
+    category: "client_profile",
+    models: ["Client", "IntakeResponse"],
+    sensitivity: "pii",
+    defaultRetentionDays: 2555,
+    exportable: true,
+    deletable: true,
+    anonymizeOnDeletion: true,
+    legalHoldRequired: false,
+    auditRequired: true,
+    rationale: "Client contact and intake details are exportable and can be anonymized/deleted when no legal hold applies.",
+  },
+  {
+    category: "medical_note",
+    models: ["BookingRequest.medicalNotesEncrypted", "IntakeResponse.medicalAnswers"],
+    sensitivity: "medical",
+    defaultRetentionDays: 2555,
+    exportable: true,
+    deletable: true,
+    anonymizeOnDeletion: true,
+    legalHoldRequired: false,
+    auditRequired: true,
+    rationale: "Medical/safety notes require encryption, export redaction review, and deletion/anonymization support.",
+  },
+  {
+    category: "reference_file",
+    models: ["FileAsset", "BookingReferenceImage"],
+    sensitivity: "sensitive",
+    defaultRetentionDays: 1095,
+    exportable: true,
+    deletable: true,
+    anonymizeOnDeletion: false,
+    legalHoldRequired: false,
+    auditRequired: true,
+    rationale: "Private reference files should be removable from object storage while preserving an audit tombstone.",
+  },
+  {
+    category: "consent_signature",
+    models: ["ConsentSignature", "ConsentFormVersion"],
+    sensitivity: "sensitive",
+    defaultRetentionDays: "indefinite",
+    exportable: true,
+    deletable: false,
+    anonymizeOnDeletion: false,
+    legalHoldRequired: true,
+    auditRequired: true,
+    rationale: "Consent records may need long-term legal retention and should not be hard-deleted without counsel-approved policy.",
+  },
+  {
+    category: "message",
+    models: ["MessageThread", "Message"],
+    sensitivity: "pii",
+    defaultRetentionDays: 1095,
+    exportable: true,
+    deletable: true,
+    anonymizeOnDeletion: true,
+    legalHoldRequired: false,
+    auditRequired: true,
+    rationale: "Client messages can contain PII and third-party data, so exports require redaction review and deletions need audit trails.",
+  },
+  {
+    category: "payment_record",
+    models: ["Deposit", "PaymentRecord", "Refund", "PaymentAuditLog"],
+    sensitivity: "payment",
+    defaultRetentionDays: 2555,
+    exportable: true,
+    deletable: false,
+    anonymizeOnDeletion: true,
+    legalHoldRequired: true,
+    auditRequired: true,
+    rationale: "Payment records are exportable but normally retained for accounting, tax, dispute, and fraud obligations.",
+  },
+  {
+    category: "audit_log",
+    models: ["AuditLog", "BookingStateEvent", "PaymentAuditLog"],
+    sensitivity: "internal",
+    defaultRetentionDays: "indefinite",
+    exportable: false,
+    deletable: false,
+    anonymizeOnDeletion: true,
+    legalHoldRequired: true,
+    auditRequired: true,
+    rationale: "Audit logs prove system integrity and should be retained or anonymized only through a controlled legal process.",
+  },
+  {
+    category: "error_report",
+    models: ["ErrorReport"],
+    sensitivity: "sensitive",
+    defaultRetentionDays: 365,
+    exportable: true,
+    deletable: true,
+    anonymizeOnDeletion: true,
+    legalHoldRequired: false,
+    auditRequired: true,
+    rationale: "Sanitized error reports may still contain user context and should be exported/deleted under privacy workflows.",
+  },
+];
+
 export const securityHeaderDrafts: SecurityHeaderDraft[] = [
   { name: "Content-Security-Policy", value: "default-src 'self'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'", status: "scaffolded", rationale: "Starting policy must be adjusted when Stripe Checkout, Sentry, analytics, storage/CDN, and image providers are wired." },
   { name: "X-Content-Type-Options", value: "nosniff", status: "scaffolded", rationale: "Helps prevent MIME confusion around public pages and asset responses." },
@@ -1066,6 +1213,87 @@ export function buildPrivacyRequestDraft(type: PrivacyRequestType): PrivacyReque
     identityVerificationRequired: true,
     affectedAreas: type === "deletion" ? baseAreas.filter((area) => area !== "payments" && area !== "audit logs") : baseAreas,
     deadlinePolicy: "Placeholder only; actual response deadlines depend on jurisdiction and attorney-reviewed policy.",
+    productionBlockers,
+  };
+}
+
+function getRetentionRule(category: PrivacyDataCategory): RetentionPolicyRule | undefined {
+  return retentionPolicyRules.find((rule) => rule.category === category);
+}
+
+function choosePrivacyAction(requestType: PrivacyRequestType, rule: RetentionPolicyRule): RetentionAction {
+  if (requestType === "access" || requestType === "export") return "export";
+  if (requestType === "restriction") return "restrict_processing";
+  if (requestType === "rectification") return rule.deletable ? "anonymize" : "retain_legal_hold";
+  if (rule.legalHoldRequired || !rule.deletable) return rule.anonymizeOnDeletion ? "anonymize" : "retain_legal_hold";
+  return rule.anonymizeOnDeletion ? "anonymize" : "delete";
+}
+
+export function buildPrivacyLifecyclePlan(input: PrivacyLifecyclePlanInput): PrivacyLifecyclePlan {
+  const draft = buildPrivacyRequestDraft(input.requestType);
+  const productionBlockers = [...draft.productionBlockers];
+  if (!input.requesterVerified) {
+    return {
+      status: "blocked_identity",
+      canExecute: false,
+      requestType: input.requestType,
+      steps: [],
+      requiredAudits: [],
+      productionBlockers: ["Requester identity must be verified before privacy lifecycle actions.", ...productionBlockers],
+    };
+  }
+
+  if (!input.legalReviewApproved) {
+    productionBlockers.push("Attorney-approved retention schedule is required before executing production export/delete workers.");
+  }
+
+  const steps: PrivacyLifecycleStep[] = [];
+  const requiredAudits: string[] = [];
+  let hasUnsupportedCategory = false;
+
+  for (const category of input.categories) {
+    const rule = getRetentionRule(category);
+    if (!rule) {
+      hasUnsupportedCategory = true;
+      steps.push({
+        category,
+        models: [],
+        action: "retain_legal_hold",
+        blocked: true,
+        reason: "No retention policy rule exists for this category.",
+        auditRequired: true,
+      });
+      continue;
+    }
+
+    const action = choosePrivacyAction(input.requestType, rule);
+    const exportBlocked = (input.requestType === "access" || input.requestType === "export") && !rule.exportable;
+    const deletionBlocked = input.requestType === "deletion" && rule.legalHoldRequired && !input.legalReviewApproved;
+    const blocked = exportBlocked || deletionBlocked;
+
+    if (rule.auditRequired) {
+      requiredAudits.push(`${input.requestType}:${category}:${action}`);
+    }
+
+    steps.push({
+      category,
+      models: rule.models,
+      action,
+      blocked,
+      reason: blocked
+        ? `${category} requires legal-hold review or is not exportable for ${input.requestType} requests.`
+        : rule.rationale,
+      auditRequired: rule.auditRequired,
+    });
+  }
+
+  const blockedSteps = steps.some((step) => step.blocked);
+  return {
+    status: hasUnsupportedCategory ? "unsupported_category" : !input.legalReviewApproved && blockedSteps ? "blocked_legal_review" : "ready",
+    canExecute: !hasUnsupportedCategory && !blockedSteps && Boolean(input.legalReviewApproved),
+    requestType: input.requestType,
+    steps,
+    requiredAudits,
     productionBlockers,
   };
 }
