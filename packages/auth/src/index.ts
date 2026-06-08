@@ -305,3 +305,76 @@ export function evaluateTenantAuthorization(input: {
     reason: "Session is active, tenant-scoped, and role includes the required permission.",
   };
 }
+
+export type DashboardGuardAction = "allow" | "redirect_login" | "redirect_tenant_switch" | "deny";
+
+export interface DashboardRouteGuardInput {
+  context?: TenantAccessContext | null;
+  tenantId: string;
+  permission: Permission;
+  routePath: string;
+  now: string;
+  loginPath?: string;
+  tenantSwitchPath?: string;
+}
+
+export interface DashboardRouteGuardDecision {
+  action: DashboardGuardAction;
+  allowed: boolean;
+  status: AuthorizationDecisionStatus;
+  routePath: string;
+  redirectTo?: string;
+  auditAction: string;
+  reason: string;
+  cachePolicy: "no-store";
+  decision: AuthorizationDecision;
+}
+
+export function evaluateDashboardRouteGuard(input: DashboardRouteGuardInput): DashboardRouteGuardDecision {
+  const auditAction = `dashboard:${input.permission}:${input.routePath}`;
+  const decision = evaluateTenantAuthorization({
+    context: input.context,
+    tenantId: input.tenantId,
+    permission: input.permission,
+    now: input.now,
+    auditAction,
+  });
+
+  const base = {
+    allowed: decision.allowed,
+    status: decision.status,
+    routePath: input.routePath,
+    auditAction,
+    reason: decision.reason,
+    cachePolicy: "no-store" as const,
+    decision,
+  };
+
+  if (decision.allowed) {
+    return {
+      ...base,
+      action: "allow",
+    };
+  }
+
+  if (decision.status === "unauthenticated" || decision.status === "session_expired" || decision.status === "session_revoked") {
+    return {
+      ...base,
+      action: "redirect_login",
+      redirectTo: `${input.loginPath ?? "/login"}?next=${encodeURIComponent(input.routePath)}`,
+    };
+  }
+
+  if (decision.status === "tenant_mismatch") {
+    return {
+      ...base,
+      action: "redirect_tenant_switch",
+      redirectTo: input.tenantSwitchPath ?? "/tenant-switcher",
+    };
+  }
+
+  return {
+    ...base,
+    action: "deny",
+  };
+}

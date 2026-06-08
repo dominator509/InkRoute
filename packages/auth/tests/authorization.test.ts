@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertPermission, evaluateTenantAuthorization, hasPermission, resolveTenantPermissions } from "../src/index";
+import { assertPermission, evaluateDashboardRouteGuard, evaluateTenantAuthorization, hasPermission, resolveTenantPermissions } from "../src/index";
 
 const ownerContext = {
   tenantId: "tenant_001",
@@ -160,5 +160,67 @@ describe("auth authorization helpers", () => {
         now: "2026-06-08T01:00:00.000Z",
       }).status,
     ).toBe("permission_denied");
+  });
+
+  it("maps dashboard route guard decisions to safe redirects or denials", () => {
+    expect(
+      evaluateDashboardRouteGuard({
+        context: null,
+        tenantId: "tenant_001",
+        permission: "booking:read",
+        routePath: "/bookings",
+        now: "2026-06-08T01:00:00.000Z",
+      }),
+    ).toMatchObject({
+      action: "redirect_login",
+      allowed: false,
+      redirectTo: "/login?next=%2Fbookings",
+      cachePolicy: "no-store",
+    });
+
+    expect(
+      evaluateDashboardRouteGuard({
+        context: ownerContext,
+        tenantId: "tenant_002",
+        permission: "booking:read",
+        routePath: "/bookings",
+        now: "2026-06-08T01:00:00.000Z",
+      }),
+    ).toMatchObject({
+      action: "redirect_tenant_switch",
+      allowed: false,
+      redirectTo: "/tenant-switcher",
+    });
+
+    expect(
+      evaluateDashboardRouteGuard({
+        context: { ...ownerContext, role: "assistant" },
+        tenantId: "tenant_001",
+        permission: "settings:write",
+        routePath: "/settings",
+        now: "2026-06-08T01:00:00.000Z",
+      }),
+    ).toMatchObject({
+      action: "deny",
+      allowed: false,
+      status: "permission_denied",
+    });
+  });
+
+  it("allows dashboard routes for active tenant members with required permissions", () => {
+    expect(
+      evaluateDashboardRouteGuard({
+        context: ownerContext,
+        tenantId: "tenant_001",
+        permission: "booking:write",
+        routePath: "/bookings/booking_001",
+        now: "2026-06-08T01:00:00.000Z",
+      }),
+    ).toMatchObject({
+      action: "allow",
+      allowed: true,
+      cachePolicy: "no-store",
+      auditAction: "dashboard:booking:write:/bookings/booking_001",
+    });
   });
 });
