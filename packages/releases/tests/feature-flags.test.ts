@@ -4,11 +4,13 @@ import {
   buildGithubReleaseWorkflowPlan,
   buildEasOtaReadinessPlan,
   buildMobileUpdatePlan,
+  buildProviderRuntimeGates,
   buildReleaseHealthChecks,
   classifyMobileUpdate,
   createReleaseCandidate,
   createReleaseNotes,
   createRollbackPlan,
+  defaultFeatureFlags,
   evaluateFeatureFlag,
   evaluateFeatureFlags,
   type FeatureFlagDefinition,
@@ -62,6 +64,27 @@ describe("release and feature flag governance", () => {
     expect(decisions).toHaveLength(2);
     expect(decisions.map((decision) => decision.reason)).toEqual(["default_value", "default_value"]);
     expect(decisions.map((decision) => decision.enabled)).toEqual([false, true]);
+  });
+
+  it("derives provider runtime gates from evaluated feature flag decisions", () => {
+    const decisions = evaluateFeatureFlags(defaultFeatureFlags, {
+      tenantId: "tenant_demo_nomad",
+      role: "owner",
+      environment: "production",
+      stableIdentifier: "tenant_demo_nomad:owner",
+    });
+    const gates = buildProviderRuntimeGates(decisions);
+
+    expect(gates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ provider: "payments", flagKey: "booking.deposit_required", action: "allow", decisionReason: "tenant_allowlist" }),
+        expect.objectContaining({ provider: "sms", flagKey: "sms_notifications.enabled", action: "block" }),
+        expect.objectContaining({ provider: "mobile-ota", flagKey: "mobile.ota_updates.enabled", action: "block" }),
+        expect.objectContaining({ provider: "ai-assistants", flagKey: "ai_assistants.enabled", action: "block" }),
+      ]),
+    );
+    expect(gates.find((gate) => gate.provider === "sms")?.runtimeBoundary).toContain("STOP/HELP");
+    expect(gates.find((gate) => gate.provider === "mobile-ota")?.runtimeBoundary).toContain("rollback drill");
   });
 
   it("blocks destructive migration plans", () => {

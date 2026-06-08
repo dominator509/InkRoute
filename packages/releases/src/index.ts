@@ -96,6 +96,15 @@ export interface FeatureFlagDecision {
   readonly auditNote: string;
 }
 
+export interface ProviderRuntimeGate {
+  readonly provider: "sms" | "payments" | "mobile-ota" | "ai-assistants";
+  readonly flagKey: string;
+  readonly enabled: boolean;
+  readonly decisionReason: FeatureFlagEvaluationReason;
+  readonly action: "allow" | "block";
+  readonly runtimeBoundary: string;
+}
+
 export interface MobileUpdateInput {
   readonly channel: "preview" | "production";
   readonly runtimeVersion: string;
@@ -321,6 +330,45 @@ export function evaluateFeatureFlag(flag: FeatureFlagDefinition, context: Featur
 
 export function evaluateFeatureFlags(flags: readonly FeatureFlagDefinition[], context: FeatureFlagContext): readonly FeatureFlagDecision[] {
   return flags.map((flag) => evaluateFeatureFlag(flag, context));
+}
+
+export function buildProviderRuntimeGates(decisions: readonly FeatureFlagDecision[]): readonly ProviderRuntimeGate[] {
+  const byKey = new Map(decisions.map((decision) => [decision.key, decision]));
+  const providerFlags: Array<{ provider: ProviderRuntimeGate["provider"]; flagKey: string; boundary: string }> = [
+    {
+      provider: "sms",
+      flagKey: "sms_notifications.enabled",
+      boundary: "SMS/email worker sends must remain disabled unless provider credentials, consent, STOP/HELP, and legal copy are verified.",
+    },
+    {
+      provider: "payments",
+      flagKey: "booking.deposit_required",
+      boundary: "Stripe deposit collection must remain disabled unless webhook persistence, idempotency, and refund/legal paths are verified.",
+    },
+    {
+      provider: "mobile-ota",
+      flagKey: "mobile.ota_updates.enabled",
+      boundary: "EAS Update publishing must remain disabled unless project, native build, update URL, and rollback drill evidence exists.",
+    },
+    {
+      provider: "ai-assistants",
+      flagKey: "ai_assistants.enabled",
+      boundary: "AI assistant features must remain disabled until privacy, provider, and product review are complete.",
+    },
+  ];
+
+  return providerFlags.map((entry) => {
+    const decision = byKey.get(entry.flagKey);
+    const enabled = decision?.enabled ?? false;
+    return {
+      provider: entry.provider,
+      flagKey: entry.flagKey,
+      enabled,
+      decisionReason: decision?.reason ?? "default_value",
+      action: enabled ? "allow" : "block",
+      runtimeBoundary: entry.boundary,
+    };
+  });
 }
 
 export function createReleaseNotes(candidate: ReleaseCandidate): string {

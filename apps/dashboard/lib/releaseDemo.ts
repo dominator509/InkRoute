@@ -8,6 +8,7 @@ import {
   demoReleaseHealthChecks,
   demoReleaseNotesMarkdown,
   demoRollbackPlan,
+  buildProviderRuntimeGates,
   evaluateFeatureFlags,
 } from "@inkroute/releases";
 import { inkrouteDemoTenant } from "@inkroute/config";
@@ -22,6 +23,7 @@ export const productionFlagPreview = evaluateFeatureFlags(defaultFeatureFlags, {
   environment: "production",
   stableIdentifier: `${inkrouteDemoTenant.id}:owner`,
 });
+export const providerRuntimeGatePreview = buildProviderRuntimeGates(productionFlagPreview);
 export const mobileOtaPlanPreview = demoMobileUpdatePlan;
 export const rollbackPlanPreview = demoRollbackPlan;
 export const releaseWorkflowPlan = demoGithubWorkflowPlan;

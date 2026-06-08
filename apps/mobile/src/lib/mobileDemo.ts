@@ -15,6 +15,7 @@ import {
   demoReleaseCandidate,
   demoReleaseHealthChecks,
   demoRollbackPlan,
+  buildProviderRuntimeGates,
 } from "@inkroute/releases";
 
 import {
@@ -263,6 +264,7 @@ export const mobileReleaseCandidate = demoReleaseCandidate;
 export const mobileReleaseHealthChecks = demoReleaseHealthChecks;
 export const mobileOtaUpdatePlan = demoMobileUpdatePlan;
 export const mobileFeatureFlagDecisions = demoFeatureFlagDecisions;
+export const mobileProviderRuntimeGates = buildProviderRuntimeGates(mobileFeatureFlagDecisions);
 export const mobileRollbackPlan = demoRollbackPlan;
 
 
