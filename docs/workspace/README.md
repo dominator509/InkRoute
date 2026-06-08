@@ -23,8 +23,8 @@ pnpm workspace:all
 
 Generated reports are written to `docs/workspace/manifests/`:
 
-- `workspace-import-audit.json`
-- `package-script-audit.json`
-- `runtime-readiness.json`
+- `docs/workspace/manifests/workspace-import-audit.json`
+- `docs/workspace/manifests/package-script-audit.json`
+- `docs/workspace/manifests/runtime-readiness.json`
 
 The runtime readiness report can show `status: fail` while the command exits successfully. That is intentional: the report is a launch-readiness signal and currently reflects the missing lockfile plus open production blockers.

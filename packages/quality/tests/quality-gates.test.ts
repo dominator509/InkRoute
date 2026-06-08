@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   auditGapEvidenceRecords,
   auditMarkdownLinks,
+  auditSemanticDocumentationClaims,
   extractMarkdownLinks,
   parseGapEvidenceRecords,
   phase17QualityGates,
@@ -16,6 +17,7 @@ describe("quality gates", () => {
     expect(summary.highGates).toBe(1);
     expect(summary.mediumGates).toBe(1);
     expect(summary.referencedGapIds).toContain("GAP-122");
+    expect(summary.referencedGapIds).toContain("GAP-128");
     expect(summary.commands).toContain("node scripts/quality/audit-gap-evidence.mjs");
   });
 
@@ -66,5 +68,31 @@ describe("quality gates", () => {
 
     expect(audit.status).toBe("fail");
     expect(audit.findings[0]?.message).toContain("Missing relative link target docs/missing.md");
+  });
+
+  it("checks semantic documentation claims and referenced repo paths", () => {
+    const audit = auditSemanticDocumentationClaims(
+      [
+        {
+          path: "docs/example.md",
+          contents: [
+            "See `packages/quality/src/index.ts` for the helper.",
+            "This launch is production-ready.",
+            "This route is not production-ready until provider evidence exists.",
+            "Future glob `packages/*/src/index.ts` is roadmap-only.",
+          ].join("\n"),
+        },
+        {
+          path: "docs/missing.md",
+          contents: "Missing code path: `packages/missing/src/index.ts`.",
+        },
+      ],
+      new Set(["docs/example.md", "packages/quality/src/index.ts"]),
+    );
+
+    expect(audit.status).toBe("fail");
+    expect(audit.referencedPathsChecked).toBe(2);
+    expect(audit.findings.some((finding) => finding.message.includes("Unsupported production-readiness claim"))).toBe(true);
+    expect(audit.findings.some((finding) => finding.reference === "packages/missing/src/index.ts")).toBe(true);
   });
 });

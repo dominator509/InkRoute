@@ -32,6 +32,20 @@ export interface MarkdownLinkAuditSummary {
   readonly status: QualityGateStatus;
 }
 
+export interface SemanticDocumentationFinding {
+  readonly status: QualityGateStatus;
+  readonly sourcePath: string;
+  readonly reference?: string;
+  readonly message: string;
+}
+
+export interface SemanticDocumentationAuditSummary {
+  readonly totalDocuments: number;
+  readonly referencedPathsChecked: number;
+  readonly findings: readonly SemanticDocumentationFinding[];
+  readonly status: QualityGateStatus;
+}
+
 export interface GapEvidenceRecord {
   readonly gapId: string;
   readonly phase: string;
@@ -322,16 +336,99 @@ export function auditMarkdownLinks(documents: readonly MarkdownDocumentInput[], 
   };
 }
 
+function isPathReference(value: string): boolean {
+  if (!value || /\s/.test(value) || /[*?[\]{}]/.test(value)) {
+    return false;
+  }
+
+  if (/^(pnpm|npm|node|npx|git|gh|curl|eas|prisma)(:|\b)/i.test(value)) {
+    return false;
+  }
+
+  if (/^[A-Z0-9_]+$/.test(value)) {
+    return false;
+  }
+
+  return /^(apps|packages|scripts|docs|deployment|testing|\.github)\//.test(value) || /^[A-Z0-9_-]+\.(md|json|yml|yaml)$/i.test(value);
+}
+
+function normalizeReferencedPath(value: string): string {
+  return stripFragmentAndQuery(value.replace(/^\.?\//, "").replace(/[:#]L?\d+.*$/i, ""));
+}
+
+function extractInlineCodeReferences(contents: string): readonly string[] {
+  const references: string[] = [];
+  const regex = /`([^`\n]+)`/g;
+  for (const match of contents.matchAll(regex)) {
+    const reference = normalizeReferencedPath(match[1] ?? "");
+    if (isPathReference(reference)) {
+      references.push(reference.replace(/\\/g, "/").replace(/\/$/, ""));
+    }
+  }
+  return references;
+}
+
+function resolveReferencedPath(sourcePath: string, reference: string, existingPaths: ReadonlySet<string>): string {
+  if (/^(apps|packages|scripts|docs|deployment|testing|\.github)\//.test(reference)) {
+    return reference;
+  }
+
+  const relativeCandidate = normalizePath(`${dirname(sourcePath)}/${reference}`);
+  if (existingPaths.has(relativeCandidate)) {
+    return relativeCandidate;
+  }
+
+  return reference;
+}
+
+function hasUnsupportedProductionClaim(line: string): boolean {
+  if (!/\b(production[- ]ready|launch[- ]ready|ready for production|safe for production)\b/i.test(line)) {
+    return false;
+  }
+
+  return !/\b(not|none|without|blocked|gated|requires?|until|before|placeholder|unverified|prematurely|not legal advice|not production[- ]ready)\b/i.test(line);
+}
+
+export function auditSemanticDocumentationClaims(documents: readonly MarkdownDocumentInput[], existingPaths: ReadonlySet<string>): SemanticDocumentationAuditSummary {
+  const findings: SemanticDocumentationFinding[] = [];
+  let referencedPathsChecked = 0;
+
+  for (const document of documents) {
+    for (const rawReference of extractInlineCodeReferences(document.contents)) {
+      const reference = resolveReferencedPath(document.path, rawReference, existingPaths);
+      referencedPathsChecked += 1;
+      if (!existingPaths.has(reference)) {
+        findings.push({ status: "fail", sourcePath: document.path, reference, message: `Referenced repo path does not exist: ${reference}.` });
+      }
+    }
+
+    const lines = document.contents.split(/\r?\n/);
+    lines.forEach((line, index) => {
+      if (hasUnsupportedProductionClaim(line)) {
+        findings.push({ status: "fail", sourcePath: document.path, message: `Unsupported production-readiness claim on line ${index + 1}.` });
+      }
+    });
+  }
+
+  const status = findings.some((finding) => finding.status === "fail") ? "fail" : findings.some((finding) => finding.status === "warn") ? "warn" : "pass";
+  return {
+    totalDocuments: documents.length,
+    referencedPathsChecked,
+    findings,
+    status,
+  };
+}
+
 export const phase17QualityGates: readonly QualityGateDefinition[] = [
   {
     id: "quality-doc-links",
-    title: "Markdown link and path audit",
+    title: "Markdown link, path, and claim audit",
     priority: "high",
     command: "node scripts/quality/audit-doc-links.mjs",
     files: ["scripts/quality/audit-doc-links.mjs", "docs/quality/manifests/markdown-link-audit.json"],
-    blocksGapIds: ["GAP-124"],
-    purpose: "Detect broken relative Markdown links before an agent relies on stale documentation.",
-    acceptanceEvidence: ["Audit command output", "Updated markdown-link-audit.json", "No missing relative targets"],
+    blocksGapIds: ["GAP-124", "GAP-128"],
+    purpose: "Detect broken relative Markdown links, missing referenced repo paths, and unsupported production-ready claims before an agent relies on stale documentation.",
+    acceptanceEvidence: ["Audit command output", "Updated markdown-link-audit.json", "No missing relative targets or unsupported production claims"],
   },
   {
     id: "quality-gap-evidence",

@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-06-06T16:06:54.308Z",
+  "generatedAt": "2026-06-08T14:50:30.230Z",
   "source": "Phase 17 quality gate hardening",
-  "status": "fail",
+  "status": "warn",
   "totalGaps": 133,
   "blockingGaps": 126,
   "criticalBlockingGapIds": [
@@ -78,11 +78,6 @@
   },
   "findings": [
     {
-      "status": "fail",
-      "gapId": "GAP-001",
-      "message": "Closed status language lacks evidence wording."
-    },
-    {
       "status": "warn",
       "gapId": "GAP-007",
       "message": "Remaining work lacks an action verb and enough detail."
@@ -154,6 +149,16 @@
     },
     {
       "status": "warn",
+      "gapId": "GAP-021",
+      "message": "Remaining work lacks an action verb and enough detail."
+    },
+    {
+      "status": "warn",
+      "gapId": "GAP-021",
+      "message": "Suggested prompt lacks an action verb and enough detail."
+    },
+    {
+      "status": "warn",
       "gapId": "GAP-025",
       "message": "Suggested prompt lacks an action verb and enough detail."
     },
@@ -186,6 +191,11 @@
       "status": "warn",
       "gapId": "GAP-035",
       "message": "Blocks production uses qualified value: Yes for reliable launch."
+    },
+    {
+      "status": "warn",
+      "gapId": "GAP-035",
+      "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
       "status": "warn",
@@ -319,6 +329,11 @@
     },
     {
       "status": "warn",
+      "gapId": "GAP-078",
+      "message": "Remaining work lacks an action verb and enough detail."
+    },
+    {
+      "status": "warn",
       "gapId": "GAP-080",
       "message": "Verification/test field lacks concrete evidence detail."
     },
@@ -361,6 +376,11 @@
       "status": "warn",
       "gapId": "GAP-085",
       "message": "Verification/test field lacks concrete evidence detail."
+    },
+    {
+      "status": "warn",
+      "gapId": "GAP-088",
+      "message": "Remaining work lacks an action verb and enough detail."
     },
     {
       "status": "warn",
@@ -414,11 +434,6 @@
     },
     {
       "status": "warn",
-      "gapId": "GAP-098",
-      "message": "Verification/test field lacks concrete evidence detail."
-    },
-    {
-      "status": "warn",
       "gapId": "GAP-102",
       "message": "Suggested prompt lacks an action verb and enough detail."
     },
@@ -444,6 +459,11 @@
     },
     {
       "status": "warn",
+      "gapId": "GAP-127",
+      "message": "Remaining work lacks an action verb and enough detail."
+    },
+    {
+      "status": "warn",
       "gapId": "GAP-128",
       "message": "Suggested prompt lacks an action verb and enough detail."
     },
@@ -451,11 +471,6 @@
       "status": "warn",
       "gapId": "GAP-129",
       "message": "Verification/test field lacks concrete evidence detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-131",
-      "message": "Remaining work lacks an action verb and enough detail."
     },
     {
       "status": "warn",

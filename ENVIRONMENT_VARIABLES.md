@@ -84,7 +84,7 @@ The Phase 5 dashboard remains static. Production dashboard work will require aut
 
 ## Phase 6 mobile environment note
 
-The Phase 6 Expo scaffold still requires production mobile variables and secrets outside this repository, including API base URLs, auth client IDs, secure redirect schemes, Expo project ID, EAS Update URL, Sentry mobile DSN, push notification configuration, and storage upload endpoints. Do not hardcode mobile secrets in `app.json` or committed source.
+The Phase 6 Expo scaffold still requires production mobile variables and secrets outside this repository, including API base URLs, auth client IDs, secure redirect schemes, Expo project ID, EAS Update URL, Sentry mobile DSN, push notification configuration, and storage upload endpoints. Do not hardcode mobile secrets in `apps/mobile/app.json` or committed source.
 
 ## Phase 7 payment environment notes
 

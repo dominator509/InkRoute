@@ -8,11 +8,11 @@ const outputPath = join(root, "docs/quality/manifests/quality-gates.json");
 const gates = [
   {
     id: "quality-doc-links",
-    title: "Markdown link and path audit",
+    title: "Markdown link, path, and claim audit",
     priority: "high",
     command: "node scripts/quality/audit-doc-links.mjs",
-    blocksGapIds: ["GAP-124"],
-    acceptanceEvidence: ["Audit output", "markdown-link-audit.json", "No missing relative links"],
+    blocksGapIds: ["GAP-124", "GAP-128"],
+    acceptanceEvidence: ["Audit output", "markdown-link-audit.json", "No missing relative links, missing referenced repo paths, or unsupported production claims"],
   },
   {
     id: "quality-gap-evidence",
