@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { buildPrivacyRequestDraft, redactRecord, type PrivacyRequestType } from "@inkroute/security";
-import { persistPrivacyRequest, resolveTenant } from "../../../../lib/localRuntimeState";
+import { persistPrivacyRequest, resolveTenant } from "../../../../../lib/localRuntimeState";
 
 const requestTypes: PrivacyRequestType[] = ["access", "export", "rectification", "deletion", "restriction"];
 

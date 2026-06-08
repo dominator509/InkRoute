@@ -1,7 +1,7 @@
 import { interpretEmailWebhook } from "@inkroute/notifications";
 import { inkrouteDemoTenant } from "@inkroute/config";
 import { NextResponse, type NextRequest } from "next/server";
-import { persistWebhookEvent } from "../../../../../lib/localRuntimeState";
+import { persistWebhookEvent } from "../../../../lib/localRuntimeState";
 
 function getTenantSlugFromPayload(payload: Record<string, unknown>): string {
   const candidateSlug = typeof payload.tenantSlug === "string" ? payload.tenantSlug : undefined;

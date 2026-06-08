@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { validateUploadDraft, type UploadAssetKind } from "@inkroute/security";
-import { checkRateLimit, getClientIp, persistUploadIntent, resolveTenant } from "../../../../lib/localRuntimeState";
+import { checkRateLimit, getClientIp, persistUploadIntent, resolveTenant } from "../../../../../lib/localRuntimeState";
 
 const uploadKinds: UploadAssetKind[] = ["portfolio_public", "reference_private", "consent_signature", "healed_follow_up", "document_private"];
 

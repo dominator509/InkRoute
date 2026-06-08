@@ -1,7 +1,7 @@
 import { inkrouteDemoTenant } from "@inkroute/config";
 import { interpretStripeWebhook } from "@inkroute/payments";
 import { NextResponse, type NextRequest } from "next/server";
-import { persistWebhookEvent } from "../../../lib/localRuntimeState";
+import { persistWebhookEvent } from "../../../../lib/localRuntimeState";
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" ? (value as Record<string, unknown>) : undefined;

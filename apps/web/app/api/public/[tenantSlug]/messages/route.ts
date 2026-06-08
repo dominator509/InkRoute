@@ -1,6 +1,6 @@
 import { buildMessageThreadDraft } from "@inkroute/notifications";
 import { NextResponse, type NextRequest } from "next/server";
-import { checkRateLimit, getClientIp, persistMessage, resolveTenant } from "../../../../lib/localRuntimeState";
+import { checkRateLimit, getClientIp, persistMessage, resolveTenant } from "../../../../../lib/localRuntimeState";
 
 export async function POST(request: NextRequest, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;

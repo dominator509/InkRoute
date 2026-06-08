@@ -133,14 +133,19 @@ export async function GET(_request: Request, context: { params: Promise<{ tenant
       const tenantAllowlist = extractReleaseBoundaryNotes(rules.tenantAllowlist);
       const roleAllowlist = extractReleaseBoundaryNotes(rules.roleAllowlist);
       const scope = entry.scope === "global" || entry.scope === "tenant" || entry.scope === "user" ? entry.scope : "tenant";
-      byKey.set(entry.key, {
+      const merged = {
         ...base,
         description: entry.description,
         scope: isTenantScopeValue(scope === "user" ? "role" : scope) ? (scope === "user" ? "role" : scope) : "tenant",
         defaultEnabled: entry.enabled,
-        tenantAllowlist: tenantAllowlist ?? base.tenantAllowlist,
-        roleAllowlist: roleAllowlist ?? base.roleAllowlist,
-      });
+      };
+      if (tenantAllowlist) {
+        merged.tenantAllowlist = tenantAllowlist;
+      }
+      if (roleAllowlist) {
+        merged.roleAllowlist = roleAllowlist;
+      }
+      byKey.set(entry.key, merged);
     }
 
     const definitions = Array.from(byKey.values());

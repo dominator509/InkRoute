@@ -1,6 +1,6 @@
 import { buildStripeCheckoutSessionDraft, calculateDepositPolicy } from "@inkroute/payments";
 import { createDepositSession } from "@inkroute/payments";
-import { checkRateLimit, getBookingRequest, getClientIp, persistDepositSession, resolveTenant } from "../../../../lib/localRuntimeState";
+import { checkRateLimit, getBookingRequest, getClientIp, persistDepositSession, resolveTenant } from "../../../../../lib/localRuntimeState";
 import { NextResponse, type NextRequest } from "next/server";
 
 interface DepositSessionPreviewBody {
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   });
 
   const sessionInput = {
-    tenantId: tenantSlug,
+    tenantId: resolvedTenant.tenantId,
     bookingRequestId,
     amountCents: policy.depositAmountCents,
     currency: policy.currency,
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     policyVersion: policy.policyVersion,
   });
 
-  const storedSession = persistDepositSession(tenantSlug, bookingRequestId, policy.depositAmountCents, session.currency);
+  const storedSession = persistDepositSession(tenantSlug, bookingRequestId, policy.depositAmountCents, policy.currency);
 
   return NextResponse.json(
     {
