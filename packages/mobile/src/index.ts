@@ -309,6 +309,183 @@ export function planOfflineSync(input: {
   };
 }
 
+export type MobileApiDomain =
+  | "bookings"
+  | "appointments"
+  | "clients"
+  | "travel"
+  | "portfolio"
+  | "notifications"
+  | "releases";
+
+export type MobileApiMethod = "GET" | "POST" | "PATCH" | "DELETE";
+
+export type MobileApiRequestStatus =
+  | "ready"
+  | "blocked_missing_auth"
+  | "blocked_missing_tenant"
+  | "blocked_missing_base_url"
+  | "blocked_missing_request_id"
+  | "offline_queue_required";
+
+export interface MobileApiRequestPlanInput {
+  baseUrl: string;
+  tenantId: string;
+  accessToken?: string | null;
+  requestId?: string | null;
+  domain: MobileApiDomain;
+  method: MobileApiMethod;
+  path: string;
+  online: boolean;
+  idempotencyKey?: string | null;
+}
+
+export interface MobileApiRequestPlan {
+  status: MobileApiRequestStatus;
+  domain: MobileApiDomain;
+  method: MobileApiMethod;
+  url: string | null;
+  headers: Record<string, string>;
+  retryable: boolean;
+  safeErrorPolicy: "redact-body";
+  offlineQueueRequired: boolean;
+  blockers: string[];
+}
+
+export interface MobileScreenSyncRequirement {
+  screenId: MobileScreenId;
+  domain: MobileApiDomain;
+  requiredEndpoints: string[];
+  mutationMethods: MobileApiMethod[];
+  requiresAuth: boolean;
+  requiresTenantScope: boolean;
+  supportsOfflineQueue: boolean;
+  gapIds: string[];
+}
+
+function joinMobileApiUrl(baseUrl: string, path: string): string {
+  return `${baseUrl.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
+}
+
+export function buildMobileApiRequestPlan(input: MobileApiRequestPlanInput): MobileApiRequestPlan {
+  const blockers: string[] = [];
+  if (!input.baseUrl.trim()) blockers.push("Mobile API base URL is required.");
+  if (!input.tenantId.trim()) blockers.push("Tenant scope is required for mobile API requests.");
+  if (!input.accessToken?.trim()) blockers.push("Bearer access token is required for mobile API requests.");
+  if (!input.requestId?.trim()) blockers.push("Request id is required for mobile API traceability.");
+
+  const offlineQueueRequired = !input.online && input.method !== "GET";
+  if (offlineQueueRequired) {
+    blockers.push("Offline mobile mutations must be queued with idempotency before sync.");
+  }
+
+  const status: MobileApiRequestStatus =
+    blockers.find((blocker) => blocker.includes("base URL"))
+      ? "blocked_missing_base_url"
+      : blockers.find((blocker) => blocker.includes("Tenant scope"))
+        ? "blocked_missing_tenant"
+        : blockers.find((blocker) => blocker.includes("Bearer access token"))
+          ? "blocked_missing_auth"
+          : blockers.find((blocker) => blocker.includes("Request id"))
+            ? "blocked_missing_request_id"
+            : offlineQueueRequired
+              ? "offline_queue_required"
+              : "ready";
+
+  const headers: Record<string, string> = {};
+  if (input.accessToken?.trim()) headers.Authorization = `Bearer ${input.accessToken}`;
+  if (input.tenantId.trim()) headers["X-InkRoute-Tenant"] = input.tenantId;
+  if (input.requestId?.trim()) headers["X-Request-Id"] = input.requestId;
+  if (input.idempotencyKey?.trim()) headers["Idempotency-Key"] = input.idempotencyKey;
+
+  return {
+    status,
+    domain: input.domain,
+    method: input.method,
+    url: input.baseUrl.trim() ? joinMobileApiUrl(input.baseUrl, input.path) : null,
+    headers,
+    retryable: input.method === "GET" || Boolean(input.idempotencyKey?.trim()),
+    safeErrorPolicy: "redact-body",
+    offlineQueueRequired,
+    blockers,
+  };
+}
+
+export function buildMobileScreenSyncRequirements(): MobileScreenSyncRequirement[] {
+  return [
+    {
+      screenId: "bookings",
+      domain: "bookings",
+      requiredEndpoints: ["/api/mobile/bookings", "/api/mobile/bookings/:id/actions"],
+      mutationMethods: ["POST", "PATCH"],
+      requiresAuth: true,
+      requiresTenantScope: true,
+      supportsOfflineQueue: true,
+      gapIds: ["GAP-043", "GAP-045"],
+    },
+    {
+      screenId: "appointments",
+      domain: "appointments",
+      requiredEndpoints: ["/api/mobile/appointments", "/api/mobile/availability"],
+      mutationMethods: ["POST", "PATCH"],
+      requiresAuth: true,
+      requiresTenantScope: true,
+      supportsOfflineQueue: true,
+      gapIds: ["GAP-043", "GAP-056"],
+    },
+    {
+      screenId: "clients",
+      domain: "clients",
+      requiredEndpoints: ["/api/mobile/clients", "/api/mobile/clients/:id/timeline"],
+      mutationMethods: ["PATCH"],
+      requiresAuth: true,
+      requiresTenantScope: true,
+      supportsOfflineQueue: false,
+      gapIds: ["GAP-040", "GAP-043"],
+    },
+    {
+      screenId: "travel",
+      domain: "travel",
+      requiredEndpoints: ["/api/mobile/travel-stops"],
+      mutationMethods: ["POST", "PATCH"],
+      requiresAuth: true,
+      requiresTenantScope: true,
+      supportsOfflineQueue: true,
+      gapIds: ["GAP-043", "GAP-056"],
+    },
+    {
+      screenId: "portfolio",
+      domain: "portfolio",
+      requiredEndpoints: ["/api/mobile/portfolio", "/api/mobile/portfolio/upload-intents"],
+      mutationMethods: ["POST", "PATCH"],
+      requiresAuth: true,
+      requiresTenantScope: true,
+      supportsOfflineQueue: true,
+      gapIds: ["GAP-005", "GAP-043"],
+    },
+    {
+      screenId: "notifications",
+      domain: "notifications",
+      requiredEndpoints: ["/api/mobile/notifications", "/api/mobile/messages"],
+      mutationMethods: ["POST", "PATCH"],
+      requiresAuth: true,
+      requiresTenantScope: true,
+      supportsOfflineQueue: false,
+      gapIds: ["GAP-043", "GAP-064"],
+    },
+    {
+      screenId: "system",
+      domain: "releases",
+      requiredEndpoints: ["/api/mobile/release-health"],
+      mutationMethods: [],
+      requiresAuth: true,
+      requiresTenantScope: true,
+      supportsOfflineQueue: false,
+      gapIds: ["GAP-043", "GAP-047"],
+    },
+  ];
+}
+
 export interface MobileHealthCheck {
   id: string;
   label: string;

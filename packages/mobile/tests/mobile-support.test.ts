@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildMobileApiRequestPlan,
+  buildMobileScreenSyncRequirements,
   getMobileScreen,
   buildOfflineIdempotencyKey,
   calculateOfflineRetryDelayMinutes,
@@ -155,6 +157,113 @@ describe("mobile support helpers", () => {
     });
     expect(encrypted.readyCount).toBe(1);
     expect(encrypted.decisions[0]?.status).toBe("ready_to_sync");
+  });
+
+  it("plans tenant-scoped mobile API requests with auth, request ids, and idempotency", () => {
+    const plan = buildMobileApiRequestPlan({
+      baseUrl: "https://preview.inkroute.test/",
+      tenantId: "tenant_001",
+      accessToken: "access_token",
+      requestId: "req_001",
+      domain: "bookings",
+      method: "PATCH",
+      path: "/api/mobile/bookings/booking_001",
+      online: true,
+      idempotencyKey: "mobile_booking_patch_001",
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      url: "https://preview.inkroute.test/api/mobile/bookings/booking_001",
+      retryable: true,
+      safeErrorPolicy: "redact-body",
+      offlineQueueRequired: false,
+      blockers: [],
+    });
+    expect(plan.headers).toEqual({
+      Authorization: "Bearer access_token",
+      "X-InkRoute-Tenant": "tenant_001",
+      "X-Request-Id": "req_001",
+      "Idempotency-Key": "mobile_booking_patch_001",
+    });
+  });
+
+  it("blocks unsafe mobile API requests before fetch wiring", () => {
+    expect(
+      buildMobileApiRequestPlan({
+        baseUrl: "",
+        tenantId: "tenant_001",
+        accessToken: "access_token",
+        requestId: "req_001",
+        domain: "clients",
+        method: "GET",
+        path: "/api/mobile/clients",
+        online: true,
+      }),
+    ).toMatchObject({
+      status: "blocked_missing_base_url",
+      url: null,
+    });
+
+    expect(
+      buildMobileApiRequestPlan({
+        baseUrl: "https://preview.inkroute.test",
+        tenantId: "",
+        accessToken: null,
+        requestId: "",
+        domain: "clients",
+        method: "GET",
+        path: "/api/mobile/clients",
+        online: true,
+      }),
+    ).toMatchObject({
+      status: "blocked_missing_tenant",
+      blockers: [
+        "Tenant scope is required for mobile API requests.",
+        "Bearer access token is required for mobile API requests.",
+        "Request id is required for mobile API traceability.",
+      ],
+    });
+  });
+
+  it("requires offline queueing for offline mobile mutations", () => {
+    const plan = buildMobileApiRequestPlan({
+      baseUrl: "https://preview.inkroute.test",
+      tenantId: "tenant_001",
+      accessToken: "access_token",
+      requestId: "req_001",
+      domain: "travel",
+      method: "PATCH",
+      path: "/api/mobile/travel-stops/stop_001",
+      online: false,
+      idempotencyKey: "travel_patch_001",
+    });
+
+    expect(plan).toMatchObject({
+      status: "offline_queue_required",
+      retryable: true,
+      offlineQueueRequired: true,
+    });
+    expect(plan.blockers).toEqual(["Offline mobile mutations must be queued with idempotency before sync."]);
+  });
+
+  it("maps mobile screens to authenticated tenant-scoped API sync requirements", () => {
+    const requirements = buildMobileScreenSyncRequirements();
+
+    expect(requirements.map((requirement) => requirement.domain)).toEqual([
+      "bookings",
+      "appointments",
+      "clients",
+      "travel",
+      "portfolio",
+      "notifications",
+      "releases",
+    ]);
+    expect(requirements.every((requirement) => requirement.requiresAuth && requirement.requiresTenantScope)).toBe(true);
+    expect(requirements.every((requirement) => requirement.gapIds.includes("GAP-043"))).toBe(true);
+    expect(requirements.find((requirement) => requirement.screenId === "portfolio")?.requiredEndpoints).toContain(
+      "/api/mobile/portfolio/upload-intents",
+    );
   });
 
   it("keeps production-blocking integration boundaries visible", () => {
