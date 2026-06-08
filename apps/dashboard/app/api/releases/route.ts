@@ -1,6 +1,6 @@
-import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
-import { createReleaseCandidate, createRollbackPlan, demoReleaseCandidate, buildReleaseHealthChecks, releaseCreateInputSchema } from "@inkroute/releases";
+import { createReleaseCandidate, createRollbackPlan, demoReleaseCandidate, buildReleaseHealthChecks } from "@inkroute/releases";
+import { releaseCreateInputSchema } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 
@@ -206,16 +206,16 @@ export async function POST(request: NextRequest) {
     const persistedChannel = normalizeDbChannel(input.channel);
     const persisted = await prisma.$transaction(async (tx) => {
       const created = await tx.releaseRecord.create({
-        data: {
-          tenantId,
-          releasedByUserId: actor.actorUserId,
-          version: input.version,
-          channel: persistedChannel,
-          commitSha: input.commitSha,
-          notes: releaseCandidate.notes.join("\n"),
-          migrationVersion: input.migrationVersion,
-          mobileRuntimeVersion: input.mobileRuntimeVersion,
-        },
+    data: {
+      tenantId,
+      releasedByUserId: actor.actorUserId,
+      version: input.version,
+      channel: persistedChannel,
+      commitSha: input.commitSha ?? null,
+      notes: input.notes,
+      migrationVersion: input.migrationVersion ?? null,
+      mobileRuntimeVersion: input.mobileRuntimeVersion ?? null,
+    },
       });
       const audit = await tx.auditLog.create({
         data: {
@@ -260,7 +260,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "P2002") {
       return NextResponse.json(
         { ok: false, error: { code: "RELEASE_UNIQUENESS_CONFLICT", message: "A release with that version already exists for this tenant." } },
         { status: 409 },

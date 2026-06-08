@@ -71,21 +71,26 @@ function mergeDefinitionWithRecord(
   const rules = asRecord(record.rules);
   const tenantAllowlist = normalizeStringArray(rules.tenantAllowlist);
   const roleAllowlist = normalizeStringArray(rules.roleAllowlist);
+  const rolloutPercentage = normalizeNumber(rules.rolloutPercentage);
   return {
-    ...base,
     key: record.key,
     description: typeof rules.description === "string" && rules.description.trim() ? rules.description : record.description ?? base.description,
     scope: normalizeScope(record.scope),
     defaultEnabled: typeof record.enabled === "boolean" ? record.enabled : base.defaultEnabled,
     environments: normalizeEnvironments(rules.environments),
+    ...(base.owner ? { owner: base.owner } : {}),
     ...(tenantAllowlist ? { tenantAllowlist } : base.tenantAllowlist ? { tenantAllowlist: base.tenantAllowlist } : {}),
     ...(roleAllowlist ? { roleAllowlist } : base.roleAllowlist ? { roleAllowlist: base.roleAllowlist } : {}),
-    rolloutPercentage: normalizeNumber(rules.rolloutPercentage) ?? base.rolloutPercentage,
-    killSwitch: typeof rules.killSwitch === "boolean" ? rules.killSwitch : base.killSwitch,
-    expiresAt: typeof rules.expiresAt === "string" ? rules.expiresAt : base.expiresAt,
+    ...(typeof rules.killSwitch === "boolean" ? { killSwitch: rules.killSwitch } : {}),
+    ...(typeof rules.expiresAt === "string" ? { expiresAt: rules.expiresAt } : {}),
+    ...(typeof rolloutPercentage === "number" ? { rolloutPercentage } : {}),
+    ...(typeof rolloutPercentage !== "number" && typeof base.rolloutPercentage === "number" ? { rolloutPercentage: base.rolloutPercentage } : {}),
     auditNote: typeof rules.auditNote === "string" && rules.auditNote.trim() ? rules.auditNote : base.auditNote,
+    owner: base.owner,
   };
 }
+
+type FeatureFlagRulesInput = Exclude<Parameters<(typeof prisma)["featureFlag"]["upsert"]>[0]["create"]["rules"], undefined>;
 
 function buildDefinitionFallback(key: string): FeatureFlagDefinition {
   return {
@@ -295,7 +300,7 @@ export async function POST(request: NextRequest) {
   }
 
   const rules = normalizeRulesInput(input.rules);
-  const persistedRules = rules as Record<string, unknown>;
+  const persistedRules = rules as FeatureFlagRulesInput;
 
   if (actor.source === "local-fallback") {
     return NextResponse.json(

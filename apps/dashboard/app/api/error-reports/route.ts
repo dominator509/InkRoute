@@ -31,6 +31,9 @@ type LocalErrorReport = {
 const localErrorReports = new Map<string, LocalErrorReport[]>();
 const LOCAL_REPORT_LIMIT = 150;
 
+type ErrorReportCreateData = Parameters<(typeof prisma)["errorReport"]["create"]>[0]["data"];
+type ErrorReportMetadataInput = Exclude<ErrorReportCreateData["metadata"], undefined>;
+
 function nextLocalErrorId(tenantId: string): string {
   const random = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2);
   return `err_${tenantId}_${Date.now()}_${random}`;
@@ -67,14 +70,14 @@ function buildDashboardReportInput(parsed: { data: ErrorReportInput }, tenantId:
     runtime: typeof inputData.runtime === "string" ? inputData.runtime : "browser",
     environment: typeof inputData.environment === "string" ? inputData.environment : "production",
     message: inputData.message,
-    stack: typeof inputData.stack === "string" ? inputData.stack : undefined,
+    ...(typeof inputData.stack === "string" ? { stack: inputData.stack } : {}),
     route: typeof inputData.route === "string" ? inputData.route : "/dashboard",
     release: typeof inputData.release === "string" ? inputData.release : "phase11-dashboard-demo",
-    userAgent,
-    statusCode: typeof inputData.statusCode === "number" ? inputData.statusCode : undefined,
+    ...(typeof userAgent === "string" ? { userAgent } : {}),
+    ...(typeof inputData.statusCode === "number" ? { statusCode: inputData.statusCode } : {}),
     handled: typeof inputData.handled === "boolean" ? inputData.handled : true,
-    metadata: typeof inputData.metadata === "object" && inputData.metadata !== null ? (inputData.metadata as Record<string, unknown>) : undefined,
-    tags: typeof inputData.tags === "object" && inputData.tags !== null ? (inputData.tags as Record<string, string>) : undefined,
+    ...(typeof inputData.metadata === "object" && inputData.metadata !== null ? { metadata: inputData.metadata as Record<string, unknown> } : {}),
+    ...(typeof inputData.tags === "object" && inputData.tags !== null ? { tags: inputData.tags as Record<string, string> } : {}),
   };
 }
 
@@ -118,14 +121,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const rows = await prisma.errorReport.findMany({
+      const rows = await prisma.errorReport.findMany({
       where: {
         tenantId,
         ...(filters.source ? { source: filters.source } : {}),
         ...(filters.status ? { status: filters.status } : {}),
       },
       orderBy: { createdAt: "desc" },
-      take: filters.limit,
+      take: filters.limit ?? 50,
       select: {
         id: true,
         tenantId: true,
@@ -224,7 +227,6 @@ export async function POST(request: NextRequest) {
   const auditRoute = buildAlertRoute(report);
 
   const localPayload = {
-    id: nextLocalErrorId(tenantId),
     tenantId,
     severity: report.severity,
     status: report.status,
@@ -232,18 +234,14 @@ export async function POST(request: NextRequest) {
     message: report.redactedMessage,
     redactionLevel: report.redactionLevel,
     stackHash: report.stackHash,
-    release: report.release,
-    route: report.route,
-    createdAt: new Date().toISOString(),
+    ...(report.release ? { release: report.release } : {}),
+    ...(report.route ? { route: report.route } : {}),
     auditRoute,
   };
 
   if (actor.source === "local-fallback") {
     const persisted = storeLocalErrorReport({
       ...localPayload,
-      id: localPayload.id,
-      auditRoute,
-      createdAt: new Date().toISOString(),
     });
     return NextResponse.json({
       ok: true,
@@ -279,10 +277,10 @@ export async function POST(request: NextRequest) {
           source: report.source,
           message: report.redactedMessage,
           stackHash: report.stackHash,
-          release: report.release,
-          route: report.route,
-          userAgent: report.userAgent,
-          metadata: report.redactedMetadata,
+          release: report.release ?? null,
+          route: report.route ?? null,
+          userAgent: report.userAgent ?? null,
+          metadata: report.redactedMetadata as ErrorReportMetadataInput,
         },
       });
       const audit = await tx.auditLog.create({
@@ -323,7 +321,7 @@ export async function POST(request: NextRequest) {
           release: persisted.created.release ?? undefined,
           metadata: persisted.created.metadata as Record<string, unknown> | null ?? {},
           createdAt: persisted.created.createdAt.toISOString(),
-          alertRoute,
+          alertRoute: auditRoute,
           auditId: persisted.audit.id,
         },
         requiredNextWork: [
@@ -339,9 +337,6 @@ export async function POST(request: NextRequest) {
     if (isDatabaseUnavailable(error)) {
       const persisted = storeLocalErrorReport({
         ...localPayload,
-        id: localPayload.id,
-        auditRoute,
-        createdAt: new Date().toISOString(),
       });
       return NextResponse.json({
         ok: true,
