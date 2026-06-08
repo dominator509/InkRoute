@@ -64,6 +64,30 @@ export interface UploadValidationResult {
   requiredProductionControls: string[];
 }
 
+export interface SignedUploadIntentInput extends UploadValidationInput {
+  tenantId: string;
+  subjectId: string;
+  requestedByUserId?: string;
+  bookingRequestId?: string;
+  expiresInSeconds?: number;
+}
+
+export interface SignedUploadIntentPlan {
+  accepted: boolean;
+  status: "provider_gated" | "rejected";
+  tenantId: string;
+  subjectId: string;
+  kind: UploadAssetKind;
+  objectKey: string | null;
+  storageVisibility: UploadValidationResult["storageVisibility"];
+  expiresInSeconds: number;
+  validation: UploadValidationResult;
+  signedUploadUrlRequired: boolean;
+  publicReadAllowed: boolean;
+  requiredWrites: Array<"FileAsset" | "AuditLog" | "BookingReferenceImage">;
+  requiredControls: string[];
+}
+
 export interface RateLimitRule {
   id: string;
   routePattern: string;
@@ -1092,6 +1116,50 @@ export function validateUploadDraft(input: UploadValidationInput): UploadValidat
       "Run malware scanning or quarantine workflow before durable use.",
       "Store private reference and consent assets behind signed, revocable URLs.",
       "Persist tenant-scoped FileAsset and AuditLog records after upload completion.",
+    ],
+  };
+}
+
+function sanitizeObjectKeySegment(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "unknown";
+}
+
+export function buildSignedUploadIntentPlan(input: SignedUploadIntentInput): SignedUploadIntentPlan {
+  const validation = validateUploadDraft(input);
+  const expiresInSeconds = Math.min(Math.max(input.expiresInSeconds ?? 900, 60), 3600);
+  const extension = validation.normalizedExtension || "bin";
+  const tenantSegment = sanitizeObjectKeySegment(input.tenantId);
+  const subjectSegment = sanitizeObjectKeySegment(input.subjectId);
+  const bookingSegment = input.bookingRequestId ? sanitizeObjectKeySegment(input.bookingRequestId) : "unassigned";
+  const kindSegment = sanitizeObjectKeySegment(input.kind);
+  const visibilityPrefix = validation.storageVisibility === "public_derivative" ? "public" : "private";
+  const objectKey = validation.accepted
+    ? `${visibilityPrefix}/${tenantSegment}/${kindSegment}/${bookingSegment}/${subjectSegment}.${extension}`
+    : null;
+
+  return {
+    accepted: validation.accepted,
+    status: validation.accepted ? "provider_gated" : "rejected",
+    tenantId: input.tenantId,
+    subjectId: input.subjectId,
+    kind: input.kind,
+    objectKey,
+    storageVisibility: validation.storageVisibility,
+    expiresInSeconds,
+    validation,
+    signedUploadUrlRequired: validation.accepted,
+    publicReadAllowed: validation.storageVisibility === "public_derivative",
+    requiredWrites: input.kind === "reference_private" ? ["FileAsset", "BookingReferenceImage", "AuditLog"] : ["FileAsset", "AuditLog"],
+    requiredControls: [
+      ...validation.requiredProductionControls,
+      "Signed upload URLs must expire and be scoped to a single object key, content type, and max byte size.",
+      "Private upload objects must not be readable through public URLs before or after scan completion.",
+      "Reference images must be associated to the booking request before artist review.",
     ],
   };
 }

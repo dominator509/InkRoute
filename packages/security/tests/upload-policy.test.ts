@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPrivacyLifecyclePlan, buildTenantIsolationFixtures, evaluateRateLimitDraft, redactRecord, validateUploadDraft } from "../src/index";
+import { buildPrivacyLifecyclePlan, buildSignedUploadIntentPlan, buildTenantIsolationFixtures, evaluateRateLimitDraft, redactRecord, validateUploadDraft } from "../src/index";
 
 describe("security and privacy helpers", () => {
   it("accepts reference image drafts only within private-upload policy limits", () => {
@@ -10,6 +10,52 @@ describe("security and privacy helpers", () => {
     expect(accepted.storageVisibility).toBe("client_private");
     expect(rejected.accepted).toBe(false);
     expect(rejected.reasons.join(" ")).toContain("allowlist");
+  });
+
+  it("plans signed private reference upload intents with scoped object keys", () => {
+    const plan = buildSignedUploadIntentPlan({
+      kind: "reference_private",
+      filename: "Rib Reference.JPG",
+      mimeType: "image/jpeg",
+      sizeBytes: 400000,
+      declaredByAuthenticatedUser: false,
+      tenantId: "Tenant Demo Nomad",
+      subjectId: "Reference 001",
+      bookingRequestId: "Booking 001",
+      expiresInSeconds: 9999,
+    });
+
+    expect(plan).toMatchObject({
+      accepted: true,
+      status: "provider_gated",
+      storageVisibility: "client_private",
+      signedUploadUrlRequired: true,
+      publicReadAllowed: false,
+      expiresInSeconds: 3600,
+      requiredWrites: ["FileAsset", "BookingReferenceImage", "AuditLog"],
+    });
+    expect(plan.objectKey).toBe("private/tenant-demo-nomad/reference_private/booking-001/reference-001.jpg");
+    expect(plan.requiredControls).toContain("Private upload objects must not be readable through public URLs before or after scan completion.");
+  });
+
+  it("rejects signed upload intents when metadata validation fails", () => {
+    const plan = buildSignedUploadIntentPlan({
+      kind: "reference_private",
+      filename: "../reference.jpg.php",
+      mimeType: "image/jpeg",
+      sizeBytes: 400000,
+      declaredByAuthenticatedUser: false,
+      tenantId: "tenant_001",
+      subjectId: "reference_001",
+      expiresInSeconds: 10,
+    });
+
+    expect(plan.accepted).toBe(false);
+    expect(plan.status).toBe("rejected");
+    expect(plan.objectKey).toBeNull();
+    expect(plan.expiresInSeconds).toBe(60);
+    expect(plan.validation.reasons.join(" ")).toContain("allowlist");
+    expect(plan.signedUploadUrlRequired).toBe(false);
   });
 
   it("redacts PII, payment fields, and medical notes", () => {
