@@ -79,12 +79,18 @@ export interface RateLimitEvaluationResult {
 
 export type EncryptionReadinessStatus = "ready" | "not_configured" | "invalid_key" | "unsupported_environment";
 export type EncryptionAttemptStatus = "stored" | "redacted";
+export type EncryptionRotationState = "unconfigured" | "single_primary_only" | "single_secondary_only" | "dual_key_rotation_ready";
 
 export interface EncryptionRuntimeContext {
   status: EncryptionReadinessStatus;
   keyVersion: string;
   ready: boolean;
   reason: string;
+}
+
+export interface EncryptionDecryptionProof {
+  ok: boolean;
+  reason?: string;
 }
 
 export interface EncryptionAttempt {
@@ -110,6 +116,34 @@ type LoadedEncryptionKey = {
 };
 
 let cachedEncryptionKeys: LoadedEncryptionKey[] | null = null;
+let encryptionCacheVersion = 1;
+
+export type EncryptionPersistScope = "database" | "local-fallback";
+
+export interface EncryptionPolicyInput {
+  operation: string;
+  scope: EncryptionPersistScope;
+  requiredFields?: string[];
+}
+
+export interface EncryptionPolicyResult {
+  operation: string;
+  scope: EncryptionPersistScope;
+  requiredFields: string[];
+  status: "allow" | "warn" | "deny";
+  canPersist: boolean;
+  reason: string;
+  readiness: EncryptionRuntimeContext;
+  rotation: {
+    configuredKeyIds: string[];
+    activeKeyId: string | null;
+    hasPrimary: boolean;
+    hasSecondary: boolean;
+    cacheVersion: number;
+    rotationState?: EncryptionRotationState;
+    rotationAction?: string;
+  };
+}
 
 function normalizeBase64(input: string): string {
   return input.replace(/[\n\r\s]/g, "").replace(/-/g, "+").replace(/_/g, "/");
@@ -184,7 +218,7 @@ async function ensureKeyLength(rawKey: string): Promise<Uint8Array | null> {
   }
 
   try {
-    const digest = await globalThis.crypto.subtle.digest("SHA-256", decoded);
+    const digest = await globalThis.crypto.subtle.digest("SHA-256", decoded as BufferSource);
     return new Uint8Array(digest);
   } catch {
     const normalized = new Uint8Array(32);
@@ -233,7 +267,7 @@ async function loadEncryptionKeys(): Promise<LoadedEncryptionKey[] | null> {
     try {
       const imported = await globalThis.crypto.subtle.importKey(
         "raw",
-        keyBytes,
+        keyBytes as BufferSource,
         { name: "AES-GCM", length: 256 },
         false,
         ["encrypt", "decrypt"],
@@ -276,15 +310,123 @@ export async function inspectConfiguredEncryptionKeys() {
     hasSecondary: configured.some((entry) => entry.source === "secondary"),
     activeKeyId: imported?.[0]?.keyId ?? null,
     ready: Boolean(imported?.length),
+    cacheVersion: encryptionCacheVersion,
     totalConfigured: configured.length,
     configuredIds: configured.map((entry) => entry.keyId),
+  };
+}
+
+function buildEncryptionRotationMetadata(
+  keyMeta: Awaited<ReturnType<typeof inspectConfiguredEncryptionKeys>>,
+  readiness: EncryptionRuntimeContext,
+) {
+  if (!keyMeta.ready) {
+    return {
+      rotationState: "unconfigured" as EncryptionRotationState,
+      rotationAction: readiness.reason,
+    };
+  }
+  if (keyMeta.hasPrimary && keyMeta.hasSecondary) {
+    return {
+      rotationState: "dual_key_rotation_ready" as EncryptionRotationState,
+      rotationAction: "Dual-key policy is configured; rotate secondary into primary on cadence and retire old key IDs only after cutover.",
+    };
+  }
+  if (keyMeta.hasPrimary) {
+    return {
+      rotationState: "single_primary_only" as EncryptionRotationState,
+      rotationAction: "Add SECURITY_ENCRYPTION_SECONDARY_KEY for explicit rotation and key retirement.",
+    };
+  }
+  return {
+    rotationState: "single_secondary_only" as EncryptionRotationState,
+    rotationAction: "Primary key is missing; secondary key is active and should be paired with a documented primary rotation path.",
+  };
+}
+
+export function getEncryptionCacheVersion(): number {
+  return encryptionCacheVersion;
+}
+
+export function invalidateEncryptionCache(): number {
+  cachedEncryptionKeys = null;
+  encryptionCacheVersion += 1;
+  return encryptionCacheVersion;
+}
+
+export async function evaluateEncryptionPolicy(input: EncryptionPolicyInput): Promise<EncryptionPolicyResult> {
+  const requiredFields = (input.requiredFields ?? []).filter(Boolean);
+  const readiness = await getEncryptionReadiness();
+  const keyMeta = await inspectConfiguredEncryptionKeys();
+  const requiresEncryption = requiredFields.length > 0;
+  const rotationMetadata = buildEncryptionRotationMetadata(keyMeta, readiness);
+
+  if (requiresEncryption && input.scope === "database" && !readiness.ready) {
+    return {
+      operation: input.operation,
+      scope: input.scope,
+      requiredFields,
+      status: "deny",
+      canPersist: false,
+      reason: "Encryption readiness is required for sensitive DB fields.",
+      readiness,
+      rotation: {
+        configuredKeyIds: keyMeta.configuredIds,
+        activeKeyId: keyMeta.activeKeyId,
+        hasPrimary: keyMeta.hasPrimary,
+        hasSecondary: keyMeta.hasSecondary,
+        cacheVersion: keyMeta.cacheVersion,
+        rotationState: rotationMetadata.rotationState,
+        rotationAction: rotationMetadata.rotationAction,
+      },
+    };
+  }
+
+  if (!readiness.ready && requiresEncryption) {
+    return {
+      operation: input.operation,
+      scope: input.scope,
+      requiredFields,
+      status: "warn",
+      canPersist: true,
+      reason: "Sensitive fields are not encrypted on local fallback without a ready key.",
+      readiness,
+      rotation: {
+        configuredKeyIds: keyMeta.configuredIds,
+        activeKeyId: keyMeta.activeKeyId,
+        hasPrimary: keyMeta.hasPrimary,
+        hasSecondary: keyMeta.hasSecondary,
+        cacheVersion: keyMeta.cacheVersion,
+        rotationState: rotationMetadata.rotationState,
+        rotationAction: rotationMetadata.rotationAction,
+      },
+    };
+  }
+
+  return {
+    operation: input.operation,
+    scope: input.scope,
+    requiredFields,
+    status: readiness.ready ? "allow" : "warn",
+    canPersist: true,
+    reason: readiness.ready ? "Encryption is ready for sensitive persistence." : "Encryption is optional for this fallback scope.",
+    readiness,
+    rotation: {
+      configuredKeyIds: keyMeta.configuredIds,
+      activeKeyId: keyMeta.activeKeyId,
+      hasPrimary: keyMeta.hasPrimary,
+      hasSecondary: keyMeta.hasSecondary,
+      cacheVersion: keyMeta.cacheVersion,
+      rotationState: rotationMetadata.rotationState,
+      rotationAction: rotationMetadata.rotationAction,
+    },
   };
 }
 
 function toBase64(bytes: Uint8Array): string {
   let value = "";
   for (let index = 0; index < bytes.length; index += 1) {
-    value += String.fromCharCode(bytes[index]);
+    value += String.fromCharCode(bytes[index] ?? 0);
   }
   if (typeof btoa === "function") return btoa(value);
   if (typeof Buffer === "undefined") return "";
@@ -381,7 +523,7 @@ export async function encryptTextField(value?: string | null): Promise<Encryptio
     const iv = new Uint8Array(12);
     globalThis.crypto.getRandomValues(iv);
     const encoded = new TextEncoder().encode(value);
-    const encrypted = new Uint8Array(await globalThis.crypto.subtle.encrypt({ name: "AES-GCM", iv }, keyMaterial.key, encoded));
+    const encrypted = new Uint8Array(await globalThis.crypto.subtle.encrypt({ name: "AES-GCM", iv }, keyMaterial.key, encoded as BufferSource));
     const envelope: EncryptionEnvelope = {
       alg: "AES-256-GCM",
       keyVersion: keyMaterial.keyId,
@@ -412,8 +554,8 @@ export async function decryptTextField(value?: string | null): Promise<string | 
   try {
     const envelope = JSON.parse(payload) as EncryptionEnvelope;
     if (envelope.alg !== "AES-256-GCM") return null;
-    const iv = fromBase64(envelope.iv);
-    const data = fromBase64(envelope.data);
+    const iv = fromBase64(envelope.iv) as unknown as BufferSource;
+    const data = fromBase64(envelope.data) as unknown as BufferSource;
 
     const orderedKeys = pickDecryptionOrder(keyMaterials, envelope.keyVersion);
     for (const keyMaterial of orderedKeys) {
@@ -428,6 +570,42 @@ export async function decryptTextField(value?: string | null): Promise<string | 
   } catch {
     return null;
   }
+}
+
+export async function verifyEncryptionRoundTrip(plainText: string | undefined, encryptedValue: string | null): Promise<EncryptionDecryptionProof> {
+  if (!plainText) {
+    return { ok: true };
+  }
+
+  if (!encryptedValue) {
+    return { ok: false, reason: "No encrypted value was supplied for verification." };
+  }
+
+  const decrypted = await decryptTextField(encryptedValue);
+  if (decrypted === null) {
+    return { ok: false, reason: "Cannot decrypt with currently configured key set." };
+  }
+  if (decrypted !== plainText) {
+    return { ok: false, reason: "Decrypted value mismatch indicates non-deterministic or truncated encryption storage." };
+  }
+
+  return { ok: true };
+}
+
+export async function encryptProviderTokenField(value?: string | null): Promise<EncryptionAttempt> {
+  return encryptTextField(value);
+}
+
+export async function decryptProviderTokenField(value?: string | null): Promise<string | null> {
+  return decryptTextField(value);
+}
+
+export async function evaluateProviderTokenEncryptionPolicy(scope: EncryptionPersistScope): Promise<EncryptionPolicyResult> {
+  return evaluateEncryptionPolicy({
+    operation: "provider-token-storage",
+    scope,
+    requiredFields: ["encryptedAccessToken", "encryptedRefreshToken"],
+  });
 }
 
 export interface CsrfControlPlan {
