@@ -723,3 +723,89 @@ export function buildPublicContentBundle(tenantSlug: string): PublicContentBundl
     },
   };
 }
+
+export const dashboardDataCollections = [
+  "bookings",
+  "clients",
+  "appointments",
+  "payments",
+  "portfolio",
+  "travel",
+  "seo",
+  "templates",
+  "errors",
+  "releases",
+  "settings",
+] as const;
+
+export type DashboardDataCollection = (typeof dashboardDataCollections)[number];
+
+export type DashboardDataSource = "demo-static" | "repository";
+
+export interface DashboardScopedRecord {
+  id: string;
+  tenantId: string;
+  [key: string]: unknown;
+}
+
+export interface TenantDashboardView {
+  collection: DashboardDataCollection;
+  tenantId: string;
+  source: DashboardDataSource;
+  records: Record<string, unknown>[];
+  redactedFields: string[];
+  rejectedRecordCount: number;
+  cachePolicy: {
+    strategy: "no-store";
+  };
+}
+
+export interface TenantDashboardViewInput<TRecord extends DashboardScopedRecord> {
+  collection: DashboardDataCollection;
+  tenantId: string;
+  records: readonly TRecord[];
+  source?: DashboardDataSource;
+  redactedFields?: readonly string[];
+}
+
+const dashboardDefaultRedactedFields = [
+  "clientEmail",
+  "clientPhone",
+  "medicalNotes",
+  "privateNotes",
+  "internalNotes",
+  "stripePaymentIntentId",
+  "providerSessionId",
+  "objectKey",
+] as const;
+
+export function findMissingDashboardCollections(collections: readonly DashboardDataCollection[]): DashboardDataCollection[] {
+  return dashboardDataCollections.filter((collection) => !collections.includes(collection));
+}
+
+export function buildTenantDashboardView<TRecord extends DashboardScopedRecord>(
+  input: TenantDashboardViewInput<TRecord>,
+): TenantDashboardView {
+  const redactedFields = [...new Set([...(input.redactedFields ?? dashboardDefaultRedactedFields)])];
+  const redactedFieldSet = new Set(redactedFields);
+  const scopedRecords = input.records.filter((record) => record.tenantId === input.tenantId);
+
+  return {
+    collection: input.collection,
+    tenantId: input.tenantId,
+    source: input.source ?? "repository",
+    records: scopedRecords.map((record) =>
+      Object.fromEntries(
+        Object.entries(record).map(([key, value]) => [
+          key,
+          redactedFieldSet.has(key) ? "[redacted-dashboard-field]" : value,
+        ]),
+      ),
+    ),
+    redactedFields,
+    rejectedRecordCount: input.records.length - scopedRecords.length,
+    cachePolicy: {
+      strategy: "no-store",
+    },
+  };
+}

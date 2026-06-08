@@ -1,0 +1,96 @@
+import { describe, expect, it } from "vitest";
+import {
+  buildTenantDashboardView,
+  dashboardDataCollections,
+  findMissingDashboardCollections,
+  type DashboardScopedRecord,
+} from "../src/index";
+
+describe("tenant dashboard data projections", () => {
+  it("covers every dashboard collection required by GAP-037", () => {
+    expect(findMissingDashboardCollections(dashboardDataCollections)).toEqual([]);
+    expect(dashboardDataCollections).toEqual([
+      "bookings",
+      "clients",
+      "appointments",
+      "payments",
+      "portfolio",
+      "travel",
+      "seo",
+      "templates",
+      "errors",
+      "releases",
+      "settings",
+    ]);
+  });
+
+  it("filters records by tenant and redacts private dashboard fields", () => {
+    const records: DashboardScopedRecord[] = [
+      {
+        id: "booking_001",
+        tenantId: "tenant_inkroute",
+        clientName: "Avery Stone",
+        clientEmail: "avery@example.test",
+        medicalNotes: "allergy detail",
+        stripePaymentIntentId: "pi_private_123",
+        status: "deposit_due",
+      },
+      {
+        id: "booking_002",
+        tenantId: "tenant_other",
+        clientName: "Cross Tenant",
+        clientEmail: "cross@example.test",
+        status: "confirmed",
+      },
+    ];
+
+    const view = buildTenantDashboardView({
+      collection: "bookings",
+      tenantId: "tenant_inkroute",
+      records,
+      source: "demo-static",
+    });
+
+    expect(view.records).toEqual([
+      {
+        id: "booking_001",
+        tenantId: "tenant_inkroute",
+        clientName: "Avery Stone",
+        clientEmail: "[redacted-dashboard-field]",
+        medicalNotes: "[redacted-dashboard-field]",
+        stripePaymentIntentId: "[redacted-dashboard-field]",
+        status: "deposit_due",
+      },
+    ]);
+    expect(view.rejectedRecordCount).toBe(1);
+    expect(view.cachePolicy).toEqual({ strategy: "no-store" });
+    expect(JSON.stringify(view.records)).not.toContain("avery@example.test");
+    expect(JSON.stringify(view.records)).not.toContain("cross@example.test");
+    expect(JSON.stringify(view.records)).not.toContain("pi_private_123");
+  });
+
+  it("allows collection-specific redaction fields for repository loaders", () => {
+    const view = buildTenantDashboardView({
+      collection: "portfolio",
+      tenantId: "tenant_inkroute",
+      records: [
+        {
+          id: "portfolio_001",
+          tenantId: "tenant_inkroute",
+          title: "Serpent sleeve",
+          objectKey: "tenant_private/originals/serpent.jpg",
+          reviewToken: "review_private_token",
+        },
+      ],
+      redactedFields: ["objectKey", "reviewToken"],
+    });
+
+    expect(view.source).toBe("repository");
+    expect(view.records[0]).toMatchObject({
+      objectKey: "[redacted-dashboard-field]",
+      reviewToken: "[redacted-dashboard-field]",
+    });
+    expect(JSON.stringify(view.records)).not.toContain("tenant_private/originals");
+    expect(JSON.stringify(view.records)).not.toContain("review_private_token");
+  });
+});
