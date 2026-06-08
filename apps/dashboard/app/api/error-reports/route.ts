@@ -1,14 +1,15 @@
 import { buildAlertRoute, buildObservabilityReportDraft } from "@inkroute/observability";
 import { errorReportFilterSchema, errorReportInputSchema } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
+import type { ErrorReportStatus, ErrorSeverity } from "@inkroute/types";
 import { NextResponse, type NextRequest } from "next/server";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 
 type LocalErrorReport = {
   id: string;
   tenantId: string;
-  severity: string;
-  status: "open" | "triaged" | "in_progress" | "resolved" | "ignored";
+  severity: ErrorSeverity;
+  status: ErrorReportStatus;
   source: string;
   message: string;
   redactionLevel: string;

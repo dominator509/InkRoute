@@ -12,6 +12,10 @@ type PersistedReleaseSummary = {
   createdAt: string;
 };
 
+type ReleaseInputChannel = "development" | "preview" | "staging" | "production" | "mobile-preview" | "mobile-production";
+type PersistedReleaseChannel = "development" | "preview" | "production" | "mobile_preview" | "mobile_production";
+const STAGING_PERSISTENCE_CHANNEL: PersistedReleaseChannel = "preview";
+
 type ReleaseRecordSummary = {
   id: string;
   version: string;
@@ -22,16 +26,18 @@ type ReleaseRecordSummary = {
 };
 
 function normalizeDbChannel(
-  channel: "development" | "preview" | "production" | "mobile-preview" | "mobile-production",
-): "development" | "preview" | "production" | "mobile_preview" | "mobile_production" {
+  channel: ReleaseInputChannel,
+): PersistedReleaseChannel {
   if (channel === "mobile-preview") return "mobile_preview";
   if (channel === "mobile-production") return "mobile_production";
+  if (channel === "staging") return STAGING_PERSISTENCE_CHANNEL;
   return channel;
 }
 
 function normalizeDisplayChannel(channel: string): "development" | "preview" | "production" | "mobile-preview" | "mobile-production" {
   if (channel === "mobile_preview") return "mobile-preview";
   if (channel === "mobile_production") return "mobile-production";
+  if (channel === "staging") return "preview";
   if (channel === "development" || channel === "preview" || channel === "production") return channel;
   return "preview";
 }
@@ -197,13 +203,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const persistedChannel = normalizeDbChannel(input.channel);
     const persisted = await prisma.$transaction(async (tx) => {
       const created = await tx.releaseRecord.create({
         data: {
           tenantId,
           releasedByUserId: actor.actorUserId,
           version: input.version,
-          channel: normalizeDbChannel(input.channel),
+          channel: persistedChannel,
           commitSha: input.commitSha,
           notes: releaseCandidate.notes.join("\n"),
           migrationVersion: input.migrationVersion,
@@ -227,6 +234,8 @@ export async function POST(request: NextRequest) {
       return { created, audit };
     });
 
+    const warning = input.channel === "staging" ? `Staging channel writes are persisted as ${STAGING_PERSISTENCE_CHANNEL} in ReleaseRecord until a native staging enum exists.` : undefined;
+
     return NextResponse.json({
       ok: true,
       source: actor.source,
@@ -240,6 +249,7 @@ export async function POST(request: NextRequest) {
       auditId: persisted.audit.id,
       rollback: createRollbackPlan(releaseCandidate, "0.11.0-phase11"),
       healthChecks: buildReleaseHealthChecks(releaseCandidate),
+      ...(warning ? { warning } : {}),
       boundary: "Release create path persists candidate and audit metadata under tenant and actor context.",
     }, { status: 201 });
   } catch (error) {
