@@ -66,6 +66,26 @@ export interface CiQualityGate {
   owner: "Codex" | "Jules" | "Claude Code" | "Local terminal" | "CI provider";
 }
 
+export type DashboardCoverageArea =
+  | "route_rendering"
+  | "component_state"
+  | "rbac_tenant_isolation"
+  | "mutation_lifecycle"
+  | "accessibility"
+  | "e2e_flow";
+
+export interface DashboardTestRequirement {
+  id: string;
+  area: DashboardCoverageArea;
+  priority: TestPriority;
+  status: TestAutomationStatus;
+  command: string;
+  targetFiles: string[];
+  verifies: string[];
+  blockers: string[];
+  gapIds: string[];
+}
+
 export function createTestCase(input: TestCaseRecord): TestCaseRecord {
   return input;
 }
@@ -215,6 +235,101 @@ export function buildRouteSmokeManifest(): RouteSmokeTestRecord[] {
       status: "runtime_gated"
     })
   ];
+}
+
+export function buildDashboardTestRequirements(): DashboardTestRequirement[] {
+  return [
+    {
+      id: "dashboard-route-rendering",
+      area: "route_rendering",
+      priority: "critical",
+      status: "runtime_gated",
+      command: "pnpm --filter @inkroute/dashboard test -- dashboard-routes",
+      targetFiles: ["apps/dashboard/app/**/*", "apps/dashboard/tests/routes/dashboard-routes.test.ts"],
+      verifies: ["bookings route renders", "payments route renders", "clients route renders", "settings route renders"],
+      blockers: ["Dashboard Next.js runtime/typecheck blockers must be resolved before route render tests can execute."],
+      gapIds: ["GAP-039", "GAP-041"]
+    },
+    {
+      id: "dashboard-component-state",
+      area: "component_state",
+      priority: "high",
+      status: "runtime_gated",
+      command: "pnpm --filter @inkroute/dashboard test -- dashboard-components",
+      targetFiles: ["apps/dashboard/components/**/*", "apps/dashboard/tests/components/dashboard-components.test.tsx"],
+      verifies: ["empty states", "loading states", "error states", "disabled provider action states"],
+      blockers: ["React/Next component test harness is not wired for dashboard app components."],
+      gapIds: ["GAP-038", "GAP-041"]
+    },
+    {
+      id: "dashboard-rbac-tenant-isolation",
+      area: "rbac_tenant_isolation",
+      priority: "critical",
+      status: "runtime_gated",
+      command: "pnpm --filter @inkroute/dashboard test -- dashboard-rbac",
+      targetFiles: ["apps/dashboard/tests/auth/dashboard-rbac.test.ts", "packages/auth/tests/authorization.test.ts"],
+      verifies: ["login redirect", "tenant switch redirect", "cross-tenant denial", "sensitive field redaction"],
+      blockers: ["Dashboard auth middleware and tenant-scoped loaders must be wired before app-level RBAC tests are meaningful."],
+      gapIds: ["GAP-036", "GAP-037", "GAP-040", "GAP-041"]
+    },
+    {
+      id: "dashboard-mutation-lifecycle",
+      area: "mutation_lifecycle",
+      priority: "critical",
+      status: "runtime_gated",
+      command: "pnpm --filter @inkroute/dashboard test -- dashboard-mutations",
+      targetFiles: ["apps/dashboard/app/**/*", "packages/booking/tests/booking-readiness.test.ts"],
+      verifies: ["booking lifecycle action", "idempotency replay", "audit log write", "provider rollback path"],
+      blockers: ["Dashboard server actions/API routes still need to call package mutation plans and persistence services."],
+      gapIds: ["GAP-024", "GAP-038", "GAP-041"]
+    },
+    {
+      id: "dashboard-accessibility",
+      area: "accessibility",
+      priority: "high",
+      status: "runtime_gated",
+      command: "pnpm test:e2e --project=dashboard-chromium --grep @a11y",
+      targetFiles: ["apps/dashboard/tests/e2e/dashboard-a11y.spec.ts"],
+      verifies: ["keyboard navigation", "landmark structure", "form labels", "axe critical violations"],
+      blockers: ["Playwright browsers and running dashboard app are required for accessibility checks."],
+      gapIds: ["GAP-041", "GAP-104"]
+    },
+    {
+      id: "dashboard-e2e-critical-flow",
+      area: "e2e_flow",
+      priority: "critical",
+      status: "runtime_gated",
+      command: "pnpm test:e2e --project=dashboard-chromium --grep @dashboard-critical",
+      targetFiles: ["apps/dashboard/tests/e2e/dashboard-critical-flow.spec.ts"],
+      verifies: ["auth gate", "booking inbox", "booking acceptance", "payment handoff", "notification preview"],
+      blockers: ["Seeded data, auth fixtures, dashboard runtime, and provider-safe mutation routes are not all available yet."],
+      gapIds: ["GAP-036", "GAP-037", "GAP-038", "GAP-041"]
+    }
+  ];
+}
+
+export function summarizeDashboardTestRequirements(requirements: readonly DashboardTestRequirement[] = buildDashboardTestRequirements()) {
+  const requiredAreas: DashboardCoverageArea[] = [
+    "route_rendering",
+    "component_state",
+    "rbac_tenant_isolation",
+    "mutation_lifecycle",
+    "accessibility",
+    "e2e_flow"
+  ];
+  const coveredAreas = new Set(requirements.map((requirement) => requirement.area));
+  const missingAreas = requiredAreas.filter((area) => !coveredAreas.has(area));
+  const criticalRuntimeGated = requirements.filter(
+    (requirement) => requirement.priority === "critical" && requirement.status !== "implemented"
+  );
+
+  return {
+    requirementCount: requirements.length,
+    missingAreas,
+    runtimeGatedCount: requirements.filter((requirement) => requirement.status === "runtime_gated").length,
+    criticalRuntimeGatedIds: criticalRuntimeGated.map((requirement) => requirement.id),
+    productionReady: missingAreas.length === 0 && criticalRuntimeGated.length === 0
+  };
 }
 
 export const phase14Suites: TestSuiteRecord[] = [
