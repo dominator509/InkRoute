@@ -98,6 +98,19 @@ Recommended migration name:
 pnpm --filter @inkroute/db prisma migrate dev --schema prisma/schema.prisma --name phase_2_domain_model
 ```
 
+## Migration compatibility enforcement
+
+Release governance now treats database changes as production-blocking until Prisma compatibility evidence is attached. The release helper in `packages/releases/src/index.ts` classifies migration inputs as none, expand-only, contract, or destructive and requires:
+
+- `prisma validate` against `packages/db/prisma/schema.prisma`.
+- `prisma migrate diff` against a staging or production-like database URL before deploy.
+- Destructive SQL scan for `DROP TABLE`, `DROP COLUMN`, `ALTER TABLE ... DROP`, and `TRUNCATE`.
+- Backup snapshot evidence and explicit approval for destructive changes.
+- Expand/contract sequencing for non-backward-compatible changes.
+- Forward-fix-first recovery policy attached to the release record, with restore reserved for approved incident scenarios.
+
+The scaffolded `.github/workflows/release-governance.yml` includes a `Prisma migration compatibility dry run` step wired to `DATABASE_URL`. It intentionally fails without a real database URL rather than silently approving migrations.
+
 ## Verification required before closing Phase 2 database gaps
 
 - `prisma validate` passes.

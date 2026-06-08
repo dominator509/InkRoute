@@ -3,6 +3,7 @@ import {
   assessMigrationCompatibility,
   buildGithubReleaseWorkflowPlan,
   buildEasOtaReadinessPlan,
+  buildMigrationCompatibilityEnforcementPlan,
   buildMobileUpdatePlan,
   buildProviderRuntimeGates,
   buildReleaseHealthChecks,
@@ -92,6 +93,58 @@ describe("release and feature flag governance", () => {
 
     expect(gate.status).toBe("block");
     expect(gate.blocksProduction).toBe(true);
+  });
+
+  it("enforces Prisma migration dry-run, backup, approval, and forward-fix evidence", () => {
+    const plan = buildMigrationCompatibilityEnforcementPlan({
+      migrations: [
+        {
+          id: "drop-client-birthdate",
+          description: "Drop encrypted client birthdate",
+          risk: "destructive",
+          backwardCompatible: false,
+          requiresBackup: true,
+          requiresManualApproval: true,
+        },
+      ],
+      prismaSchemaPath: "packages/db/prisma/schema.prisma",
+      migrationDirectory: "packages/db/prisma/migrations",
+      stagingDatabaseDryRun: false,
+      backupSnapshotAttached: false,
+      destructiveApprovalAttached: false,
+      expandContractPlanAttached: false,
+      forwardFixPlanAttached: false,
+    });
+
+    expect(plan.classification).toBe("destructive");
+    expect(plan.productionBlocked).toBe(true);
+    expect(plan.gates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "staging-database-dry-run", status: "block" }),
+        expect.objectContaining({ id: "destructive-change-approval", status: "block" }),
+        expect.objectContaining({ id: "expand-contract-plan", status: "block" }),
+        expect.objectContaining({ id: "database-forward-fix-plan", status: "block" }),
+      ]),
+    );
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([expect.stringContaining("prisma migrate diff"), "pnpm --filter @inkroute/db prisma migrate deploy"]));
+    expect(plan.policy.join(" ")).toContain("forward-fix");
+  });
+
+  it("allows expand-only migrations after staging dry-run and recovery evidence is attached", () => {
+    const plan = buildMigrationCompatibilityEnforcementPlan({
+      migrations: [{ id: "add-release-index", description: "Add release index", risk: "expand_only", backwardCompatible: true }],
+      prismaSchemaPath: "packages/db/prisma/schema.prisma",
+      migrationDirectory: "packages/db/prisma/migrations",
+      stagingDatabaseDryRun: true,
+      backupSnapshotAttached: false,
+      destructiveApprovalAttached: false,
+      expandContractPlanAttached: false,
+      forwardFixPlanAttached: true,
+    });
+
+    expect(plan.classification).toBe("expand_only");
+    expect(plan.productionBlocked).toBe(false);
+    expect(plan.gates.every((gate) => gate.status === "pass")).toBe(true);
   });
 
   it("classifies mobile updates that require store builds", () => {

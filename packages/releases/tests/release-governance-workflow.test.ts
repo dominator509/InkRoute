@@ -39,6 +39,11 @@ describe("release governance workflow scaffold", () => {
     );
     expect(workflow).not.toMatch(/sk_live_|ghp_|gho_|vercel_[A-Za-z0-9]/);
     expect(workflow).toContain("Prisma migration dry run");
+    expect(workflow).toContain("Prisma migration compatibility dry run");
+    expect(workflow).toContain("DATABASE_URL");
+    expect(workflow).toContain("prisma validate --schema packages/db/prisma/schema.prisma");
+    expect(workflow).toContain("prisma migrate diff");
+    expect(workflow).toContain("DROP COLUMN");
     expect(workflow).toContain("Sentry release artifacts");
   });
 

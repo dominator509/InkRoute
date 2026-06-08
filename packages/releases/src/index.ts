@@ -185,6 +185,25 @@ export interface GithubReleaseWorkflowPlan {
   readonly deploymentGatedSteps: readonly string[];
 }
 
+export interface MigrationCompatibilityEnforcementInput {
+  readonly migrations: readonly MigrationChange[];
+  readonly prismaSchemaPath: string;
+  readonly migrationDirectory: string;
+  readonly stagingDatabaseDryRun: boolean;
+  readonly backupSnapshotAttached: boolean;
+  readonly destructiveApprovalAttached: boolean;
+  readonly expandContractPlanAttached: boolean;
+  readonly forwardFixPlanAttached: boolean;
+}
+
+export interface MigrationCompatibilityEnforcementPlan {
+  readonly classification: MigrationRisk;
+  readonly productionBlocked: boolean;
+  readonly gates: readonly ReleaseGate[];
+  readonly requiredCommands: readonly string[];
+  readonly policy: readonly string[];
+}
+
 const releasePriority: Record<ReleaseRiskLevel, number> = {
   low: 1,
   medium: 2,
@@ -264,6 +283,86 @@ export function assessMigrationCompatibility(changes: readonly MigrationChange[]
     blocksProduction: false,
     evidence: `${changes.length} backward-compatible migration change(s) detected.`,
     nextAction: "Run migration in staging and confirm old and new app versions can read the schema during deploy window.",
+  };
+}
+
+export function buildMigrationCompatibilityEnforcementPlan(input: MigrationCompatibilityEnforcementInput): MigrationCompatibilityEnforcementPlan {
+  const classification = input.migrations.reduce<MigrationRisk>((current, change) => {
+    if (current === "destructive" || change.risk === "destructive" || change.requiresBackup || change.requiresManualApproval) return "destructive";
+    if (current === "contract" || change.risk === "contract" || !change.backwardCompatible) return "contract";
+    if (current === "expand_only" || change.risk === "expand_only") return "expand_only";
+    return "none";
+  }, "none");
+  const needsBackupAndApproval = classification === "destructive";
+  const needsExpandContractPlan = classification === "contract" || classification === "destructive";
+  const gates: ReleaseGate[] = [
+    {
+      id: "prisma-schema-present",
+      label: "Prisma schema selected",
+      status: input.prismaSchemaPath.endsWith("schema.prisma") ? "pass" : "block",
+      blocksProduction: true,
+      evidence: input.prismaSchemaPath,
+      nextAction: "Point the release workflow at packages/db/prisma/schema.prisma.",
+    },
+    {
+      id: "prisma-migrations-present",
+      label: "Prisma migration directory selected",
+      status: input.migrationDirectory.includes("migrations") ? "pass" : "block",
+      blocksProduction: true,
+      evidence: input.migrationDirectory,
+      nextAction: "Generate Prisma migrations and commit them with the release.",
+    },
+    {
+      id: "staging-database-dry-run",
+      label: "Staging database dry run",
+      status: input.stagingDatabaseDryRun ? "pass" : "block",
+      blocksProduction: true,
+      evidence: input.stagingDatabaseDryRun ? "Staging migration dry-run evidence is attached." : "No staging migration dry-run evidence is attached.",
+      nextAction: "Run prisma migrate diff/deploy against a staging database before production approval.",
+    },
+    {
+      id: "destructive-change-approval",
+      label: "Destructive migration approval",
+      status: !needsBackupAndApproval || (input.backupSnapshotAttached && input.destructiveApprovalAttached) ? "pass" : "block",
+      blocksProduction: true,
+      evidence: needsBackupAndApproval
+        ? `backup=${input.backupSnapshotAttached}; approval=${input.destructiveApprovalAttached}`
+        : "No destructive migration changes detected.",
+      nextAction: "Attach backup snapshot evidence and explicit production approval for destructive migrations.",
+    },
+    {
+      id: "expand-contract-plan",
+      label: "Expand/contract compatibility plan",
+      status: !needsExpandContractPlan || input.expandContractPlanAttached ? "pass" : "block",
+      blocksProduction: true,
+      evidence: needsExpandContractPlan ? `expandContractPlan=${input.expandContractPlanAttached}` : "Expand-only or no-op migration.",
+      nextAction: "Split incompatible changes into expand, backfill, and contract phases.",
+    },
+    {
+      id: "database-forward-fix-plan",
+      label: "Forward-fix/restore policy",
+      status: input.forwardFixPlanAttached ? "pass" : "block",
+      blocksProduction: true,
+      evidence: input.forwardFixPlanAttached ? "Forward-fix/restore policy is attached to the release record." : "No forward-fix/restore policy is attached.",
+      nextAction: "Attach forward-fix-first recovery steps and restore approval policy to the release record.",
+    },
+  ];
+
+  return {
+    classification,
+    productionBlocked: gates.some((gate) => gate.status !== "pass"),
+    gates,
+    requiredCommands: [
+      `pnpm --filter @inkroute/db prisma validate --schema ${input.prismaSchemaPath}`,
+      `pnpm --filter @inkroute/db prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel ${input.prismaSchemaPath} --script`,
+      "pnpm --filter @inkroute/db prisma migrate deploy",
+    ],
+    policy: [
+      "Expand-only migrations may proceed after staging dry-run evidence is attached.",
+      "Contract/destructive migrations require expand/contract sequencing and explicit approval.",
+      "Destructive migrations require backup snapshot evidence before production deploy.",
+      "Database rollback defaults to forward-fix; restore requires incident approval and data-loss assessment.",
+    ],
   };
 }
 
@@ -541,10 +640,10 @@ export function buildGithubReleaseWorkflowPlan(): GithubReleaseWorkflowPlan {
     workflowName: "Release Governance",
     triggers: ["workflow_dispatch", "push to main", "tagged release candidates"],
     requiredSecrets: ["VERCEL_TOKEN", "VERCEL_ORG_ID", "VERCEL_PROJECT_ID", "EXPO_TOKEN", "DATABASE_URL"],
-    requiredChecks: ["pnpm install --frozen-lockfile", "pnpm typecheck", "pnpm lint", "pnpm test", "Prisma migration dry run", "Next.js builds", "Expo preview build/update when mobile surface changed"],
+    requiredChecks: ["pnpm install --frozen-lockfile", "pnpm typecheck", "pnpm lint", "pnpm test", "Prisma validate", "Prisma migration diff", "Prisma migration dry run", "Next.js builds", "Expo preview build/update when mobile surface changed"],
     concurrencyGroup: "release-${{ github.ref }}",
     environments: ["preview", "staging", "production"],
-    deploymentGatedSteps: ["Vercel preview/prod deploy", "Prisma migrate deploy", "EAS Update publish", "Sentry release/source-map upload", "Search Console sitemap submission"],
+    deploymentGatedSteps: ["Vercel preview/prod deploy", "Prisma validate", "Prisma migrate diff destructive-change scan", "Prisma migrate deploy", "EAS Update publish", "Sentry release/source-map upload", "Search Console sitemap submission"],
   };
 }
 
@@ -680,6 +779,17 @@ export const demoEasOtaReadinessPlan = buildEasOtaReadinessPlan({
   productionChannel: "production",
   runtimeVersionPolicy: "appVersion",
   adoptionMonitoringConfigured: false,
+});
+
+export const demoMigrationCompatibilityEnforcementPlan = buildMigrationCompatibilityEnforcementPlan({
+  migrations: demoReleaseCandidate.migrations,
+  prismaSchemaPath: "packages/db/prisma/schema.prisma",
+  migrationDirectory: "packages/db/prisma/migrations",
+  stagingDatabaseDryRun: false,
+  backupSnapshotAttached: false,
+  destructiveApprovalAttached: false,
+  expandContractPlanAttached: true,
+  forwardFixPlanAttached: true,
 });
 
 export const demoFeatureFlagDecisions = evaluateFeatureFlags(defaultFeatureFlags, {

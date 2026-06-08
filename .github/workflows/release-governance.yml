@@ -44,6 +44,22 @@ jobs:
       - name: Print deployment gates
         run: |
           echo "Production deployment remains gated until dependencies, app builds, DB migrations, EAS project, Vercel project, and provider credentials are verified."
+      - name: Prisma migration compatibility dry run
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          test -f packages/db/prisma/schema.prisma
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "::error::DATABASE_URL is required for Prisma migration compatibility dry run."
+            exit 1
+          fi
+          pnpm --filter @inkroute/db prisma validate --schema packages/db/prisma/schema.prisma
+          pnpm --filter @inkroute/db prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel packages/db/prisma/schema.prisma --script > /tmp/inkroute-migration.sql
+          if grep -Eiq 'DROP TABLE|DROP COLUMN|ALTER TABLE .* DROP|TRUNCATE' /tmp/inkroute-migration.sql; then
+            echo "::error::Destructive Prisma migration detected. Attach backup evidence, expand/contract plan, and explicit production approval before deploy."
+            exit 1
+          fi
+          echo "Prisma migration compatibility dry run completed without destructive SQL."
 
   deployment-gated-preview:
     name: Deployment-gated preview release
