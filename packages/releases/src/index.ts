@@ -673,6 +673,15 @@ export const demoMobileUpdatePlan = buildMobileUpdatePlan({
   expoProjectConfigured: false,
 });
 
+export const demoEasOtaReadinessPlan = buildEasOtaReadinessPlan({
+  expoProjectId: "deployment-gated-see-GAP-008",
+  updateUrl: "https://u.expo.dev/deployment-gated-see-GAP-047",
+  previewChannel: "preview",
+  productionChannel: "production",
+  runtimeVersionPolicy: "appVersion",
+  adoptionMonitoringConfigured: false,
+});
+
 export const demoFeatureFlagDecisions = evaluateFeatureFlags(defaultFeatureFlags, {
   tenantId: "tenant_demo_nomad",
   role: "owner",

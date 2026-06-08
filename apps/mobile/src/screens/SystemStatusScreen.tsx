@@ -8,6 +8,7 @@ import {
   mobileCrashAlertRoute,
   mobileCrashReportDraft,
   mobileHealthChecks,
+  mobileEasOtaReadinessPlan,
   mobileFeatureFlagDecisions,
   mobileObservabilityBoundaries,
   mobileOtaUpdatePlan,
@@ -40,6 +41,18 @@ export function SystemStatusScreen() {
         <Text style={{ color: "#d6d3d1" }}>{mobileOtaUpdatePlan.commandPreview}</Text>
         <Text style={{ color: "#a8a29e", marginTop: 6 }}>{mobileOtaUpdatePlan.rollbackPlan}</Text>
         <MobilePill label={`${mobileOtaUpdatePlan.channel} channel`} tone={mobileOtaUpdatePlan.compatibility === "safe" ? "good" : "warn"} />
+      </MobileCard>
+
+      <MobileCard title="EAS OTA readiness" eyebrow={mobileEasOtaReadinessPlan.status}>
+        <Text style={{ color: "#fafaf9", fontWeight: "900" }}>{mobileEasOtaReadinessPlan.productionReady ? "Production ready" : "Production blocked"}</Text>
+        <Text style={{ color: "#d6d3d1" }}>{mobileEasOtaReadinessPlan.rollbackRequirement}</Text>
+        {mobileEasOtaReadinessPlan.gates.slice(0, 4).map((gate) => (
+          <View key={gate.id} style={{ borderTopWidth: 1, borderColor: "#44403c", paddingTop: 10, marginTop: 10, gap: 6 }}>
+            <Text style={{ color: "#fafaf9", fontWeight: "900" }}>{gate.label}</Text>
+            <Text style={{ color: "#d6d3d1" }}>{gate.evidence}</Text>
+            <MobilePill label={gate.status} tone={gate.status === "pass" ? "good" : "warn"} />
+          </View>
+        ))}
       </MobileCard>
 
       <MobileCard title="Release health checks" eyebrow="Runtime-gated">

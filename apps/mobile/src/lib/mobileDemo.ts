@@ -11,6 +11,7 @@ import {
 } from "@inkroute/observability";
 import {
   demoFeatureFlagDecisions,
+  demoEasOtaReadinessPlan,
   demoMobileUpdatePlan,
   demoReleaseCandidate,
   demoReleaseHealthChecks,
@@ -263,6 +264,7 @@ export const mobileObservabilityBoundaries = observabilityProviderBoundaries.fil
 export const mobileReleaseCandidate = demoReleaseCandidate;
 export const mobileReleaseHealthChecks = demoReleaseHealthChecks;
 export const mobileOtaUpdatePlan = demoMobileUpdatePlan;
+export const mobileEasOtaReadinessPlan = demoEasOtaReadinessPlan;
 export const mobileFeatureFlagDecisions = demoFeatureFlagDecisions;
 export const mobileProviderRuntimeGates = buildProviderRuntimeGates(mobileFeatureFlagDecisions);
 export const mobileRollbackPlan = demoRollbackPlan;
