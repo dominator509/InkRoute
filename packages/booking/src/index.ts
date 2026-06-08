@@ -570,6 +570,223 @@ export function buildBookingProviderFailurePlan(input: BookingProviderFailurePla
   };
 }
 
+export type DashboardMutationAction =
+  | BookingLifecycleAction
+  | "create_reference_upload_intent"
+  | "create_deposit_session"
+  | "send_client_notification"
+  | "create_calendar_hold"
+  | "publish_travel_stop"
+  | "publish_portfolio_item"
+  | "toggle_feature_flag"
+  | "rollback_release"
+  | "update_settings";
+
+export type DashboardMutationProviderBoundary =
+  | "database"
+  | "storage"
+  | "stripe"
+  | "notification"
+  | "calendar"
+  | "release"
+  | "settings";
+
+export type DashboardMutationWriteModel =
+  | "BookingRequest"
+  | "BookingStateEvent"
+  | "AuditLog"
+  | "FileAsset"
+  | "Payment"
+  | "NotificationDelivery"
+  | "CalendarEvent"
+  | "TravelStop"
+  | "PortfolioItem"
+  | "FeatureFlag"
+  | "ReleaseRecord"
+  | "TenantSettings";
+
+export interface DashboardMutationPlanInput {
+  tenantId: string;
+  actorId?: string;
+  actorType?: "owner" | "artist" | "assistant" | "studio_manager" | "system";
+  bookingRequestId?: string;
+  currentStatus?: BookingStatus;
+  action: DashboardMutationAction;
+  occurredAt: string;
+  idempotencyKey?: string;
+}
+
+export interface DashboardMutationPlan {
+  status: "ready" | "blocked" | "invalid_transition";
+  action: DashboardMutationAction;
+  tenantId: string;
+  providerBoundary: DashboardMutationProviderBoundary;
+  requiresAudit: boolean;
+  requiresIdempotency: boolean;
+  canCommit: boolean;
+  writes: DashboardMutationWriteModel[];
+  auditAction: string;
+  idempotencyKey: string | null;
+  blockers: string[];
+}
+
+const dashboardProviderActions: Record<
+  Exclude<DashboardMutationAction, BookingLifecycleAction>,
+  {
+    providerBoundary: DashboardMutationProviderBoundary;
+    writes: DashboardMutationWriteModel[];
+    auditAction: string;
+  }
+> = {
+  create_reference_upload_intent: {
+    providerBoundary: "storage",
+    writes: ["FileAsset", "AuditLog"],
+    auditAction: "dashboard.reference_upload_intent.create",
+  },
+  create_deposit_session: {
+    providerBoundary: "stripe",
+    writes: ["Payment", "AuditLog"],
+    auditAction: "dashboard.deposit_session.create",
+  },
+  send_client_notification: {
+    providerBoundary: "notification",
+    writes: ["NotificationDelivery", "AuditLog"],
+    auditAction: "dashboard.notification.send",
+  },
+  create_calendar_hold: {
+    providerBoundary: "calendar",
+    writes: ["CalendarEvent", "AuditLog"],
+    auditAction: "dashboard.calendar_hold.create",
+  },
+  publish_travel_stop: {
+    providerBoundary: "database",
+    writes: ["TravelStop", "AuditLog"],
+    auditAction: "dashboard.travel_stop.publish",
+  },
+  publish_portfolio_item: {
+    providerBoundary: "database",
+    writes: ["PortfolioItem", "AuditLog"],
+    auditAction: "dashboard.portfolio_item.publish",
+  },
+  toggle_feature_flag: {
+    providerBoundary: "release",
+    writes: ["FeatureFlag", "AuditLog"],
+    auditAction: "dashboard.feature_flag.toggle",
+  },
+  rollback_release: {
+    providerBoundary: "release",
+    writes: ["ReleaseRecord", "AuditLog"],
+    auditAction: "dashboard.release.rollback",
+  },
+  update_settings: {
+    providerBoundary: "settings",
+    writes: ["TenantSettings", "AuditLog"],
+    auditAction: "dashboard.settings.update",
+  },
+};
+
+function getDashboardMutationProviderAction(
+  action: DashboardMutationAction,
+): (typeof dashboardProviderActions)[keyof typeof dashboardProviderActions] | null {
+  return action in dashboardProviderActions
+    ? dashboardProviderActions[action as keyof typeof dashboardProviderActions]
+    : null;
+}
+
+export function buildDashboardMutationPlan(input: DashboardMutationPlanInput): DashboardMutationPlan {
+  const blockers: string[] = [];
+  if (!input.tenantId.trim()) blockers.push("Tenant scope is required before dashboard mutations can run.");
+  if (!input.actorId?.trim()) blockers.push("Actor identity is required before dashboard mutations can run.");
+  if (!input.idempotencyKey?.trim()) blockers.push("Idempotency key is required before dashboard mutations can run.");
+
+  const providerAction = getDashboardMutationProviderAction(input.action);
+  if (providerAction) {
+    const bookingScopedActions: DashboardMutationAction[] = [
+      "create_reference_upload_intent",
+      "create_deposit_session",
+      "send_client_notification",
+      "create_calendar_hold",
+    ];
+    if (bookingScopedActions.includes(input.action) && !input.bookingRequestId?.trim()) {
+      blockers.push("Booking request id is required for booking-scoped dashboard provider actions.");
+    }
+
+    return {
+      status: blockers.length === 0 ? "ready" : "blocked",
+      action: input.action,
+      tenantId: input.tenantId,
+      providerBoundary: providerAction.providerBoundary,
+      requiresAudit: true,
+      requiresIdempotency: true,
+      canCommit: blockers.length === 0,
+      writes: providerAction.writes,
+      auditAction: providerAction.auditAction,
+      idempotencyKey: input.idempotencyKey ?? null,
+      blockers,
+    };
+  }
+
+  if (!input.bookingRequestId?.trim()) blockers.push("Booking request id is required for booking lifecycle dashboard mutations.");
+  if (!input.currentStatus) blockers.push("Current booking status is required for booking lifecycle dashboard mutations.");
+
+  if (blockers.length > 0 || !input.bookingRequestId || !input.currentStatus) {
+    return {
+      status: "blocked",
+      action: input.action,
+      tenantId: input.tenantId,
+      providerBoundary: "database",
+      requiresAudit: true,
+      requiresIdempotency: true,
+      canCommit: false,
+      writes: [],
+      auditAction: `dashboard.booking.${input.action}`,
+      idempotencyKey: input.idempotencyKey ?? null,
+      blockers,
+    };
+  }
+
+  const transitionPlan = createBookingTransitionPlan({
+    tenantId: input.tenantId,
+    bookingRequestId: input.bookingRequestId,
+    from: input.currentStatus,
+    action: input.action as BookingLifecycleAction,
+    actorId: input.actorId,
+    actorType: input.actorType,
+    occurredAt: input.occurredAt,
+    idempotencyKey: input.idempotencyKey,
+  });
+
+  if (!transitionPlan.canCommit) {
+    return {
+      status: "invalid_transition",
+      action: input.action,
+      tenantId: input.tenantId,
+      providerBoundary: "database",
+      requiresAudit: true,
+      requiresIdempotency: true,
+      canCommit: false,
+      writes: [],
+      auditAction: `dashboard.booking.${input.action}`,
+      idempotencyKey: input.idempotencyKey ?? null,
+      blockers: ["Booking lifecycle transition is not valid from the current status."],
+    };
+  }
+
+  return {
+    status: "ready",
+    action: input.action,
+    tenantId: input.tenantId,
+    providerBoundary: "database",
+    requiresAudit: true,
+    requiresIdempotency: true,
+    canCommit: true,
+    writes: transitionPlan.writes.map((write) => write.model),
+    auditAction: `dashboard.booking.${input.action}`,
+    idempotencyKey: input.idempotencyKey ?? null,
+    blockers,
+  };
+}
+
 export function getTravelBookingCta(status: TravelBookingStatus): string {
   if (status === "open") return "Request this city";
   if (status === "waitlist") return "Join the waitlist";

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildBookingPostSubmitPlan,
   buildBookingProviderFailurePlan,
+  buildDashboardMutationPlan,
   calculateTattooReadinessScore,
   createBookingTransitionPlan,
   emptyBookingDraft,
@@ -253,6 +254,87 @@ describe("booking readiness", () => {
       canRetry: true,
       rollbackRequired: false,
       actions: ["mark_workflow_failed", "write_audit_log", "retry_notification"],
+    });
+  });
+
+  it("plans dashboard lifecycle mutations with audit, idempotency, and atomic booking writes", () => {
+    const plan = buildDashboardMutationPlan({
+      tenantId: "tenant_001",
+      bookingRequestId: "booking_001",
+      currentStatus: "submitted",
+      action: "accept",
+      actorId: "artist_001",
+      actorType: "artist",
+      occurredAt: "2026-06-08T13:00:00.000Z",
+      idempotencyKey: "dashboard_accept_001",
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      providerBoundary: "database",
+      requiresAudit: true,
+      requiresIdempotency: true,
+      canCommit: true,
+      auditAction: "dashboard.booking.accept",
+      idempotencyKey: "dashboard_accept_001",
+    });
+    expect(plan.writes).toEqual(["BookingRequest", "BookingStateEvent", "AuditLog"]);
+  });
+
+  it("blocks dashboard mutations missing tenant, actor, idempotency, or booking scope", () => {
+    const plan = buildDashboardMutationPlan({
+      tenantId: "",
+      action: "create_deposit_session",
+      occurredAt: "2026-06-08T13:00:00.000Z",
+    });
+
+    expect(plan).toMatchObject({
+      status: "blocked",
+      providerBoundary: "stripe",
+      requiresAudit: true,
+      requiresIdempotency: true,
+      canCommit: false,
+      writes: ["Payment", "AuditLog"],
+    });
+    expect(plan.blockers).toEqual([
+      "Tenant scope is required before dashboard mutations can run.",
+      "Actor identity is required before dashboard mutations can run.",
+      "Idempotency key is required before dashboard mutations can run.",
+      "Booking request id is required for booking-scoped dashboard provider actions.",
+    ]);
+  });
+
+  it("maps provider dashboard actions to explicit write and provider boundaries", () => {
+    expect(
+      buildDashboardMutationPlan({
+        tenantId: "tenant_001",
+        bookingRequestId: "booking_001",
+        action: "create_reference_upload_intent",
+        actorId: "artist_001",
+        occurredAt: "2026-06-08T13:00:00.000Z",
+        idempotencyKey: "upload_intent_001",
+      }),
+    ).toMatchObject({
+      status: "ready",
+      providerBoundary: "storage",
+      writes: ["FileAsset", "AuditLog"],
+      auditAction: "dashboard.reference_upload_intent.create",
+    });
+
+    expect(
+      buildDashboardMutationPlan({
+        tenantId: "tenant_001",
+        action: "rollback_release",
+        actorId: "owner_001",
+        actorType: "owner",
+        occurredAt: "2026-06-08T13:00:00.000Z",
+        idempotencyKey: "rollback_release_001",
+      }),
+    ).toMatchObject({
+      status: "ready",
+      providerBoundary: "release",
+      writes: ["ReleaseRecord", "AuditLog"],
+      auditAction: "dashboard.release.rollback",
     });
   });
 
