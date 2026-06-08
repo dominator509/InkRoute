@@ -5,6 +5,7 @@ import {
   buildGoogleCalendarProviderSyncPlan,
   buildSignedIcsFeedDraft,
   buildSignedIcsFeedTokenHash,
+  buildTimezoneRecurrenceQaPlan,
   auditCalendarTimezones,
   detectCalendarConflicts,
   evaluateSignedIcsFeedAccess,
@@ -389,6 +390,98 @@ describe("calendar availability", () => {
       "Encrypted refresh token must be stored before Google Calendar provider calls.",
       "Appointment id is required before mutating Google Calendar events.",
       "Provider event id is required before deleting Google Calendar events.",
+    ]);
+  });
+
+  it("plans timezone recurrence QA across DST, recurrence, provider render, and all-day travel cases", () => {
+    const plan = buildTimezoneRecurrenceQaPlan({
+      temporalStrategySelected: true,
+      providerRenderSmokeTested: true,
+      requiredTimezones: ["America/Los_Angeles", "America/Phoenix", "America/New_York"],
+      requiredChecks: ["iana_validation", "dst_transition", "recurrence_expansion", "provider_render_matrix", "all_day_travel_window"],
+      cases: [
+        {
+          id: "la-spring-forward",
+          timezone: "America/Los_Angeles",
+          startsAt: "2026-03-08T09:30:00.000Z",
+          endsAt: "2026-03-08T11:30:00.000Z",
+          check: "dst_transition",
+        },
+        {
+          id: "phoenix-no-dst",
+          timezone: "America/Phoenix",
+          startsAt: "2026-03-08T17:00:00.000Z",
+          endsAt: "2026-03-08T19:00:00.000Z",
+          check: "all_day_travel_window",
+        },
+        {
+          id: "new-york-weekly",
+          timezone: "America/New_York",
+          startsAt: "2026-11-01T05:30:00.000Z",
+          endsAt: "2026-11-01T07:30:00.000Z",
+          check: "recurrence_expansion",
+          recurrenceRule: "FREQ=WEEKLY;COUNT=4",
+          expandedOccurrenceCount: 4,
+        },
+        {
+          id: "google-render-la",
+          timezone: "America/Los_Angeles",
+          startsAt: "2026-06-10T18:00:00.000Z",
+          endsAt: "2026-06-10T20:00:00.000Z",
+          check: "provider_render_matrix",
+          provider: "google",
+          expectedLocalLabel: "Jun 10, 2026 11:00 AM PDT",
+        },
+        {
+          id: "iana-base",
+          timezone: "America/New_York",
+          startsAt: "2026-06-10T18:00:00.000Z",
+          endsAt: "2026-06-10T20:00:00.000Z",
+          check: "iana_validation",
+        },
+      ],
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.checkedCount).toBe(5);
+    expect(plan.coveredTimezones).toEqual(["America/Los_Angeles", "America/New_York", "America/Phoenix"]);
+    expect(plan.coveredChecks).toEqual(["all_day_travel_window", "dst_transition", "iana_validation", "provider_render_matrix", "recurrence_expansion"]);
+    expect(plan.findings.every((finding) => finding.status === "pass")).toBe(true);
+    expect(plan.requiredControls).toContain("Test DST spring-forward and fall-back boundaries before expanding recurring availability.");
+  });
+
+  it("blocks timezone recurrence QA when strategy, coverage, recurrence expansion, or provider labels are missing", () => {
+    const plan = buildTimezoneRecurrenceQaPlan({
+      temporalStrategySelected: false,
+      providerRenderSmokeTested: false,
+      requiredTimezones: ["America/Los_Angeles", "America/Phoenix"],
+      requiredChecks: ["dst_transition", "recurrence_expansion", "provider_render_matrix"],
+      cases: [
+        {
+          id: "bad-recurrence",
+          timezone: "America/Los_Angeles",
+          startsAt: "2026-03-08T09:30:00.000Z",
+          endsAt: "2026-03-08T11:30:00.000Z",
+          check: "recurrence_expansion",
+        },
+        {
+          id: "bad-provider-render",
+          timezone: "PST",
+          startsAt: "2026-06-10T18:00:00.000Z",
+          endsAt: "2026-06-10T20:00:00.000Z",
+          check: "provider_render_matrix",
+        },
+      ],
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.blockers).toEqual([
+      "Timezone QA requires an explicit timezone/date library or Temporal strategy before production scheduling.",
+      "Provider render smoke tests must cover internal, Google, and ICS calendar outputs.",
+      "Required timezone is missing from the QA matrix.",
+      "Required timezone QA check is missing from the matrix.",
+      "Recurring availability case must include a recurrence rule and expanded occurrence count.",
+      "Timezone case must use a valid IANA timezone.",
     ]);
   });
 });

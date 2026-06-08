@@ -224,6 +224,49 @@ export interface GoogleCalendarProviderSyncPlan {
   blockers: readonly string[];
 }
 
+export type TimezoneQaCheck =
+  | "iana_validation"
+  | "dst_transition"
+  | "recurrence_expansion"
+  | "provider_render_matrix"
+  | "all_day_travel_window";
+
+export interface TimezoneQaCase {
+  id: string;
+  timezone: string;
+  startsAt: ISODateString;
+  endsAt: ISODateString;
+  check: TimezoneQaCheck;
+  expectedLocalLabel?: string;
+  provider?: "internal" | "google" | "ics";
+  recurrenceRule?: string;
+  expandedOccurrenceCount?: number;
+}
+
+export interface TimezoneRecurrenceQaPlanInput {
+  cases: readonly TimezoneQaCase[];
+  requiredTimezones: readonly string[];
+  requiredChecks: readonly TimezoneQaCheck[];
+  temporalStrategySelected: boolean;
+  providerRenderSmokeTested: boolean;
+}
+
+export interface TimezoneRecurrenceQaFinding {
+  id: string;
+  status: "pass" | "fail";
+  message: string;
+}
+
+export interface TimezoneRecurrenceQaPlan {
+  status: "ready" | "blocked";
+  checkedCount: number;
+  coveredTimezones: readonly string[];
+  coveredChecks: readonly TimezoneQaCheck[];
+  findings: readonly TimezoneRecurrenceQaFinding[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 function escapeIcsText(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/,/g, "\\,").replace(/;/g, "\\;").replace(/\n/g, "\\n");
 }
@@ -294,6 +337,106 @@ export function auditCalendarTimezones(input: {
     checkedCount: findings.length,
     uniqueTimezones: Array.from(new Set(findings.map((finding) => finding.timezone))).sort(),
     findings,
+  };
+}
+
+export function buildTimezoneRecurrenceQaPlan(input: TimezoneRecurrenceQaPlanInput): TimezoneRecurrenceQaPlan {
+  const findings: TimezoneRecurrenceQaFinding[] = [];
+  const coveredTimezones = Array.from(new Set(input.cases.map((testCase) => testCase.timezone))).sort();
+  const coveredChecks = Array.from(new Set(input.cases.map((testCase) => testCase.check))).sort() as TimezoneQaCheck[];
+
+  if (!input.temporalStrategySelected) {
+    findings.push({
+      id: "temporal-strategy",
+      status: "fail",
+      message: "Timezone QA requires an explicit timezone/date library or Temporal strategy before production scheduling.",
+    });
+  }
+  if (!input.providerRenderSmokeTested) {
+    findings.push({
+      id: "provider-render-smoke",
+      status: "fail",
+      message: "Provider render smoke tests must cover internal, Google, and ICS calendar outputs.",
+    });
+  }
+
+  for (const timezone of input.requiredTimezones) {
+    if (!coveredTimezones.includes(timezone)) {
+      findings.push({
+        id: `timezone:${timezone}`,
+        status: "fail",
+        message: "Required timezone is missing from the QA matrix.",
+      });
+    }
+  }
+
+  for (const check of input.requiredChecks) {
+    if (!coveredChecks.includes(check)) {
+      findings.push({
+        id: `check:${check}`,
+        status: "fail",
+        message: "Required timezone QA check is missing from the matrix.",
+      });
+    }
+  }
+
+  for (const testCase of input.cases) {
+    const startsAtMs = new Date(testCase.startsAt).getTime();
+    const endsAtMs = new Date(testCase.endsAt).getTime();
+    if (!isValidIanaTimezone(testCase.timezone)) {
+      findings.push({
+        id: testCase.id,
+        status: "fail",
+        message: "Timezone case must use a valid IANA timezone.",
+      });
+      continue;
+    }
+    if (!Number.isFinite(startsAtMs) || !Number.isFinite(endsAtMs) || startsAtMs >= endsAtMs) {
+      findings.push({
+        id: testCase.id,
+        status: "fail",
+        message: "Timezone case must have a valid start before end.",
+      });
+      continue;
+    }
+    if (testCase.check === "recurrence_expansion" && (!testCase.recurrenceRule?.trim() || !testCase.expandedOccurrenceCount || testCase.expandedOccurrenceCount <= 0)) {
+      findings.push({
+        id: testCase.id,
+        status: "fail",
+        message: "Recurring availability case must include a recurrence rule and expanded occurrence count.",
+      });
+      continue;
+    }
+    if (testCase.check === "provider_render_matrix" && (!testCase.provider || !testCase.expectedLocalLabel?.trim())) {
+      findings.push({
+        id: testCase.id,
+        status: "fail",
+        message: "Provider render matrix case must include provider and expected local label.",
+      });
+      continue;
+    }
+    findings.push({
+      id: testCase.id,
+      status: "pass",
+      message: "Timezone QA case is structurally ready for route/provider verification.",
+    });
+  }
+
+  const blockers = findings.filter((finding) => finding.status === "fail").map((finding) => finding.message);
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    checkedCount: input.cases.length,
+    coveredTimezones,
+    coveredChecks,
+    findings,
+    requiredControls: [
+      "Use one explicit timezone strategy consistently at route, persistence, provider, and render boundaries.",
+      "Store canonical UTC instants plus IANA timezone identifiers for appointments, holds, travel, and availability.",
+      "Test DST spring-forward and fall-back boundaries before expanding recurring availability.",
+      "Render Los Angeles, Arizona, and New York examples through internal, Google, and ICS outputs.",
+      "Keep all-day travel windows timezone-aware and avoid converting them to floating local times.",
+    ],
+    blockers,
   };
 }
 
