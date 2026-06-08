@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildStripeCheckoutExecutionReadiness,
   buildStripeCheckoutSessionDraft,
   buildStripeWebhookReconciliationPlan,
   calculateDepositPolicy,
@@ -41,6 +42,68 @@ describe("payment policy engine", () => {
     expect(draft.mode).toBe("payment");
     expect(draft.customerEmail).toBe("client@example.com");
     expect(draft.idempotencyKey).toContain("tenant_demo:booking_demo:15000:usd");
+  });
+
+  it("blocks live Stripe Checkout until SDK, secrets, persistence, token, and redirects are safe", () => {
+    const readiness = buildStripeCheckoutExecutionReadiness({
+      tenantId: "tenant_demo",
+      bookingRequestId: "booking_demo",
+      amountCents: 15000,
+      currency: "usd",
+      successUrl: "https://evil.example/success",
+      cancelUrl: "not-a-url",
+      clientEmail: "client@example.com",
+      artistDisplayName: "Mara Vale",
+      stripeSdkInstalled: false,
+      stripeSecretConfigured: false,
+      stripeApiVersionPinned: false,
+      idempotencyStoreAvailable: false,
+      persistenceAvailable: false,
+      signedBookingTokenValid: false,
+      allowedRedirectHosts: ["inkroute.test"],
+    });
+
+    expect(readiness).toMatchObject({
+      status: "blocked",
+      canCallStripe: false,
+      requiredWrites: ["Deposit", "Payment", "PaymentAuditLog", "IdempotencyKey"],
+    });
+    expect(readiness.blockers).toEqual([
+      "Stripe SDK must be installed before live Checkout execution.",
+      "Stripe secret key must be configured in a secret store before live Checkout execution.",
+      "Stripe API version must be pinned before live Checkout execution.",
+      "Idempotency store must be available before live Checkout execution.",
+      "Deposit, Payment, and PaymentAuditLog persistence must be available before live Checkout execution.",
+      "Signed booking/deposit token must be valid before creating a Checkout session.",
+      "Success redirect host is not in the allowed redirect host list.",
+      "Cancel redirect host is not in the allowed redirect host list.",
+    ]);
+  });
+
+  it("allows live Stripe Checkout only when provider and persistence gates pass", () => {
+    const readiness = buildStripeCheckoutExecutionReadiness({
+      tenantId: "tenant_demo",
+      bookingRequestId: "booking_demo",
+      amountCents: 15000,
+      currency: "usd",
+      successUrl: "https://inkroute.test/deposit/success",
+      cancelUrl: "https://inkroute.test/deposit/cancel",
+      clientEmail: "client@example.com",
+      artistDisplayName: "Mara Vale",
+      stripeSdkInstalled: true,
+      stripeSecretConfigured: true,
+      stripeApiVersionPinned: true,
+      idempotencyStoreAvailable: true,
+      persistenceAvailable: true,
+      signedBookingTokenValid: true,
+      allowedRedirectHosts: ["inkroute.test"],
+    });
+
+    expect(readiness.status).toBe("ready");
+    expect(readiness.canCallStripe).toBe(true);
+    expect(readiness.draft.idempotencyKey).toBe("deposit:tenant_demo:booking_demo:15000:usd");
+    expect(readiness.requiredControls).toContain("Return only Stripe-hosted checkout URL to the browser; never return secret keys or raw provider payloads.");
+    expect(readiness.blockers).toEqual([]);
   });
 
   it("evaluates refund and no-show decisions with audit-friendly outcomes", () => {

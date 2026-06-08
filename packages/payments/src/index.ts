@@ -122,6 +122,25 @@ export interface StripeCheckoutSessionDraft {
   idempotencyKey: string;
 }
 
+export interface StripeCheckoutExecutionReadinessInput extends CreateDepositSessionInput {
+  stripeSdkInstalled: boolean;
+  stripeSecretConfigured: boolean;
+  stripeApiVersionPinned: boolean;
+  idempotencyStoreAvailable: boolean;
+  persistenceAvailable: boolean;
+  signedBookingTokenValid: boolean;
+  allowedRedirectHosts: readonly string[];
+}
+
+export interface StripeCheckoutExecutionReadiness {
+  status: "ready" | "blocked";
+  canCallStripe: boolean;
+  draft: StripeCheckoutSessionDraft;
+  requiredWrites: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 export interface RefundPolicyInput {
   amountPaidCents: number;
   requestedRefundCents?: number;
@@ -351,6 +370,46 @@ export function buildStripeCheckoutSessionDraft(input: CreateDepositSessionInput
   }
 
   return draft;
+}
+
+function getUrlHost(value: string): string | null {
+  try {
+    return new URL(value).host;
+  } catch {
+    return null;
+  }
+}
+
+export function buildStripeCheckoutExecutionReadiness(input: StripeCheckoutExecutionReadinessInput): StripeCheckoutExecutionReadiness {
+  const draft = buildStripeCheckoutSessionDraft(input);
+  const blockers: string[] = [];
+  const successHost = getUrlHost(input.successUrl);
+  const cancelHost = getUrlHost(input.cancelUrl);
+  const hostAllowed = (host: string | null) => Boolean(host && input.allowedRedirectHosts.includes(host));
+
+  if (!input.stripeSdkInstalled) blockers.push("Stripe SDK must be installed before live Checkout execution.");
+  if (!input.stripeSecretConfigured) blockers.push("Stripe secret key must be configured in a secret store before live Checkout execution.");
+  if (!input.stripeApiVersionPinned) blockers.push("Stripe API version must be pinned before live Checkout execution.");
+  if (!input.idempotencyStoreAvailable) blockers.push("Idempotency store must be available before live Checkout execution.");
+  if (!input.persistenceAvailable) blockers.push("Deposit, Payment, and PaymentAuditLog persistence must be available before live Checkout execution.");
+  if (!input.signedBookingTokenValid) blockers.push("Signed booking/deposit token must be valid before creating a Checkout session.");
+  if (!hostAllowed(successHost)) blockers.push("Success redirect host is not in the allowed redirect host list.");
+  if (!hostAllowed(cancelHost)) blockers.push("Cancel redirect host is not in the allowed redirect host list.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    canCallStripe: blockers.length === 0,
+    draft,
+    requiredWrites: ["Deposit", "Payment", "PaymentAuditLog", "IdempotencyKey"],
+    requiredControls: [
+      "Create Checkout Session only for accepted bookings or valid signed deposit tokens.",
+      "Persist idempotency key before provider call and reuse it for Stripe request options.",
+      "Persist provider session id and redirect URL after Stripe returns.",
+      "Return only Stripe-hosted checkout URL to the browser; never return secret keys or raw provider payloads.",
+      "Reconcile final payment state only through verified Stripe webhooks.",
+    ],
+    blockers,
+  };
 }
 
 export async function createDepositSession(_input: CreateDepositSessionInput): Promise<CreateDepositSessionResult> {
