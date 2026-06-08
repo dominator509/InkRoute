@@ -1,5 +1,28 @@
 import type { Permission, Role } from "@inkroute/types";
 
+export const allPermissions: Permission[] = [
+  "tenant:read",
+  "tenant:write",
+  "booking:read",
+  "booking:write",
+  "client:read",
+  "client:write",
+  "portfolio:read",
+  "portfolio:write",
+  "travel:read",
+  "travel:write",
+  "payment:read",
+  "payment:write",
+  "seo:read",
+  "seo:write",
+  "analytics:read",
+  "error:read",
+  "error:write",
+  "release:read",
+  "release:write",
+  "settings:write",
+];
+
 export const rolePermissions: Record<Role, Permission[]> = {
   owner: [
     "tenant:read",
@@ -70,8 +93,92 @@ export const rolePermissions: Record<Role, Permission[]> = {
   ],
 };
 
+const permissionSet = new Set<string>(allPermissions);
+
+export interface CustomRoleGrant {
+  id: string;
+  tenantId: string;
+  name?: string;
+  permissions: readonly string[];
+  isActive?: boolean;
+}
+
+export interface PermissionResolution {
+  role: Role;
+  permissions: Permission[];
+  customRoleId?: string;
+  customRoleName?: string;
+  customRoleApplied: boolean;
+  rejectedPermissions: string[];
+  ignoredReason?: "tenant_mismatch" | "inactive";
+}
+
+export function isPermission(value: string): value is Permission {
+  return permissionSet.has(value);
+}
+
+export function resolveTenantPermissions(input: { role: Role; tenantId: string; customRole?: CustomRoleGrant | null }): PermissionResolution {
+  const permissions = new Set<Permission>(rolePermissions[input.role]);
+  const customRole = input.customRole;
+
+  if (!customRole) {
+    return {
+      role: input.role,
+      permissions: Array.from(permissions),
+      customRoleApplied: false,
+      rejectedPermissions: [],
+    };
+  }
+
+  if (customRole.tenantId !== input.tenantId) {
+    return {
+      role: input.role,
+      permissions: Array.from(permissions),
+      customRoleId: customRole.id,
+      customRoleName: customRole.name,
+      customRoleApplied: false,
+      rejectedPermissions: [],
+      ignoredReason: "tenant_mismatch",
+    };
+  }
+
+  if (customRole.isActive === false) {
+    return {
+      role: input.role,
+      permissions: Array.from(permissions),
+      customRoleId: customRole.id,
+      customRoleName: customRole.name,
+      customRoleApplied: false,
+      rejectedPermissions: [],
+      ignoredReason: "inactive",
+    };
+  }
+
+  const rejectedPermissions: string[] = [];
+  for (const permission of customRole.permissions) {
+    if (isPermission(permission)) {
+      permissions.add(permission);
+    } else {
+      rejectedPermissions.push(permission);
+    }
+  }
+
+  return {
+    role: input.role,
+    permissions: Array.from(permissions),
+    customRoleId: customRole.id,
+    customRoleName: customRole.name,
+    customRoleApplied: true,
+    rejectedPermissions,
+  };
+}
+
 export function hasPermission(role: Role, permission: Permission): boolean {
   return rolePermissions[role].includes(permission);
+}
+
+export function hasResolvedPermission(resolution: PermissionResolution, permission: Permission): boolean {
+  return resolution.permissions.includes(permission);
 }
 
 export function assertPermission(role: Role, permission: Permission): void {
@@ -84,6 +191,7 @@ export interface TenantAccessContext {
   tenantId: string;
   userId: string;
   role: Role;
+  customRole?: CustomRoleGrant | null;
   sessionId?: string;
   expiresAt?: string;
   revokedAt?: string;
@@ -107,6 +215,8 @@ export interface AuthorizationDecision {
   userId?: string;
   tenantId?: string;
   role?: Role;
+  customRoleId?: string;
+  rejectedPermissions?: string[];
   permission?: Permission;
   auditAction: string;
   reason: string;
@@ -136,6 +246,7 @@ export function evaluateTenantAuthorization(input: {
     userId: context.userId,
     tenantId: context.tenantId,
     role: context.role,
+    customRoleId: context.customRole?.id,
     permission: input.permission,
     auditAction,
   };
@@ -167,12 +278,22 @@ export function evaluateTenantAuthorization(input: {
     };
   }
 
-  if (!hasPermission(context.role, input.permission)) {
+  const resolution = resolveTenantPermissions({
+    role: context.role,
+    tenantId: context.tenantId,
+    customRole: context.customRole,
+  });
+
+  if (!hasResolvedPermission(resolution, input.permission)) {
     return {
       ...base,
       allowed: false,
       status: "permission_denied",
-      reason: `Role ${context.role} does not have permission ${input.permission}.`,
+      rejectedPermissions: resolution.rejectedPermissions,
+      reason:
+        resolution.ignoredReason === "tenant_mismatch"
+          ? "Custom role belongs to a different tenant and was ignored."
+          : `Role ${context.role} does not have permission ${input.permission}.`,
     };
   }
 
@@ -180,6 +301,7 @@ export function evaluateTenantAuthorization(input: {
     ...base,
     allowed: true,
     status: "allowed",
+    rejectedPermissions: resolution.rejectedPermissions,
     reason: "Session is active, tenant-scoped, and role includes the required permission.",
   };
 }

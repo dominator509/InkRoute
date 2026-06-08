@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertPermission, evaluateTenantAuthorization, hasPermission } from "../src/index";
+import { assertPermission, evaluateTenantAuthorization, hasPermission, resolveTenantPermissions } from "../src/index";
 
 const ownerContext = {
   tenantId: "tenant_001",
@@ -32,6 +32,87 @@ describe("auth authorization helpers", () => {
       role: "owner",
       auditAction: "authz:booking:write",
     });
+  });
+
+  it("combines built-in role permissions with active tenant-scoped custom roles", () => {
+    const resolution = resolveTenantPermissions({
+      role: "assistant",
+      tenantId: "tenant_001",
+      customRole: {
+        id: "custom_role_001",
+        tenantId: "tenant_001",
+        name: "Marketing coordinator",
+        permissions: ["seo:read", "analytics:read", "not-a-real-permission"],
+      },
+    });
+
+    expect(resolution.customRoleApplied).toBe(true);
+    expect(resolution.permissions).toContain("booking:read");
+    expect(resolution.permissions).toContain("seo:read");
+    expect(resolution.permissions).toContain("analytics:read");
+    expect(resolution.rejectedPermissions).toEqual(["not-a-real-permission"]);
+  });
+
+  it("uses custom role permissions during tenant authorization without accepting unknown permission strings", () => {
+    const decision = evaluateTenantAuthorization({
+      context: {
+        ...ownerContext,
+        role: "assistant",
+        customRole: {
+          id: "custom_role_002",
+          tenantId: "tenant_001",
+          permissions: ["payment:read", "settings:delete"],
+        },
+      },
+      tenantId: "tenant_001",
+      permission: "payment:read",
+      now: "2026-06-08T01:00:00.000Z",
+    });
+
+    expect(decision).toMatchObject({
+      allowed: true,
+      status: "allowed",
+      customRoleId: "custom_role_002",
+      rejectedPermissions: ["settings:delete"],
+    });
+  });
+
+  it("ignores inactive or cross-tenant custom roles", () => {
+    expect(
+      evaluateTenantAuthorization({
+        context: {
+          ...ownerContext,
+          role: "assistant",
+          customRole: {
+            id: "custom_role_inactive",
+            tenantId: "tenant_001",
+            permissions: ["settings:write"],
+            isActive: false,
+          },
+        },
+        tenantId: "tenant_001",
+        permission: "settings:write",
+        now: "2026-06-08T01:00:00.000Z",
+      }).status,
+    ).toBe("permission_denied");
+
+    const tenantMismatch = evaluateTenantAuthorization({
+      context: {
+        ...ownerContext,
+        role: "assistant",
+        customRole: {
+          id: "custom_role_wrong_tenant",
+          tenantId: "tenant_999",
+          permissions: ["settings:write"],
+        },
+      },
+      tenantId: "tenant_001",
+      permission: "settings:write",
+      now: "2026-06-08T01:00:00.000Z",
+    });
+
+    expect(tenantMismatch.status).toBe("permission_denied");
+    expect(tenantMismatch.reason).toBe("Custom role belongs to a different tenant and was ignored.");
   });
 
   it("denies missing, revoked, expired, cross-tenant, and underprivileged sessions", () => {
