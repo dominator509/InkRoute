@@ -124,6 +124,50 @@ export interface SeoImageFields {
   structuredData: JsonLd;
 }
 
+export type SeoImageDerivativeFormat = "webp" | "avif" | "jpeg";
+export type SeoImageAcl = "public" | "private";
+
+export interface SeoImageDerivativePlan {
+  label: "thumbnail" | "card" | "hero" | "open_graph";
+  width: number;
+  format: SeoImageDerivativeFormat;
+  objectKey: string;
+  publicUrl?: string;
+  acl: SeoImageAcl;
+  cacheControl: string;
+}
+
+export interface SeoImagePipelineInput {
+  item: PortfolioItem;
+  tenantSlug: string;
+  sourceObjectKey: string;
+  sourceAcl: SeoImageAcl;
+  cdnBaseUrl?: string;
+  widths?: number[];
+  formats?: SeoImageDerivativeFormat[];
+  now?: string;
+}
+
+export interface SeoImagePipelinePlan {
+  tenantId: string;
+  tenantSlug: string;
+  portfolioItemId: string;
+  filenameHint: string;
+  altText: string;
+  caption: string;
+  sourceObjectKey: string;
+  sourceAcl: SeoImageAcl;
+  sourceRemainsPrivate: boolean;
+  requiresExifStrip: true;
+  requiresDimensionProbe: true;
+  requiresBlurPlaceholder: true;
+  requiresDerivativePersistence: true;
+  cacheControl: string;
+  derivatives: SeoImageDerivativePlan[];
+  blockers: string[];
+  generatedAt: string;
+}
+
 export interface SeoRevalidationPlan {
   reason: string;
   paths: string[];
@@ -559,6 +603,67 @@ export function deriveImageSeoFields(item: PortfolioItem): SeoImageFields {
     caption: item.caption,
     filenameHint: `${normalizedTitle}-${stylePart}-${item.placement}-${item.freshness}.jpg`,
     structuredData: buildPortfolioImageSchema(item),
+  };
+}
+
+function imageDerivativeLabel(width: number): SeoImageDerivativePlan["label"] {
+  if (width <= 320) return "thumbnail";
+  if (width <= 768) return "card";
+  if (width <= 1280) return "hero";
+  return "open_graph";
+}
+
+function trimSlashes(value: string): string {
+  return value.replace(/^\/+|\/+$/g, "");
+}
+
+export function buildSeoImagePipelinePlan(input: SeoImagePipelineInput): SeoImagePipelinePlan {
+  const seo = deriveImageSeoFields(input.item);
+  const widths = input.widths ?? [320, 768, 1280, 1600];
+  const formats = input.formats ?? ["webp", "avif"];
+  const cacheControl = "public, max-age=31536000, immutable";
+  const blockers: string[] = [];
+
+  if (!input.sourceObjectKey.trim()) blockers.push("Source object key is required before image derivative processing.");
+  if (input.sourceAcl !== "private") blockers.push("Original portfolio uploads must remain private; only reviewed derivatives may be public.");
+  if (!seo.altText.trim()) blockers.push("Reviewed alt text is required before publishing image derivatives.");
+  if (!seo.caption.trim()) blockers.push("Reviewed caption is required before publishing image derivatives.");
+
+  const baseKey = `${trimSlashes(input.tenantSlug)}/portfolio/${input.item.id}/${seo.filenameHint.replace(/\.[^.]+$/, "")}`;
+  const publicBase = input.cdnBaseUrl ? trimSlashes(input.cdnBaseUrl) : undefined;
+  const derivatives = widths.flatMap((width) =>
+    formats.map((format) => {
+      const objectKey = `${baseKey}-${width}w.${format}`;
+      return {
+        label: imageDerivativeLabel(width),
+        width,
+        format,
+        objectKey,
+        ...(publicBase ? { publicUrl: `${publicBase}/${objectKey}` } : {}),
+        acl: "public" as const,
+        cacheControl,
+      };
+    }),
+  );
+
+  return {
+    tenantId: input.item.tenantId,
+    tenantSlug: input.tenantSlug,
+    portfolioItemId: input.item.id,
+    filenameHint: seo.filenameHint,
+    altText: seo.altText,
+    caption: seo.caption,
+    sourceObjectKey: input.sourceObjectKey,
+    sourceAcl: input.sourceAcl,
+    sourceRemainsPrivate: input.sourceAcl === "private",
+    requiresExifStrip: true,
+    requiresDimensionProbe: true,
+    requiresBlurPlaceholder: true,
+    requiresDerivativePersistence: true,
+    cacheControl,
+    derivatives,
+    blockers,
+    generatedAt: input.now ?? new Date().toISOString(),
   };
 }
 

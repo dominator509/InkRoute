@@ -12,6 +12,7 @@ import {
   buildPortfolioImageSchema,
   buildTravelEventSchema,
   buildSearchConsoleOperationPlan,
+  buildSeoImagePipelinePlan,
   buildSeoPublicationMutationPlan,
   buildSeoRedirectDecision,
   buildSitemapPlan,
@@ -684,5 +685,78 @@ describe("SEO engine helpers", () => {
     expect(importPlan.shouldStoreImportedRows).toBe(true);
     expect(importPlan.steps[0]?.providerEndpoint).toBe("searchconsole.searchanalytics.query");
     expect(importPlan.dashboardStatus).toBe("ready_for_provider");
+  });
+
+  it("plans public image SEO derivatives while keeping source uploads private", () => {
+    const item: PortfolioItem = {
+      id: "portfolio_image_001",
+      tenantId: "tenant_001",
+      artistId: "artist_001",
+      title: "Seattle blackwork sleeve",
+      slug: "seattle-blackwork-sleeve",
+      caption: "Healed blackwork sleeve photographed after a Seattle guest spot.",
+      styles: ["blackwork"],
+      placement: "arm",
+      freshness: "healed",
+      city: "Seattle",
+      imageUrl: "storage://tenant_001/private/originals/seattle-blackwork-sleeve.jpg",
+      altText: "Healed blackwork sleeve tattoo",
+      isFeatured: true,
+    };
+
+    const plan = buildSeoImagePipelinePlan({
+      item,
+      tenantSlug: "inkroute-demo",
+      sourceObjectKey: "tenant_001/private/originals/seattle-blackwork-sleeve.jpg",
+      sourceAcl: "private",
+      cdnBaseUrl: "https://cdn.inkroute.example",
+      widths: [320, 768],
+      formats: ["webp", "avif"],
+      now: "2026-06-08T00:00:00.000Z",
+    });
+
+    expect(plan.blockers).toHaveLength(0);
+    expect(plan.sourceRemainsPrivate).toBe(true);
+    expect(plan.requiresExifStrip).toBe(true);
+    expect(plan.requiresDimensionProbe).toBe(true);
+    expect(plan.requiresBlurPlaceholder).toBe(true);
+    expect(plan.derivatives).toHaveLength(4);
+    expect(plan.derivatives.every((derivative) => derivative.acl === "public")).toBe(true);
+    expect(plan.derivatives[0]).toMatchObject({
+      label: "thumbnail",
+      width: 320,
+      format: "webp",
+      cacheControl: "public, max-age=31536000, immutable",
+    });
+    expect(plan.derivatives[0]?.publicUrl).toContain("https://cdn.inkroute.example/inkroute-demo/portfolio/portfolio_image_001");
+  });
+
+  it("blocks image SEO publication when originals are public or review text is missing", () => {
+    const item: PortfolioItem = {
+      id: "portfolio_image_002",
+      tenantId: "tenant_001",
+      artistId: "artist_001",
+      title: "Untitled flash",
+      slug: "untitled-flash",
+      caption: "",
+      styles: ["flash"],
+      placement: "leg",
+      freshness: "fresh",
+      imageUrl: "https://public.example/original.jpg",
+      altText: "",
+      isFeatured: false,
+    };
+
+    const plan = buildSeoImagePipelinePlan({
+      item,
+      tenantSlug: "inkroute-demo",
+      sourceObjectKey: "tenant_001/public/originals/untitled-flash.jpg",
+      sourceAcl: "public",
+    });
+
+    expect(plan.sourceRemainsPrivate).toBe(false);
+    expect(plan.blockers.join(" ")).toContain("Original portfolio uploads must remain private");
+    expect(plan.blockers.join(" ")).toContain("Reviewed alt text");
+    expect(plan.blockers.join(" ")).toContain("Reviewed caption");
   });
 });
