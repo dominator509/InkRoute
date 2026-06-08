@@ -115,6 +115,41 @@ export interface UploadScanPipelinePlan {
   reasons: readonly string[];
 }
 
+export type StorageAccessOperation = "upload" | "download";
+export type StorageAccessStatus = "signed_url_ready" | "rejected" | "revoked" | "expired" | "provider_gated";
+
+export interface PrivateStorageAccessInput {
+  kind: UploadAssetKind;
+  operation: StorageAccessOperation;
+  tenantId: string;
+  subjectId: string;
+  requestedByUserId?: string;
+  objectKey?: string;
+  storageVisibility: UploadValidationResult["storageVisibility"];
+  expiresInSeconds: number;
+  now: string;
+  expiresAt?: string;
+  revokedAt?: string;
+  scanApproved: boolean;
+  providerConfigured: boolean;
+  publicDerivativeObjectKey?: string;
+}
+
+export interface PrivateStorageAccessPlan {
+  status: StorageAccessStatus;
+  operation: StorageAccessOperation;
+  tenantId: string;
+  subjectId: string;
+  objectKey: string | null;
+  bucketAcl: "private" | "public-read-derivatives-only";
+  signedUrlRequired: boolean;
+  publicReadAllowed: boolean;
+  expiresInSeconds: number;
+  requiredWrites: Array<"FileAsset" | "AuditLog" | "SignedUrlGrant">;
+  requiredControls: readonly string[];
+  reasons: readonly string[];
+}
+
 export interface RateLimitRule {
   id: string;
   routePattern: string;
@@ -1265,6 +1300,70 @@ export function buildUploadScanPipelinePlan(input: UploadScanPipelineInput): Upl
       "Persist scan status and detected MIME type on the tenant-scoped FileAsset record.",
       "Write AuditLog entries for approval, quarantine, rejection, and derivative publication.",
       "Never expose original private uploads publicly; publish only safe derivatives when allowed.",
+    ],
+    reasons,
+  };
+}
+
+function isExpired(now: string, expiresAt?: string): boolean {
+  if (!expiresAt) return false;
+  return new Date(expiresAt).getTime() <= new Date(now).getTime();
+}
+
+export function buildPrivateStorageAccessPlan(input: PrivateStorageAccessInput): PrivateStorageAccessPlan {
+  const reasons: string[] = [];
+  const privateVisibility = input.storageVisibility !== "public_derivative";
+  const signedUrlRequired = privateVisibility || input.operation === "upload";
+  const expiresInSeconds = Math.min(Math.max(input.expiresInSeconds, 60), 3600);
+
+  if (!input.providerConfigured) {
+    reasons.push("Storage provider is not configured.");
+  }
+  if (!input.objectKey?.trim()) {
+    reasons.push("Server-owned object key is required.");
+  }
+  if (input.revokedAt) {
+    reasons.push("Signed URL grant has been revoked.");
+  }
+  if (isExpired(input.now, input.expiresAt)) {
+    reasons.push("Signed URL grant is expired.");
+  }
+  if (input.operation === "download" && privateVisibility && !input.scanApproved) {
+    reasons.push("Private downloads require approved scan status.");
+  }
+  if (input.storageVisibility === "public_derivative" && !input.publicDerivativeObjectKey?.trim()) {
+    reasons.push("Public portfolio access must use a separate safe derivative object key.");
+  }
+
+  const status: StorageAccessStatus = input.revokedAt
+    ? "revoked"
+    : isExpired(input.now, input.expiresAt)
+      ? "expired"
+      : reasons.some((reason) => reason !== "Storage provider is not configured.")
+        ? "rejected"
+        : input.providerConfigured
+          ? "signed_url_ready"
+          : "provider_gated";
+
+  return {
+    status,
+    operation: input.operation,
+    tenantId: input.tenantId,
+    subjectId: input.subjectId,
+    objectKey: input.objectKey?.trim() || null,
+    bucketAcl: input.storageVisibility === "public_derivative" ? "public-read-derivatives-only" : "private",
+    signedUrlRequired,
+    publicReadAllowed: input.storageVisibility === "public_derivative" && status === "signed_url_ready",
+    expiresInSeconds,
+    requiredWrites: ["FileAsset", "AuditLog", "SignedUrlGrant"],
+    requiredControls: [
+      "Generate object keys server-side from tenant, asset kind, and subject identifiers.",
+      "Use private bucket ACLs for original reference, consent, healed-photo, and document assets.",
+      "Issue signed URLs scoped to one object key, content type, operation, and expiry window.",
+      "Check revocation and expiry before every private download grant.",
+      "Require approved scan status before private download and before public derivative publication.",
+      "Publish public portfolio access only through separate derivative object keys.",
+      "Write AuditLog entries for signed URL creation, download, revocation, and public derivative publication.",
     ],
     reasons,
   };

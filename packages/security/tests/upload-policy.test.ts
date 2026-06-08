@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildPrivacyLifecyclePlan,
   buildSignedUploadIntentPlan,
+  buildPrivateStorageAccessPlan,
   buildUploadScanPipelinePlan,
   detectMimeTypeFromSignature,
   buildTenantIsolationFixtures,
@@ -131,6 +132,96 @@ describe("security and privacy helpers", () => {
     expect(cleanDerivative.metadataStrippingRequired).toBe(true);
     expect(cleanDerivative.publicDerivativeAllowed).toBe(true);
     expect(cleanDerivative.requiredControls).toContain("Never expose original private uploads publicly; publish only safe derivatives when allowed.");
+  });
+
+  it("requires scoped signed URLs for private uploads and downloads", () => {
+    const upload = buildPrivateStorageAccessPlan({
+      kind: "reference_private",
+      operation: "upload",
+      tenantId: "tenant_001",
+      subjectId: "booking_001",
+      objectKey: "private/tenant_001/reference_private/booking_001/ref.jpg",
+      storageVisibility: "client_private",
+      expiresInSeconds: 9999,
+      now: "2026-06-08T20:30:00.000Z",
+      scanApproved: false,
+      providerConfigured: true,
+    });
+    const download = buildPrivateStorageAccessPlan({
+      kind: "reference_private",
+      operation: "download",
+      tenantId: "tenant_001",
+      subjectId: "booking_001",
+      objectKey: "private/tenant_001/reference_private/booking_001/ref.jpg",
+      storageVisibility: "client_private",
+      expiresInSeconds: 900,
+      now: "2026-06-08T20:30:00.000Z",
+      expiresAt: "2026-06-08T20:45:00.000Z",
+      scanApproved: true,
+      providerConfigured: true,
+    });
+
+    expect(upload).toMatchObject({
+      status: "signed_url_ready",
+      bucketAcl: "private",
+      signedUrlRequired: true,
+      publicReadAllowed: false,
+      expiresInSeconds: 3600,
+      requiredWrites: ["FileAsset", "AuditLog", "SignedUrlGrant"],
+    });
+    expect(download.status).toBe("signed_url_ready");
+    expect(download.requiredControls).toContain("Check revocation and expiry before every private download grant.");
+  });
+
+  it("blocks revoked, expired, unscanned private downloads and unsafe public derivatives", () => {
+    const revoked = buildPrivateStorageAccessPlan({
+      kind: "consent_signature",
+      operation: "download",
+      tenantId: "tenant_001",
+      subjectId: "consent_001",
+      objectKey: "private/tenant_001/consent_signature/consent_001/signature.png",
+      storageVisibility: "system_private",
+      expiresInSeconds: 900,
+      now: "2026-06-08T20:30:00.000Z",
+      expiresAt: "2026-06-08T20:45:00.000Z",
+      revokedAt: "2026-06-08T20:31:00.000Z",
+      scanApproved: true,
+      providerConfigured: true,
+    });
+    const unscanned = buildPrivateStorageAccessPlan({
+      kind: "document_private",
+      operation: "download",
+      tenantId: "tenant_001",
+      subjectId: "doc_001",
+      objectKey: "private/tenant_001/document_private/doc_001/intake.pdf",
+      storageVisibility: "tenant_private",
+      expiresInSeconds: 900,
+      now: "2026-06-08T20:30:00.000Z",
+      expiresAt: "2026-06-08T20:45:00.000Z",
+      scanApproved: false,
+      providerConfigured: true,
+    });
+    const unsafeDerivative = buildPrivateStorageAccessPlan({
+      kind: "portfolio_public",
+      operation: "download",
+      tenantId: "tenant_001",
+      subjectId: "portfolio_001",
+      objectKey: "private/tenant_001/portfolio_public/original.jpg",
+      storageVisibility: "public_derivative",
+      expiresInSeconds: 900,
+      now: "2026-06-08T20:30:00.000Z",
+      expiresAt: "2026-06-08T20:45:00.000Z",
+      scanApproved: true,
+      providerConfigured: true,
+    });
+
+    expect(revoked.status).toBe("revoked");
+    expect(revoked.reasons).toContain("Signed URL grant has been revoked.");
+    expect(unscanned.status).toBe("rejected");
+    expect(unscanned.reasons).toContain("Private downloads require approved scan status.");
+    expect(unsafeDerivative.status).toBe("rejected");
+    expect(unsafeDerivative.publicReadAllowed).toBe(false);
+    expect(unsafeDerivative.reasons).toContain("Public portfolio access must use a separate safe derivative object key.");
   });
 
   it("redacts PII, payment fields, and medical notes", () => {

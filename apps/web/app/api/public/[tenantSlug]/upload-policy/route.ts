@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildSecurityHeaderPlan, buildUploadScanPipelinePlan, rateLimitRules, uploadPolicies } from "@inkroute/security";
+import { buildPrivateStorageAccessPlan, buildSecurityHeaderPlan, buildUploadScanPipelinePlan, rateLimitRules, uploadPolicies } from "@inkroute/security";
 
 export async function GET(_request: Request, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;
@@ -18,6 +18,18 @@ export async function GET(_request: Request, context: { params: Promise<{ tenant
       exifMetadataPresent: true,
       normalizedDerivativeGenerated: false,
       scanProviderConfigured: false,
+    }),
+    privateStorageAccessPreview: buildPrivateStorageAccessPlan({
+      kind: "reference_private",
+      operation: "download",
+      tenantId: tenantSlug,
+      subjectId: "booking-reference-preview",
+      objectKey: `private/${tenantSlug}/reference_private/booking-reference-preview/reference.jpg`,
+      storageVisibility: "client_private",
+      expiresInSeconds: 900,
+      now: "2026-06-08T00:00:00.000Z",
+      scanApproved: false,
+      providerConfigured: false,
     }),
     publicRateLimits: rateLimitRules.filter((rule) => rule.routePattern.includes("/api/public")),
     securityHeaders: buildSecurityHeaderPlan(),
