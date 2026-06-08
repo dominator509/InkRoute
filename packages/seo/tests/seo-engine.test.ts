@@ -8,6 +8,7 @@ import {
   buildInternalLinkPlan,
   buildMetadataDraft,
   buildSeoPublicationMutationPlan,
+  buildSeoRedirectDecision,
   buildSitemapPlan,
   buildStyleSeoBrief,
   buildWebPageSchema,
@@ -15,6 +16,7 @@ import {
   composeJsonLdGraph,
   createCanonicalUrl,
   createSeoRouteRecord,
+  resolveTenantCanonicalPolicy,
 } from "../src/index";
 
 describe("SEO engine helpers", () => {
@@ -393,5 +395,139 @@ describe("SEO engine helpers", () => {
     expect(plan.blockers.join(" ")).toContain("owner or studio_manager");
     expect(plan.blockers.join(" ")).toContain("different tenant");
     expect(plan.writes.some((write) => write.model === "AuditLog")).toBe(true);
+  });
+
+  it("resolves tenant canonical domains while excluding draft and noindex routes from sitemap entries", () => {
+    const published = createSeoRouteRecord({
+      path: "/cities/seattle-wa",
+      kind: "city",
+      title: "Seattle Tattoo Booking with Mara Vale",
+      description: "Seattle tattoo booking page with strong local search context and travel appointment intent.",
+      city: "Seattle",
+      region: "WA",
+      status: "published",
+      tenantSlug: "inkroute-demo",
+    });
+    const draft = createSeoRouteRecord({
+      path: "/cities/draft",
+      kind: "city",
+      title: "Draft Tattoo City Landing Page",
+      description: "Draft city landing page for private dashboard preview before public indexing.",
+      city: "Tacoma",
+      region: "WA",
+      status: "draft",
+      tenantSlug: "inkroute-demo",
+    });
+    const noindex = createSeoRouteRecord({
+      path: "/booking/confirmation",
+      kind: "system",
+      title: "Booking Confirmation",
+      description: "Private confirmation page not intended for search indexing.",
+      indexMode: "noindex",
+      tenantSlug: "inkroute-demo",
+    });
+
+    const policy = resolveTenantCanonicalPolicy({
+      requestHost: "www.inkroute.example",
+      requestPath: "/cities/seattle-wa",
+      tenantSlug: "inkroute-demo",
+      tenantId: "tenant_001",
+      protocol: "http",
+      domains: [
+        {
+          tenantId: "tenant_001",
+          tenantSlug: "inkroute-demo",
+          primaryHost: "inkroute.example",
+          allowedHosts: ["www.inkroute.example"],
+          forceHttps: true,
+        },
+      ],
+      routes: [published, draft, noindex],
+    });
+
+    expect(policy.hostAllowed).toBe(true);
+    expect(policy.shouldRedirectHost).toBe(true);
+    expect(policy.shouldForceHttps).toBe(true);
+    expect(policy.canonicalUrl).toBe("https://inkroute.example/cities/seattle-wa");
+    expect(policy.sitemapEntries.map((entry) => entry.url)).toEqual(["https://inkroute.example/cities/seattle-wa"]);
+    expect(policy.noindexPaths).toEqual(["/booking/confirmation", "/cities/draft"]);
+    expect(policy.blockers).toHaveLength(0);
+  });
+
+  it("reports unregistered hosts and duplicate canonical paths before publishing", () => {
+    const first = createSeoRouteRecord({
+      path: "/styles/blackwork",
+      kind: "style",
+      title: "Blackwork Tattoo Booking with Mara Vale",
+      description: "Blackwork tattoo booking page with style education, healed examples, and consultation calls to action.",
+      style: "Blackwork",
+      status: "published",
+      tenantSlug: "inkroute-demo",
+    });
+    const duplicate = createSeoRouteRecord({
+      path: "/styles/blackwork/",
+      kind: "style",
+      title: "Duplicate Blackwork Tattoo Booking",
+      description: "Duplicate blackwork canonical path used to prove duplicate canonical detection before publishing.",
+      style: "Blackwork",
+      status: "published",
+      tenantSlug: "inkroute-demo",
+    });
+
+    const policy = resolveTenantCanonicalPolicy({
+      requestHost: "evil.example",
+      requestPath: "/styles/blackwork",
+      tenantSlug: "inkroute-demo",
+      tenantId: "tenant_001",
+      domains: [
+        {
+          tenantId: "tenant_001",
+          tenantSlug: "inkroute-demo",
+          primaryHost: "inkroute.example",
+          allowedHosts: ["www.inkroute.example"],
+        },
+      ],
+      routes: [first, duplicate],
+    });
+
+    expect(policy.hostAllowed).toBe(false);
+    expect(policy.duplicateCanonicalPaths).toEqual(["/styles/blackwork"]);
+    expect(policy.blockers.join(" ")).toContain("not registered");
+    expect(policy.blockers.join(" ")).toContain("Duplicate canonical paths");
+  });
+
+  it("builds tenant-scoped redirect and noindex decisions", () => {
+    const route = createSeoRouteRecord({
+      path: "/cities/seattle-wa",
+      kind: "city",
+      title: "Seattle Tattoo Booking with Mara Vale",
+      description: "Seattle tattoo booking page with strong local search context and travel appointment intent.",
+      city: "Seattle",
+      region: "WA",
+      status: "published",
+    });
+    const draft = createSeoRouteRecord({
+      path: "/cities/private-preview",
+      kind: "city",
+      title: "Private Preview Tattoo City Page",
+      description: "Private preview route should not be indexed before editorial approval and publish state changes.",
+      city: "Seattle",
+      region: "WA",
+      status: "draft",
+    });
+
+    const redirect = buildSeoRedirectDecision({
+      tenantId: "tenant_001",
+      path: "/old-seattle",
+      rules: [{ tenantId: "tenant_001", fromPath: "/old-seattle", toPath: "/cities/seattle-wa", statusCode: 308, isActive: true }],
+    });
+    const allowed = buildSeoRedirectDecision({ tenantId: "tenant_001", path: "/cities/seattle-wa", route, rules: [] });
+    const privateRoute = buildSeoRedirectDecision({ tenantId: "tenant_001", path: "/cities/private-preview", route: draft, rules: [] });
+    const missing = buildSeoRedirectDecision({ tenantId: "tenant_001", path: "/missing", rules: [] });
+
+    expect(redirect).toMatchObject({ action: "redirect", destinationPath: "/cities/seattle-wa", statusCode: 308, shouldIndex: false });
+    expect(allowed).toMatchObject({ action: "allow", shouldIndex: true });
+    expect(privateRoute).toMatchObject({ action: "noindex", shouldIndex: false });
+    expect(missing).toMatchObject({ action: "not_found", shouldIndex: false });
   });
 });

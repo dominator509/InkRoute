@@ -7,6 +7,8 @@ export type SeoIndexMode = "index" | "noindex";
 export type SeoChangeFrequency = "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
 export type SeoIssueSeverity = "info" | "warning" | "error";
 export type SeoPublicationStatus = SeoPageStatus | "static_demo";
+export type SeoRedirectStatusCode = 301 | 302 | 307 | 308;
+export type SeoRedirectDecisionAction = "allow" | "redirect" | "not_found" | "noindex";
 
 export interface SeoRouteRecord {
   path: string;
@@ -179,6 +181,65 @@ export interface SeoPublicationMutationPlan {
   writes: SeoPublicationWrite[];
   auditAction: string;
   revalidation: SeoRevalidationPlan;
+}
+
+export interface TenantCanonicalDomain {
+  tenantId: string;
+  tenantSlug: string;
+  primaryHost: string;
+  allowedHosts: string[];
+  forceHttps?: boolean;
+}
+
+export interface SeoRedirectRule {
+  tenantId: string;
+  fromPath: string;
+  toPath: string;
+  statusCode: SeoRedirectStatusCode;
+  isActive: boolean;
+}
+
+export interface TenantCanonicalPolicyInput {
+  requestHost: string;
+  requestPath: string;
+  tenantSlug: string;
+  tenantId: string;
+  domains: TenantCanonicalDomain[];
+  routes: SeoRouteRecord[];
+  protocol?: "http" | "https";
+}
+
+export interface TenantCanonicalPolicyResult {
+  tenantId: string;
+  tenantSlug: string;
+  requestedHost: string;
+  canonicalHost: string;
+  canonicalPath: string;
+  canonicalUrl: string;
+  hostAllowed: boolean;
+  shouldRedirectHost: boolean;
+  shouldForceHttps: boolean;
+  duplicateCanonicalPaths: string[];
+  sitemapEntries: SitemapEntryDraft[];
+  noindexPaths: string[];
+  blockers: string[];
+}
+
+export interface SeoRedirectDecisionInput {
+  tenantId: string;
+  path: string;
+  route?: SeoRouteRecord;
+  rules: SeoRedirectRule[];
+}
+
+export interface SeoRedirectDecision {
+  action: SeoRedirectDecisionAction;
+  tenantId: string;
+  path: string;
+  destinationPath?: string;
+  statusCode?: SeoRedirectStatusCode;
+  reason: string;
+  shouldIndex: boolean;
 }
 
 export interface SearchConsolePropertyDraft {
@@ -764,6 +825,100 @@ export function buildSeoPublicationMutationPlan(input: SeoPublicationMutationInp
       routes: [routeWithTargetStatus],
       contentIds: [input.model, routeWithTargetStatus.canonicalPath],
     }),
+  };
+}
+
+function normalizeHost(host: string): string {
+  return host.toLowerCase().trim().replace(/:\d+$/, "");
+}
+
+function findTenantDomain(input: TenantCanonicalPolicyInput): TenantCanonicalDomain | undefined {
+  const requestedHost = normalizeHost(input.requestHost);
+  return input.domains.find(
+    (domain) =>
+      domain.tenantId === input.tenantId &&
+      (normalizeHost(domain.primaryHost) === requestedHost || domain.allowedHosts.map(normalizeHost).includes(requestedHost)),
+  );
+}
+
+export function resolveTenantCanonicalPolicy(input: TenantCanonicalPolicyInput): TenantCanonicalPolicyResult {
+  const canonicalPath = normalizePath(input.requestPath);
+  const requestedHost = normalizeHost(input.requestHost);
+  const tenantDomain = findTenantDomain(input);
+  const tenantRoutes = input.routes.filter((route) => route.tenantSlug === input.tenantSlug || route.tenantSlug == null);
+  const canonicalCounts = new Map<string, number>();
+  for (const route of tenantRoutes) {
+    const path = normalizePath(route.canonicalPath);
+    canonicalCounts.set(path, (canonicalCounts.get(path) ?? 0) + 1);
+  }
+  const duplicateCanonicalPaths = [...canonicalCounts.entries()].filter(([, count]) => count > 1).map(([path]) => path).sort();
+  const canonicalHost = normalizeHost(tenantDomain?.primaryHost ?? requestedHost);
+  const protocol = input.protocol ?? "https";
+  const shouldForceHttps = (tenantDomain?.forceHttps ?? true) && protocol !== "https";
+  const blockers: string[] = [];
+
+  if (!tenantDomain) blockers.push("Request host is not registered for the requested tenant.");
+  if (duplicateCanonicalPaths.length > 0) blockers.push("Duplicate canonical paths must be resolved before publishing sitemap output.");
+
+  const sitemap = buildSitemapPlan({ baseUrl: `https://${canonicalHost}`, routes: tenantRoutes });
+  return {
+    tenantId: input.tenantId,
+    tenantSlug: input.tenantSlug,
+    requestedHost,
+    canonicalHost,
+    canonicalPath,
+    canonicalUrl: createCanonicalUrl(`https://${canonicalHost}`, canonicalPath),
+    hostAllowed: Boolean(tenantDomain),
+    shouldRedirectHost: Boolean(tenantDomain) && requestedHost !== canonicalHost,
+    shouldForceHttps,
+    duplicateCanonicalPaths,
+    sitemapEntries: sitemap.entries,
+    noindexPaths: tenantRoutes.filter((route) => !routeToSitemapEntry(route, `https://${canonicalHost}`)).map((route) => route.path).sort(),
+    blockers,
+  };
+}
+
+export function buildSeoRedirectDecision(input: SeoRedirectDecisionInput): SeoRedirectDecision {
+  const path = normalizePath(input.path);
+  const rule = input.rules.find((candidate) => candidate.tenantId === input.tenantId && candidate.isActive && normalizePath(candidate.fromPath) === path);
+  if (rule) {
+    return {
+      action: "redirect",
+      tenantId: input.tenantId,
+      path,
+      destinationPath: normalizePath(rule.toPath),
+      statusCode: rule.statusCode,
+      reason: "Matched active tenant-scoped SEO redirect rule.",
+      shouldIndex: false,
+    };
+  }
+
+  if (!input.route) {
+    return {
+      action: "not_found",
+      tenantId: input.tenantId,
+      path,
+      reason: "No tenant route or redirect rule matched this path.",
+      shouldIndex: false,
+    };
+  }
+
+  if (input.route.indexMode === "noindex" || input.route.status === "draft" || input.route.status === "archived") {
+    return {
+      action: "noindex",
+      tenantId: input.tenantId,
+      path,
+      reason: "Matched route is draft, archived, or explicitly noindex.",
+      shouldIndex: false,
+    };
+  }
+
+  return {
+    action: "allow",
+    tenantId: input.tenantId,
+    path,
+    reason: "Matched published/indexable tenant route.",
+    shouldIndex: true,
   };
 }
 
