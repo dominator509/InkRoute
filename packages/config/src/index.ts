@@ -486,3 +486,145 @@ export const bookingIntegrationBoundaries = [
     detail: "Google Calendar OAuth, conflict checks, ICS exports, buffer rules, and timezone verification remain planned integrations.",
   },
 ] as const;
+
+export interface PublicTenantProfile {
+  slug: string;
+  name: string;
+  publicSiteName: string;
+  defaultTimezone?: string;
+}
+
+export interface PublicArtistProfile {
+  slug: string;
+  displayName: string;
+  bio: string;
+  shortBio?: string;
+  homeBaseCity?: string;
+  specialties: TattooStyle[];
+  instagramUrl?: string;
+  bookingEnabled?: boolean;
+}
+
+export interface PublicPortfolioItem {
+  slug: string;
+  title: string;
+  caption: string;
+  styles: TattooStyle[];
+  placement: PortfolioItem["placement"];
+  freshness: PortfolioItem["freshness"];
+  city?: string;
+  imageUrl: string;
+  altText: string;
+  isFeatured: boolean;
+}
+
+export interface PublicTravelStop {
+  city: string;
+  region: string;
+  country: string;
+  timezone: string;
+  startsAt: string;
+  endsAt: string;
+  studioName?: string;
+  bookingStatus: TravelStop["bookingStatus"];
+  publicNotes?: string;
+}
+
+export interface PublicContentBundle {
+  source: "demo-static";
+  tenant: PublicTenantProfile;
+  artist: PublicArtistProfile;
+  portfolioItems: PublicPortfolioItem[];
+  travelStops: PublicTravelStop[];
+  cityPages: SeoCityLandingPage[];
+  stylePages: SeoStyleLandingPage[];
+  faqs: PublicFaqItem[];
+  testimonials: PublicTestimonial[];
+  redactedFields: string[];
+  cachePolicy: {
+    strategy: "static-demo" | "tenant-revalidated";
+    revalidateSeconds: number;
+  };
+}
+
+const publicContentRedactedFields = [
+  "tenant.id",
+  "tenant.plan",
+  "tenant.status",
+  "artist.id",
+  "artist.tenantId",
+  "portfolio.id",
+  "portfolio.tenantId",
+  "portfolio.artistId",
+  "portfolio.attributionKey",
+  "portfolio.isPublic",
+  "travel.id",
+  "travel.tenantId",
+  "travel.artistId",
+];
+
+export function normalizeTenantSlug(slug: string): string {
+  return decodeURIComponent(slug).trim().toLowerCase();
+}
+
+export function buildPublicContentBundle(tenantSlug: string): PublicContentBundle | null {
+  if (normalizeTenantSlug(tenantSlug) !== inkrouteDemoTenant.slug) {
+    return null;
+  }
+
+  return {
+    source: "demo-static",
+    tenant: {
+      slug: inkrouteDemoTenant.slug,
+      name: inkrouteDemoTenant.name,
+      publicSiteName: inkrouteDemoTenant.publicSiteName ?? inkrouteDemoTenant.name,
+      defaultTimezone: inkrouteDemoTenant.defaultTimezone,
+    },
+    artist: {
+      slug: inkrouteDemoArtist.slug,
+      displayName: inkrouteDemoArtist.displayName,
+      bio: inkrouteDemoArtist.bio,
+      shortBio: inkrouteDemoArtist.shortBio,
+      homeBaseCity: inkrouteDemoArtist.homeBaseCity,
+      specialties: [...inkrouteDemoArtist.specialties],
+      instagramUrl: inkrouteDemoArtist.instagramUrl,
+      bookingEnabled: inkrouteDemoArtist.bookingEnabled,
+    },
+    portfolioItems: demoPortfolioItems
+      .filter((item) => item.tenantId === inkrouteDemoTenant.id && item.artistId === inkrouteDemoArtist.id && item.isPublic !== false)
+      .map((item) => ({
+        slug: item.slug,
+        title: item.title,
+        caption: item.caption,
+        styles: [...item.styles],
+        placement: item.placement,
+        freshness: item.freshness,
+        city: item.city,
+        imageUrl: item.imageUrl,
+        altText: item.altText,
+        isFeatured: item.isFeatured,
+      })),
+    travelStops: demoTravelStops
+      .filter((stop) => stop.tenantId === inkrouteDemoTenant.id && stop.artistId === inkrouteDemoArtist.id)
+      .map((stop) => ({
+        city: stop.city,
+        region: stop.region,
+        country: stop.country,
+        timezone: stop.timezone,
+        startsAt: stop.startsAt,
+        endsAt: stop.endsAt,
+        studioName: stop.studioName,
+        bookingStatus: stop.bookingStatus,
+        publicNotes: stop.publicNotes,
+      })),
+    cityPages: demoSeoCityPages.map((page) => ({ ...page, bestFor: [...page.bestFor] })),
+    stylePages: demoSeoStylePages.map((page) => ({ ...page, sessionFit: [...page.sessionFit] })),
+    faqs: publicFaqs.map((faq) => ({ ...faq })),
+    testimonials: demoTestimonials.map((testimonial) => ({ ...testimonial })),
+    redactedFields: publicContentRedactedFields,
+    cachePolicy: {
+      strategy: "static-demo",
+      revalidateSeconds: 300,
+    },
+  };
+}
