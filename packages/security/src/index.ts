@@ -797,6 +797,50 @@ export interface PrivacyCaseWorkflowPlan {
   auditEvents: readonly string[];
 }
 
+export type RetentionEnforcementAction = RetentionAction | "retain_until_due";
+
+export interface RetentionCandidateRecord {
+  id: string;
+  category: PrivacyDataCategory;
+  ageDays: number;
+  legalHoldActive?: boolean;
+}
+
+export interface RetentionEnforcementDryRunInput {
+  records: readonly RetentionCandidateRecord[];
+  legalReviewApproved: boolean;
+  databaseWorkerConfigured: boolean;
+  storageWorkerConfigured: boolean;
+  auditLogConfigured: boolean;
+  backupPolicyDocumented: boolean;
+  restorePolicyDocumented: boolean;
+}
+
+export interface RetentionEnforcementStep {
+  recordId: string;
+  category: PrivacyDataCategory;
+  models: readonly string[];
+  action: RetentionEnforcementAction;
+  due: boolean;
+  blocked: boolean;
+  auditRequired: boolean;
+  reason: string;
+}
+
+export interface RetentionEnforcementDryRun {
+  status: "ready" | "blocked";
+  canExecute: boolean;
+  steps: readonly RetentionEnforcementStep[];
+  blockers: readonly string[];
+  requiredWorkers: readonly string[];
+  requiredAuditEvents: readonly string[];
+  backupRestorePolicy: {
+    backupPolicyDocumented: boolean;
+    restorePolicyDocumented: boolean;
+    implication: string;
+  };
+}
+
 export interface LegalDocumentPlaceholder {
   slug: string;
   title: string;
@@ -1644,6 +1688,79 @@ export function buildPrivacyCaseWorkflowPlan(input: PrivacyCaseWorkflowInput): P
       "Notify completion, denial, or legal-hold delay with attorney-reviewed copy.",
     ],
     auditEvents: ["privacy.intake", "privacy.identity_verified", "privacy.worker_started", "privacy.worker_completed", "privacy.notification_sent", "privacy.case_closed"],
+  };
+}
+
+export function buildRetentionEnforcementDryRun(input: RetentionEnforcementDryRunInput): RetentionEnforcementDryRun {
+  const blockers: string[] = [];
+  if (!input.legalReviewApproved) blockers.push("Attorney-approved retention schedule is required before automated retention enforcement.");
+  if (!input.databaseWorkerConfigured) blockers.push("Database retention worker must be configured before deleting/anonymizing records.");
+  if (!input.storageWorkerConfigured) blockers.push("Storage retention worker must be configured before deleting private files.");
+  if (!input.auditLogConfigured) blockers.push("Audit logging must be configured before retention actions execute.");
+  if (!input.backupPolicyDocumented) blockers.push("Backup retention implications must be documented before destructive enforcement.");
+  if (!input.restorePolicyDocumented) blockers.push("Restore policy must document how deleted/anonymized records remain deleted after backup restore.");
+
+  const steps: RetentionEnforcementStep[] = input.records.map((record) => {
+    const rule = getRetentionRule(record.category);
+    if (!rule) {
+      return {
+        recordId: record.id,
+        category: record.category,
+        models: [],
+        action: "retain_legal_hold",
+        due: false,
+        blocked: true,
+        auditRequired: true,
+        reason: "No retention rule exists for this category.",
+      };
+    }
+
+    const retentionDue = rule.defaultRetentionDays !== "indefinite" && record.ageDays >= rule.defaultRetentionDays;
+    const legalHold = Boolean(record.legalHoldActive || rule.legalHoldRequired);
+    const action: RetentionEnforcementAction = legalHold
+      ? "retain_legal_hold"
+      : !retentionDue
+        ? "retain_until_due"
+        : rule.deletable
+          ? rule.anonymizeOnDeletion
+            ? "anonymize"
+            : "delete"
+          : rule.anonymizeOnDeletion
+            ? "anonymize"
+            : "retain_legal_hold";
+    const blocked = action !== "retain_until_due" && action !== "retain_legal_hold" && blockers.length > 0;
+
+    return {
+      recordId: record.id,
+      category: record.category,
+      models: rule.models,
+      action,
+      due: retentionDue,
+      blocked,
+      auditRequired: rule.auditRequired || action !== "retain_until_due",
+      reason: legalHold
+        ? rule.rationale
+        : !retentionDue
+          ? `${record.category} is ${record.ageDays} day(s) old and is not past the ${rule.defaultRetentionDays} day retention window.`
+          : rule.rationale,
+    };
+  });
+
+  const executableSteps = steps.filter((step) => step.due && step.action !== "retain_legal_hold" && step.action !== "retain_until_due");
+  const blockedSteps = steps.some((step) => step.blocked);
+
+  return {
+    status: blockers.length === 0 && !blockedSteps ? "ready" : "blocked",
+    canExecute: blockers.length === 0 && !blockedSteps,
+    steps,
+    blockers,
+    requiredWorkers: ["database-retention", "storage-retention", "privacy-export", "audit-log", "backup-restore-reconciliation"],
+    requiredAuditEvents: executableSteps.map((step) => `retention:${step.category}:${step.action}:${step.recordId}`),
+    backupRestorePolicy: {
+      backupPolicyDocumented: input.backupPolicyDocumented,
+      restorePolicyDocumented: input.restorePolicyDocumented,
+      implication: "Backups must preserve legal holds and restore jobs must replay deletion/anonymization tombstones before restored data becomes queryable.",
+    },
   };
 }
 

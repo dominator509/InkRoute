@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildPrivacyLifecyclePlan,
   buildPrivacyCaseWorkflowPlan,
+  buildRetentionEnforcementDryRun,
   buildSignedUploadIntentPlan,
   buildPrivateStorageAccessPlan,
   buildUploadScanPipelinePlan,
@@ -425,5 +426,72 @@ describe("security and privacy helpers", () => {
     expect(plan.caseStatus).toBe("ready_for_execution");
     expect(plan.lifecycle.canExecute).toBe(true);
     expect(plan.notificationSteps.join(" ")).toContain("attorney-reviewed copy");
+  });
+
+  it("dry-runs retention enforcement across sensitive categories and blocks without workers and backup policy", () => {
+    const plan = buildRetentionEnforcementDryRun({
+      records: [
+        { id: "client_old", category: "client_profile", ageDays: 10000 },
+        { id: "reference_due", category: "reference_file", ageDays: 10000 },
+        { id: "consent_hold", category: "consent_signature", ageDays: 2000 },
+        { id: "payment_due", category: "payment_record", ageDays: 3000 },
+        { id: "audit_indefinite", category: "audit_log", ageDays: 3000 },
+      ],
+      legalReviewApproved: false,
+      databaseWorkerConfigured: false,
+      storageWorkerConfigured: false,
+      auditLogConfigured: false,
+      backupPolicyDocumented: false,
+      restorePolicyDocumented: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.canExecute).toBe(false);
+    expect(plan.blockers).toEqual(
+      expect.arrayContaining([
+        "Attorney-approved retention schedule is required before automated retention enforcement.",
+        "Database retention worker must be configured before deleting/anonymizing records.",
+        "Storage retention worker must be configured before deleting private files.",
+        "Backup retention implications must be documented before destructive enforcement.",
+        "Restore policy must document how deleted/anonymized records remain deleted after backup restore.",
+      ]),
+    );
+    expect(plan.steps.map((step) => [step.recordId, step.action, step.blocked])).toEqual([
+      ["client_old", "anonymize", true],
+      ["reference_due", "delete", true],
+      ["consent_hold", "retain_legal_hold", false],
+      ["payment_due", "retain_legal_hold", false],
+      ["audit_indefinite", "retain_legal_hold", false],
+    ]);
+    expect(plan.backupRestorePolicy.implication).toContain("tombstones");
+  });
+
+  it("allows reviewed retention dry-runs and emits audit events for due deletion/anonymization steps", () => {
+    const plan = buildRetentionEnforcementDryRun({
+      records: [
+        { id: "message_due", category: "message", ageDays: 1200 },
+        { id: "error_recent", category: "error_report", ageDays: 10 },
+        { id: "notification_due", category: "message", ageDays: 1400 },
+      ],
+      legalReviewApproved: true,
+      databaseWorkerConfigured: true,
+      storageWorkerConfigured: true,
+      auditLogConfigured: true,
+      backupPolicyDocumented: true,
+      restorePolicyDocumented: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.canExecute).toBe(true);
+    expect(plan.steps.map((step) => [step.recordId, step.action, step.due])).toEqual([
+      ["message_due", "anonymize", true],
+      ["error_recent", "retain_until_due", false],
+      ["notification_due", "anonymize", true],
+    ]);
+    expect(plan.requiredAuditEvents).toEqual([
+      "retention:message:anonymize:message_due",
+      "retention:message:anonymize:notification_due",
+    ]);
+    expect(plan.requiredWorkers).toContain("backup-restore-reconciliation");
   });
 });
