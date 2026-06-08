@@ -144,6 +144,42 @@ export interface ProviderSendDraft {
   disabledReason: string;
 }
 
+export interface EmailProviderSendPlanInput {
+  tenantId: string;
+  notificationId: string;
+  deliveryId: string;
+  templateKey: NotificationTemplateKey;
+  context: NotificationTemplateContext;
+  consent: ClientConsentSnapshot;
+  requestId: string;
+  providerSdkInstalled: boolean;
+  providerApiKeyConfigured: boolean;
+  senderDomainVerified: boolean;
+  unsubscribeFooterPresent: boolean;
+  destinationSuppressed?: boolean;
+  deliveryLogPersistenceAvailable: boolean;
+}
+
+export interface EmailProviderSendPlan {
+  status: "ready" | "blocked";
+  provider: "resend";
+  channel: "email";
+  tenantId: string;
+  notificationId: string;
+  deliveryId: string;
+  toMasked: string | null;
+  idempotencyKey: string;
+  payloadPreview: {
+    subject: string;
+    bodyPreview: string;
+    containsSensitiveContent: boolean;
+    unsubscribeFooterPresent: boolean;
+  };
+  requiredWrites: string[];
+  requiredControls: string[];
+  blockers: string[];
+}
+
 export interface ProviderWebhookInterpretation {
   provider: NotificationProvider;
   eventType: string;
@@ -643,6 +679,58 @@ export function createProviderSendDraft(params: {
     payloadPreview,
     enabled: false,
     disabledReason: "Provider SDK, credentials, worker queue, delivery logs, and opt-out enforcement are not wired in this scaffold.",
+  };
+}
+
+export function buildEmailProviderSendPlan(input: EmailProviderSendPlanInput): EmailProviderSendPlan {
+  const blockers: string[] = [];
+  if (!input.tenantId.trim()) blockers.push("Tenant scope is required before email delivery.");
+  if (!input.notificationId.trim()) blockers.push("Notification id is required before email delivery.");
+  if (!input.deliveryId.trim()) blockers.push("Notification delivery id is required before email delivery.");
+  if (!input.requestId.trim()) blockers.push("Request id is required for email delivery traceability.");
+  if (!input.providerSdkInstalled) blockers.push("Email provider SDK must be installed before sending.");
+  if (!input.providerApiKeyConfigured) blockers.push("Email provider API key must be configured in a secret store before sending.");
+  if (!input.senderDomainVerified) blockers.push("Email sender domain must be verified before sending.");
+  if (!input.unsubscribeFooterPresent) blockers.push("Email messages must include an unsubscribe or preference footer before sending.");
+  if (input.destinationSuppressed) blockers.push("Email destination is suppressed and must not be sent.");
+  if (!input.deliveryLogPersistenceAvailable) blockers.push("NotificationDelivery persistence must be available before provider send.");
+
+  const delivery = buildDeliveryPlan({
+    key: input.templateKey,
+    context: input.context,
+    consent: input.consent,
+    audience: "client",
+  });
+  const emailCandidate = delivery.candidates.find((candidate) => candidate.channel === "email");
+  if (!emailCandidate || emailCandidate.status === "blocked" || emailCandidate.status === "requires_destination") {
+    blockers.push(emailCandidate?.reason ?? "Email delivery candidate is unavailable.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    provider: "resend",
+    channel: "email",
+    tenantId: input.tenantId,
+    notificationId: input.notificationId,
+    deliveryId: input.deliveryId,
+    toMasked: input.consent.email ? maskDestination("email", input.consent.email) ?? null : null,
+    idempotencyKey: `email-send:${input.tenantId}:${input.deliveryId}:${input.requestId}`,
+    payloadPreview: {
+      subject: delivery.template.subject,
+      bodyPreview: compactText(delivery.template.body).slice(0, 180),
+      containsSensitiveContent: delivery.template.containsSensitiveContent,
+      unsubscribeFooterPresent: input.unsubscribeFooterPresent,
+    },
+    requiredWrites: ["NotificationDelivery", "ProviderEvent", "SuppressionCheck", "AuditLog", "IdempotencyKey"],
+    requiredControls: [
+      "Persist queued NotificationDelivery before provider send and final provider status after send.",
+      "Use provider idempotency/request metadata to prevent duplicate sends.",
+      "Check bounce, complaint, unsubscribe, and tenant suppression lists immediately before send.",
+      "Include unsubscribe or preference-center footer on every email.",
+      "Store only masked destination and redacted body preview in logs.",
+      "Verify provider webhook signatures before reconciling delivered, bounced, or complained events.",
+    ],
+    blockers,
   };
 }
 

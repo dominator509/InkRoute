@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildAftercareSequence,
   buildDeliveryPlan,
+  buildEmailProviderSendPlan,
   buildExpoPushDeliveryPlan,
   buildExpoPushRegistrationPlan,
   buildProviderEventReconciliationPlan,
@@ -202,5 +203,93 @@ describe("notification delivery planning", () => {
 
     expect(blocked.status).toBe("blocked");
     expect(blocked.blockers.join(" ")).toContain("Marketing opt-in missing");
+  });
+
+  it("plans Resend email provider send with verified sender, unsubscribe, idempotency, and redacted payload", () => {
+    const plan = buildEmailProviderSendPlan({
+      tenantId: "tenant_001",
+      notificationId: "notification_001",
+      deliveryId: "delivery_001",
+      templateKey: "deposit_request",
+      context,
+      consent,
+      requestId: "req_email_001",
+      providerSdkInstalled: true,
+      providerApiKeyConfigured: true,
+      senderDomainVerified: true,
+      unsubscribeFooterPresent: true,
+      deliveryLogPersistenceAvailable: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      provider: "resend",
+      channel: "email",
+      idempotencyKey: "email-send:tenant_001:delivery_001:req_email_001",
+      requiredWrites: ["NotificationDelivery", "ProviderEvent", "SuppressionCheck", "AuditLog", "IdempotencyKey"],
+    });
+    expect(plan.toMasked).toBe("av***@example.com");
+    expect(plan.payloadPreview.subject).toContain("Deposit requested");
+    expect(plan.payloadPreview.unsubscribeFooterPresent).toBe(true);
+    expect(plan.requiredControls).toContain("Check bounce, complaint, unsubscribe, and tenant suppression lists immediately before send.");
+    expect(plan.blockers).toEqual([]);
+  });
+
+  it("blocks email provider send without provider readiness, verified sender, footer, persistence, or suppression clearance", () => {
+    const plan = buildEmailProviderSendPlan({
+      tenantId: "",
+      notificationId: "",
+      deliveryId: "",
+      templateKey: "deposit_request",
+      context,
+      consent,
+      requestId: "",
+      providerSdkInstalled: false,
+      providerApiKeyConfigured: false,
+      senderDomainVerified: false,
+      unsubscribeFooterPresent: false,
+      destinationSuppressed: true,
+      deliveryLogPersistenceAvailable: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.blockers).toEqual([
+      "Tenant scope is required before email delivery.",
+      "Notification id is required before email delivery.",
+      "Notification delivery id is required before email delivery.",
+      "Request id is required for email delivery traceability.",
+      "Email provider SDK must be installed before sending.",
+      "Email provider API key must be configured in a secret store before sending.",
+      "Email sender domain must be verified before sending.",
+      "Email messages must include an unsubscribe or preference footer before sending.",
+      "Email destination is suppressed and must not be sent.",
+      "NotificationDelivery persistence must be available before provider send.",
+    ]);
+  });
+
+  it("blocks email provider send when consent or destination rules reject the email candidate", () => {
+    const plan = buildEmailProviderSendPlan({
+      tenantId: "tenant_001",
+      notificationId: "notification_002",
+      deliveryId: "delivery_002",
+      templateKey: "city_waitlist_opening",
+      context,
+      consent: {
+        ...consent,
+        email: undefined,
+        emailOptIn: false,
+        marketingOptIn: false,
+      },
+      requestId: "req_email_002",
+      providerSdkInstalled: true,
+      providerApiKeyConfigured: true,
+      senderDomainVerified: true,
+      unsubscribeFooterPresent: true,
+      deliveryLogPersistenceAvailable: true,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.toMasked).toBeNull();
+    expect(plan.blockers.join(" ")).toContain("Destination missing for this channel.");
   });
 });
