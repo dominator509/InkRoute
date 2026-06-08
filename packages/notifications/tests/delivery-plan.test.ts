@@ -12,6 +12,7 @@ import {
   buildAppointmentNotificationSequence,
   buildPreferenceMutationPlan,
   buildPreferenceTokenHash,
+  buildMessagingPrivacyPlan,
   buildProviderEventReconciliationPlan,
   buildSmsProviderSendPlan,
   interpretSmsWebhook,
@@ -839,5 +840,109 @@ describe("notification delivery planning", () => {
     ]);
     expect(start.status).toBe("blocked");
     expect(start.blockers).toEqual(["SMS START requires legal-approved consent copy before re-enabling SMS."]);
+  });
+
+  it("plans role-based message visibility and redacted export controls", () => {
+    const artistView = buildMessagingPrivacyPlan({
+      tenantId: "tenant_001",
+      action: "authorize_message_view",
+      role: "artist",
+      actorId: "artist_001",
+      messageId: "message_001",
+      body: "Redacted message preview.",
+      bodyRedacted: true,
+      idempotencyKey: "message-view:tenant_001:message_001:artist_001",
+    });
+    const exportPlan = buildMessagingPrivacyPlan({
+      tenantId: "tenant_001",
+      action: "export_thread",
+      role: "admin",
+      actorId: "admin_001",
+      threadId: "thread_001",
+      body: "Redacted export body.",
+      bodyRedacted: true,
+      attachmentPolicyApproved: true,
+      exportIncludesProviderPayloads: false,
+      exportIncludesPrivateUrls: false,
+      idempotencyKey: "message-export:tenant_001:thread_001",
+    });
+
+    expect(artistView.status).toBe("ready");
+    expect(artistView.visibleFields).toEqual(["subject", "bodyPreview", "clientContactMasked", "attachments"]);
+    expect(exportPlan.status).toBe("ready");
+    expect(exportPlan.visibleFields).toContain("auditTrail");
+    expect(exportPlan.requiredControls).toContain("Omit provider payloads, raw destinations, private URLs, and secrets from message exports.");
+  });
+
+  it("blocks message persistence or export when sensitive content and private URLs are not redacted", () => {
+    const plan = buildMessagingPrivacyPlan({
+      tenantId: "tenant_001",
+      action: "export_thread",
+      role: "admin",
+      actorId: "admin_001",
+      threadId: "thread_001",
+      body: "Email avery@example.com, phone +1 206 555 0123, card cvv, allergy note, https://storage.example/private.jpg?token=secret",
+      bodyRedacted: false,
+      attachmentUrl: "https://storage.example/private-upload.jpg?signature=abc",
+      attachmentPolicyApproved: false,
+      exportIncludesProviderPayloads: true,
+      exportIncludesPrivateUrls: true,
+      idempotencyKey: "message-export:tenant_001:thread_001",
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.redactionFindings).toEqual(["email", "phone", "sensitive_terms", "private_url", "private_attachment_url"]);
+    expect(plan.blockers).toEqual([
+      "Message body contains sensitive data and must be redacted before persistence or export.",
+      "Message attachments require approved private attachment policy before access or export.",
+      "Message export must omit raw provider payloads.",
+      "Message export must omit private file URLs and signed upload URLs.",
+    ]);
+  });
+
+  it("blocks retention/delete workflows without retention proof and moderation when spam is not rate-limited", () => {
+    const deletion = buildMessagingPrivacyPlan({
+      tenantId: "tenant_001",
+      action: "delete_thread",
+      role: "admin",
+      actorId: "admin_001",
+      threadId: "thread_001",
+      idempotencyKey: "message-delete:tenant_001:thread_001",
+    });
+    const moderation = buildMessagingPrivacyPlan({
+      tenantId: "tenant_001",
+      action: "moderate_message",
+      role: "studio_manager",
+      actorId: "manager_001",
+      messageId: "message_001",
+      spamScore: 95,
+      rateLimitAllowed: true,
+      idempotencyKey: "message-moderate:tenant_001:message_001",
+    });
+
+    expect(deletion.status).toBe("blocked");
+    expect(deletion.blockers).toEqual([
+      "Retention/delete workflow requires a positive retention period.",
+      "Delete workflow requires a deletion request timestamp.",
+    ]);
+    expect(moderation.status).toBe("blocked");
+    expect(moderation.blockers).toEqual(["High spam score must trigger moderation or rate-limit blocking."]);
+  });
+
+  it("blocks message privacy actions without tenant, actor, idempotency, or required ids", () => {
+    const plan = buildMessagingPrivacyPlan({
+      tenantId: "",
+      action: "redact_message",
+      role: "assistant",
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.visibleFields).toEqual(["subject", "bodyPreview", "clientContactMasked"]);
+    expect(plan.blockers).toEqual([
+      "Missing tenant scope.",
+      "Messaging privacy action requires an actor id.",
+      "Missing idempotency key for messaging privacy action.",
+      "Message id is required for this privacy action.",
+    ]);
   });
 });

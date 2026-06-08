@@ -1445,6 +1445,47 @@ export interface PreferenceMutationPlan {
   blockers: readonly string[];
 }
 
+export type MessagingPrivacyAction =
+  | "redact_message"
+  | "authorize_message_view"
+  | "export_thread"
+  | "delete_thread"
+  | "apply_retention"
+  | "moderate_message";
+
+export type MessagingRole = "client" | "artist" | "assistant" | "studio_manager" | "admin";
+
+export interface MessagingPrivacyPlanInput {
+  tenantId: string;
+  action: MessagingPrivacyAction;
+  role: MessagingRole;
+  actorId?: string;
+  threadId?: string;
+  messageId?: string;
+  body?: string;
+  bodyRedacted?: boolean;
+  attachmentUrl?: string;
+  attachmentPolicyApproved?: boolean;
+  retentionDays?: number;
+  exportIncludesProviderPayloads?: boolean;
+  exportIncludesPrivateUrls?: boolean;
+  deleteRequestedAt?: string;
+  spamScore?: number;
+  rateLimitAllowed?: boolean;
+  idempotencyKey?: string;
+}
+
+export interface MessagingPrivacyPlan {
+  status: "ready" | "blocked";
+  action: MessagingPrivacyAction;
+  role: MessagingRole;
+  visibleFields: readonly string[];
+  redactionFindings: readonly string[];
+  requiredWrites: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 function notificationSchedulerWriteModels(action: NotificationSchedulerAction): NotificationSchedulerWriteModel[] {
   switch (action) {
     case "schedule_sequence":
@@ -1650,6 +1691,63 @@ export function buildPreferenceMutationPlan(input: PreferenceMutationPlanInput):
       "Apply email unsubscribe and SMS STOP suppression before marketing or transactional sends as policy requires.",
       "Separate transactional permission from marketing opt-in and preserve required service-message rules.",
       "Require legal-approved consent copy before SMS START or tenant preference setting changes.",
+    ],
+    blockers,
+  };
+}
+
+function messagingVisibleFields(role: MessagingRole): string[] {
+  if (role === "admin") return ["subject", "bodyPreview", "clientContactMasked", "attachments", "auditTrail", "retentionState"];
+  if (role === "studio_manager") return ["subject", "bodyPreview", "clientContactMasked", "attachments", "retentionState"];
+  if (role === "artist") return ["subject", "bodyPreview", "clientContactMasked", "attachments"];
+  if (role === "assistant") return ["subject", "bodyPreview", "clientContactMasked"];
+  return ["subject", "bodyPreview", "attachments"];
+}
+
+function detectMessagingPrivacyFindings(body: string | undefined, attachmentUrl: string | undefined): string[] {
+  const findings: string[] = [];
+  const text = body ?? "";
+  if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(text)) findings.push("email");
+  if (/\+?\d[\d\s().-]{8,}\d/.test(text)) findings.push("phone");
+  if (/\b(card|cvv|ssn|social security|diagnosis|infection|medication|allergy)\b/i.test(text)) findings.push("sensitive_terms");
+  if (/https?:\/\/\S*(token|signature|secret|private|storage)\S*/i.test(text)) findings.push("private_url");
+  if (attachmentUrl && /https?:\/\/\S*(token|signature|secret|private|storage)\S*/i.test(attachmentUrl)) findings.push("private_attachment_url");
+  return findings;
+}
+
+export function buildMessagingPrivacyPlan(input: MessagingPrivacyPlanInput): MessagingPrivacyPlan {
+  const blockers: string[] = [];
+  const findings = detectMessagingPrivacyFindings(input.body, input.attachmentUrl);
+  const visibleFields = messagingVisibleFields(input.role);
+
+  if (!input.tenantId.trim()) blockers.push("Missing tenant scope.");
+  if (!input.actorId?.trim()) blockers.push("Messaging privacy action requires an actor id.");
+  if (!input.idempotencyKey?.trim()) blockers.push("Missing idempotency key for messaging privacy action.");
+  if ((input.action === "redact_message" || input.action === "authorize_message_view" || input.action === "moderate_message") && !input.messageId?.trim()) blockers.push("Message id is required for this privacy action.");
+  if ((input.action === "export_thread" || input.action === "delete_thread" || input.action === "apply_retention") && !input.threadId?.trim()) blockers.push("Thread id is required for thread privacy workflows.");
+  if (findings.length > 0 && !input.bodyRedacted) blockers.push("Message body contains sensitive data and must be redacted before persistence or export.");
+  if (input.attachmentUrl && !input.attachmentPolicyApproved) blockers.push("Message attachments require approved private attachment policy before access or export.");
+  if (input.action === "export_thread" && input.exportIncludesProviderPayloads) blockers.push("Message export must omit raw provider payloads.");
+  if (input.action === "export_thread" && input.exportIncludesPrivateUrls) blockers.push("Message export must omit private file URLs and signed upload URLs.");
+  if ((input.action === "delete_thread" || input.action === "apply_retention") && (!input.retentionDays || input.retentionDays <= 0)) blockers.push("Retention/delete workflow requires a positive retention period.");
+  if (input.action === "delete_thread" && !input.deleteRequestedAt?.trim()) blockers.push("Delete workflow requires a deletion request timestamp.");
+  if (input.action === "moderate_message" && (input.spamScore ?? 0) >= 80 && input.rateLimitAllowed !== false) blockers.push("High spam score must trigger moderation or rate-limit blocking.");
+  if (input.role === "assistant" && visibleFields.includes("attachments")) blockers.push("Assistant role must not receive unrestricted attachment visibility.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    action: input.action,
+    role: input.role,
+    visibleFields,
+    redactionFindings: findings,
+    requiredWrites: ["MessagePrivacyEvent", "MessageAuditLog", "IdempotencyKey"],
+    requiredControls: [
+      "Redact PII, payment, medical, private URLs, and signed attachment URLs before persistence, logs, exports, or previews.",
+      "Apply role-based field visibility before returning message records to dashboard or client views.",
+      "Require secure attachment policy before exposing or exporting message attachments.",
+      "Omit provider payloads, raw destinations, private URLs, and secrets from message exports.",
+      "Persist retention/delete/export audit events with actor, tenant, thread, and idempotency key.",
+      "Apply spam/rate-limit controls before storing or routing suspicious inbound messages.",
     ],
     blockers,
   };
