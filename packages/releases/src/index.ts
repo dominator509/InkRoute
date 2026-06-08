@@ -116,6 +116,28 @@ export interface MobileUpdatePlan {
   readonly notes: readonly string[];
 }
 
+export interface EasOtaReadinessInput {
+  readonly expoProjectId?: string;
+  readonly updateUrl?: string;
+  readonly previewChannel?: string;
+  readonly productionChannel?: string;
+  readonly runtimeVersionPolicy: "appVersion" | "nativeVersion" | "fingerprint" | "unknown";
+  readonly previewBuildUrl?: string;
+  readonly productionBuildUrl?: string;
+  readonly previewUpdateId?: string;
+  readonly rollbackDrillId?: string;
+  readonly adoptionMonitoringConfigured: boolean;
+}
+
+export interface EasOtaReadinessPlan {
+  readonly status: "ready_for_preview" | "blocked";
+  readonly productionReady: boolean;
+  readonly gates: readonly ReleaseGate[];
+  readonly requiredCommands: readonly string[];
+  readonly rollbackRequirement: string;
+  readonly blockers: readonly string[];
+}
+
 export interface RollbackPlan {
   readonly releaseId: string;
   readonly web: string;
@@ -343,6 +365,109 @@ export function buildMobileUpdatePlan(input: MobileUpdateInput): MobileUpdatePla
     gates,
     rollbackPlan: "Republish the previous compatible EAS update on the same channel after confirming runtime version compatibility.",
     notes: input.changes,
+  };
+}
+
+function evidenceGate(id: string, label: string, present: boolean, evidence: string, nextAction: string): ReleaseGate {
+  return {
+    id,
+    label,
+    status: present ? "pass" : "block",
+    blocksProduction: true,
+    evidence,
+    nextAction,
+  };
+}
+
+export function buildEasOtaReadinessPlan(input: EasOtaReadinessInput): EasOtaReadinessPlan {
+  const gates: ReleaseGate[] = [
+    evidenceGate(
+      "eas-project-id",
+      "EAS project id configured",
+      Boolean(input.expoProjectId?.trim()),
+      input.expoProjectId ? "Expo project id is present." : "No Expo project id is configured.",
+      "Run eas init/update configuration and commit non-secret project metadata.",
+    ),
+    evidenceGate(
+      "eas-update-url",
+      "EAS update URL configured",
+      Boolean(input.updateUrl?.trim() && !input.updateUrl.includes("placeholder")),
+      input.updateUrl ? "Update URL is present." : "No EAS update URL is configured.",
+      "Configure expo-updates URL for the real EAS project.",
+    ),
+    evidenceGate(
+      "eas-channels",
+      "Preview and production channels configured",
+      Boolean(input.previewChannel?.trim() && input.productionChannel?.trim()),
+      input.previewChannel && input.productionChannel ? `${input.previewChannel}/${input.productionChannel}` : "Missing preview or production EAS channel.",
+      "Create preview and production EAS channels with explicit runtime policy.",
+    ),
+    evidenceGate(
+      "runtime-version-policy",
+      "Runtime version policy declared",
+      input.runtimeVersionPolicy !== "unknown",
+      `Runtime policy: ${input.runtimeVersionPolicy}.`,
+      "Declare an Expo runtimeVersion policy before OTA updates are allowed.",
+    ),
+    evidenceGate(
+      "preview-native-build",
+      "Preview native build verified",
+      Boolean(input.previewBuildUrl?.trim()),
+      input.previewBuildUrl ? "Preview build URL is attached." : "No preview native build evidence is attached.",
+      "Run eas build --profile preview and device-smoke the binary.",
+    ),
+    evidenceGate(
+      "production-native-build",
+      "Production native build configured",
+      Boolean(input.productionBuildUrl?.trim()),
+      input.productionBuildUrl ? "Production build URL is attached." : "No production build evidence is attached.",
+      "Run or schedule production build with native credentials before launch.",
+    ),
+    evidenceGate(
+      "preview-update-published",
+      "Preview OTA update published",
+      Boolean(input.previewUpdateId?.trim()),
+      input.previewUpdateId ? "Preview update id is attached." : "No preview EAS Update id is attached.",
+      "Publish a preview EAS Update and verify it is received by the preview binary.",
+    ),
+    evidenceGate(
+      "rollback-drill",
+      "OTA rollback drill verified",
+      Boolean(input.rollbackDrillId?.trim()),
+      input.rollbackDrillId ? "Rollback drill id is attached." : "No rollback drill evidence is attached.",
+      "Republish a previous compatible update on preview and record the drill.",
+    ),
+    evidenceGate(
+      "adoption-monitoring",
+      "Update adoption monitoring configured",
+      input.adoptionMonitoringConfigured,
+      input.adoptionMonitoringConfigured ? "Adoption monitoring is configured." : "No update adoption monitoring evidence is attached.",
+      "Configure update adoption/error monitoring before production OTA.",
+    ),
+  ];
+  const blockers = gates.filter((gate) => gate.status === "block").map((gate) => gate.nextAction);
+  const previewGateIds = new Set([
+    "eas-project-id",
+    "eas-update-url",
+    "eas-channels",
+    "runtime-version-policy",
+    "preview-native-build",
+    "preview-update-published",
+  ]);
+  const previewReady = gates.filter((gate) => previewGateIds.has(gate.id)).every((gate) => gate.status === "pass");
+
+  return {
+    status: previewReady ? "ready_for_preview" : "blocked",
+    productionReady: blockers.length === 0,
+    gates,
+    requiredCommands: [
+      "eas build --profile preview",
+      "eas update --channel preview",
+      "eas channel:list",
+      "eas update:list --channel preview",
+    ],
+    rollbackRequirement: "Republish the previous compatible EAS update on the same preview channel and confirm the device receives it.",
+    blockers,
   };
 }
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assessMigrationCompatibility,
   buildGithubReleaseWorkflowPlan,
+  buildEasOtaReadinessPlan,
   buildMobileUpdatePlan,
   buildReleaseHealthChecks,
   classifyMobileUpdate,
@@ -117,6 +118,49 @@ describe("release and feature flag governance", () => {
       compatibility: "blocked",
       gates: expect.arrayContaining([expect.objectContaining({ id: "eas-project-configured", status: "block" })]),
     });
+  });
+
+  it("blocks EAS OTA readiness when project, channels, builds, update, or rollback evidence is missing", () => {
+    const plan = buildEasOtaReadinessPlan({
+      updateUrl: "https://u.expo.dev/placeholder",
+      runtimeVersionPolicy: "unknown",
+      adoptionMonitoringConfigured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.productionReady).toBe(false);
+    expect(plan.gates.filter((gate) => gate.status === "block").map((gate) => gate.id)).toEqual([
+      "eas-project-id",
+      "eas-update-url",
+      "eas-channels",
+      "runtime-version-policy",
+      "preview-native-build",
+      "production-native-build",
+      "preview-update-published",
+      "rollback-drill",
+      "adoption-monitoring",
+    ]);
+    expect(plan.requiredCommands).toContain("eas build --profile preview");
+  });
+
+  it("distinguishes preview OTA readiness from production launch readiness", () => {
+    const plan = buildEasOtaReadinessPlan({
+      expoProjectId: "expo-project-001",
+      updateUrl: "https://u.expo.dev/project-001",
+      previewChannel: "preview",
+      productionChannel: "production",
+      runtimeVersionPolicy: "appVersion",
+      previewBuildUrl: "https://expo.dev/accounts/inkroute/builds/preview",
+      previewUpdateId: "update-preview-001",
+      adoptionMonitoringConfigured: false,
+    });
+
+    expect(plan.status).toBe("ready_for_preview");
+    expect(plan.productionReady).toBe(false);
+    expect(plan.gates.find((gate) => gate.id === "preview-update-published")?.status).toBe("pass");
+    expect(plan.gates.find((gate) => gate.id === "production-native-build")?.status).toBe("block");
+    expect(plan.gates.find((gate) => gate.id === "rollback-drill")?.status).toBe("block");
+    expect(plan.rollbackRequirement).toContain("previous compatible EAS update");
   });
 
   it("creates release candidates with blocking gates", () => {
