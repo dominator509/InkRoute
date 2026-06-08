@@ -4,6 +4,7 @@ import {
   buildAlertRoute,
   buildGithubIssueDraft,
   buildObservabilityReportDraft,
+  buildSentrySdkConfigurationPlan,
   buildStackHash,
   classifyErrorSeverity,
   redactMetadata,
@@ -94,5 +95,69 @@ describe("observability redaction and triage", () => {
     expect(issue.body).toContain("[redacted:email]");
     expect(issue.body).not.toContain("avery@example.com");
     expect(issue.body).not.toContain("sk_live_secret");
+  });
+
+  it("plans a ready Sentry Next.js runtime with redaction and source-map gates", () => {
+    const plan = buildSentrySdkConfigurationPlan({
+      surface: "web-nextjs",
+      dsnConfigured: true,
+      authTokenConfigured: true,
+      orgConfigured: true,
+      projectConfigured: true,
+      release: "web-2026.06.08.1",
+      environment: "production",
+      sourceMapsEnabled: true,
+      beforeSendRedactionEnabled: true,
+      tenantTaggingEnabled: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.requiredPackages).toEqual(["@sentry/nextjs"]);
+    expect(plan.providerBoundaryIds).toEqual(["sentry-nextjs"]);
+    expect(plan.configFiles).toContain("apps/web/sentry.server.config.ts");
+    expect(plan.sourceMapUploadRequired).toBe(true);
+    expect(plan.debugSymbolsRequired).toBe(false);
+    expect(plan.beforeSendPipeline).toContain("redactSensitiveText");
+    expect(plan.releaseTags).toMatchObject({
+      release: "web-2026.06.08.1",
+      environment: "production",
+      surface: "web-nextjs",
+    });
+    expect(plan.sampleRate).toBe(0.25);
+    expect(plan.tracesSampleRate).toBe(0.1);
+  });
+
+  it("blocks mobile Sentry readiness until credentials, redaction, tenant tags, and debug symbols are present", () => {
+    const plan = buildSentrySdkConfigurationPlan({
+      surface: "mobile-expo",
+      dsnConfigured: false,
+      authTokenConfigured: false,
+      orgConfigured: true,
+      projectConfigured: false,
+      release: "",
+      environment: "preview",
+      sourceMapsEnabled: false,
+      debugSymbolsEnabled: false,
+      beforeSendRedactionEnabled: false,
+      tenantTaggingEnabled: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.requiredPackages).toEqual(["@sentry/react-native"]);
+    expect(plan.providerBoundaryIds).toEqual(["sentry-react-native"]);
+    expect(plan.requiredEnv).toContain("EXPO_PUBLIC_SENTRY_DSN");
+    expect(plan.debugSymbolsRequired).toBe(true);
+    expect(plan.blockers).toEqual(
+      expect.arrayContaining([
+        "Sentry DSN is not configured for this runtime surface.",
+        "SENTRY_AUTH_TOKEN is required for release artifact upload.",
+        "SENTRY_PROJECT is required for release artifact upload.",
+        "Sentry release tag is required before runtime capture can be enabled.",
+        "beforeSend redaction must call redactSensitiveText and redactMetadata before event submission.",
+        "Tenant-safe tags must be emitted without customer PII or medical/payment data.",
+        "Expo JavaScript source-map upload must be enabled for mobile releases.",
+        "React Native debug symbol upload must be enabled and verified through EAS.",
+      ]),
+    );
   });
 });

@@ -434,3 +434,91 @@ export const demoErrorReports: readonly ObservabilityReportDraft[] = [
     tags: { phase: "6", feature: "mobile" },
   }, "2026-06-03T10:00:00-07:00"),
 ];
+
+export type SentryRuntimeSurface = "web-nextjs" | "dashboard-nextjs" | "mobile-expo";
+export type SentrySdkReadinessStatus = "ready" | "blocked";
+export type SentrySdkEnvironment = Extract<RuntimeEnvironment, "development" | "preview" | "production">;
+
+export interface SentrySdkConfigurationInput {
+  surface: SentryRuntimeSurface;
+  dsnConfigured: boolean;
+  authTokenConfigured: boolean;
+  orgConfigured: boolean;
+  projectConfigured: boolean;
+  release: string;
+  environment: SentrySdkEnvironment;
+  sampleRate?: number;
+  tracesSampleRate?: number;
+  sourceMapsEnabled?: boolean;
+  debugSymbolsEnabled?: boolean;
+  beforeSendRedactionEnabled?: boolean;
+  tenantTaggingEnabled?: boolean;
+}
+
+export interface SentrySdkConfigurationPlan {
+  surface: SentryRuntimeSurface;
+  status: SentrySdkReadinessStatus;
+  requiredPackages: readonly string[];
+  requiredEnv: readonly string[];
+  configFiles: readonly string[];
+  providerBoundaryIds: readonly string[];
+  blockers: readonly string[];
+  sourceMapUploadRequired: boolean;
+  debugSymbolsRequired: boolean;
+  beforeSendPipeline: readonly string[];
+  releaseTags: Record<string, string>;
+  sampleRate: number;
+  tracesSampleRate: number;
+}
+
+const sentrySurfaceBoundaries: Record<SentryRuntimeSurface, readonly string[]> = {
+  "web-nextjs": ["sentry-nextjs"],
+  "dashboard-nextjs": ["sentry-dashboard"],
+  "mobile-expo": ["sentry-react-native"],
+};
+
+function clampSampleRate(value: number | undefined, fallback: number): number {
+  if (typeof value !== "number" || Number.isNaN(value)) return fallback;
+  if (value < 0) return 0;
+  if (value > 1) return 1;
+  return value;
+}
+
+export function buildSentrySdkConfigurationPlan(input: SentrySdkConfigurationInput): SentrySdkConfigurationPlan {
+  const providerBoundaries = observabilityProviderBoundaries.filter((boundary) => sentrySurfaceBoundaries[input.surface].includes(boundary.id));
+  const requiredEnv = [...new Set(providerBoundaries.flatMap((boundary) => boundary.requiredEnv))];
+  const configFiles = [...new Set(providerBoundaries.flatMap((boundary) => boundary.implementationFiles))];
+  const isMobile = input.surface === "mobile-expo";
+  const blockers: string[] = [];
+
+  if (!input.dsnConfigured) blockers.push("Sentry DSN is not configured for this runtime surface.");
+  if (!input.authTokenConfigured) blockers.push("SENTRY_AUTH_TOKEN is required for release artifact upload.");
+  if (!input.orgConfigured) blockers.push("SENTRY_ORG is required for release artifact upload.");
+  if (!input.projectConfigured) blockers.push("SENTRY_PROJECT is required for release artifact upload.");
+  if (input.release.trim().length === 0) blockers.push("Sentry release tag is required before runtime capture can be enabled.");
+  if (!input.beforeSendRedactionEnabled) blockers.push("beforeSend redaction must call redactSensitiveText and redactMetadata before event submission.");
+  if (!input.tenantTaggingEnabled) blockers.push("Tenant-safe tags must be emitted without customer PII or medical/payment data.");
+  if (!isMobile && !input.sourceMapsEnabled) blockers.push("Next.js source-map upload must be enabled for server, edge, and browser bundles.");
+  if (isMobile && !input.sourceMapsEnabled) blockers.push("Expo JavaScript source-map upload must be enabled for mobile releases.");
+  if (isMobile && !input.debugSymbolsEnabled) blockers.push("React Native debug symbol upload must be enabled and verified through EAS.");
+
+  return {
+    surface: input.surface,
+    status: blockers.length === 0 ? "ready" : "blocked",
+    requiredPackages: isMobile ? ["@sentry/react-native"] : ["@sentry/nextjs"],
+    requiredEnv,
+    configFiles,
+    providerBoundaryIds: providerBoundaries.map((boundary) => boundary.id),
+    blockers,
+    sourceMapUploadRequired: true,
+    debugSymbolsRequired: isMobile,
+    beforeSendPipeline: ["redactSensitiveText", "redactMetadata", "drop-high-risk-context", "tenant-safe-tags"],
+    releaseTags: {
+      release: input.release,
+      environment: input.environment,
+      surface: input.surface,
+    },
+    sampleRate: clampSampleRate(input.sampleRate, input.environment === "production" ? 0.25 : 1),
+    tracesSampleRate: clampSampleRate(input.tracesSampleRate, input.environment === "production" ? 0.1 : 0.25),
+  };
+}
