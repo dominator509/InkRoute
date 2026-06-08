@@ -3,6 +3,7 @@ import {
   buildAgenticBugFixWorkflow,
   buildAlertEscalationPlan,
   buildAlertRoute,
+  buildGithubIssueAutomationPlan,
   buildGithubIssueDraft,
   buildObservabilityReportDraft,
   buildSentrySdkConfigurationPlan,
@@ -270,6 +271,89 @@ describe("observability redaction and triage", () => {
     expect(issue.body).toContain("[redacted:email]");
     expect(issue.body).not.toContain("avery@example.com");
     expect(issue.body).not.toContain("sk_live_secret");
+  });
+
+  it("blocks GitHub issue automation until token, labels, assignees, template, and human approval are configured", () => {
+    const report = buildObservabilityReportDraft({
+      source: "webhook",
+      runtime: "provider-webhook",
+      environment: "preview",
+      message: "Payment webhook failed for client avery@example.com",
+      route: "/api/webhooks/stripe",
+      handled: false,
+      metadata: { token: "sk_live_secret" },
+    });
+    const plan = buildGithubIssueAutomationPlan({
+      report,
+      githubTokenConfigured: false,
+      repositoryConfigured: false,
+      labelsConfigured: ["bug"],
+      assigneesConfigured: [],
+      humanApproved: false,
+      issueTemplateConfigured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.blockers).toEqual(
+      expect.arrayContaining([
+        "GitHub token must be configured before issue creation.",
+        "GitHub repository target must be configured before issue creation.",
+        "Missing configured GitHub labels: severity:critical, surface:webhook.",
+        "Human approval is required before creating an agentic issue.",
+        "Privacy-safe issue template must be configured before issue creation.",
+        "At least one triage assignee must be configured.",
+      ]),
+    );
+    expect(plan.createIssueRequest).toBeUndefined();
+    expect(plan.draft.body).not.toContain("avery@example.com");
+    expect(plan.draft.body).not.toContain("sk_live_secret");
+  });
+
+  it("builds a ready sanitized GitHub issue create request after human approval", () => {
+    const previousRepository = process.env.GITHUB_REPOSITORY;
+    process.env.GITHUB_REPOSITORY = "dominator509/InkRoute";
+    const report = buildObservabilityReportDraft({
+      source: "api",
+      runtime: "server",
+      environment: "production",
+      message: "tenant isolation error for client avery@example.com",
+      route: "/api/private",
+      release: "ops-2026.06.08.2",
+      handled: false,
+      statusCode: 500,
+      metadata: { authorization: "Bearer sk_live_secret", bookingId: "booking_issue_test" },
+    });
+    const plan = buildGithubIssueAutomationPlan({
+      report,
+      githubTokenConfigured: true,
+      repositoryConfigured: true,
+      labelsConfigured: ["bug", "severity:critical", "surface:api"],
+      assigneesConfigured: ["codex-triage"],
+      humanApproved: true,
+      issueTemplateConfigured: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.createIssueRequest).toMatchObject({
+      repository: "dominator509/InkRoute",
+      labels: ["bug", "severity:critical", "surface:api"],
+      assignees: ["codex-triage"],
+    });
+    expect(plan.reportLink).toMatchObject({
+      errorReportFingerprint: report.fingerprint,
+      stackHash: report.stackHash,
+      route: "/api/private",
+      release: "ops-2026.06.08.2",
+    });
+    expect(plan.createIssueRequest?.body).toContain("[redacted:email]");
+    expect(plan.createIssueRequest?.body).not.toContain("avery@example.com");
+    expect(plan.createIssueRequest?.body).not.toContain("sk_live_secret");
+
+    if (previousRepository === undefined) {
+      delete process.env.GITHUB_REPOSITORY;
+    } else {
+      process.env.GITHUB_REPOSITORY = previousRepository;
+    }
   });
 
   it("plans a ready Sentry Next.js runtime with redaction and source-map gates", () => {

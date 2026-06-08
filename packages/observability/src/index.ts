@@ -152,6 +152,38 @@ export interface GithubIssueDraft {
   blockedReason: string;
 }
 
+export interface GithubIssueAutomationInput {
+  report: ObservabilityReportDraft;
+  githubTokenConfigured: boolean;
+  repositoryConfigured: boolean;
+  labelsConfigured: readonly string[];
+  assigneesConfigured?: readonly string[];
+  humanApproved: boolean;
+  issueTemplateConfigured?: boolean;
+}
+
+export interface GithubIssueAutomationPlan {
+  status: "ready" | "blocked";
+  draft: GithubIssueDraft;
+  blockers: readonly string[];
+  labels: readonly string[];
+  assignees: readonly string[];
+  reportLink: {
+    errorReportFingerprint: string;
+    stackHash: string;
+    route: string;
+    release: string;
+  };
+  privacyChecklist: readonly string[];
+  createIssueRequest?: {
+    repository: string;
+    title: string;
+    body: string;
+    labels: readonly string[];
+    assignees: readonly string[];
+  };
+}
+
 const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const phonePattern = /(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)\d{3}[-.\s]?\d{4}/g;
 const tokenPattern = /(sk_live_|sk_test_|pk_live_|pk_test_|sntrys_|xox[baprs]-|Bearer\s+)[A-Za-z0-9_\-.]+/g;
@@ -498,6 +530,55 @@ export function buildGithubIssueDraft(report: ObservabilityReportDraft): GithubI
     body,
     blocked: true,
     blockedReason: "GitHub issue creation is scaffolded only until repo token, project labels, and privacy review are configured.",
+  };
+}
+
+export function buildGithubIssueAutomationPlan(input: GithubIssueAutomationInput): GithubIssueAutomationPlan {
+  const draft = buildGithubIssueDraft(input.report);
+  const requiredLabels = draft.labels;
+  const blockers: string[] = [];
+  const configuredLabels = new Set(input.labelsConfigured);
+  const missingLabels = requiredLabels.filter((label) => !configuredLabels.has(label));
+  const repository = process.env.GITHUB_REPOSITORY ?? "unconfigured/repository";
+
+  if (!input.githubTokenConfigured) blockers.push("GitHub token must be configured before issue creation.");
+  if (!input.repositoryConfigured) blockers.push("GitHub repository target must be configured before issue creation.");
+  if (missingLabels.length > 0) blockers.push(`Missing configured GitHub labels: ${missingLabels.join(", ")}.`);
+  if (!input.humanApproved) blockers.push("Human approval is required before creating an agentic issue.");
+  if (!input.issueTemplateConfigured) blockers.push("Privacy-safe issue template must be configured before issue creation.");
+  if (!input.assigneesConfigured || input.assigneesConfigured.length === 0) blockers.push("At least one triage assignee must be configured.");
+  if (input.report.redactionLevel === "blocked_high_risk_payload") blockers.push("Blocked high-risk payloads require dashboard-only review and cannot create GitHub issues automatically.");
+
+  const privacyChecklist = [
+    "Issue body must use buildGithubIssueDraft output only.",
+    "Do not include raw PII, medical notes, consent signatures, payment payloads, cookies, authorization headers, or provider tokens.",
+    "Human approver must confirm labels, assignees, and sanitized reproduction steps before dispatch.",
+  ] as const;
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    draft,
+    blockers,
+    labels: requiredLabels,
+    assignees: input.assigneesConfigured ?? [],
+    reportLink: {
+      errorReportFingerprint: input.report.fingerprint,
+      stackHash: input.report.stackHash,
+      route: input.report.route ?? "unknown",
+      release: input.report.release ?? "unknown",
+    },
+    privacyChecklist,
+    ...(blockers.length === 0
+      ? {
+          createIssueRequest: {
+            repository,
+            title: draft.title,
+            body: draft.body,
+            labels: requiredLabels,
+            assignees: input.assigneesConfigured ?? [],
+          },
+        }
+      : {}),
   };
 }
 
