@@ -949,6 +949,32 @@ export interface SecurityHeaderDraft {
   rationale: string;
 }
 
+export interface SecurityRuntimeEnforcementInput {
+  environment: "development" | "preview" | "production";
+  httpsEnabled: boolean;
+  appSurface: "web" | "dashboard";
+  extraConnectSources?: readonly string[];
+  cookieAuthenticatedMutation: boolean;
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  csrfTokenPresent: boolean;
+  csrfTokenValid: boolean;
+  sameSiteCookie: "lax" | "strict" | "none" | "missing";
+}
+
+export interface SecurityRuntimeEnforcementPlan {
+  status: "ready" | "blocked";
+  headers: readonly SecurityHeaderDraft[];
+  missingHeaders: readonly string[];
+  csrf: {
+    required: boolean;
+    allowed: boolean;
+    reason: string;
+  };
+  hstsEnabled: boolean;
+  blockers: readonly string[];
+  testExpectations: readonly string[];
+}
+
 export const sensitiveFieldPolicies: SensitiveFieldPolicy[] = [
   {
     field: "email",
@@ -2177,6 +2203,51 @@ export function buildSecurityHeaderPlan(extraConnectSources: string[] = []): Sec
     const connectSrc = [`'self'`, ...extraConnectSources].join(" ");
     return { ...header, value: header.value.replace("connect-src 'self'", `connect-src ${connectSrc}`) };
   });
+}
+
+export function buildSecurityRuntimeEnforcementPlan(input: SecurityRuntimeEnforcementInput): SecurityRuntimeEnforcementPlan {
+  const headers = buildSecurityHeaderPlan([...(input.extraConnectSources ?? [])]);
+  const headerNames = new Set(headers.map((header) => header.name.toLowerCase()));
+  const requiredHeaders = ["Content-Security-Policy", "X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy", "Strict-Transport-Security"];
+  const missingHeaders = requiredHeaders.filter((header) => !headerNames.has(header.toLowerCase()));
+  const mutating = input.method !== "GET";
+  const csrfRequired = input.cookieAuthenticatedMutation && mutating;
+  const csrfAllowed = !csrfRequired || (input.csrfTokenPresent && input.csrfTokenValid && (input.sameSiteCookie === "lax" || input.sameSiteCookie === "strict"));
+  const hstsEnabled = input.environment === "production" && input.httpsEnabled;
+  const blockers: string[] = [];
+
+  if (missingHeaders.length > 0) blockers.push(`Missing security headers: ${missingHeaders.join(", ")}.`);
+  if (input.environment === "production" && !input.httpsEnabled) blockers.push("Production HSTS requires HTTPS to be confirmed before enabling preload policy.");
+  if (csrfRequired && !csrfAllowed) blockers.push("Cookie-authenticated mutations require a valid CSRF token and SameSite lax/strict cookie policy.");
+  if (input.sameSiteCookie === "none" && input.cookieAuthenticatedMutation) blockers.push("Cookie-authenticated mutation cookies must not use SameSite=None without a separate explicit review.");
+
+  const csp = headers.find((header) => header.name === "Content-Security-Policy")?.value ?? "";
+  if (!csp.includes("frame-ancestors 'none'")) blockers.push("CSP must deny framing with frame-ancestors 'none'.");
+  if (!csp.includes("base-uri 'self'")) blockers.push("CSP must restrict base-uri to self.");
+  if (!csp.includes("form-action 'self'")) blockers.push("CSP must restrict form-action to self until provider redirects are explicitly reviewed.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    headers: hstsEnabled ? headers : headers.filter((header) => header.name !== "Strict-Transport-Security"),
+    missingHeaders,
+    csrf: {
+      required: csrfRequired,
+      allowed: csrfAllowed,
+      reason: csrfRequired
+        ? csrfAllowed
+          ? "Mutating cookie-authenticated request has a valid CSRF/session binding."
+          : "Mutating cookie-authenticated request is missing valid CSRF/session binding."
+        : "CSRF is not required for this non-mutating or non-cookie-authenticated request.",
+    },
+    hstsEnabled,
+    blockers,
+    testExpectations: [
+      "Security headers include CSP, nosniff, referrer policy, permissions policy, and production-only HSTS.",
+      "CSP denies framing and constrains base-uri/form-action before adding provider exceptions.",
+      "Cookie-authenticated POST/PATCH/DELETE requests fail without valid CSRF token and SameSite lax/strict cookies.",
+      "Provider connect-src additions are explicit and test-covered.",
+    ],
+  };
 }
 
 export function summarizeSecurityPosture(controls: SecurityControl[] = phase13SecurityControls) {

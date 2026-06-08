@@ -7,6 +7,7 @@ import {
   buildAbuseControlPlan,
   buildSignedUploadIntentPlan,
   buildPrivateStorageAccessPlan,
+  buildSecurityRuntimeEnforcementPlan,
   buildUploadScanPipelinePlan,
   detectMimeTypeFromSignature,
   buildTenantIsolationFixtures,
@@ -404,6 +405,89 @@ describe("security and privacy helpers", () => {
     expect(invalid.action).toBe("challenge");
     expect(invalid.signals).toContain("provider_signature_missing");
     expect(invalid.alert.shouldAlert).toBe(true);
+  });
+
+  it("enforces security headers with production-only HSTS and provider CSP connect sources", () => {
+    const production = buildSecurityRuntimeEnforcementPlan({
+      environment: "production",
+      httpsEnabled: true,
+      appSurface: "web",
+      extraConnectSources: ["https://sentry.io", "https://api.stripe.com"],
+      cookieAuthenticatedMutation: false,
+      method: "GET",
+      csrfTokenPresent: false,
+      csrfTokenValid: false,
+      sameSiteCookie: "lax",
+    });
+    const preview = buildSecurityRuntimeEnforcementPlan({
+      environment: "preview",
+      httpsEnabled: false,
+      appSurface: "dashboard",
+      cookieAuthenticatedMutation: false,
+      method: "GET",
+      csrfTokenPresent: false,
+      csrfTokenValid: false,
+      sameSiteCookie: "lax",
+    });
+
+    expect(production.status).toBe("ready");
+    expect(production.hstsEnabled).toBe(true);
+    expect(production.headers.map((header) => header.name)).toContain("Strict-Transport-Security");
+    expect(production.headers.find((header) => header.name === "Content-Security-Policy")?.value).toContain("connect-src 'self' https://sentry.io https://api.stripe.com");
+    expect(production.testExpectations.join(" ")).toContain("production-only HSTS");
+    expect(preview.hstsEnabled).toBe(false);
+    expect(preview.headers.map((header) => header.name)).not.toContain("Strict-Transport-Security");
+  });
+
+  it("blocks production header enforcement when HTTPS or CSP invariants are not ready", () => {
+    const plan = buildSecurityRuntimeEnforcementPlan({
+      environment: "production",
+      httpsEnabled: false,
+      appSurface: "web",
+      cookieAuthenticatedMutation: false,
+      method: "GET",
+      csrfTokenPresent: false,
+      csrfTokenValid: false,
+      sameSiteCookie: "lax",
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.hstsEnabled).toBe(false);
+    expect(plan.blockers).toContain("Production HSTS requires HTTPS to be confirmed before enabling preload policy.");
+  });
+
+  it("fails CSRF attack simulations for cookie-authenticated mutations", () => {
+    const attack = buildSecurityRuntimeEnforcementPlan({
+      environment: "production",
+      httpsEnabled: true,
+      appSurface: "dashboard",
+      cookieAuthenticatedMutation: true,
+      method: "POST",
+      csrfTokenPresent: false,
+      csrfTokenValid: false,
+      sameSiteCookie: "none",
+    });
+    const valid = buildSecurityRuntimeEnforcementPlan({
+      environment: "production",
+      httpsEnabled: true,
+      appSurface: "dashboard",
+      cookieAuthenticatedMutation: true,
+      method: "PATCH",
+      csrfTokenPresent: true,
+      csrfTokenValid: true,
+      sameSiteCookie: "strict",
+    });
+
+    expect(attack.status).toBe("blocked");
+    expect(attack.csrf).toMatchObject({ required: true, allowed: false });
+    expect(attack.blockers).toEqual(
+      expect.arrayContaining([
+        "Cookie-authenticated mutations require a valid CSRF token and SameSite lax/strict cookie policy.",
+        "Cookie-authenticated mutation cookies must not use SameSite=None without a separate explicit review.",
+      ]),
+    );
+    expect(valid.status).toBe("ready");
+    expect(valid.csrf).toMatchObject({ required: true, allowed: true });
   });
 
   it("blocks privacy lifecycle plans until requester identity is verified", () => {
