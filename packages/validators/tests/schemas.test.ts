@@ -10,8 +10,14 @@ import {
   paymentRecordInputSchema,
   clientInputSchema,
   clientProfileInputSchema,
+  consentFormInputSchema,
+  consentSignatureInputSchema,
+  medicalSafetyAcknowledgmentInputSchema,
   seoCityPageInputSchema,
   seoStylePageInputSchema,
+  releaseCreateInputSchema,
+  featureFlagPatchInputSchema,
+  deploymentReadinessMutationSchema,
 } from "../src/index";
 
 describe("validator happy/error paths", () => {
@@ -150,6 +156,31 @@ describe("validator happy/error paths", () => {
     expect(clientInputSchema.safeParse({ email: "not-an-email", preferredName: "" }).success).toBe(false);
   });
 
+  it("validates consent-related form payloads", () => {
+    expect(
+      consentFormInputSchema.safeParse({
+        key: "tattoo-consent",
+        title: "Tattoo Consent",
+        body: "I understand the risks and care instructions associated with this tattoo.",
+      }).success,
+    ).toBe(true);
+    expect(
+      consentSignatureInputSchema.safeParse({
+        consentFormId: "cform_1",
+        clientId: "client_1",
+        signerName: "Ari Test",
+        signerEmail: "ari@example.com",
+      }).success,
+    ).toBe(true);
+    expect(
+      medicalSafetyAcknowledgmentInputSchema.safeParse({
+        clientId: "client_1",
+        acknowledgments: { hasSkinCondition: false },
+        flaggedReasons: ["no known conditions"],
+      }).success,
+    ).toBe(true);
+  });
+
   it("validates SEO pages and fails malformed paths", () => {
     const city = seoCityPageInputSchema.safeParse({
       slug: "seattle-wa",
@@ -172,5 +203,31 @@ describe("validator happy/error paths", () => {
 
     expect(city.success).toBe(true);
     expect(malformed.success).toBe(false);
+  });
+
+  it("validates release and rollout payloads", () => {
+    expect(
+      releaseCreateInputSchema.safeParse({
+        version: "v1.2.3",
+        channel: "mobile_preview",
+        commitSha: "abc1234",
+        notes: "Release for dashboard update.",
+      }).success,
+    ).toBe(true);
+
+    expect(
+      featureFlagPatchInputSchema.safeParse({
+        key: "beta-feature",
+        enabled: true,
+      }).success,
+    ).toBe(true);
+
+    expect(
+      deploymentReadinessMutationSchema.safeParse({
+        operation: "request-production-approval",
+        targetEnvironment: "production",
+        reason: "Release readiness checks passed.",
+      }).success,
+    ).toBe(true);
   });
 });
