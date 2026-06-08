@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { buildAgenticBugFixWorkflow, buildObservabilityReportDraft, buildStackHash, redactSensitiveText } from "../src/index";
+import {
+  buildAgenticBugFixWorkflow,
+  buildAlertRoute,
+  buildGithubIssueDraft,
+  buildObservabilityReportDraft,
+  buildStackHash,
+  classifyErrorSeverity,
+  redactMetadata,
+  redactSensitiveText,
+} from "../src/index";
 
 describe("observability redaction and triage", () => {
   it("redacts sensitive text before report persistence", () => {
@@ -20,12 +29,70 @@ describe("observability redaction and triage", () => {
       route: "/api/webhooks/stripe",
       handled: false,
       statusCode: 500,
-      metadata: { email: "client@example.com", bookingId: "booking_1" }
+      metadata: { email: "client@example.com", bookingId: "booking_1" },
     });
 
     expect(report.severity).toBe("critical");
     expect(report.redactedMetadata.email).not.toBe("client@example.com");
     expect(buildStackHash({ message: "Stripe webhook rejected", route: "/api/webhooks/stripe", source: "api" })).toHaveLength(12);
     expect(buildAgenticBugFixWorkflow(report).length).toBeGreaterThan(3);
+  });
+
+  it("redacts nested metadata and high-risk keys", () => {
+    const redacted = redactMetadata({
+      authorization: "Bearer sk_live_secret",
+      nested: {
+        clientEmail: "avery@example.com",
+        notes: ["Call 206-555-0199 before session"],
+      },
+      bookingId: "booking_1",
+    });
+
+    expect(redacted.metadata.authorization).toBe("[redacted:sensitive-field]");
+    expect(redacted.metadata.bookingId).toBe("booking_1");
+    expect(JSON.stringify(redacted.metadata)).not.toContain("avery@example.com");
+    expect(JSON.stringify(redacted.metadata)).not.toContain("206-555-0199");
+    expect(redacted.redactionLevel).toBe("sensitive_context_removed");
+  });
+
+  it("classifies severity for privacy, API, mobile, and handled reports", () => {
+    expect(classifyErrorSeverity({ source: "web", message: "privacy export leaked pii", handled: true })).toBe("critical");
+    expect(classifyErrorSeverity({ source: "api", message: "validation failed", handled: false })).toBe("high");
+    expect(classifyErrorSeverity({ source: "mobile", message: "native crash on launch", handled: true })).toBe("high");
+    expect(classifyErrorSeverity({ source: "dashboard", message: "handled empty state", handled: true })).toBe("low");
+  });
+
+  it("routes alerts by severity and redaction risk", () => {
+    expect(buildAlertRoute({ severity: "medium", source: "web", alertRecommended: false, redactionLevel: "none_detected" })).toMatchObject({
+      channel: "dashboard",
+      shouldNotifyNow: false,
+    });
+    expect(buildAlertRoute({ severity: "critical", source: "api", alertRecommended: true, redactionLevel: "standard_redaction" })).toMatchObject({
+      channel: "pager",
+      escalationMinutes: 15,
+    });
+    expect(buildAlertRoute({ severity: "critical", source: "api", alertRecommended: true, redactionLevel: "blocked_high_risk_payload" })).toMatchObject({
+      channel: "dashboard",
+      shouldNotifyNow: true,
+    });
+  });
+
+  it("builds sanitized GitHub issue drafts without raw sensitive values", () => {
+    const report = buildObservabilityReportDraft({
+      source: "webhook",
+      runtime: "provider-webhook",
+      environment: "preview",
+      message: "Payment webhook failed for client avery@example.com",
+      route: "/api/webhooks/stripe",
+      handled: false,
+      metadata: { token: "sk_live_secret" },
+    });
+    const issue = buildGithubIssueDraft(report);
+
+    expect(issue.blocked).toBe(true);
+    expect(issue.labels).toContain("severity:critical");
+    expect(issue.body).toContain("[redacted:email]");
+    expect(issue.body).not.toContain("avery@example.com");
+    expect(issue.body).not.toContain("sk_live_secret");
   });
 });
