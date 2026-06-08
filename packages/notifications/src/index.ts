@@ -769,6 +769,131 @@ export function buildProviderEventReconciliationPlan(input: ProviderEventReconci
   };
 }
 
+export type ExpoPushPermissionStatus = "granted" | "denied" | "undetermined";
+
+export interface ExpoPushRegistrationPlanInput {
+  tenantId: string;
+  userId: string;
+  deviceId: string;
+  permissionStatus: ExpoPushPermissionStatus;
+  expoPushToken?: string | null;
+  pushOptIn: boolean;
+  registeredAt: string;
+}
+
+export interface ExpoPushRegistrationPlan {
+  status: "ready" | "blocked";
+  provider: "expo";
+  tenantId: string;
+  userId: string;
+  deviceId: string;
+  tokenMasked: string | null;
+  shouldPersistToken: boolean;
+  shouldPersistOptOut: boolean;
+  requiredWrites: string[];
+  requiredControls: string[];
+  blockers: string[];
+}
+
+export interface ExpoPushDeliveryPlanInput {
+  tenantId: string;
+  notificationId: string;
+  templateKey: NotificationTemplateKey;
+  context: NotificationTemplateContext;
+  consent: ClientConsentSnapshot;
+  requestId: string;
+  deepLinkPath?: string;
+}
+
+export interface ExpoPushDeliveryPlan {
+  status: "ready" | "blocked";
+  provider: "expo";
+  channel: "push";
+  tenantId: string;
+  notificationId: string;
+  toMasked: string | null;
+  idempotencyKey: string;
+  payloadPreview: {
+    title: string;
+    body: string;
+    deepLinkPath: string | null;
+    containsSensitiveContent: boolean;
+  };
+  requiredWrites: string[];
+  requiredControls: string[];
+  blockers: string[];
+}
+
+export function buildExpoPushRegistrationPlan(input: ExpoPushRegistrationPlanInput): ExpoPushRegistrationPlan {
+  const blockers: string[] = [];
+  if (!input.tenantId.trim()) blockers.push("Tenant scope is required before registering Expo push tokens.");
+  if (!input.userId.trim()) blockers.push("User id is required before registering Expo push tokens.");
+  if (!input.deviceId.trim()) blockers.push("Device id is required before registering Expo push tokens.");
+  if (input.permissionStatus !== "granted") blockers.push("Expo push permission must be granted before token registration.");
+  if (!input.expoPushToken?.trim() && input.permissionStatus === "granted") blockers.push("Expo push token is required after permission is granted.");
+
+  return {
+    status: blockers.length === 0 && input.pushOptIn ? "ready" : "blocked",
+    provider: "expo",
+    tenantId: input.tenantId,
+    userId: input.userId,
+    deviceId: input.deviceId,
+    tokenMasked: input.expoPushToken ? maskDestination("push", input.expoPushToken) ?? null : null,
+    shouldPersistToken: blockers.length === 0 && input.pushOptIn,
+    shouldPersistOptOut: input.permissionStatus === "denied" || !input.pushOptIn,
+    requiredWrites: ["PushToken", "NotificationPreference", "AuditLog"],
+    requiredControls: [
+      "Persist Expo tokens tenant/user/device scoped.",
+      "Store only masked token previews in logs.",
+      "Respect push opt-out before delivery.",
+      "Mark invalid tokens inactive from Expo receipt reconciliation.",
+    ],
+    blockers: input.pushOptIn ? blockers : [...blockers, "Push opt-in is required before token registration."],
+  };
+}
+
+export function buildExpoPushDeliveryPlan(input: ExpoPushDeliveryPlanInput): ExpoPushDeliveryPlan {
+  const blockers: string[] = [];
+  if (!input.tenantId.trim()) blockers.push("Tenant scope is required before push delivery.");
+  if (!input.notificationId.trim()) blockers.push("Notification id is required before push delivery.");
+  if (!input.requestId.trim()) blockers.push("Request id is required for push delivery traceability.");
+  const delivery = buildDeliveryPlan({
+    key: input.templateKey,
+    context: input.context,
+    consent: input.consent,
+    audience: "client",
+  });
+  const template = delivery.template;
+  const pushCandidate = delivery.candidates.find((candidate) => candidate.channel === "push");
+  if (!pushCandidate || pushCandidate.status === "blocked" || pushCandidate.status === "requires_destination") {
+    blockers.push(pushCandidate?.reason ?? "Push delivery candidate is unavailable.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    provider: "expo",
+    channel: "push",
+    tenantId: input.tenantId,
+    notificationId: input.notificationId,
+    toMasked: input.consent.pushToken ? maskDestination("push", input.consent.pushToken) ?? null : null,
+    idempotencyKey: `expo-push:${input.tenantId}:${input.notificationId}:${input.requestId}`,
+    payloadPreview: {
+      title: template.pushTitle,
+      body: template.pushBody,
+      deepLinkPath: input.deepLinkPath ?? null,
+      containsSensitiveContent: template.containsSensitiveContent,
+    },
+    requiredWrites: ["NotificationDelivery", "ProviderEvent", "AuditLog"],
+    requiredControls: [
+      "Do not log full Expo push tokens.",
+      "Persist delivery log before provider send.",
+      "Attach deep-link target for tap routing without embedding private file URLs.",
+      "Process Expo receipts for delivery state and invalid-token suppression.",
+    ],
+    blockers,
+  };
+}
+
 export const providerBoundaryMatrix: Array<{ provider: NotificationProvider; channel: NotificationChannel; credentialEnvVars: string[]; productionRequirement: string; gapId: string }> = [
   { provider: "resend", channel: "email", credentialEnvVars: ["RESEND_API_KEY", "EMAIL_FROM"], productionRequirement: "Transactional email domain, sender verification, provider webhooks, unsubscribe footer, delivery logs.", gapId: "GAP-061" },
   { provider: "twilio", channel: "sms", credentialEnvVars: ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_MESSAGING_SERVICE_SID"], productionRequirement: "SMS consent capture, STOP/HELP handling, quiet hours, delivery callbacks, phone number compliance.", gapId: "GAP-062" },

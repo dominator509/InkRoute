@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildAftercareSequence,
   buildDeliveryPlan,
+  buildExpoPushDeliveryPlan,
+  buildExpoPushRegistrationPlan,
   buildProviderEventReconciliationPlan,
   interpretSmsWebhook,
   renderTemplateText,
@@ -116,5 +118,89 @@ describe("notification delivery planning", () => {
 
     expect(replay.shouldUpdateDeliveryLog).toBe(false);
     expect(replay.blockers).toContain("Provider event id was already processed.");
+  });
+
+  it("plans Expo push token registration with permission, opt-out, and redacted token controls", () => {
+    const ready = buildExpoPushRegistrationPlan({
+      tenantId: "tenant_001",
+      userId: "user_001",
+      deviceId: "device_001",
+      permissionStatus: "granted",
+      expoPushToken: "ExponentPushToken[abcdef123456]",
+      pushOptIn: true,
+      registeredAt: "2026-06-08T12:00:00.000Z",
+    });
+
+    expect(ready).toMatchObject({
+      status: "ready",
+      shouldPersistToken: true,
+      shouldPersistOptOut: false,
+      requiredWrites: ["PushToken", "NotificationPreference", "AuditLog"],
+    });
+    expect(ready.tokenMasked).toBe("push_Expone***");
+    expect(ready.requiredControls).toContain("Respect push opt-out before delivery.");
+
+    const denied = buildExpoPushRegistrationPlan({
+      tenantId: "tenant_001",
+      userId: "user_001",
+      deviceId: "device_001",
+      permissionStatus: "denied",
+      pushOptIn: false,
+      registeredAt: "2026-06-08T12:00:00.000Z",
+    });
+
+    expect(denied).toMatchObject({
+      status: "blocked",
+      shouldPersistToken: false,
+      shouldPersistOptOut: true,
+    });
+    expect(denied.blockers).toEqual([
+      "Expo push permission must be granted before token registration.",
+      "Push opt-in is required before token registration.",
+    ]);
+  });
+
+  it("plans Expo push delivery with opt-out blocking, delivery logs, and tap routing metadata", () => {
+    const ready = buildExpoPushDeliveryPlan({
+      tenantId: "tenant_001",
+      notificationId: "notification_001",
+      templateKey: "booking_request_accepted",
+      context,
+      consent: {
+        ...consent,
+        pushOptIn: true,
+        pushToken: "ExponentPushToken[abcdef123456]",
+      },
+      requestId: "req_push_001",
+      deepLinkPath: "/bookings/booking_001",
+    });
+
+    expect(ready).toMatchObject({
+      status: "ready",
+      provider: "expo",
+      channel: "push",
+      idempotencyKey: "expo-push:tenant_001:notification_001:req_push_001",
+      requiredWrites: ["NotificationDelivery", "ProviderEvent", "AuditLog"],
+      payloadPreview: {
+        deepLinkPath: "/bookings/booking_001",
+      },
+    });
+    expect(ready.toMasked).toBe("push_Expone***");
+    expect(ready.requiredControls).toContain("Process Expo receipts for delivery state and invalid-token suppression.");
+
+    const blocked = buildExpoPushDeliveryPlan({
+      tenantId: "tenant_001",
+      notificationId: "notification_002",
+      templateKey: "city_waitlist_opening",
+      context,
+      consent: {
+        ...consent,
+        pushToken: "ExponentPushToken[abcdef123456]",
+      },
+      requestId: "req_push_002",
+    });
+
+    expect(blocked.status).toBe("blocked");
+    expect(blocked.blockers.join(" ")).toContain("Marketing opt-in missing");
   });
 });
