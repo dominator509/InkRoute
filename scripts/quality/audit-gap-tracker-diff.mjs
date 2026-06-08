@@ -40,7 +40,8 @@ function extractPrRefs(eventPath) {
     return null;
   }
 
-  const event = JSON.parse(readFileSync(eventPath, "utf8"));
+  const eventText = readFileSync(eventPath, "utf8").replace(/^\uFEFF/, "");
+  const event = JSON.parse(eventText);
   const pr = event.pull_request;
   if (!pr?.base?.sha || !pr?.head?.sha) {
     return null;
@@ -136,6 +137,14 @@ function gitOutput(args) {
   });
 }
 
+function tryGitOutput(args) {
+  try {
+    return gitOutput(args);
+  } catch {
+    return null;
+  }
+}
+
 function buildGapTrackerDiff(baseRef, headRef) {
   try {
     execFileSync("git", ["merge-base", baseRef, headRef], {
@@ -151,9 +160,18 @@ function buildGapTrackerDiff(baseRef, headRef) {
   try {
     return gitOutput(["diff", "--unified=0", baseRef, headRef, "--", "GAP_TRACKER.md"]);
   } catch {
-    console.warn("Gap tracker diff audit: direct base/head diff unavailable in this checkout; skipping PR gap-diff enforcement.");
-    return "";
+    console.warn("Gap tracker diff audit: direct base/head diff unavailable in this checkout.");
   }
+
+  const checkoutSha = process.env.GITHUB_SHA || "HEAD";
+  const mergeCommitDiff = tryGitOutput(["diff", "--unified=0", `${checkoutSha}^1`, checkoutSha, "--", "GAP_TRACKER.md"]);
+  if (mergeCommitDiff != null) {
+    console.warn("Gap tracker diff audit: falling back to checked-out PR merge commit parent diff.");
+    return mergeCommitDiff;
+  }
+
+  console.warn("Gap tracker diff audit: no usable PR diff range is available in this checkout; skipping PR gap-diff enforcement.");
+  return "";
 }
 
 function refExists(ref) {
@@ -170,7 +188,7 @@ function refExists(ref) {
 
 function fetchRefIfMissing(ref, refForFetch) {
   if (refExists(ref)) {
-    return;
+    return true;
   }
 
   try {
@@ -178,13 +196,15 @@ function fetchRefIfMissing(ref, refForFetch) {
       cwd: root,
       stdio: "ignore",
     });
+    return refExists(ref);
   } catch {
     if (refExists(ref)) {
       console.warn(`Gap tracker diff audit: fetch failed for ${refForFetch}, but ${ref} is already available locally.`);
-      return;
+      return true;
     }
 
-    throw new Error(`Gap tracker diff audit could not fetch required ref ${refForFetch}.`);
+    console.warn(`Gap tracker diff audit: could not fetch required ref ${refForFetch}; trying checkout-local fallbacks.`);
+    return false;
   }
 }
 
