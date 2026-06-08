@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { buildPrivacyLifecyclePlan, buildSignedUploadIntentPlan, buildTenantIsolationFixtures, evaluateRateLimitDraft, redactRecord, validateUploadDraft } from "../src/index";
+import {
+  buildPrivacyLifecyclePlan,
+  buildSignedUploadIntentPlan,
+  buildTenantIsolationFixtures,
+  evaluateDashboardPrivacyField,
+  evaluateRateLimitDraft,
+  projectDashboardPrivacyRecord,
+  redactRecord,
+  validateUploadDraft,
+} from "../src/index";
 
 describe("security and privacy helpers", () => {
   it("accepts reference image drafts only within private-upload policy limits", () => {
@@ -64,6 +73,75 @@ describe("security and privacy helpers", () => {
     expect(redacted.email).not.toBe("avery@example.com");
     expect(redacted.stripePaymentIntentId).toBe("[redacted-payment]");
     expect(redacted.medicalNotes).toBe("[redacted-medical]");
+  });
+
+  it("projects dashboard privacy records by role and field sensitivity", () => {
+    const assistantView = projectDashboardPrivacyRecord({
+      role: "assistant",
+      surface: "booking_request",
+      tenantScoped: true,
+      record: {
+        clientName: "Avery Client",
+        clientEmail: "avery@example.com",
+        medicalNotes: "allergy details",
+        stripePaymentIntentId: "pi_123",
+      },
+    });
+
+    expect(assistantView.fields).toMatchObject({
+      clientName: "[redacted-pii]",
+      clientEmail: "av***@e***",
+      medicalNotes: "[redacted-medical]",
+      stripePaymentIntentId: "[redacted-payment]",
+    });
+    expect(assistantView.redactedFields).toEqual(["clientName", "clientEmail", "medicalNotes", "stripePaymentIntentId"]);
+    expect(assistantView.auditRequired).toBe(true);
+    expect(assistantView.retentionWorkflowRequired).toBe(true);
+  });
+
+  it("denies dashboard privacy access without tenant scope", () => {
+    const projection = projectDashboardPrivacyRecord({
+      role: "owner",
+      surface: "client_profile",
+      tenantScoped: false,
+      record: {
+        clientName: "Avery Client",
+        clientEmail: "avery@example.com",
+      },
+    });
+
+    expect(projection.fields).toEqual({});
+    expect(projection.deniedFields).toEqual(["clientName", "clientEmail"]);
+    expect(projection.auditRequired).toBe(true);
+  });
+
+  it("requires verified break-glass context before platform admins can view sensitive tenant fields", () => {
+    const unverified = evaluateDashboardPrivacyField({
+      role: "admin",
+      surface: "payment",
+      fieldName: "stripePaymentIntentId",
+      value: "pi_123",
+      tenantScoped: true,
+    });
+    const verifiedOwner = evaluateDashboardPrivacyField({
+      role: "owner",
+      surface: "payment",
+      fieldName: "stripePaymentIntentId",
+      value: "pi_123",
+      tenantScoped: true,
+      requesterVerified: true,
+    });
+
+    expect(unverified).toMatchObject({
+      decision: "redact",
+      value: "[redacted-payment]",
+      auditRequired: true,
+    });
+    expect(verifiedOwner).toMatchObject({
+      decision: "allow",
+      value: "pi_123",
+      auditRequired: true,
+    });
   });
 
   it("provides tenant isolation and rate-limit fixtures for future integration tests", () => {

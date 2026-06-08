@@ -1366,6 +1366,192 @@ export function buildPrivacyLifecyclePlan(input: PrivacyLifecyclePlanInput): Pri
   };
 }
 
+export type DashboardPrivacyRole = "owner" | "artist" | "assistant" | "studio_manager" | "admin";
+
+export type DashboardPrivacySurface =
+  | "client_profile"
+  | "booking_request"
+  | "consent_form"
+  | "payment"
+  | "message"
+  | "file_asset";
+
+export type DashboardPrivacyDecision = "allow" | "redact" | "deny";
+
+export interface DashboardPrivacyPolicyInput {
+  role: DashboardPrivacyRole;
+  surface: DashboardPrivacySurface;
+  fieldName: string;
+  value: unknown;
+  tenantScoped: boolean;
+  requesterVerified?: boolean;
+}
+
+export interface DashboardPrivacyFieldDecision {
+  decision: DashboardPrivacyDecision;
+  fieldName: string;
+  surface: DashboardPrivacySurface;
+  value: unknown;
+  auditRequired: boolean;
+  retentionWorkflowRequired: boolean;
+  reason: string;
+}
+
+export interface DashboardPrivacyProjectionInput<TRecord extends Record<string, unknown>> {
+  role: DashboardPrivacyRole;
+  surface: DashboardPrivacySurface;
+  tenantScoped: boolean;
+  requesterVerified?: boolean;
+  record: TRecord;
+}
+
+export interface DashboardPrivacyProjection {
+  surface: DashboardPrivacySurface;
+  role: DashboardPrivacyRole;
+  tenantScoped: boolean;
+  fields: Record<string, unknown>;
+  redactedFields: string[];
+  deniedFields: string[];
+  auditRequired: boolean;
+  retentionWorkflowRequired: boolean;
+}
+
+const dashboardSensitiveFields = new Set([
+  "clientEmail",
+  "clientPhone",
+  "email",
+  "phone",
+  "medicalNotes",
+  "medicalNotesEncrypted",
+  "consentSignatureUrl",
+  "consentSignatureHash",
+  "stripePaymentIntentId",
+  "stripeCustomerId",
+  "paymentMethodSummary",
+  "messageBody",
+  "attachmentUrl",
+  "objectKey",
+  "signedUrl",
+]);
+
+const dashboardMedicalFields = new Set(["medicalNotes", "medicalNotesEncrypted"]);
+const dashboardPaymentFields = new Set(["stripePaymentIntentId", "stripeCustomerId", "paymentMethodSummary"]);
+const dashboardFileSecretFields = new Set(["objectKey", "signedUrl", "attachmentUrl"]);
+
+function canViewSensitiveDashboardField(role: DashboardPrivacyRole, surface: DashboardPrivacySurface, fieldName: string): boolean {
+  if (role === "owner" || role === "studio_manager") return true;
+  if (role === "artist") return surface !== "payment" && !dashboardPaymentFields.has(fieldName);
+  if (role === "assistant") return false;
+  return false;
+}
+
+export function evaluateDashboardPrivacyField(input: DashboardPrivacyPolicyInput): DashboardPrivacyFieldDecision {
+  const retentionWorkflowRequired = ["medicalNotes", "medicalNotesEncrypted", "consentSignatureUrl", "consentSignatureHash", "messageBody", "objectKey", "signedUrl"].includes(input.fieldName);
+
+  if (!input.tenantScoped) {
+    return {
+      decision: "deny",
+      fieldName: input.fieldName,
+      surface: input.surface,
+      value: undefined,
+      auditRequired: true,
+      retentionWorkflowRequired,
+      reason: "Dashboard privacy access requires a matched tenant scope.",
+    };
+  }
+
+  const sensitive = dashboardSensitiveFields.has(input.fieldName) || redactValue(input.fieldName, input.value) !== input.value;
+  if (!sensitive) {
+    return {
+      decision: "allow",
+      fieldName: input.fieldName,
+      surface: input.surface,
+      value: input.value,
+      auditRequired: false,
+      retentionWorkflowRequired,
+      reason: "Field is not classified as sensitive for dashboard display.",
+    };
+  }
+
+  if (input.role === "admin" && !input.requesterVerified) {
+    return {
+      decision: "redact",
+      fieldName: input.fieldName,
+      surface: input.surface,
+      value: redactValue(input.fieldName, input.value),
+      auditRequired: true,
+      retentionWorkflowRequired,
+      reason: "Platform admin access to tenant-sensitive fields requires verified break-glass context.",
+    };
+  }
+
+  if (!canViewSensitiveDashboardField(input.role, input.surface, input.fieldName)) {
+    return {
+      decision: "redact",
+      fieldName: input.fieldName,
+      surface: input.surface,
+      value: redactValue(input.fieldName, input.value),
+      auditRequired: true,
+      retentionWorkflowRequired,
+      reason: "Role cannot view this sensitive dashboard field.",
+    };
+  }
+
+  return {
+    decision: "allow",
+    fieldName: input.fieldName,
+    surface: input.surface,
+    value: input.value,
+    auditRequired: true,
+    retentionWorkflowRequired,
+    reason: "Role is allowed to view this sensitive field inside the tenant scope.",
+  };
+}
+
+export function projectDashboardPrivacyRecord<TRecord extends Record<string, unknown>>(
+  input: DashboardPrivacyProjectionInput<TRecord>,
+): DashboardPrivacyProjection {
+  const redactedFields: string[] = [];
+  const deniedFields: string[] = [];
+  let auditRequired = false;
+  let retentionWorkflowRequired = false;
+  const fields: Record<string, unknown> = {};
+
+  for (const [fieldName, value] of Object.entries(input.record)) {
+    const decision = evaluateDashboardPrivacyField({
+      role: input.role,
+      surface: input.surface,
+      fieldName,
+      value,
+      tenantScoped: input.tenantScoped,
+      requesterVerified: input.requesterVerified,
+    });
+
+    auditRequired = auditRequired || decision.auditRequired;
+    retentionWorkflowRequired = retentionWorkflowRequired || decision.retentionWorkflowRequired;
+    if (decision.decision === "deny") {
+      deniedFields.push(fieldName);
+      continue;
+    }
+
+    if (decision.decision === "redact") {
+      redactedFields.push(fieldName);
+    }
+    fields[fieldName] = decision.value;
+  }
+
+  return {
+    surface: input.surface,
+    role: input.role,
+    tenantScoped: input.tenantScoped,
+    fields,
+    redactedFields,
+    deniedFields,
+    auditRequired,
+    retentionWorkflowRequired,
+  };
+}
+
 export function buildSecurityHeaderPlan(extraConnectSources: string[] = []): SecurityHeaderDraft[] {
   if (extraConnectSources.length === 0) return securityHeaderDrafts;
   return securityHeaderDrafts.map((header) => {
