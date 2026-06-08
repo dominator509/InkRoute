@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-06-06T16:06:48.531Z",
+  "generatedAt": "2026-06-08T14:55:00.686Z",
   "source": "Phase 18 workspace runtime readiness",
   "status": "pass",
   "projectsChecked": 25,
-  "sourceFilesChecked": 176,
+  "sourceFilesChecked": 747,
   "workspacePackages": [
     "@inkroute/analytics",
     "@inkroute/auth",
@@ -55,10 +55,46 @@
   ],
   "importRecords": [
     {
+      "sourcePath": "apps/dashboard/app/api/dashboardAuth.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/auth",
+      "importSpecifier": "@inkroute/auth"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/dashboardAuth.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/dashboardAuth.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/deployment/readiness/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/db",
+      "importSpecifier": "@inkroute/db"
+    },
+    {
       "sourcePath": "apps/dashboard/app/api/deployment/readiness/route.ts",
       "ownerPackageName": "@inkroute/dashboard",
       "importedPackageName": "@inkroute/deployment",
       "importSpecifier": "@inkroute/deployment"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/deployment/readiness/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/validators",
+      "importSpecifier": "@inkroute/validators"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/error-reports/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/db",
+      "importSpecifier": "@inkroute/db"
     },
     {
       "sourcePath": "apps/dashboard/app/api/error-reports/route.ts",
@@ -67,10 +103,22 @@
       "importSpecifier": "@inkroute/observability"
     },
     {
+      "sourcePath": "apps/dashboard/app/api/error-reports/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/error-reports/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/validators",
+      "importSpecifier": "@inkroute/validators"
+    },
+    {
       "sourcePath": "apps/dashboard/app/api/feature-flags/route.ts",
       "ownerPackageName": "@inkroute/dashboard",
-      "importedPackageName": "@inkroute/config",
-      "importSpecifier": "@inkroute/config"
+      "importedPackageName": "@inkroute/db",
+      "importSpecifier": "@inkroute/db"
     },
     {
       "sourcePath": "apps/dashboard/app/api/feature-flags/route.ts",
@@ -79,16 +127,28 @@
       "importSpecifier": "@inkroute/releases"
     },
     {
+      "sourcePath": "apps/dashboard/app/api/feature-flags/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/validators",
+      "importSpecifier": "@inkroute/validators"
+    },
+    {
       "sourcePath": "apps/dashboard/app/api/releases/route.ts",
       "ownerPackageName": "@inkroute/dashboard",
-      "importedPackageName": "@inkroute/config",
-      "importSpecifier": "@inkroute/config"
+      "importedPackageName": "@inkroute/db",
+      "importSpecifier": "@inkroute/db"
     },
     {
       "sourcePath": "apps/dashboard/app/api/releases/route.ts",
       "ownerPackageName": "@inkroute/dashboard",
       "importedPackageName": "@inkroute/releases",
       "importSpecifier": "@inkroute/releases"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/releases/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/validators",
+      "importSpecifier": "@inkroute/validators"
     },
     {
       "sourcePath": "apps/dashboard/app/api/security/privacy-requests/route.ts",
@@ -137,6 +197,12 @@
       "ownerPackageName": "@inkroute/dashboard",
       "importedPackageName": "@inkroute/config",
       "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/dashboard/components/StatusPill.tsx",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/ui",
+      "importSpecifier": "@inkroute/ui"
     },
     {
       "sourcePath": "apps/dashboard/lib/demo.ts",
@@ -345,6 +411,30 @@
     {
       "sourcePath": "apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts",
       "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/booking",
+      "importSpecifier": "@inkroute/booking"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/db",
+      "importSpecifier": "@inkroute/db"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/validators",
+      "importSpecifier": "@inkroute/validators"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/booking-requests/test-helpers.ts",
+      "ownerPackageName": "@inkroute/web",
       "importedPackageName": "@inkroute/validators",
       "importSpecifier": "@inkroute/validators"
     },
@@ -367,6 +457,18 @@
       "importSpecifier": "@inkroute/payments"
     },
     {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/error-reports/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/db",
+      "importSpecifier": "@inkroute/db"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/error-reports/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/validators",
+      "importSpecifier": "@inkroute/validators"
+    },
+    {
       "sourcePath": "apps/web/app/api/public/[tenantSlug]/messages/route.ts",
       "ownerPackageName": "@inkroute/web",
       "importedPackageName": "@inkroute/notifications",
@@ -383,6 +485,18 @@
       "ownerPackageName": "@inkroute/web",
       "importedPackageName": "@inkroute/security",
       "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/release-health/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/release-health/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/db",
+      "importSpecifier": "@inkroute/db"
     },
     {
       "sourcePath": "apps/web/app/api/public/[tenantSlug]/release-health/route.ts",
@@ -405,6 +519,12 @@
     {
       "sourcePath": "apps/web/app/api/webhooks/email/route.ts",
       "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/api/webhooks/email/route.ts",
+      "ownerPackageName": "@inkroute/web",
       "importedPackageName": "@inkroute/notifications",
       "importSpecifier": "@inkroute/notifications"
     },
@@ -417,8 +537,20 @@
     {
       "sourcePath": "apps/web/app/api/webhooks/sms/route.ts",
       "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/api/webhooks/sms/route.ts",
+      "ownerPackageName": "@inkroute/web",
       "importedPackageName": "@inkroute/notifications",
       "importSpecifier": "@inkroute/notifications"
+    },
+    {
+      "sourcePath": "apps/web/app/api/webhooks/stripe/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
     },
     {
       "sourcePath": "apps/web/app/api/webhooks/stripe/route.ts",
@@ -589,6 +721,36 @@
       "importSpecifier": "@inkroute/observability"
     },
     {
+      "sourcePath": "apps/web/lib/localRuntimeState.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/booking",
+      "importSpecifier": "@inkroute/booking"
+    },
+    {
+      "sourcePath": "apps/web/lib/localRuntimeState.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/lib/localRuntimeState.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/web/lib/localRuntimeState.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "apps/web/lib/localRuntimeState.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/validators",
+      "importSpecifier": "@inkroute/validators"
+    },
+    {
       "sourcePath": "apps/web/lib/securityDemo.ts",
       "ownerPackageName": "@inkroute/web",
       "importedPackageName": "@inkroute/security",
@@ -671,7 +833,14 @@
       "ownerPackageName": "@inkroute/seo",
       "importedPackageName": "@inkroute/types",
       "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "packages/seo/tests/seo-engine.test.ts",
+      "ownerPackageName": "@inkroute/seo",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
     }
   ],
-  "findings": []
+  "findings": [],
+  "entrypointFindings": []
 }

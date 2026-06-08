@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   auditPackageScripts,
+  auditPackageEntrypoints,
   auditWorkspaceDependencies,
   classifyWorkspacePath,
   extractWorkspaceImportSpecifiers,
@@ -13,6 +14,8 @@ const baseProject = {
   path: "packages/example",
   kind: "package" as const,
   private: true,
+  main: "./src/index.ts",
+  types: "./src/index.ts",
   scripts: { build: "tsc --noEmit", typecheck: "tsc --noEmit", lint: "tsc --noEmit", test: "vitest run" },
   dependencies: { "@inkroute/types": "workspace:*" },
   devDependencies: {},
@@ -84,6 +87,40 @@ describe("workspace audit helpers", () => {
     expect(summary.findings.some((finding) => finding.message.includes("Declared workspace dependency @inkroute/missing does not exist"))).toBe(true);
     expect(summary.findings.some((finding) => finding.message.includes("Imports missing workspace package @inkroute/ghost"))).toBe(true);
     expect(summary.findings.some((finding) => finding.message.includes("missing from tsconfig.base.json paths"))).toBe(true);
+  });
+
+  it("audits workspace package entrypoints and export targets", () => {
+    const passing = auditPackageEntrypoints(
+      [
+        baseProject,
+        {
+          ...baseProject,
+          name: "@inkroute/types",
+          path: "packages/types",
+          exports: { ".": "./src/index.ts", "./testing": { types: "./src/testing.ts", default: "./src/testing.ts" } },
+        },
+      ],
+      new Set([
+        "packages/example/src/index.ts",
+        "packages/types/src/index.ts",
+        "packages/types/src/testing.ts",
+      ]),
+    );
+    expect(passing.status).toBe("pass");
+    expect(passing.packagesChecked).toBe(2);
+
+    const failing = auditPackageEntrypoints(
+      [
+        { ...baseProject, main: "./src/missing.ts" },
+        { ...baseProject, name: "@inkroute/types", path: "packages/types", main: undefined, types: undefined, exports: { ".": "./src/missing.ts" } },
+      ],
+      new Set(["packages/example/src/index.ts"]),
+    );
+
+    expect(failing.status).toBe("fail");
+    expect(failing.findings.some((finding) => finding.message.includes("Package main target does not exist"))).toBe(true);
+    expect(failing.findings.some((finding) => finding.message.includes("Package manifest is missing types"))).toBe(true);
+    expect(failing.findings.some((finding) => finding.message.includes("Package exports target does not exist"))).toBe(true);
   });
 
   it("audits package script contracts and duplicate names", () => {

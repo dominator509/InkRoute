@@ -46,6 +46,9 @@ function listProjectManifests() {
       path: repoPath === "" ? "." : repoPath,
       kind: repoPath === "" ? "root" : repoPath.startsWith("apps/") ? "app" : "package",
       private: Boolean(data.private),
+      main: data.main,
+      types: data.types,
+      exports: data.exports,
       scripts: data.scripts ?? {},
       dependencies: data.dependencies ?? {},
       devDependencies: data.devDependencies ?? {},
@@ -91,6 +94,29 @@ function declaredDependencies(project) {
   ]);
 }
 
+function normalizeManifestPath(value) {
+  return value.replace(/^\.\//, "").replace(/\\/g, "/");
+}
+
+function manifestTargetPath(project, value) {
+  return `${project.path}/${normalizeManifestPath(value)}`.replace(/\/+/g, "/");
+}
+
+function collectExportTargets(exportsField) {
+  const targets = [];
+  const visit = (value) => {
+    if (typeof value === "string") {
+      targets.push(value);
+      return;
+    }
+    if (value && typeof value === "object") {
+      for (const nested of Object.values(value)) visit(nested);
+    }
+  };
+  visit(exportsField);
+  return targets;
+}
+
 function readTsconfigPathAliases() {
   const tsconfigPath = join(root, "tsconfig.base.json");
   if (!existsSync(tsconfigPath)) return [];
@@ -107,6 +133,7 @@ const workspacePackageSet = new Set(workspacePackages);
 const tsconfigAliases = readTsconfigPathAliases();
 const tsconfigAliasSet = new Set(tsconfigAliases);
 const findings = [];
+const entrypointFindings = [];
 const importRecords = [];
 
 for (const workspacePackage of aliasRequiredWorkspacePackages) {
@@ -119,6 +146,32 @@ for (const project of projects) {
   for (const dependencyName of declaredDependencies(project)) {
     if (dependencyName.startsWith("@inkroute/") && !workspacePackageSet.has(dependencyName)) {
       findings.push({ status: "fail", packageName: project.name, message: `Declared workspace dependency ${dependencyName} does not exist.` });
+    }
+  }
+}
+
+for (const project of projects.filter((item) => item.kind === "package" && item.name.startsWith("@inkroute/"))) {
+  const sourceIndex = `${project.path}/src/index.ts`;
+  if (!existsSync(join(root, sourceIndex))) {
+    entrypointFindings.push({ status: "fail", packageName: project.name, message: `Missing source entrypoint ${sourceIndex}.` });
+  }
+
+  for (const field of ["main", "types"]) {
+    const value = project[field];
+    if (!value) {
+      entrypointFindings.push({ status: "warn", packageName: project.name, message: `Package manifest is missing ${field}.` });
+      continue;
+    }
+    const target = manifestTargetPath(project, value);
+    if (!existsSync(join(root, target))) {
+      entrypointFindings.push({ status: "fail", packageName: project.name, message: `Package ${field} target does not exist: ${target}.` });
+    }
+  }
+
+  for (const targetValue of collectExportTargets(project.exports)) {
+    const target = manifestTargetPath(project, targetValue);
+    if (!existsSync(join(root, target))) {
+      entrypointFindings.push({ status: "fail", packageName: project.name, message: `Package exports target does not exist: ${target}.` });
     }
   }
 }
@@ -152,17 +205,19 @@ for (const file of sourceFiles) {
 const report = {
   generatedAt: new Date().toISOString(),
   source: "Phase 18 workspace runtime readiness",
-  status: findings.some((finding) => finding.status === "fail") ? "fail" : findings.some((finding) => finding.status === "warn") ? "warn" : "pass",
+  status: [...findings, ...entrypointFindings].some((finding) => finding.status === "fail") ? "fail" : [...findings, ...entrypointFindings].some((finding) => finding.status === "warn") ? "warn" : "pass",
   projectsChecked: projects.length,
   sourceFilesChecked: sourceFiles.length,
   workspacePackages: workspacePackages.sort(),
   tsconfigAliases: tsconfigAliases.sort(),
   importRecords,
   findings,
+  entrypointFindings,
 };
 mkdirSync(dirname(outputPath), { recursive: true });
 writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`);
 console.log(`Workspace import audit status: ${report.status}`);
 console.log(`Projects: ${report.projectsChecked}; source files: ${report.sourceFilesChecked}; imports: ${report.importRecords.length}`);
+console.log(`Entrypoint findings: ${report.entrypointFindings.length}`);
 console.log(`Report: ${toRepoPath(outputPath)}`);
 if (report.status === "fail") process.exitCode = 1;

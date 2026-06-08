@@ -7,6 +7,9 @@ export interface WorkspaceProjectManifest {
   readonly path: string;
   readonly kind: WorkspaceProjectKind;
   readonly private: boolean;
+  readonly main?: string;
+  readonly types?: string;
+  readonly exports?: unknown;
   readonly scripts: Readonly<Record<string, string>>;
   readonly dependencies: Readonly<Record<string, string>>;
   readonly devDependencies: Readonly<Record<string, string>>;
@@ -25,6 +28,18 @@ export interface WorkspaceDependencyFinding {
   readonly packageName?: string;
   readonly sourcePath?: string;
   readonly message: string;
+}
+
+export interface PackageEntrypointFinding {
+  readonly status: WorkspaceAuditStatus;
+  readonly packageName: string;
+  readonly message: string;
+}
+
+export interface PackageEntrypointAuditSummary {
+  readonly status: WorkspaceAuditStatus;
+  readonly packagesChecked: number;
+  readonly findings: readonly PackageEntrypointFinding[];
 }
 
 export interface WorkspaceDependencyAuditSummary {
@@ -168,6 +183,69 @@ export function auditWorkspaceDependencies(input: {
     projectsChecked: input.projects.length,
     workspacePackages: packageNames.sort(),
     importRecords: input.imports,
+    findings,
+  };
+}
+
+function normalizeManifestPath(value: string): string {
+  return value.replace(/^\.\//, "").replace(/\\/g, "/");
+}
+
+function manifestTargetPath(project: WorkspaceProjectManifest, value: string): string {
+  return `${project.path}/${normalizeManifestPath(value)}`.replace(/\/+/g, "/");
+}
+
+function collectExportTargets(exportsField: unknown): readonly string[] {
+  const targets: string[] = [];
+  const visit = (value: unknown) => {
+    if (typeof value === "string") {
+      targets.push(value);
+      return;
+    }
+    if (value && typeof value === "object") {
+      for (const nested of Object.values(value as Record<string, unknown>)) {
+        visit(nested);
+      }
+    }
+  };
+  visit(exportsField);
+  return targets;
+}
+
+export function auditPackageEntrypoints(projects: readonly WorkspaceProjectManifest[], existingRepoPaths: ReadonlySet<string>): PackageEntrypointAuditSummary {
+  const findings: PackageEntrypointFinding[] = [];
+  const packages = projects.filter((project) => project.kind === "package" && workspacePackagePattern.test(project.name));
+
+  for (const project of packages) {
+    const sourceIndex = `${project.path}/src/index.ts`;
+    if (!existingRepoPaths.has(sourceIndex)) {
+      findings.push({ status: "fail", packageName: project.name, message: `Missing source entrypoint ${sourceIndex}.` });
+    }
+
+    for (const field of ["main", "types"] as const) {
+      const value = project[field];
+      if (!value) {
+        findings.push({ status: "warn", packageName: project.name, message: `Package manifest is missing ${field}.` });
+        continue;
+      }
+      const target = manifestTargetPath(project, value);
+      if (!existingRepoPaths.has(target)) {
+        findings.push({ status: "fail", packageName: project.name, message: `Package ${field} target does not exist: ${target}.` });
+      }
+    }
+
+    for (const targetValue of collectExportTargets(project.exports)) {
+      const target = manifestTargetPath(project, targetValue);
+      if (!existingRepoPaths.has(target)) {
+        findings.push({ status: "fail", packageName: project.name, message: `Package exports target does not exist: ${target}.` });
+      }
+    }
+  }
+
+  const status = findings.some((finding) => finding.status === "fail") ? "fail" : findings.some((finding) => finding.status === "warn") ? "warn" : "pass";
+  return {
+    status,
+    packagesChecked: packages.length,
     findings,
   };
 }

@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@inkroute/config": "workspace:*",
+    "@inkroute/db": "workspace:*",
     "@inkroute/seo": "workspace:*",
     "@inkroute/types": "workspace:*",
     "@inkroute/ui": "workspace:*",
