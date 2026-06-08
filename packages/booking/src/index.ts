@@ -377,6 +377,130 @@ export function createBookingTransitionPlan(input: BookingTransitionPlanInput): 
   };
 }
 
+export type BookingPostSubmitWorkflowType = "reference-upload" | "deposit-handoff" | "notification-bootstrap" | "calendar-hold";
+export type BookingPostSubmitWorkflowStatus = "ready" | "blocked_missing_data" | "provider_gated";
+
+export interface BookingPostSubmitWorkflow {
+  type: BookingPostSubmitWorkflowType;
+  status: BookingPostSubmitWorkflowStatus;
+  required: boolean;
+  tenantId: string;
+  bookingRequestId: string;
+  reason: string;
+  providerBoundary?: "storage" | "stripe" | "notification" | "calendar";
+  payload: Record<string, string | number | boolean | null>;
+}
+
+export interface BookingPostSubmitPlanInput {
+  tenantId: string;
+  bookingRequestId: string;
+  draft: BookingDraft;
+  submittedAt: string;
+}
+
+export interface BookingPostSubmitPlan {
+  status: "ready" | "blocked";
+  canPersistWorkflowRecords: boolean;
+  workflows: BookingPostSubmitWorkflow[];
+  blockers: string[];
+}
+
+function hasReferenceImages(draft: BookingDraft): boolean {
+  return draft.referenceImages.length > 0;
+}
+
+function hasSchedulingContext(draft: BookingDraft): boolean {
+  return hasText(draft.preferredCitySlug, 2) && hasText(draft.preferredDateWindow, 4);
+}
+
+export function buildBookingPostSubmitPlan(input: BookingPostSubmitPlanInput): BookingPostSubmitPlan {
+  const blockers: string[] = [];
+  if (!input.tenantId.trim()) blockers.push("Tenant scope is required before post-submit workflows can be recorded.");
+  if (!input.bookingRequestId.trim()) blockers.push("Booking request id is required before post-submit workflows can be recorded.");
+  if (!hasEmailShape(input.draft.clientEmail)) blockers.push("A valid client email is required for notification bootstrap.");
+
+  const basePayload = {
+    tenantId: input.tenantId,
+    bookingRequestId: input.bookingRequestId,
+    submittedAt: input.submittedAt,
+  };
+
+  const workflows: BookingPostSubmitWorkflow[] = [
+    {
+      type: "reference-upload",
+      status: hasReferenceImages(input.draft) ? "provider_gated" : "blocked_missing_data",
+      required: hasReferenceImages(input.draft),
+      tenantId: input.tenantId,
+      bookingRequestId: input.bookingRequestId,
+      providerBoundary: "storage",
+      reason: hasReferenceImages(input.draft)
+        ? "Reference metadata exists and needs signed private upload intents after booking persistence."
+        : "No reference image metadata was included in the booking draft.",
+      payload: {
+        ...basePayload,
+        referenceCount: input.draft.referenceImages.length,
+        signedUploadRequired: hasReferenceImages(input.draft),
+      },
+    },
+    {
+      type: "deposit-handoff",
+      status: input.draft.depositBoundaryAcknowledged ? "provider_gated" : "blocked_missing_data",
+      required: input.draft.depositBoundaryAcknowledged,
+      tenantId: input.tenantId,
+      bookingRequestId: input.bookingRequestId,
+      providerBoundary: "stripe",
+      reason: input.draft.depositBoundaryAcknowledged
+        ? "Client acknowledged the deposit boundary; accepted bookings can create a Stripe handoff later."
+        : "Deposit boundary was not acknowledged.",
+      payload: {
+        ...basePayload,
+        policyAcknowledged: input.draft.policyAccepted,
+        depositBoundaryAcknowledged: input.draft.depositBoundaryAcknowledged,
+      },
+    },
+    {
+      type: "notification-bootstrap",
+      status: hasEmailShape(input.draft.clientEmail) ? "provider_gated" : "blocked_missing_data",
+      required: true,
+      tenantId: input.tenantId,
+      bookingRequestId: input.bookingRequestId,
+      providerBoundary: "notification",
+      reason: hasEmailShape(input.draft.clientEmail)
+        ? "Client contact is valid and a message thread plus confirmation notification should be queued."
+        : "Client email is invalid, so notification bootstrap cannot run safely.",
+      payload: {
+        ...basePayload,
+        clientEmailPresent: hasEmailShape(input.draft.clientEmail),
+        smsOptIn: input.draft.smsOptIn,
+        marketingOptIn: input.draft.marketingOptIn,
+      },
+    },
+    {
+      type: "calendar-hold",
+      status: hasSchedulingContext(input.draft) ? "provider_gated" : "blocked_missing_data",
+      required: hasSchedulingContext(input.draft),
+      tenantId: input.tenantId,
+      bookingRequestId: input.bookingRequestId,
+      providerBoundary: "calendar",
+      reason: hasSchedulingContext(input.draft)
+        ? "City and date context exist for a tentative calendar hold after artist acceptance."
+        : "Preferred city/date context is incomplete.",
+      payload: {
+        ...basePayload,
+        preferredCitySlug: input.draft.preferredCitySlug || null,
+        preferredDateWindow: input.draft.preferredDateWindow || null,
+      },
+    },
+  ];
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    canPersistWorkflowRecords: blockers.length === 0,
+    workflows,
+    blockers,
+  };
+}
+
 export function getTravelBookingCta(status: TravelBookingStatus): string {
   if (status === "open") return "Request this city";
   if (status === "waitlist") return "Join the waitlist";
