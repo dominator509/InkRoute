@@ -6,6 +6,7 @@ import {
   buildExpoPushDeliveryPlan,
   buildExpoPushRegistrationPlan,
   buildProviderEventReconciliationPlan,
+  buildSmsProviderSendPlan,
   interpretSmsWebhook,
   renderTemplateText,
   type ClientConsentSnapshot,
@@ -285,6 +286,111 @@ describe("notification delivery planning", () => {
       providerApiKeyConfigured: true,
       senderDomainVerified: true,
       unsubscribeFooterPresent: true,
+      deliveryLogPersistenceAvailable: true,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.toMasked).toBeNull();
+    expect(plan.blockers.join(" ")).toContain("Destination missing for this channel.");
+  });
+
+  it("plans Twilio SMS provider send with consent proof, quiet-hours controls, and redacted phone data", () => {
+    const plan = buildSmsProviderSendPlan({
+      tenantId: "tenant_001",
+      notificationId: "notification_sms_001",
+      deliveryId: "delivery_sms_001",
+      templateKey: "appointment_confirmed",
+      context,
+      consent,
+      requestId: "req_sms_001",
+      providerSdkInstalled: true,
+      accountSidConfigured: true,
+      authTokenConfigured: true,
+      messagingServiceConfigured: true,
+      legalConsentCopyApproved: true,
+      consentProofAvailable: true,
+      quietHoursPolicyConfigured: true,
+      deliveryLogPersistenceAvailable: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      provider: "twilio",
+      channel: "sms",
+      idempotencyKey: "sms-send:tenant_001:delivery_sms_001:req_sms_001",
+      requiredWrites: ["NotificationDelivery", "ProviderEvent", "SuppressionCheck", "ConsentSnapshot", "AuditLog", "IdempotencyKey"],
+    });
+    expect(plan.toMasked).toBe("***-***-0123");
+    expect(plan.payloadPreview.bodyPreview).toContain("Confirmed");
+    expect(plan.requiredControls).toContain("Apply tenant quiet-hours policy before Twilio API calls.");
+    expect(plan.blockers).toEqual([]);
+  });
+
+  it("blocks Twilio SMS provider send without provider readiness, legal consent, quiet hours, persistence, or STOP clearance", () => {
+    const plan = buildSmsProviderSendPlan({
+      tenantId: "",
+      notificationId: "",
+      deliveryId: "",
+      templateKey: "appointment_confirmed",
+      context,
+      consent: {
+        ...consent,
+        smsStoppedAt: "2026-06-08T12:00:00.000Z",
+      },
+      requestId: "",
+      providerSdkInstalled: false,
+      accountSidConfigured: false,
+      authTokenConfigured: false,
+      messagingServiceConfigured: false,
+      legalConsentCopyApproved: false,
+      consentProofAvailable: false,
+      quietHoursPolicyConfigured: false,
+      withinQuietHours: true,
+      destinationSuppressed: true,
+      deliveryLogPersistenceAvailable: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.blockers).toEqual([
+      "Tenant scope is required before SMS delivery.",
+      "Notification id is required before SMS delivery.",
+      "Notification delivery id is required before SMS delivery.",
+      "Request id is required for SMS delivery traceability.",
+      "SMS provider SDK must be installed before sending.",
+      "Twilio account SID must be configured in a secret store before sending.",
+      "Twilio auth token must be configured in a secret store before sending.",
+      "Twilio messaging service SID must be configured before sending.",
+      "SMS consent and compliance copy must be legal-approved before sending.",
+      "SMS delivery requires stored consent proof for this destination.",
+      "SMS quiet-hours policy must be configured before sending.",
+      "SMS delivery is inside quiet hours and must be delayed.",
+      "SMS destination is suppressed by STOP/unsubscribe state and must not be sent.",
+      "NotificationDelivery persistence must be available before SMS provider send.",
+      "Client has sent STOP or disabled SMS.",
+    ]);
+  });
+
+  it("blocks Twilio SMS provider send when marketing consent or destination rules reject the SMS candidate", () => {
+    const plan = buildSmsProviderSendPlan({
+      tenantId: "tenant_001",
+      notificationId: "notification_sms_002",
+      deliveryId: "delivery_sms_002",
+      templateKey: "city_waitlist_opening",
+      context,
+      consent: {
+        ...consent,
+        phone: undefined,
+        smsOptIn: false,
+        marketingOptIn: false,
+      },
+      requestId: "req_sms_002",
+      providerSdkInstalled: true,
+      accountSidConfigured: true,
+      authTokenConfigured: true,
+      messagingServiceConfigured: true,
+      legalConsentCopyApproved: true,
+      consentProofAvailable: true,
+      quietHoursPolicyConfigured: true,
       deliveryLogPersistenceAvailable: true,
     });
 

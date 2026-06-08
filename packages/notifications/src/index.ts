@@ -180,6 +180,45 @@ export interface EmailProviderSendPlan {
   blockers: string[];
 }
 
+export interface SmsProviderSendPlanInput {
+  tenantId: string;
+  notificationId: string;
+  deliveryId: string;
+  templateKey: NotificationTemplateKey;
+  context: NotificationTemplateContext;
+  consent: ClientConsentSnapshot;
+  requestId: string;
+  providerSdkInstalled: boolean;
+  accountSidConfigured: boolean;
+  authTokenConfigured: boolean;
+  messagingServiceConfigured: boolean;
+  legalConsentCopyApproved: boolean;
+  consentProofAvailable: boolean;
+  quietHoursPolicyConfigured: boolean;
+  withinQuietHours?: boolean;
+  destinationSuppressed?: boolean;
+  deliveryLogPersistenceAvailable: boolean;
+}
+
+export interface SmsProviderSendPlan {
+  status: "ready" | "blocked";
+  provider: "twilio";
+  channel: "sms";
+  tenantId: string;
+  notificationId: string;
+  deliveryId: string;
+  toMasked: string | null;
+  idempotencyKey: string;
+  payloadPreview: {
+    bodyPreview: string;
+    purpose: MessagePurpose;
+    requiresHumanReview: boolean;
+  };
+  requiredWrites: string[];
+  requiredControls: string[];
+  blockers: string[];
+}
+
 export interface ProviderWebhookInterpretation {
   provider: NotificationProvider;
   eventType: string;
@@ -729,6 +768,61 @@ export function buildEmailProviderSendPlan(input: EmailProviderSendPlanInput): E
       "Include unsubscribe or preference-center footer on every email.",
       "Store only masked destination and redacted body preview in logs.",
       "Verify provider webhook signatures before reconciling delivered, bounced, or complained events.",
+    ],
+    blockers,
+  };
+}
+
+export function buildSmsProviderSendPlan(input: SmsProviderSendPlanInput): SmsProviderSendPlan {
+  const blockers: string[] = [];
+  if (!input.tenantId.trim()) blockers.push("Tenant scope is required before SMS delivery.");
+  if (!input.notificationId.trim()) blockers.push("Notification id is required before SMS delivery.");
+  if (!input.deliveryId.trim()) blockers.push("Notification delivery id is required before SMS delivery.");
+  if (!input.requestId.trim()) blockers.push("Request id is required for SMS delivery traceability.");
+  if (!input.providerSdkInstalled) blockers.push("SMS provider SDK must be installed before sending.");
+  if (!input.accountSidConfigured) blockers.push("Twilio account SID must be configured in a secret store before sending.");
+  if (!input.authTokenConfigured) blockers.push("Twilio auth token must be configured in a secret store before sending.");
+  if (!input.messagingServiceConfigured) blockers.push("Twilio messaging service SID must be configured before sending.");
+  if (!input.legalConsentCopyApproved) blockers.push("SMS consent and compliance copy must be legal-approved before sending.");
+  if (!input.consentProofAvailable) blockers.push("SMS delivery requires stored consent proof for this destination.");
+  if (!input.quietHoursPolicyConfigured) blockers.push("SMS quiet-hours policy must be configured before sending.");
+  if (input.withinQuietHours) blockers.push("SMS delivery is inside quiet hours and must be delayed.");
+  if (input.destinationSuppressed || input.consent.smsStoppedAt) blockers.push("SMS destination is suppressed by STOP/unsubscribe state and must not be sent.");
+  if (!input.deliveryLogPersistenceAvailable) blockers.push("NotificationDelivery persistence must be available before SMS provider send.");
+
+  const delivery = buildDeliveryPlan({
+    key: input.templateKey,
+    context: input.context,
+    consent: input.consent,
+    audience: "client",
+  });
+  const smsCandidate = delivery.candidates.find((candidate) => candidate.channel === "sms");
+  if (!smsCandidate || smsCandidate.status === "blocked" || smsCandidate.status === "requires_destination") {
+    blockers.push(smsCandidate?.reason ?? "SMS delivery candidate is unavailable.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    provider: "twilio",
+    channel: "sms",
+    tenantId: input.tenantId,
+    notificationId: input.notificationId,
+    deliveryId: input.deliveryId,
+    toMasked: input.consent.phone ? maskDestination("sms", input.consent.phone) ?? null : null,
+    idempotencyKey: `sms-send:${input.tenantId}:${input.deliveryId}:${input.requestId}`,
+    payloadPreview: {
+      bodyPreview: smsLimit(delivery.template.smsBody),
+      purpose: delivery.template.purpose,
+      requiresHumanReview: delivery.template.requiresHumanReview,
+    },
+    requiredWrites: ["NotificationDelivery", "ProviderEvent", "SuppressionCheck", "ConsentSnapshot", "AuditLog", "IdempotencyKey"],
+    requiredControls: [
+      "Persist queued NotificationDelivery before provider send and final Twilio status after send.",
+      "Use request idempotency metadata to prevent duplicate SMS sends.",
+      "Check STOP, unsubscribe, consent proof, and tenant suppression state immediately before send.",
+      "Apply tenant quiet-hours policy before Twilio API calls.",
+      "Store only masked phone numbers and redacted SMS body previews in logs.",
+      "Verify Twilio webhook signatures before reconciling delivered, failed, STOP, START, or HELP events.",
     ],
     blockers,
   };
