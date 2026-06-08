@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T17:37:02.042Z",
+  "generatedAt": "2026-06-08T18:40:48.004Z",
   "source": "Phase 17 quality gate hardening",
   "status": "warn",
   "totalGaps": 133,
@@ -306,11 +306,6 @@
       "status": "warn",
       "gapId": "GAP-078",
       "message": "Remaining work lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-080",
-      "message": "Verification/test field lacks concrete evidence detail."
     },
     {
       "status": "warn",
