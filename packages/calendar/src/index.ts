@@ -106,6 +106,20 @@ export interface SignedIcsFeedAccessDecision {
   reason: string;
 }
 
+export interface CalendarTimezoneFinding {
+  id: string;
+  timezone: string;
+  status: "pass" | "fail";
+  message: string;
+}
+
+export interface CalendarTimezoneAuditSummary {
+  status: "pass" | "fail";
+  checkedCount: number;
+  uniqueTimezones: string[];
+  findings: CalendarTimezoneFinding[];
+}
+
 function escapeIcsText(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/,/g, "\\,").replace(/;/g, "\\;").replace(/\n/g, "\\n");
 }
@@ -132,6 +146,51 @@ function rangeOverlaps(aStart: string, aEnd: string, bStart: string, bEnd: strin
 
 function slugify(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+export function isValidIanaTimezone(timezone: string): boolean {
+  if (!timezone || timezone.trim() !== timezone) {
+    return false;
+  }
+  if (!timezone.includes("/")) {
+    return false;
+  }
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date("2026-06-08T00:00:00.000Z"));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function auditCalendarTimezones(input: {
+  blocks?: readonly CalendarTimeBlock[];
+  windows?: readonly Pick<AvailabilityWindow, "id" | "timezone">[];
+  travelStops?: readonly Pick<TravelStop, "id" | "timezone">[];
+  requiredTimezones?: readonly string[];
+}): CalendarTimezoneAuditSummary {
+  const findings: CalendarTimezoneFinding[] = [];
+  const add = (id: string, timezone: string) => {
+    const valid = isValidIanaTimezone(timezone);
+    findings.push({
+      id,
+      timezone,
+      status: valid ? "pass" : "fail",
+      message: valid ? "Timezone is a valid IANA identifier." : "Timezone must be a trimmed valid IANA identifier.",
+    });
+  };
+
+  for (const block of input.blocks ?? []) add(`block:${block.id}`, block.timezone);
+  for (const window of input.windows ?? []) add(`window:${window.id}`, window.timezone);
+  for (const stop of input.travelStops ?? []) add(`travel:${stop.id}`, stop.timezone);
+  for (const timezone of input.requiredTimezones ?? []) add(`required:${timezone}`, timezone);
+
+  return {
+    status: findings.some((finding) => finding.status === "fail") ? "fail" : "pass",
+    checkedCount: findings.length,
+    uniqueTimezones: Array.from(new Set(findings.map((finding) => finding.timezone))).sort(),
+    findings,
+  };
 }
 
 export function applyBuffers(block: CalendarTimeBlock): BufferedCalendarBlock {

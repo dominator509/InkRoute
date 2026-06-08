@@ -3,8 +3,10 @@ import {
   buildAvailabilitySlots,
   buildSignedIcsFeedDraft,
   buildSignedIcsFeedTokenHash,
+  auditCalendarTimezones,
   detectCalendarConflicts,
   evaluateSignedIcsFeedAccess,
+  isValidIanaTimezone,
   type CalendarTimeBlock,
 } from "../src/index";
 import type { AvailabilityWindow } from "@inkroute/types";
@@ -140,5 +142,42 @@ describe("calendar availability", () => {
         now: "2026-06-08T00:00:00.000Z",
       }).status,
     ).toBe("expired");
+  });
+
+  it("audits IANA timezones across blocks, windows, travel stops, and required city matrix", () => {
+    expect(isValidIanaTimezone("America/Los_Angeles")).toBe(true);
+    expect(isValidIanaTimezone("America/Phoenix")).toBe(true);
+    expect(isValidIanaTimezone("PST")).toBe(false);
+    expect(isValidIanaTimezone(" America/New_York")).toBe(false);
+
+    const summary = auditCalendarTimezones({
+      blocks: [busy],
+      windows: [window],
+      travelStops: [
+        {
+          id: "stop_1",
+          timezone: "America/New_York",
+        },
+      ],
+      requiredTimezones: ["America/Los_Angeles", "America/Phoenix", "America/New_York", "America/Chicago"],
+    });
+
+    expect(summary.status).toBe("pass");
+    expect(summary.checkedCount).toBe(7);
+    expect(summary.uniqueTimezones).toEqual([
+      "America/Chicago",
+      "America/Los_Angeles",
+      "America/New_York",
+      "America/Phoenix",
+    ]);
+
+    const failing = auditCalendarTimezones({
+      blocks: [{ ...busy, id: "bad_block", timezone: "US/Pacific Time" }],
+    });
+    expect(failing.status).toBe("fail");
+    expect(failing.findings[0]).toMatchObject({
+      id: "block:bad_block",
+      status: "fail",
+    });
   });
 });
