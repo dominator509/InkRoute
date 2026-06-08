@@ -66,7 +66,21 @@ function isNonOpenStatus(value) {
 
 function hasEvidence(value) {
   const v = (value || "").toLowerCase();
-  return /`[^`]+`/.test(value || "") || /\b(run|execute|pass|passed|output|log|ci|provider|verify|evidence|proof|proofs|snapshot|screenshot|artifact|command)\b/.test(v);
+  return /`[^`]+`/.test(value || "") || /\b(run|execute|pass|passed|output|log|ci|provider|verify|evidence|proof|proofs|snapshot|screenshot|artifact|command|check|verified|commanded|drill|reviewed|updated|command output)\b/.test(v);
+}
+
+function hasGapClosureEvidence(newRow) {
+  const statusHasEvidence = hasEvidence(newRow.currentStatus);
+  const verificationHasEvidence = hasEvidence(newRow.verificationNeeded);
+
+  if (!statusHasEvidence || !verificationHasEvidence) {
+    const checks = [];
+    if (!statusHasEvidence) checks.push("current status");
+    if (!verificationHasEvidence) checks.push("verification/test needed");
+    return { ok: false, checks };
+  }
+
+  return { ok: true, checks: [] };
 }
 
 function collectGapDiff(diffText) {
@@ -177,9 +191,12 @@ function runGapDiffAudit() {
       continue;
     }
 
-    if (!hasEvidence(newRow.verificationNeeded)) {
-      findings.push(`GAP-TRK-DIFF: ${gapId} changed to non-open status or downgraded blocker but lacks verification/test detail.`);
+    const evidence = hasGapClosureEvidence(newRow);
+    if (!evidence.ok) {
+      findings.push(`GAP-TRK-DIFF: ${gapId} changed to non-open status or downgraded blocker but lacks evidence in ${evidence.checks.join(" and ")} column(s).`);
+      continue;
     }
+
   }
 
   if (findings.length > 0) {
