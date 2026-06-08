@@ -264,6 +264,19 @@ export interface SeoTechnicalAuditSummary {
   findings: SeoIssue[];
 }
 
+export interface JsonLdValidationInput {
+  graph: JsonLd | JsonLd[];
+  sourcePath: string;
+}
+
+export interface JsonLdValidationResult {
+  sourcePath: string;
+  status: "pass" | "warn" | "fail";
+  itemCount: number;
+  types: string[];
+  findings: SeoIssue[];
+}
+
 export function normalizePath(path: string): string {
   const trimmed = path.trim();
   if (trimmed === "") return "/";
@@ -646,6 +659,122 @@ function isJsonLdGraph(value: JsonLd): value is { "@graph": unknown[] } {
   return Array.isArray(value["@graph"]);
 }
 
+function asJsonLdItems(graph: JsonLd | JsonLd[]): unknown[] {
+  if (Array.isArray(graph)) return graph;
+  if (isJsonLdGraph(graph)) return graph["@graph"];
+  return [graph];
+}
+
+function hasTextField(item: Record<string, unknown>, field: string): boolean {
+  return typeof item[field] === "string" && item[field].trim().length > 0;
+}
+
+function hasArrayField(item: Record<string, unknown>, field: string): boolean {
+  return Array.isArray(item[field]) && (item[field] as unknown[]).length > 0;
+}
+
+function addJsonLdFinding(findings: SeoIssue[], input: Omit<SeoIssue, "nextAction"> & { nextAction?: string }): void {
+  findings.push({
+    ...input,
+    nextAction: input.nextAction ?? "Fix structured data before treating rendered SEO output as launch-ready.",
+  });
+}
+
+export function auditJsonLdRichResultCompatibility(input: JsonLdValidationInput): JsonLdValidationResult {
+  const findings: SeoIssue[] = [];
+  const items = asJsonLdItems(input.graph);
+  const types: string[] = [];
+  const requiredByType: Record<string, string[]> = {
+    WebSite: ["name", "url"],
+    WebPage: ["name", "description", "url"],
+    Person: ["name", "description", "url"],
+    Service: ["name", "description", "provider", "serviceType"],
+    ImageObject: ["name", "contentUrl", "description"],
+    Event: ["name", "startDate", "endDate", "location", "performer", "description"],
+    Review: ["reviewRating", "author", "reviewBody", "datePublished"],
+    FAQPage: ["mainEntity"],
+    BreadcrumbList: ["itemListElement"],
+  };
+  const supportedTypes = new Set([...Object.keys(requiredByType), "TattooParlor"]);
+
+  if (items.length === 0) {
+    addJsonLdFinding(findings, {
+      code: "JSON_LD_GRAPH_EMPTY",
+      severity: "error",
+      field: "jsonLd",
+      message: `${input.sourcePath} rendered no structured data items.`,
+    });
+  }
+
+  for (const item of items) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      addJsonLdFinding(findings, {
+        code: "JSON_LD_ITEM_INVALID",
+        severity: "error",
+        field: "jsonLd",
+        message: `${input.sourcePath} contains a non-object structured data item.`,
+      });
+      continue;
+    }
+
+    const record = item as Record<string, unknown>;
+    const rawType = record["@type"];
+    const type = typeof rawType === "string" ? rawType : "";
+    if (!type) {
+      addJsonLdFinding(findings, {
+        code: "JSON_LD_ITEM_TYPE_MISSING",
+        severity: "error",
+        field: "@type",
+        message: `${input.sourcePath} contains a structured data item without @type.`,
+      });
+      continue;
+    }
+
+    types.push(type);
+    if (!supportedTypes.has(type)) {
+      addJsonLdFinding(findings, {
+        code: "JSON_LD_TYPE_UNSUPPORTED",
+        severity: "warning",
+        field: "@type",
+        message: `${input.sourcePath} uses unsupported schema type ${type}; confirm rich-result eligibility before launch.`,
+        nextAction: "Replace unsupported schema type or document why it is retained outside rich-result eligibility.",
+      });
+      continue;
+    }
+
+    if (type === "TattooParlor") {
+      addJsonLdFinding(findings, {
+        code: "JSON_LD_TYPE_NOT_GOOGLE_RICH_RESULT",
+        severity: "warning",
+        field: "@type",
+        message: "TattooParlor is schema.org vocabulary but not a Google rich-result type in this local compatibility gate.",
+        nextAction: "Validate rendered LocalBusiness output with external rich-result/crawler tooling before launch.",
+      });
+    }
+
+    for (const field of requiredByType[type] ?? []) {
+      const ok = field === "mainEntity" || field === "itemListElement" ? hasArrayField(record, field) : Boolean(record[field]) && (typeof record[field] !== "string" || hasTextField(record, field));
+      if (!ok) {
+        addJsonLdFinding(findings, {
+          code: "JSON_LD_REQUIRED_FIELD_MISSING",
+          severity: "error",
+          field,
+          message: `${input.sourcePath} ${type} item is missing required field ${field}.`,
+        });
+      }
+    }
+  }
+
+  const status = findings.some((finding) => finding.severity === "error") ? "fail" : findings.length > 0 ? "warn" : "pass";
+  return {
+    sourcePath: input.sourcePath,
+    status,
+    itemCount: items.length,
+    types: Array.from(new Set(types)).sort(),
+    findings,
+  };
+}
+
 export function auditSeoTechnicalReadiness(input: SeoTechnicalAuditInput): SeoTechnicalAuditSummary {
   const findings: SeoIssue[] = [];
   const sitemap = buildSitemapPlan({ baseUrl: input.baseUrl, routes: input.routes });
@@ -687,6 +816,9 @@ export function auditSeoTechnicalReadiness(input: SeoTechnicalAuditInput): SeoTe
   }
 
   for (const graph of input.jsonLdGraphs ?? []) {
+    const richResultAudit = auditJsonLdRichResultCompatibility({ graph, sourcePath: "technical-audit" });
+    findings.push(...richResultAudit.findings);
+
     if (!isJsonLdGraph(graph)) {
       addTechnicalFinding(findings, {
         code: "JSON_LD_GRAPH_MISSING",

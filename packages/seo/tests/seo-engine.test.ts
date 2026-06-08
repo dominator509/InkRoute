@@ -3,10 +3,14 @@ import type { ArtistProfile, PortfolioItem, SeoCityPage, SeoStylePage, TravelSto
 import {
   auditSeoRoute,
   auditSeoTechnicalReadiness,
+  auditJsonLdRichResultCompatibility,
   buildCitySeoBrief,
   buildFaqSchema,
   buildInternalLinkPlan,
   buildMetadataDraft,
+  buildArtistPersonSchema,
+  buildPortfolioImageSchema,
+  buildTravelEventSchema,
   buildSeoPublicationMutationPlan,
   buildSeoRedirectDecision,
   buildSitemapPlan,
@@ -182,6 +186,94 @@ describe("SEO engine helpers", () => {
     expect(graph["@graph"]).toHaveLength(3);
     expect(graph["@graph"][1]?.["@type"]).toBe("WebPage");
     expect((graph["@graph"][1] as Record<string, unknown>).name).toBe("Seattle Tattoo Booking");
+  });
+
+  it("validates rendered page-style JSON-LD snapshots for required rich-result fields", () => {
+    const artist: ArtistProfile = {
+      id: "artist_snapshot",
+      tenantId: "tenant_001",
+      slug: "mara-vale",
+      displayName: "Mara Vale",
+      bio: "Nomadic tattoo artist specializing in blackwork and ornamental guest spots.",
+      specialties: ["blackwork", "ornamental"],
+      bookingEnabled: true,
+    };
+    const portfolioItem: PortfolioItem = {
+      id: "portfolio_snapshot",
+      tenantId: "tenant_001",
+      artistId: "artist_snapshot",
+      title: "Seattle ornamental shoulder piece",
+      slug: "seattle-ornamental-shoulder-piece",
+      caption: "Ornamental shoulder tattoo photographed in Seattle.",
+      styles: ["ornamental"],
+      placement: "shoulder",
+      freshness: "healed",
+      city: "Seattle",
+      imageUrl: "https://inkroute.example/media/seattle-ornamental-shoulder-piece.jpg",
+      altText: "Healed ornamental shoulder tattoo",
+      isFeatured: true,
+    };
+    const travelStop: TravelStop = {
+      id: "travel_snapshot",
+      tenantId: "tenant_001",
+      artistId: "artist_snapshot",
+      city: "Seattle",
+      region: "WA",
+      country: "US",
+      timezone: "America/Los_Angeles",
+      startsAt: "2026-06-04T00:00:00.000Z",
+      endsAt: "2026-06-08T00:00:00.000Z",
+      bookingStatus: "open",
+      publicNotes: "Seattle guest spot booking is open for ornamental and blackwork projects.",
+    };
+    const renderedHomeSchema = [
+      buildArtistPersonSchema(artist),
+      buildPortfolioImageSchema(portfolioItem),
+      buildTravelEventSchema(travelStop, artist),
+      buildFaqSchema([{ question: "Can I book Seattle?", answer: "Yes, Seattle booking is open in this demo snapshot." }]),
+    ];
+
+    const audit = auditJsonLdRichResultCompatibility({
+      graph: renderedHomeSchema,
+      sourcePath: "apps/web/app/page.tsx",
+    });
+
+    expect(audit.status).toBe("pass");
+    expect(audit.itemCount).toBe(4);
+    expect(audit.types).toEqual(["Event", "FAQPage", "ImageObject", "Person"]);
+    expect(audit.findings).toHaveLength(0);
+  });
+
+  it("flags unsupported or malformed JSON-LD before external crawler validation", () => {
+    const unsupported = auditJsonLdRichResultCompatibility({
+      graph: composeJsonLdGraph([
+        {
+          "@context": "https://schema.org",
+          "@type": "TattooParlor",
+          name: "Mara Vale Studio",
+          description: "Schema.org local business output retained for crawler QA.",
+          address: { "@type": "PostalAddress", addressLocality: "Seattle" },
+        },
+      ]),
+      sourcePath: "apps/web/app/cities/[citySlug]/page.tsx",
+    });
+    const malformed = auditJsonLdRichResultCompatibility({
+      graph: composeJsonLdGraph([
+        {
+          "@context": "https://schema.org",
+          "@type": "Event",
+          name: "Guest spot without dates",
+        },
+      ]),
+      sourcePath: "apps/web/app/travel/page.tsx",
+    });
+
+    expect(unsupported.status).toBe("warn");
+    expect(unsupported.findings.some((finding) => finding.code === "JSON_LD_TYPE_NOT_GOOGLE_RICH_RESULT")).toBe(true);
+    expect(malformed.status).toBe("fail");
+    expect(malformed.findings.filter((finding) => finding.code === "JSON_LD_REQUIRED_FIELD_MISSING").map((finding) => finding.field)).toEqual(
+      expect.arrayContaining(["startDate", "endDate", "location", "performer", "description"]),
+    );
   });
 
   it("audits technical SEO readiness for sitemap, canonical, and JSON-LD invariants", () => {
