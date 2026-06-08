@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from "node:fs";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -128,6 +128,58 @@ function resolveRefs(eventRefs) {
   return null;
 }
 
+function buildGapTrackerDiff(baseRef, headRef) {
+  try {
+    execSync(`git merge-base ${baseRef} ${headRef}`, {
+      cwd: root,
+      stdio: "ignore",
+    });
+
+    return execSync(`git diff --unified=0 ${baseRef}...${headRef} -- GAP_TRACKER.md`, {
+      cwd: root,
+      encoding: "utf8",
+    });
+  } catch {
+    console.warn("Gap tracker diff audit: no merge base available; falling back to direct base/head diff.");
+    return execSync(`git diff --unified=0 ${baseRef} ${headRef} -- GAP_TRACKER.md`, {
+      cwd: root,
+      encoding: "utf8",
+    });
+  }
+}
+
+function refExists(ref) {
+  try {
+    execFileSync("git", ["rev-parse", "--verify", `${ref}^{commit}`], {
+      cwd: root,
+      stdio: "ignore",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function fetchRefIfMissing(ref, refForFetch) {
+  if (refExists(ref)) {
+    return;
+  }
+
+  try {
+    execFileSync("git", ["fetch", "--no-tags", "--depth=1", "origin", refForFetch], {
+      cwd: root,
+      stdio: "ignore",
+    });
+  } catch {
+    if (refExists(ref)) {
+      console.warn(`Gap tracker diff audit: fetch failed for ${refForFetch}, but ${ref} is already available locally.`);
+      return;
+    }
+
+    throw new Error(`Gap tracker diff audit could not fetch required ref ${refForFetch}.`);
+  }
+}
+
 function runGapDiffAudit() {
   const isPullRequest = process.env.GITHUB_EVENT_NAME === "pull_request";
   if (!isPullRequest && process.env.GITHUB_EVENT_PATH == null) {
@@ -152,23 +204,14 @@ function runGapDiffAudit() {
     : headRef;
 
   if (isSha(baseRef) || baseRef.startsWith("origin/")) {
-    execSync(`git fetch --no-tags --depth=1 origin ${baseRefForFetch}`, {
-      cwd: root,
-      stdio: "ignore",
-    });
+    fetchRefIfMissing(baseRef, baseRefForFetch);
   }
 
   if (isSha(headRef) || headRef.startsWith("origin/")) {
-    execSync(`git fetch --no-tags --depth=1 origin ${headRefForFetch}`, {
-      cwd: root,
-      stdio: "ignore",
-    });
+    fetchRefIfMissing(headRef, headRefForFetch);
   }
 
-  const diff = execSync(`git diff --unified=0 ${baseRef}...${headRef} -- GAP_TRACKER.md`, {
-    cwd: root,
-    encoding: "utf8",
-  });
+  const diff = buildGapTrackerDiff(baseRef, headRef);
 
   const { added, removed } = collectGapDiff(diff);
   const changedGapIds = new Set([...added.keys(), ...removed.keys()]);
