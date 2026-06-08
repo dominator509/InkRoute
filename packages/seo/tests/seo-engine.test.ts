@@ -11,6 +11,7 @@ import {
   buildArtistPersonSchema,
   buildPortfolioImageSchema,
   buildTravelEventSchema,
+  buildSearchConsoleOperationPlan,
   buildSeoPublicationMutationPlan,
   buildSeoRedirectDecision,
   buildSitemapPlan,
@@ -621,5 +622,67 @@ describe("SEO engine helpers", () => {
     expect(allowed).toMatchObject({ action: "allow", shouldIndex: true });
     expect(privateRoute).toMatchObject({ action: "noindex", shouldIndex: false });
     expect(missing).toMatchObject({ action: "not_found", shouldIndex: false });
+  });
+
+  it("blocks Search Console provider operations without credentials or tenant ownership", () => {
+    const missingCredentials = buildSearchConsoleOperationPlan({
+      operation: "submit_sitemap",
+      tenantId: "tenant_001",
+      tenantSlug: "inkroute-demo",
+      siteUrl: "https://inkroute.example",
+      sitemapUrl: "https://inkroute.example/sitemap.xml",
+      credentialsConfigured: false,
+      propertyOwnerTenantId: "tenant_001",
+    });
+    const tenantMismatch = buildSearchConsoleOperationPlan({
+      operation: "verify_property",
+      tenantId: "tenant_001",
+      tenantSlug: "inkroute-demo",
+      siteUrl: "inkroute.example",
+      credentialsConfigured: true,
+      propertyOwnerTenantId: "tenant_other",
+    });
+
+    expect(missingCredentials.status).toBe("blocked");
+    expect(missingCredentials.canExecuteProviderCall).toBe(false);
+    expect(missingCredentials.blockers.join(" ")).toContain("credentials");
+    expect(missingCredentials.requiredEnv).toContain("GOOGLE_SEARCH_CONSOLE_PRIVATE_KEY");
+    expect(tenantMismatch.dashboardStatus).toBe("tenant_mismatch");
+    expect(tenantMismatch.blockers.join(" ")).toContain("different tenant");
+    expect(tenantMismatch.propertyType).toBe("domain");
+    expect(tenantMismatch.verificationMethod).toBe("dns_txt");
+  });
+
+  it("plans Search Console sitemap submission and query/page imports as credential-gated tenant writes", () => {
+    const sitemap = buildSearchConsoleOperationPlan({
+      operation: "submit_sitemap",
+      tenantId: "tenant_001",
+      tenantSlug: "inkroute-demo",
+      siteUrl: "https://inkroute.example",
+      sitemapUrl: "https://inkroute.example/sitemap.xml",
+      credentialsConfigured: true,
+      propertyOwnerTenantId: "tenant_001",
+    });
+    const importPlan = buildSearchConsoleOperationPlan({
+      operation: "import_query_pages",
+      tenantId: "tenant_001",
+      tenantSlug: "inkroute-demo",
+      siteUrl: "https://inkroute.example",
+      credentialsConfigured: true,
+      propertyOwnerTenantId: "tenant_001",
+      dateRangeDays: 28,
+    });
+
+    expect(sitemap.status).toBe("ready");
+    expect(sitemap.canExecuteProviderCall).toBe(true);
+    expect(sitemap.steps[0]).toMatchObject({
+      id: "submit-sitemap",
+      providerEndpoint: "searchconsole.sitemaps.submit",
+      writesTenantData: true,
+    });
+    expect(importPlan.status).toBe("ready");
+    expect(importPlan.shouldStoreImportedRows).toBe(true);
+    expect(importPlan.steps[0]?.providerEndpoint).toBe("searchconsole.searchanalytics.query");
+    expect(importPlan.dashboardStatus).toBe("ready_for_provider");
   });
 });

@@ -250,6 +250,50 @@ export interface SearchConsolePropertyDraft {
   nextAction: string;
 }
 
+export type SearchConsoleOperation = "verify_property" | "submit_sitemap" | "import_query_pages" | "monitor_indexing";
+export type SearchConsolePlanStatus = "ready" | "blocked";
+
+export interface SearchConsoleOperationInput {
+  operation: SearchConsoleOperation;
+  tenantId: string;
+  tenantSlug: string;
+  siteUrl: string;
+  sitemapUrl?: string;
+  propertyOwnerTenantId?: string;
+  credentialsConfigured: boolean;
+  serviceAccountEmail?: string;
+  OAuthClientConfigured?: boolean;
+  verificationMethod?: SearchConsolePropertyDraft["verificationMethod"];
+  dateRangeDays?: number;
+}
+
+export interface SearchConsoleOperationStep {
+  id: string;
+  summary: string;
+  providerEndpoint: string;
+  requiresCredential: boolean;
+  writesTenantData: boolean;
+}
+
+export interface SearchConsoleOperationPlan {
+  status: SearchConsolePlanStatus;
+  operation: SearchConsoleOperation;
+  tenantId: string;
+  tenantSlug: string;
+  siteUrl: string;
+  sitemapUrl?: string;
+  propertyType: SearchConsolePropertyDraft["propertyType"];
+  verificationMethod: SearchConsolePropertyDraft["verificationMethod"];
+  canExecuteProviderCall: boolean;
+  requiresCredential: true;
+  requiresTenantOwnershipCheck: true;
+  shouldStoreImportedRows: boolean;
+  blockers: string[];
+  steps: SearchConsoleOperationStep[];
+  requiredEnv: string[];
+  dashboardStatus: "not_configured" | "ready_for_provider" | "tenant_mismatch";
+}
+
 export interface SeoTechnicalAuditInput {
   baseUrl: string;
   routes: SeoRouteRecord[];
@@ -630,6 +674,79 @@ export function buildSearchConsolePropertyDraft(siteUrl: string, propertyType: "
     verificationMethod: propertyType === "domain" ? "dns_txt" : "html_file",
     status: "credential_gated",
     nextAction: "Verify ownership in Google Search Console, submit sitemap, and connect query/page metrics to the SEO dashboard.",
+  };
+}
+
+function inferSearchConsolePropertyType(siteUrl: string): SearchConsolePropertyDraft["propertyType"] {
+  return /^https?:\/\//i.test(siteUrl) ? "url_prefix" : "domain";
+}
+
+export function buildSearchConsoleOperationPlan(input: SearchConsoleOperationInput): SearchConsoleOperationPlan {
+  const propertyType = inferSearchConsolePropertyType(input.siteUrl);
+  const verificationMethod = input.verificationMethod ?? (propertyType === "domain" ? "dns_txt" : "html_file");
+  const blockers: string[] = [];
+
+  if (!input.tenantId.trim()) blockers.push("Tenant id is required before Search Console operations.");
+  if (!input.tenantSlug.trim()) blockers.push("Tenant slug is required before Search Console operations.");
+  if (!input.siteUrl.trim()) blockers.push("Search Console site URL or domain property is required.");
+  if (!input.credentialsConfigured) blockers.push("Google Search Console credentials are not configured.");
+  if (input.propertyOwnerTenantId && input.propertyOwnerTenantId !== input.tenantId) blockers.push("Search Console property belongs to a different tenant.");
+  if (input.operation === "submit_sitemap" && !input.sitemapUrl) blockers.push("Sitemap submission requires a sitemap URL.");
+  if (input.operation === "import_query_pages" && (input.dateRangeDays ?? 0) <= 0) blockers.push("Query/page import requires a positive date range.");
+
+  const steps: SearchConsoleOperationStep[] = [];
+  if (input.operation === "verify_property") {
+    steps.push({
+      id: "verify-property",
+      summary: `Verify ${input.siteUrl} ownership using ${verificationMethod}.`,
+      providerEndpoint: "searchconsole.sites.add / ownership verification",
+      requiresCredential: true,
+      writesTenantData: true,
+    });
+  } else if (input.operation === "submit_sitemap") {
+    steps.push({
+      id: "submit-sitemap",
+      summary: `Submit sitemap ${input.sitemapUrl ?? "missing"} for ${input.siteUrl}.`,
+      providerEndpoint: "searchconsole.sitemaps.submit",
+      requiresCredential: true,
+      writesTenantData: true,
+    });
+  } else if (input.operation === "import_query_pages") {
+    steps.push({
+      id: "import-query-pages",
+      summary: `Import query/page performance for the last ${input.dateRangeDays ?? 0} day(s).`,
+      providerEndpoint: "searchconsole.searchanalytics.query",
+      requiresCredential: true,
+      writesTenantData: true,
+    });
+  } else {
+    steps.push({
+      id: "monitor-indexing",
+      summary: "Check sitemap/indexing status and surface dashboard alerts for coverage regressions.",
+      providerEndpoint: "searchconsole.sitemaps.get / urlInspection.index.inspect",
+      requiresCredential: true,
+      writesTenantData: true,
+    });
+  }
+
+  const tenantMismatch = blockers.some((blocker) => blocker.includes("different tenant"));
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    operation: input.operation,
+    tenantId: input.tenantId,
+    tenantSlug: input.tenantSlug,
+    siteUrl: input.siteUrl,
+    ...(input.sitemapUrl ? { sitemapUrl: input.sitemapUrl } : {}),
+    propertyType,
+    verificationMethod,
+    canExecuteProviderCall: blockers.length === 0,
+    requiresCredential: true,
+    requiresTenantOwnershipCheck: true,
+    shouldStoreImportedRows: input.operation === "import_query_pages" || input.operation === "monitor_indexing",
+    blockers,
+    steps,
+    requiredEnv: ["GOOGLE_SEARCH_CONSOLE_CLIENT_EMAIL", "GOOGLE_SEARCH_CONSOLE_PRIVATE_KEY", "GOOGLE_SEARCH_CONSOLE_SITE_URL"],
+    dashboardStatus: tenantMismatch ? "tenant_mismatch" : blockers.length === 0 ? "ready_for_provider" : "not_configured",
   };
 }
 
