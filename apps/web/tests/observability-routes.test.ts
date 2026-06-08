@@ -1,19 +1,28 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+
+const dbMocks = vi.hoisted(() => ({
+  tenantFindUnique: vi.fn(),
+  transaction: vi.fn(),
+}));
 
 vi.mock("@inkroute/db", () => ({
   prisma: {
     tenant: {
-      findUnique: vi.fn(async () => {
-        throw new Error("database unavailable in route contract test");
-      }),
+      findUnique: dbMocks.tenantFindUnique,
     },
-    $transaction: vi.fn(),
+    $transaction: dbMocks.transaction,
   },
 }));
 
 import { POST as createPublicErrorReport } from "../app/api/public/[tenantSlug]/error-reports/route";
 import { POST as receiveSentryWebhook } from "../app/api/webhooks/sentry/route";
+
+beforeEach(() => {
+  dbMocks.tenantFindUnique.mockReset();
+  dbMocks.transaction.mockReset();
+  dbMocks.tenantFindUnique.mockRejectedValue(new Error("database unavailable in route contract test"));
+});
 
 function errorReportRequest(body: unknown, clientIp: string): NextRequest {
   return new NextRequest("https://local.test/api/public/inkroute-demo/error-reports", {
@@ -84,6 +93,83 @@ describe("observability route boundaries", () => {
     expect(JSON.stringify(payload.data.preview.report.redactedMetadata)).not.toContain("avery@example.com");
     expect(payload.data.preview.report.stackHash).toHaveLength(12);
     expect(payload.data.localBoundary.rateLimitRule).toBe("fallback-error-report");
+  });
+
+  it("persists database-backed public error reports as redacted tenant rows with audit metadata", async () => {
+    const createdReport = {
+      id: "err_db_route_test",
+      tenantId: "tenant_db_route_test",
+      severity: "critical",
+      status: "open",
+      source: "web",
+      message: "[redacted:email] crashed payment preview",
+      stackHash: "abc123def456",
+      release: "phase11-db-route-test",
+      route: "/booking",
+      createdAt: new Date("2026-06-08T18:45:00.000Z"),
+    };
+    const createdAudit = { id: "audit_db_route_test" };
+    const errorReportCreate = vi.fn(async ({ data }) => ({ ...createdReport, ...data, id: createdReport.id, createdAt: createdReport.createdAt }));
+    const auditLogCreate = vi.fn(async ({ data }) => ({ ...createdAudit, ...data }));
+
+    dbMocks.tenantFindUnique.mockResolvedValue({ id: "tenant_db_route_test" });
+    dbMocks.transaction.mockImplementation(async (callback) =>
+      callback({
+        errorReport: { create: errorReportCreate },
+        auditLog: { create: auditLogCreate },
+      }),
+    );
+
+    const response = await createPublicErrorReport(
+      errorReportRequest(
+        {
+          source: "web",
+          runtime: "browser",
+          environment: "preview",
+          message: "Client avery@example.com hit a payment crash",
+          route: "/booking",
+          release: "phase11-db-route-test",
+          handled: false,
+          metadata: {
+            clientEmail: "avery@example.com",
+            card: "4242 4242 4242 4242",
+            bookingId: "booking_db_route_test",
+          },
+        },
+        "203.0.113.83",
+      ),
+      { params: Promise.resolve({ tenantSlug: "inkroute-demo" }) },
+    );
+    const payload = (await response.json()) as {
+      ok: boolean;
+      data: {
+        persistence: string;
+        report: { redactedMessage: string; stackHash: string; auditId: string };
+      };
+    };
+
+    expect(response.status).toBe(201);
+    expect(payload.ok).toBe(true);
+    expect(payload.data.persistence).toBe("database");
+    expect(payload.data.report.auditId).toBe("audit_db_route_test");
+    expect(payload.data.report.redactedMessage).not.toContain("avery@example.com");
+    expect(errorReportCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        tenantId: "tenant_db_route_test",
+        message: expect.not.stringContaining("avery@example.com"),
+      }),
+    });
+    const persistedMetadata = JSON.stringify(errorReportCreate.mock.calls[0]?.[0].data.metadata ?? {});
+    expect(persistedMetadata).not.toContain("avery@example.com");
+    expect(persistedMetadata).not.toContain("4242 4242 4242 4242");
+    expect(auditLogCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        tenantId: "tenant_db_route_test",
+        action: "observability:error_report.persist",
+        entityType: "ErrorReport",
+        entityId: "err_db_route_test",
+      }),
+    });
   });
 
   it("keeps Sentry webhook ingestion credential-gated until provider verification is wired", async () => {
