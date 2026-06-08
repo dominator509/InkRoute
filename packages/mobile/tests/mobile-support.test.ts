@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   getMobileScreen,
+  buildOfflineIdempotencyKey,
+  calculateOfflineRetryDelayMinutes,
   mobileScreenRegistry,
   phase6HealthChecks,
   phase6MobileBoundaries,
+  planOfflineSync,
   summarizeOfflineQueue,
   type OfflineQueueItem,
 } from "../src/index";
@@ -74,6 +77,84 @@ describe("mobile support helpers", () => {
       sensitive: 1,
       productionReady: false,
     });
+  });
+
+  it("plans offline sync with idempotency, encryption, retry, and conflict decisions", () => {
+    const items: OfflineQueueItem[] = [
+      {
+        id: "sensitive_1",
+        kind: "client_note",
+        label: "Sensitive client note",
+        status: "queued",
+        createdAt: "2026-06-08T00:00:00.000Z",
+        retryCount: 0,
+        sensitive: true,
+        tenantId: "tenant_001",
+        entityId: "client_001",
+      },
+      {
+        id: "conflict_1",
+        kind: "travel_update",
+        label: "Travel update",
+        status: "queued",
+        createdAt: "2026-06-08T00:01:00.000Z",
+        retryCount: 0,
+        sensitive: false,
+        tenantId: "tenant_001",
+        entityId: "stop_001",
+        localVersion: 2,
+        remoteVersion: 3,
+      },
+      {
+        id: "failed_1",
+        kind: "portfolio_metadata",
+        label: "Portfolio metadata",
+        status: "failed",
+        createdAt: "2026-06-08T00:02:00.000Z",
+        retryCount: 3,
+        sensitive: false,
+        tenantId: "tenant_001",
+      },
+      {
+        id: "synced_1",
+        kind: "aftercare_checkin",
+        label: "Aftercare check-in",
+        status: "synced",
+        createdAt: "2026-06-08T00:03:00.000Z",
+        retryCount: 0,
+        sensitive: false,
+      },
+    ];
+
+    const blocked = planOfflineSync({
+      items,
+      generatedAt: "2026-06-08T01:00:00.000Z",
+      encryptedStoreAvailable: false,
+    });
+
+    expect(buildOfflineIdempotencyKey(items[0]!)).toBe("tenant_001:client_note:client_001:2026-06-08T00:00:00.000Z");
+    expect(calculateOfflineRetryDelayMinutes(3)).toBe(8);
+    expect(blocked.productionReady).toBe(false);
+    expect(blocked.blockedCount).toBe(1);
+    expect(blocked.conflictCount).toBe(1);
+    expect(blocked.decisions.find((decision) => decision.itemId === "sensitive_1")).toMatchObject({
+      status: "blocked_unencrypted",
+      requiresEncryption: true,
+    });
+    expect(blocked.decisions.find((decision) => decision.itemId === "conflict_1")?.status).toBe("conflict");
+    expect(blocked.decisions.find((decision) => decision.itemId === "failed_1")).toMatchObject({
+      status: "retry_later",
+      nextAttemptAt: "2026-06-08T01:08:00.000Z",
+    });
+    expect(blocked.decisions.find((decision) => decision.itemId === "synced_1")?.status).toBe("already_synced");
+
+    const encrypted = planOfflineSync({
+      items: [items[0]!],
+      generatedAt: "2026-06-08T01:00:00.000Z",
+      encryptedStoreAvailable: true,
+    });
+    expect(encrypted.readyCount).toBe(1);
+    expect(encrypted.decisions[0]?.status).toBe("ready_to_sync");
   });
 
   it("keeps production-blocking integration boundaries visible", () => {

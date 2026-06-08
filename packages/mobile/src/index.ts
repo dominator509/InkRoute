@@ -167,6 +167,10 @@ export interface OfflineQueueItem {
   lastAttemptAt?: string;
   retryCount: number;
   sensitive: boolean;
+  tenantId?: string;
+  entityId?: string;
+  localVersion?: number;
+  remoteVersion?: number;
 }
 
 export interface OfflineQueueSummary {
@@ -190,6 +194,118 @@ export function summarizeOfflineQueue(items: readonly OfflineQueueItem[]): Offli
     sensitive,
     productionReady: false,
     warning: "Offline queue is a Phase 6 model only; encrypted persistence and sync conflict handling are not implemented.",
+  };
+}
+
+export type OfflineSyncDecisionStatus = "ready_to_sync" | "retry_later" | "conflict" | "blocked_unencrypted" | "already_synced";
+
+export interface OfflineSyncDecision {
+  itemId: string;
+  status: OfflineSyncDecisionStatus;
+  idempotencyKey: string;
+  requiresEncryption: boolean;
+  nextAttemptAt: string | null;
+  reason: string;
+}
+
+export interface OfflineSyncPlan {
+  generatedAt: string;
+  decisions: readonly OfflineSyncDecision[];
+  readyCount: number;
+  conflictCount: number;
+  blockedCount: number;
+  productionReady: boolean;
+  warning: string;
+}
+
+export function buildOfflineIdempotencyKey(item: OfflineQueueItem): string {
+  const tenant = item.tenantId ?? "unknown-tenant";
+  const entity = item.entityId ?? item.id;
+  return `${tenant}:${item.kind}:${entity}:${item.createdAt}`;
+}
+
+function addMinutes(iso: string, minutes: number): string {
+  return new Date(new Date(iso).getTime() + minutes * 60_000).toISOString();
+}
+
+export function calculateOfflineRetryDelayMinutes(retryCount: number): number {
+  if (retryCount <= 0) return 0;
+  return Math.min(60, 2 ** Math.min(retryCount, 5));
+}
+
+export function planOfflineSync(input: {
+  items: readonly OfflineQueueItem[];
+  generatedAt: string;
+  encryptedStoreAvailable: boolean;
+}): OfflineSyncPlan {
+  const decisions = input.items.map<OfflineSyncDecision>((item) => {
+    const idempotencyKey = buildOfflineIdempotencyKey(item);
+    const requiresEncryption = item.sensitive;
+
+    if (item.status === "synced") {
+      return {
+        itemId: item.id,
+        status: "already_synced",
+        idempotencyKey,
+        requiresEncryption,
+        nextAttemptAt: null,
+        reason: "Item is already marked synced.",
+      };
+    }
+
+    if (requiresEncryption && !input.encryptedStoreAvailable) {
+      return {
+        itemId: item.id,
+        status: "blocked_unencrypted",
+        idempotencyKey,
+        requiresEncryption,
+        nextAttemptAt: null,
+        reason: "Sensitive offline item cannot sync until encrypted local persistence is available.",
+      };
+    }
+
+    if (item.localVersion !== undefined && item.remoteVersion !== undefined && item.localVersion < item.remoteVersion) {
+      return {
+        itemId: item.id,
+        status: "conflict",
+        idempotencyKey,
+        requiresEncryption,
+        nextAttemptAt: null,
+        reason: "Remote version is newer than the local offline mutation.",
+      };
+    }
+
+    if (item.status === "failed") {
+      return {
+        itemId: item.id,
+        status: "retry_later",
+        idempotencyKey,
+        requiresEncryption,
+        nextAttemptAt: addMinutes(input.generatedAt, calculateOfflineRetryDelayMinutes(item.retryCount)),
+        reason: "Failed item should retry with bounded exponential backoff.",
+      };
+    }
+
+    return {
+      itemId: item.id,
+      status: "ready_to_sync",
+      idempotencyKey,
+      requiresEncryption,
+      nextAttemptAt: input.generatedAt,
+      reason: "Queued item can be sent through the authenticated sync worker.",
+    };
+  });
+
+  const conflictCount = decisions.filter((decision) => decision.status === "conflict").length;
+  const blockedCount = decisions.filter((decision) => decision.status === "blocked_unencrypted").length;
+  return {
+    generatedAt: input.generatedAt,
+    decisions,
+    readyCount: decisions.filter((decision) => decision.status === "ready_to_sync").length,
+    conflictCount,
+    blockedCount,
+    productionReady: false,
+    warning: "Offline sync planning is dependency-light only; encrypted device persistence and runtime worker execution remain unimplemented.",
   };
 }
 
