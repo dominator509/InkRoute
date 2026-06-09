@@ -150,6 +150,39 @@ export interface PrivateStorageAccessPlan {
   reasons: readonly string[];
 }
 
+export type FileAssetPersistenceStatus = "ready" | "blocked";
+export type FileAssetAccessLevel = "public_derivative" | "tenant_member" | "client_private" | "system_only";
+
+export interface FileAssetPersistencePlanInput {
+  kind: UploadAssetKind;
+  tenantId: string;
+  subjectId: string;
+  objectKey: string | null;
+  originalFilename: string;
+  mimeType: string;
+  sizeBytes: number;
+  storageVisibility: UploadValidationResult["storageVisibility"];
+  scanStatus: UploadScanStatus | "pending";
+  publicDerivativeObjectKey?: string;
+  providerConfigured: boolean;
+  auditLogConfigured: boolean;
+  fileAssetStoreConfigured: boolean;
+}
+
+export interface FileAssetPersistencePlan {
+  status: FileAssetPersistenceStatus;
+  tenantId: string;
+  subjectId: string;
+  kind: UploadAssetKind;
+  objectKey: string | null;
+  accessLevel: FileAssetAccessLevel;
+  publicReadAllowed: boolean;
+  requiredWrites: Array<"FileAsset" | "AuditLog" | "BookingReferenceImage" | "ConsentArtifact">;
+  requiredFields: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 export interface RateLimitRule {
   id: string;
   routePattern: string;
@@ -2278,6 +2311,67 @@ export function summarizeSecurityPosture(controls: SecurityControl[] = phase13Se
     scaffolded,
     legal,
     productionReady: blockers === 0 && legal === 0,
+  };
+}
+
+function fileAssetAccessLevel(visibility: UploadValidationResult["storageVisibility"]): FileAssetAccessLevel {
+  if (visibility === "public_derivative") return "public_derivative";
+  if (visibility === "client_private") return "client_private";
+  if (visibility === "system_private") return "system_only";
+  return "tenant_member";
+}
+
+export function buildFileAssetPersistencePlan(input: FileAssetPersistencePlanInput): FileAssetPersistencePlan {
+  const blockers: string[] = [];
+  const requiredWrites: FileAssetPersistencePlan["requiredWrites"] = ["FileAsset", "AuditLog"];
+  const accessLevel = fileAssetAccessLevel(input.storageVisibility);
+  const publicReadAllowed = input.storageVisibility === "public_derivative" && input.scanStatus === "approved" && Boolean(input.publicDerivativeObjectKey);
+
+  if (input.kind === "reference_private") requiredWrites.push("BookingReferenceImage");
+  if (input.kind === "consent_signature") requiredWrites.push("ConsentArtifact");
+  if (!input.tenantId.trim()) blockers.push("Missing tenant scope for file asset persistence.");
+  if (!input.subjectId.trim()) blockers.push("Missing subject id for file asset persistence.");
+  if (!input.objectKey?.trim()) blockers.push("Missing private storage object key.");
+  if (!input.providerConfigured) blockers.push("Object storage provider must be configured before FileAsset persistence is production-ready.");
+  if (!input.fileAssetStoreConfigured) blockers.push("Tenant-scoped FileAsset store must be configured before upload metadata can persist.");
+  if (!input.auditLogConfigured) blockers.push("AuditLog persistence must be configured for upload intent, scan, access, and deletion events.");
+  if (input.scanStatus !== "approved") blockers.push("FileAsset cannot be exposed or finalized before upload scan approval.");
+  if (input.storageVisibility === "public_derivative" && !input.publicDerivativeObjectKey) {
+    blockers.push("Public portfolio assets require a separate scanned derivative object key.");
+  }
+  if (input.storageVisibility !== "public_derivative" && input.publicDerivativeObjectKey) {
+    blockers.push("Private file kinds must not declare public derivative object keys.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    tenantId: input.tenantId,
+    subjectId: input.subjectId,
+    kind: input.kind,
+    objectKey: input.objectKey,
+    accessLevel,
+    publicReadAllowed,
+    requiredWrites,
+    requiredFields: [
+      "tenantId",
+      "kind",
+      "objectKey",
+      "originalFilename",
+      "mimeType",
+      "sizeBytes",
+      "storageVisibility",
+      "scanStatus",
+      "createdByUserId",
+      "retentionCategory",
+    ],
+    requiredControls: [
+      "Persist FileAsset metadata in the same tenant scope as the booking, consent, message, or portfolio owner.",
+      "Keep original objects private; expose only approved public derivatives for portfolio assets.",
+      "Require malware scan approval and metadata stripping before any read grant or derivative publication.",
+      "Write AuditLog rows for upload intent creation, scan verdicts, signed URL grants, revocations, and deletion.",
+      "Apply privacy retention rules to private reference, consent, document, and healed follow-up files.",
+    ],
+    blockers,
   };
 }
 

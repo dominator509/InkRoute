@@ -8,6 +8,7 @@ import {
   buildFaqSchema,
   buildInternalLinkPlan,
   buildMetadataDraft,
+  buildPublicWebReadinessPlan,
   buildArtistPersonSchema,
   buildPortfolioImageSchema,
   buildTravelEventSchema,
@@ -336,6 +337,75 @@ describe("SEO engine helpers", () => {
     expect(failing.findings.some((finding) => finding.code === "DUPLICATE_SITEMAP_URL")).toBe(true);
     expect(failing.findings.some((finding) => finding.code === "CITY_CONTEXT_MISSING")).toBe(true);
     expect(failing.findings.some((finding) => finding.code === "JSON_LD_ITEM_TYPE_MISSING")).toBe(true);
+  });
+
+  it("plans public web launch readiness across static, local-runtime, provider, and asset blockers", () => {
+    const plan = buildPublicWebReadinessPlan({
+      packageScripts: {
+        typecheck: "tsc --noEmit",
+        build: "next build",
+        test: "playwright test --project=web-chromium --project=web-mobile",
+      },
+      buildVerified: false,
+      typecheckVerified: false,
+      accessibilityAuditVerified: false,
+      performanceAuditVerified: false,
+      runtimePersistenceConfigured: false,
+      realPortfolioAssetsConfigured: false,
+      surfaces: [
+        {
+          id: "home",
+          path: "/",
+          kind: "page",
+          backingMode: "static_demo",
+          hasRouteTest: true,
+          requiresDatabase: false,
+          requiresProvider: false,
+          placeholderAssetsPresent: true,
+        },
+        {
+          id: "booking-request-api",
+          path: "/api/public/[tenantSlug]/booking-requests",
+          kind: "api",
+          backingMode: "local_runtime",
+          hasRouteTest: true,
+          requiresDatabase: true,
+          requiresProvider: false,
+        },
+        {
+          id: "stripe-webhook",
+          path: "/api/webhooks/stripe",
+          kind: "webhook",
+          backingMode: "local_runtime",
+          hasRouteTest: true,
+          requiresDatabase: true,
+          requiresProvider: true,
+        },
+        {
+          id: "robots",
+          path: "/robots.txt",
+          kind: "metadata",
+          backingMode: "static_demo",
+          hasRouteTest: false,
+          requiresDatabase: false,
+          requiresProvider: false,
+        },
+      ],
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.surfaceCount).toBe(4);
+    expect(plan.staticDemoSurfaceCount).toBe(2);
+    expect(plan.localRuntimeSurfaceCount).toBe(2);
+    expect(plan.untestedSurfaces).toEqual(["robots"]);
+    expect(plan.placeholderAssetSurfaces).toEqual(["home"]);
+    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/web build");
+    expect(plan.blockers).toEqual(expect.arrayContaining([
+      "Next.js web build has not been verified in the installed workspace.",
+      "Public routes that require persistence are still static-demo or local-runtime backed.",
+      "Provider-backed public routes still use local runtime or static provider boundaries.",
+      "Public portfolio/media surfaces still depend on placeholder or demo assets.",
+    ]));
   });
 
   it("creates city and style SEO briefs with internal link plans", () => {

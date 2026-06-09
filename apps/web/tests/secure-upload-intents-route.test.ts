@@ -108,6 +108,20 @@ describe("public secure upload intent route", () => {
     });
     expect(body.data.privateStoragePlan.requiredControls).toContain("Use private bucket ACLs for original reference, consent, healed-photo, and document assets.");
     expect(body.data.privateStoragePlan.reasons).toContain("Storage provider is not configured.");
+    expect(body.data.fileAssetPersistencePlan).toMatchObject({
+      status: "blocked",
+      tenantId: body.data.tenantId,
+      subjectId: body.data.draft.id,
+      objectKey: body.data.signedIntentPlan.objectKey,
+      accessLevel: "tenant_member",
+      publicReadAllowed: false,
+      requiredWrites: ["FileAsset", "AuditLog", "BookingReferenceImage"],
+    });
+    expect(body.data.fileAssetPersistencePlan.blockers).toEqual(expect.arrayContaining([
+      "Object storage provider must be configured before FileAsset persistence is production-ready.",
+      "Tenant-scoped FileAsset store must be configured before upload metadata can persist.",
+      "FileAsset cannot be exposed or finalized before upload scan approval.",
+    ]));
     expect(body.data.localRuntime.gapIds).toEqual(expect.arrayContaining(["GAP-096", "GAP-097"]));
     expect(body.data.nextWork).toEqual(expect.arrayContaining([
       "Scan and strip metadata from media before status transitions.",

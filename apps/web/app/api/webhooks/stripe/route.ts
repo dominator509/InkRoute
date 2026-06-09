@@ -1,5 +1,5 @@
 import { inkrouteDemoTenant } from "@inkroute/config";
-import { interpretStripeWebhook } from "@inkroute/payments";
+import { interpretStripeWebhook, verifyStripeWebhookSignature } from "@inkroute/payments";
 import { NextResponse, type NextRequest } from "next/server";
 import { persistWebhookEvent } from "../../../../lib/localRuntimeState";
 
@@ -43,6 +43,35 @@ export async function POST(request: NextRequest) {
       },
       { status: 400 },
     );
+  }
+
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (endpointSecret) {
+    const verification = verifyStripeWebhookSignature({
+      rawBody,
+      signatureHeader: signature,
+      endpointSecret,
+      nowEpochSeconds: Math.floor(Date.now() / 1000),
+    });
+
+    if (!verification.verified) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: {
+            code: "STRIPE_SIGNATURE_INVALID",
+            message: verification.reason,
+          },
+          data: {
+            verification: {
+              status: verification.status,
+              toleranceSeconds: verification.toleranceSeconds,
+            },
+          },
+        },
+        { status: 400 },
+      );
+    }
   }
 
   let parsedEventType = "unknown";

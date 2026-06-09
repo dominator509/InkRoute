@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import type { ISODateString, PaymentStatus } from "@inkroute/types";
 
 export type CurrencyCode = "usd";
@@ -211,6 +212,23 @@ export interface StripeWebhookReconciliationPlan {
   shouldReconcile: boolean;
   blockers: readonly string[];
   requiredChecks: readonly string[];
+}
+
+export interface StripeWebhookSignatureVerificationInput {
+  rawBody: string;
+  signatureHeader: string | null;
+  endpointSecret: string | null | undefined;
+  nowEpochSeconds: number;
+  toleranceSeconds?: number;
+}
+
+export interface StripeWebhookSignatureVerificationResult {
+  verified: boolean;
+  status: "verified" | "missing_header" | "missing_secret" | "malformed_header" | "timestamp_outside_tolerance" | "signature_mismatch";
+  timestamp?: number;
+  toleranceSeconds: number;
+  signedPayloadPreview: string;
+  reason: string;
 }
 
 export type PaymentLifecycleAction =
@@ -691,6 +709,91 @@ export function interpretStripeWebhook(eventType: string): StripeWebhookInterpre
         note: "Unknown Stripe event should be logged with redaction and ignored unless explicitly supported.",
       };
   }
+}
+
+function parseStripeSignatureHeader(header: string): { timestamp?: number; signatures: readonly string[] } {
+  const parts = header.split(",");
+  const signatures: string[] = [];
+  let timestamp: number | undefined;
+
+  for (const part of parts) {
+    const [key, value] = part.split("=");
+    if (key === "t" && value) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) timestamp = parsed;
+    }
+    if (key === "v1" && value) {
+      signatures.push(value);
+    }
+  }
+
+  return timestamp === undefined ? { signatures } : { timestamp, signatures };
+}
+
+function safeSignatureEquals(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left, "hex");
+  const rightBuffer = Buffer.from(right, "hex");
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+export function verifyStripeWebhookSignature(input: StripeWebhookSignatureVerificationInput): StripeWebhookSignatureVerificationResult {
+  const toleranceSeconds = input.toleranceSeconds ?? 300;
+  const signedPayloadPreview = input.rawBody.length > 32 ? `${input.rawBody.slice(0, 32)}...` : input.rawBody;
+
+  if (!input.signatureHeader) {
+    return {
+      verified: false,
+      status: "missing_header",
+      toleranceSeconds,
+      signedPayloadPreview,
+      reason: "Stripe-Signature header is required before webhook payloads can be trusted.",
+    };
+  }
+
+  if (!input.endpointSecret) {
+    return {
+      verified: false,
+      status: "missing_secret",
+      toleranceSeconds,
+      signedPayloadPreview,
+      reason: "Stripe webhook endpoint secret must be configured before signature verification can run.",
+    };
+  }
+
+  const parsed = parseStripeSignatureHeader(input.signatureHeader);
+  if (!parsed.timestamp || parsed.signatures.length === 0) {
+    return {
+      verified: false,
+      status: "malformed_header",
+      toleranceSeconds,
+      signedPayloadPreview,
+      reason: "Stripe-Signature header must include a timestamp and at least one v1 signature.",
+    };
+  }
+
+  if (Math.abs(input.nowEpochSeconds - parsed.timestamp) > toleranceSeconds) {
+    return {
+      verified: false,
+      status: "timestamp_outside_tolerance",
+      timestamp: parsed.timestamp,
+      toleranceSeconds,
+      signedPayloadPreview,
+      reason: "Stripe webhook timestamp is outside the configured replay tolerance.",
+    };
+  }
+
+  const signedPayload = `${parsed.timestamp}.${input.rawBody}`;
+  const expectedSignature = createHmac("sha256", input.endpointSecret).update(signedPayload, "utf8").digest("hex");
+  const verified = parsed.signatures.some((signature) => safeSignatureEquals(signature, expectedSignature));
+
+  return {
+    verified,
+    status: verified ? "verified" : "signature_mismatch",
+    timestamp: parsed.timestamp,
+    toleranceSeconds,
+    signedPayloadPreview,
+    reason: verified ? "Stripe webhook signature matched the raw request body." : "Stripe webhook signature did not match the raw request body.",
+  };
 }
 
 export function buildStripeWebhookReconciliationPlan(input: StripeWebhookReconciliationInput): StripeWebhookReconciliationPlan {

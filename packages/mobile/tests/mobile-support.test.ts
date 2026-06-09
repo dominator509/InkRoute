@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import {
   buildMobileApiRequestPlan,
   buildMobileDeviceQaChecklist,
+  buildMobileRuntimeReadinessPlan,
   buildMobileScreenSyncRequirements,
   getMobileScreen,
   buildOfflineIdempotencyKey,
@@ -327,5 +328,45 @@ describe("mobile support helpers", () => {
       "not-configured",
       "not-configured",
     ]);
+  });
+
+  it("plans aggregate mobile runtime readiness without claiming Expo/provider/device proof", () => {
+    const plan = buildMobileRuntimeReadinessPlan({
+      packageScripts: {
+        typecheck: "tsc --noEmit",
+        build: "tsc --noEmit",
+        test: "vitest run apps/mobile/tests/**/*.test.ts",
+        ios: "expo start --ios",
+        android: "expo start --android",
+      },
+      appJsonProjectId: "deployment-gated-see-GAP-008",
+      appJsonUpdatesUrl: "https://u.expo.dev/deployment-gated-see-GAP-047",
+      typecheckVerified: false,
+      expoRuntimeVerified: false,
+      iosSmokeVerified: false,
+      androidSmokeVerified: false,
+      easPreviewBuildVerified: false,
+      authProviderConfigured: false,
+      biometricGateConfigured: false,
+      apiClientConfigured: false,
+      pushProviderConfigured: false,
+      encryptedOfflineStoreConfigured: false,
+      crashReportingConfigured: false,
+      otaUpdatesConfigured: false,
+      deviceQaSummary: summarizeMobileDeviceQa(buildMobileDeviceQaChecklist()),
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual([]);
+    expect(plan.requiredCommands).toContain("eas build --profile preview --platform all");
+    expect(plan.requiredControls).toContain("Encrypt sensitive offline queue items and replay mutations idempotently after reconnect.");
+    expect(plan.blockingQaItemIds).toContain("ios-screen-smoke");
+    expect(plan.blockers).toEqual(expect.arrayContaining([
+      "Expo runtime has not been launched locally for this scaffold.",
+      "Mobile auth provider/session exchange is not configured.",
+      "Tenant-scoped mobile API client is not configured.",
+      "Expo/EAS project id is still deployment-gated.",
+      "Mobile device QA checklist still has blocking runtime/provider/manual items.",
+    ]));
   });
 });

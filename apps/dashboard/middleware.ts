@@ -13,6 +13,7 @@ const sessionCookieNames = [
 ];
 const mutatingMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const providerConnectSources = ["https://sentry.io", "https://api.stripe.com"];
+const authPublicPathPrefixes = ["/login", "/tenant-switcher"];
 
 function runtimeEnvironment(): RuntimeEnvironment {
   if (process.env.VERCEL_ENV === "production") return "production";
@@ -26,6 +27,39 @@ function requestUsesHttps(request: NextRequest): boolean {
 
 function hasSessionCookie(request: NextRequest): boolean {
   return sessionCookieNames.some((name) => request.cookies.has(name));
+}
+
+function isDashboardAuthPublicPath(pathname: string): boolean {
+  return authPublicPathPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
+function isDashboardApiPath(pathname: string): boolean {
+  return pathname === "/api" || pathname.startsWith("/api/");
+}
+
+function buildLoginRedirect(request: NextRequest): NextResponse {
+  const loginUrl = request.nextUrl.clone();
+  loginUrl.pathname = "/login";
+  loginUrl.search = "";
+  loginUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
+  return NextResponse.redirect(loginUrl);
+}
+
+function buildUnauthenticatedDashboardResponse(request: NextRequest): NextResponse {
+  if (isDashboardApiPath(request.nextUrl.pathname)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "AUTH_REQUIRED",
+          message: "Dashboard API routes require an authenticated tenant session.",
+        },
+      },
+      { status: 401 },
+    );
+  }
+
+  return buildLoginRedirect(request);
 }
 
 function csrfTokenIsValid(request: NextRequest): { present: boolean; valid: boolean } {
@@ -61,6 +95,12 @@ function applySecurityHeaders(response: NextResponse, request: NextRequest): Nex
 }
 
 export function middleware(request: NextRequest) {
+  const productionAuthRequired = runtimeEnvironment() === "production" && !isDashboardAuthPublicPath(request.nextUrl.pathname);
+
+  if (productionAuthRequired && !hasSessionCookie(request)) {
+    return applySecurityHeaders(buildUnauthenticatedDashboardResponse(request), request);
+  }
+
   const csrf = csrfTokenIsValid(request);
   const cookieAuthenticatedMutation = mutatingMethods.has(request.method) && hasSessionCookie(request);
 

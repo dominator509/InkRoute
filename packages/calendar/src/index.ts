@@ -313,6 +313,32 @@ export interface TravelPublishMutationPlan {
   blockers: readonly string[];
 }
 
+export interface CalendarRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  packageTestsPassed: boolean;
+  packageTypecheckPassed: boolean;
+  databaseRepositoriesConfigured: boolean;
+  postgresIntegrationVerified: boolean;
+  tenantIsolationVerified: boolean;
+  availabilityTransactionsConfigured: boolean;
+  googleOauthConfigured: boolean;
+  encryptedProviderTokensConfigured: boolean;
+  googleWorkerEnabled: boolean;
+  googleProviderSmokeVerified: boolean;
+  signedIcsTokenStoreConfigured: boolean;
+  signedIcsAccessVerified: boolean;
+  timezoneQaReady: boolean;
+  cacheRevalidationConfigured: boolean;
+}
+
+export interface CalendarRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 function escapeIcsText(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/,/g, "\\,").replace(/;/g, "\\;").replace(/\n/g, "\\n");
 }
@@ -481,6 +507,52 @@ export function buildTimezoneRecurrenceQaPlan(input: TimezoneRecurrenceQaPlanInp
       "Test DST spring-forward and fall-back boundaries before expanding recurring availability.",
       "Render Los Angeles, Arizona, and New York examples through internal, Google, and ICS outputs.",
       "Keep all-day travel windows timezone-aware and avoid converting them to floating local times.",
+    ],
+    blockers,
+  };
+}
+
+export function buildCalendarRuntimeReadinessPlan(input: CalendarRuntimeReadinessInput): CalendarRuntimeReadinessPlan {
+  const requiredScripts = ["build", "typecheck", "test"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+
+  if (missingScripts.length > 0) blockers.push("@inkroute/calendar package scripts are missing required verification commands.");
+  if (!input.packageTestsPassed) blockers.push("Calendar package tests have not passed in the installed workspace.");
+  if (!input.packageTypecheckPassed) blockers.push("Calendar package typecheck has not passed in the installed workspace.");
+  if (!input.databaseRepositoriesConfigured) blockers.push("Tenant-scoped calendar repositories are not configured.");
+  if (!input.postgresIntegrationVerified) blockers.push("Postgres integration tests have not verified availability windows, holds, appointments, and audit writes.");
+  if (!input.tenantIsolationVerified) blockers.push("Calendar tenant isolation has not been verified against cross-tenant reads and mutations.");
+  if (!input.availabilityTransactionsConfigured) blockers.push("Availability mutations are not wired to transactional persistence and idempotency enforcement.");
+  if (!input.googleOauthConfigured) blockers.push("Google OAuth client, redirect URI, and scopes are not configured.");
+  if (!input.encryptedProviderTokensConfigured) blockers.push("Google refresh tokens are not encrypted before persistence.");
+  if (!input.googleWorkerEnabled) blockers.push("Google Calendar provider sync worker is not enabled.");
+  if (!input.googleProviderSmokeVerified) blockers.push("Google test calendar smoke has not verified event create/update/delete and incremental sync.");
+  if (!input.signedIcsTokenStoreConfigured) blockers.push("Signed ICS feed token store is not configured.");
+  if (!input.signedIcsAccessVerified) blockers.push("Signed ICS feed access has not been verified with valid, revoked, expired, and scoped tokens.");
+  if (!input.timezoneQaReady) blockers.push("Timezone/DST/recurrence/provider-render QA matrix is not ready.");
+  if (!input.cacheRevalidationConfigured) blockers.push("Calendar/travel cache revalidation and sync events are not configured.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "pnpm db:generate",
+      "pnpm db:migrate",
+      "pnpm test:unit -- packages/db/tests/tenant-scope.test.ts",
+      "Google Calendar test-mode event create/update/delete smoke",
+      "Signed ICS feed valid/revoked/expired token smoke",
+    ],
+    requiredControls: [
+      "Persist availability windows, holds, appointments, travel blocks, sync state, and audit logs in tenant-scoped transactions.",
+      "Claim idempotency keys before creating slot holds, appointments, provider events, or sync-state writes.",
+      "Encrypt provider refresh tokens and never expose Google tokens to clients.",
+      "Recover from Google invalid sync tokens by running full resync before incremental sync resumes.",
+      "Validate signed ICS feed token hash, tenant/artist scope, expiry, and revocation before returning private feeds.",
+      "Run DST, recurrence, provider render, and all-day travel timezone QA before launch.",
+      "Emit dashboard/mobile/public revalidation events after committed travel and scheduling mutations.",
     ],
     blockers,
   };

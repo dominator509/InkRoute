@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildAvailabilitySlots,
   buildAvailabilityPersistencePlan,
+  buildCalendarRuntimeReadinessPlan,
   buildGoogleCalendarProviderSyncPlan,
   buildSignedIcsFeedDraft,
   buildSignedIcsFeedTokenHash,
@@ -465,6 +466,42 @@ describe("calendar availability", () => {
     expect(plan.coveredChecks).toEqual(["all_day_travel_window", "dst_transition", "iana_validation", "provider_render_matrix", "recurrence_expansion"]);
     expect(plan.findings.every((finding) => finding.status === "pass")).toBe(true);
     expect(plan.requiredControls).toContain("Test DST spring-forward and fall-back boundaries before expanding recurring availability.");
+  });
+
+  it("plans aggregate calendar runtime readiness without claiming DB or Google provider proof", () => {
+    const plan = buildCalendarRuntimeReadinessPlan({
+      packageScripts: {
+        build: "tsc --noEmit",
+        typecheck: "tsc --noEmit",
+        test: "vitest run",
+      },
+      packageTestsPassed: false,
+      packageTypecheckPassed: false,
+      databaseRepositoriesConfigured: false,
+      postgresIntegrationVerified: false,
+      tenantIsolationVerified: false,
+      availabilityTransactionsConfigured: false,
+      googleOauthConfigured: false,
+      encryptedProviderTokensConfigured: false,
+      googleWorkerEnabled: false,
+      googleProviderSmokeVerified: false,
+      signedIcsTokenStoreConfigured: false,
+      signedIcsAccessVerified: false,
+      timezoneQaReady: false,
+      cacheRevalidationConfigured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual([]);
+    expect(plan.requiredCommands).toContain("Google Calendar test-mode event create/update/delete smoke");
+    expect(plan.requiredControls).toContain("Encrypt provider refresh tokens and never expose Google tokens to clients.");
+    expect(plan.blockers).toEqual(expect.arrayContaining([
+      "Calendar package tests have not passed in the installed workspace.",
+      "Tenant-scoped calendar repositories are not configured.",
+      "Google OAuth client, redirect URI, and scopes are not configured.",
+      "Signed ICS feed token store is not configured.",
+      "Timezone/DST/recurrence/provider-render QA matrix is not ready.",
+    ]));
   });
 
   it("blocks timezone recurrence QA when strategy, coverage, recurrence expansion, or provider labels are missing", () => {

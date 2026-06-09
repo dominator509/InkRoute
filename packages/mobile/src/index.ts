@@ -515,6 +515,34 @@ export interface MobileDeviceQaSummary {
   productionReady: boolean;
 }
 
+export interface MobileRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  appJsonProjectId?: string;
+  appJsonUpdatesUrl?: string;
+  typecheckVerified: boolean;
+  expoRuntimeVerified: boolean;
+  iosSmokeVerified: boolean;
+  androidSmokeVerified: boolean;
+  easPreviewBuildVerified: boolean;
+  authProviderConfigured: boolean;
+  biometricGateConfigured: boolean;
+  apiClientConfigured: boolean;
+  pushProviderConfigured: boolean;
+  encryptedOfflineStoreConfigured: boolean;
+  crashReportingConfigured: boolean;
+  otaUpdatesConfigured: boolean;
+  deviceQaSummary?: MobileDeviceQaSummary;
+}
+
+export interface MobileRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  requiredCommands: readonly string[];
+  requiredControls: readonly string[];
+  missingScripts: readonly string[];
+  blockingQaItemIds: readonly string[];
+  blockers: readonly string[];
+}
+
 export function buildMobileDeviceQaChecklist(): MobileDeviceQaItem[] {
   return [
     {
@@ -630,6 +658,55 @@ export function summarizeMobileDeviceQa(items: readonly MobileDeviceQaItem[] = b
     missingAreas,
     blockingItemIds,
     productionReady: missingAreas.length === 0 && blockingItemIds.length === 0,
+  };
+}
+
+export function buildMobileRuntimeReadinessPlan(input: MobileRuntimeReadinessInput): MobileRuntimeReadinessPlan {
+  const blockers: string[] = [];
+  const requiredScripts = ["typecheck", "build", "test", "ios", "android"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const qa = input.deviceQaSummary ?? summarizeMobileDeviceQa();
+  const projectId = input.appJsonProjectId?.trim() ?? "";
+  const updatesUrl = input.appJsonUpdatesUrl?.trim() ?? "";
+
+  if (missingScripts.length > 0) blockers.push("@inkroute/mobile package scripts are missing required runtime commands.");
+  if (!input.typecheckVerified) blockers.push("Mobile typecheck has not been verified in the installed workspace.");
+  if (!input.expoRuntimeVerified) blockers.push("Expo runtime has not been launched locally for this scaffold.");
+  if (!input.iosSmokeVerified) blockers.push("iOS simulator/device screen smoke has not been verified.");
+  if (!input.androidSmokeVerified) blockers.push("Android emulator/device screen smoke has not been verified.");
+  if (!input.easPreviewBuildVerified) blockers.push("EAS preview build has not been verified.");
+  if (!input.authProviderConfigured) blockers.push("Mobile auth provider/session exchange is not configured.");
+  if (!input.biometricGateConfigured) blockers.push("Mobile biometric gate is not configured for secure session unlock.");
+  if (!input.apiClientConfigured) blockers.push("Tenant-scoped mobile API client is not configured.");
+  if (!input.pushProviderConfigured) blockers.push("Expo push token registration and delivery provider are not configured.");
+  if (!input.encryptedOfflineStoreConfigured) blockers.push("Encrypted offline storage and sync worker are not configured.");
+  if (!input.crashReportingConfigured) blockers.push("Mobile crash reporting is not configured.");
+  if (!input.otaUpdatesConfigured) blockers.push("OTA update channels and rollback workflow are not configured.");
+  if (!projectId || projectId.includes("deployment-gated")) blockers.push("Expo/EAS project id is still deployment-gated.");
+  if (!updatesUrl || updatesUrl.includes("deployment-gated")) blockers.push("Expo updates URL is still deployment-gated.");
+  if (!qa.productionReady) blockers.push("Mobile device QA checklist still has blocking runtime/provider/manual items.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    requiredCommands: [
+      "pnpm --filter @inkroute/mobile typecheck",
+      "pnpm --filter @inkroute/mobile ios",
+      "pnpm --filter @inkroute/mobile android",
+      "pnpm --filter @inkroute/mobile test",
+      "eas build --profile preview --platform all",
+    ],
+    requiredControls: [
+      "Use provider-backed auth/session exchange before any tenant data loads.",
+      "Require biometric unlock and secure storage for cached refresh/session tokens when enabled.",
+      "Send tenant, request-id, idempotency, and bearer auth headers through the mobile API client.",
+      "Encrypt sensitive offline queue items and replay mutations idempotently after reconnect.",
+      "Register push tokens only after consent and persist delivery receipts tenant-safely.",
+      "Capture sanitized crash reports without PII, medical notes, payment data, or tokens.",
+      "Verify EAS preview builds, OTA update adoption, and rollback on real devices before launch.",
+    ],
+    missingScripts,
+    blockingQaItemIds: qa.blockingItemIds,
+    blockers,
   };
 }
 

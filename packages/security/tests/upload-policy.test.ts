@@ -5,6 +5,7 @@ import {
   buildRetentionEnforcementDryRun,
   buildLegalReviewPacketPlan,
   buildAbuseControlPlan,
+  buildFileAssetPersistencePlan,
   buildSignedUploadIntentPlan,
   buildPrivateStorageAccessPlan,
   buildSecurityRuntimeEnforcementPlan,
@@ -176,6 +177,53 @@ describe("security and privacy helpers", () => {
     });
     expect(download.status).toBe("signed_url_ready");
     expect(download.requiredControls).toContain("Check revocation and expiry before every private download grant.");
+  });
+
+  it("plans FileAsset persistence with scan, derivative, privacy, and audit blockers", () => {
+    const privateReference = buildFileAssetPersistencePlan({
+      kind: "reference_private",
+      tenantId: "tenant_001",
+      subjectId: "booking_001",
+      objectKey: "private/tenant_001/reference_private/booking_001/ref.jpg",
+      originalFilename: "ref.jpg",
+      mimeType: "image/jpeg",
+      sizeBytes: 400000,
+      storageVisibility: "client_private",
+      scanStatus: "approved",
+      providerConfigured: true,
+      auditLogConfigured: true,
+      fileAssetStoreConfigured: true,
+    });
+    const blockedPublic = buildFileAssetPersistencePlan({
+      kind: "portfolio_public",
+      tenantId: "tenant_001",
+      subjectId: "portfolio_001",
+      objectKey: "private/tenant_001/portfolio_public/original.jpg",
+      originalFilename: "flash.jpg",
+      mimeType: "image/jpeg",
+      sizeBytes: 400000,
+      storageVisibility: "public_derivative",
+      scanStatus: "pending",
+      providerConfigured: false,
+      auditLogConfigured: false,
+      fileAssetStoreConfigured: false,
+    });
+
+    expect(privateReference).toMatchObject({
+      status: "ready",
+      accessLevel: "client_private",
+      publicReadAllowed: false,
+      requiredWrites: ["FileAsset", "AuditLog", "BookingReferenceImage"],
+      blockers: [],
+    });
+    expect(privateReference.requiredControls).toContain("Apply privacy retention rules to private reference, consent, document, and healed follow-up files.");
+    expect(blockedPublic.status).toBe("blocked");
+    expect(blockedPublic.publicReadAllowed).toBe(false);
+    expect(blockedPublic.blockers).toEqual(expect.arrayContaining([
+      "Object storage provider must be configured before FileAsset persistence is production-ready.",
+      "FileAsset cannot be exposed or finalized before upload scan approval.",
+      "Public portfolio assets require a separate scanned derivative object key.",
+    ]));
   });
 
   it("blocks revoked, expired, unscanned private downloads and unsafe public derivatives", () => {

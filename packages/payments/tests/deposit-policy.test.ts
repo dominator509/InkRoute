@@ -10,7 +10,9 @@ import {
   evaluateRefundPolicy,
   generateReceiptNumber,
   interpretStripeWebhook,
+  verifyStripeWebhookSignature,
 } from "../src/index";
+import { createHmac } from "node:crypto";
 
 describe("payment policy engine", () => {
   it("raises risk for high-demand travel and client no-show history", () => {
@@ -186,6 +188,44 @@ describe("payment policy engine", () => {
     expect(unknown.shouldReconcile).toBe(false);
     expect(unknown.blockers).toContain("Unsupported Stripe event type.");
     expect(unknown.shouldPersistAuditLog).toBe(true);
+  });
+
+  it("verifies Stripe webhook signatures against the raw body and timestamp tolerance", () => {
+    const rawBody = JSON.stringify({ id: "evt_001", type: "checkout.session.completed" });
+    const timestamp = 1780966800;
+    const secret = "whsec_test_secret";
+    const signature = createHmac("sha256", secret).update(`${timestamp}.${rawBody}`, "utf8").digest("hex");
+
+    expect(
+      verifyStripeWebhookSignature({
+        rawBody,
+        signatureHeader: `t=${timestamp},v1=${signature}`,
+        endpointSecret: secret,
+        nowEpochSeconds: timestamp + 60,
+      }),
+    ).toMatchObject({
+      verified: true,
+      status: "verified",
+      timestamp,
+    });
+
+    expect(
+      verifyStripeWebhookSignature({
+        rawBody,
+        signatureHeader: `t=${timestamp},v1=deadbeef`,
+        endpointSecret: secret,
+        nowEpochSeconds: timestamp + 60,
+      }).status,
+    ).toBe("signature_mismatch");
+
+    expect(
+      verifyStripeWebhookSignature({
+        rawBody,
+        signatureHeader: `t=${timestamp},v1=${signature}`,
+        endpointSecret: secret,
+        nowEpochSeconds: timestamp + 600,
+      }).status,
+    ).toBe("timestamp_outside_tolerance");
   });
 
   it("plans tenant-scoped provider session persistence with audit and idempotency writes", () => {

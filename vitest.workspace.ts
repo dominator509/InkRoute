@@ -23,6 +23,14 @@ export default defineWorkspace([
   },
   {
     test: {
+      name: "dashboard-contracts",
+      include: ["apps/dashboard/tests/**/*.test.ts"],
+      environment: "node",
+      coverage: coverageConfig,
+    },
+  },
+  {
+    test: {
       name: "domain-packages",
       include: ["packages/**/tests/**/*.test.ts"],
       environment: "node",

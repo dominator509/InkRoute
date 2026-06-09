@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createHmac } from "node:crypto";
 import { NextRequest } from "next/server";
 import { POST as createDepositSession } from "../app/api/public/[tenantSlug]/deposit-sessions/route";
 import { POST as receiveStripeWebhook } from "../app/api/webhooks/stripe/route";
@@ -162,5 +163,47 @@ describe("payment API route boundaries", () => {
       targetStatus: "paid",
     });
     expect(acceptedPayload.data.productionBoundary.gapIds).toEqual(["GAP-004", "GAP-049", "GAP-050", "GAP-051"]);
+  });
+
+  it("rejects invalid Stripe webhook signatures when the endpoint secret is configured", async () => {
+    const originalSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    process.env.STRIPE_WEBHOOK_SECRET = "whsec_route_test";
+    const body = JSON.stringify({
+      type: "checkout.session.completed",
+      data: { object: { metadata: { tenantId: "tenant_inkroute_demo" } } },
+    });
+    const timestamp = Math.floor(Date.now() / 1000);
+    const validSignature = createHmac("sha256", process.env.STRIPE_WEBHOOK_SECRET).update(`${timestamp}.${body}`, "utf8").digest("hex");
+
+    try {
+      const invalid = await receiveStripeWebhook(
+        new NextRequest("https://local.test/api/webhooks/stripe", {
+          method: "POST",
+          headers: { "stripe-signature": `t=${timestamp},v1=deadbeef` },
+          body,
+        }),
+      );
+      const valid = await receiveStripeWebhook(
+        new NextRequest("https://local.test/api/webhooks/stripe", {
+          method: "POST",
+          headers: { "stripe-signature": `t=${timestamp},v1=${validSignature}` },
+          body,
+        }),
+      );
+
+      expect(invalid.status).toBe(400);
+      await expect(invalid.json()).resolves.toMatchObject({
+        ok: false,
+        error: { code: "STRIPE_SIGNATURE_INVALID" },
+        data: { verification: { status: "signature_mismatch" } },
+      });
+      expect(valid.status).toBe(200);
+    } finally {
+      if (originalSecret === undefined) {
+        delete process.env.STRIPE_WEBHOOK_SECRET;
+      } else {
+        process.env.STRIPE_WEBHOOK_SECRET = originalSecret;
+      }
+    }
   });
 });

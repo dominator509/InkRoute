@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assertPermission,
+  buildDashboardReadinessPlan,
   buildSessionPersistencePlan,
   evaluateApiRouteGuard,
   evaluateDashboardRouteGuard,
@@ -494,5 +495,76 @@ describe("auth authorization helpers", () => {
         "Session revocation persistence must be checked before every sensitive route decision.",
       ]),
     );
+  });
+
+  it("plans dashboard readiness across guarded surfaces, persistence, mutations, audits, and smoke evidence", () => {
+    const plan = buildDashboardReadinessPlan({
+      packageScripts: {
+        typecheck: "tsc --noEmit",
+        build: "next build",
+        test: "playwright test --project=dashboard-chromium",
+      },
+      buildVerified: false,
+      typecheckVerified: false,
+      e2eVerified: false,
+      providerActionsConfigured: false,
+      seededDataAvailable: false,
+      surfaces: [
+        {
+          id: "booking-inbox",
+          path: "/bookings",
+          kind: "page",
+          mode: "static_demo",
+          requiredPermission: "booking:read",
+          hasAuthGuard: true,
+          hasTenantScope: true,
+          hasAuditLog: false,
+          hasPersistence: false,
+          hasTestCoverage: true,
+        },
+        {
+          id: "release-feature-flags",
+          path: "/api/feature-flags",
+          kind: "api",
+          mode: "mutation_api",
+          requiredPermission: "release:write",
+          hasAuthGuard: true,
+          hasTenantScope: true,
+          hasAuditLog: false,
+          hasPersistence: false,
+          hasTestCoverage: true,
+        },
+        {
+          id: "stripe-refund-action",
+          path: "/payments/refunds",
+          kind: "server_action",
+          mode: "provider_action",
+          requiredPermission: "payment:write",
+          hasAuthGuard: false,
+          hasTenantScope: false,
+          hasAuditLog: false,
+          hasPersistence: false,
+          hasTestCoverage: false,
+        },
+      ],
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.surfaceCount).toBe(3);
+    expect(plan.staticSurfaceCount).toBe(1);
+    expect(plan.mutationSurfaceCount).toBe(2);
+    expect(plan.unguardedSurfaces).toEqual(["stripe-refund-action"]);
+    expect(plan.unscopedSurfaces).toEqual(["stripe-refund-action"]);
+    expect(plan.unauditedMutations).toEqual(["release-feature-flags", "stripe-refund-action"]);
+    expect(plan.unpersistedSurfaces).toEqual(["release-feature-flags", "stripe-refund-action"]);
+    expect(plan.untestedSurfaces).toEqual(["stripe-refund-action"]);
+    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/dashboard build");
+    expect(plan.requiredControls).toContain("Execute state-changing actions inside tenant-scoped transactions with AuditLog writes.");
+    expect(plan.blockers).toEqual(expect.arrayContaining([
+      "Dashboard Next.js build has not been verified in the installed workspace.",
+      "Dashboard has no verified seeded tenant data source for smoke and mutation tests.",
+      "Dashboard provider actions are still static/demo gated and cannot execute production provider calls.",
+      "Every dashboard mutation/provider action must write an AuditLog row.",
+    ]));
   });
 });

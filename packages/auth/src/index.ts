@@ -746,6 +746,47 @@ export interface SessionPersistencePlan {
   auditEvents: readonly string[];
 }
 
+export type DashboardSurfaceKind = "page" | "api" | "server_action";
+export type DashboardSurfaceMode = "static_demo" | "read_only_api" | "mutation_api" | "provider_action";
+
+export interface DashboardSurfaceRequirement {
+  id: string;
+  path: string;
+  kind: DashboardSurfaceKind;
+  mode: DashboardSurfaceMode;
+  requiredPermission: Permission;
+  hasAuthGuard: boolean;
+  hasTenantScope: boolean;
+  hasAuditLog: boolean;
+  hasPersistence: boolean;
+  hasTestCoverage: boolean;
+}
+
+export interface DashboardReadinessInput {
+  surfaces: readonly DashboardSurfaceRequirement[];
+  packageScripts: Readonly<Record<string, string>>;
+  buildVerified: boolean;
+  typecheckVerified: boolean;
+  e2eVerified: boolean;
+  providerActionsConfigured: boolean;
+  seededDataAvailable: boolean;
+}
+
+export interface DashboardReadinessPlan {
+  status: "ready" | "blocked";
+  surfaceCount: number;
+  staticSurfaceCount: number;
+  mutationSurfaceCount: number;
+  unguardedSurfaces: readonly string[];
+  unscopedSurfaces: readonly string[];
+  unauditedMutations: readonly string[];
+  unpersistedSurfaces: readonly string[];
+  untestedSurfaces: readonly string[];
+  requiredCommands: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 export function buildSessionPersistencePlan(input: SessionPersistencePlanInput): SessionPersistencePlan {
   const blockers: string[] = [];
   if (!input.authProviderConfigured) blockers.push("Auth provider must be selected and configured before provider-backed login/logout is ready.");
@@ -768,5 +809,59 @@ export function buildSessionPersistencePlan(input: SessionPersistencePlanInput):
       "session revocation check",
     ],
     auditEvents: ["auth.login", "auth.logout", "auth.refresh", "auth.revoked", "authz.allowed", "authz.denied", "tenant.switch"],
+  };
+}
+
+export function buildDashboardReadinessPlan(input: DashboardReadinessInput): DashboardReadinessPlan {
+  const blockers: string[] = [];
+  const mutationSurfaces = input.surfaces.filter((surface) => surface.mode === "mutation_api" || surface.mode === "provider_action");
+  const unguardedSurfaces = input.surfaces.filter((surface) => !surface.hasAuthGuard).map((surface) => surface.id).sort();
+  const unscopedSurfaces = input.surfaces.filter((surface) => !surface.hasTenantScope).map((surface) => surface.id).sort();
+  const unauditedMutations = mutationSurfaces.filter((surface) => !surface.hasAuditLog).map((surface) => surface.id).sort();
+  const unpersistedSurfaces = input.surfaces.filter((surface) => surface.mode !== "static_demo" && !surface.hasPersistence).map((surface) => surface.id).sort();
+  const untestedSurfaces = input.surfaces.filter((surface) => !surface.hasTestCoverage).map((surface) => surface.id).sort();
+
+  for (const script of ["typecheck", "build", "test"]) {
+    if (!input.packageScripts[script]) {
+      blockers.push(`@inkroute/dashboard package script is missing ${script}.`);
+    }
+  }
+  if (!input.typecheckVerified) blockers.push("Dashboard typecheck command has not been verified in the installed workspace.");
+  if (!input.buildVerified) blockers.push("Dashboard Next.js build has not been verified in the installed workspace.");
+  if (!input.e2eVerified) blockers.push("Dashboard Playwright smoke tests have not been verified with seeded tenant data.");
+  if (!input.seededDataAvailable) blockers.push("Dashboard has no verified seeded tenant data source for smoke and mutation tests.");
+  if (!input.providerActionsConfigured && mutationSurfaces.some((surface) => surface.mode === "provider_action")) {
+    blockers.push("Dashboard provider actions are still static/demo gated and cannot execute production provider calls.");
+  }
+  if (unguardedSurfaces.length > 0) blockers.push("Every dashboard page/API/server action must enforce an auth guard.");
+  if (unscopedSurfaces.length > 0) blockers.push("Every dashboard surface must resolve tenant scope server-side.");
+  if (unauditedMutations.length > 0) blockers.push("Every dashboard mutation/provider action must write an AuditLog row.");
+  if (unpersistedSurfaces.length > 0) blockers.push("Read and mutation dashboard surfaces need tenant-scoped persistence instead of demo state.");
+  if (untestedSurfaces.length > 0) blockers.push("Every dashboard surface needs smoke, route, or contract test coverage.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    surfaceCount: input.surfaces.length,
+    staticSurfaceCount: input.surfaces.filter((surface) => surface.mode === "static_demo").length,
+    mutationSurfaceCount: mutationSurfaces.length,
+    unguardedSurfaces,
+    unscopedSurfaces,
+    unauditedMutations,
+    unpersistedSurfaces,
+    untestedSurfaces,
+    requiredCommands: [
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/dashboard test",
+      "pnpm test:e2e --project=dashboard-chromium",
+    ],
+    requiredControls: [
+      "Resolve provider-backed session and tenant membership before rendering dashboard data.",
+      "Authorize every dashboard page, API route, and server action with the required permission.",
+      "Execute state-changing actions inside tenant-scoped transactions with AuditLog writes.",
+      "Redact or deny sensitive fields by role before serializing dashboard payloads.",
+      "Run seeded-data Playwright smoke tests and cross-tenant denial tests before launch.",
+    ],
+    blockers,
   };
 }

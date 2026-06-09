@@ -365,6 +365,46 @@ export interface JsonLdValidationResult {
   findings: SeoIssue[];
 }
 
+export type PublicWebSurfaceKind = "page" | "api" | "webhook" | "metadata";
+export type PublicWebBackingMode = "static_demo" | "local_runtime" | "database" | "provider";
+export type PublicWebReadinessStatus = "ready" | "blocked";
+
+export interface PublicWebSurfaceRequirement {
+  id: string;
+  path: string;
+  kind: PublicWebSurfaceKind;
+  backingMode: PublicWebBackingMode;
+  hasRouteTest: boolean;
+  requiresDatabase: boolean;
+  requiresProvider: boolean;
+  placeholderAssetsPresent?: boolean;
+}
+
+export interface PublicWebReadinessInput {
+  surfaces: readonly PublicWebSurfaceRequirement[];
+  packageScripts: Readonly<Record<string, string>>;
+  buildVerified: boolean;
+  typecheckVerified: boolean;
+  accessibilityAuditVerified: boolean;
+  performanceAuditVerified: boolean;
+  runtimePersistenceConfigured: boolean;
+  realPortfolioAssetsConfigured: boolean;
+}
+
+export interface PublicWebReadinessPlan {
+  status: PublicWebReadinessStatus;
+  surfaceCount: number;
+  staticDemoSurfaceCount: number;
+  localRuntimeSurfaceCount: number;
+  databaseBackedSurfaceCount: number;
+  providerBackedSurfaceCount: number;
+  untestedSurfaces: readonly string[];
+  placeholderAssetSurfaces: readonly string[];
+  requiredCommands: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 export function normalizePath(path: string): string {
   const trimmed = path.trim();
   if (trimmed === "") return "/";
@@ -1077,6 +1117,64 @@ export function auditSeoTechnicalReadiness(input: SeoTechnicalAuditInput): SeoTe
     sitemapEntryCount: sitemap.entries.length,
     duplicateSitemapUrls,
     findings,
+  };
+}
+
+export function buildPublicWebReadinessPlan(input: PublicWebReadinessInput): PublicWebReadinessPlan {
+  const blockers: string[] = [];
+  const untestedSurfaces = input.surfaces.filter((surface) => !surface.hasRouteTest).map((surface) => surface.id).sort();
+  const placeholderAssetSurfaces = input.surfaces.filter((surface) => surface.placeholderAssetsPresent).map((surface) => surface.id).sort();
+  const staticDemoSurfaceCount = input.surfaces.filter((surface) => surface.backingMode === "static_demo").length;
+  const localRuntimeSurfaceCount = input.surfaces.filter((surface) => surface.backingMode === "local_runtime").length;
+  const databaseBackedSurfaceCount = input.surfaces.filter((surface) => surface.backingMode === "database").length;
+  const providerBackedSurfaceCount = input.surfaces.filter((surface) => surface.backingMode === "provider").length;
+
+  for (const script of ["typecheck", "build", "test"]) {
+    if (!input.packageScripts[script]) {
+      blockers.push(`@inkroute/web package script is missing ${script}.`);
+    }
+  }
+  if (!input.typecheckVerified) blockers.push("Web typecheck command has not been verified in the installed workspace.");
+  if (!input.buildVerified) blockers.push("Next.js web build has not been verified in the installed workspace.");
+  if (!input.accessibilityAuditVerified) blockers.push("Public web accessibility audit has not been verified.");
+  if (!input.performanceAuditVerified) blockers.push("Public web performance/Core Web Vitals audit has not been verified.");
+  if (!input.runtimePersistenceConfigured && input.surfaces.some((surface) => surface.requiresDatabase)) {
+    blockers.push("Public routes that require persistence are still static-demo or local-runtime backed.");
+  }
+  if (input.surfaces.some((surface) => surface.requiresProvider && surface.backingMode !== "provider")) {
+    blockers.push("Provider-backed public routes still use local runtime or static provider boundaries.");
+  }
+  if (!input.realPortfolioAssetsConfigured && placeholderAssetSurfaces.length > 0) {
+    blockers.push("Public portfolio/media surfaces still depend on placeholder or demo assets.");
+  }
+  if (untestedSurfaces.length > 0) {
+    blockers.push("Every public page/API/webhook surface needs route smoke or contract coverage before launch.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    surfaceCount: input.surfaces.length,
+    staticDemoSurfaceCount,
+    localRuntimeSurfaceCount,
+    databaseBackedSurfaceCount,
+    providerBackedSurfaceCount,
+    untestedSurfaces,
+    placeholderAssetSurfaces,
+    requiredCommands: [
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/web test",
+      "pnpm test:e2e --project=web-chromium",
+      "pnpm test:e2e --project=web-mobile",
+    ],
+    requiredControls: [
+      "Keep static-demo and local-runtime responses explicitly labeled until database persistence is wired.",
+      "Smoke every public page, public API route, provider webhook, sitemap, robots, and JSON-LD output before launch.",
+      "Replace placeholder portfolio/media assets with scanned FileAsset-backed derivatives.",
+      "Verify accessibility, mobile responsiveness, SEO metadata, sitemap, robots, and performance budgets.",
+      "Persist booking, payment, upload, notification, privacy, and observability records tenant-safely before production.",
+    ],
+    blockers,
   };
 }
 
