@@ -2797,5 +2797,21 @@
         "Dashboard typecheck/build/test and browser route smoke proof pending",
         "CI evidence and secret-safe artifact proof pending"
       ]
+    }
+    ,{
+      "id": "unit-dashboard-privacy-runtime-static",
+      "file": "apps/dashboard/tests/dashboard-privacy-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-040 dashboard privacy runtime matrix covers security typecheck/tests, dashboard typecheck/build, client/booking/consent/payment/message/file privacy projections, dashboard privacy/trust route tests, persisted privacy request store, export/delete/anonymize workflows, private file deletion, AuditLog persistence, sanitized logs/errors, legal/product approval, CI evidence, and secret-safe artifacts",
+        "GAP-040 dashboard privacy request route returns buildDashboardPrivacyWorkflowEvidencePlan output while preserving tenant/role gates, no-store responses, rate limiting, and redacted submissions",
+        "GAP-040 readiness keeps persisted workflow, private storage deletion, legal approval, sanitized runtime logs/errors, dashboard build, CI, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static dashboard privacy runtime test execution pending",
+        "Persisted privacy request store and export/delete/anonymize workflow proof pending",
+        "Private file deletion, AuditLog, sanitized log/error, and legal/product approval proof pending",
+        "Dashboard typecheck/build, CI evidence, and secret-safe artifact proof pending"
+      ]
     }  ]
 }

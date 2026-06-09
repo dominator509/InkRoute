@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { buildPrivacyRequestDraft, rateLimitRules, redactRecord, type PrivacyRequestType } from "@inkroute/security";
+import {
+  buildDashboardPrivacyWorkflowEvidencePlan,
+  buildPrivacyRequestDraft,
+  rateLimitRules,
+  redactRecord,
+  type PrivacyRequestType,
+} from "@inkroute/security";
 
 type PrivacyRequestInput = {
   type: PrivacyRequestType;
@@ -166,6 +172,26 @@ export async function POST(request: NextRequest) {
           role: actor.role,
         },
         draft: buildPrivacyRequestDraft(requestInput.type),
+        dashboardPrivacyWorkflowEvidencePlan: buildDashboardPrivacyWorkflowEvidencePlan({
+          packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+          securityTestsPassed: false,
+          securityTypecheckPassed: false,
+          dashboardTypecheckPassed: false,
+          dashboardBuildPassed: false,
+          routeProjectionSurfaces: ["client_profile", "booking_request", "consent_form", "payment", "message", "file_asset"],
+          routeTestSurfaces: ["client_profile", "booking_request", "consent_form", "payment", "message", "file_asset"],
+          persistedPrivacyRequestStoreConfigured: false,
+          exportWorkflowIntegrationPassed: false,
+          deleteAnonymizeWorkflowIntegrationPassed: false,
+          privateStorageDeletionIntegrationPassed: false,
+          auditLogPersistencePassed: false,
+          legalApprovalCaptured: false,
+          consentMedicalDepositSmsCopyApproved: false,
+          sanitizedLogEvidenceCaptured: false,
+          sanitizedErrorEvidenceCaptured: false,
+          ciEvidenceCaptured: false,
+          secretSafeArtifactsCaptured: false,
+        }),
         persisted: {
           id: persisted.id,
           requestType: persisted.requestType,

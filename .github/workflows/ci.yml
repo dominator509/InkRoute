@@ -822,6 +822,34 @@ jobs:
               coverage/dashboard-build-secret-safe-artifacts.json
               test-results/dashboard-build-runtime
             if-no-files-found: warn
+        - name: Run Phase 5 dashboard privacy runtime contracts
+          run: pnpm --filter @inkroute/security test && pnpm vitest run apps/dashboard/tests/dashboard-privacy-runtime-static.test.ts apps/dashboard/tests/security-privacy-route-static.test.ts apps/dashboard/tests/security-trust-route-static.test.ts
+
+        - name: Upload Phase 5 dashboard privacy runtime artifacts
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: dashboard-privacy-runtime-artifacts
+            path: |
+              coverage/dashboard-privacy-runtime.json
+              coverage/dashboard-privacy-security-typecheck.txt
+              coverage/dashboard-privacy-security-test.txt
+              coverage/dashboard-privacy-dashboard-typecheck.txt
+              coverage/dashboard-privacy-dashboard-build.txt
+              coverage/dashboard-privacy-route-projection-matrix.json
+              coverage/dashboard-privacy-route-tests.json
+              coverage/dashboard-privacy-request-store.json
+              coverage/dashboard-privacy-export-workflow.json
+              coverage/dashboard-privacy-delete-anonymize-workflow.json
+              coverage/dashboard-privacy-private-file-deletion.json
+              coverage/dashboard-privacy-auditlog-redacted.json
+              coverage/dashboard-privacy-sanitized-logs.json
+              coverage/dashboard-privacy-sanitized-errors.json
+              coverage/dashboard-privacy-legal-approval-redacted.json
+              coverage/dashboard-privacy-ci-evidence.json
+              coverage/dashboard-privacy-secret-safe-artifacts.json
+              test-results/dashboard-privacy-runtime
+            if-no-files-found: warn
 
       - name: Run Phase 5 dashboard launch runtime contracts
         run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/dashboard-launch-runtime-static.test.ts
