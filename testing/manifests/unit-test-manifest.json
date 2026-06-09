@@ -1594,6 +1594,23 @@
                                          "GitHub Actions migration dry-run success pending",
                                          "Backup/approval/rollback evidence pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-dashboard-release-incident-linkage-static",
+                       "file":  "apps/dashboard/tests/release-incident-linkage-static.test.ts",
+                       "priority":  "medium",
+                       "verifies":  [
+                                        "GAP-093 dashboard release incident route persists tenant-scoped release/report linkage and rollback communication handoff metadata",
+                                        "GAP-093 release incident filters, tenant isolation, sanitized payloads, and artifact paths are wired without provider mutation",
+                                        "GAP-093 live Sentry release/source-map evidence and incident provider creation remain explicitly gated"
+                                    ],
+                       "blockedBy":  [
+                                         "Static release incident linkage test execution pending",
+                                         "Live Sentry release tags/source maps pending",
+                                         "Incident provider workflow configuration pending",
+                                         "DB-backed persistence integration proof pending",
+                                         "Live provider incident proof pending"
+                                     ]
                    }
                ]
 }

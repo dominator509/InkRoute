@@ -440,6 +440,26 @@ jobs:
             coverage/migration-github-actions-dry-run.json
             test-results/migration-runtime-dry-run
           if-no-files-found: warn
+      - name: Run Phase 12 release incident linkage contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/dashboard/tests/release-incident-linkage-static.test.ts
+
+      - name: Upload release incident linkage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-incident-linkage-artifacts
+          path: |
+            coverage/release-incident-linkage.json
+            coverage/release-sentry-tags-source-maps-redacted.json
+            coverage/release-errorreport-link-persistence.json
+            coverage/release-record-incident-link.json
+            coverage/release-rollback-communication-handoff.json
+            coverage/release-dashboard-filter-smoke.json
+            coverage/release-tenant-incident-isolation.json
+            coverage/release-incident-sanitized-payload-redacted.json
+            coverage/release-incident-live-provider-proof-redacted.json
+            test-results/release-incident-linkage
+          if-no-files-found: warn
       - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
@@ -488,6 +508,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
