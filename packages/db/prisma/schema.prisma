@@ -396,6 +396,7 @@ model Tenant {
   requiredChecksRuns RequiredChecksRun[]
   workspaceRuntimeToolchainRuns WorkspaceRuntimeToolchainRun[]
   staticDependencyAuditRuns StaticDependencyAuditRun[]
+  runtimeEvidenceRuns RuntimeEvidenceRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2620,6 +2621,52 @@ model StaticDependencyAuditRun {
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())
   updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model RuntimeEvidenceRun {
+  id                                String   @id @default(cuid())
+  tenantId                          String
+  runId                             String
+  commitSha                         String?
+  status                            String
+  commandMatrix                     Json
+  requirementManifest               Json
+  artifactManifest                  Json
+  redactedEvidenceManifest          Json
+  productionBlockerManifest         Json
+  installEvidenceCaptured           Boolean  @default(false)
+  runtimeEvidenceCommandPassed      Boolean  @default(false)
+  workspaceAllPassed                Boolean  @default(false)
+  handoffAllPassed                  Boolean  @default(false)
+  qualityAllPassed                  Boolean  @default(false)
+  typecheckPassed                   Boolean  @default(false)
+  unitTestsPassed                   Boolean  @default(false)
+  webBuildEvidenceCaptured          Boolean  @default(false)
+  dashboardBuildEvidenceCaptured    Boolean  @default(false)
+  ciRuntimeReadinessPassed          Boolean  @default(false)
+  ciEvidenceCaptured                Boolean  @default(false)
+  runtimeEvidenceAuditPassed        Boolean  @default(false)
+  redactedEvidenceLabelsCaptured    Boolean  @default(false)
+  productionBlockersVisible         Boolean  @default(false)
+  installArtifactPath               String?
+  runtimeEvidenceArtifactPath       String?
+  workspaceAllArtifactPath          String?
+  handoffAllArtifactPath            String?
+  qualityAllArtifactPath            String?
+  typecheckArtifactPath             String?
+  unitTestArtifactPath              String?
+  webBuildArtifactPath              String?
+  dashboardBuildArtifactPath        String?
+  ciRuntimeReadinessArtifactPath    String?
+  productionBlockerArtifactPath     String?
+  ciRunUrl                          String?
+  tenant                            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                         DateTime @default(now())
+  updatedAt                         DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

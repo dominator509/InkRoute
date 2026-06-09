@@ -14,6 +14,92 @@ export interface RuntimeEvidenceMatrixEntry {
   readonly requiredForProduction: boolean;
 }
 
+export interface RuntimeEvidenceRunPersistenceContract {
+  readonly model: "RuntimeEvidenceRun";
+  readonly tenantRelation: "runtimeEvidenceRuns";
+  readonly migration: "20260609032300_add_runtime_evidence_runs";
+  readonly jsonFields: readonly [
+    "commandMatrix",
+    "requirementManifest",
+    "artifactManifest",
+    "redactedEvidenceManifest",
+    "productionBlockerManifest",
+  ];
+  readonly evidenceBooleans: readonly [
+    "installEvidenceCaptured",
+    "runtimeEvidenceCommandPassed",
+    "workspaceAllPassed",
+    "handoffAllPassed",
+    "qualityAllPassed",
+    "typecheckPassed",
+    "unitTestsPassed",
+    "webBuildEvidenceCaptured",
+    "dashboardBuildEvidenceCaptured",
+    "ciRuntimeReadinessPassed",
+    "ciEvidenceCaptured",
+    "runtimeEvidenceAuditPassed",
+    "redactedEvidenceLabelsCaptured",
+    "productionBlockersVisible",
+  ];
+  readonly artifactFields: readonly [
+    "installArtifactPath",
+    "runtimeEvidenceArtifactPath",
+    "workspaceAllArtifactPath",
+    "handoffAllArtifactPath",
+    "qualityAllArtifactPath",
+    "typecheckArtifactPath",
+    "unitTestArtifactPath",
+    "webBuildArtifactPath",
+    "dashboardBuildArtifactPath",
+    "ciRuntimeReadinessArtifactPath",
+    "productionBlockerArtifactPath",
+    "ciRunUrl",
+  ];
+}
+
+export const runtimeEvidenceRunPersistenceContract: RuntimeEvidenceRunPersistenceContract = {
+  model: "RuntimeEvidenceRun",
+  tenantRelation: "runtimeEvidenceRuns",
+  migration: "20260609032300_add_runtime_evidence_runs",
+  jsonFields: [
+    "commandMatrix",
+    "requirementManifest",
+    "artifactManifest",
+    "redactedEvidenceManifest",
+    "productionBlockerManifest",
+  ],
+  evidenceBooleans: [
+    "installEvidenceCaptured",
+    "runtimeEvidenceCommandPassed",
+    "workspaceAllPassed",
+    "handoffAllPassed",
+    "qualityAllPassed",
+    "typecheckPassed",
+    "unitTestsPassed",
+    "webBuildEvidenceCaptured",
+    "dashboardBuildEvidenceCaptured",
+    "ciRuntimeReadinessPassed",
+    "ciEvidenceCaptured",
+    "runtimeEvidenceAuditPassed",
+    "redactedEvidenceLabelsCaptured",
+    "productionBlockersVisible",
+  ],
+  artifactFields: [
+    "installArtifactPath",
+    "runtimeEvidenceArtifactPath",
+    "workspaceAllArtifactPath",
+    "handoffAllArtifactPath",
+    "qualityAllArtifactPath",
+    "typecheckArtifactPath",
+    "unitTestArtifactPath",
+    "webBuildArtifactPath",
+    "dashboardBuildArtifactPath",
+    "ciRuntimeReadinessArtifactPath",
+    "productionBlockerArtifactPath",
+    "ciRunUrl",
+  ],
+};
+
 export const runtimeEvidenceCommands = [
   "pnpm install",
   "pnpm workspace:runtime-evidence",
