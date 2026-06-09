@@ -2109,6 +2109,22 @@
         "pnpm quality:all execution proof pending",
         "GitHub Actions quality job and artifact proof pending"
       ]
+    },
+    {
+      "id": "unit-web-documentation-audit-runtime-static",
+      "file": "apps/web/tests/documentation-audit-runtime-static.test.ts",
+      "priority": "medium",
+      "verifies": [
+        "GAP-124 documentation audit runtime matrix covers markdown link/path audit, documentation consistency, route references, provider/legal readiness language, workspace inventory, generated reports, CI quality docs evidence, provider review, legal review, and stale provider status proof",
+        "GAP-124 quality docs scripts, helper tests, protocol language, generated reports, CI labels, and tracker evidence remain wired before external review proof",
+        "GAP-124 static readiness keeps local audits complete while preserving blockers for CI, provider, legal, and stale-provider evidence"
+      ],
+      "blockedBy": [
+        "Static documentation audit runtime test execution pending",
+        "pnpm quality:docs and CI quality docs evidence pending",
+        "Provider readiness evidence or gated-language review pending",
+        "Legal review evidence and stale provider status proof pending"
+      ]
     }
   ]
 }

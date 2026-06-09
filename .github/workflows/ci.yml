@@ -284,6 +284,26 @@ jobs:
             test-results/quality-gate-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 16 documentation audit runtime contracts
+        run: pnpm --filter @inkroute/quality test && pnpm vitest run apps/web/tests/documentation-audit-runtime-static.test.ts
+
+      - name: Upload Phase 16 documentation audit runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-audit-runtime-artifacts
+          path: |
+            coverage/documentation-audit-runtime.json
+            coverage/documentation-link-audit-output.txt
+            coverage/documentation-consistency-output.txt
+            coverage/documentation-inventory-output.txt
+            coverage/documentation-provider-review-redacted.json
+            coverage/documentation-legal-review-redacted.json
+            coverage/documentation-stale-provider-status-redacted.json
+            coverage/documentation-ci-quality-docs.json
+            test-results/documentation-audit-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 17 quality gates
         run: pnpm quality:all
       - name: Verify PR GAP tracker diff evidence
