@@ -1486,6 +1486,37 @@ export interface MessagingPrivacyPlan {
   blockers: readonly string[];
 }
 
+export type NotificationRuntimeReadinessStatus = "ready" | "blocked";
+
+export interface NotificationRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  packageTestsPassed: boolean;
+  packageTypecheckPassed: boolean;
+  providerCredentialsConfigured: boolean;
+  providerSandboxSmokeVerified: boolean;
+  queueWorkerConfigured: boolean;
+  deliveryLogPersistenceConfigured: boolean;
+  messageThreadPersistenceConfigured: boolean;
+  consentStoreConfigured: boolean;
+  unsubscribeStopConfigured: boolean;
+  webhookSignatureVerificationConfigured: boolean;
+  webhookReplayProtectionConfigured: boolean;
+  pushTokenStoreConfigured: boolean;
+  expoPushConfigured: boolean;
+  retryBackoffConfigured: boolean;
+  deadLetterQueueConfigured: boolean;
+  tenantIsolationVerified: boolean;
+  templateLegalReviewApproved: boolean;
+}
+
+export interface NotificationRuntimeReadinessPlan {
+  status: NotificationRuntimeReadinessStatus;
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 function notificationSchedulerWriteModels(action: NotificationSchedulerAction): NotificationSchedulerWriteModel[] {
   switch (action) {
     case "schedule_sequence":
@@ -1748,6 +1779,53 @@ export function buildMessagingPrivacyPlan(input: MessagingPrivacyPlanInput): Mes
       "Omit provider payloads, raw destinations, private URLs, and secrets from message exports.",
       "Persist retention/delete/export audit events with actor, tenant, thread, and idempotency key.",
       "Apply spam/rate-limit controls before storing or routing suspicious inbound messages.",
+    ],
+    blockers,
+  };
+}
+
+export function buildNotificationRuntimeReadinessPlan(input: NotificationRuntimeReadinessInput): NotificationRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing @inkroute/notifications ${script} script.`);
+  if (!input.packageTestsPassed) blockers.push("Notification package tests must pass before runtime promotion.");
+  if (!input.packageTypecheckPassed) blockers.push("Notification package typecheck must pass before runtime promotion.");
+  if (!input.providerCredentialsConfigured) blockers.push("Resend, Twilio, and Expo provider credentials must be configured in a secret store.");
+  if (!input.providerSandboxSmokeVerified) blockers.push("Provider sandbox email, SMS, and push smoke tests must pass.");
+  if (!input.queueWorkerConfigured) blockers.push("Notification queue worker must be configured before provider-backed automation.");
+  if (!input.deliveryLogPersistenceConfigured) blockers.push("Tenant-scoped NotificationDelivery persistence must be configured.");
+  if (!input.messageThreadPersistenceConfigured) blockers.push("Tenant-scoped message thread persistence must be configured.");
+  if (!input.consentStoreConfigured) blockers.push("Consent/preference store must be configured before non-transactional delivery.");
+  if (!input.unsubscribeStopConfigured) blockers.push("Email unsubscribe, SMS STOP/HELP, and suppression controls must be configured.");
+  if (!input.webhookSignatureVerificationConfigured) blockers.push("Provider webhook signature verification must be configured.");
+  if (!input.webhookReplayProtectionConfigured) blockers.push("Provider webhook replay/idempotency protection must be configured.");
+  if (!input.pushTokenStoreConfigured) blockers.push("Push token registration and revocation store must be configured.");
+  if (!input.expoPushConfigured) blockers.push("Expo push delivery and receipt processing must be configured.");
+  if (!input.retryBackoffConfigured) blockers.push("Retry backoff policy must be configured before worker retries.");
+  if (!input.deadLetterQueueConfigured) blockers.push("Dead-letter queue handling must be configured before production retries.");
+  if (!input.tenantIsolationVerified) blockers.push("Notification/message tenant isolation must be verified with integration tests.");
+  if (!input.templateLegalReviewApproved) blockers.push("Notification templates, consent copy, STOP/HELP copy, and policy language need legal/product approval.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/notifications typecheck",
+      "pnpm --filter @inkroute/notifications test",
+      "provider sandbox email/SMS/push smoke",
+      "webhook signature, replay, and idempotency tests",
+      "tenant delivery-log and message-thread isolation integration tests",
+    ],
+    requiredControls: [
+      "Resolve channel delivery through consent and suppression state immediately before send.",
+      "Persist tenant-scoped NotificationDelivery, ProviderEvent, MessageThread, Message, suppression, and audit records transactionally.",
+      "Verify Resend, Twilio, and Expo webhook signatures before reconciliation.",
+      "Apply replay protection and idempotency keys to provider events, queue jobs, and preference mutations.",
+      "Process SMS STOP/HELP, email unsubscribe, bounce/complaint, and invalid push token suppression before future sends.",
+      "Use queue retries with bounded exponential backoff and dead-letter audit trails.",
+      "Keep raw destinations, provider payloads, private URLs, and sensitive message bodies out of logs and exports.",
     ],
     blockers,
   };

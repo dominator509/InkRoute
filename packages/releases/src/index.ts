@@ -204,6 +204,39 @@ export interface MigrationCompatibilityEnforcementPlan {
   readonly policy: readonly string[];
 }
 
+export interface ReleaseControlPlaneReadinessInput {
+  packageScripts: readonly string[];
+  packageTestsPassed: boolean;
+  packageTypecheckPassed: boolean;
+  releaseRecordPersistenceConfigured: boolean;
+  featureFlagPersistenceConfigured: boolean;
+  rbacEnforced: boolean;
+  tenantScopedReadsVerified: boolean;
+  tenantScopedMutationsVerified: boolean;
+  auditLogPersistenceConfigured: boolean;
+  optimisticConcurrencyConfigured: boolean;
+  protectedGithubEnvironmentsConfigured: boolean;
+  signedDeploymentJobsConfigured: boolean;
+  ciRequiredChecksConfigured: boolean;
+  previewDeploymentJobConfigured: boolean;
+  productionDeploymentJobConfigured: boolean;
+  migrationGatesConfigured: boolean;
+  rollbackWorkflowRehearsed: boolean;
+  incidentLinkageConfigured: boolean;
+  easUpdateGovernanceConfigured: boolean;
+  rolloutControlsConfigured: boolean;
+  killSwitchesVerified: boolean;
+  releaseHealthRouteVerified: boolean;
+}
+
+export interface ReleaseControlPlaneReadinessPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingScripts: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
+}
+
 const releasePriority: Record<ReleaseRiskLevel, number> = {
   low: 1,
   medium: 2,
@@ -644,6 +677,60 @@ export function buildGithubReleaseWorkflowPlan(): GithubReleaseWorkflowPlan {
     concurrencyGroup: "release-${{ github.ref }}",
     environments: ["preview", "staging", "production"],
     deploymentGatedSteps: ["Vercel preview/prod deploy", "Prisma validate", "Prisma migrate diff destructive-change scan", "Prisma migrate deploy", "EAS Update publish", "Sentry release/source-map upload", "Search Console sitemap submission"],
+  };
+}
+
+export function buildReleaseControlPlaneReadinessPlan(input: ReleaseControlPlaneReadinessInput): ReleaseControlPlaneReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing @inkroute/releases ${script} script.`);
+  if (!input.packageTestsPassed) blockers.push("Release package tests must pass before release control-plane readiness.");
+  if (!input.packageTypecheckPassed) blockers.push("Release package typecheck must pass before release control-plane readiness.");
+  if (!input.releaseRecordPersistenceConfigured) blockers.push("ReleaseRecord persistence must be configured for create, approve, deploy, rollback, and health states.");
+  if (!input.featureFlagPersistenceConfigured) blockers.push("FeatureFlag persistence must be configured with tenant/environment scopes.");
+  if (!input.rbacEnforced) blockers.push("Release and feature-flag mutations must enforce release-admin RBAC.");
+  if (!input.tenantScopedReadsVerified) blockers.push("Release/feature-flag reads must be tenant-scoped and tested.");
+  if (!input.tenantScopedMutationsVerified) blockers.push("Release/feature-flag mutations must be tenant-scoped and tested.");
+  if (!input.auditLogPersistenceConfigured) blockers.push("Release, rollback, mobile update, and feature-flag changes must persist audit rows.");
+  if (!input.optimisticConcurrencyConfigured) blockers.push("Release and feature-flag writes must use optimistic concurrency or version checks.");
+  if (!input.protectedGithubEnvironmentsConfigured) blockers.push("GitHub preview/production protected environments must be configured.");
+  if (!input.signedDeploymentJobsConfigured) blockers.push("Deployment jobs must be signed or otherwise tied to trusted CI identity and immutable commit SHA.");
+  if (!input.ciRequiredChecksConfigured) blockers.push("Release workflow must require CI quality gates before deployment.");
+  if (!input.previewDeploymentJobConfigured) blockers.push("Preview deployment job must be configured and dry-run verified.");
+  if (!input.productionDeploymentJobConfigured) blockers.push("Production deployment job must be configured behind approval gates.");
+  if (!input.migrationGatesConfigured) blockers.push("Migration compatibility gates must run before production deploy approval.");
+  if (!input.rollbackWorkflowRehearsed) blockers.push("Rollback workflow must be rehearsed for web, dashboard, mobile OTA, database forward-fix, and feature flags.");
+  if (!input.incidentLinkageConfigured) blockers.push("Release records must link incidents, Sentry/ErrorReport fingerprints, rollback decisions, and tenant communication drafts.");
+  if (!input.easUpdateGovernanceConfigured) blockers.push("EAS Update governance must verify project, channels, runtime policy, native build, update id, adoption monitoring, and rollback drill.");
+  if (!input.rolloutControlsConfigured) blockers.push("Tenant/environment rollout controls must be configured before SaaS release automation.");
+  if (!input.killSwitchesVerified) blockers.push("Provider and risky-feature kill switches must be verified before rollout.");
+  if (!input.releaseHealthRouteVerified) blockers.push("Release health route must return consistent tenant-scoped envelopes with persisted release/flag state.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/releases typecheck",
+      "pnpm --filter @inkroute/releases test",
+      "pnpm test:unit -- apps/web/tests/release-health-route.test.ts apps/web/tests/release-automation-static.test.ts",
+      "pnpm test:unit -- apps/mobile/tests/mobile-static.test.ts",
+      "release-governance workflow dry run",
+      "Prisma migration compatibility dry run",
+      "preview deploy and rollback rehearsal",
+      "EAS preview update and rollback rehearsal",
+    ],
+    requiredEvidence: [
+      "ReleaseRecord and FeatureFlag writes persisted with tenant scope, RBAC, audit rows, and version checks.",
+      "Release/feature-flag API route envelopes are consistent for success, validation failure, unauthorized access, and cross-tenant denial.",
+      "GitHub protected environment settings require CI checks and human approval before production deployment.",
+      "Deployment jobs are tied to immutable commit SHA, release version, environment, artifact URLs, and redacted secrets evidence.",
+      "Migration gate output includes Prisma validate, diff, dry-run, backup/restore or forward-fix evidence, and destructive-change approval when needed.",
+      "Rollback rehearsal covers web, dashboard, mobile OTA, database forward-fix/restore policy, feature flags, and incident communication.",
+      "Release health route reads persisted release/flag state and links Sentry/ErrorReport incident fingerprints.",
+    ],
+    blockers,
   };
 }
 

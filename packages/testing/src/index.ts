@@ -86,6 +86,39 @@ export interface DashboardTestRequirement {
   gapIds: string[];
 }
 
+export interface TestingRuntimeReadinessInput {
+  rootScripts: readonly string[];
+  lockfileCommitted: boolean;
+  dependenciesInstalled: boolean;
+  vitestWorkspaceConfigured: boolean;
+  playwrightConfigured: boolean;
+  ciWorkflowConfigured: boolean;
+  phase14StaticPassed: boolean;
+  testManifestPassed: boolean;
+  unitTestsPassed: boolean;
+  e2eTestsPassed: boolean;
+  appBuildsPassed: boolean;
+  prismaIntegrationTestsPassed: boolean;
+  providerSandboxTestsPassed: boolean;
+  securityRegressionTestsPassed: boolean;
+  mobileStaticTestsPassed: boolean;
+  mobileDeviceTestsPassed: boolean;
+  coverageThresholdsConfigured: boolean;
+  coverageArtifactsUploaded: boolean;
+  playwrightArtifactsUploaded: boolean;
+  ciRunPassed: boolean;
+  branchProtectionRequiresCi: boolean;
+  flakyTestPolicyConfigured: boolean;
+}
+
+export interface TestingRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export function createTestCase(input: TestCaseRecord): TestCaseRecord {
   return input;
 }
@@ -329,6 +362,63 @@ export function summarizeDashboardTestRequirements(requirements: readonly Dashbo
     runtimeGatedCount: requirements.filter((requirement) => requirement.status === "runtime_gated").length,
     criticalRuntimeGatedIds: criticalRuntimeGated.map((requirement) => requirement.id),
     productionReady: missingAreas.length === 0 && criticalRuntimeGated.length === 0
+  };
+}
+
+export function buildTestingRuntimeReadinessPlan(input: TestingRuntimeReadinessInput): TestingRuntimeReadinessPlan {
+  const requiredScripts = ["test:phase14:static", "test:manifest", "test:unit", "test:e2e", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.rootScripts.includes(script));
+  const blockers: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing root ${script} script.`);
+  if (!input.lockfileCommitted) blockers.push("Committed pnpm-lock.yaml is required before reproducible test execution.");
+  if (!input.dependenciesInstalled) blockers.push("Workspace dependencies must install with pnpm before test execution.");
+  if (!input.vitestWorkspaceConfigured) blockers.push("Vitest workspace configuration must include package, app, and contract tests.");
+  if (!input.playwrightConfigured) blockers.push("Playwright configuration must include web and dashboard projects.");
+  if (!input.ciWorkflowConfigured) blockers.push("CI workflow must run install, manifest, typecheck, unit, coverage, and E2E gates.");
+  if (!input.phase14StaticPassed) blockers.push("Phase 14 static testing manifest check must pass.");
+  if (!input.testManifestPassed) blockers.push("Test manifest verification must pass.");
+  if (!input.unitTestsPassed) blockers.push("Unit tests must pass across workspace packages and app contract tests.");
+  if (!input.e2eTestsPassed) blockers.push("Playwright web/dashboard E2E tests must pass.");
+  if (!input.appBuildsPassed) blockers.push("Web and dashboard builds must pass before E2E results are production-significant.");
+  if (!input.prismaIntegrationTestsPassed) blockers.push("Prisma/database integration tests must pass against non-production database fixtures.");
+  if (!input.providerSandboxTestsPassed) blockers.push("Provider sandbox tests must pass for Stripe, storage, notification, calendar, and observability boundaries.");
+  if (!input.securityRegressionTestsPassed) blockers.push("Security regression tests must cover auth, CSRF, tenant isolation, uploads, webhooks, and redaction.");
+  if (!input.mobileStaticTestsPassed) blockers.push("Mobile static tests must pass.");
+  if (!input.mobileDeviceTestsPassed) blockers.push("Expo simulator/device smoke tests must pass.");
+  if (!input.coverageThresholdsConfigured) blockers.push("Coverage thresholds must be configured before launch quality gates.");
+  if (!input.coverageArtifactsUploaded) blockers.push("Vitest coverage artifacts must upload from CI.");
+  if (!input.playwrightArtifactsUploaded) blockers.push("Playwright HTML/JUnit/JSON reports and failure traces/screenshots/videos must upload from CI.");
+  if (!input.ciRunPassed) blockers.push("A GitHub Actions CI run must pass on the PR branch.");
+  if (!input.branchProtectionRequiresCi) blockers.push("Branch protection must require the CI quality check before merge.");
+  if (!input.flakyTestPolicyConfigured) blockers.push("Flaky-test retry/quarantine policy must be configured and documented.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm install --frozen-lockfile",
+      "pnpm test:phase14:static",
+      "pnpm test:manifest",
+      "pnpm typecheck",
+      "pnpm test:unit",
+      "pnpm test:unit:coverage",
+      "pnpm test:e2e",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "Prisma integration test suite against non-production fixtures",
+      "Expo simulator/device smoke suite",
+      "provider sandbox integration suites",
+    ],
+    requiredEvidence: [
+      "Committed lockfile and reproducible dependency install output.",
+      "Passing local or CI output for static, manifest, typecheck, unit, coverage, E2E, app build, Prisma, provider, and mobile commands.",
+      "Vitest coverage thresholds plus retained coverage artifact from CI.",
+      "Playwright report, JUnit/JSON output, and retained failure traces/screenshots/videos from CI.",
+      "Branch protection settings showing CI required before merge.",
+      "Documented flaky-test handling and quarantine process.",
+    ],
+    blockers,
   };
 }
 

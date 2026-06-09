@@ -45,6 +45,29 @@ export const tenantOwnedModelNames = [
 
 export type TenantOwnedModelName = (typeof tenantOwnedModelNames)[number];
 
+export interface TenantIsolationIntegrationReadinessInput {
+  packageScripts: readonly string[];
+  prismaClientGenerated: boolean;
+  databaseUrlConfigured: boolean;
+  migrationsApplied: boolean;
+  seedDataLoaded: boolean;
+  multiTenantFixturesLoaded: boolean;
+  repositoryLayerUsesHelpers: boolean;
+  crossTenantReadTestsPassed: boolean;
+  crossTenantWriteTestsPassed: boolean;
+  auditRowsIncludeTenantAndActor: boolean;
+  allTenantOwnedModelsCovered: boolean;
+  destructiveFixtureCleanupVerified: boolean;
+}
+
+export interface TenantIsolationIntegrationReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 function requireTenantId(scope: TenantScope): string {
   const tenantId = scope.tenantId.trim();
   if (!tenantId) {
@@ -85,4 +108,45 @@ export function assertTenantScopedData(value: { data?: Record<string, unknown> }
   if (!value.data || value.data.tenantId !== expectedTenantId) {
     throw new Error("Mutation is missing the expected tenantId scope.");
   }
+}
+
+export function buildTenantIsolationIntegrationReadinessPlan(input: TenantIsolationIntegrationReadinessInput): TenantIsolationIntegrationReadinessPlan {
+  const requiredScripts = ["test", "db:validate", "db:generate", "db:migrate", "db:seed"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing @inkroute/db ${script} script.`);
+  if (!input.prismaClientGenerated) blockers.push("Prisma Client must be generated before repository integration tests can run.");
+  if (!input.databaseUrlConfigured) blockers.push("Non-production DATABASE_URL must be configured for tenant isolation integration tests.");
+  if (!input.migrationsApplied) blockers.push("Prisma migrations must be applied to the non-production test database.");
+  if (!input.seedDataLoaded) blockers.push("Seed data must be loaded before tenant isolation smoke tests.");
+  if (!input.multiTenantFixturesLoaded) blockers.push("At least two tenant fixtures with overlapping domain records must be loaded.");
+  if (!input.repositoryLayerUsesHelpers) blockers.push("Repository/service layer must use withTenantWhere and withTenantData for tenant-owned models.");
+  if (!input.crossTenantReadTestsPassed) blockers.push("Cross-tenant read tests must prove records from another tenant return no rows.");
+  if (!input.crossTenantWriteTestsPassed) blockers.push("Cross-tenant write tests must prove mismatched tenantId mutations are denied.");
+  if (!input.auditRowsIncludeTenantAndActor) blockers.push("Audit rows must include tenantId and actor metadata for sensitive reads/writes.");
+  if (!input.allTenantOwnedModelsCovered) blockers.push("Integration tests must cover every tenant-owned model in tenantOwnedModelNames.");
+  if (!input.destructiveFixtureCleanupVerified) blockers.push("Tenant isolation fixtures must clean up without touching production-like data.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/db db:validate",
+      "pnpm --filter @inkroute/db db:generate",
+      "pnpm --filter @inkroute/db db:migrate",
+      "pnpm --filter @inkroute/db db:seed",
+      "pnpm --filter @inkroute/db test",
+      "tenant isolation Postgres integration suite",
+    ],
+    requiredEvidence: [
+      "Redacted DATABASE_URL target proving tests ran against non-production Postgres.",
+      "Migration and seed command output for two or more tenant fixtures.",
+      "Cross-tenant read denial output for every tenant-owned model.",
+      "Cross-tenant write denial output for every tenant-owned model mutation path.",
+      "AuditLog rows proving tenantId, actorId, entityType, entityId, and action metadata are persisted.",
+      "Fixture cleanup output proving tenant-scoped teardown only removed test records.",
+    ],
+    blockers,
+  };
 }

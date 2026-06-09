@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertPermission,
   buildDashboardReadinessPlan,
+  buildDomainAuthorizationRuntimeReadinessPlan,
   buildSessionPersistencePlan,
   evaluateApiRouteGuard,
   evaluateDashboardRouteGuard,
@@ -566,5 +567,32 @@ describe("auth authorization helpers", () => {
       "Dashboard provider actions are still static/demo gated and cannot execute production provider calls.",
       "Every dashboard mutation/provider action must write an AuditLog row.",
     ]));
+  });
+
+  it("summarizes domain authorization runtime readiness across middleware, roles, audits, CSRF, and route tests", () => {
+    const plan = buildDomainAuthorizationRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      packageTestsPassed: true,
+      packageTypecheckPassed: false,
+      customRolesLoadedFromDatabase: false,
+      middlewareUsesRouteGuard: false,
+      dashboardRoutesGuarded: true,
+      apiRoutesGuarded: false,
+      serverActionsGuarded: false,
+      fieldRedactionApplied: true,
+      authorizationAuditPersisted: false,
+      tenantMismatchTestsPassed: false,
+      roleMatrixRouteTestsPassed: false,
+      csrfSessionBindingVerified: false,
+      sessionRevocationChecked: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toContain("dashboard/API role matrix route tests");
+    expect(plan.requiredControls).toContain("Combine built-in role permissions with active tenant-scoped custom grants only.");
+    expect(plan.blockers).toContain("CustomRole rows must be loaded from the database before runtime authorization decisions.");
+    expect(plan.blockers).toContain("Authorization allow/deny decisions must persist AuditLog rows with tenant, actor, route, and permission metadata.");
+    expect(plan.blockers).toContain("Route tests must cover owner, artist, assistant, studio manager, admin, and custom roles.");
   });
 });

@@ -630,6 +630,31 @@ export interface DashboardMutationPlan {
   blockers: string[];
 }
 
+export interface DomainEventAuditReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  bookingPackageTestsPassed: boolean;
+  bookingPackageTypecheckPassed: boolean;
+  paymentPackageTestsPassed: boolean;
+  bookingTransitionPlansCovered: boolean;
+  paymentLifecyclePlansCovered: boolean;
+  prismaTransactionServicesConfigured: boolean;
+  tenantScopedRepositoriesConfigured: boolean;
+  idempotencyStoreConfigured: boolean;
+  auditLogPersistenceConfigured: boolean;
+  bookingStateEventPersistenceConfigured: boolean;
+  paymentAuditLogPersistenceConfigured: boolean;
+  rollbackFailurePlansConfigured: boolean;
+  databaseIntegrationTestsPassed: boolean;
+}
+
+export interface DomainEventAuditReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 const dashboardProviderActions: Record<
   Exclude<DashboardMutationAction, BookingLifecycleAction>,
   {
@@ -789,6 +814,49 @@ export function buildDashboardMutationPlan(input: DashboardMutationPlanInput): D
     writes: transitionPlan.writes.map((write) => write.model),
     auditAction: `dashboard.booking.${input.action}`,
     idempotencyKey: input.idempotencyKey ?? null,
+    blockers,
+  };
+}
+
+export function buildDomainEventAuditReadinessPlan(input: DomainEventAuditReadinessInput): DomainEventAuditReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/booking package script is missing ${script}.`);
+  if (!input.bookingPackageTestsPassed) blockers.push("Booking package lifecycle tests must pass.");
+  if (!input.bookingPackageTypecheckPassed) blockers.push("Booking package typecheck must pass in an installed workspace.");
+  if (!input.paymentPackageTestsPassed) blockers.push("Payment package lifecycle/audit tests must pass.");
+  if (!input.bookingTransitionPlansCovered) blockers.push("Booking transitions must produce BookingRequest, BookingStateEvent, and AuditLog write plans.");
+  if (!input.paymentLifecyclePlansCovered) blockers.push("Payment lifecycle transitions must produce Payment/Deposit/Refund, BookingStateEvent when applicable, PaymentAuditLog, and IdempotencyKey write plans.");
+  if (!input.prismaTransactionServicesConfigured) blockers.push("Prisma service layer must execute state changes and event/audit writes in one transaction.");
+  if (!input.tenantScopedRepositoriesConfigured) blockers.push("Tenant-scoped repositories must enforce tenantId on every lifecycle read/write.");
+  if (!input.idempotencyStoreConfigured) blockers.push("Idempotency store must reject replayed booking/payment lifecycle mutations.");
+  if (!input.auditLogPersistenceConfigured) blockers.push("AuditLog persistence must cover every sensitive booking/dashboard lifecycle mutation.");
+  if (!input.bookingStateEventPersistenceConfigured) blockers.push("BookingStateEvent persistence must be required for every booking status change.");
+  if (!input.paymentAuditLogPersistenceConfigured) blockers.push("PaymentAuditLog persistence must be required for every payment/deposit/refund lifecycle change.");
+  if (!input.rollbackFailurePlansConfigured) blockers.push("Provider failure rollback plans must be wired for deposit, upload, notification, calendar, and release actions.");
+  if (!input.databaseIntegrationTestsPassed) blockers.push("Database integration tests must prove state mutation, event row, audit row, idempotency, and rollback behavior atomically.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/booking typecheck",
+      "pnpm --filter @inkroute/booking test",
+      "pnpm --filter @inkroute/payments test",
+      "booking/payment lifecycle Prisma transaction integration tests",
+      "idempotency replay integration tests",
+      "provider failure rollback integration tests",
+    ],
+    requiredControls: [
+      "Execute BookingRequest, BookingStateEvent, AuditLog, Payment, Deposit, Refund, PaymentAuditLog, and IdempotencyKey writes inside tenant-scoped transactions.",
+      "Reject lifecycle mutations before persistence when tenant scope, actor, idempotency key, current status, provider id, or amount is invalid.",
+      "Persist audit/event rows for both success and failure paths before returning a client-visible state change.",
+      "Use idempotency keys for dashboard actions, provider webhooks, payment lifecycle updates, and rollback attempts.",
+      "Make invalid state transitions impossible through the service layer, not just through UI disabled states.",
+      "Attach provider failure rollback records before retrying or surfacing deposit/calendar/upload/notification failures.",
+    ],
     blockers,
   };
 }

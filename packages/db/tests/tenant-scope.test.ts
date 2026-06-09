@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertTenantScopedData,
   assertTenantScopedWhere,
+  buildTenantIsolationIntegrationReadinessPlan,
   tenantOwnedModelNames,
   withTenantData,
   withTenantWhere,
@@ -38,5 +39,29 @@ describe("tenant scope helpers", () => {
         "AuditLog",
       ]),
     );
+  });
+
+  it("summarizes tenant isolation integration readiness for live Postgres proof", () => {
+    const plan = buildTenantIsolationIntegrationReadinessPlan({
+      packageScripts: ["test", "db:validate", "db:generate"],
+      prismaClientGenerated: true,
+      databaseUrlConfigured: false,
+      migrationsApplied: false,
+      seedDataLoaded: false,
+      multiTenantFixturesLoaded: false,
+      repositoryLayerUsesHelpers: true,
+      crossTenantReadTestsPassed: false,
+      crossTenantWriteTestsPassed: false,
+      auditRowsIncludeTenantAndActor: false,
+      allTenantOwnedModelsCovered: false,
+      destructiveFixtureCleanupVerified: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["db:migrate", "db:seed"]);
+    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/db db:migrate");
+    expect(plan.requiredEvidence).toContain("Cross-tenant read denial output for every tenant-owned model.");
+    expect(plan.blockers).toContain("Non-production DATABASE_URL must be configured for tenant isolation integration tests.");
+    expect(plan.blockers).toContain("Integration tests must cover every tenant-owned model in tenantOwnedModelNames.");
   });
 });

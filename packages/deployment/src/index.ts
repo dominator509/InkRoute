@@ -92,6 +92,38 @@ export interface HandoffTask {
   readonly gapIds: readonly string[];
 }
 
+export interface DeploymentPipelineReadinessInput {
+  providerProjectsConfigured: boolean;
+  githubEnvironmentsConfigured: boolean;
+  githubSecretsConfigured: boolean;
+  vercelWebProjectConfigured: boolean;
+  vercelDashboardProjectConfigured: boolean;
+  previewDeploySucceeded: boolean;
+  productionDryRunSucceeded: boolean;
+  productionApprovalGateConfigured: boolean;
+  databaseProviderConfigured: boolean;
+  migrationDryRunSucceeded: boolean;
+  backupRestoreDrillCompleted: boolean;
+  storageProviderConfigured: boolean;
+  mobileEasProjectConfigured: boolean;
+  easPreviewBuildSucceeded: boolean;
+  easNativeCredentialsConfigured: boolean;
+  otaRollbackDrillCompleted: boolean;
+  ciQualityGatesRequired: boolean;
+  sentryReleaseUploadConfigured: boolean;
+  environmentStrictCheckPassed: boolean;
+  rollbackRunbookReviewed: boolean;
+  launchEvidenceCollected: boolean;
+}
+
+export interface DeploymentPipelineReadinessPlan {
+  readonly status: "ready" | "blocked";
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly approvalGates: readonly string[];
+  readonly blockers: readonly string[];
+}
+
 export const deploymentEnvironmentRequirements: readonly EnvironmentRequirement[] = [
   {
     name: "NODE_ENV",
@@ -509,6 +541,68 @@ export function buildDeploymentPlan(environment: DeploymentEnvironment): Deploym
     steps,
     productionBlockers,
     summary: `${productionBlockers.length} production-blocking deployment step(s) remain before ${environment} can be treated as launch-ready.`,
+  };
+}
+
+export function buildDeploymentPipelineReadinessPlan(input: DeploymentPipelineReadinessInput): DeploymentPipelineReadinessPlan {
+  const blockers: string[] = [];
+
+  if (!input.providerProjectsConfigured) blockers.push("Provider projects must be created for web, dashboard, database, storage, mobile, observability, and CI.");
+  if (!input.githubEnvironmentsConfigured) blockers.push("GitHub preview and production environments must be configured.");
+  if (!input.githubSecretsConfigured) blockers.push("GitHub environment secrets must be configured without placeholder values.");
+  if (!input.vercelWebProjectConfigured) blockers.push("Vercel public web project must be configured.");
+  if (!input.vercelDashboardProjectConfigured) blockers.push("Vercel dashboard project must be configured.");
+  if (!input.previewDeploySucceeded) blockers.push("Preview deployment must complete for web and dashboard.");
+  if (!input.productionDryRunSucceeded) blockers.push("Production dry run must complete without mutating production data.");
+  if (!input.productionApprovalGateConfigured) blockers.push("Production deployment approval gate must be configured.");
+  if (!input.databaseProviderConfigured) blockers.push("Managed Postgres provider must be configured before deployment readiness.");
+  if (!input.migrationDryRunSucceeded) blockers.push("Migration dry run must succeed against a non-production database.");
+  if (!input.backupRestoreDrillCompleted) blockers.push("Database backup/restore drill must be completed and documented.");
+  if (!input.storageProviderConfigured) blockers.push("Private storage provider and bucket policies must be configured.");
+  if (!input.mobileEasProjectConfigured) blockers.push("Expo/EAS project must be configured with project id and update URL.");
+  if (!input.easPreviewBuildSucceeded) blockers.push("EAS preview build must succeed for mobile.");
+  if (!input.easNativeCredentialsConfigured) blockers.push("EAS native signing credentials must be configured outside the repo.");
+  if (!input.otaRollbackDrillCompleted) blockers.push("OTA rollback drill must be completed before mobile update readiness.");
+  if (!input.ciQualityGatesRequired) blockers.push("CI quality gates must be required before preview or production deployment.");
+  if (!input.sentryReleaseUploadConfigured) blockers.push("Sentry release/source-map upload must be configured in deployment pipeline.");
+  if (!input.environmentStrictCheckPassed) blockers.push("Strict environment check must pass with non-placeholder preview/production values.");
+  if (!input.rollbackRunbookReviewed) blockers.push("Rollback runbook must be reviewed with owners before launch.");
+  if (!input.launchEvidenceCollected) blockers.push("Launch evidence packet must include URLs, command logs, provider screenshots, redacted secrets proof, and rollback evidence.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    requiredCommands: [
+      "pnpm deploy:check-env:strict",
+      "pnpm deploy:verify-provider-envs",
+      "pnpm deploy:verify-secrets",
+      "pnpm deploy:verify-mobile",
+      "pnpm deploy:verify-database-ops",
+      "pnpm deploy:verify-launch-evidence",
+      "pnpm deploy:verify-ops",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm db:generate && pnpm db:migrate",
+      "eas build --profile preview",
+    ],
+    requiredEvidence: [
+      "Preview web and dashboard deployment URLs with route smoke output.",
+      "Production dry-run log and explicit approval-gate screenshot or settings export.",
+      "Managed Postgres connection, migration dry-run, backup, and restore evidence.",
+      "Private storage bucket ACL proof and signed upload/download smoke output.",
+      "EAS preview build URL, device smoke notes, native credential status, update channel, and OTA rollback transcript.",
+      "GitHub Actions CI run URL proving required quality gates before deploy jobs.",
+      "Sentry release/source-map upload output linked to deployment version.",
+      "Redacted environment strict-check output proving no placeholders or secrets are committed.",
+      "Rollback runbook owner review and launch evidence packet.",
+    ],
+    approvalGates: [
+      "Production GitHub environment requires human approval.",
+      "Database migrations require dry-run review before production deploy.",
+      "Mobile OTA updates require runtime-version compatibility and rollback approval.",
+      "Provider secret changes require redacted two-person review.",
+      "Legal/payment/privacy launch gates remain blocked until approved evidence exists.",
+    ],
+    blockers,
   };
 }
 

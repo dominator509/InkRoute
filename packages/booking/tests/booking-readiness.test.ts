@@ -3,6 +3,7 @@ import {
   buildBookingPostSubmitPlan,
   buildBookingProviderFailurePlan,
   buildDashboardMutationPlan,
+  buildDomainEventAuditReadinessPlan,
   calculateTattooReadinessScore,
   createBookingTransitionPlan,
   emptyBookingDraft,
@@ -336,6 +337,33 @@ describe("booking readiness", () => {
       writes: ["ReleaseRecord", "AuditLog"],
       auditAction: "dashboard.release.rollback",
     });
+  });
+
+  it("summarizes domain event and audit readiness across booking, payment, transactions, idempotency, and rollback", () => {
+    const plan = buildDomainEventAuditReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      bookingPackageTestsPassed: true,
+      bookingPackageTypecheckPassed: false,
+      paymentPackageTestsPassed: true,
+      bookingTransitionPlansCovered: true,
+      paymentLifecyclePlansCovered: true,
+      prismaTransactionServicesConfigured: false,
+      tenantScopedRepositoriesConfigured: false,
+      idempotencyStoreConfigured: false,
+      auditLogPersistenceConfigured: false,
+      bookingStateEventPersistenceConfigured: false,
+      paymentAuditLogPersistenceConfigured: false,
+      rollbackFailurePlansConfigured: true,
+      databaseIntegrationTestsPassed: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toContain("booking/payment lifecycle Prisma transaction integration tests");
+    expect(plan.requiredControls).toContain("Make invalid state transitions impossible through the service layer, not just through UI disabled states.");
+    expect(plan.blockers).toContain("Prisma service layer must execute state changes and event/audit writes in one transaction.");
+    expect(plan.blockers).toContain("Idempotency store must reject replayed booking/payment lifecycle mutations.");
+    expect(plan.blockers).toContain("Database integration tests must prove state mutation, event row, audit row, idempotency, and rollback behavior atomically.");
   });
 
   it("returns travel booking calls to action for open, waitlist, and closed statuses", () => {

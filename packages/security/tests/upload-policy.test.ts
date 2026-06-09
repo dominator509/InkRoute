@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildPrivacyLifecyclePlan,
   buildPrivacyCaseWorkflowPlan,
+  buildPrivacyRetentionRuntimeReadinessPlan,
   buildRetentionEnforcementDryRun,
   buildLegalReviewPacketPlan,
   buildAbuseControlPlan,
@@ -730,6 +731,44 @@ describe("security and privacy helpers", () => {
       "retention:message:anonymize:notification_due",
     ]);
     expect(plan.requiredWorkers).toContain("backup-restore-reconciliation");
+  });
+
+  it("blocks privacy retention runtime readiness without legal, worker, storage, and backup evidence", () => {
+    const plan = buildPrivacyRetentionRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      packageTestsPassed: true,
+      packageTypecheckPassed: false,
+      attorneyApprovalRecorded: false,
+      privacyCaseStoreConfigured: false,
+      auditLogPersistenceConfigured: false,
+      identityVerificationWorkerConfigured: true,
+      exportWorkerConfigured: false,
+      deleteAnonymizeWorkerConfigured: false,
+      storageDeletionConfigured: false,
+      retentionScheduleApproved: false,
+      prismaExecutionVerified: false,
+      objectStorageExecutionVerified: false,
+      legalHoldWorkflowConfigured: false,
+      backupRestorePolicyDocumented: false,
+      restoreTombstoneReplayVerified: false,
+      tenantIsolationVerified: false,
+      notificationCopyApproved: false,
+      dryRunEvidenceCollected: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/security test -- privacy-workers");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "attorney-approved privacy retention and deletion schedule",
+      "Prisma and object-storage export/delete/anonymization dry-run output",
+      "backup/restore tombstone replay policy and drill evidence",
+    ]));
+    expect(plan.blockers).toEqual(expect.arrayContaining([
+      "Object storage deletion must be configured for private reference, consent, document, and follow-up files.",
+      "Restore jobs must replay deletion/anonymization tombstones before restored data becomes queryable.",
+      "Privacy workers must verify tenant isolation for cross-tenant export/delete attempts.",
+    ]));
   });
 
   it("blocks legal review packets until every topic has attorney approval, versions, and acceptance audits", () => {

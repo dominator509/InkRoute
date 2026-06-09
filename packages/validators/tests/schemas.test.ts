@@ -18,6 +18,7 @@ import {
   releaseCreateInputSchema,
   featureFlagPatchInputSchema,
   deploymentReadinessMutationSchema,
+  buildValidatorRuntimeReadinessPlan,
 } from "../src/index";
 
 describe("validator happy/error paths", () => {
@@ -229,5 +230,34 @@ describe("validator happy/error paths", () => {
         reason: "Release readiness checks passed.",
       }).success,
     ).toBe(true);
+  });
+
+  it("summarizes validator runtime readiness across package execution, schema domains, route usage, and sensitive fields", () => {
+    const plan = buildValidatorRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      packageTypecheckPassed: false,
+      packageTestsPassed: true,
+      bookingSchemasCovered: true,
+      travelSchemasCovered: true,
+      portfolioSchemasCovered: true,
+      paymentSchemasCovered: true,
+      peopleSchemasCovered: true,
+      seoSchemasCovered: true,
+      consentSchemasCovered: true,
+      releaseSchemasCovered: true,
+      messagingSchemasCovered: false,
+      observabilitySchemasCovered: false,
+      tenantAuthEdgeCasesCovered: false,
+      formEdgeCasesCovered: false,
+      apiRoutesUseSharedValidators: false,
+      sensitiveFieldPoliciesAligned: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/validators typecheck");
+    expect(plan.requiredEvidence).toContain("Route contract tests showing API handlers import and use shared schemas instead of ad-hoc parsing.");
+    expect(plan.blockers).toContain("Message, notification, consent, preview, and provider webhook schemas need happy/error coverage.");
+    expect(plan.blockers).toContain("Public, dashboard, webhook, release, privacy, upload, payment, notification, and observability routes must use shared validator schemas.");
   });
 });

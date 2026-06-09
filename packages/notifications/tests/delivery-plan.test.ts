@@ -13,6 +13,7 @@ import {
   buildPreferenceMutationPlan,
   buildPreferenceTokenHash,
   buildMessagingPrivacyPlan,
+  buildNotificationRuntimeReadinessPlan,
   buildProviderEventReconciliationPlan,
   buildSmsProviderSendPlan,
   interpretSmsWebhook,
@@ -944,5 +945,36 @@ describe("notification delivery planning", () => {
       "Missing idempotency key for messaging privacy action.",
       "Message id is required for this privacy action.",
     ]);
+  });
+
+  it("summarizes notification runtime readiness across providers, persistence, consent, queues, and webhooks", () => {
+    const plan = buildNotificationRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      packageTestsPassed: true,
+      packageTypecheckPassed: false,
+      providerCredentialsConfigured: false,
+      providerSandboxSmokeVerified: false,
+      queueWorkerConfigured: false,
+      deliveryLogPersistenceConfigured: false,
+      messageThreadPersistenceConfigured: false,
+      consentStoreConfigured: false,
+      unsubscribeStopConfigured: false,
+      webhookSignatureVerificationConfigured: false,
+      webhookReplayProtectionConfigured: false,
+      pushTokenStoreConfigured: false,
+      expoPushConfigured: false,
+      retryBackoffConfigured: false,
+      deadLetterQueueConfigured: false,
+      tenantIsolationVerified: false,
+      templateLegalReviewApproved: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/notifications typecheck");
+    expect(plan.requiredControls).toContain("Verify Resend, Twilio, and Expo webhook signatures before reconciliation.");
+    expect(plan.blockers).toContain("Notification queue worker must be configured before provider-backed automation.");
+    expect(plan.blockers).toContain("Email unsubscribe, SMS STOP/HELP, and suppression controls must be configured.");
+    expect(plan.blockers).toContain("Push token registration and revocation store must be configured.");
   });
 });

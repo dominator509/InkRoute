@@ -6,6 +6,7 @@ import {
   buildGithubIssueAutomationPlan,
   buildGithubIssueDraft,
   buildObservabilityReportDraft,
+  buildObservabilityRuntimeReadinessPlan,
   buildReleaseIncidentLinkagePlan,
   buildSentrySdkConfigurationPlan,
   buildStackHash,
@@ -502,5 +503,39 @@ describe("observability redaction and triage", () => {
         "React Native debug symbol upload must be enabled and verified through EAS.",
       ]),
     );
+  });
+
+  it("summarizes observability runtime readiness across Sentry, OTel, persistence, alerts, and privacy gates", () => {
+    const plan = buildObservabilityRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      packageTestsPassed: true,
+      packageTypecheckPassed: false,
+      sentryWebConfigured: true,
+      sentryDashboardConfigured: false,
+      sentryMobileConfigured: false,
+      sentryReleaseArtifactsConfigured: false,
+      sourceMapsVerified: false,
+      mobileDebugSymbolsVerified: false,
+      forcedWebErrorVerified: true,
+      forcedDashboardErrorVerified: false,
+      forcedMobileCrashVerified: false,
+      forcedApiErrorVerified: false,
+      otelExporterConfigured: false,
+      structuredLoggingConfigured: false,
+      requestTracePropagationVerified: false,
+      errorReportPersistenceConfigured: false,
+      dashboardTriagePersistenceVerified: false,
+      providerWebhookSignatureVerified: false,
+      alertRoutingConfigured: false,
+      redactionTestsPassed: true,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/observability typecheck");
+    expect(plan.requiredControls).toContain("Persist only sanitized ErrorReport summaries and keep raw provider payloads out of dashboard triage.");
+    expect(plan.blockers).toContain("Sentry Next.js SDK must be configured for the dashboard app.");
+    expect(plan.blockers).toContain("OpenTelemetry exporter endpoint and service metadata must be configured.");
+    expect(plan.blockers).toContain("Sanitized ErrorReport persistence must be configured before dashboard viewing is production-ready.");
   });
 });

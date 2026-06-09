@@ -916,6 +916,36 @@ export interface RetentionEnforcementDryRun {
   };
 }
 
+export interface PrivacyRetentionRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  packageTestsPassed: boolean;
+  packageTypecheckPassed: boolean;
+  attorneyApprovalRecorded: boolean;
+  privacyCaseStoreConfigured: boolean;
+  auditLogPersistenceConfigured: boolean;
+  identityVerificationWorkerConfigured: boolean;
+  exportWorkerConfigured: boolean;
+  deleteAnonymizeWorkerConfigured: boolean;
+  storageDeletionConfigured: boolean;
+  retentionScheduleApproved: boolean;
+  prismaExecutionVerified: boolean;
+  objectStorageExecutionVerified: boolean;
+  legalHoldWorkflowConfigured: boolean;
+  backupRestorePolicyDocumented: boolean;
+  restoreTombstoneReplayVerified: boolean;
+  tenantIsolationVerified: boolean;
+  notificationCopyApproved: boolean;
+  dryRunEvidenceCollected: boolean;
+}
+
+export interface PrivacyRetentionRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export interface LegalDocumentPlaceholder {
   slug: string;
   title: string;
@@ -2055,6 +2085,63 @@ export function buildRetentionEnforcementDryRun(input: RetentionEnforcementDryRu
       restorePolicyDocumented: input.restorePolicyDocumented,
       implication: "Backups must preserve legal holds and restore jobs must replay deletion/anonymization tombstones before restored data becomes queryable.",
     },
+  };
+}
+
+export function buildPrivacyRetentionRuntimeReadinessPlan(input: PrivacyRetentionRuntimeReadinessInput): PrivacyRetentionRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
+  if (!input.packageTestsPassed) blockers.push("Run and pass @inkroute/security tests before marking privacy retention ready.");
+  if (!input.packageTypecheckPassed) blockers.push("Run and pass @inkroute/security typecheck before marking privacy retention ready.");
+  if (!input.attorneyApprovalRecorded) blockers.push("Attorney approval must be recorded for retention, deletion, anonymization, legal hold, and user notification workflows.");
+  if (!input.privacyCaseStoreConfigured) blockers.push("Privacy request case records must be persisted before intake can be production-ready.");
+  if (!input.auditLogPersistenceConfigured) blockers.push("Privacy case, export, deletion, anonymization, legal hold, and notification audit events must be persisted.");
+  if (!input.identityVerificationWorkerConfigured) blockers.push("Identity verification worker must gate privacy request execution.");
+  if (!input.exportWorkerConfigured) blockers.push("Export worker must be configured for client profile, medical note, file, message, payment, and error report data.");
+  if (!input.deleteAnonymizeWorkerConfigured) blockers.push("Deletion/anonymization worker must be configured for Prisma-owned privacy data.");
+  if (!input.storageDeletionConfigured) blockers.push("Object storage deletion must be configured for private reference, consent, document, and follow-up files.");
+  if (!input.retentionScheduleApproved) blockers.push("Attorney-approved retention schedule must be available to workers.");
+  if (!input.prismaExecutionVerified) blockers.push("Prisma export/delete/anonymization execution must be verified against privacy fixtures.");
+  if (!input.objectStorageExecutionVerified) blockers.push("Object storage export/delete execution must be verified against private file fixtures.");
+  if (!input.legalHoldWorkflowConfigured) blockers.push("Legal hold workflow must prevent destructive actions for protected consent, payment, and audit categories.");
+  if (!input.backupRestorePolicyDocumented) blockers.push("Backup and restore implications must be documented before destructive privacy enforcement.");
+  if (!input.restoreTombstoneReplayVerified) blockers.push("Restore jobs must replay deletion/anonymization tombstones before restored data becomes queryable.");
+  if (!input.tenantIsolationVerified) blockers.push("Privacy workers must verify tenant isolation for cross-tenant export/delete attempts.");
+  if (!input.notificationCopyApproved) blockers.push("Attorney-reviewed privacy request notification copy must be approved before production sends.");
+  if (!input.dryRunEvidenceCollected) blockers.push("Dry-run evidence must include case records, worker outputs, audit rows, storage actions, and backup/restore reconciliation.");
+
+  if (!input.attorneyApprovalRecorded || !input.retentionScheduleApproved) {
+    requiredEvidence.push("attorney-approved privacy retention and deletion schedule");
+  }
+  if (!input.privacyCaseStoreConfigured || !input.auditLogPersistenceConfigured) {
+    requiredEvidence.push("persisted PrivacyCase and AuditLog records for intake, identity, worker execution, notification, and closure");
+  }
+  if (!input.prismaExecutionVerified || !input.objectStorageExecutionVerified || !input.storageDeletionConfigured) {
+    requiredEvidence.push("Prisma and object-storage export/delete/anonymization dry-run output");
+  }
+  if (!input.backupRestorePolicyDocumented || !input.restoreTombstoneReplayVerified) {
+    requiredEvidence.push("backup/restore tombstone replay policy and drill evidence");
+  }
+  if (!input.tenantIsolationVerified) {
+    requiredEvidence.push("cross-tenant privacy worker denial tests");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm --filter @inkroute/security test -- privacy-workers",
+      "node scripts/privacy/run-retention-dry-run.mjs",
+      "node scripts/privacy/verify-backup-restore-tombstones.mjs",
+    ],
+    requiredEvidence,
+    blockers,
   };
 }
 

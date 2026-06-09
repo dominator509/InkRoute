@@ -222,6 +222,38 @@ export interface ReleaseIncidentLinkagePlan {
   privacyChecklist: readonly string[];
 }
 
+export interface ObservabilityRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  packageTestsPassed: boolean;
+  packageTypecheckPassed: boolean;
+  sentryWebConfigured: boolean;
+  sentryDashboardConfigured: boolean;
+  sentryMobileConfigured: boolean;
+  sentryReleaseArtifactsConfigured: boolean;
+  sourceMapsVerified: boolean;
+  mobileDebugSymbolsVerified: boolean;
+  forcedWebErrorVerified: boolean;
+  forcedDashboardErrorVerified: boolean;
+  forcedMobileCrashVerified: boolean;
+  forcedApiErrorVerified: boolean;
+  otelExporterConfigured: boolean;
+  structuredLoggingConfigured: boolean;
+  requestTracePropagationVerified: boolean;
+  errorReportPersistenceConfigured: boolean;
+  dashboardTriagePersistenceVerified: boolean;
+  providerWebhookSignatureVerified: boolean;
+  alertRoutingConfigured: boolean;
+  redactionTestsPassed: boolean;
+}
+
+export interface ObservabilityRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const phonePattern = /(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)\d{3}[-.\s]?\d{4}/g;
 const tokenPattern = /(sk_live_|sk_test_|pk_live_|pk_test_|sntrys_|xox[baprs]-|Bearer\s+)[A-Za-z0-9_\-.]+/g;
@@ -897,5 +929,57 @@ export function buildSentrySdkConfigurationPlan(input: SentrySdkConfigurationInp
     },
     sampleRate: clampSampleRate(input.sampleRate, input.environment === "production" ? 0.25 : 1),
     tracesSampleRate: clampSampleRate(input.tracesSampleRate, input.environment === "production" ? 0.1 : 0.25),
+  };
+}
+
+export function buildObservabilityRuntimeReadinessPlan(input: ObservabilityRuntimeReadinessInput): ObservabilityRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing @inkroute/observability ${script} script.`);
+  if (!input.packageTestsPassed) blockers.push("Observability package tests must pass before launch readiness.");
+  if (!input.packageTypecheckPassed) blockers.push("Observability package typecheck must pass before launch readiness.");
+  if (!input.sentryWebConfigured) blockers.push("Sentry Next.js SDK must be configured for the public web app.");
+  if (!input.sentryDashboardConfigured) blockers.push("Sentry Next.js SDK must be configured for the dashboard app.");
+  if (!input.sentryMobileConfigured) blockers.push("Sentry React Native SDK must be configured for the Expo mobile app.");
+  if (!input.sentryReleaseArtifactsConfigured) blockers.push("Sentry release artifact upload must be configured in CI.");
+  if (!input.sourceMapsVerified) blockers.push("Web and dashboard source-map resolution must be verified with forced errors.");
+  if (!input.mobileDebugSymbolsVerified) blockers.push("Mobile source maps/debug symbols must be verified through Expo/EAS crash evidence.");
+  if (!input.forcedWebErrorVerified) blockers.push("Forced public web error must appear in Sentry and dashboard triage without PII.");
+  if (!input.forcedDashboardErrorVerified) blockers.push("Forced dashboard error must appear in Sentry and dashboard triage without PII.");
+  if (!input.forcedMobileCrashVerified) blockers.push("Forced mobile crash must appear in Sentry and dashboard triage without PII.");
+  if (!input.forcedApiErrorVerified) blockers.push("Forced API/webhook error must appear in Sentry and dashboard triage without PII.");
+  if (!input.otelExporterConfigured) blockers.push("OpenTelemetry exporter endpoint and service metadata must be configured.");
+  if (!input.structuredLoggingConfigured) blockers.push("Structured logging must be configured for web, dashboard, API, worker, and webhook surfaces.");
+  if (!input.requestTracePropagationVerified) blockers.push("Request ID and trace context propagation must be verified across routes, workers, and provider callbacks.");
+  if (!input.errorReportPersistenceConfigured) blockers.push("Sanitized ErrorReport persistence must be configured before dashboard viewing is production-ready.");
+  if (!input.dashboardTriagePersistenceVerified) blockers.push("Dashboard triage must read persisted sanitized ErrorReport records with tenant isolation.");
+  if (!input.providerWebhookSignatureVerified) blockers.push("Sentry/provider webhook signature verification and replay protection must be verified.");
+  if (!input.alertRoutingConfigured) blockers.push("High/critical alert routing must be configured with on-call ownership and dashboard-only privacy fallback.");
+  if (!input.redactionTestsPassed) blockers.push("Redaction tests must pass for messages, metadata, tags, alert payloads, issue drafts, and telemetry attributes.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/observability typecheck",
+      "pnpm --filter @inkroute/observability test",
+      "forced web/dashboard/API Sentry capture smoke",
+      "forced Expo mobile crash capture smoke",
+      "source-map and debug-symbol resolution checks",
+      "tenant-isolated ErrorReport persistence integration tests",
+      "Sentry/provider webhook signature and replay tests",
+    ],
+    requiredControls: [
+      "Run redactSensitiveText and redactMetadata before external capture, persistence, alerting, issue creation, or telemetry export.",
+      "Tag events with release, environment, surface, route, request ID, trace ID, and tenant-safe identifiers only.",
+      "Upload web/dashboard source maps and mobile debug symbols from CI using secret-backed Sentry credentials.",
+      "Persist only sanitized ErrorReport summaries and keep raw provider payloads out of dashboard triage.",
+      "Verify provider webhook signatures and replay protection before reconciling Sentry or incident events.",
+      "Route high-risk payloads to dashboard-only review instead of Slack, pager, GitHub, or OTLP export.",
+      "Keep request ID and trace context propagation consistent across routes, workers, provider callbacks, and mobile crash reports.",
+    ],
+    blockers,
   };
 }

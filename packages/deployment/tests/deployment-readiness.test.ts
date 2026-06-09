@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDeploymentPlan,
+  buildDeploymentPipelineReadinessPlan,
   buildDeploymentSteps,
   buildHandoffTasks,
   buildProductionLaunchChecklist,
@@ -98,5 +99,40 @@ describe("deployment readiness helpers", () => {
     expect(providerOptions.every((provider) => provider.setupEvidenceRequired.length > 0)).toBe(true);
     expect(providerOptions.every((provider) => provider.gapIds.length > 0)).toBe(true);
     expect(providerOptions.map((provider) => provider.id)).toContain("github_actions");
+  });
+
+  it("summarizes deployment pipeline readiness across providers, secrets, previews, mobile, rollback, and launch evidence", () => {
+    const plan = buildDeploymentPipelineReadinessPlan({
+      providerProjectsConfigured: true,
+      githubEnvironmentsConfigured: true,
+      githubSecretsConfigured: false,
+      vercelWebProjectConfigured: true,
+      vercelDashboardProjectConfigured: false,
+      previewDeploySucceeded: false,
+      productionDryRunSucceeded: false,
+      productionApprovalGateConfigured: false,
+      databaseProviderConfigured: false,
+      migrationDryRunSucceeded: false,
+      backupRestoreDrillCompleted: false,
+      storageProviderConfigured: false,
+      mobileEasProjectConfigured: false,
+      easPreviewBuildSucceeded: false,
+      easNativeCredentialsConfigured: false,
+      otaRollbackDrillCompleted: false,
+      ciQualityGatesRequired: false,
+      sentryReleaseUploadConfigured: false,
+      environmentStrictCheckPassed: false,
+      rollbackRunbookReviewed: false,
+      launchEvidenceCollected: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.requiredCommands).toContain("pnpm deploy:check-env:strict");
+    expect(plan.requiredCommands).toContain("eas build --profile preview");
+    expect(plan.requiredEvidence).toContain("Preview web and dashboard deployment URLs with route smoke output.");
+    expect(plan.approvalGates).toContain("Production GitHub environment requires human approval.");
+    expect(plan.blockers).toContain("GitHub environment secrets must be configured without placeholder values.");
+    expect(plan.blockers).toContain("EAS preview build must succeed for mobile.");
+    expect(plan.blockers).toContain("Launch evidence packet must include URLs, command logs, provider screenshots, redacted secrets proof, and rollback evidence.");
   });
 });

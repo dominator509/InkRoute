@@ -746,6 +746,31 @@ export interface SessionPersistencePlan {
   auditEvents: readonly string[];
 }
 
+export interface DomainAuthorizationRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  packageTestsPassed: boolean;
+  packageTypecheckPassed: boolean;
+  customRolesLoadedFromDatabase: boolean;
+  middlewareUsesRouteGuard: boolean;
+  dashboardRoutesGuarded: boolean;
+  apiRoutesGuarded: boolean;
+  serverActionsGuarded: boolean;
+  fieldRedactionApplied: boolean;
+  authorizationAuditPersisted: boolean;
+  tenantMismatchTestsPassed: boolean;
+  roleMatrixRouteTestsPassed: boolean;
+  csrfSessionBindingVerified: boolean;
+  sessionRevocationChecked: boolean;
+}
+
+export interface DomainAuthorizationRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 export type DashboardSurfaceKind = "page" | "api" | "server_action";
 export type DashboardSurfaceMode = "static_demo" | "read_only_api" | "mutation_api" | "provider_action";
 
@@ -809,6 +834,50 @@ export function buildSessionPersistencePlan(input: SessionPersistencePlanInput):
       "session revocation check",
     ],
     auditEvents: ["auth.login", "auth.logout", "auth.refresh", "auth.revoked", "authz.allowed", "authz.denied", "tenant.switch"],
+  };
+}
+
+export function buildDomainAuthorizationRuntimeReadinessPlan(input: DomainAuthorizationRuntimeReadinessInput): DomainAuthorizationRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/auth package script is missing ${script}.`);
+  if (!input.packageTestsPassed) blockers.push("Auth package permission and route-guard tests must pass.");
+  if (!input.packageTypecheckPassed) blockers.push("Auth package typecheck must pass in the installed workspace.");
+  if (!input.customRolesLoadedFromDatabase) blockers.push("CustomRole rows must be loaded from the database before runtime authorization decisions.");
+  if (!input.middlewareUsesRouteGuard) blockers.push("Dashboard/API middleware must call evaluateApiRouteGuard or evaluateDashboardRouteGuard.");
+  if (!input.dashboardRoutesGuarded) blockers.push("Dashboard pages must enforce route-level permission guards.");
+  if (!input.apiRoutesGuarded) blockers.push("Dashboard and public API routes with tenant data must enforce route-level permission guards.");
+  if (!input.serverActionsGuarded) blockers.push("Server actions and provider actions must enforce route-level permission guards.");
+  if (!input.fieldRedactionApplied) blockers.push("Sensitive dashboard/API fields must use evaluateFieldAuthorization before serialization.");
+  if (!input.authorizationAuditPersisted) blockers.push("Authorization allow/deny decisions must persist AuditLog rows with tenant, actor, route, and permission metadata.");
+  if (!input.tenantMismatchTestsPassed) blockers.push("Route tests must prove cross-tenant sessions are denied.");
+  if (!input.roleMatrixRouteTestsPassed) blockers.push("Route tests must cover owner, artist, assistant, studio manager, admin, and custom roles.");
+  if (!input.csrfSessionBindingVerified) blockers.push("Cookie-authenticated mutating routes must verify CSRF tokens bound to the active session.");
+  if (!input.sessionRevocationChecked) blockers.push("Route authorization must check session revocation before allowing sensitive actions.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/auth typecheck",
+      "pnpm --filter @inkroute/auth test",
+      "dashboard middleware route-guard contract tests",
+      "dashboard/API role matrix route tests",
+      "cross-tenant denial route tests",
+      "authorization audit persistence integration tests",
+    ],
+    requiredControls: [
+      "Resolve provider-backed session, TenantMember, and CustomRole rows server-side before authorization.",
+      "Combine built-in role permissions with active tenant-scoped custom grants only.",
+      "Reject invalid permission strings, inactive custom roles, cross-tenant custom roles, expired sessions, revoked sessions, and tenant mismatches.",
+      "Authorize dashboard pages, API routes, and server/provider actions before data loading or mutation.",
+      "Bind CSRF validation to cookie-authenticated mutating routes.",
+      "Persist redacted authorization audit rows for allow and deny decisions.",
+      "Apply field-level redaction for private client, medical, payment, consent, and system fields.",
+    ],
+    blockers,
   };
 }
 

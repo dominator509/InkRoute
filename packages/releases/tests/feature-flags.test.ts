@@ -7,6 +7,7 @@ import {
   buildMobileUpdatePlan,
   buildProviderRuntimeGates,
   buildReleaseHealthChecks,
+  buildReleaseControlPlaneReadinessPlan,
   classifyMobileUpdate,
   createReleaseCandidate,
   createReleaseNotes,
@@ -289,5 +290,40 @@ describe("release and feature flag governance", () => {
     expect(plan.requiredSecrets).toContain("DATABASE_URL");
     expect(plan.deploymentGatedSteps).toContain("Prisma migrate deploy");
     expect(plan.environments).toEqual(["preview", "staging", "production"]);
+  });
+
+  it("summarizes release control-plane readiness across persistence, RBAC, protected environments, rollout, and rollback evidence", () => {
+    const plan = buildReleaseControlPlaneReadinessPlan({
+      packageScripts: ["test"],
+      packageTestsPassed: true,
+      packageTypecheckPassed: false,
+      releaseRecordPersistenceConfigured: true,
+      featureFlagPersistenceConfigured: false,
+      rbacEnforced: true,
+      tenantScopedReadsVerified: true,
+      tenantScopedMutationsVerified: false,
+      auditLogPersistenceConfigured: false,
+      optimisticConcurrencyConfigured: false,
+      protectedGithubEnvironmentsConfigured: false,
+      signedDeploymentJobsConfigured: false,
+      ciRequiredChecksConfigured: true,
+      previewDeploymentJobConfigured: false,
+      productionDeploymentJobConfigured: false,
+      migrationGatesConfigured: true,
+      rollbackWorkflowRehearsed: false,
+      incidentLinkageConfigured: false,
+      easUpdateGovernanceConfigured: false,
+      rolloutControlsConfigured: false,
+      killSwitchesVerified: false,
+      releaseHealthRouteVerified: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/releases typecheck");
+    expect(plan.requiredEvidence).toContain("ReleaseRecord and FeatureFlag writes persisted with tenant scope, RBAC, audit rows, and version checks.");
+    expect(plan.blockers).toContain("FeatureFlag persistence must be configured with tenant/environment scopes.");
+    expect(plan.blockers).toContain("GitHub preview/production protected environments must be configured.");
+    expect(plan.blockers).toContain("Rollback workflow must be rehearsed for web, dashboard, mobile OTA, database forward-fix, and feature flags.");
   });
 });
