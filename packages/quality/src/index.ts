@@ -791,6 +791,64 @@ export interface PrGapEvidenceEnforcementReadinessPlan {
   readonly blockers: readonly string[];
 }
 
+export interface PrGapEvidenceEnforcementRunPersistenceContract {
+  readonly prismaModel: "PrGapEvidenceEnforcementRun";
+  readonly tenantRelation: "prGapEvidenceEnforcementRuns";
+  readonly uniqueKey: readonly ["tenantId", "runId"];
+  readonly jsonFields: readonly ["fixtureMatrix", "prAuditMatrix", "branchProtectionEvidence", "artifactManifest"];
+  readonly requiredBooleanProofs: readonly [
+    "prGapAuditPassedWithoutContext",
+    "prGapAuditPassedWithMergeFallback",
+    "positiveFixturePassed",
+    "negativeFixtureFailed",
+    "productionBlockerDowngradeCovered",
+    "closedRowFixtureCovered",
+    "noSecretLogsVerified",
+    "ciPullRequestStepWired",
+    "branchProtectionRequiresQualityJob",
+    "liveFailingPrEvidenceCaptured",
+    "livePassingPrEvidenceCaptured",
+    "mergeBlockProofCaptured"
+  ];
+  readonly redactedArtifactFields: readonly [
+    "fixtureArtifactPath",
+    "prGapAuditArtifactPath",
+    "branchProtectionArtifactPath",
+    "liveFailingPrArtifactPath",
+    "livePassingPrArtifactPath",
+    "secretSafeLogReviewArtifactPath"
+  ];
+}
+
+export const prGapEvidenceEnforcementRunPersistenceContract: PrGapEvidenceEnforcementRunPersistenceContract = {
+  prismaModel: "PrGapEvidenceEnforcementRun",
+  tenantRelation: "prGapEvidenceEnforcementRuns",
+  uniqueKey: ["tenantId", "runId"],
+  jsonFields: ["fixtureMatrix", "prAuditMatrix", "branchProtectionEvidence", "artifactManifest"],
+  requiredBooleanProofs: [
+    "prGapAuditPassedWithoutContext",
+    "prGapAuditPassedWithMergeFallback",
+    "positiveFixturePassed",
+    "negativeFixtureFailed",
+    "productionBlockerDowngradeCovered",
+    "closedRowFixtureCovered",
+    "noSecretLogsVerified",
+    "ciPullRequestStepWired",
+    "branchProtectionRequiresQualityJob",
+    "liveFailingPrEvidenceCaptured",
+    "livePassingPrEvidenceCaptured",
+    "mergeBlockProofCaptured",
+  ],
+  redactedArtifactFields: [
+    "fixtureArtifactPath",
+    "prGapAuditArtifactPath",
+    "branchProtectionArtifactPath",
+    "liveFailingPrArtifactPath",
+    "livePassingPrArtifactPath",
+    "secretSafeLogReviewArtifactPath",
+  ],
+};
+
 const requiredPrGapEvidenceScripts = ["quality:pr-gaps", "quality:pr-gap-fixtures", "quality:all"] as const;
 const requiredPrGapEvidenceCiTerms = ["pnpm quality:pr-gaps", "pnpm quality:all"] as const;
 const requiredPrGapEvidenceFixtures = ["valid-with-evidence.diff", "invalid-missing-evidence.diff"] as const;

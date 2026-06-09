@@ -387,6 +387,7 @@ model Tenant {
   agentExecutionLedgerRuns AgentExecutionLedgerRun[]
   handoffToolingRuns HandoffToolingRun[]
   agentTaskTrackingRuns AgentTaskTrackingRun[]
+  prGapEvidenceEnforcementRuns PrGapEvidenceEnforcementRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2249,6 +2250,44 @@ model AgentTaskTrackingRun {
   docLinksArtifactPath                    String?
   gapLinksArtifactPath                    String?
   statusTraceabilityArtifactPath          String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model PrGapEvidenceEnforcementRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  fixtureMatrix                           Json
+  prAuditMatrix                           Json
+  branchProtectionEvidence                Json
+  artifactManifest                        Json
+  prGapAuditPassedWithoutContext          Boolean  @default(false)
+  prGapAuditPassedWithMergeFallback       Boolean  @default(false)
+  positiveFixturePassed                   Boolean  @default(false)
+  negativeFixtureFailed                   Boolean  @default(false)
+  productionBlockerDowngradeCovered       Boolean  @default(false)
+  closedRowFixtureCovered                 Boolean  @default(false)
+  noSecretLogsVerified                    Boolean  @default(false)
+  ciPullRequestStepWired                  Boolean  @default(false)
+  branchProtectionRequiresQualityJob      Boolean  @default(false)
+  liveFailingPrEvidenceCaptured           Boolean  @default(false)
+  livePassingPrEvidenceCaptured           Boolean  @default(false)
+  mergeBlockProofCaptured                 Boolean  @default(false)
+  fixtureArtifactPath                     String?
+  prGapAuditArtifactPath                  String?
+  branchProtectionArtifactPath            String?
+  liveFailingPrArtifactPath               String?
+  livePassingPrArtifactPath               String?
+  secretSafeLogReviewArtifactPath         String?
   ciRunUrl                                String?
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())

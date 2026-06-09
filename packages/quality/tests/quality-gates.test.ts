@@ -16,8 +16,13 @@ import {
   extractMarkdownLinks,
   parseGapEvidenceRecords,
   phase17QualityGates,
+  prGapEvidenceEnforcementRunPersistenceContract,
   summarizeQualityGates,
 } from "../src/index";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
 describe("quality gates", () => {
   it("summarizes the Phase 17 quality gate catalog", () => {
@@ -263,6 +268,45 @@ describe("quality gates", () => {
     expect(plan.missingCiTerms).toEqual([]);
     expect(plan.missingFixtures).toEqual([]);
     expect(plan.blockers).toEqual([]);
+  });
+
+  it("pins durable PrGapEvidenceEnforcementRun persistence for live merge-block proof", () => {
+    const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+    const prismaMigration = readRepoFile(
+      "packages/db/prisma/migrations/20260609026000_add_pr_gap_evidence_enforcement_runs/migration.sql",
+    );
+    const gapTracker = readRepoFile("GAP_TRACKER.md");
+
+    expect(prGapEvidenceEnforcementRunPersistenceContract.prismaModel).toBe("PrGapEvidenceEnforcementRun");
+    expect(prGapEvidenceEnforcementRunPersistenceContract.tenantRelation).toBe("prGapEvidenceEnforcementRuns");
+    expect(prGapEvidenceEnforcementRunPersistenceContract.uniqueKey).toEqual(["tenantId", "runId"]);
+    expect(prGapEvidenceEnforcementRunPersistenceContract.jsonFields).toEqual([
+      "fixtureMatrix",
+      "prAuditMatrix",
+      "branchProtectionEvidence",
+      "artifactManifest",
+    ]);
+    expect(prGapEvidenceEnforcementRunPersistenceContract.requiredBooleanProofs).toEqual(
+      expect.arrayContaining([
+        "positiveFixturePassed",
+        "negativeFixtureFailed",
+        "productionBlockerDowngradeCovered",
+        "branchProtectionRequiresQualityJob",
+        "liveFailingPrEvidenceCaptured",
+        "livePassingPrEvidenceCaptured",
+        "mergeBlockProofCaptured",
+      ]),
+    );
+    expect(prGapEvidenceEnforcementRunPersistenceContract.redactedArtifactFields).toContain(
+      "branchProtectionArtifactPath",
+    );
+    expect(prismaSchema).toContain("prGapEvidenceEnforcementRuns PrGapEvidenceEnforcementRun[]");
+    expect(prismaSchema).toContain("model PrGapEvidenceEnforcementRun");
+    expect(prismaSchema).toContain("branchProtectionEvidence                Json");
+    expect(prismaSchema).toContain("mergeBlockProofCaptured                 Boolean  @default(false)");
+    expect(prismaMigration).toContain('CREATE TABLE "PrGapEvidenceEnforcementRun"');
+    expect(prismaMigration).toContain('"liveFailingPrArtifactPath" TEXT');
+    expect(gapTracker).toContain("packages/db/prisma/migrations/20260609026000_add_pr_gap_evidence_enforcement_runs/migration.sql");
   });
 
   it("blocks documentation audit readiness until scripts, reports, CI, inventory, provider, and legal evidence are complete", () => {
