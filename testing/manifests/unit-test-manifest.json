@@ -982,6 +982,24 @@
                                          "Google FreeBusy/event/push/recovery smoke artifacts pending",
                                          "Tenant isolation tests pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-dashboard-timezone-recurrence-qa-static",
+                       "file":  "apps/dashboard/tests/timezone-recurrence-qa-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-058 timezone QA matrix covers IANA validation, DST transitions, recurrence expansion, provider render matrix, and all-day travel windows",
+                                        "GAP-058 route/persistence/provider timezone boundaries reject untrimmed, abbreviation-only, and invalid timezones",
+                                        "GAP-058 dashboard timezone QA API is tenant-scoped and no-store",
+                                        "GAP-058 readiness remains blocked on Temporal/date-library implementation, DST/recurrence/provider smokes, and seeded persistence-boundary evidence"
+                                    ],
+                       "blockedBy":  [
+                                         "Static timezone recurrence QA test execution pending",
+                                         "Temporal/date-library implementation evidence pending",
+                                         "Stored recurrence expansion integration tests pending",
+                                         "Google and ICS timezone render smoke artifacts pending",
+                                         "Seeded persistence-boundary tests pending"
+                                     ]
                    }
                ]
 }
