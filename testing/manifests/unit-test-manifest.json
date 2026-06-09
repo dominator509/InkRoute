@@ -2056,13 +2056,13 @@
       "file": "apps/web/tests/agent-execution-ledger-runtime-static.test.ts",
       "priority": "medium",
       "verifies": [
-        "GAP-119 agent execution ledger runtime matrix covers queue/ledger parity, handoff verifier/audit/doc/next commands, Codex/Jules/Claude/local result imports, commandsRun, filesChanged, evidenceArtifacts, remainingGaps, risks, secret-safety review, GAP_TRACKER updates, and CI artifacts",
+        "GAP-119 agent execution ledger runtime matrix covers queue/ledger parity, handoff verifier/audit/doc/next commands, Codex/Jules/Claude/local result imports, commandsRun, filesChanged, evidenceArtifacts, remainingGaps, risks, secret-safety review, GAP_TRACKER updates, AgentExecutionLedgerRun Prisma model and app row contract, and CI artifacts",
         "GAP-119 queue manifest, ledger manifest, verifier script, root handoff scripts, and package helper tests stay aligned before external agent execution proof",
         "GAP-119 CI retains agent execution ledger runtime contract and redacted artifact paths without claiming external agents have executed tasks"
       ],
       "blockedBy": [
         "Static agent execution ledger runtime test execution pending",
-        "Codex/Jules/Claude/local task execution proof pending",
+        "Provider-backed AgentExecutionLedgerRun transaction plus Codex/Jules/Claude/local task execution proof pending",
         "Completed redacted ledger entries with command/artifact evidence pending",
         "Secret-safety review and GAP_TRACKER evidence update proof pending"
       ]

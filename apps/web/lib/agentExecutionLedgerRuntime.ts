@@ -14,6 +14,42 @@ export interface AgentExecutionLedgerRuntimeMatrixEntry {
   readonly status: AgentExecutionLedgerRuntimeStatus;
 }
 
+export interface AgentExecutionLedgerRunPersistenceContract {
+  readonly prismaModel: "AgentExecutionLedgerRun";
+  readonly tenantRelation: "agentExecutionLedgerRuns";
+  readonly uniqueKey: readonly ["tenantId", "runId"];
+  readonly jsonFields: readonly [
+    "queueTaskMatrix",
+    "ledgerExecutionMatrix",
+    "changedFilesMatrix",
+    "evidenceArtifactManifest"
+  ];
+  readonly requiredBooleanProofs: readonly [
+    "verifierPassed",
+    "handoffAuditPassed",
+    "handoffDocsVerified",
+    "handoffNextComputed",
+    "queueLedgerParityVerified",
+    "agentCommandPlansRecorded",
+    "redactedCommandTranscriptsCaptured",
+    "changedFilesRecorded",
+    "providerEvidenceCaptured",
+    "remainingGapsRecorded",
+    "secretSafetyReviewed",
+    "gapTrackerUpdated",
+    "externalAgentResultsImported",
+    "ciLedgerArtifactsCaptured"
+  ];
+  readonly redactedArtifactFields: readonly [
+    "commandTranscriptArtifactPath",
+    "diffSummaryArtifactPath",
+    "providerEvidenceArtifactPath",
+    "secretSafetyArtifactPath",
+    "gapTrackerUpdateArtifactPath",
+    "externalResultsImportArtifactPath"
+  ];
+}
+
 export const agentExecutionLedgerTaskIds = [
   "codex-workspace-runtime-readiness-001",
   "codex-runtime-verification-001",
@@ -106,6 +142,42 @@ export const agentExecutionLedgerRuntimeMatrix = [
     status: "ci-gated",
   },
 ] as const satisfies readonly AgentExecutionLedgerRuntimeMatrixEntry[];
+
+export const agentExecutionLedgerRunPersistenceContract: AgentExecutionLedgerRunPersistenceContract = {
+  prismaModel: "AgentExecutionLedgerRun",
+  tenantRelation: "agentExecutionLedgerRuns",
+  uniqueKey: ["tenantId", "runId"],
+  jsonFields: [
+    "queueTaskMatrix",
+    "ledgerExecutionMatrix",
+    "changedFilesMatrix",
+    "evidenceArtifactManifest",
+  ],
+  requiredBooleanProofs: [
+    "verifierPassed",
+    "handoffAuditPassed",
+    "handoffDocsVerified",
+    "handoffNextComputed",
+    "queueLedgerParityVerified",
+    "agentCommandPlansRecorded",
+    "redactedCommandTranscriptsCaptured",
+    "changedFilesRecorded",
+    "providerEvidenceCaptured",
+    "remainingGapsRecorded",
+    "secretSafetyReviewed",
+    "gapTrackerUpdated",
+    "externalAgentResultsImported",
+    "ciLedgerArtifactsCaptured",
+  ],
+  redactedArtifactFields: [
+    "commandTranscriptArtifactPath",
+    "diffSummaryArtifactPath",
+    "providerEvidenceArtifactPath",
+    "secretSafetyArtifactPath",
+    "gapTrackerUpdateArtifactPath",
+    "externalResultsImportArtifactPath",
+  ],
+};
 
 export const agentExecutionLedgerRuntimeReadiness = buildAgentExecutionLedgerReadinessPlan({
   queueTasks: agentExecutionLedgerTaskIds.map((id, index) => ({

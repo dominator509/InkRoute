@@ -384,6 +384,7 @@ model Tenant {
   databaseOperationsRuns DatabaseOperationsRun[]
   productionLaunchEvidenceRuns ProductionLaunchEvidenceRun[]
   launchOperationsRuns LaunchOperationsRun[]
+  agentExecutionLedgerRuns AgentExecutionLedgerRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2129,6 +2130,46 @@ model LaunchOperationsRun {
   monitoringDashboardArtifactPath         String?
   communicationsTemplateArtifactPath      String?
   operationsApprovalArtifactPath          String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model AgentExecutionLedgerRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  queueTaskMatrix                         Json
+  ledgerExecutionMatrix                   Json
+  changedFilesMatrix                      Json
+  evidenceArtifactManifest                Json
+  verifierPassed                          Boolean  @default(false)
+  handoffAuditPassed                      Boolean  @default(false)
+  handoffDocsVerified                     Boolean  @default(false)
+  handoffNextComputed                     Boolean  @default(false)
+  queueLedgerParityVerified               Boolean  @default(false)
+  agentCommandPlansRecorded               Boolean  @default(false)
+  redactedCommandTranscriptsCaptured      Boolean  @default(false)
+  changedFilesRecorded                    Boolean  @default(false)
+  providerEvidenceCaptured                Boolean  @default(false)
+  remainingGapsRecorded                   Boolean  @default(false)
+  secretSafetyReviewed                    Boolean  @default(false)
+  gapTrackerUpdated                       Boolean  @default(false)
+  externalAgentResultsImported            Boolean  @default(false)
+  ciLedgerArtifactsCaptured               Boolean  @default(false)
+  commandTranscriptArtifactPath           String?
+  diffSummaryArtifactPath                 String?
+  providerEvidenceArtifactPath            String?
+  secretSafetyArtifactPath                String?
+  gapTrackerUpdateArtifactPath            String?
+  externalResultsImportArtifactPath       String?
   ciRunUrl                                String?
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())

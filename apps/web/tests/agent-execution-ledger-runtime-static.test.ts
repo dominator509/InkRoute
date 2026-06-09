@@ -6,6 +6,7 @@ import {
   agentExecutionLedgerRuntimeCommands,
   agentExecutionLedgerRuntimeMatrix,
   agentExecutionLedgerRuntimeReadiness,
+  agentExecutionLedgerRunPersistenceContract,
   agentExecutionLedgerTargets,
   agentExecutionLedgerTaskIds,
 } from "../lib/agentExecutionLedgerRuntime";
@@ -22,6 +23,10 @@ describe("agent execution ledger runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const prismaMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609023000_add_agent_execution_ledger_runs/migration.sql",
+  );
 
   it("pins the runtime matrix commands, tasks, targets, and redacted artifact paths", () => {
     expect(agentExecutionLedgerRuntimeCommands).toEqual([
@@ -123,5 +128,44 @@ describe("agent execution ledger runtime contract", () => {
     expect(unitManifest).toContain("unit-web-agent-execution-ledger-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/agentExecutionLedgerRuntime.ts");
     expect(gapTracker).toContain("live external agent execution proof remains open");
+  });
+
+  it("pins durable AgentExecutionLedgerRun persistence for imported handoff execution proof", () => {
+    expect(agentExecutionLedgerRunPersistenceContract.prismaModel).toBe("AgentExecutionLedgerRun");
+    expect(agentExecutionLedgerRunPersistenceContract.tenantRelation).toBe("agentExecutionLedgerRuns");
+    expect(agentExecutionLedgerRunPersistenceContract.uniqueKey).toEqual(["tenantId", "runId"]);
+    expect(agentExecutionLedgerRunPersistenceContract.jsonFields).toEqual([
+      "queueTaskMatrix",
+      "ledgerExecutionMatrix",
+      "changedFilesMatrix",
+      "evidenceArtifactManifest",
+    ]);
+    expect(agentExecutionLedgerRunPersistenceContract.requiredBooleanProofs).toEqual(
+      expect.arrayContaining([
+        "queueLedgerParityVerified",
+        "agentCommandPlansRecorded",
+        "redactedCommandTranscriptsCaptured",
+        "changedFilesRecorded",
+        "providerEvidenceCaptured",
+        "secretSafetyReviewed",
+        "gapTrackerUpdated",
+        "externalAgentResultsImported",
+        "ciLedgerArtifactsCaptured",
+      ]),
+    );
+    expect(agentExecutionLedgerRunPersistenceContract.redactedArtifactFields).toContain(
+      "externalResultsImportArtifactPath",
+    );
+    expect(prismaSchema).toContain("agentExecutionLedgerRuns AgentExecutionLedgerRun[]");
+    expect(prismaSchema).toContain("model AgentExecutionLedgerRun");
+    expect(prismaSchema).toContain("ledgerExecutionMatrix                   Json");
+    expect(prismaSchema).toContain("externalAgentResultsImported            Boolean  @default(false)");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(prismaMigration).toContain('CREATE TABLE "AgentExecutionLedgerRun"');
+    expect(prismaMigration).toContain('"commandTranscriptArtifactPath" TEXT');
+    expect(unitManifest).toContain("AgentExecutionLedgerRun Prisma model and app row contract");
+    expect(gapTracker).toContain(
+      "packages/db/prisma/migrations/20260609023000_add_agent_execution_ledger_runs/migration.sql",
+    );
   });
 });
