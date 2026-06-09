@@ -6,6 +6,7 @@ import {
   domainEventAuditRuntimeCommands,
   domainEventAuditRuntimeMatrix,
   domainEventAuditRuntimeReadiness,
+  domainEventAuditRunPersistenceContract,
 } from "../lib/domainEventAuditRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -21,6 +22,8 @@ describe("domain event and audit transaction runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const domainEventAuditRunMigration = readRepoFile("packages/db/prisma/migrations/20260609034600_add_domain_event_audit_runs/migration.sql");
 
   it("pins domain event/audit commands, matrix rows, and artifact paths", () => {
     expect(domainEventAuditRuntimeCommands).toEqual([
@@ -94,13 +97,46 @@ describe("domain event and audit transaction runtime contract", () => {
     );
   });
 
+  it("pins the DomainEventAuditRun persistence model and migration", () => {
+    expect(domainEventAuditRunPersistenceContract).toEqual({
+      prismaModel: "DomainEventAuditRun",
+      tenantRelation: "domainEventAuditRuns",
+      migration: "20260609034600_add_domain_event_audit_runs",
+      storesRunId: true,
+      storesCommitSha: true,
+      storesReadinessStatus: true,
+      storesCommandMatrix: true,
+      storesArtifactManifest: true,
+      storesTransactionServiceEvidence: true,
+      storesRepositoryEvidence: true,
+      storesAtomicityEvidence: true,
+      storesEventAuditPersistenceEvidence: true,
+      storesIdempotencyReplayEvidence: true,
+      storesRollbackEvidence: true,
+      storesDenialEvidence: true,
+      storesDatabaseCiEvidence: true,
+      storesSecretSafeArtifacts: true,
+    });
+    expect(prismaSchema).toContain("model DomainEventAuditRun");
+    expect(prismaSchema).toContain("domainEventAuditRuns DomainEventAuditRun[]");
+    expect(prismaSchema).toContain("transactionServiceEvidenceCaptured");
+    expect(prismaSchema).toContain("idempotencyReplayEvidenceCaptured");
+    expect(prismaSchema).toContain("secretSafeArtifactsCaptured");
+    expect(domainEventAuditRunMigration).toContain('CREATE TABLE "DomainEventAuditRun"');
+    expect(domainEventAuditRunMigration).toContain('"commandMatrix" JSONB NOT NULL');
+    expect(domainEventAuditRunMigration).toContain('"artifactManifest" JSONB NOT NULL');
+    expect(domainEventAuditRunMigration).toContain('"DomainEventAuditRun_tenantId_runId_key"');
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming transaction evidence readiness", () => {
     expect(ciWorkflow).toContain("Run Phase 2 domain event audit runtime contracts");
     expect(ciWorkflow).toContain("domain-event-audit-runtime-static.test.ts");
     expect(ciWorkflow).toContain("domain-event-audit-runtime-artifacts");
     expect(ciWorkflow).toContain("coverage/domain-event-audit-runtime.json");
     expect(unitManifest).toContain("unit-web-domain-event-audit-runtime-static");
+    expect(unitManifest).toContain("DomainEventAuditRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/domainEventAuditRuntime.ts");
+    expect(gapTracker).toContain("DomainEventAuditRun Prisma model and app row contract");
     expect(gapTracker).toContain("live Prisma transaction services, tenant-scoped repositories, booking/payment atomicity tests, BookingStateEvent/AuditLog/PaymentAuditLog persistence, idempotency persistence, replay original-result behavior, provider rollback integration, invalid-transition denial, cross-tenant denial, database evidence, CI evidence, and secret-safe artifacts remain open");
   });
 });

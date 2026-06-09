@@ -15,6 +15,47 @@ export interface DomainEventAuditRuntimeMatrixEntry {
   readonly status: DomainEventAuditRuntimeStatus;
 }
 
+
+export interface DomainEventAuditRunPersistenceContract {
+  readonly prismaModel: "DomainEventAuditRun";
+  readonly tenantRelation: "domainEventAuditRuns";
+  readonly migration: "20260609034600_add_domain_event_audit_runs";
+  readonly storesRunId: true;
+  readonly storesCommitSha: true;
+  readonly storesReadinessStatus: true;
+  readonly storesCommandMatrix: true;
+  readonly storesArtifactManifest: true;
+  readonly storesTransactionServiceEvidence: true;
+  readonly storesRepositoryEvidence: true;
+  readonly storesAtomicityEvidence: true;
+  readonly storesEventAuditPersistenceEvidence: true;
+  readonly storesIdempotencyReplayEvidence: true;
+  readonly storesRollbackEvidence: true;
+  readonly storesDenialEvidence: true;
+  readonly storesDatabaseCiEvidence: true;
+  readonly storesSecretSafeArtifacts: true;
+}
+
+export const domainEventAuditRunPersistenceContract = {
+  prismaModel: "DomainEventAuditRun",
+  tenantRelation: "domainEventAuditRuns",
+  migration: "20260609034600_add_domain_event_audit_runs",
+  storesRunId: true,
+  storesCommitSha: true,
+  storesReadinessStatus: true,
+  storesCommandMatrix: true,
+  storesArtifactManifest: true,
+  storesTransactionServiceEvidence: true,
+  storesRepositoryEvidence: true,
+  storesAtomicityEvidence: true,
+  storesEventAuditPersistenceEvidence: true,
+  storesIdempotencyReplayEvidence: true,
+  storesRollbackEvidence: true,
+  storesDenialEvidence: true,
+  storesDatabaseCiEvidence: true,
+  storesSecretSafeArtifacts: true,
+} as const satisfies DomainEventAuditRunPersistenceContract;
+
 export const domainEventAuditRuntimeCommands = [
   "pnpm --filter @inkroute/booking typecheck",
   "pnpm --filter @inkroute/booking test",
