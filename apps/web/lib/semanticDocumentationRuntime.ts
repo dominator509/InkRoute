@@ -14,6 +14,37 @@ export interface SemanticDocumentationRuntimeMatrixEntry {
   readonly status: SemanticDocumentationRuntimeStatus;
 }
 
+export interface SemanticDocumentationRunPersistenceContract {
+  readonly prismaModel: "SemanticDocumentationRun";
+  readonly tenantRelation: "semanticDocumentationRuns";
+  readonly uniqueKey: readonly ["tenantId", "runId"];
+  readonly jsonFields: readonly ["semanticCheckMatrix", "proofBoundaryMatrix", "artifactManifest"];
+  readonly requiredBooleanProofs: readonly [
+    "qualityDocsPassed",
+    "structuralLinksPassed",
+    "concreteRepoPathsPassed",
+    "productionReadinessClaimsPassed",
+    "apiRouteReferencesPassed",
+    "providerReadinessLanguagePassed",
+    "legalReadinessLanguagePassed",
+    "appPackageInventoryPassed",
+    "documentationInventoryContractCurrent",
+    "ciQualityDocsEvidenceCaptured",
+    "runtimeProofSeparated",
+    "providerProofSeparated",
+    "legalReviewSeparated"
+  ];
+  readonly artifactFields: readonly [
+    "linkPathArtifactPath",
+    "consistencyArtifactPath",
+    "inventoryArtifactPath",
+    "ciQualityDocsArtifactPath",
+    "runtimeBoundaryArtifactPath",
+    "providerBoundaryArtifactPath",
+    "legalBoundaryArtifactPath"
+  ];
+}
+
 export const semanticDocumentationRuntimeCommands = [
   "pnpm quality:docs",
   "node scripts/quality/audit-doc-links.mjs",
@@ -95,6 +126,37 @@ export const semanticDocumentationRuntimeMatrix = [
     status: "legal-review-separated",
   },
 ] as const satisfies readonly SemanticDocumentationRuntimeMatrixEntry[];
+
+export const semanticDocumentationRunPersistenceContract: SemanticDocumentationRunPersistenceContract = {
+  prismaModel: "SemanticDocumentationRun",
+  tenantRelation: "semanticDocumentationRuns",
+  uniqueKey: ["tenantId", "runId"],
+  jsonFields: ["semanticCheckMatrix", "proofBoundaryMatrix", "artifactManifest"],
+  requiredBooleanProofs: [
+    "qualityDocsPassed",
+    "structuralLinksPassed",
+    "concreteRepoPathsPassed",
+    "productionReadinessClaimsPassed",
+    "apiRouteReferencesPassed",
+    "providerReadinessLanguagePassed",
+    "legalReadinessLanguagePassed",
+    "appPackageInventoryPassed",
+    "documentationInventoryContractCurrent",
+    "ciQualityDocsEvidenceCaptured",
+    "runtimeProofSeparated",
+    "providerProofSeparated",
+    "legalReviewSeparated",
+  ],
+  artifactFields: [
+    "linkPathArtifactPath",
+    "consistencyArtifactPath",
+    "inventoryArtifactPath",
+    "ciQualityDocsArtifactPath",
+    "runtimeBoundaryArtifactPath",
+    "providerBoundaryArtifactPath",
+    "legalBoundaryArtifactPath",
+  ],
+};
 
 export const semanticDocumentationRuntimeReadiness = buildSemanticDocumentationRuntimeReadinessPlan({
   qualityDocsScriptIncludesLinkAudit: true,

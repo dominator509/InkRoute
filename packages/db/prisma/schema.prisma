@@ -392,6 +392,7 @@ model Tenant {
   repositoryGovernanceRuns RepositoryGovernanceRun[]
   qualityGateRuns QualityGateRun[]
   prDiffEvidenceRuns PrDiffEvidenceRun[]
+  semanticDocumentationRuns SemanticDocumentationRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2454,6 +2455,45 @@ model PrDiffEvidenceRun {
   positiveFixtureArtifactPath             String?
   negativeFixtureArtifactPath             String?
   secretSafeLogReviewArtifactPath         String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model SemanticDocumentationRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  semanticCheckMatrix                     Json
+  proofBoundaryMatrix                     Json
+  artifactManifest                        Json
+  qualityDocsPassed                       Boolean  @default(false)
+  structuralLinksPassed                   Boolean  @default(false)
+  concreteRepoPathsPassed                 Boolean  @default(false)
+  productionReadinessClaimsPassed         Boolean  @default(false)
+  apiRouteReferencesPassed                Boolean  @default(false)
+  providerReadinessLanguagePassed         Boolean  @default(false)
+  legalReadinessLanguagePassed            Boolean  @default(false)
+  appPackageInventoryPassed               Boolean  @default(false)
+  documentationInventoryContractCurrent   Boolean  @default(false)
+  ciQualityDocsEvidenceCaptured           Boolean  @default(false)
+  runtimeProofSeparated                   Boolean  @default(false)
+  providerProofSeparated                  Boolean  @default(false)
+  legalReviewSeparated                    Boolean  @default(false)
+  linkPathArtifactPath                    String?
+  consistencyArtifactPath                 String?
+  inventoryArtifactPath                   String?
+  ciQualityDocsArtifactPath               String?
+  runtimeBoundaryArtifactPath             String?
+  providerBoundaryArtifactPath            String?
+  legalBoundaryArtifactPath               String?
   ciRunUrl                                String?
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())

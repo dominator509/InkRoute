@@ -2168,13 +2168,13 @@
       "file": "apps/web/tests/semantic-documentation-runtime-static.test.ts",
       "priority": "medium",
       "verifies": [
-        "GAP-128 semantic documentation runtime matrix covers structural links, concrete repo paths, production-readiness claims, API route references, provider/legal readiness language, app/package inventory, documentation inventory contracts, quality:docs chaining, CI evidence, and runtime/provider/legal proof boundaries",
+        "GAP-128 semantic documentation runtime matrix covers structural links, concrete repo paths, production-readiness claims, API route references, provider/legal readiness language, app/package inventory, documentation inventory contracts, quality:docs chaining, CI evidence, SemanticDocumentationRun Prisma model and app row contract, and runtime/provider/legal proof boundaries",
         "GAP-128 quality docs scripts, package helper tests, protocol language, CI labels, artifact paths, and tracker row remain wired before live CI quality-docs proof",
         "GAP-128 static readiness keeps semantic checks complete while preserving runtime build, provider proof, and legal review as separate evidence gates"
       ],
       "blockedBy": [
         "Static semantic documentation runtime test execution pending",
-        "pnpm quality:docs and CI quality-docs evidence pending",
+        "Provider-backed SemanticDocumentationRun transaction plus pnpm quality:docs and CI quality-docs evidence pending",
         "Runtime build proof remains separate from static semantic documentation audit",
         "Provider proof and legal review remain separate from static wording checks"
       ]

@@ -7,6 +7,7 @@ import {
   semanticDocumentationRuntimeCommands,
   semanticDocumentationRuntimeMatrix,
   semanticDocumentationRuntimeReadiness,
+  semanticDocumentationRunPersistenceContract,
 } from "../lib/semanticDocumentationRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -18,6 +19,8 @@ describe("semantic documentation runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const prismaMigration = readRepoFile("packages/db/prisma/migrations/20260609031000_add_semantic_documentation_runs/migration.sql");
 
   it("pins semantic documentation commands, checks, matrix rows, and artifacts", () => {
     expect(semanticDocumentationRuntimeCommands).toEqual([
@@ -85,5 +88,38 @@ describe("semantic documentation runtime contract", () => {
     expect(unitManifest).toContain("unit-web-semantic-documentation-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/semanticDocumentationRuntime.ts");
     expect(gapTracker).toContain("live CI quality-docs evidence remains open while runtime, provider, and legal proof remain separate gates");
+  });
+
+  it("pins durable SemanticDocumentationRun persistence for semantic docs and proof-boundary evidence", () => {
+    expect(semanticDocumentationRunPersistenceContract.prismaModel).toBe("SemanticDocumentationRun");
+    expect(semanticDocumentationRunPersistenceContract.tenantRelation).toBe("semanticDocumentationRuns");
+    expect(semanticDocumentationRunPersistenceContract.uniqueKey).toEqual(["tenantId", "runId"]);
+    expect(semanticDocumentationRunPersistenceContract.jsonFields).toEqual([
+      "semanticCheckMatrix",
+      "proofBoundaryMatrix",
+      "artifactManifest",
+    ]);
+    expect(semanticDocumentationRunPersistenceContract.requiredBooleanProofs).toEqual(
+      expect.arrayContaining([
+        "qualityDocsPassed",
+        "productionReadinessClaimsPassed",
+        "providerReadinessLanguagePassed",
+        "legalReadinessLanguagePassed",
+        "ciQualityDocsEvidenceCaptured",
+        "runtimeProofSeparated",
+        "providerProofSeparated",
+        "legalReviewSeparated",
+      ]),
+    );
+    expect(semanticDocumentationRunPersistenceContract.artifactFields).toContain("runtimeBoundaryArtifactPath");
+    expect(prismaSchema).toContain("semanticDocumentationRuns SemanticDocumentationRun[]");
+    expect(prismaSchema).toContain("model SemanticDocumentationRun");
+    expect(prismaSchema).toContain("proofBoundaryMatrix                     Json");
+    expect(prismaSchema).toContain("legalReviewSeparated                    Boolean  @default(false)");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(prismaMigration).toContain('CREATE TABLE "SemanticDocumentationRun"');
+    expect(prismaMigration).toContain('"providerBoundaryArtifactPath" TEXT');
+    expect(unitManifest).toContain("SemanticDocumentationRun Prisma model and app row contract");
+    expect(gapTracker).toContain("packages/db/prisma/migrations/20260609031000_add_semantic_documentation_runs/migration.sql");
   });
 });
