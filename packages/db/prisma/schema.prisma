@@ -422,6 +422,7 @@ model Tenant {
   domainEventAuditRuns DomainEventAuditRun[]
   privacyRetentionRuns PrivacyRetentionRun[]
   publicContentRuns PublicContentRun[]
+  webBuildRuntimeRuns WebBuildRuntimeRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3735,6 +3736,32 @@ model PublicContentRun {
   createdAt                               DateTime @default(now())
   updatedAt                               DateTime @updatedAt
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model WebBuildRuntimeRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String
+  status                          String
+  commandMatrix                   Json
+  artifactManifest                Json
+  prismaClientEvidenceCaptured    Boolean  @default(false)
+  typecheckEvidenceCaptured       Boolean  @default(false)
+  buildEvidenceCaptured           Boolean  @default(false)
+  browserSmokeEvidenceCaptured    Boolean  @default(false)
+  fallbackEvidenceCaptured        Boolean  @default(false)
+  exactOptionalEvidenceCaptured   Boolean  @default(false)
+  secretSafeArtifactsCaptured     Boolean  @default(false)
+  typecheckOutputPath             String?
+  buildOutputPath                 String?
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

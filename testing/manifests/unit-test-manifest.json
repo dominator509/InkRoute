@@ -2655,6 +2655,21 @@
       ]
     },
     {
+      "id": "unit-web-build-runtime-verification-static",
+      "file": "apps/web/tests/web-build-runtime-verification-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-027 WebBuildRuntimeRun Prisma model and app row contract plus web build/runtime matrix covers Prisma Client generation, web typecheck, Next build, browser smoke, DB-backed booking route smoke, DB-unavailable fallback smoke, exact optional property review, and secret-safe artifacts",
+        "GAP-027 compile-unblocker source contracts remain wired without claiming live typecheck/build/browser proof",
+        "GAP-027 readiness keeps generated Prisma Client, web typecheck, web build, browser smoke, CI, and secret-safe artifact evidence explicit blockers"
+      ],
+      "blockedBy": [
+        "Provider-backed WebBuildRuntimeRun transaction plus generated Prisma Client proof pending",
+        "Web typecheck, Next build, DB-backed booking route smoke, and browser smoke proof pending",
+        "CI evidence and secret-safe artifact proof pending"
+      ]
+    },
+    {
       "id": "unit-web-portfolio-image-performance-runtime-static",
       "file": "apps/web/tests/portfolio-image-performance-runtime-static.test.ts",
       "priority": "high",
