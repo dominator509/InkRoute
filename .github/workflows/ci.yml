@@ -2338,6 +2338,11 @@ jobs:
           name: observability-automated-coverage-artifacts
           path: |
             coverage/observability-automated-coverage.json
+            coverage/observability-automated-closeout.md
+            coverage/observability-automated-ui-static.json
+            coverage/observability-automated-route-static.json
+            coverage/observability-automated-web-typecheck.txt
+            coverage/observability-automated-package-test.txt
             coverage/observability-global-error-rendered.json
             coverage/observability-dashboard-triage-smoke.json
             coverage/observability-playwright-triage-results.json

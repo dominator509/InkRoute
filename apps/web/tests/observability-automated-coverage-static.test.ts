@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -15,6 +15,7 @@ const trackerSource = readFileSync(join(root, "GAP_TRACKER.md"), "utf8");
 const webE2eSource = readFileSync(join(root, "apps/web/tests/e2e/observability-global-error.spec.ts"), "utf8");
 const dashboardE2eSource = readFileSync(join(root, "apps/dashboard/tests/e2e/observability-triage.spec.ts"), "utf8");
 const mobileProofSource = readFileSync(join(root, "apps/mobile/tests/mobile-crash-proof-static.test.ts"), "utf8");
+const unitManifest = readFileSync(join(root, "testing/manifests/unit-test-manifest.json"), "utf8");
 
 describe("observability automated coverage closeout matrix", () => {
   it("adds executable browser targets for rendered global-error and dashboard triage coverage", () => {
@@ -39,10 +40,14 @@ describe("observability automated coverage closeout matrix", () => {
       expect.arrayContaining([
         "package-observability-helpers",
         "web-observability-routes",
+        "web-ui-static",
         "rendered-global-error-boundaries",
         "dashboard-triage-browser-smoke",
         "mobile-crash-simulator-ui",
         "mobile-crash-device-proof",
+        "ci-observability-coverage",
+        "secret-safe-artifacts",
+        "closeout-evidence",
       ]),
     );
   });
@@ -67,6 +72,10 @@ describe("observability automated coverage closeout matrix", () => {
     expect(workflowSource).toContain("apps/web/tests/observability-automated-coverage-static.test.ts");
     expect(workflowSource).toContain("apps/mobile/tests/mobile-crash-proof-static.test.ts");
     expect(workflowSource).toContain("observability-playwright-triage-results");
+    expect(workflowSource).toContain("coverage/observability-ci-evidence.json");
+    expect(observabilityAutomatedCoverageArtifactPaths).toContain("coverage/observability-secret-safe-artifacts.json");
+    expect(observabilityAutomatedCoverageArtifactPaths).toContain("coverage/observability-automated-closeout.md");
+    expect(unitManifest).toContain("secret-safe artifact proof pending");
     expect(trackerSource).toContain("GAP-086");
     expect(trackerSource).toContain("apps/web/lib/observabilityAutomatedCoverage.ts");
     expect(trackerSource).toContain("live browser/device execution remains open");

@@ -1,13 +1,20 @@
-﻿import { buildObservabilityAutomatedCoverageReadinessPlan } from "@inkroute/observability";
+import { buildObservabilityAutomatedCoverageReadinessPlan } from "@inkroute/observability";
 
 export const observabilityAutomatedCoverageArtifactPaths = [
   "coverage/observability-automated-coverage.json",
+  "coverage/observability-automated-package-test.txt",
+  "coverage/observability-automated-web-typecheck.txt",
+  "coverage/observability-automated-route-static.json",
+  "coverage/observability-automated-ui-static.json",
   "coverage/observability-global-error-rendered.json",
   "coverage/observability-dashboard-triage-smoke.json",
   "coverage/observability-playwright-triage-results.json",
   "coverage/observability-mobile-simulator-crash-ui.json",
   "coverage/observability-mobile-device-crash-proof-redacted.json",
   "coverage/observability-webhook-ingest-coverage.json",
+  "coverage/observability-ci-evidence.json",
+  "coverage/observability-secret-safe-artifacts.json",
+  "coverage/observability-automated-closeout.md",
   "test-results/observability-automated",
   "test-results/observability-browser",
   "test-results/observability-mobile",
@@ -20,6 +27,8 @@ export const observabilityAutomatedCoverageCommands = [
   "pnpm exec playwright test apps/web/tests/e2e/observability-global-error.spec.ts apps/dashboard/tests/e2e/observability-triage.spec.ts",
   "mobile simulator crash-report UI smoke",
   "mobile physical-device crash-report proof",
+  "GitHub Actions observability automated coverage evidence",
+  "redacted observability coverage artifact audit",
 ] as const;
 
 export const observabilityAutomatedCoverageMatrix = [
@@ -33,6 +42,12 @@ export const observabilityAutomatedCoverageMatrix = [
     id: "web-observability-routes",
     command: "pnpm vitest run apps/web/tests/observability-routes.test.ts",
     artifact: "coverage/observability-webhook-ingest-coverage.json",
+    status: "implemented-command-target",
+  },
+  {
+    id: "web-ui-static",
+    command: "pnpm vitest run apps/web/tests/observability-ui-static.test.ts",
+    artifact: "coverage/observability-automated-ui-static.json",
     status: "implemented-command-target",
   },
   {
@@ -58,6 +73,24 @@ export const observabilityAutomatedCoverageMatrix = [
     command: "mobile physical-device crash-report proof",
     artifact: "coverage/observability-mobile-device-crash-proof-redacted.json",
     status: "device-proof-gated",
+  },
+  {
+    id: "ci-observability-coverage",
+    command: "GitHub Actions observability automated coverage evidence",
+    artifact: "coverage/observability-ci-evidence.json",
+    status: "ci-gated",
+  },
+  {
+    id: "secret-safe-artifacts",
+    command: "redacted observability coverage artifact audit",
+    artifact: "coverage/observability-secret-safe-artifacts.json",
+    status: "artifact-gated",
+  },
+  {
+    id: "closeout-evidence",
+    command: "attach observability automated coverage closeout evidence",
+    artifact: "coverage/observability-automated-closeout.md",
+    status: "artifact-gated",
   },
 ] as const;
 

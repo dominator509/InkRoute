@@ -1490,14 +1490,14 @@
       "verifies": [
         "GAP-086 executable Playwright targets exist for rendered web global-error and dashboard observability triage smoke",
         "GAP-086 mobile crash simulator/device proof targets and redacted artifact paths are tracked without claiming live device execution",
-        "GAP-086 CI retains package, route, static UI, browser, mobile, webhook, ingest, and artifact coverage commands"
+        "GAP-086 observabilityAutomatedCoverageMatrix retains package, route, static UI, browser, mobile, webhook/ingest, CI, closeout, and secret-safe artifact coverage commands"
       ],
       "blockedBy": [
         "Static observability automated coverage test execution pending",
         "Rendered Playwright global-error smoke execution pending",
         "Dashboard observability triage browser execution pending",
-        "Mobile simulator crash-report UI execution pending",
-        "Mobile physical-device crash proof pending"
+        "Mobile simulator/device crash proof execution pending",
+        "CI evidence, closeout evidence, and secret-safe artifact proof pending"
       ]
     },
     {
