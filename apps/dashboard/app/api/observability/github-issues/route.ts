@@ -1,4 +1,4 @@
-﻿import { prisma } from "@inkroute/db";
+import { prisma } from "@inkroute/db";
 import {
   buildGithubIssueAutomationPlan,
   buildGithubIssueRuntimeDispatchPlan,
@@ -11,14 +11,66 @@ import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "
 
 export const runtime = "nodejs";
 
+export type GithubIssueAutomationRuntimeStatus =
+  | "wired"
+  | "approval-gated"
+  | "credential-gated"
+  | "provider-gated"
+  | "persistence-gated"
+  | "privacy-gated"
+  | "ci-gated";
+
+export interface GithubIssueAutomationRuntimeMatrixEntry {
+  readonly id: string;
+  readonly command: string;
+  readonly artifact: string;
+  readonly status: GithubIssueAutomationRuntimeStatus;
+}
+
+export const githubIssueAutomationCommands = [
+  "pnpm --filter @inkroute/observability typecheck",
+  "pnpm --filter @inkroute/observability test",
+  "pnpm vitest run apps/dashboard/tests/github-issue-automation-static.test.ts",
+  "dashboard GitHub issue approval action smoke",
+  "GitHub issue create API smoke",
+  "ErrorReport issue-link persistence smoke",
+  "live synthetic GitHub issue creation proof",
+  "GitHub issue no-PII artifact audit",
+] as const;
+
 export const githubIssueAutomationArtifactPaths = [
   "coverage/github-issue-automation-approval.json",
+  "coverage/github-issue-observability-typecheck.txt",
+  "coverage/github-issue-observability-test.txt",
+  "coverage/github-issue-route-static-contract.json",
+  "coverage/github-issue-dashboard-approval-ui.json",
+  "coverage/github-issue-provider-credentials-redacted.json",
   "coverage/github-issue-human-approval-audit.json",
   "coverage/github-issue-create-request-redacted.json",
   "coverage/github-issue-errorreport-link.json",
   "coverage/github-issue-dashboard-status-sync.json",
   "coverage/github-issue-live-dispatch-redacted.json",
+  "coverage/github-issue-no-pii-artifact-audit.json",
+  "coverage/github-issue-ci-evidence.json",
+  "coverage/github-issue-secret-safe-artifacts.json",
   "test-results/github-issue-automation",
+] as const;
+
+export const githubIssueAutomationRuntimeMatrix: readonly GithubIssueAutomationRuntimeMatrixEntry[] = [
+  { id: "observability-typecheck", command: "pnpm --filter @inkroute/observability typecheck", artifact: "coverage/github-issue-observability-typecheck.txt", status: "wired" },
+  { id: "observability-tests", command: "pnpm --filter @inkroute/observability test", artifact: "coverage/github-issue-observability-test.txt", status: "wired" },
+  { id: "route-static-contract", command: "pnpm vitest run apps/dashboard/tests/github-issue-automation-static.test.ts", artifact: "coverage/github-issue-route-static-contract.json", status: "wired" },
+  { id: "approval-api", command: "dashboard GitHub issue approval action smoke", artifact: "coverage/github-issue-automation-approval.json", status: "wired" },
+  { id: "dashboard-approval-ui", command: "rendered dashboard approval UI/action smoke", artifact: "coverage/github-issue-dashboard-approval-ui.json", status: "approval-gated" },
+  { id: "provider-credentials", command: "GitHub token/repository/template/label/assignee credential audit", artifact: "coverage/github-issue-provider-credentials-redacted.json", status: "credential-gated" },
+  { id: "human-approval-audit", command: "human approval AuditLog persistence smoke", artifact: "coverage/github-issue-human-approval-audit.json", status: "persistence-gated" },
+  { id: "create-request-redaction", command: "sanitized createIssueRequest no-PII audit", artifact: "coverage/github-issue-create-request-redacted.json", status: "privacy-gated" },
+  { id: "errorreport-link", command: "ErrorReport issue-link persistence smoke", artifact: "coverage/github-issue-errorreport-link.json", status: "persistence-gated" },
+  { id: "dashboard-status-sync", command: "dashboard issue-link status sync smoke", artifact: "coverage/github-issue-dashboard-status-sync.json", status: "persistence-gated" },
+  { id: "live-dispatch", command: "live synthetic GitHub issue creation proof", artifact: "coverage/github-issue-live-dispatch-redacted.json", status: "provider-gated" },
+  { id: "no-pii-artifact-audit", command: "GitHub issue no-PII artifact audit", artifact: "coverage/github-issue-no-pii-artifact-audit.json", status: "privacy-gated" },
+  { id: "ci-github-issue-automation", command: "GitHub Actions issue automation gate", artifact: "coverage/github-issue-ci-evidence.json", status: "ci-gated" },
+  { id: "secret-safe-artifacts", command: "redacted GitHub issue artifact audit", artifact: "coverage/github-issue-secret-safe-artifacts.json", status: "ci-gated" },
 ] as const;
 
 function json(data: unknown, status = 200) {

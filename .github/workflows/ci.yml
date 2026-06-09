@@ -2313,6 +2313,14 @@ jobs:
           name: github-issue-automation-artifacts
           path: |
             coverage/github-issue-automation-approval.json
+            coverage/github-issue-secret-safe-artifacts.json
+            coverage/github-issue-ci-evidence.json
+            coverage/github-issue-no-pii-artifact-audit.json
+            coverage/github-issue-provider-credentials-redacted.json
+            coverage/github-issue-dashboard-approval-ui.json
+            coverage/github-issue-route-static-contract.json
+            coverage/github-issue-observability-test.txt
+            coverage/github-issue-observability-typecheck.txt
             coverage/github-issue-human-approval-audit.json
             coverage/github-issue-create-request-redacted.json
             coverage/github-issue-errorreport-link.json

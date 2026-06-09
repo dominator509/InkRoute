@@ -1472,14 +1472,15 @@
       "verifies": [
         "GAP-085 dashboard GitHub issue approval route enforces RBAC, tenant matching, and explicit human approval",
         "GAP-085 route builds sanitized createIssueRequest payloads, stores human approval audit metadata, and persists ErrorReport issue-link status",
-        "GAP-085 GitHub API dispatch is wired behind token/repository/template/enable gates while live repo proof remains explicit"
+        "GAP-085 githubIssueAutomationRuntimeMatrix wires dashboard approval UI, provider credentials, dispatch, ErrorReport link persistence, live proof, no-PII audit, CI, and secret-safe artifacts"
       ],
       "blockedBy": [
         "Static GitHub issue automation test execution pending",
-        "GitHub token/repository/label/assignee/template configuration pending",
-        "Rendered dashboard approval UI smoke pending",
+        "GitHub token/repository/labels/assignees/privacy template pending",
+        "Rendered dashboard approval UI/action smoke pending",
+        "Provider-backed ErrorReport issue-link integration test pending",
         "Live synthetic GitHub issue creation proof pending",
-        "Provider-backed ErrorReport issue-link integration test pending"
+        "No-PII artifact audit, CI evidence, and secret-safe artifact proof pending"
       ]
     },
     {

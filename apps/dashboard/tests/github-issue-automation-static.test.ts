@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -6,6 +6,7 @@ const root = join(__dirname, "..", "..");
 const routeSource = readFileSync(join(root, "apps/dashboard/app/api/observability/github-issues/route.ts"), "utf8");
 const workflowSource = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
 const trackerSource = readFileSync(join(root, "GAP_TRACKER.md"), "utf8");
+const unitManifest = readFileSync(join(root, "testing/manifests/unit-test-manifest.json"), "utf8");
 
 describe("GitHub issue automation runtime contract", () => {
   it("requires dashboard RBAC, tenant matching, and explicit human approval", () => {
@@ -42,12 +43,37 @@ describe("GitHub issue automation runtime contract", () => {
     expect(routeSource).toContain("liveSyntheticIssueCreationVerified: false");
   });
 
+  it("pins the GitHub issue automation command and artifact matrix", () => {
+    expect(routeSource).toContain("githubIssueAutomationCommands");
+    expect(routeSource).toContain("githubIssueAutomationRuntimeMatrix");
+    for (const id of [
+      "dashboard-approval-ui",
+      "provider-credentials",
+      "human-approval-audit",
+      "create-request-redaction",
+      "errorreport-link",
+      "dashboard-status-sync",
+      "live-dispatch",
+      "no-pii-artifact-audit",
+      "ci-github-issue-automation",
+      "secret-safe-artifacts",
+    ]) {
+      expect(routeSource).toContain(`id: "${id}"`);
+    }
+  });
+
   it("is wired into CI and the tracker without claiming live repo proof", () => {
     expect(routeSource).toContain("coverage/github-issue-live-dispatch-redacted.json");
+    expect(routeSource).toContain("coverage/github-issue-provider-credentials-redacted.json");
+    expect(routeSource).toContain("coverage/github-issue-no-pii-artifact-audit.json");
+    expect(routeSource).toContain("coverage/github-issue-ci-evidence.json");
     expect(workflowSource).toContain("Run Phase 11 GitHub issue automation contracts");
     expect(workflowSource).toContain("apps/dashboard/tests/github-issue-automation-static.test.ts");
+    expect(workflowSource).toContain("coverage/github-issue-ci-evidence.json");
+    expect(unitManifest).toContain("githubIssueAutomationRuntimeMatrix");
     expect(trackerSource).toContain("GAP-085");
     expect(trackerSource).toContain("apps/dashboard/app/api/observability/github-issues/route.ts");
+    expect(trackerSource).toContain("GAP-085 is github-issue-automation-runtime-matrix wired");
     expect(trackerSource).toContain("live synthetic GitHub issue creation proof remains open");
   });
 });
