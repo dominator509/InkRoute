@@ -3053,7 +3053,8 @@
         "Persisted conflict detection, overlapping DB rejection, concurrent hold, and cross-tenant tests pending",
         "Dashboard/API repository tests, CI evidence, and secret-safe artifact proof pending"
       ]
-    }    ,{
+    }
+    ,{
       "id": "unit-google-calendar-sync-runtime-static",
       "file": "apps/dashboard/tests/google-calendar-sync-runtime-static.test.ts",
       "priority": "critical",
@@ -3067,6 +3068,21 @@
         "Google SDK/client, OAuth app/callback, and encrypted token persistence proof pending",
         "FreeBusy/event/full-sync/incremental-sync/invalid-token/push smoke artifacts pending",
         "Tenant isolation, Google test-calendar artifacts, CI evidence, and secret-safe artifact proof pending"
+      ]
+    }    ,{
+      "id": "unit-timezone-recurrence-qa-runtime-static",
+      "file": "apps/dashboard/tests/timezone-recurrence-qa-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-058 timezone recurrence runtime matrix covers calendar typecheck/tests, timezone strategy, Temporal/date-library implementation, route and persistence IANA validation, UTC+timezone storage, DST spring/fall tests, recurrence expansion, all-day travel windows, cross-city rendering, provider rendering, Google render smoke, ICS render smoke, seeded persistence-boundary tests, CI evidence, and secret-safe artifacts",
+        "GAP-058 dashboard timezone QA contract remains wired for required IANA zones, DST spring/fall cases, recurring availability expansion, all-day travel windows, Google/ICS provider render cases, route/persistence/provider boundary validation, no-store tenant-scoped API boundary, and calendar read route surfacing",
+        "GAP-058 readiness keeps Temporal/date-library evidence, stored recurrence expansion integration tests, Google/ICS render smokes, cross-city artifacts, seeded persistence-boundary tests, command evidence, CI, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static timezone recurrence runtime test execution pending",
+        "Temporal/date-library implementation and route/persistence boundary proof pending",
+        "DST, recurrence expansion, all-day travel, cross-city, Google, and ICS render proof pending",
+        "Seeded persistence-boundary tests, CI evidence, and secret-safe artifact proof pending"
       ]
     }  ]
 }
