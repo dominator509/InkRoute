@@ -2056,7 +2056,7 @@ jobs:
             coverage/playwright-seo-attribution-results.json
             test-results/seo-analytics
           if-no-files-found: warn
-      - name: Run Phase 10 Search Console contracts
+      - name: Run Phase 10 Search Console runtime contracts
         run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/dashboard/tests/search-console-route-static.test.ts
 
       - name: Upload Search Console artifacts
@@ -2066,6 +2066,16 @@ jobs:
           name: search-console-artifacts
           path: |
             coverage/search-console-provider-route.json
+            coverage/search-console-secret-safe-artifacts.json
+            coverage/search-console-ci-evidence.json
+            coverage/search-console-provider-sandbox-redacted.json
+            coverage/search-console-idempotency-store.json
+            coverage/search-console-background-job.json
+            coverage/search-console-imported-row-persistence.json
+            coverage/search-console-verified-property-proof-redacted.json
+            coverage/search-console-required-env-redacted.json
+            coverage/search-console-seo-test.txt
+            coverage/search-console-seo-typecheck.txt
             coverage/search-console-dashboard-status.json
             coverage/search-console-import-fixture.json
             coverage/search-console-sitemap-submission-redacted.json

@@ -1,4 +1,4 @@
-﻿import { readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -8,10 +8,15 @@ import {
   searchConsoleDashboardStatus,
   searchConsoleRequiredEnv,
   searchConsoleRuntimeContract,
+  searchConsoleRuntimeCommands,
+  searchConsoleRuntimeMatrix,
 } from "../lib/searchConsoleRuntime";
 
 const routeSource = readFileSync(join(process.cwd(), "apps/dashboard/app/api/seo/search-console/route.ts"), "utf8");
 const envExample = readFileSync(join(process.cwd(), ".env.example"), "utf8");
+const ciWorkflow = readFileSync(join(process.cwd(), ".github/workflows/ci.yml"), "utf8");
+const unitManifest = readFileSync(join(process.cwd(), "testing/manifests/unit-test-manifest.json"), "utf8");
+const gapTracker = readFileSync(join(process.cwd(), "GAP_TRACKER.md"), "utf8");
 
 describe("GAP-075 Search Console provider boundary", () => {
   it("requires Google Search Console env vars and keeps operations credential gated", () => {
@@ -60,5 +65,50 @@ describe("GAP-075 Search Console provider boundary", () => {
     expect(searchConsoleRuntimeContract.blockers).toContain("Search Console operation idempotency store must be available.");
     expect(searchConsoleArtifactPaths).toContain("coverage/search-console-sitemap-submission-redacted.json");
     expect(searchConsoleArtifactPaths).toContain("test-results/search-console");
+  });
+
+  it("pins the Search Console runtime matrix and live-provider proof boundaries", () => {
+    expect(searchConsoleRuntimeCommands).toEqual([
+      "pnpm --filter @inkroute/seo typecheck",
+      "pnpm --filter @inkroute/seo test",
+      "pnpm vitest run apps/dashboard/tests/search-console-route-static.test.ts",
+      "verified test-property sitemap submission smoke",
+      "Search Console query/page import persistence tests",
+      "Search Console background job and idempotency tests",
+      "approved Search Console fixture/provider tests",
+    ]);
+    expect(searchConsoleRuntimeMatrix.map((entry) => entry.id)).toEqual([
+      "seo-typecheck",
+      "seo-tests",
+      "provider-route",
+      "required-env",
+      "verified-property-proof",
+      "sitemap-submission-smoke",
+      "query-page-import-fixture",
+      "imported-row-persistence",
+      "background-job",
+      "idempotency-store",
+      "provider-sandbox",
+      "ci-search-console-job",
+      "secret-safe-artifacts",
+    ]);
+    expect(searchConsoleRuntimeContract.requiredEvidence).toEqual(
+      expect.arrayContaining([
+        "credential-managed provider route/job execution evidence",
+        "tenant ownership persistence, ownership checks, and verified property proof evidence",
+        "verified-property sitemap submission evidence",
+        "query/page import, persisted rows, indexing monitoring, and dashboard status evidence",
+        "fixture/provider execution, audit, and idempotency evidence",
+      ]),
+    );
+  });
+
+  it("keeps CI, manifest, and tracker evidence tied to GAP-075", () => {
+    expect(ciWorkflow).toContain("Run Phase 10 Search Console runtime contracts");
+    expect(ciWorkflow).toContain("search-console-route-static.test.ts");
+    expect(ciWorkflow).toContain("search-console-artifacts");
+    expect(unitManifest).toContain("unit-dashboard-search-console-route-static");
+    expect(unitManifest).toContain("searchConsoleRuntimeMatrix");
+    expect(gapTracker).toContain("GAP-075 is search-console-runtime-matrix wired");
   });
 });

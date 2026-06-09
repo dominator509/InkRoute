@@ -1292,15 +1292,16 @@
       "verifies": [
         "GAP-075 Search Console provider route requires Google env vars and credential-gated operation plans",
         "GAP-075 dashboard route enforces seo:read/seo:write RBAC, tenant ownership checks, no-store status, audit logs, and idempotency metadata",
-        "GAP-075 sitemap submission, query/page import, indexing monitoring, dashboard status, and artifact paths are wired without claiming live provider execution"
+        "GAP-075 sitemap submission, query/page import, indexing monitoring, dashboard status, and artifact paths are wired without claiming live provider execution",
+        "GAP-075 searchConsoleRuntimeMatrix wires credentials, verified property, sitemap smoke, imported-row persistence, background/idempotency, provider fixtures, CI, and secret-safe artifacts"
       ],
       "blockedBy": [
         "Static Search Console route test execution pending",
         "Verified Google Search Console test property proof pending",
         "Live sitemap submission smoke pending",
         "Imported query/page row persistence pending",
-        "Dedicated idempotency store pending",
-        "Approved fixture/provider tests pending"
+        "Dedicated idempotency store and background job pending",
+        "Approved fixture/provider tests, CI evidence, and secret-safe artifact proof pending"
       ]
     },
     {
