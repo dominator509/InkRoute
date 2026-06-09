@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildSecurityMiddlewareEvidencePersistenceContract,
   securityMiddlewareArtifactPaths,
   securityMiddlewareCommands,
+  securityMiddlewareEvidencePersistencePreview,
   securityMiddlewareRuntimeContract,
 } from "../lib/securityMiddlewareRuntime";
 
@@ -53,6 +55,36 @@ describe("GAP-102 security middleware runtime contract", () => {
     );
   });
 
+  it("pins durable security middleware evidence rows, proof fields, tenant isolation, and redacted artifacts", () => {
+    const schema = readWorkspaceFile("packages/db/prisma/schema.prisma");
+    const contract = buildSecurityMiddlewareEvidencePersistenceContract({
+      tenantId: "tenant_demo",
+      surface: "dashboard",
+      environment: "production",
+      routePattern: "/api/security/privacy-requests",
+      headerSmokePassed: true,
+      productionHstsVerified: true,
+      previewLocalHstsSuppressed: true,
+      cspProviderConnectSrcVerified: true,
+      cspFrameBaseFormInvariantPassed: true,
+      csrfAttackRejected: true,
+      csrfValidSessionAllowed: true,
+      sameSiteSessionBoundVerified: true,
+      signedWebhookBypassReviewed: true,
+      artifactObjectKey: "security/tenant_demo/middleware/redacted-dashboard-smoke.json",
+    });
+
+    expect(schema).toContain("model SecurityMiddlewareEvidence");
+    expect(schema).toContain("productionHstsVerified");
+    expect(schema).toContain("sameSiteSessionBoundVerified");
+    expect(schema).toContain("@@index([tenantId, surface, environment])");
+    expect(contract.transactionWrites).toEqual(["SecurityMiddlewareEvidence", "AuditLog"]);
+    expect(contract.proofFields).toContain("csrfAttackRejected");
+    expect(contract.redactedFields).toContain("csrfToken");
+    expect(contract.tenantIsolationKey).toBe("tenantId");
+    expect(securityMiddlewareEvidencePersistencePreview.modelName).toBe("SecurityMiddlewareEvidence");
+  });
+
   it("keeps existing middleware runtime, static, and E2E security tests in the evidence set", () => {
     const runtime = readWorkspaceFile("apps/web/tests/security-runtime-middleware.test.ts");
     const webStatic = readWorkspaceFile("apps/web/tests/security-runtime-middleware-static.test.ts");
@@ -75,6 +107,7 @@ describe("GAP-102 security middleware runtime contract", () => {
 
     expect(securityMiddlewareCommands).toContain("signed webhook CSRF bypass review");
     expect(securityMiddlewareArtifactPaths).toContain("coverage/security-webhook-csrf-bypass-review.json");
+    expect(manifest).toContain("SecurityMiddlewareEvidence Prisma model and app row contract are wired");
     expect(ci).toContain("Run Phase 13 security middleware runtime contracts");
     expect(ci).toContain("apps/web/tests/security-middleware-runtime-static.test.ts");
     expect(ci).toContain("security-middleware-runtime-artifacts");

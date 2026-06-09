@@ -17,6 +17,41 @@ export type SecurityMiddlewareEvidenceAction =
   | "review-signed-webhook-csrf-bypass"
   | "capture-browser-header-smoke";
 
+export interface SecurityMiddlewareEvidencePersistenceInput {
+  tenantId: string;
+  surface: "web" | "dashboard";
+  environment: "production" | "preview" | "local";
+  routePattern: string;
+  headerSmokePassed: boolean;
+  productionHstsVerified: boolean;
+  previewLocalHstsSuppressed: boolean;
+  cspProviderConnectSrcVerified: boolean;
+  cspFrameBaseFormInvariantPassed: boolean;
+  csrfAttackRejected: boolean;
+  csrfValidSessionAllowed: boolean;
+  sameSiteSessionBoundVerified: boolean;
+  signedWebhookBypassReviewed: boolean;
+  artifactObjectKey?: string;
+}
+
+export interface SecurityMiddlewareEvidencePersistenceContract {
+  modelName: "SecurityMiddlewareEvidence";
+  row: SecurityMiddlewareEvidencePersistenceInput;
+  transactionWrites: readonly ["SecurityMiddlewareEvidence", "AuditLog"];
+  proofFields: readonly [
+    "headerSmokePassed",
+    "productionHstsVerified",
+    "previewLocalHstsSuppressed",
+    "cspProviderConnectSrcVerified",
+    "csrfAttackRejected",
+    "csrfValidSessionAllowed",
+    "sameSiteSessionBoundVerified",
+    "signedWebhookBypassReviewed",
+  ];
+  redactedFields: readonly ["artifactObjectKey", "redactedMetadata", "cookie", "csrfToken", "sessionId"];
+  tenantIsolationKey: "tenantId";
+}
+
 export const securityMiddlewareArtifactPaths = [
   "coverage/security-middleware-runtime.json",
   "coverage/security-web-header-browser-smoke.json",
@@ -40,6 +75,28 @@ export const securityMiddlewareCommands = [
   "provider CSP connect-src smoke",
   "signed webhook CSRF bypass review",
 ] as const;
+
+export function buildSecurityMiddlewareEvidencePersistenceContract(
+  input: SecurityMiddlewareEvidencePersistenceInput,
+): SecurityMiddlewareEvidencePersistenceContract {
+  return {
+    modelName: "SecurityMiddlewareEvidence",
+    row: input,
+    transactionWrites: ["SecurityMiddlewareEvidence", "AuditLog"],
+    proofFields: [
+      "headerSmokePassed",
+      "productionHstsVerified",
+      "previewLocalHstsSuppressed",
+      "cspProviderConnectSrcVerified",
+      "csrfAttackRejected",
+      "csrfValidSessionAllowed",
+      "sameSiteSessionBoundVerified",
+      "signedWebhookBypassReviewed",
+    ],
+    redactedFields: ["artifactObjectKey", "redactedMetadata", "cookie", "csrfToken", "sessionId"],
+    tenantIsolationKey: "tenantId",
+  };
+}
 
 export function buildSecurityMiddlewareRuntimeContract() {
   const csrfAttack = buildSecurityRuntimeEnforcementPlan({
@@ -109,3 +166,20 @@ export function buildSecurityMiddlewareRuntimeContract() {
 }
 
 export const securityMiddlewareRuntimeContract = buildSecurityMiddlewareRuntimeContract();
+
+export const securityMiddlewareEvidencePersistencePreview = buildSecurityMiddlewareEvidencePersistenceContract({
+  tenantId: "tenant_demo",
+  surface: "web",
+  environment: "production",
+  routePattern: "/api/public/:tenantSlug/booking-requests",
+  headerSmokePassed: false,
+  productionHstsVerified: false,
+  previewLocalHstsSuppressed: true,
+  cspProviderConnectSrcVerified: false,
+  cspFrameBaseFormInvariantPassed: true,
+  csrfAttackRejected: true,
+  csrfValidSessionAllowed: true,
+  sameSiteSessionBoundVerified: false,
+  signedWebhookBypassReviewed: false,
+  artifactObjectKey: "security/tenant_demo/middleware/redacted-browser-smoke.json",
+});

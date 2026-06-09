@@ -366,6 +366,7 @@ model Tenant {
   legalDocumentVersions LegalDocumentVersion[]
   legalAcceptanceAudits LegalAcceptanceAudit[]
   abuseEvents     AbuseEvent[]
+  securityMiddlewareEvidence SecurityMiddlewareEvidence[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -1505,6 +1506,32 @@ model AbuseEvent {
   @@index([tenantId, abuseKeyHash])
   @@index([tenantId, action])
   @@index([tenantId, failClosed])
+}
+
+model SecurityMiddlewareEvidence {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  surface                         String
+  environment                     String
+  routePattern                    String
+  headerSmokePassed               Boolean  @default(false)
+  productionHstsVerified          Boolean  @default(false)
+  previewLocalHstsSuppressed      Boolean  @default(false)
+  cspProviderConnectSrcVerified   Boolean  @default(false)
+  cspFrameBaseFormInvariantPassed Boolean  @default(false)
+  csrfAttackRejected              Boolean  @default(false)
+  csrfValidSessionAllowed         Boolean  @default(false)
+  sameSiteSessionBoundVerified    Boolean  @default(false)
+  signedWebhookBypassReviewed     Boolean  @default(false)
+  artifactObjectKey               String?
+  redactedMetadata                Json?
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+
+  @@index([tenantId, surface, environment])
+  @@index([tenantId, routePattern])
+  @@index([tenantId, createdAt])
 }
 
 model ErrorReport {
