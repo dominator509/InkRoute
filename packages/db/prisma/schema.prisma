@@ -383,6 +383,7 @@ model Tenant {
   mobileDeploymentRuns MobileDeploymentRun[]
   databaseOperationsRuns DatabaseOperationsRun[]
   productionLaunchEvidenceRuns ProductionLaunchEvidenceRun[]
+  launchOperationsRuns LaunchOperationsRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2086,6 +2087,48 @@ model ProductionLaunchEvidenceRun {
   legalApprovalArtifactPath               String?
   rollbackOperationsArtifactPath          String?
   explicitApprovalArtifactPath            String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model LaunchOperationsRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  ownerCoverageMatrix                     Json
+  operationCheckMatrix                    Json
+  unsafeEvidenceFindings                  Json
+  artifactManifest                        Json
+  verifierPassed                          Boolean  @default(false)
+  namedPrimaryBackupOwnersAssigned        Boolean  @default(false)
+  onCallCoverageVerified                  Boolean  @default(false)
+  alertRoutingTestPassed                  Boolean  @default(false)
+  supportEscalationDrillPassed            Boolean  @default(false)
+  privacyRequestDrillPassed               Boolean  @default(false)
+  incidentDrillPassed                     Boolean  @default(false)
+  rollbackDrillPassed                     Boolean  @default(false)
+  productionMonitoringVerified            Boolean  @default(false)
+  communicationsTemplatesApproved         Boolean  @default(false)
+  unsafeEvidenceScanPassed                Boolean  @default(false)
+  explicitOperationsApprovalCaptured      Boolean  @default(false)
+  ciLaunchOperationsArtifactsCaptured     Boolean  @default(false)
+  ownerCoverageArtifactPath               String?
+  alertRoutingArtifactPath                String?
+  supportEscalationArtifactPath           String?
+  privacyRequestDrillArtifactPath         String?
+  incidentDrillArtifactPath               String?
+  rollbackDrillArtifactPath               String?
+  monitoringDashboardArtifactPath         String?
+  communicationsTemplateArtifactPath      String?
+  operationsApprovalArtifactPath          String?
   ciRunUrl                                String?
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())

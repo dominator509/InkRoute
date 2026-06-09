@@ -2040,13 +2040,13 @@
       "file": "apps/web/tests/launch-operations-runtime-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-120 launch operations runtime matrix covers named owner coverage, alert routing, support escalation, privacy request drills, incident drills, rollback drills, production monitoring, communications templates, unsafe evidence detection, approval blocking, verifier output, and CI artifacts",
+        "GAP-120 launch operations runtime matrix covers named owner coverage, alert routing, support escalation, privacy request drills, incident drills, rollback drills, production monitoring, communications templates, unsafe evidence detection, approval blocking, verifier output, LaunchOperationsRun Prisma model and app row contract, and CI artifacts",
         "GAP-120 launch operations evidence manifest, verifier script, package helper tests, owner model, SLAs, and forbidden evidence policy stay aligned before staffed launch operations proof",
         "GAP-120 CI retains launch operations runtime contract and redacted artifact paths without claiming staffed operational readiness has passed"
       ],
       "blockedBy": [
         "Static launch operations runtime test execution pending",
-        "Named primary/backup owner coverage proof pending",
+        "Provider-backed LaunchOperationsRun transaction plus named primary/backup owner coverage proof pending",
         "Alert, incident, rollback, privacy, and support drill proof pending",
         "Monitoring dashboard, communication template approval, and operations approval proof pending"
       ]

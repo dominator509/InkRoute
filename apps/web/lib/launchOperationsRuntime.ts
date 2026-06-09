@@ -16,6 +16,39 @@ export interface LaunchOperationsRuntimeMatrixEntry {
   readonly status: LaunchOperationsRuntimeStatus;
 }
 
+export interface LaunchOperationsRunPersistenceContract {
+  readonly prismaModel: "LaunchOperationsRun";
+  readonly tenantRelation: "launchOperationsRuns";
+  readonly uniqueKey: readonly ["tenantId", "runId"];
+  readonly jsonFields: readonly ["ownerCoverageMatrix", "operationCheckMatrix", "unsafeEvidenceFindings", "artifactManifest"];
+  readonly requiredBooleanProofs: readonly [
+    "verifierPassed",
+    "namedPrimaryBackupOwnersAssigned",
+    "onCallCoverageVerified",
+    "alertRoutingTestPassed",
+    "supportEscalationDrillPassed",
+    "privacyRequestDrillPassed",
+    "incidentDrillPassed",
+    "rollbackDrillPassed",
+    "productionMonitoringVerified",
+    "communicationsTemplatesApproved",
+    "unsafeEvidenceScanPassed",
+    "explicitOperationsApprovalCaptured",
+    "ciLaunchOperationsArtifactsCaptured"
+  ];
+  readonly redactedArtifactFields: readonly [
+    "ownerCoverageArtifactPath",
+    "alertRoutingArtifactPath",
+    "supportEscalationArtifactPath",
+    "privacyRequestDrillArtifactPath",
+    "incidentDrillArtifactPath",
+    "rollbackDrillArtifactPath",
+    "monitoringDashboardArtifactPath",
+    "communicationsTemplateArtifactPath",
+    "operationsApprovalArtifactPath"
+  ];
+}
+
 export const launchOperationsRuntimeCheckIds: readonly LaunchOperationCheckId[] = [
   "on-call-coverage",
   "alert-routing",
@@ -104,6 +137,39 @@ export const launchOperationsRuntimeMatrix: readonly LaunchOperationsRuntimeMatr
     status: "ci-gated"
   }
 ];
+
+export const launchOperationsRunPersistenceContract: LaunchOperationsRunPersistenceContract = {
+  prismaModel: "LaunchOperationsRun",
+  tenantRelation: "launchOperationsRuns",
+  uniqueKey: ["tenantId", "runId"],
+  jsonFields: ["ownerCoverageMatrix", "operationCheckMatrix", "unsafeEvidenceFindings", "artifactManifest"],
+  requiredBooleanProofs: [
+    "verifierPassed",
+    "namedPrimaryBackupOwnersAssigned",
+    "onCallCoverageVerified",
+    "alertRoutingTestPassed",
+    "supportEscalationDrillPassed",
+    "privacyRequestDrillPassed",
+    "incidentDrillPassed",
+    "rollbackDrillPassed",
+    "productionMonitoringVerified",
+    "communicationsTemplatesApproved",
+    "unsafeEvidenceScanPassed",
+    "explicitOperationsApprovalCaptured",
+    "ciLaunchOperationsArtifactsCaptured"
+  ],
+  redactedArtifactFields: [
+    "ownerCoverageArtifactPath",
+    "alertRoutingArtifactPath",
+    "supportEscalationArtifactPath",
+    "privacyRequestDrillArtifactPath",
+    "incidentDrillArtifactPath",
+    "rollbackDrillArtifactPath",
+    "monitoringDashboardArtifactPath",
+    "communicationsTemplateArtifactPath",
+    "operationsApprovalArtifactPath"
+  ]
+};
 
 export const launchOperationsRuntimeReadiness = buildLaunchOperationsRuntimeReadinessPlan({
   approvalStatus: "blocked",

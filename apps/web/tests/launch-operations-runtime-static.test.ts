@@ -6,7 +6,8 @@ import {
   launchOperationsRuntimeCheckIds,
   launchOperationsRuntimeCommands,
   launchOperationsRuntimeMatrix,
-  launchOperationsRuntimeReadiness
+  launchOperationsRuntimeReadiness,
+  launchOperationsRunPersistenceContract
 } from "../lib/launchOperationsRuntime";
 
 const root = process.cwd();
@@ -17,6 +18,8 @@ const deploymentTests = read("packages/deployment/tests/deployment-readiness.tes
 const ciWorkflow = read(".github/workflows/ci.yml");
 const unitManifest = read("testing/manifests/unit-test-manifest.json");
 const gapTracker = read("GAP_TRACKER.md");
+const prismaSchema = read("packages/db/prisma/schema.prisma");
+const prismaMigration = read("packages/db/prisma/migrations/20260609022000_add_launch_operations_runs/migration.sql");
 
 describe("GAP-120 launch operations runtime wiring", () => {
   it("pins launch operations check ids, commands, matrix entries, and redacted artifacts", () => {
@@ -112,5 +115,41 @@ describe("GAP-120 launch operations runtime wiring", () => {
     expect(unitManifest).toContain("unit-web-launch-operations-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/launchOperationsRuntime.ts");
     expect(gapTracker).toContain("live staffed launch operations proof remains open");
+  });
+
+  it("pins durable LaunchOperationsRun persistence for staffed operations proof", () => {
+    expect(launchOperationsRunPersistenceContract.prismaModel).toBe("LaunchOperationsRun");
+    expect(launchOperationsRunPersistenceContract.tenantRelation).toBe("launchOperationsRuns");
+    expect(launchOperationsRunPersistenceContract.uniqueKey).toEqual(["tenantId", "runId"]);
+    expect(launchOperationsRunPersistenceContract.jsonFields).toEqual([
+      "ownerCoverageMatrix",
+      "operationCheckMatrix",
+      "unsafeEvidenceFindings",
+      "artifactManifest"
+    ]);
+    expect(launchOperationsRunPersistenceContract.requiredBooleanProofs).toEqual(
+      expect.arrayContaining([
+        "namedPrimaryBackupOwnersAssigned",
+        "onCallCoverageVerified",
+        "alertRoutingTestPassed",
+        "supportEscalationDrillPassed",
+        "privacyRequestDrillPassed",
+        "incidentDrillPassed",
+        "rollbackDrillPassed",
+        "productionMonitoringVerified",
+        "communicationsTemplatesApproved",
+        "explicitOperationsApprovalCaptured"
+      ])
+    );
+    expect(launchOperationsRunPersistenceContract.redactedArtifactFields).toContain("ownerCoverageArtifactPath");
+    expect(prismaSchema).toContain("launchOperationsRuns LaunchOperationsRun[]");
+    expect(prismaSchema).toContain("model LaunchOperationsRun");
+    expect(prismaSchema).toContain("ownerCoverageMatrix                     Json");
+    expect(prismaSchema).toContain("communicationsTemplatesApproved         Boolean  @default(false)");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(prismaMigration).toContain('CREATE TABLE "LaunchOperationsRun"');
+    expect(prismaMigration).toContain('"operationsApprovalArtifactPath" TEXT');
+    expect(unitManifest).toContain("LaunchOperationsRun Prisma model and app row contract");
+    expect(gapTracker).toContain("packages/db/prisma/migrations/20260609022000_add_launch_operations_runs/migration.sql");
   });
 });
