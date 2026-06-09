@@ -1035,6 +1035,23 @@
                                          "Playwright dashboard/public travel traces pending",
                                          "CI calendar artifact upload evidence pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-email-provider-static",
+                       "file":  "apps/web/tests/email-provider-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-061 Resend email send contract requires verified sender/domain, API key, suppression checks, idempotency, delivery/provider event writes, and redacted payload previews",
+                                        "GAP-061 email webhook readiness requires raw-body capture, Resend/Svix verifier, webhook secret, replay tolerance, tenant resolution, durable persistence, idempotency, suppression writes, and redaction",
+                                        "GAP-061 email webhook route surfaces provider readiness, reconciliation, required writes, and controls without trusting unverified signatures"
+                                    ],
+                       "blockedBy":  [
+                                         "Static email provider test execution pending",
+                                         "Resend SDK/API key and verified sender/domain pending",
+                                         "Cryptographic route signature verification pending",
+                                         "Durable NotificationDelivery/ProviderEvent/Suppression persistence pending",
+                                         "Sandbox delivered/bounced/complained provider evidence pending"
+                                     ]
                    }
                ]
 }
