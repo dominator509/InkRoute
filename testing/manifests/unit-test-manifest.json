@@ -1,4 +1,4 @@
-﻿{
+{
     "phase":  "14",
     "status":  "scaffolded",
     "command":  "pnpm test:unit",
@@ -1610,6 +1610,23 @@
                                          "Incident provider workflow configuration pending",
                                          "DB-backed persistence integration proof pending",
                                          "Live provider incident proof pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-web-release-automated-coverage-static",
+                       "file":  "apps/web/tests/release-automated-coverage-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-094 Playwright dashboard release smoke target covers release page sections and no-store release/feature-flag reads",
+                                        "GAP-094 release automated matrix tracks provider-backed route, Expo render/device, GitHub Actions execution, real secrets/environments, and CI artifact evidence",
+                                        "GAP-094 CI retains package, route, static, mobile, Playwright, provider, Expo, workflow, and secret-safe artifact paths without claiming live execution"
+                                    ],
+                       "blockedBy":  [
+                                         "Static release automated coverage test execution pending",
+                                         "Playwright dashboard release smoke execution pending",
+                                         "Provider-backed release/feature-flag integration proof pending",
+                                         "Expo render/device release proof pending",
+                                         "GitHub Actions workflow execution with real secrets/environments pending"
                                      ]
                    }
                ]
