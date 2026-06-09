@@ -1932,6 +1932,22 @@
                                          "DB EXPLAIN/ANALYZE and image optimization benchmark proof pending",
                                          "CI performance job and regression triage proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-deployment-tooling-runtime-static",
+                       "file":  "apps/web/tests/deployment-tooling-runtime-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-113 deployment tooling runtime matrix covers frozen install, deployment package typecheck/test, dashboard deployment route contracts, deploy:check-env, deploy:checklist, deploy:gaps, dashboard build/page/API smoke, rollback preflight, production approval boundary, CI deployment reports, and blocker-owner artifacts",
+                                        "GAP-113 deployment package scripts, root deployment scripts, dashboard route/page smoke seams, and runtime readiness blockers stay aligned before live execution proof",
+                                        "GAP-113 CI retains deployment tooling runtime contract and artifact paths without claiming full deployment execution has passed"
+                                    ],
+                       "blockedBy":  [
+                                         "Static deployment tooling runtime test execution pending",
+                                         "Dependency install and deployment package typecheck/test proof pending",
+                                         "Deployment scripts and dashboard build/page/API smoke proof pending",
+                                         "Rollback preflight, approval boundary, CI report, and blocker-owner proof pending"
+                                     ]
                    }
                ]
 }

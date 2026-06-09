@@ -22,6 +22,32 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Verify Phase 14 testing manifests
         run: pnpm test:phase14:static && pnpm test:manifest
+      - name: Run Phase 15 deployment tooling runtime contracts
+        run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/deployment-tooling-runtime-static.test.ts apps/web/tests/dashboard-deployment-readiness-route.test.ts apps/dashboard/tests/deployment-readiness-route-static.test.ts
+
+      - name: Upload Phase 15 deployment tooling runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-tooling-runtime-artifacts
+          path: |
+            coverage/deployment-tooling-runtime.json
+            coverage/deployment-install.log
+            coverage/deployment-package-typecheck.log
+            coverage/deployment-package-tests.json
+            coverage/deployment-route-contracts.json
+            coverage/deploy-check-env.json
+            coverage/deploy-checklist.json
+            coverage/deploy-gaps.json
+            coverage/deployment-dashboard-build.log
+            coverage/deployment-dashboard-page-smoke.json
+            coverage/deployment-readiness-api-smoke.json
+            coverage/deployment-rollback-preflight.json
+            coverage/deployment-production-approval-boundary.json
+            coverage/deployment-ci-reports-redacted.json
+            coverage/deployment-blocker-owner-list.json
+            test-results/deployment-tooling-runtime
+          if-no-files-found: warn
       - name: Verify Phase 15 deployment manifests
         run: pnpm deploy:check-env && pnpm deploy:verify-provider-envs && pnpm deploy:verify-secrets && pnpm deploy:verify-mobile && pnpm deploy:verify-database-ops && pnpm deploy:verify-launch-evidence && pnpm deploy:verify-ops && pnpm deploy:checklist && pnpm deploy:gaps
       - name: Verify Phase 16 handoff manifests
@@ -949,6 +975,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
