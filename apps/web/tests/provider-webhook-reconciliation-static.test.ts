@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -8,12 +8,16 @@ import {
   buildSentryReconciliationPlan,
   mapSentryActionToErrorStatus,
   providerWebhookReconciliationArtifactPaths,
+  providerWebhookReconciliationCommands,
+  providerWebhookReconciliationMatrix,
   sanitizeProviderWebhookPayload,
 } from "../lib/providerWebhookReconciliation";
 
 const root = join(__dirname, "..", "..");
 const routeSource = readFileSync(join(root, "apps/web/app/api/webhooks/sentry/route.ts"), "utf8");
 const workflowSource = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
+const unitManifest = readFileSync(join(root, "testing/manifests/unit-test-manifest.json"), "utf8");
+const gapTracker = readFileSync(join(root, "GAP_TRACKER.md"), "utf8");
 
 const event = {
   action: "resolved",
@@ -108,11 +112,43 @@ describe("provider webhook reconciliation contract", () => {
     );
   });
 
+  it("pins the provider webhook reconciliation command and artifact matrix", () => {
+    expect(providerWebhookReconciliationCommands).toEqual([
+      "pnpm --filter @inkroute/observability typecheck",
+      "pnpm --filter @inkroute/observability test",
+      "pnpm vitest run apps/web/tests/provider-webhook-reconciliation-static.test.ts apps/web/tests/observability-routes.test.ts",
+      "Sentry webhook signature and replay tests",
+      "ProviderWebhookDelivery unique idempotency persistence tests",
+      "ErrorReport status mutation integration tests",
+      "live Sentry webhook replay proof with redacted payloads",
+      "provider webhook no-PII artifact audit",
+    ]);
+    expect(providerWebhookReconciliationMatrix.map((entry) => entry.id)).toEqual([
+      "observability-typecheck",
+      "observability-tests",
+      "route-static-contracts",
+      "signature-replay",
+      "idempotency",
+      "durable-delivery-constraint",
+      "error-status-mutation",
+      "sanitized-payload",
+      "live-sentry-proof",
+      "no-pii-artifact-audit",
+      "ci-provider-webhook-reconciliation",
+      "secret-safe-artifacts",
+    ]);
+    expect(providerWebhookReconciliationArtifactPaths).toContain("coverage/provider-webhook-durable-delivery-constraint.json");
+    expect(providerWebhookReconciliationArtifactPaths).toContain("coverage/provider-webhook-secret-safe-artifacts.json");
+  });
+
   it("is wired into CI with redacted provider webhook artifacts", () => {
     expect(workflowSource).toContain("Run Phase 11 provider webhook reconciliation contracts");
     expect(workflowSource).toContain("apps/web/tests/provider-webhook-reconciliation-static.test.ts");
     expect(workflowSource).toContain("Upload provider webhook reconciliation artifacts");
     expect(workflowSource).toContain("coverage/provider-webhook-live-sentry-proof-redacted.json");
+    expect(workflowSource).toContain("coverage/provider-webhook-ci-evidence.json");
     expect(workflowSource).toContain("test-results/provider-webhook-reconciliation");
+    expect(unitManifest).toContain("providerWebhookReconciliationMatrix");
+    expect(gapTracker).toContain("GAP-082 is provider-webhook-reconciliation-matrix wired");
   });
 });

@@ -1,4 +1,4 @@
-﻿import { buildProviderWebhookReconciliationPlan as buildObservabilityProviderWebhookReconciliationPlan } from "@inkroute/observability";
+import { buildProviderWebhookReconciliationPlan as buildObservabilityProviderWebhookReconciliationPlan } from "@inkroute/observability";
 import {
   buildProviderWebhookRuntimeReadinessPlan,
   type ProviderEventReconciliationPlan,
@@ -9,13 +9,63 @@ import { smsProviderContract } from "./smsProvider";
 
 export type ProviderWebhookErrorStatus = "open" | "triaged" | "in_progress" | "resolved" | "ignored";
 
+export type ProviderWebhookReconciliationStatus =
+  | "wired"
+  | "signature-gated"
+  | "persistence-gated"
+  | "replay-gated"
+  | "provider-gated"
+  | "privacy-gated"
+  | "ci-gated";
+
+export interface ProviderWebhookReconciliationMatrixEntry {
+  readonly id: string;
+  readonly command: string;
+  readonly artifact: string;
+  readonly status: ProviderWebhookReconciliationStatus;
+}
+
+export const providerWebhookReconciliationCommands = [
+  "pnpm --filter @inkroute/observability typecheck",
+  "pnpm --filter @inkroute/observability test",
+  "pnpm vitest run apps/web/tests/provider-webhook-reconciliation-static.test.ts apps/web/tests/observability-routes.test.ts",
+  "Sentry webhook signature and replay tests",
+  "ProviderWebhookDelivery unique idempotency persistence tests",
+  "ErrorReport status mutation integration tests",
+  "live Sentry webhook replay proof with redacted payloads",
+  "provider webhook no-PII artifact audit",
+] as const;
+
 export const providerWebhookReconciliationArtifactPaths = [
   "coverage/provider-webhook-reconciliation.json",
+  "coverage/provider-webhook-observability-typecheck.txt",
+  "coverage/provider-webhook-observability-test.txt",
+  "coverage/provider-webhook-route-static-contracts.json",
+  "coverage/provider-webhook-signature-replay.json",
   "coverage/provider-webhook-idempotency.json",
+  "coverage/provider-webhook-durable-delivery-constraint.json",
   "coverage/provider-webhook-error-status-mutation.json",
   "coverage/provider-webhook-sanitized-payload-redacted.json",
   "coverage/provider-webhook-live-sentry-proof-redacted.json",
+  "coverage/provider-webhook-no-pii-artifact-audit.json",
+  "coverage/provider-webhook-ci-evidence.json",
+  "coverage/provider-webhook-secret-safe-artifacts.json",
   "test-results/provider-webhook-reconciliation",
+] as const;
+
+export const providerWebhookReconciliationMatrix: readonly ProviderWebhookReconciliationMatrixEntry[] = [
+  { id: "observability-typecheck", command: "pnpm --filter @inkroute/observability typecheck", artifact: "coverage/provider-webhook-observability-typecheck.txt", status: "wired" },
+  { id: "observability-tests", command: "pnpm --filter @inkroute/observability test", artifact: "coverage/provider-webhook-observability-test.txt", status: "wired" },
+  { id: "route-static-contracts", command: "provider webhook reconciliation static route contracts", artifact: "coverage/provider-webhook-route-static-contracts.json", status: "wired" },
+  { id: "signature-replay", command: "Sentry webhook signature and replay tests", artifact: "coverage/provider-webhook-signature-replay.json", status: "signature-gated" },
+  { id: "idempotency", command: "provider delivery idempotency tests", artifact: "coverage/provider-webhook-idempotency.json", status: "replay-gated" },
+  { id: "durable-delivery-constraint", command: "ProviderWebhookDelivery unique idempotency persistence tests", artifact: "coverage/provider-webhook-durable-delivery-constraint.json", status: "persistence-gated" },
+  { id: "error-status-mutation", command: "ErrorReport status mutation integration tests", artifact: "coverage/provider-webhook-error-status-mutation.json", status: "persistence-gated" },
+  { id: "sanitized-payload", command: "sanitized provider payload artifact audit", artifact: "coverage/provider-webhook-sanitized-payload-redacted.json", status: "privacy-gated" },
+  { id: "live-sentry-proof", command: "live Sentry webhook replay proof with redacted payloads", artifact: "coverage/provider-webhook-live-sentry-proof-redacted.json", status: "provider-gated" },
+  { id: "no-pii-artifact-audit", command: "provider webhook no-PII artifact audit", artifact: "coverage/provider-webhook-no-pii-artifact-audit.json", status: "privacy-gated" },
+  { id: "ci-provider-webhook-reconciliation", command: "GitHub Actions provider webhook reconciliation gate", artifact: "coverage/provider-webhook-ci-evidence.json", status: "ci-gated" },
+  { id: "secret-safe-artifacts", command: "redacted provider webhook artifact audit", artifact: "coverage/provider-webhook-secret-safe-artifacts.json", status: "ci-gated" },
 ] as const;
 
 const SECRET_KEY_PATTERN = /(authorization|cookie|password|secret|token|api[-_]?key|sentry[-_]?secret|dsn)/i;

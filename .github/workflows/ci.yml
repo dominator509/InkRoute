@@ -2237,6 +2237,12 @@ jobs:
           name: provider-webhook-reconciliation-artifacts
           path: |
             coverage/provider-webhook-reconciliation.json
+            coverage/provider-webhook-no-pii-artifact-audit.json
+            coverage/provider-webhook-durable-delivery-constraint.json
+            coverage/provider-webhook-signature-replay.json
+            coverage/provider-webhook-route-static-contracts.json
+            coverage/provider-webhook-observability-test.txt
+            coverage/provider-webhook-observability-typecheck.txt
             coverage/provider-webhook-idempotency.json
             coverage/provider-webhook-error-status-mutation.json
             coverage/provider-webhook-sanitized-payload-redacted.json

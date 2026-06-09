@@ -1417,15 +1417,16 @@
       "file": "apps/web/tests/provider-webhook-reconciliation-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-082 Sentry webhook reconciliation keeps deterministic idempotency keys, signature verification, and timing-safe comparison",
-        "GAP-082 route resolves tenant/error ownership hints, mutates ErrorReport status transactionally, and writes sanitized provider-delivery AuditLog metadata",
-        "GAP-082 provider payload summaries are redacted-only while dedicated unique delivery constraints and live Sentry replay proof remain tracked"
+        "GAP-082 deterministic Sentry providerDeliveryId and idempotency keys are built from provider action and issue id",
+        "GAP-082 route verifies signatures, uses timingSafeEqual, mutates ErrorReport status transactionally, and writes ProviderWebhookDelivery-shaped AuditLog metadata",
+        "GAP-082 providerWebhookReconciliationMatrix wires signature/replay, durable delivery constraints, status mutation integration, live Sentry replay, no-PII audit, CI, and secret-safe artifacts"
       ],
       "blockedBy": [
         "Static provider webhook reconciliation test execution pending",
-        "Dedicated ProviderWebhookDelivery unique constraint pending",
+        "Dedicated ProviderWebhookDelivery table and unique idempotency constraints pending",
+        "Persisted status-update integration tests pending",
         "Live Sentry webhook replay proof pending",
-        "Provider status-update integration test pending"
+        "Provider no-PII artifact audit, CI evidence, and secret-safe artifact proof pending"
       ]
     },
     {
