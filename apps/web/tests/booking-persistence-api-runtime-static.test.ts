@@ -7,6 +7,7 @@ import {
   bookingPersistenceApiRemainingRuntimeEvidence,
   bookingPersistenceApiRuntimeCommands,
   bookingPersistenceApiRuntimeMatrix,
+  bookingPersistenceApiRunPersistenceContract,
 } from "../lib/bookingPersistenceApiRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -22,6 +23,8 @@ describe("booking persistence API runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const bookingPersistenceApiRunMigration = readRepoFile("packages/db/prisma/migrations/20260609035400_add_booking_persistence_api_runs/migration.sql");
 
   it("pins booking persistence API commands, matrix rows, and artifact paths", () => {
     expect(bookingPersistenceApiRuntimeCommands).toEqual([
@@ -91,13 +94,45 @@ describe("booking persistence API runtime contract", () => {
     ]);
   });
 
+  it("pins the BookingPersistenceApiRun persistence model and migration", () => {
+    expect(bookingPersistenceApiRunPersistenceContract).toEqual({
+      prismaModel: "BookingPersistenceApiRun",
+      tenantRelation: "bookingPersistenceApiRuns",
+      migration: "20260609035400_add_booking_persistence_api_runs",
+      storesRunId: true,
+      storesCommitSha: true,
+      storesReadinessStatus: true,
+      storesCommandMatrix: true,
+      storesArtifactManifest: true,
+      storesRouteContractEvidence: true,
+      storesWebTypecheckBuildEvidence: true,
+      storesPrismaGenerationEvidence: true,
+      storesDatabaseTransactionEvidence: true,
+      storesNextRouteSmokeEvidence: true,
+      storesProviderBoundaryEvidence: true,
+      storesCiEvidence: true,
+      storesSecretSafeArtifacts: true,
+    });
+    expect(prismaSchema).toContain("model BookingPersistenceApiRun");
+    expect(prismaSchema).toContain("bookingPersistenceApiRuns BookingPersistenceApiRun[]");
+    expect(prismaSchema).toContain("routeContractEvidenceCaptured");
+    expect(prismaSchema).toContain("databaseTransactionEvidenceCaptured");
+    expect(prismaSchema).toContain("secretSafeArtifactsCaptured");
+    expect(bookingPersistenceApiRunMigration).toContain('CREATE TABLE "BookingPersistenceApiRun"');
+    expect(bookingPersistenceApiRunMigration).toContain('"commandMatrix" JSONB NOT NULL');
+    expect(bookingPersistenceApiRunMigration).toContain('"artifactManifest" JSONB NOT NULL');
+    expect(bookingPersistenceApiRunMigration).toContain('"BookingPersistenceApiRun_tenantId_runId_key"');
+  });
+
   it("wires CI, manifest, tracker, and artifacts for GAP-032", () => {
     expect(ciWorkflow).toContain("Run Phase 4 booking persistence API runtime contracts");
     expect(ciWorkflow).toContain("booking-persistence-api-runtime-static.test.ts");
     expect(ciWorkflow).toContain("booking-persistence-api-runtime-artifacts");
     expect(ciWorkflow).toContain("coverage/booking-persistence-api-runtime.json");
     expect(unitManifest).toContain("unit-web-booking-persistence-api-runtime-static");
+    expect(unitManifest).toContain("BookingPersistenceApiRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/bookingPersistenceApiRuntime.ts");
+    expect(gapTracker).toContain("BookingPersistenceApiRun Prisma model and app row contract");
     expect(gapTracker).toContain("live generated Prisma Client, dev-DB transaction smoke, web typecheck/build, Next route runtime smoke, fresh CI evidence, and secret-safe artifact review remain open");
   });
 });

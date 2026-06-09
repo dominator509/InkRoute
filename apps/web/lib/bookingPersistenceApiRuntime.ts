@@ -12,6 +12,45 @@ export interface BookingPersistenceApiRuntimeMatrixEntry {
   readonly status: BookingPersistenceApiRuntimeStatus;
 }
 
+
+export interface BookingPersistenceApiRunPersistenceContract {
+  readonly prismaModel: "BookingPersistenceApiRun";
+  readonly tenantRelation: "bookingPersistenceApiRuns";
+  readonly migration: "20260609035400_add_booking_persistence_api_runs";
+  readonly storesRunId: true;
+  readonly storesCommitSha: true;
+  readonly storesReadinessStatus: true;
+  readonly storesCommandMatrix: true;
+  readonly storesArtifactManifest: true;
+  readonly storesRouteContractEvidence: true;
+  readonly storesWebTypecheckBuildEvidence: true;
+  readonly storesPrismaGenerationEvidence: true;
+  readonly storesDatabaseTransactionEvidence: true;
+  readonly storesNextRouteSmokeEvidence: true;
+  readonly storesProviderBoundaryEvidence: true;
+  readonly storesCiEvidence: true;
+  readonly storesSecretSafeArtifacts: true;
+}
+
+export const bookingPersistenceApiRunPersistenceContract = {
+  prismaModel: "BookingPersistenceApiRun",
+  tenantRelation: "bookingPersistenceApiRuns",
+  migration: "20260609035400_add_booking_persistence_api_runs",
+  storesRunId: true,
+  storesCommitSha: true,
+  storesReadinessStatus: true,
+  storesCommandMatrix: true,
+  storesArtifactManifest: true,
+  storesRouteContractEvidence: true,
+  storesWebTypecheckBuildEvidence: true,
+  storesPrismaGenerationEvidence: true,
+  storesDatabaseTransactionEvidence: true,
+  storesNextRouteSmokeEvidence: true,
+  storesProviderBoundaryEvidence: true,
+  storesCiEvidence: true,
+  storesSecretSafeArtifacts: true,
+} as const satisfies BookingPersistenceApiRunPersistenceContract;
+
 export const bookingPersistenceApiRuntimeCommands = [
   "pnpm --filter @inkroute/web test -- booking-requests-contract",
   "pnpm --filter @inkroute/web typecheck",

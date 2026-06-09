@@ -427,6 +427,7 @@ model Tenant {
   bookingContactRuns BookingContactRun[]
   seoA11yPerformanceAuditRuns SeoA11yPerformanceAuditRun[]
   bookingFlowRuntimeRuns BookingFlowRuntimeRun[]
+  bookingPersistenceApiRuns BookingPersistenceApiRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3874,6 +3875,33 @@ model BookingFlowRuntimeRun {
   secretSafeArtifactsCaptured         Boolean  @default(false)
   routeSmokeReportPath                String?
   browserSmokeReportPath              String?
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model BookingPersistenceApiRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String
+  status                              String
+  commandMatrix                       Json
+  artifactManifest                    Json
+  routeContractEvidenceCaptured       Boolean  @default(false)
+  webTypecheckBuildEvidenceCaptured   Boolean  @default(false)
+  prismaGenerationEvidenceCaptured    Boolean  @default(false)
+  databaseTransactionEvidenceCaptured Boolean  @default(false)
+  nextRouteSmokeEvidenceCaptured      Boolean  @default(false)
+  providerBoundaryEvidenceCaptured    Boolean  @default(false)
+  ciEvidenceCaptured                  Boolean  @default(false)
+  secretSafeArtifactsCaptured         Boolean  @default(false)
+  transactionSmokeReportPath          String?
+  nextRouteSmokeReportPath            String?
   createdAt                           DateTime @default(now())
   updatedAt                           DateTime @updatedAt
   tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
