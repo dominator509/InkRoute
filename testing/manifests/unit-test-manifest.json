@@ -2781,5 +2781,21 @@
         "Idempotency, tenant-isolation/RBAC, provider rollback/retry, and UI feedback-state proof pending",
         "Dashboard typecheck/build, CI evidence, and secret-safe artifact proof pending"
       ]
+    }
+    ,{
+      "id": "unit-dashboard-build-runtime-static",
+      "file": "apps/dashboard/tests/dashboard-build-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-039 dashboard build/runtime matrix covers pnpm install, Next/React type availability, dashboard typecheck, dashboard build, dashboard test, browser smoke for home/bookings/clients/payments/portfolio/travel/messages/settings, Next 15 app-router runtime smoke, CI evidence, and secret-safe artifacts",
+        "GAP-039 dashboard package scripts, Next config transpilePackages, app layout, and middleware build/runtime surfaces remain pinned",
+        "GAP-039 readiness keeps dependency install, typecheck/build, Playwright/browser rendering, CI, and redacted artifact proof explicit until commands are actually run"
+      ],
+      "blockedBy": [
+        "Static dashboard build/runtime test execution pending",
+        "pnpm install and Next/React type availability proof pending",
+        "Dashboard typecheck/build/test and browser route smoke proof pending",
+        "CI evidence and secret-safe artifact proof pending"
+      ]
     }  ]
 }

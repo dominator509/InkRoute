@@ -794,6 +794,34 @@ jobs:
               coverage/dashboard-mutation-secret-safe-artifacts.json
               test-results/dashboard-mutation-runtime
             if-no-files-found: warn
+        - name: Run Phase 5 dashboard build/runtime verification contracts
+          run: pnpm vitest run apps/dashboard/tests/dashboard-build-runtime-static.test.ts
+
+        - name: Upload Phase 5 dashboard build/runtime artifacts
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: dashboard-build-runtime-artifacts
+            path: |
+              coverage/dashboard-build-runtime.json
+              coverage/dashboard-install-output.txt
+              coverage/dashboard-next-react-types.txt
+              coverage/dashboard-typecheck.txt
+              coverage/dashboard-build.txt
+              coverage/dashboard-test.txt
+              coverage/dashboard-browser-home.json
+              coverage/dashboard-browser-bookings.json
+              coverage/dashboard-browser-clients.json
+              coverage/dashboard-browser-payments.json
+              coverage/dashboard-browser-portfolio.json
+              coverage/dashboard-browser-travel.json
+              coverage/dashboard-browser-messages.json
+              coverage/dashboard-browser-settings.json
+              coverage/dashboard-next15-runtime-smoke.json
+              coverage/dashboard-build-ci-evidence.json
+              coverage/dashboard-build-secret-safe-artifacts.json
+              test-results/dashboard-build-runtime
+            if-no-files-found: warn
 
       - name: Run Phase 5 dashboard launch runtime contracts
         run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/dashboard-launch-runtime-static.test.ts
