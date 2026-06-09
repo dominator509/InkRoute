@@ -1628,6 +1628,23 @@
                                          "Expo render/device release proof pending",
                                          "GitHub Actions workflow execution with real secrets/environments pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-auth-session-tenant-guard-static",
+                       "file":  "apps/web/tests/auth-session-tenant-guard-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "GAP-095 dashboard middleware enforces production session-cookie and cookie-authenticated CSRF boundaries",
+                                        "GAP-095 dashboard trust/privacy APIs resolve tenant actor context before no-store route reads or mutations",
+                                        "GAP-095 mobile session/tenant security surfaces and provider-backed session, revocation, audit, and cross-tenant proof gates remain explicit"
+                                    ],
+                       "blockedBy":  [
+                                         "Static auth session tenant guard test execution pending",
+                                         "Provider-backed login/logout integration proof pending",
+                                         "Persisted TenantMember/session/revocation lookup proof pending",
+                                         "Auth AuditLog persistence proof pending",
+                                         "Cross-tenant route integration proof pending"
+                                     ]
                    }
                ]
 }

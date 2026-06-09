@@ -480,6 +480,25 @@ jobs:
             test-results/release-dashboard
             test-results/release-provider
             test-results/release-expo
+          if-no-files-found: warn      - name: Run Phase 13 auth session tenant guard contracts
+        run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/auth-session-tenant-guard-static.test.ts apps/dashboard/tests/security-trust-route-static.test.ts apps/dashboard/tests/security-privacy-route-static.test.ts apps/mobile/tests/mobile-security-static.test.ts
+
+      - name: Upload auth session tenant guard artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-session-tenant-guard-artifacts
+          path: |
+            coverage/auth-session-tenant-guard-runtime.json
+            coverage/auth-dashboard-middleware-guard.json
+            coverage/auth-dashboard-route-guard-matrix.json
+            coverage/auth-mobile-session-guard.json
+            coverage/auth-csrf-revocation-redacted.json
+            coverage/auth-provider-session-redacted.json
+            coverage/auth-cross-tenant-denial-redacted.json
+            test-results/auth-session-tenant-guards
+            test-results/dashboard-auth-guards
+            test-results/mobile-auth-guards
           if-no-files-found: warn      - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
@@ -528,6 +547,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
