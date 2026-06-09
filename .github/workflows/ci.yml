@@ -2108,7 +2108,7 @@ jobs:
             test-results/phase10-seo-dashboard
             test-results/structured-data-crawl
           if-no-files-found: warn
-      - name: Run Phase 10 image SEO pipeline contracts
+      - name: Run Phase 10 image SEO pipeline runtime contracts
         run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/dashboard/tests/image-seo-pipeline-static.test.ts
 
       - name: Upload image SEO pipeline artifacts
@@ -2118,6 +2118,13 @@ jobs:
           name: image-seo-pipeline-artifacts
           path: |
             coverage/image-seo-pipeline-plan.json
+            coverage/image-seo-secret-safe-artifacts.json
+            coverage/image-seo-ci-evidence.json
+            coverage/image-seo-audit-log.json
+            coverage/image-seo-fileasset-portfolioimage-persistence.json
+            coverage/image-seo-storage-transform.json
+            coverage/image-seo-seo-test.txt
+            coverage/image-seo-seo-typecheck.txt
             coverage/image-seo-private-original-acl.json
             coverage/image-seo-public-derivative-load.json
             coverage/image-seo-cdn-headers.json

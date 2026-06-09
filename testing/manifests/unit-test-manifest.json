@@ -1330,15 +1330,15 @@
       "verifies": [
         "GAP-077 image pipeline plans private originals, EXIF stripping, dimensions, blur placeholders, responsive WebP/AVIF/JPEG derivatives, immutable object keys, and CDN cache headers",
         "GAP-077 dashboard image SEO route writes FileAsset, PortfolioImage, derivative metadata, and AuditLog rows inside tenant-scoped Prisma transactions",
-        "GAP-077 private-original ACL, public derivative load, CDN header, and Lighthouse artifact paths remain tracked without claiming unrun provider proof"
+        "GAP-077 imageSeoPipelineRuntimeMatrix wires storage transforms, private-original ACL, public derivative load, CDN headers, Lighthouse, persistence/audit, CI, and secret-safe artifacts"
       ],
       "blockedBy": [
         "Static image SEO pipeline test execution pending",
-        "Storage provider transform execution pending",
-        "Private original access-denial test pending",
-        "Public derivative load test pending",
-        "CDN cache header test pending",
-        "Lighthouse image audit pending"
+        "Storage-backed image transform execution pending",
+        "Private original denial and public derivative load tests pending",
+        "CDN cache header tests pending",
+        "Lighthouse image optimization audit pending",
+        "Provider/runtime artifacts, CI evidence, and secret-safe artifact proof pending"
       ]
     },
     {
