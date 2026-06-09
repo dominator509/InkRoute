@@ -2024,13 +2024,13 @@
       "file": "apps/web/tests/production-launch-evidence-runtime-static.test.ts",
       "priority": "critical",
       "verifies": [
-        "GAP-118 production launch evidence runtime matrix covers CI/build/test, database operations, provider/secrets, security/privacy, accessibility/SEO/performance, mobile release, legal approval, rollback/operations, checklist blockers, unsafe evidence detection, explicit approval blocking, and CI artifacts",
+        "GAP-118 production launch evidence runtime matrix covers CI/build/test, database operations, provider/secrets, security/privacy, accessibility/SEO/performance, mobile release, legal approval, rollback/operations, checklist blockers, unsafe evidence detection, explicit approval blocking, ProductionLaunchEvidenceRun Prisma model and app row contract, and CI artifacts",
         "GAP-118 production launch evidence manifest, checklist, verifier, package helper tests, and approval blockers stay aligned before launch proof",
         "GAP-118 CI retains production launch evidence runtime contract and redacted artifact paths without claiming production approval has been captured"
       ],
       "blockedBy": [
         "Static production launch evidence runtime test execution pending",
-        "Verified launch evidence bundle proof pending",
+        "Provider-backed ProductionLaunchEvidenceRun transaction plus verified launch evidence bundle proof pending",
         "Legal approval and rollback drill proof pending",
         "Explicit production approval record proof pending"
       ]

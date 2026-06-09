@@ -14,6 +14,36 @@ export interface ProductionLaunchEvidenceRuntimeMatrixEntry {
   readonly status: ProductionLaunchEvidenceRuntimeStatus;
 }
 
+export interface ProductionLaunchEvidenceRunPersistenceContract {
+  readonly prismaModel: "ProductionLaunchEvidenceRun";
+  readonly tenantRelation: "productionLaunchEvidenceRuns";
+  readonly uniqueKey: readonly ["tenantId", "runId"];
+  readonly jsonFields: readonly ["launchBundleMatrix", "checklistBlockers", "unsafeEvidenceFindings", "artifactManifest"];
+  readonly requiredBooleanProofs: readonly [
+    "verifierPassed",
+    "ciBuildTestEvidenceVerified",
+    "databaseOperationsEvidenceVerified",
+    "providerSecretEvidenceVerified",
+    "securityPrivacyTrustEvidenceVerified",
+    "accessibilitySeoPerformanceVerified",
+    "mobileReleaseEvidenceVerified",
+    "legalApprovalVerified",
+    "rollbackOperationsEvidenceVerified",
+    "checklistBlockersRetained",
+    "unsafeEvidenceScanPassed",
+    "explicitProductionApprovalCaptured",
+    "ciLaunchEvidenceArtifactsCaptured"
+  ];
+  readonly redactedArtifactFields: readonly [
+    "launchEvidenceBundleArtifactPath",
+    "checklistBlockerArtifactPath",
+    "unsafeEvidenceArtifactPath",
+    "legalApprovalArtifactPath",
+    "rollbackOperationsArtifactPath",
+    "explicitApprovalArtifactPath"
+  ];
+}
+
 export const productionLaunchEvidenceBundleIds: readonly ProductionLaunchEvidenceBundleId[] = [
   "ci-build-test",
   "database-ops",
@@ -99,6 +129,36 @@ export const productionLaunchEvidenceRuntimeMatrix: readonly ProductionLaunchEvi
     status: "approval-gated"
   }
 ];
+
+export const productionLaunchEvidenceRunPersistenceContract: ProductionLaunchEvidenceRunPersistenceContract = {
+  prismaModel: "ProductionLaunchEvidenceRun",
+  tenantRelation: "productionLaunchEvidenceRuns",
+  uniqueKey: ["tenantId", "runId"],
+  jsonFields: ["launchBundleMatrix", "checklistBlockers", "unsafeEvidenceFindings", "artifactManifest"],
+  requiredBooleanProofs: [
+    "verifierPassed",
+    "ciBuildTestEvidenceVerified",
+    "databaseOperationsEvidenceVerified",
+    "providerSecretEvidenceVerified",
+    "securityPrivacyTrustEvidenceVerified",
+    "accessibilitySeoPerformanceVerified",
+    "mobileReleaseEvidenceVerified",
+    "legalApprovalVerified",
+    "rollbackOperationsEvidenceVerified",
+    "checklistBlockersRetained",
+    "unsafeEvidenceScanPassed",
+    "explicitProductionApprovalCaptured",
+    "ciLaunchEvidenceArtifactsCaptured"
+  ],
+  redactedArtifactFields: [
+    "launchEvidenceBundleArtifactPath",
+    "checklistBlockerArtifactPath",
+    "unsafeEvidenceArtifactPath",
+    "legalApprovalArtifactPath",
+    "rollbackOperationsArtifactPath",
+    "explicitApprovalArtifactPath"
+  ]
+};
 
 export const productionLaunchEvidenceRuntimeReadiness = buildProductionLaunchEvidenceRuntimeReadinessPlan({
   approvalStatus: "blocked",

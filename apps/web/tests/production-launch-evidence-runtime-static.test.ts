@@ -6,7 +6,8 @@ import {
   productionLaunchEvidenceRuntimeArtifactPaths,
   productionLaunchEvidenceRuntimeCommands,
   productionLaunchEvidenceRuntimeMatrix,
-  productionLaunchEvidenceRuntimeReadiness
+  productionLaunchEvidenceRuntimeReadiness,
+  productionLaunchEvidenceRunPersistenceContract
 } from "../lib/productionLaunchEvidenceRuntime";
 
 const root = process.cwd();
@@ -18,6 +19,10 @@ const deploymentTests = read("packages/deployment/tests/deployment-readiness.tes
 const ciWorkflow = read(".github/workflows/ci.yml");
 const unitManifest = read("testing/manifests/unit-test-manifest.json");
 const gapTracker = read("GAP_TRACKER.md");
+const prismaSchema = read("packages/db/prisma/schema.prisma");
+const prismaMigration = read(
+  "packages/db/prisma/migrations/20260609021000_add_production_launch_evidence_runs/migration.sql"
+);
 
 describe("GAP-118 production launch evidence runtime wiring", () => {
   it("pins launch evidence bundles, commands, matrix entries, and redacted artifact paths", () => {
@@ -106,5 +111,44 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
     expect(unitManifest).toContain("unit-web-production-launch-evidence-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/productionLaunchEvidenceRuntime.ts");
     expect(gapTracker).toContain("live production launch approval proof remains open");
+  });
+
+  it("pins durable ProductionLaunchEvidenceRun persistence for launch approval proof", () => {
+    expect(productionLaunchEvidenceRunPersistenceContract.prismaModel).toBe("ProductionLaunchEvidenceRun");
+    expect(productionLaunchEvidenceRunPersistenceContract.tenantRelation).toBe("productionLaunchEvidenceRuns");
+    expect(productionLaunchEvidenceRunPersistenceContract.uniqueKey).toEqual(["tenantId", "runId"]);
+    expect(productionLaunchEvidenceRunPersistenceContract.jsonFields).toEqual([
+      "launchBundleMatrix",
+      "checklistBlockers",
+      "unsafeEvidenceFindings",
+      "artifactManifest"
+    ]);
+    expect(productionLaunchEvidenceRunPersistenceContract.requiredBooleanProofs).toEqual(
+      expect.arrayContaining([
+        "ciBuildTestEvidenceVerified",
+        "databaseOperationsEvidenceVerified",
+        "providerSecretEvidenceVerified",
+        "legalApprovalVerified",
+        "rollbackOperationsEvidenceVerified",
+        "checklistBlockersRetained",
+        "unsafeEvidenceScanPassed",
+        "explicitProductionApprovalCaptured",
+        "ciLaunchEvidenceArtifactsCaptured"
+      ])
+    );
+    expect(productionLaunchEvidenceRunPersistenceContract.redactedArtifactFields).toContain(
+      "explicitApprovalArtifactPath"
+    );
+    expect(prismaSchema).toContain("productionLaunchEvidenceRuns ProductionLaunchEvidenceRun[]");
+    expect(prismaSchema).toContain("model ProductionLaunchEvidenceRun");
+    expect(prismaSchema).toContain("launchBundleMatrix                      Json");
+    expect(prismaSchema).toContain("explicitProductionApprovalCaptured      Boolean  @default(false)");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(prismaMigration).toContain('CREATE TABLE "ProductionLaunchEvidenceRun"');
+    expect(prismaMigration).toContain('"explicitApprovalArtifactPath" TEXT');
+    expect(unitManifest).toContain("ProductionLaunchEvidenceRun Prisma model and app row contract");
+    expect(gapTracker).toContain(
+      "packages/db/prisma/migrations/20260609021000_add_production_launch_evidence_runs/migration.sql"
+    );
   });
 });

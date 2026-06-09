@@ -382,6 +382,7 @@ model Tenant {
   secretManagementRuns SecretManagementRun[]
   mobileDeploymentRuns MobileDeploymentRun[]
   databaseOperationsRuns DatabaseOperationsRun[]
+  productionLaunchEvidenceRuns ProductionLaunchEvidenceRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2046,6 +2047,45 @@ model DatabaseOperationsRun {
   tenantIsolationArtifactPath             String?
   branchPromotionArtifactPath             String?
   productionDataSafetyArtifactPath        String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model ProductionLaunchEvidenceRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  launchBundleMatrix                      Json
+  checklistBlockers                       Json
+  unsafeEvidenceFindings                  Json
+  artifactManifest                        Json
+  verifierPassed                          Boolean  @default(false)
+  ciBuildTestEvidenceVerified             Boolean  @default(false)
+  databaseOperationsEvidenceVerified      Boolean  @default(false)
+  providerSecretEvidenceVerified          Boolean  @default(false)
+  securityPrivacyTrustEvidenceVerified    Boolean  @default(false)
+  accessibilitySeoPerformanceVerified     Boolean  @default(false)
+  mobileReleaseEvidenceVerified           Boolean  @default(false)
+  legalApprovalVerified                   Boolean  @default(false)
+  rollbackOperationsEvidenceVerified      Boolean  @default(false)
+  checklistBlockersRetained               Boolean  @default(false)
+  unsafeEvidenceScanPassed                Boolean  @default(false)
+  explicitProductionApprovalCaptured      Boolean  @default(false)
+  ciLaunchEvidenceArtifactsCaptured       Boolean  @default(false)
+  launchEvidenceBundleArtifactPath        String?
+  checklistBlockerArtifactPath            String?
+  unsafeEvidenceArtifactPath              String?
+  legalApprovalArtifactPath               String?
+  rollbackOperationsArtifactPath          String?
+  explicitApprovalArtifactPath            String?
   ciRunUrl                                String?
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())
