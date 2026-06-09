@@ -1831,6 +1831,87 @@ export function buildNotificationRuntimeReadinessPlan(input: NotificationRuntime
   };
 }
 
+export interface MobilePushRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  notificationTestsPassed: boolean;
+  notificationTypecheckPassed: boolean;
+  mobileTypecheckPassed: boolean;
+  mobileDeviceTestsPassed: boolean;
+  expoProjectConfigured: boolean;
+  expoAccessTokenConfigured: boolean;
+  permissionPromptImplemented: boolean;
+  deviceTokenRegistrationImplemented: boolean;
+  pushTokenStoreConfigured: boolean;
+  pushOptOutUiImplemented: boolean;
+  deliveryLogPersistenceConfigured: boolean;
+  auditLogPersistenceConfigured: boolean;
+  receiptWorkerConfigured: boolean;
+  invalidTokenSuppressionTested: boolean;
+  tapRoutingImplemented: boolean;
+  foregroundDeliveryTested: boolean;
+  backgroundDeliveryTested: boolean;
+  deepLinkRoutingTested: boolean;
+}
+
+export interface MobilePushRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export function buildMobilePushRuntimeReadinessPlan(input: MobilePushRuntimeReadinessInput): MobilePushRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing @inkroute/notifications ${script} script.`);
+  if (!input.notificationTestsPassed) blockers.push("@inkroute/notifications Expo push tests must pass.");
+  if (!input.notificationTypecheckPassed) blockers.push("@inkroute/notifications typecheck must pass.");
+  if (!input.mobileTypecheckPassed) blockers.push("@inkroute/mobile typecheck must pass with push registration and tap routing wired.");
+  if (!input.mobileDeviceTestsPassed) blockers.push("Expo mobile foreground/background push device tests must pass.");
+  if (!input.expoProjectConfigured) blockers.push("Expo project id must be configured before push runtime promotion.");
+  if (!input.expoAccessTokenConfigured) blockers.push("Expo access token must be configured in a secret store.");
+  if (!input.permissionPromptImplemented) blockers.push("Mobile push permission prompt must be implemented.");
+  if (!input.deviceTokenRegistrationImplemented) blockers.push("Device token registration flow must be implemented.");
+  if (!input.pushTokenStoreConfigured) blockers.push("Tenant/user/device-scoped push token store must be configured.");
+  if (!input.pushOptOutUiImplemented) blockers.push("Mobile push opt-out UI must be implemented and persisted.");
+  if (!input.deliveryLogPersistenceConfigured) blockers.push("Push delivery logs must persist NotificationDelivery and ProviderEvent rows.");
+  if (!input.auditLogPersistenceConfigured) blockers.push("Push registration, opt-out, delivery, receipt, and tap actions must write audit logs.");
+  if (!input.receiptWorkerConfigured) blockers.push("Expo receipt worker must reconcile delivery state.");
+  if (!input.invalidTokenSuppressionTested) blockers.push("Invalid Expo token receipts must suppress or deactivate tokens.");
+  if (!input.tapRoutingImplemented) blockers.push("Notification tap routing must be implemented with safe internal deep links.");
+  if (!input.foregroundDeliveryTested) blockers.push("Foreground push delivery must be tested on device/simulator.");
+  if (!input.backgroundDeliveryTested) blockers.push("Background push delivery must be tested on device/simulator.");
+  if (!input.deepLinkRoutingTested) blockers.push("Push tap deep-link routing must be tested for booking/message contexts.");
+
+  if (!input.expoProjectConfigured || !input.expoAccessTokenConfigured) requiredEvidence.push("Expo project and secret configuration evidence");
+  if (!input.deviceTokenRegistrationImplemented || !input.pushTokenStoreConfigured) requiredEvidence.push("tenant/user/device push-token persistence evidence");
+  if (!input.deliveryLogPersistenceConfigured || !input.receiptWorkerConfigured || !input.invalidTokenSuppressionTested) {
+    requiredEvidence.push("Expo receipt reconciliation and invalid-token suppression test output");
+  }
+  if (!input.foregroundDeliveryTested || !input.backgroundDeliveryTested || !input.deepLinkRoutingTested) {
+    requiredEvidence.push("foreground/background push and tap-routing device evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/notifications typecheck",
+      "pnpm --filter @inkroute/notifications test",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "Expo foreground push smoke test",
+      "Expo background push smoke test",
+      "Expo push tap deep-link smoke test",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
 export const providerBoundaryMatrix: Array<{ provider: NotificationProvider; channel: NotificationChannel; credentialEnvVars: string[]; productionRequirement: string; gapId: string }> = [
   { provider: "resend", channel: "email", credentialEnvVars: ["RESEND_API_KEY", "EMAIL_FROM"], productionRequirement: "Transactional email domain, sender verification, provider webhooks, unsubscribe footer, delivery logs.", gapId: "GAP-061" },
   { provider: "twilio", channel: "sms", credentialEnvVars: ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_MESSAGING_SERVICE_SID"], productionRequirement: "SMS consent capture, STOP/HELP handling, quiet hours, delivery callbacks, phone number compliance.", gapId: "GAP-062" },

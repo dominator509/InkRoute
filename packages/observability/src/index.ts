@@ -821,6 +821,35 @@ export interface SentrySdkConfigurationPlan {
   tracesSampleRate: number;
 }
 
+export interface MobileCrashRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  observabilityTestsPassed: boolean;
+  observabilityTypecheckPassed: boolean;
+  mobileTypecheckPassed: boolean;
+  sentryExpoSdkConfigured: boolean;
+  fallbackReporterConfigured: boolean;
+  sentryDsnConfigured: boolean;
+  releaseTagsConfigured: boolean;
+  beforeSendRedactionConfigured: boolean;
+  piiRedactionTestsPassed: boolean;
+  sourceMapsUploaded: boolean;
+  debugSymbolsUploaded: boolean;
+  forcedCrashSimulatorVerified: boolean;
+  forcedCrashDeviceVerified: boolean;
+  errorReportPersistenceConfigured: boolean;
+  sanitizedDashboardSyncVerified: boolean;
+  offlineCrashBufferingVerified: boolean;
+  noPiiProviderPayloadVerified: boolean;
+}
+
+export interface MobileCrashRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 const sentrySurfaceBoundaries: Record<SentryRuntimeSurface, readonly string[]> = {
   "web-nextjs": ["sentry-nextjs"],
   "dashboard-nextjs": ["sentry-dashboard"],
@@ -929,6 +958,56 @@ export function buildSentrySdkConfigurationPlan(input: SentrySdkConfigurationInp
     },
     sampleRate: clampSampleRate(input.sampleRate, input.environment === "production" ? 0.25 : 1),
     tracesSampleRate: clampSampleRate(input.tracesSampleRate, input.environment === "production" ? 0.1 : 0.25),
+  };
+}
+
+export function buildMobileCrashRuntimeReadinessPlan(input: MobileCrashRuntimeReadinessInput): MobileCrashRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing @inkroute/observability ${script} script.`);
+  if (!input.observabilityTestsPassed) blockers.push("@inkroute/observability mobile crash tests must pass.");
+  if (!input.observabilityTypecheckPassed) blockers.push("@inkroute/observability typecheck must pass.");
+  if (!input.mobileTypecheckPassed) blockers.push("@inkroute/mobile typecheck must pass with crash reporting wired.");
+  if (!input.sentryExpoSdkConfigured && !input.fallbackReporterConfigured) {
+    blockers.push("Either Sentry Expo/React Native SDK or a privacy-safe fallback reporter must be configured.");
+  }
+  if (!input.sentryDsnConfigured) blockers.push("Mobile Sentry DSN must be configured in environment/secret settings.");
+  if (!input.releaseTagsConfigured) blockers.push("Mobile crash reports must include release, environment, EAS channel, and runtime version tags.");
+  if (!input.beforeSendRedactionConfigured) blockers.push("beforeSend/fallback redaction must run before external mobile crash capture.");
+  if (!input.piiRedactionTestsPassed) blockers.push("Mobile crash redaction tests must cover PII, medical notes, reference file URLs, payment ids, push tokens, auth tokens, and breadcrumbs.");
+  if (!input.sourceMapsUploaded) blockers.push("Expo JavaScript source maps must upload for mobile releases.");
+  if (!input.debugSymbolsUploaded) blockers.push("React Native debug symbols must upload and resolve stack frames.");
+  if (!input.forcedCrashSimulatorVerified) blockers.push("Forced mobile crash must be verified on simulator without leaking PII.");
+  if (!input.forcedCrashDeviceVerified) blockers.push("Forced mobile crash must be verified on physical device without leaking PII.");
+  if (!input.errorReportPersistenceConfigured) blockers.push("Sanitized mobile crash summaries must persist to ErrorReport.");
+  if (!input.sanitizedDashboardSyncVerified) blockers.push("Dashboard triage must read sanitized mobile ErrorReport records with tenant/release filters.");
+  if (!input.offlineCrashBufferingVerified) blockers.push("Offline crash buffering must be verified to avoid storing raw PII/provider payloads.");
+  if (!input.noPiiProviderPayloadVerified) blockers.push("Provider payloads and dashboard summaries must be proven free of raw PII, medical, payment, token, and private URL values.");
+
+  if (!input.sentryExpoSdkConfigured && !input.fallbackReporterConfigured) requiredEvidence.push("mobile crash capture SDK or fallback reporter configuration evidence");
+  if (!input.sourceMapsUploaded || !input.debugSymbolsUploaded) requiredEvidence.push("Expo source-map and React Native debug-symbol upload evidence");
+  if (!input.forcedCrashSimulatorVerified || !input.forcedCrashDeviceVerified) requiredEvidence.push("forced simulator and device crash capture evidence");
+  if (!input.errorReportPersistenceConfigured || !input.sanitizedDashboardSyncVerified) requiredEvidence.push("sanitized ErrorReport persistence and dashboard triage evidence");
+  if (!input.piiRedactionTestsPassed || !input.noPiiProviderPayloadVerified || !input.offlineCrashBufferingVerified) {
+    requiredEvidence.push("mobile crash privacy redaction and offline buffering evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/observability typecheck",
+      "pnpm --filter @inkroute/observability test",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "Expo simulator forced crash smoke test",
+      "Expo physical-device forced crash smoke test",
+      "Sentry source-map/debug-symbol resolution check",
+    ],
+    requiredEvidence,
+    blockers,
   };
 }
 

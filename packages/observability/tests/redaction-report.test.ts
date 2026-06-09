@@ -5,6 +5,7 @@ import {
   buildAlertRoute,
   buildGithubIssueAutomationPlan,
   buildGithubIssueDraft,
+  buildMobileCrashRuntimeReadinessPlan,
   buildObservabilityReportDraft,
   buildObservabilityRuntimeReadinessPlan,
   buildReleaseIncidentLinkagePlan,
@@ -503,6 +504,40 @@ describe("observability redaction and triage", () => {
         "React Native debug symbol upload must be enabled and verified through EAS.",
       ]),
     );
+  });
+
+  it("blocks mobile crash runtime readiness until SDK/fallback capture, redaction, artifacts, forced crashes, and ErrorReport sync are proven", () => {
+    const plan = buildMobileCrashRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      observabilityTestsPassed: true,
+      observabilityTypecheckPassed: false,
+      mobileTypecheckPassed: false,
+      sentryExpoSdkConfigured: false,
+      fallbackReporterConfigured: false,
+      sentryDsnConfigured: false,
+      releaseTagsConfigured: false,
+      beforeSendRedactionConfigured: false,
+      piiRedactionTestsPassed: false,
+      sourceMapsUploaded: false,
+      debugSymbolsUploaded: false,
+      forcedCrashSimulatorVerified: false,
+      forcedCrashDeviceVerified: false,
+      errorReportPersistenceConfigured: false,
+      sanitizedDashboardSyncVerified: false,
+      offlineCrashBufferingVerified: false,
+      noPiiProviderPayloadVerified: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toContain("Expo physical-device forced crash smoke test");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "mobile crash capture SDK or fallback reporter configuration evidence",
+      "Expo source-map and React Native debug-symbol upload evidence",
+      "mobile crash privacy redaction and offline buffering evidence",
+    ]));
+    expect(plan.blockers).toContain("Either Sentry Expo/React Native SDK or a privacy-safe fallback reporter must be configured.");
+    expect(plan.blockers).toContain("Provider payloads and dashboard summaries must be proven free of raw PII, medical, payment, token, and private URL values.");
   });
 
   it("summarizes observability runtime readiness across Sentry, OTel, persistence, alerts, and privacy gates", () => {

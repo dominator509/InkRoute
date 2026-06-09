@@ -3,6 +3,7 @@ import {
   buildBookingPostSubmitPlan,
   buildBookingProviderFailurePlan,
   buildDashboardMutationPlan,
+  buildDashboardMutationRuntimeReadinessPlan,
   buildDomainEventAuditReadinessPlan,
   calculateTattooReadinessScore,
   createBookingTransitionPlan,
@@ -337,6 +338,34 @@ describe("booking readiness", () => {
       writes: ["ReleaseRecord", "AuditLog"],
       auditAction: "dashboard.release.rollback",
     });
+  });
+
+  it("blocks dashboard mutation runtime readiness until routes, tests, transactions, and provider rollback exist", () => {
+    const plan = buildDashboardMutationRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      bookingTestsPassed: true,
+      bookingTypecheckPassed: false,
+      dashboardTypecheckPassed: false,
+      dashboardBuildPassed: false,
+      actionsWithServerRoutes: ["accept", "decline", "create_deposit_session"],
+      actionsWithRouteTests: ["accept"],
+      prismaTransactionsConfigured: false,
+      tenantIsolationTestsPassed: false,
+      rbacDenialTestsPassed: false,
+      idempotencyStoreConfigured: true,
+      auditLogPersistenceConfigured: false,
+      providerRollbackTestsPassed: false,
+      disabledPlaceholdersRemoved: false,
+      userFeedbackStatesCovered: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.missingServerRoutes).toContain("create_calendar_hold");
+    expect(plan.missingRouteTests).toContain("rollback_release");
+    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/dashboard test -- dashboard-mutations");
+    expect(plan.requiredEvidence).toContain("tenant isolation and RBAC denial test output for dashboard mutations");
+    expect(plan.blockers).toContain("Disabled dashboard action placeholders must be replaced by gated actions before runtime readiness.");
   });
 
   it("summarizes domain event and audit readiness across booking, payment, transactions, idempotency, and rollback", () => {

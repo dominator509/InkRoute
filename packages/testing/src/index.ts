@@ -86,6 +86,34 @@ export interface DashboardTestRequirement {
   gapIds: string[];
 }
 
+export interface DashboardTestingRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  testingPackageTestsPassed: boolean;
+  testingPackageTypecheckPassed: boolean;
+  dashboardTypecheckPassed: boolean;
+  dashboardBuildPassed: boolean;
+  implementedRequirementIds: readonly string[];
+  passingRequirementIds: readonly string[];
+  seededAuthFixturesConfigured: boolean;
+  seededTenantDataConfigured: boolean;
+  rbacTenantIsolationFixturesConfigured: boolean;
+  mutationTestHarnessConfigured: boolean;
+  accessibilityRunnerConfigured: boolean;
+  playwrightDashboardProjectConfigured: boolean;
+  ciUploadsDashboardArtifacts: boolean;
+  branchProtectionRequiresDashboardTests: boolean;
+}
+
+export interface DashboardTestingRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  missingImplementedRequirements: readonly string[];
+  missingPassingRequirements: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export interface TestingRuntimeReadinessInput {
   rootScripts: readonly string[];
   lockfileCommitted: boolean;
@@ -362,6 +390,62 @@ export function summarizeDashboardTestRequirements(requirements: readonly Dashbo
     runtimeGatedCount: requirements.filter((requirement) => requirement.status === "runtime_gated").length,
     criticalRuntimeGatedIds: criticalRuntimeGated.map((requirement) => requirement.id),
     productionReady: missingAreas.length === 0 && criticalRuntimeGated.length === 0
+  };
+}
+
+export function buildDashboardTestingRuntimeReadinessPlan(
+  input: DashboardTestingRuntimeReadinessInput,
+  requirements: readonly DashboardTestRequirement[] = buildDashboardTestRequirements(),
+): DashboardTestingRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const requirementIds = requirements.map((requirement) => requirement.id);
+  const missingImplementedRequirements = requirementIds.filter((id) => !input.implementedRequirementIds.includes(id));
+  const missingPassingRequirements = requirementIds.filter((id) => !input.passingRequirementIds.includes(id));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/testing package script is missing ${script}.`);
+  if (!input.testingPackageTestsPassed) blockers.push("@inkroute/testing dashboard matrix tests must pass.");
+  if (!input.testingPackageTypecheckPassed) blockers.push("@inkroute/testing typecheck must pass in an installed workspace.");
+  if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass before dashboard app tests are meaningful.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass before dashboard E2E evidence is meaningful.");
+  if (missingImplementedRequirements.length > 0) blockers.push(`Dashboard test files are missing for requirement(s): ${missingImplementedRequirements.join(", ")}.`);
+  if (missingPassingRequirements.length > 0) blockers.push(`Dashboard test requirements have not passed: ${missingPassingRequirements.join(", ")}.`);
+  if (!input.seededAuthFixturesConfigured) blockers.push("Dashboard tests need seeded auth/session fixtures.");
+  if (!input.seededTenantDataConfigured) blockers.push("Dashboard tests need seeded tenant data for bookings, clients, payments, and settings.");
+  if (!input.rbacTenantIsolationFixturesConfigured) blockers.push("Dashboard tests need RBAC and cross-tenant denial fixtures.");
+  if (!input.mutationTestHarnessConfigured) blockers.push("Dashboard mutation tests need a provider-safe server-action/API harness.");
+  if (!input.accessibilityRunnerConfigured) blockers.push("Dashboard accessibility tests need an axe/keyboard runner.");
+  if (!input.playwrightDashboardProjectConfigured) blockers.push("Playwright must include a dashboard project.");
+  if (!input.ciUploadsDashboardArtifacts) blockers.push("CI must upload dashboard test, Playwright, trace, screenshot, and accessibility artifacts.");
+  if (!input.branchProtectionRequiresDashboardTests) blockers.push("Branch protection must require dashboard test gates before merge.");
+
+  if (missingImplementedRequirements.length > 0 || missingPassingRequirements.length > 0) {
+    requiredEvidence.push("passing route/component/RBAC/mutation/accessibility/E2E dashboard test output");
+  }
+  if (!input.seededAuthFixturesConfigured || !input.seededTenantDataConfigured || !input.rbacTenantIsolationFixturesConfigured) {
+    requiredEvidence.push("seeded auth, tenant, and RBAC fixture evidence");
+  }
+  if (!input.ciUploadsDashboardArtifacts || !input.branchProtectionRequiresDashboardTests) {
+    requiredEvidence.push("CI artifact upload and required-check enforcement evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    missingImplementedRequirements,
+    missingPassingRequirements,
+    requiredCommands: [
+      "pnpm --filter @inkroute/testing typecheck",
+      "pnpm --filter @inkroute/testing test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/dashboard test",
+      "pnpm test:e2e --project=dashboard-chromium",
+    ],
+    requiredEvidence,
+    blockers,
   };
 }
 

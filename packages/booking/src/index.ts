@@ -630,6 +630,34 @@ export interface DashboardMutationPlan {
   blockers: string[];
 }
 
+export interface DashboardMutationRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  bookingTestsPassed: boolean;
+  bookingTypecheckPassed: boolean;
+  dashboardTypecheckPassed: boolean;
+  dashboardBuildPassed: boolean;
+  actionsWithServerRoutes: readonly DashboardMutationAction[];
+  actionsWithRouteTests: readonly DashboardMutationAction[];
+  prismaTransactionsConfigured: boolean;
+  tenantIsolationTestsPassed: boolean;
+  rbacDenialTestsPassed: boolean;
+  idempotencyStoreConfigured: boolean;
+  auditLogPersistenceConfigured: boolean;
+  providerRollbackTestsPassed: boolean;
+  disabledPlaceholdersRemoved: boolean;
+  userFeedbackStatesCovered: boolean;
+}
+
+export interface DashboardMutationRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  missingServerRoutes: readonly DashboardMutationAction[];
+  missingRouteTests: readonly DashboardMutationAction[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export interface DomainEventAuditReadinessInput {
   packageScripts: Readonly<Record<string, string>>;
   bookingPackageTestsPassed: boolean;
@@ -814,6 +842,77 @@ export function buildDashboardMutationPlan(input: DashboardMutationPlanInput): D
     writes: transitionPlan.writes.map((write) => write.model),
     auditAction: `dashboard.booking.${input.action}`,
     idempotencyKey: input.idempotencyKey ?? null,
+    blockers,
+  };
+}
+
+export function buildDashboardMutationRuntimeReadinessPlan(
+  input: DashboardMutationRuntimeReadinessInput,
+): DashboardMutationRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const requiredActions: DashboardMutationAction[] = [
+    "accept",
+    "decline",
+    "request_changes",
+    "mark_deposit_paid",
+    "confirm_appointment",
+    "complete",
+    "create_reference_upload_intent",
+    "create_deposit_session",
+    "send_client_notification",
+    "create_calendar_hold",
+    "publish_travel_stop",
+    "publish_portfolio_item",
+    "toggle_feature_flag",
+    "rollback_release",
+    "update_settings",
+  ];
+  const missingServerRoutes = requiredActions.filter((action) => !input.actionsWithServerRoutes.includes(action));
+  const missingRouteTests = requiredActions.filter((action) => !input.actionsWithRouteTests.includes(action));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/booking package script is missing ${script}.`);
+  if (!input.bookingTestsPassed) blockers.push("@inkroute/booking dashboard mutation tests must pass.");
+  if (!input.bookingTypecheckPassed) blockers.push("@inkroute/booking typecheck must pass in an installed workspace.");
+  if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass with mutation routes/actions wired.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with mutation routes/actions wired.");
+  if (missingServerRoutes.length > 0) blockers.push(`Dashboard mutation server routes/actions are missing for: ${missingServerRoutes.join(", ")}.`);
+  if (missingRouteTests.length > 0) blockers.push(`Dashboard mutation route/API tests are missing for: ${missingRouteTests.join(", ")}.`);
+  if (!input.prismaTransactionsConfigured) blockers.push("Dashboard mutations must execute write models in Prisma transactions.");
+  if (!input.tenantIsolationTestsPassed) blockers.push("Dashboard mutation tests must reject cross-tenant writes.");
+  if (!input.rbacDenialTestsPassed) blockers.push("Dashboard mutation tests must reject actors lacking required permissions.");
+  if (!input.idempotencyStoreConfigured) blockers.push("Dashboard mutations must persist and enforce idempotency keys.");
+  if (!input.auditLogPersistenceConfigured) blockers.push("Dashboard mutations must persist AuditLog records for sensitive changes.");
+  if (!input.providerRollbackTestsPassed) blockers.push("Provider-backed dashboard actions must prove rollback/retry behavior.");
+  if (!input.disabledPlaceholdersRemoved) blockers.push("Disabled dashboard action placeholders must be replaced by gated actions before runtime readiness.");
+  if (!input.userFeedbackStatesCovered) blockers.push("Dashboard mutation UI must cover loading, success, denial, provider-failure, and retry states.");
+
+  if (missingServerRoutes.length > 0 || missingRouteTests.length > 0) {
+    requiredEvidence.push("server route/action and route-test matrix for every dashboard mutation action");
+  }
+  if (!input.prismaTransactionsConfigured || !input.auditLogPersistenceConfigured || !input.idempotencyStoreConfigured) {
+    requiredEvidence.push("transaction, idempotency, and AuditLog persistence evidence for dashboard writes");
+  }
+  if (!input.tenantIsolationTestsPassed || !input.rbacDenialTestsPassed) {
+    requiredEvidence.push("tenant isolation and RBAC denial test output for dashboard mutations");
+  }
+  if (!input.providerRollbackTestsPassed) requiredEvidence.push("provider rollback/retry test output for Stripe, storage, notifications, calendar, and release actions");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    missingServerRoutes,
+    missingRouteTests,
+    requiredCommands: [
+      "pnpm --filter @inkroute/booking typecheck",
+      "pnpm --filter @inkroute/booking test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/dashboard test -- dashboard-mutations",
+    ],
+    requiredEvidence,
     blockers,
   };
 }

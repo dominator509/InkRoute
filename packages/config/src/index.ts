@@ -809,3 +809,83 @@ export function buildTenantDashboardView<TRecord extends DashboardScopedRecord>(
     },
   };
 }
+
+export interface DashboardDataRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  configTestsPassed: boolean;
+  configTypecheckPassed: boolean;
+  dashboardTypecheckPassed: boolean;
+  dashboardBuildPassed: boolean;
+  repositoryLoadersConfigured: readonly DashboardDataCollection[];
+  dashboardRoutesUsingRepositories: readonly DashboardDataCollection[];
+  seededDatabaseVerified: boolean;
+  tenantIsolationTestsPassed: boolean;
+  redactionTestsPassed: boolean;
+  rbacGuardsConfigured: boolean;
+  noStoreCachingVerified: boolean;
+  auditLogsConfiguredForSensitiveReads: boolean;
+  demoStaticImportsRemoved: boolean;
+}
+
+export interface DashboardDataRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  missingRepositoryLoaders: readonly DashboardDataCollection[];
+  missingRouteWiring: readonly DashboardDataCollection[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export function buildDashboardDataRuntimeReadinessPlan(
+  input: DashboardDataRuntimeReadinessInput,
+): DashboardDataRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const missingRepositoryLoaders = findMissingDashboardCollections(input.repositoryLoadersConfigured);
+  const missingRouteWiring = findMissingDashboardCollections(input.dashboardRoutesUsingRepositories);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/config package script is missing ${script}.`);
+  if (!input.configTestsPassed) blockers.push("@inkroute/config dashboard data tests must pass.");
+  if (!input.configTypecheckPassed) blockers.push("@inkroute/config typecheck must pass in an installed workspace.");
+  if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass with repository loaders.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with repository-backed routes.");
+  if (missingRepositoryLoaders.length > 0) blockers.push(`Dashboard repository loaders are missing for: ${missingRepositoryLoaders.join(", ")}.`);
+  if (missingRouteWiring.length > 0) blockers.push(`Dashboard routes still need repository wiring for: ${missingRouteWiring.join(", ")}.`);
+  if (!input.seededDatabaseVerified) blockers.push("Seeded database smoke evidence must prove dashboard routes can read tenant data.");
+  if (!input.tenantIsolationTestsPassed) blockers.push("Dashboard repository tests must reject cross-tenant reads.");
+  if (!input.redactionTestsPassed) blockers.push("Dashboard repository/API tests must prove private field redaction.");
+  if (!input.rbacGuardsConfigured) blockers.push("Dashboard loaders must be called behind tenant RBAC guards.");
+  if (!input.noStoreCachingVerified) blockers.push("Dashboard route responses must preserve no-store caching for private tenant data.");
+  if (!input.auditLogsConfiguredForSensitiveReads) blockers.push("Sensitive dashboard reads must have audit logging policy coverage.");
+  if (!input.demoStaticImportsRemoved) blockers.push("Dashboard route data dependencies must no longer read static demo arrays for production surfaces.");
+
+  if (missingRepositoryLoaders.length > 0 || missingRouteWiring.length > 0) {
+    requiredEvidence.push("repository-loader coverage map for bookings, clients, appointments, payments, portfolio, travel, SEO, templates, errors, releases, and settings");
+  }
+  if (!input.seededDatabaseVerified) requiredEvidence.push("seeded database dashboard route smoke output");
+  if (!input.tenantIsolationTestsPassed || !input.redactionTestsPassed) {
+    requiredEvidence.push("tenant isolation and redaction test output for dashboard repositories/APIs");
+  }
+  if (!input.dashboardTypecheckPassed || !input.dashboardBuildPassed) {
+    requiredEvidence.push("dashboard typecheck and build logs");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    missingRepositoryLoaders,
+    missingRouteWiring,
+    requiredCommands: [
+      "pnpm --filter @inkroute/config typecheck",
+      "pnpm --filter @inkroute/config test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/dashboard test -- dashboard-data",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}

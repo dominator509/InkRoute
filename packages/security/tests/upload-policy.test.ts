@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildDashboardPrivacyRuntimeReadinessPlan,
   buildPrivacyLifecyclePlan,
   buildPrivacyCaseWorkflowPlan,
   buildPrivacyRetentionRuntimeReadinessPlan,
@@ -360,6 +361,41 @@ describe("security and privacy helpers", () => {
       value: "pi_123",
       auditRequired: true,
     });
+  });
+
+  it("blocks dashboard privacy runtime readiness until routes, legal review, workflows, storage, and log redaction are proven", () => {
+    const plan = buildDashboardPrivacyRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      dashboardTypecheckPassed: false,
+      dashboardBuildPassed: false,
+      surfacesUsingProjection: ["client_profile", "booking_request", "payment"],
+      surfacesWithRouteTests: ["client_profile"],
+      legalReviewApproved: false,
+      persistedPrivacyWorkflowsConfigured: false,
+      exportWorkflowTested: false,
+      deletionWorkflowTested: false,
+      privateFileStorageDeletionTested: false,
+      auditLogPersistenceConfigured: false,
+      logAndErrorRedactionVerified: false,
+      consentLanguageApproved: false,
+      medicalLanguageApproved: false,
+      paymentLanguageApproved: true,
+      smsLanguageApproved: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.missingProjectionSurfaces).toEqual(["consent_form", "message", "file_asset"]);
+    expect(plan.missingRouteTestSurfaces).toContain("payment");
+    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/dashboard test -- dashboard-privacy");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "dashboard route/API privacy projection matrix for client, booking, consent, payment, message, and file surfaces",
+      "persisted export/delete/anonymization workflow test output for tenant dashboard data",
+      "AuditLog persistence and sanitized log/error evidence for dashboard privacy actions",
+    ]));
+    expect(plan.blockers).toContain("Dashboard logs and error reports must be verified to redact PII, medical notes, payment identifiers, file keys, and message bodies.");
   });
 
   it("provides tenant isolation and rate-limit fixtures for future integration tests", () => {

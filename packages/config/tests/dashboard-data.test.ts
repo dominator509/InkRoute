@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildDashboardDataRuntimeReadinessPlan,
   buildTenantDashboardView,
   dashboardDataCollections,
   findMissingDashboardCollections,
@@ -92,5 +93,41 @@ describe("tenant dashboard data projections", () => {
     });
     expect(JSON.stringify(view.records)).not.toContain("tenant_private/originals");
     expect(JSON.stringify(view.records)).not.toContain("review_private_token");
+  });
+
+  it("blocks dashboard data runtime readiness until repository loaders, route wiring, and runtime evidence exist", () => {
+    const plan = buildDashboardDataRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      configTestsPassed: true,
+      configTypecheckPassed: false,
+      dashboardTypecheckPassed: false,
+      dashboardBuildPassed: false,
+      repositoryLoadersConfigured: ["bookings", "clients", "payments"],
+      dashboardRoutesUsingRepositories: ["bookings"],
+      seededDatabaseVerified: false,
+      tenantIsolationTestsPassed: false,
+      redactionTestsPassed: true,
+      rbacGuardsConfigured: false,
+      noStoreCachingVerified: true,
+      auditLogsConfiguredForSensitiveReads: false,
+      demoStaticImportsRemoved: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.missingRepositoryLoaders).toEqual([
+      "appointments",
+      "portfolio",
+      "travel",
+      "seo",
+      "templates",
+      "errors",
+      "releases",
+      "settings",
+    ]);
+    expect(plan.missingRouteWiring).toContain("clients");
+    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/dashboard build");
+    expect(plan.requiredEvidence).toContain("tenant isolation and redaction test output for dashboard repositories/APIs");
+    expect(plan.blockers).toContain("Dashboard route data dependencies must no longer read static demo arrays for production surfaces.");
   });
 });

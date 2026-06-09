@@ -218,6 +218,34 @@ export interface OfflineSyncPlan {
   warning: string;
 }
 
+export interface OfflineRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  mobileSupportTestsPassed: boolean;
+  mobileSupportTypecheckPassed: boolean;
+  mobileTypecheckPassed: boolean;
+  mobileDeviceTestsPassed: boolean;
+  storageAdapterSelected: boolean;
+  encryptedStoreConfigured: boolean;
+  sensitiveItemsEncryptedAtRest: boolean;
+  deviceRestartPersistenceTested: boolean;
+  syncWorkerConfigured: boolean;
+  retryBackoffWorkerTested: boolean;
+  conflictResolutionConfigured: boolean;
+  serverConflictTestsPassed: boolean;
+  idempotencyPersistenceConfigured: boolean;
+  alreadySyncedReplayTested: boolean;
+  auditTrailPersistenceConfigured: boolean;
+  offlineReconnectDeviceTested: boolean;
+}
+
+export interface OfflineRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export function buildOfflineIdempotencyKey(item: OfflineQueueItem): string {
   const tenant = item.tenantId ?? "unknown-tenant";
   const entity = item.entityId ?? item.id;
@@ -309,6 +337,60 @@ export function planOfflineSync(input: {
   };
 }
 
+export function buildOfflineRuntimeReadinessPlan(input: OfflineRuntimeReadinessInput): OfflineRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/mobile-support package script is missing ${script}.`);
+  if (!input.mobileSupportTestsPassed) blockers.push("@inkroute/mobile-support offline tests must pass.");
+  if (!input.mobileSupportTypecheckPassed) blockers.push("@inkroute/mobile-support typecheck must pass.");
+  if (!input.mobileTypecheckPassed) blockers.push("@inkroute/mobile typecheck must pass with offline store/sync wiring.");
+  if (!input.mobileDeviceTestsPassed) blockers.push("Expo mobile offline device tests must pass.");
+  if (!input.storageAdapterSelected) blockers.push("Offline storage adapter must be selected before runtime readiness.");
+  if (!input.encryptedStoreConfigured) blockers.push("Encrypted offline store must be configured for sensitive queue items.");
+  if (!input.sensitiveItemsEncryptedAtRest) blockers.push("Sensitive offline queue items must be proven encrypted at rest.");
+  if (!input.deviceRestartPersistenceTested) blockers.push("Offline queue persistence must survive device/app restart.");
+  if (!input.syncWorkerConfigured) blockers.push("Runtime offline sync worker must be configured.");
+  if (!input.retryBackoffWorkerTested) blockers.push("Retry worker must prove bounded backoff behavior.");
+  if (!input.conflictResolutionConfigured) blockers.push("Conflict resolution policy must be configured for stale offline mutations.");
+  if (!input.serverConflictTestsPassed) blockers.push("Server-side conflict tests must reject stale offline mutations safely.");
+  if (!input.idempotencyPersistenceConfigured) blockers.push("Offline idempotency keys must persist through replay and restart.");
+  if (!input.alreadySyncedReplayTested) blockers.push("Already-synced offline mutations must not replay duplicate writes.");
+  if (!input.auditTrailPersistenceConfigured) blockers.push("Offline sync attempts, conflicts, retries, and drops must persist audit events.");
+  if (!input.offlineReconnectDeviceTested) blockers.push("Airplane-mode queue and reconnect sync must be verified on device or simulator.");
+
+  if (!input.storageAdapterSelected || !input.encryptedStoreConfigured || !input.sensitiveItemsEncryptedAtRest) {
+    requiredEvidence.push("encrypted offline storage adapter and at-rest encryption proof");
+  }
+  if (!input.deviceRestartPersistenceTested || !input.offlineReconnectDeviceTested) {
+    requiredEvidence.push("device restart and airplane-mode reconnect evidence");
+  }
+  if (!input.syncWorkerConfigured || !input.retryBackoffWorkerTested || !input.alreadySyncedReplayTested) {
+    requiredEvidence.push("runtime sync worker retry and idempotent replay test output");
+  }
+  if (!input.conflictResolutionConfigured || !input.serverConflictTestsPassed) {
+    requiredEvidence.push("server conflict-resolution test output");
+  }
+  if (!input.auditTrailPersistenceConfigured) requiredEvidence.push("offline sync audit trail persistence evidence");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/mobile-support typecheck",
+      "pnpm --filter @inkroute/mobile-support test",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "pnpm --filter @inkroute/mobile test",
+      "Expo offline restart persistence smoke test",
+      "Expo airplane-mode reconnect sync smoke test",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
 export type MobileApiDomain =
   | "bookings"
   | "appointments"
@@ -361,6 +443,36 @@ export interface MobileScreenSyncRequirement {
   requiresTenantScope: boolean;
   supportsOfflineQueue: boolean;
   gapIds: string[];
+}
+
+export interface MobileApiRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  mobileSupportTestsPassed: boolean;
+  mobileSupportTypecheckPassed: boolean;
+  mobileAppTypecheckPassed: boolean;
+  mobileAppTestsPassed: boolean;
+  apiClientImplemented: boolean;
+  authHeadersWired: boolean;
+  requestIdMiddlewareConfigured: boolean;
+  tenantScopeHeaderConfigured: boolean;
+  responseEnvelopeValidationConfigured: boolean;
+  safeErrorRedactionConfigured: boolean;
+  offlineRetryQueueConfigured: boolean;
+  idempotencyPersistenceConfigured: boolean;
+  seededApiSmokePassed: boolean;
+  expiredAuthFailsSafelyTested: boolean;
+  crossTenantDenialTested: boolean;
+  offlineReplayTested: boolean;
+  screensUsingApiClient: readonly MobileApiDomain[];
+}
+
+export interface MobileApiRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  missingScreenDomains: readonly MobileApiDomain[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
 }
 
 function joinMobileApiUrl(baseUrl: string, path: string): string {
@@ -484,6 +596,61 @@ export function buildMobileScreenSyncRequirements(): MobileScreenSyncRequirement
       gapIds: ["GAP-043", "GAP-047"],
     },
   ];
+}
+
+export function buildMobileApiRuntimeReadinessPlan(input: MobileApiRuntimeReadinessInput): MobileApiRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const requiredDomains: MobileApiDomain[] = ["bookings", "appointments", "clients", "travel", "portfolio", "notifications", "releases"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const missingScreenDomains = requiredDomains.filter((domain) => !input.screensUsingApiClient.includes(domain));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/mobile-support package script is missing ${script}.`);
+  if (!input.mobileSupportTestsPassed) blockers.push("@inkroute/mobile-support API/sync tests must pass.");
+  if (!input.mobileSupportTypecheckPassed) blockers.push("@inkroute/mobile-support typecheck must pass in an installed workspace.");
+  if (!input.mobileAppTypecheckPassed) blockers.push("@inkroute/mobile typecheck must pass with API client wiring.");
+  if (!input.mobileAppTestsPassed) blockers.push("@inkroute/mobile app tests must pass with API-backed screen loaders/actions.");
+  if (!input.apiClientImplemented) blockers.push("Typed Expo API client must be implemented before replacing static mobile data.");
+  if (!input.authHeadersWired) blockers.push("Mobile API client must attach provider-backed bearer auth headers.");
+  if (!input.requestIdMiddlewareConfigured) blockers.push("Mobile API client must attach request ids for traceability.");
+  if (!input.tenantScopeHeaderConfigured) blockers.push("Mobile API client must attach tenant scope on every request.");
+  if (!input.responseEnvelopeValidationConfigured) blockers.push("Mobile API client must validate response envelopes before screen state updates.");
+  if (!input.safeErrorRedactionConfigured) blockers.push("Mobile API errors must redact response bodies and sensitive request metadata.");
+  if (!input.offlineRetryQueueConfigured) blockers.push("Offline-aware retry queue must handle mobile mutations.");
+  if (!input.idempotencyPersistenceConfigured) blockers.push("Mobile mutation idempotency keys must persist until replay succeeds or is abandoned.");
+  if (!input.seededApiSmokePassed) blockers.push("Seeded mobile API smoke tests must prove screens can load backend data.");
+  if (!input.expiredAuthFailsSafelyTested) blockers.push("Expired/invalid mobile auth must fail safely without leaking cached tenant data.");
+  if (!input.crossTenantDenialTested) blockers.push("Mobile API tests must reject cross-tenant reads and writes.");
+  if (!input.offlineReplayTested) blockers.push("Offline mutations must replay idempotently after reconnect.");
+  if (missingScreenDomains.length > 0) blockers.push(`Mobile screens still need API client wiring for domains: ${missingScreenDomains.join(", ")}.`);
+
+  if (!input.apiClientImplemented || missingScreenDomains.length > 0) {
+    requiredEvidence.push("mobile screen API-client wiring matrix for bookings, appointments, clients, travel, portfolio, notifications, and releases");
+  }
+  if (!input.seededApiSmokePassed) requiredEvidence.push("seeded mobile API smoke output");
+  if (!input.expiredAuthFailsSafelyTested || !input.crossTenantDenialTested) {
+    requiredEvidence.push("expired-auth and cross-tenant denial test output");
+  }
+  if (!input.offlineRetryQueueConfigured || !input.idempotencyPersistenceConfigured || !input.offlineReplayTested) {
+    requiredEvidence.push("offline idempotent replay test output");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    missingScreenDomains,
+    requiredCommands: [
+      "pnpm --filter @inkroute/mobile-support typecheck",
+      "pnpm --filter @inkroute/mobile-support test",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "pnpm --filter @inkroute/mobile test",
+      "Expo iOS/Android mobile API smoke tests",
+      "offline reconnect/replay mobile test",
+    ],
+    requiredEvidence,
+    blockers,
+  };
 }
 
 export type MobileQaArea =

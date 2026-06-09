@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
+  buildMobileApiRuntimeReadinessPlan,
   buildMobileApiRequestPlan,
   buildMobileDeviceQaChecklist,
   buildMobileRuntimeReadinessPlan,
   buildMobileScreenSyncRequirements,
   getMobileScreen,
   buildOfflineIdempotencyKey,
+  buildOfflineRuntimeReadinessPlan,
   calculateOfflineRetryDelayMinutes,
   mobileScreenRegistry,
   phase6HealthChecks,
@@ -170,6 +172,39 @@ describe("mobile support helpers", () => {
     expect(encrypted.decisions[0]?.status).toBe("ready_to_sync");
   });
 
+  it("blocks offline runtime readiness until encrypted persistence, worker replay, conflicts, and audit evidence exist", () => {
+    const plan = buildOfflineRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      mobileSupportTestsPassed: true,
+      mobileSupportTypecheckPassed: false,
+      mobileTypecheckPassed: false,
+      mobileDeviceTestsPassed: false,
+      storageAdapterSelected: false,
+      encryptedStoreConfigured: false,
+      sensitiveItemsEncryptedAtRest: false,
+      deviceRestartPersistenceTested: false,
+      syncWorkerConfigured: false,
+      retryBackoffWorkerTested: false,
+      conflictResolutionConfigured: false,
+      serverConflictTestsPassed: false,
+      idempotencyPersistenceConfigured: false,
+      alreadySyncedReplayTested: false,
+      auditTrailPersistenceConfigured: false,
+      offlineReconnectDeviceTested: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toContain("Expo airplane-mode reconnect sync smoke test");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "encrypted offline storage adapter and at-rest encryption proof",
+      "runtime sync worker retry and idempotent replay test output",
+      "server conflict-resolution test output",
+    ]));
+    expect(plan.blockers).toContain("Offline idempotency keys must persist through replay and restart.");
+    expect(plan.blockers).toContain("Offline sync attempts, conflicts, retries, and drops must persist audit events.");
+  });
+
   it("plans tenant-scoped mobile API requests with auth, request ids, and idempotency", () => {
     const plan = buildMobileApiRequestPlan({
       baseUrl: "https://preview.inkroute.test/",
@@ -275,6 +310,40 @@ describe("mobile support helpers", () => {
     expect(requirements.find((requirement) => requirement.screenId === "portfolio")?.requiredEndpoints).toContain(
       "/api/mobile/portfolio/upload-intents",
     );
+  });
+
+  it("blocks mobile API runtime readiness until typed clients, auth headers, screen wiring, and replay evidence exist", () => {
+    const plan = buildMobileApiRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      mobileSupportTestsPassed: true,
+      mobileSupportTypecheckPassed: false,
+      mobileAppTypecheckPassed: false,
+      mobileAppTestsPassed: false,
+      apiClientImplemented: false,
+      authHeadersWired: false,
+      requestIdMiddlewareConfigured: true,
+      tenantScopeHeaderConfigured: false,
+      responseEnvelopeValidationConfigured: false,
+      safeErrorRedactionConfigured: true,
+      offlineRetryQueueConfigured: false,
+      idempotencyPersistenceConfigured: false,
+      seededApiSmokePassed: false,
+      expiredAuthFailsSafelyTested: false,
+      crossTenantDenialTested: false,
+      offlineReplayTested: false,
+      screensUsingApiClient: ["bookings", "clients"],
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.missingScreenDomains).toEqual(["appointments", "travel", "portfolio", "notifications", "releases"]);
+    expect(plan.requiredCommands).toContain("offline reconnect/replay mobile test");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "mobile screen API-client wiring matrix for bookings, appointments, clients, travel, portfolio, notifications, and releases",
+      "expired-auth and cross-tenant denial test output",
+      "offline idempotent replay test output",
+    ]));
+    expect(plan.blockers).toContain("Typed Expo API client must be implemented before replacing static mobile data.");
   });
 
   it("tracks mobile device QA requirements without claiming runtime readiness", () => {

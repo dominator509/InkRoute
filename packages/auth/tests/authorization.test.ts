@@ -3,6 +3,7 @@ import {
   assertPermission,
   buildDashboardReadinessPlan,
   buildDomainAuthorizationRuntimeReadinessPlan,
+  buildMobileAuthRuntimeReadinessPlan,
   buildSessionPersistencePlan,
   evaluateApiRouteGuard,
   evaluateDashboardRouteGuard,
@@ -379,6 +380,40 @@ describe("auth authorization helpers", () => {
       action: "logout",
       status: "logout_requested",
     });
+  });
+
+  it("blocks mobile auth runtime readiness until provider, secure store, biometrics, tenant lookup, and device evidence exist", () => {
+    const plan = buildMobileAuthRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      authTestsPassed: true,
+      authTypecheckPassed: false,
+      mobileTypecheckPassed: false,
+      mobileDeviceTestsPassed: false,
+      authProviderConfigured: false,
+      providerLoginLogoutTested: false,
+      expoSecureStoreConfigured: false,
+      biometricUnlockConfigured: true,
+      biometricDeviceTested: false,
+      refreshTokenRecoveryTested: false,
+      logoutClearsLocalStateTested: false,
+      revokedSessionClearsLocalStateTested: false,
+      tenantMembershipLookupConfigured: false,
+      roleResolutionConfigured: false,
+      crossTenantDenialTested: false,
+      secureTokenStorageVerified: false,
+      auditLogPersistenceConfigured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toContain("Expo device biometric unlock test");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "provider-backed mobile login/logout test output",
+      "Expo SecureStore token persistence/clearing evidence with no plaintext token storage",
+      "tenant membership, role resolution, and cross-tenant denial test output",
+    ]));
+    expect(plan.blockers).toContain("Revoked sessions must clear local mobile auth state.");
+    expect(plan.blockers).toContain("Mobile login, refresh, logout, denial, revocation, and tenant-switch decisions must persist audit logs.");
   });
 
   it("maps API route guards to no-store 401, 403, 409, 419, or allow decisions", () => {

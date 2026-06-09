@@ -415,6 +415,35 @@ export interface MobileSessionGateDecision {
   decision?: AuthorizationDecision;
 }
 
+export interface MobileAuthRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  authTestsPassed: boolean;
+  authTypecheckPassed: boolean;
+  mobileTypecheckPassed: boolean;
+  mobileDeviceTestsPassed: boolean;
+  authProviderConfigured: boolean;
+  providerLoginLogoutTested: boolean;
+  expoSecureStoreConfigured: boolean;
+  biometricUnlockConfigured: boolean;
+  biometricDeviceTested: boolean;
+  refreshTokenRecoveryTested: boolean;
+  logoutClearsLocalStateTested: boolean;
+  revokedSessionClearsLocalStateTested: boolean;
+  tenantMembershipLookupConfigured: boolean;
+  roleResolutionConfigured: boolean;
+  crossTenantDenialTested: boolean;
+  secureTokenStorageVerified: boolean;
+  auditLogPersistenceConfigured: boolean;
+}
+
+export interface MobileAuthRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export function evaluateMobileSessionGate(input: MobileSessionGateInput): MobileSessionGateDecision {
   const auditAction = `mobile:${input.permission}:${input.tenantId}`;
   const base = {
@@ -528,6 +557,59 @@ export function evaluateMobileSessionGate(input: MobileSessionGateInput): Mobile
     status: "allowed",
     decision,
     reason: "Mobile session is secure-store backed, biometric-unlocked when required, tenant-scoped, and authorized.",
+  };
+}
+
+export function buildMobileAuthRuntimeReadinessPlan(input: MobileAuthRuntimeReadinessInput): MobileAuthRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/auth package script is missing ${script}.`);
+  if (!input.authTestsPassed) blockers.push("@inkroute/auth mobile session gate tests must pass.");
+  if (!input.authTypecheckPassed) blockers.push("@inkroute/auth typecheck must pass in an installed workspace.");
+  if (!input.mobileTypecheckPassed) blockers.push("@inkroute/mobile typecheck must pass with auth/session wiring.");
+  if (!input.mobileDeviceTestsPassed) blockers.push("Expo mobile device/simulator auth tests must pass.");
+  if (!input.authProviderConfigured) blockers.push("Mobile auth provider must be selected and configured before login/logout is production-ready.");
+  if (!input.providerLoginLogoutTested) blockers.push("Provider-backed mobile login and logout flows must be tested.");
+  if (!input.expoSecureStoreConfigured) blockers.push("Expo SecureStore must persist refresh/session material.");
+  if (!input.biometricUnlockConfigured) blockers.push("Biometric unlock gate must be configured for cached mobile sessions.");
+  if (!input.biometricDeviceTested) blockers.push("Biometric unlock must be verified on simulator/device.");
+  if (!input.refreshTokenRecoveryTested) blockers.push("Expired mobile sessions must refresh from secure storage or fail closed.");
+  if (!input.logoutClearsLocalStateTested) blockers.push("Logout must clear secure storage, biometric gate state, and cached tenant context.");
+  if (!input.revokedSessionClearsLocalStateTested) blockers.push("Revoked sessions must clear local mobile auth state.");
+  if (!input.tenantMembershipLookupConfigured) blockers.push("Mobile session resolution must load tenant membership from the server/provider-backed store.");
+  if (!input.roleResolutionConfigured) blockers.push("Mobile role/permission resolution must use provider-backed tenant membership.");
+  if (!input.crossTenantDenialTested) blockers.push("Mobile auth tests must reject cross-tenant access.");
+  if (!input.secureTokenStorageVerified) blockers.push("Secure token storage must be verified to avoid plaintext token persistence.");
+  if (!input.auditLogPersistenceConfigured) blockers.push("Mobile login, refresh, logout, denial, revocation, and tenant-switch decisions must persist audit logs.");
+
+  if (!input.authProviderConfigured || !input.providerLoginLogoutTested) requiredEvidence.push("provider-backed mobile login/logout test output");
+  if (!input.expoSecureStoreConfigured || !input.secureTokenStorageVerified) {
+    requiredEvidence.push("Expo SecureStore token persistence/clearing evidence with no plaintext token storage");
+  }
+  if (!input.biometricUnlockConfigured || !input.biometricDeviceTested) requiredEvidence.push("biometric unlock simulator/device evidence");
+  if (!input.refreshTokenRecoveryTested || !input.logoutClearsLocalStateTested || !input.revokedSessionClearsLocalStateTested) {
+    requiredEvidence.push("refresh, logout, and revoked-session clearing test output");
+  }
+  if (!input.tenantMembershipLookupConfigured || !input.roleResolutionConfigured || !input.crossTenantDenialTested) {
+    requiredEvidence.push("tenant membership, role resolution, and cross-tenant denial test output");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/auth typecheck",
+      "pnpm --filter @inkroute/auth test",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "pnpm --filter @inkroute/mobile test",
+      "Expo iOS/Android auth smoke tests",
+      "Expo device biometric unlock test",
+    ],
+    requiredEvidence,
+    blockers,
   };
 }
 

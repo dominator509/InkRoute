@@ -13,6 +13,7 @@ import {
   buildPreferenceMutationPlan,
   buildPreferenceTokenHash,
   buildMessagingPrivacyPlan,
+  buildMobilePushRuntimeReadinessPlan,
   buildNotificationRuntimeReadinessPlan,
   buildProviderEventReconciliationPlan,
   buildSmsProviderSendPlan,
@@ -495,6 +496,41 @@ describe("notification delivery planning", () => {
       "Push deep-link path must be an internal relative route.",
       "Push deep-link path must not contain private URLs, tokens, signatures, or secrets.",
     ]);
+  });
+
+  it("blocks mobile push runtime readiness until Expo config, token storage, receipts, opt-out, and device evidence exist", () => {
+    const plan = buildMobilePushRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      notificationTestsPassed: true,
+      notificationTypecheckPassed: false,
+      mobileTypecheckPassed: false,
+      mobileDeviceTestsPassed: false,
+      expoProjectConfigured: false,
+      expoAccessTokenConfigured: false,
+      permissionPromptImplemented: true,
+      deviceTokenRegistrationImplemented: false,
+      pushTokenStoreConfigured: false,
+      pushOptOutUiImplemented: false,
+      deliveryLogPersistenceConfigured: false,
+      auditLogPersistenceConfigured: false,
+      receiptWorkerConfigured: false,
+      invalidTokenSuppressionTested: false,
+      tapRoutingImplemented: true,
+      foregroundDeliveryTested: false,
+      backgroundDeliveryTested: false,
+      deepLinkRoutingTested: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toContain("Expo push tap deep-link smoke test");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "Expo project and secret configuration evidence",
+      "tenant/user/device push-token persistence evidence",
+      "foreground/background push and tap-routing device evidence",
+    ]));
+    expect(plan.blockers).toContain("Mobile push opt-out UI must be implemented and persisted.");
+    expect(plan.blockers).toContain("Invalid Expo token receipts must suppress or deactivate tokens.");
   });
 
   it("plans tenant-scoped message thread and message persistence with redaction and audit writes", () => {

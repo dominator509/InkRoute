@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCiQualityGatePlan,
+  buildDashboardTestingRuntimeReadinessPlan,
   buildDashboardTestRequirements,
   buildManualQaChecklist,
   buildRouteSmokeManifest,
@@ -39,6 +40,40 @@ describe("Phase 14 testing manifest", () => {
     ]);
     expect(requirements.every((requirement) => requirement.gapIds.includes("GAP-041"))).toBe(true);
     expect(requirements.find((requirement) => requirement.area === "accessibility")?.verifies).toContain("axe critical violations");
+  });
+
+  it("blocks dashboard testing runtime readiness until app tests, fixtures, artifacts, and required checks exist", () => {
+    const plan = buildDashboardTestingRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      testingPackageTestsPassed: true,
+      testingPackageTypecheckPassed: false,
+      dashboardTypecheckPassed: false,
+      dashboardBuildPassed: false,
+      implementedRequirementIds: ["dashboard-route-rendering"],
+      passingRequirementIds: [],
+      seededAuthFixturesConfigured: false,
+      seededTenantDataConfigured: false,
+      rbacTenantIsolationFixturesConfigured: false,
+      mutationTestHarnessConfigured: false,
+      accessibilityRunnerConfigured: false,
+      playwrightDashboardProjectConfigured: true,
+      ciUploadsDashboardArtifacts: false,
+      branchProtectionRequiresDashboardTests: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.missingImplementedRequirements).toEqual([
+      "dashboard-component-state",
+      "dashboard-rbac-tenant-isolation",
+      "dashboard-mutation-lifecycle",
+      "dashboard-accessibility",
+      "dashboard-e2e-critical-flow",
+    ]);
+    expect(plan.missingPassingRequirements).toContain("dashboard-route-rendering");
+    expect(plan.requiredCommands).toContain("pnpm test:e2e --project=dashboard-chromium");
+    expect(plan.requiredEvidence).toContain("seeded auth, tenant, and RBAC fixture evidence");
+    expect(plan.blockers).toContain("Dashboard mutation tests need a provider-safe server-action/API harness.");
   });
 
   it("summarizes testing runtime readiness across install, execution, coverage, artifacts, CI, and branch protection", () => {

@@ -2195,6 +2195,37 @@ export interface DashboardPrivacyProjection {
   retentionWorkflowRequired: boolean;
 }
 
+export interface DashboardPrivacyRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  securityTestsPassed: boolean;
+  securityTypecheckPassed: boolean;
+  dashboardTypecheckPassed: boolean;
+  dashboardBuildPassed: boolean;
+  surfacesUsingProjection: readonly DashboardPrivacySurface[];
+  surfacesWithRouteTests: readonly DashboardPrivacySurface[];
+  legalReviewApproved: boolean;
+  persistedPrivacyWorkflowsConfigured: boolean;
+  exportWorkflowTested: boolean;
+  deletionWorkflowTested: boolean;
+  privateFileStorageDeletionTested: boolean;
+  auditLogPersistenceConfigured: boolean;
+  logAndErrorRedactionVerified: boolean;
+  consentLanguageApproved: boolean;
+  medicalLanguageApproved: boolean;
+  paymentLanguageApproved: boolean;
+  smsLanguageApproved: boolean;
+}
+
+export interface DashboardPrivacyRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  missingProjectionSurfaces: readonly DashboardPrivacySurface[];
+  missingRouteTestSurfaces: readonly DashboardPrivacySurface[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 const dashboardSensitiveFields = new Set([
   "clientEmail",
   "clientPhone",
@@ -2328,6 +2359,75 @@ export function projectDashboardPrivacyRecord<TRecord extends Record<string, unk
     deniedFields,
     auditRequired,
     retentionWorkflowRequired,
+  };
+}
+
+export function buildDashboardPrivacyRuntimeReadinessPlan(
+  input: DashboardPrivacyRuntimeReadinessInput,
+): DashboardPrivacyRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const requiredSurfaces: DashboardPrivacySurface[] = [
+    "client_profile",
+    "booking_request",
+    "consent_form",
+    "payment",
+    "message",
+    "file_asset",
+  ];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const missingProjectionSurfaces = requiredSurfaces.filter((surface) => !input.surfacesUsingProjection.includes(surface));
+  const missingRouteTestSurfaces = requiredSurfaces.filter((surface) => !input.surfacesWithRouteTests.includes(surface));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/security package script is missing ${script}.`);
+  if (!input.securityTestsPassed) blockers.push("@inkroute/security dashboard privacy tests must pass.");
+  if (!input.securityTypecheckPassed) blockers.push("@inkroute/security typecheck must pass in an installed workspace.");
+  if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass with privacy projections wired.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with privacy projections wired.");
+  if (missingProjectionSurfaces.length > 0) blockers.push(`Dashboard privacy projection is not wired for surfaces: ${missingProjectionSurfaces.join(", ")}.`);
+  if (missingRouteTestSurfaces.length > 0) blockers.push(`Route/API privacy tests are missing for surfaces: ${missingRouteTestSurfaces.join(", ")}.`);
+  if (!input.legalReviewApproved) blockers.push("Attorney/product privacy review must approve dashboard consent, medical, payment, file, and SMS language.");
+  if (!input.persistedPrivacyWorkflowsConfigured) blockers.push("Persisted privacy workflows must back export/delete/retention actions for dashboard data.");
+  if (!input.exportWorkflowTested) blockers.push("Export workflow tests must run against persisted tenant dashboard data.");
+  if (!input.deletionWorkflowTested) blockers.push("Deletion/anonymization workflow tests must run against persisted tenant dashboard data.");
+  if (!input.privateFileStorageDeletionTested) blockers.push("Private file storage deletion tests must cover consent, reference, document, and message attachments.");
+  if (!input.auditLogPersistenceConfigured) blockers.push("Dashboard privacy projections and workflows must persist AuditLog records for sensitive access/actions.");
+  if (!input.logAndErrorRedactionVerified) blockers.push("Dashboard logs and error reports must be verified to redact PII, medical notes, payment identifiers, file keys, and message bodies.");
+  if (!input.consentLanguageApproved) blockers.push("Consent-signature dashboard language requires legal approval.");
+  if (!input.medicalLanguageApproved) blockers.push("Medical-note dashboard language requires legal approval.");
+  if (!input.paymentLanguageApproved) blockers.push("Payment/deposit dashboard language requires legal approval.");
+  if (!input.smsLanguageApproved) blockers.push("SMS/message dashboard language requires legal approval.");
+
+  if (missingProjectionSurfaces.length > 0 || missingRouteTestSurfaces.length > 0) {
+    requiredEvidence.push("dashboard route/API privacy projection matrix for client, booking, consent, payment, message, and file surfaces");
+  }
+  if (!input.legalReviewApproved || !input.consentLanguageApproved || !input.medicalLanguageApproved || !input.paymentLanguageApproved || !input.smsLanguageApproved) {
+    requiredEvidence.push("attorney/product approval record for dashboard privacy, consent, medical, deposit, and SMS copy");
+  }
+  if (!input.persistedPrivacyWorkflowsConfigured || !input.exportWorkflowTested || !input.deletionWorkflowTested) {
+    requiredEvidence.push("persisted export/delete/anonymization workflow test output for tenant dashboard data");
+  }
+  if (!input.privateFileStorageDeletionTested) requiredEvidence.push("private file storage deletion test output");
+  if (!input.auditLogPersistenceConfigured || !input.logAndErrorRedactionVerified) {
+    requiredEvidence.push("AuditLog persistence and sanitized log/error evidence for dashboard privacy actions");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    missingProjectionSurfaces,
+    missingRouteTestSurfaces,
+    requiredCommands: [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/dashboard test -- dashboard-privacy",
+      "pnpm --filter @inkroute/security test -- privacy",
+    ],
+    requiredEvidence,
+    blockers,
   };
 }
 
