@@ -15,6 +15,49 @@ export interface PublicContentRuntimeMatrixEntry {
   readonly status: PublicContentRuntimeStatus;
 }
 
+
+export interface PublicContentRunPersistenceContract {
+  readonly prismaModel: "PublicContentRun";
+  readonly tenantRelation: "publicContentRuns";
+  readonly migration: "20260609034800_add_public_content_runs";
+  readonly storesRunId: true;
+  readonly storesCommitSha: true;
+  readonly storesReadinessStatus: true;
+  readonly storesCommandMatrix: true;
+  readonly storesArtifactManifest: true;
+  readonly storesTenantDomainResolverEvidence: true;
+  readonly storesRepositoryReadEvidence: true;
+  readonly storesRouteApiAdoptionEvidence: true;
+  readonly storesSeededContentEvidence: true;
+  readonly storesApiJsonRedactionEvidence: true;
+  readonly storesRenderedHtmlRedactionEvidence: true;
+  readonly storesPrivatePortfolioExclusionEvidence: true;
+  readonly storesCacheRevalidationEvidence: true;
+  readonly storesBrowserCiEvidence: true;
+  readonly storesSecretSafeArtifacts: true;
+}
+
+export const publicContentRunPersistenceContract = {
+  prismaModel: "PublicContentRun",
+  tenantRelation: "publicContentRuns",
+  migration: "20260609034800_add_public_content_runs",
+  storesRunId: true,
+  storesCommitSha: true,
+  storesReadinessStatus: true,
+  storesCommandMatrix: true,
+  storesArtifactManifest: true,
+  storesTenantDomainResolverEvidence: true,
+  storesRepositoryReadEvidence: true,
+  storesRouteApiAdoptionEvidence: true,
+  storesSeededContentEvidence: true,
+  storesApiJsonRedactionEvidence: true,
+  storesRenderedHtmlRedactionEvidence: true,
+  storesPrivatePortfolioExclusionEvidence: true,
+  storesCacheRevalidationEvidence: true,
+  storesBrowserCiEvidence: true,
+  storesSecretSafeArtifacts: true,
+} as const satisfies PublicContentRunPersistenceContract;
+
 export const publicContentRuntimeCommands = [
   "pnpm --filter @inkroute/config typecheck",
   "pnpm --filter @inkroute/config test",

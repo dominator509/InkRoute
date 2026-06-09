@@ -6,6 +6,7 @@ import {
   publicContentRuntimeCommands,
   publicContentRuntimeMatrix,
   publicContentRuntimeReadiness,
+  publicContentRunPersistenceContract,
 } from "../lib/publicContentRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -19,6 +20,8 @@ describe("public content runtime evidence contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const publicContentRunMigration = readRepoFile("packages/db/prisma/migrations/20260609034800_add_public_content_runs/migration.sql");
 
   it("pins public content commands, matrix rows, and artifact paths", () => {
     expect(publicContentRuntimeCommands).toEqual([
@@ -79,13 +82,47 @@ describe("public content runtime evidence contract", () => {
     );
   });
 
+  it("pins the PublicContentRun persistence model and migration", () => {
+    expect(publicContentRunPersistenceContract).toEqual({
+      prismaModel: "PublicContentRun",
+      tenantRelation: "publicContentRuns",
+      migration: "20260609034800_add_public_content_runs",
+      storesRunId: true,
+      storesCommitSha: true,
+      storesReadinessStatus: true,
+      storesCommandMatrix: true,
+      storesArtifactManifest: true,
+      storesTenantDomainResolverEvidence: true,
+      storesRepositoryReadEvidence: true,
+      storesRouteApiAdoptionEvidence: true,
+      storesSeededContentEvidence: true,
+      storesApiJsonRedactionEvidence: true,
+      storesRenderedHtmlRedactionEvidence: true,
+      storesPrivatePortfolioExclusionEvidence: true,
+      storesCacheRevalidationEvidence: true,
+      storesBrowserCiEvidence: true,
+      storesSecretSafeArtifacts: true,
+    });
+    expect(prismaSchema).toContain("model PublicContentRun");
+    expect(prismaSchema).toContain("publicContentRuns PublicContentRun[]");
+    expect(prismaSchema).toContain("tenantDomainResolverEvidenceCaptured");
+    expect(prismaSchema).toContain("renderedHtmlRedactionEvidenceCaptured");
+    expect(prismaSchema).toContain("secretSafeArtifactsCaptured");
+    expect(publicContentRunMigration).toContain('CREATE TABLE "PublicContentRun"');
+    expect(publicContentRunMigration).toContain('"commandMatrix" JSONB NOT NULL');
+    expect(publicContentRunMigration).toContain('"artifactManifest" JSONB NOT NULL');
+    expect(publicContentRunMigration).toContain('"PublicContentRun_tenantId_runId_key"');
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming repository-backed public content readiness", () => {
     expect(ciWorkflow).toContain("Run Phase 3 public content runtime contracts");
     expect(ciWorkflow).toContain("public-content-runtime-static.test.ts");
     expect(ciWorkflow).toContain("public-content-runtime-artifacts");
     expect(ciWorkflow).toContain("coverage/public-content-runtime.json");
     expect(unitManifest).toContain("unit-web-public-content-runtime-static");
+    expect(unitManifest).toContain("PublicContentRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/publicContentRuntime.ts");
+    expect(gapTracker).toContain("PublicContentRun Prisma model and app row contract");
     expect(gapTracker).toContain("live persisted tenant/domain resolver, repository-backed public reads, DB/CMS seed proof, route/API adoption proof, API JSON and rendered HTML redaction proof, cache revalidation, web build, browser smoke, CI evidence, and secret-safe artifact review remain open");
   });
 });

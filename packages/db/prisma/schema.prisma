@@ -421,6 +421,7 @@ model Tenant {
   domainAuthorizationRuns DomainAuthorizationRun[]
   domainEventAuditRuns DomainEventAuditRun[]
   privacyRetentionRuns PrivacyRetentionRun[]
+  publicContentRuns PublicContentRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3705,6 +3706,35 @@ model PrivacyRetentionRun {
   createdAt                           DateTime @default(now())
   updatedAt                           DateTime @updatedAt
   tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model PublicContentRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String
+  status                                  String
+  commandMatrix                           Json
+  artifactManifest                        Json
+  tenantDomainResolverEvidenceCaptured    Boolean  @default(false)
+  repositoryReadEvidenceCaptured          Boolean  @default(false)
+  routeApiAdoptionEvidenceCaptured        Boolean  @default(false)
+  seededContentEvidenceCaptured           Boolean  @default(false)
+  apiJsonRedactionEvidenceCaptured        Boolean  @default(false)
+  renderedHtmlRedactionEvidenceCaptured   Boolean  @default(false)
+  privatePortfolioExclusionEvidenceCaptured Boolean @default(false)
+  cacheRevalidationEvidenceCaptured       Boolean  @default(false)
+  browserCiEvidenceCaptured               Boolean  @default(false)
+  secretSafeArtifactsCaptured             Boolean  @default(false)
+  resolverReportPath                      String?
+  redactionReportPath                     String?
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])
