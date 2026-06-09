@@ -101,14 +101,14 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "INVALID_JSON", message: "Privacy request body must be valid JSON." }, { status: 400 });
+    return NextResponse.json({ error: "INVALID_JSON", message: "Privacy request body must be valid JSON." }, { status: 400, headers: { "Cache-Control": "no-store" } });
   }
 
   const input = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
   if (!isPrivacyRequestType(input.type) || typeof input.email !== "string" || !input.email.includes("@")) {
     return NextResponse.json(
       { error: "VALIDATION_FAILED", message: "Expected valid type and email for a privacy request." },
-      { status: 400 },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   }
 
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
   if (actorResolution.error) {
     return NextResponse.json(
       { ok: false, error: { code: actorResolution.error.code, message: actorResolution.error.message, gapIds: ["GAP-095", "GAP-098"] } },
-      { status: actorResolution.error.status },
+      { status: actorResolution.error.status, headers: { "Cache-Control": "no-store" } },
     );
   }
 
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
           details: { gapIds: ["GAP-095", "GAP-098", "GAP-101"], remaining: rateLimit.remaining, retryAfterSeconds: rateLimit.retryAfterSeconds },
         },
       },
-      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds), "Cache-Control": "no-store" } },
     );
   }
 
@@ -183,6 +183,6 @@ export async function POST(request: NextRequest) {
         gapIds: ["GAP-013", "GAP-098", "GAP-099", "GAP-100"],
       },
     },
-    { status: 201 },
+    { status: 201, headers: { "Cache-Control": "no-store" } },
   );
 }

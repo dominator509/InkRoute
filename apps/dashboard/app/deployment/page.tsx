@@ -24,7 +24,7 @@ export default function DeploymentPage() {
       <DashboardPageHeader
         eyebrow="Phase 15"
         title="Deployment, launch, and handoff control room"
-        description="A deployment readiness scaffold for local setup, provider environments, CI/CD, mobile builds, launch evidence, and agent handoff. All live deployment actions remain disabled until providers, secrets, legal review, and runtime verification exist."
+        description="A deployment readiness scaffold for local setup, provider environments, CI/CD, mobile builds, launch evidence, agent handoff, and a no-store tenant-scoped readiness API. All live deployment actions remain disabled until providers, secrets, legal review, and runtime verification exist."
       />
 
       <section className="grid three">

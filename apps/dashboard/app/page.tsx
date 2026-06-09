@@ -19,7 +19,7 @@ export default function DashboardHomePage() {
       <DashboardPageHeader
         eyebrow="Phase 5 scaffolded dashboard"
         title="Artist command center"
-        description="Static tenant dashboard surfaces for bookings, travel, clients, payments, content, SEO, errors, and release control. No live auth, Prisma, Stripe, storage, or notification provider is wired yet."
+        description="Tenant dashboard surfaces for bookings, travel, clients, payments, content, reviews, SEO, errors, and release control. Reviews now have a redacted tenant-scoped read API; provider-backed runtime actions remain gated."
         actions={<a className="primary-link" href="/bookings">Review booking inbox</a>}
       />
 
@@ -28,7 +28,7 @@ export default function DashboardHomePage() {
         <MetricCard label="Open review queue" value={String(openRequests)} detail="Static booking rows" />
         <MetricCard label="Pending deposits" value={centsToUsd(pendingDeposits)} detail="Stripe boundary only" />
         <MetricCard label="Portfolio attribution" value={String(portfolioAttributionCount)} detail="Demo image-to-request signals" />
-        <MetricCard label="Approved reviews" value={String(dashboardReviewQueue.length)} detail="CMS moderation scaffold" />
+        <MetricCard label="Approved reviews" value={String(dashboardReviewQueue.length)} detail="GET /api/reviews redacted read seam" />
       </section>
 
       <section className="grid two spacious">

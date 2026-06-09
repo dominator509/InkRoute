@@ -123,14 +123,14 @@ function normalizeRulesInput(inputRules: unknown): Record<string, unknown> {
   return normalized;
 }
 
-function buildDefinitionsForTenant(tenantId: string) {
+function buildDefinitionsForTenant(tenantId: string, client: Pick<typeof prisma, "featureFlag"> = prisma) {
   const baseDefinitions = new Map<string, FeatureFlagDefinition>();
   defaultFeatureFlags.forEach((definition) => {
     baseDefinitions.set(definition.key, definition);
   });
 
   return async () => {
-    const rows = await prisma.featureFlag.findMany({
+    const rows = await client.featureFlag.findMany({
       where: { OR: [{ tenantId }, { tenantId: null }] },
       orderBy: { updatedAt: "desc" },
       select: { key: true, scope: true, enabled: true, description: true, rules: true },
@@ -183,82 +183,115 @@ export async function GET(request: NextRequest) {
   try {
     assertPermission(actor, "release:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read feature flags." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read feature flags." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
   }
 
   const params = new URL(request.url).searchParams;
+  const tenantId = params.get("tenantId") ?? actor.tenantId;
+  if (tenantId !== actor.tenantId) {
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query feature flags for another tenant." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+  }
+
   const environment = normalizeEnvironment(params.get("environment"));
   const role = params.get("role");
-  const context = buildDecisionContext(actor.role, actor.tenantId, environment, role);
-
-  const loadDefinitions = buildDefinitionsForTenant(actor.tenantId);
+  const context = buildDecisionContext(actor.role, tenantId, environment, role);
 
   if (actor.source === "local-fallback") {
     const decisions = evaluateFeatureFlags(defaultFeatureFlags, context);
-    return NextResponse.json({
-      ok: true,
-      source: actor.source,
-      tenantId: actor.tenantId,
-      actorRole: actor.role,
-      persistence: "local-fallback",
-      environment,
-      definitions: buildSafeResponseDefinitions([...defaultFeatureFlags]),
-      decisions,
-      cache: {
-        generatedAt: new Date().toISOString(),
-        ttlSeconds: 15,
-        cacheKey: `feature-flags:${actor.tenantId}:${environment}:fallback`,
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId,
+        actorRole: actor.role,
+        persistence: "local-fallback",
+        environment,
+        definitions: buildSafeResponseDefinitions([...defaultFeatureFlags]),
+        decisions,
+        cache: {
+          generatedAt: new Date().toISOString(),
+          ttlSeconds: 15,
+          cacheKey: `feature-flags:${tenantId}:${environment}:fallback`,
+        },
+        boundary: "Local fallback mode: flag overrides are not persisted and use package defaults.",
+        gapIds: ["GAP-088", "GAP-090", "GAP-093"],
       },
-      boundary: "Local fallback mode: flag overrides are not persisted and use package defaults.",
-      gapIds: ["GAP-088", "GAP-090", "GAP-093"],
-    });
+      { headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   try {
-    const definitions = await loadDefinitions();
-    const decisions = evaluateFeatureFlags(definitions, context);
-    return NextResponse.json({
-      ok: true,
-      source: actor.source,
-      tenantId: actor.tenantId,
-      actorRole: actor.role,
-      persistence: "database",
-      environment,
-      definitions: buildSafeResponseDefinitions(definitions),
-      decisions,
-      cache: {
-        generatedAt: new Date().toISOString(),
-        ttlSeconds: 60,
-        cacheKey: `feature-flags:${actor.tenantId}:${environment}:v1`,
-      },
-      gapIds: ["GAP-088", "GAP-090", "GAP-093"],
-      boundary: "Feature flags now include DB overrides (tenant/global) and release-aware decision output.",
+    const result = await prisma.$transaction(async (tx) => {
+      const definitions = await buildDefinitionsForTenant(tenantId, tx)();
+      const audit = await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorUserId: actor.actorUserId,
+          action: "feature_flag:read:list",
+          entityType: "FeatureFlag",
+          metadata: {
+            source: "dashboard-api",
+            environment,
+            role: role ?? actor.role,
+            definitionCount: definitions.length,
+            redactedFields: ["rules.secret", "rules.token", "rules.providerKey", "rules.privateRolloutNotes"],
+          },
+        },
+        select: { id: true },
+      });
+      return { definitions, audit };
     });
+    const definitions = result.definitions;
+    const decisions = evaluateFeatureFlags(definitions, context);
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId,
+        actorRole: actor.role,
+        persistence: "database",
+        environment,
+        definitions: buildSafeResponseDefinitions(definitions),
+        decisions,
+        auditId: result.audit.id,
+        cache: {
+          generatedAt: new Date().toISOString(),
+          ttlSeconds: 60,
+          cacheKey: `feature-flags:${tenantId}:${environment}:v1`,
+        },
+        gapIds: ["GAP-088", "GAP-090", "GAP-093"],
+        boundary: "Feature flag reads are tenant-scoped, no-store, audit-logged, and include DB overrides plus release-aware decision output.",
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     if (!isDatabaseUnavailable(error)) {
       throw error;
     }
     const definitions = [...defaultFeatureFlags];
-    const fallbackContext = buildDecisionContext(actor.role, actor.tenantId, environment, role);
+    const fallbackContext = buildDecisionContext(actor.role, tenantId, environment, role);
     const decisions = evaluateFeatureFlags(definitions, fallbackContext);
-    return NextResponse.json({
-      ok: true,
-      source: actor.source,
-      tenantId: actor.tenantId,
-      actorRole: actor.role,
-      persistence: "local-fallback",
-      environment,
-      definitions: buildSafeResponseDefinitions(definitions),
-      decisions,
-      cache: {
-        generatedAt: new Date().toISOString(),
-        ttlSeconds: 15,
-        cacheKey: `feature-flags:${actor.tenantId}:${environment}:fallback`,
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId,
+        actorRole: actor.role,
+        persistence: "local-fallback",
+        environment,
+        definitions: buildSafeResponseDefinitions(definitions),
+        decisions,
+        cache: {
+          generatedAt: new Date().toISOString(),
+          ttlSeconds: 15,
+          cacheKey: `feature-flags:${tenantId}:${environment}:fallback`,
+        },
+        warning: "Database unavailable; default feature definitions returned as fallback.",
+        gapIds: ["GAP-088", "GAP-090", "GAP-093"],
+        boundary: "Database fallback used; DB overrides unavailable in this response.",
       },
-      warning: "Database unavailable; default feature definitions returned as fallback.",
-      gapIds: ["GAP-088", "GAP-090", "GAP-093"],
-      boundary: "Database fallback used; DB overrides unavailable in this response.",
-    });
+      { headers: { "Cache-Control": "no-store" } },
+    );
   }
 }
 

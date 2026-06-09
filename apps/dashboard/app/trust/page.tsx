@@ -30,7 +30,7 @@ export default function TrustPage() {
       <DashboardPageHeader
         eyebrow="Phase 13 · Security and trust"
         title="Trust, privacy, and compliance control plane"
-        description="Static security hardening scaffold for auth, tenant isolation, upload validation, CSRF/rate-limit contracts, privacy workflows, legal placeholders, and production launch blockers. No production control is active yet."
+        description="Security hardening scaffold for auth, tenant isolation, upload validation, CSRF/rate-limit contracts, privacy workflows, legal placeholders, no-store trust/privacy API boundaries, and production launch blockers. No production control is active yet."
       />
 
       <section className="grid four">
@@ -175,7 +175,7 @@ export default function TrustPage() {
 
       <DisabledActionPanel
         title="Trust center actions disabled"
-        description="Production requires real auth, tenant isolation tests, upload scanning/storage, rate-limit infrastructure, CSRF/session strategy, privacy workflows, and attorney-reviewed legal documents."
+        description="GET /api/security/trust-status and POST /api/security/privacy-requests now keep dashboard trust/privacy responses no-store with tenant and role gates. Production still requires real auth, tenant isolation tests, upload scanning/storage, rate-limit infrastructure, CSRF/session strategy, privacy workers, audit persistence, and attorney-reviewed legal documents."
         actions={["Enable auth guard", "Create signed upload", "Run tenant isolation tests", "Publish privacy policy", "Approve legal pack"]}
       />
     </main>

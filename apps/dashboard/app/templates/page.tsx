@@ -23,7 +23,7 @@ export default function TemplatesPage() {
       <DashboardPageHeader
         eyebrow="Notifications"
         title="Template, consent, and delivery command center"
-        description="Email, SMS, push, and in-app notification templates with consent-aware delivery plans, automation sequences, and provider boundaries. No provider sends are enabled."
+        description="Email, SMS, push, and in-app notification templates with consent-aware delivery plans, automation sequences, provider boundaries, and a tenant-scoped redacted template API. No provider sends are enabled."
       />
 
       <section className="grid two">
@@ -114,7 +114,7 @@ export default function TemplatesPage() {
 
       <DisabledActionPanel
         title="Notification actions"
-        description="Template saving, test sends, scheduled delivery, queue retries, suppression changes, and provider delivery reconciliation require authenticated APIs and provider credentials."
+        description="GET /api/templates now exposes coded template metadata plus redacted queue/delivery summaries. Template saving, test sends, scheduled delivery, queue retries, suppression changes, and provider delivery reconciliation still require write APIs and provider credentials."
         actions={["Save template", "Send test email", "Send SMS preview", "Queue aftercare sequence", "Register push token", "Sync provider status"]}
       />
     </main>

@@ -27,7 +27,7 @@ export default function ReleasesPage() {
       <DashboardPageHeader
         eyebrow="Release operations"
         title="Releases, flags, rollback, and mobile updates"
-        description="Phase 12 turns release planning into a coded control-plane scaffold: release candidates, feature-flag decisions, migration gates, rollback drafts, CI/CD guardrails, and EAS Update boundaries. Actions stay disabled until persistence, CI secrets, and production environments exist."
+        description="Phase 12 turns release planning into a coded control-plane scaffold: release candidates, feature-flag decisions, migration gates, rollback drafts, CI/CD guardrails, EAS Update boundaries, and no-store tenant-scoped release/feature-flag APIs. Actions stay disabled until CI secrets and production environments exist."
       />
 
       <section className="grid three">
@@ -198,7 +198,7 @@ export default function ReleasesPage() {
 
       <DisabledActionPanel
         title="Release actions"
-        description="Creating release records, toggling feature flags, running migrations, deploying Vercel builds, publishing EAS updates, uploading Sentry artifacts, and rolling back all require authenticated runtime services and audit persistence."
+        description="GET /api/releases and GET /api/feature-flags now have tenant mismatch denial, no-store responses, and read audit logging. Deploying Vercel builds, publishing EAS updates, uploading Sentry artifacts, and rolling back still require protected environments and provider credentials."
         actions={["Create release", "Approve production", "Toggle flag", "Publish mobile OTA", "Rollback"]}
       />
     </main>

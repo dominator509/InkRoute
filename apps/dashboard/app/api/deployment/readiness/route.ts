@@ -177,11 +177,46 @@ export async function GET(request: NextRequest) {
   try {
     assertPermission(actor, "release:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read deployment readiness." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read deployment readiness." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+  }
+
+  const params = new URL(request.url).searchParams;
+  const tenantId = params.get("tenantId") ?? actor.tenantId;
+  if (tenantId !== actor.tenantId) {
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query deployment readiness for another tenant." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
   }
 
   const environment = buildEnvironmentSnapshot("production");
-  return NextResponse.json(buildPayload(actor, environment));
+  if (actor.source === "local-fallback") {
+    return NextResponse.json(buildPayload(actor, environment), { headers: { "Cache-Control": "no-store" } });
+  }
+
+  try {
+    const audit = await prisma.auditLog.create({
+      data: {
+        tenantId,
+        actorUserId: actor.actorUserId,
+        action: "deployment:readiness:read",
+        entityType: "DeploymentReadiness",
+        metadata: {
+          source: actor.source,
+          targetEnvironment: "production",
+          productionBlocked: environment.productionBlocked,
+          missingRequiredNames: environment.missingRequiredNames,
+          redactedFields: ["DATABASE_URL", "DIRECT_URL", "AUTH_SECRET", "STRIPE_SECRET_KEY", "SENTRY_AUTH_TOKEN", "VERCEL_TOKEN"],
+        },
+      },
+      select: { id: true },
+    });
+
+    return NextResponse.json({ ...buildPayload(actor, environment), auditId: audit.id }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    if (isDatabaseUnavailable(error)) {
+      return NextResponse.json({ ...buildPayload(actor, environment), warning: "Database unavailable; deployment readiness read audit was not persisted." }, { headers: { "Cache-Control": "no-store" } });
+    }
+
+    return NextResponse.json({ ok: false, error: { code: "DEPLOYMENT_READINESS_READ_FAILED", message: "Deployment readiness could not be loaded." } }, { status: 500, headers: { "Cache-Control": "no-store" } });
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -189,14 +224,14 @@ export async function POST(request: NextRequest) {
   try {
     assertPermission(actor, "release:write");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to trigger deployment operations." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to trigger deployment operations." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Deployment readiness body must be valid JSON." } }, { status: 400 });
+    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Deployment readiness body must be valid JSON." } }, { status: 400, headers: { "Cache-Control": "no-store" } });
   }
 
   const parsed = deploymentReadinessMutationSchema.safeParse(body);
@@ -210,7 +245,7 @@ export async function POST(request: NextRequest) {
           issues: parsed.error.flatten(),
         },
       },
-      { status: 400 },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   }
 
@@ -219,7 +254,7 @@ export async function POST(request: NextRequest) {
   const environment = buildEnvironmentSnapshot(input.targetEnvironment);
 
   if (actor.source === "local-fallback") {
-    return NextResponse.json(buildPostSuccessPayload(actor, input, undefined, environment), { status: policy.statusCode });
+    return NextResponse.json(buildPostSuccessPayload(actor, input, undefined, environment), { status: policy.statusCode, headers: { "Cache-Control": "no-store" } });
   }
 
   try {
@@ -242,12 +277,12 @@ export async function POST(request: NextRequest) {
     });
 
     const payload = buildPostSuccessPayload(actor, input, audit.id, environment);
-    return NextResponse.json(payload, { status: policy.statusCode });
+    return NextResponse.json(payload, { status: policy.statusCode, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
-      return NextResponse.json(buildPostSuccessPayload(actor, input, undefined, environment), { status: 200 });
+      return NextResponse.json(buildPostSuccessPayload(actor, input, undefined, environment), { status: 200, headers: { "Cache-Control": "no-store" } });
     }
 
-    return NextResponse.json({ ok: false, error: { code: "DEPLOYMENT_READINESS_FAILED", message: "Could not persist deployment readiness request." } }, { status: 500 });
+    return NextResponse.json({ ok: false, error: { code: "DEPLOYMENT_READINESS_FAILED", message: "Could not persist deployment readiness request." } }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
 }

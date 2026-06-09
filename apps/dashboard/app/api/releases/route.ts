@@ -94,23 +94,48 @@ export async function GET(request: NextRequest) {
   try {
     assertPermission(actor, "release:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read release records." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read release records." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+  }
+
+  const params = new URL(request.url).searchParams;
+  const tenantId = params.get("tenantId") ?? actor.tenantId;
+  if (tenantId !== actor.tenantId) {
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query release records for another tenant." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
   }
 
   if (actor.source === "local-fallback") {
-    return NextResponse.json(buildReleaseFallback(actor));
+    return NextResponse.json(buildReleaseFallback(actor), { headers: { "Cache-Control": "no-store" } });
   }
 
   try {
-    const releases = await prisma.releaseRecord.findMany({
-      where: { tenantId: actor.tenantId },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      select: { id: true, version: true, channel: true, commitSha: true, notes: true, createdAt: true },
+    const result = await prisma.$transaction(async (tx) => {
+      const releases = await tx.releaseRecord.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        select: { id: true, version: true, channel: true, commitSha: true, notes: true, createdAt: true },
+      });
+
+      const audit = await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorUserId: actor.actorUserId,
+          action: "release:read:list",
+          entityType: "ReleaseRecord",
+          metadata: {
+            source: "dashboard-api",
+            count: releases.length,
+            redactedFields: ["deploymentSecrets", "providerTokens", "environmentSecrets"],
+          },
+        },
+        select: { id: true },
+      });
+
+      return { releases, audit };
     });
 
-    const release = releases[0]
-      ? mapRecordToCandidate({ ...releases[0], createdAt: new Date(releases[0].createdAt) })
+    const release = result.releases[0]
+      ? mapRecordToCandidate({ ...result.releases[0], createdAt: new Date(result.releases[0].createdAt) })
       : createReleaseCandidate({
           version: demoReleaseCandidate.version,
           channel: "preview",
@@ -124,22 +149,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       source: actor.source,
-      tenantId: actor.tenantId,
+      tenantId,
       actorRole: actor.role,
       status: "authenticated",
       release,
-      releases: releases.map(toReleaseSummary),
+      releases: result.releases.map(toReleaseSummary),
       rollback: createRollbackPlan(release, "0.11.0-phase11"),
       healthChecks: buildReleaseHealthChecks(release),
+      auditId: result.audit.id,
       boundary: "Release records are now tenant-scoped and persisted when database is reachable; deployment automation remains external in this pass.",
       gapIds: ["GAP-015", "GAP-122", "GAP-125"],
-    });
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (!isDatabaseUnavailable(error)) {
       throw error;
     }
 
-    return NextResponse.json(buildReleaseFallback(actor));
+    return NextResponse.json(buildReleaseFallback(actor), { headers: { "Cache-Control": "no-store" } });
   }
 }
 

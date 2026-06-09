@@ -81,6 +81,18 @@ function buildDashboardReportInput(parsed: { data: ErrorReportInput }, tenantId:
   };
 }
 
+function redactMetadata(value: unknown): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, metadataValue]) => [
+      key,
+      /email|phone|token|secret|cookie|authorization|password|ip|useragent|body|stack|payload|client|card/i.test(key)
+        ? "[redacted-dashboard-field]"
+        : metadataValue,
+    ]),
+  );
+}
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
@@ -93,81 +105,108 @@ export async function GET(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: { code: "VALIDATION_FAILED", message: "Error-report query parameters are invalid.", issues: parsed.error.flatten() } },
-      { status: 400 },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   }
 
   const filters = parsed.data;
   const tenantId = filters.tenantId ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a different tenant's error reports." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a different tenant's error reports." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
   }
 
   if (actor.source === "local-fallback") {
     const localData = localErrorReports.get(actor.tenantId) ?? [];
     const filtered = localData.filter((candidate) => (!filters.status || candidate.status === filters.status) && (!filters.source || candidate.source === filters.source)).slice(0, filters.limit);
-    return NextResponse.json({
-      ok: true,
-      source: actor.source,
-      tenantId: actor.tenantId,
-      actorRole: actor.role,
-      persistence: "local-fallback",
-      count: filtered.length,
-      status: "local-read-fallback",
-      reports: filtered,
-      gapIds: ["GAP-079", "GAP-081", "GAP-095"],
-      boundary: "Local fallback mode active; errors are retained in-memory only.",
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId: actor.tenantId,
+        actorRole: actor.role,
+        persistence: "local-fallback",
+        count: filtered.length,
+        status: "local-read-fallback",
+        reports: filtered,
+        gapIds: ["GAP-079", "GAP-081", "GAP-095"],
+        boundary: "Local fallback mode active; errors are retained in-memory only.",
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   try {
-      const rows = await prisma.errorReport.findMany({
-      where: {
-        tenantId,
-        ...(filters.source ? { source: filters.source } : {}),
-        ...(filters.status ? { status: filters.status } : {}),
-      },
-      orderBy: { createdAt: "desc" },
-      take: filters.limit ?? 50,
-      select: {
-        id: true,
-        tenantId: true,
-        severity: true,
-        status: true,
-        source: true,
-        message: true,
-        stackHash: true,
-        release: true,
-        route: true,
-        createdAt: true,
-        metadata: true,
-      },
+    const result = await prisma.$transaction(async (tx) => {
+      const rows = await tx.errorReport.findMany({
+        where: {
+          tenantId,
+          ...(filters.source ? { source: filters.source } : {}),
+          ...(filters.status ? { status: filters.status } : {}),
+        },
+        orderBy: { createdAt: "desc" },
+        take: filters.limit ?? 50,
+        select: {
+          id: true,
+          tenantId: true,
+          severity: true,
+          status: true,
+          source: true,
+          message: true,
+          stackHash: true,
+          release: true,
+          route: true,
+          createdAt: true,
+          metadata: true,
+        },
+      });
+
+      const audit = await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorUserId: actor.actorUserId,
+          action: "error_report:read:list",
+          entityType: "ErrorReport",
+          metadata: {
+            source: "dashboard-api",
+            count: rows.length,
+            filters: { status: filters.status ?? null, source: filters.source ?? null, limit: filters.limit ?? 50 },
+            redactedFields: ["metadata", "userAgent", "stack", "payload", "client", "token", "secret"],
+          },
+        },
+        select: { id: true },
+      });
+
+      return { rows, audit };
     });
 
-    return NextResponse.json({
-      ok: true,
-      source: actor.source,
-      tenantId,
-      actorRole: actor.role,
-      persistence: "database",
-      count: rows.length,
-      status: "authenticated-read",
-      reports: rows.map((entry) => ({
-        id: entry.id,
-        tenantId: entry.tenantId,
-        severity: entry.severity,
-        status: entry.status,
-        source: entry.source,
-        message: entry.message,
-        stackHash: entry.stackHash,
-        release: entry.release ?? undefined,
-        route: entry.route ?? undefined,
-        metadata: typeof entry.metadata === "object" && entry.metadata !== null ? (entry.metadata as Record<string, unknown>) : {},
-        createdAt: entry.createdAt.toISOString(),
-      })),
-      gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
-      boundary: "Error reports now include tenant-scoped persistence, RBAC, and metadata redaction in DB-backed mode.",
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId,
+        actorRole: actor.role,
+        persistence: "database",
+        count: result.rows.length,
+        status: "authenticated-read",
+        reports: result.rows.map((entry) => ({
+          id: entry.id,
+          tenantId: entry.tenantId,
+          severity: entry.severity,
+          status: entry.status,
+          source: entry.source,
+          message: entry.message,
+          stackHash: entry.stackHash,
+          release: entry.release ?? undefined,
+          route: entry.route ?? undefined,
+          metadata: redactMetadata(entry.metadata),
+          createdAt: entry.createdAt.toISOString(),
+        })),
+        auditId: result.audit.id,
+        gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
+        boundary: "Error report reads are tenant-scoped, RBAC-gated, no-store, audit-logged, and metadata-redacted in DB-backed mode.",
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     if (!isDatabaseUnavailable(error)) {
       throw error;
@@ -175,19 +214,22 @@ export async function GET(request: NextRequest) {
 
     const localData = localErrorReports.get(actor.tenantId) ?? [];
     const filtered = localData.filter((candidate) => (!filters.status || candidate.status === filters.status) && (!filters.source || candidate.source === filters.source)).slice(0, filters.limit);
-    return NextResponse.json({
-      ok: true,
-      source: actor.source,
-      tenantId: actor.tenantId,
-      actorRole: actor.role,
-      persistence: "local-fallback",
-      count: filtered.length,
-      status: "database-unavailable",
-      reports: filtered,
-      warning: "Database is currently unavailable; returning local fallback data.",
-      gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
-      boundary: "DB outage fallback only; data persistence is temporary and request-scoped.",
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId: actor.tenantId,
+        actorRole: actor.role,
+        persistence: "local-fallback",
+        count: filtered.length,
+        status: "database-unavailable",
+        reports: filtered,
+        warning: "Database is currently unavailable; returning local fallback data.",
+        gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
+        boundary: "DB outage fallback only; data persistence is temporary and request-scoped.",
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   }
 }
 

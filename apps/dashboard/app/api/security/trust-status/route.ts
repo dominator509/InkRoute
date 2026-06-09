@@ -45,27 +45,30 @@ export async function GET(request: NextRequest) {
   if ("error" in reader) {
     return NextResponse.json(
       { ok: false, error: { code: reader.error.code, message: reader.error.message, gapIds: ["GAP-095", "GAP-103"] } },
-      { status: reader.error.status },
+      { status: reader.error.status, headers: { "Cache-Control": "no-store" } },
     );
   }
 
   const controls = buildTrustCenterChecklist();
-  return NextResponse.json({
-    ok: true,
-    status: "scaffolded",
-    tenantId: reader.tenantId,
-    actor: {
-      userId: reader.userId,
-      role: reader.role,
+  return NextResponse.json(
+    {
+      ok: true,
+      status: "scaffolded",
+      tenantId: reader.tenantId,
+      actor: {
+        userId: reader.userId,
+        role: reader.role,
+      },
+      summary: summarizeSecurityPosture(controls),
+      controls,
+      tenantIsolationFixtures: buildTenantIsolationFixtures(),
+      uploadPolicies,
+      rateLimitRules,
+      csrfControlPlans,
+      securityHeaders: buildSecurityHeaderPlan(),
+      boundary: "Read-only security posture preview. Production requires auth, RBAC, tenant-scoped data loaders, rate limit store, upload provider, legal review, audit logs, and tests.",
+      gapIds: ["GAP-095", "GAP-096", "GAP-097", "GAP-098", "GAP-099", "GAP-100", "GAP-101", "GAP-102", "GAP-103"],
     },
-    summary: summarizeSecurityPosture(controls),
-    controls,
-    tenantIsolationFixtures: buildTenantIsolationFixtures(),
-    uploadPolicies,
-    rateLimitRules,
-    csrfControlPlans,
-    securityHeaders: buildSecurityHeaderPlan(),
-    boundary: "Read-only security posture preview. Production requires auth, RBAC, tenant-scoped data loaders, rate limit store, upload provider, legal review, audit logs, and tests.",
-    gapIds: ["GAP-095", "GAP-096", "GAP-097", "GAP-098", "GAP-099", "GAP-100", "GAP-101", "GAP-102", "GAP-103"],
-  });
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

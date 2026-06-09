@@ -33,7 +33,7 @@ export default function ErrorReportsPage() {
       <DashboardPageHeader
         eyebrow="Observability"
         title="Error and crash reporting"
-        description="Triage web, dashboard, mobile, API, and webhook failures with redacted context, alert routing, provider boundaries, and an agentic bug-fix workflow. Capture providers are still scaffolded, not live."
+        description="Triage web, dashboard, mobile, API, and webhook failures with redacted context, alert routing, provider boundaries, an agentic bug-fix workflow, and a tenant-scoped no-store error-report API. Capture providers are still scaffolded, not live."
       />
 
       <section className="metrics-grid">
@@ -148,7 +148,7 @@ export default function ErrorReportsPage() {
 
       <DisabledActionPanel
         title="Bug-fix workflow actions"
-        description="Sentry issue links, OpenTelemetry traces, GitHub issue creation, alert routing, privacy-safe screenshots, and agent handoff automation require provider credentials, persistence, and runtime verification."
+        description="GET /api/error-reports now provides RBAC-gated, tenant-scoped, audit-logged, metadata-redacted reads. Sentry issue links, OpenTelemetry traces, GitHub issue creation, alert routing, privacy-safe screenshots, and agent handoff automation require provider credentials and runtime verification."
         actions={["Create GitHub issue", "Assign severity", "Open Sentry event", "Replay trace", "Generate agent handoff"]}
       />
     </main>
