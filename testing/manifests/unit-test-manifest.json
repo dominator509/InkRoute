@@ -1365,17 +1365,15 @@
       "verifies": [
         "GAP-079 forced-error matrix covers web global-error, dashboard global-error, public API ingest, Sentry webhook, dashboard triage, mobile status, sanitized logs, local persistence, provider proof, and closeout artifacts",
         "GAP-079 synthetic payloads and artifacts are redacted-only and do not use live PII/payment/token data",
-        "GAP-079 CI runs observability package, route, dashboard route, and runtime verification static contracts"
+        "GAP-079 observabilityRuntimeVerificationMatrix wires package checks, browser/API/mobile forced-error proof, provider proof, no-PII audit, CI evidence, and closeout artifacts"
       ],
       "blockedBy": [
         "Static observability runtime verification test execution pending",
-        "Browser forced-error screenshots pending",
+        "Browser forced-error UX screenshots pending",
+        "API/webhook forced-error smoke and sanitized logs pending",
         "Mobile simulator/device forced-error screenshots pending",
-        "Sanitized forced-error log capture pending",
-        "Local fallback persistence runtime proof pending",
-        "Dashboard triage runtime proof pending",
-        "Live Sentry/provider runtime proof pending",
-        "No-PII closeout evidence pending"
+        "Local fallback persistence and dashboard triage runtime proof pending",
+        "Sentry/provider proof, no-PII artifact audit, CI evidence, and closeout evidence pending"
       ]
     },
     {

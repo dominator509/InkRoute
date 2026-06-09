@@ -2164,6 +2164,11 @@ jobs:
           name: observability-runtime-verification-artifacts
           path: |
             coverage/observability-*.json
+            coverage/observability-no-pii-artifact-audit.json
+            coverage/observability-provider-webhook-proof-redacted.json
+            coverage/observability-runtime-static-contract.json
+            coverage/observability-package-test.txt
+            coverage/observability-package-typecheck.txt
             coverage/observability-*.png
             coverage/observability-*-redacted.json
             coverage/observability-runtime-closeout.md
