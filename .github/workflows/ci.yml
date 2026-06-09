@@ -392,6 +392,30 @@ jobs:
             test-results/prisma-lifecycle-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 1 provider session runtime contracts
+        run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/provider-session-runtime-static.test.ts
+
+      - name: Upload Phase 1 provider session runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-session-runtime-artifacts
+          path: |
+            coverage/provider-session-runtime.json
+            coverage/provider-session-auth-typecheck.txt
+            coverage/provider-session-auth-test.txt
+            coverage/provider-session-provider-env-redacted.json
+            coverage/provider-session-login-callback.json
+            coverage/provider-session-logout-callback.json
+            coverage/provider-session-callback-tenant-lookup.json
+            coverage/provider-session-persistence.json
+            coverage/provider-session-security-controls.json
+            coverage/provider-session-audit-log.json
+            coverage/provider-session-tenant-isolation-smoke.json
+            coverage/provider-session-mobile-revocation-smoke.json
+            test-results/provider-session-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 18 workspace runtime readiness
         run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness && pnpm workspace:required-checks && pnpm workspace:toolchain
       - name: Run Phase 17 quality gate runtime contracts

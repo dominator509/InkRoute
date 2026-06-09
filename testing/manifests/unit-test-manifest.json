@@ -2301,6 +2301,22 @@
         "Prisma validate/generate/migrate, SQL review, seed, and drift proof pending",
         "DB lifecycle CI evidence pending"
       ]
+    },
+    {
+      "id": "unit-web-provider-session-runtime-static",
+      "file": "apps/web/tests/provider-session-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-003 provider session runtime matrix covers auth typecheck/test, provider selection/env/callbacks, login/logout/session callbacks, provider identity mapping, persisted User/TenantMember/CustomRole/session/revocation lookups, secure dashboard cookies, secure mobile tokens, audit logs, provider-backed tests, cross-tenant smoke tests, and command evidence",
+        "GAP-003 auth helper, package tests, dashboard middleware guardrails, CI labels, artifact paths, and tracker row remain wired without claiming a provider-backed session store exists",
+        "GAP-003 readiness keeps provider-backed auth controls explicit until provider, persistence, security, smoke, and evidence gates are satisfied"
+      ],
+      "blockedBy": [
+        "Static provider session runtime test execution pending",
+        "Auth provider selection/env/callbacks pending",
+        "Persisted session store, membership/role lookup, revocation, cookies/mobile token security, and audit logs pending",
+        "Provider-backed tests, tenant-isolation smoke tests, and command evidence pending"
+      ]
     }
   ]
 }
