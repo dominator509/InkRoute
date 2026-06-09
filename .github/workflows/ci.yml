@@ -1575,6 +1575,30 @@ jobs:
             test-results/privacy-retention-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 3 public content runtime contracts
+        run: pnpm --filter @inkroute/config test && pnpm vitest run apps/web/tests/public-content-runtime-static.test.ts
+
+      - name: Upload Phase 3 public content runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-content-runtime-artifacts
+          path: |
+            coverage/public-content-runtime.json
+            coverage/public-content-config-typecheck.txt
+            coverage/public-content-config-test.txt
+            coverage/public-content-web-typecheck.txt
+            coverage/public-content-web-build.txt
+            coverage/public-content-resolver-wiring.json
+            coverage/public-content-seeded-db-cms-redacted.json
+            coverage/public-content-api-json-redaction.json
+            coverage/public-content-rendered-html-redaction.json
+            coverage/public-content-cache-revalidation.json
+            coverage/public-content-browser-smoke.json
+            coverage/public-content-ci-evidence.json
+            test-results/public-content-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 13 legal review evidence contracts
         run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/legal-review-evidence-static.test.ts
 
