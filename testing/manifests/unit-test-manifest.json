@@ -964,6 +964,24 @@
                                          "Seeded Postgres lifecycle integration tests pending",
                                          "Concurrent slot hold race-condition tests pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-dashboard-google-calendar-sync-static",
+                       "file":  "apps/dashboard/tests/google-calendar-sync-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "GAP-057 Google Calendar sync contract covers OAuth, FreeBusy, event upsert/delete, full sync, incremental sync, and push renewal",
+                                        "GAP-057 Google Calendar sync requires encrypted tokens, idempotency, invalid sync-token recovery, push channel validation, and CalendarAuditLog persistence",
+                                        "GAP-057 dashboard Google sync API blocks or returns provider-worker-required instead of executing unconfigured Google calls",
+                                        "GAP-057 readiness remains blocked on SDK/OAuth configuration, smoke tests, tenant isolation, push webhook, and Google test-calendar artifacts"
+                                    ],
+                       "blockedBy":  [
+                                         "Static Google calendar sync test execution pending",
+                                         "Google SDK/client dependency pending",
+                                         "OAuth app credentials and callback smoke pending",
+                                         "Google FreeBusy/event/push/recovery smoke artifacts pending",
+                                         "Tenant isolation tests pending"
+                                     ]
                    }
                ]
 }
