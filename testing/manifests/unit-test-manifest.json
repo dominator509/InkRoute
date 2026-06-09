@@ -2644,6 +2644,19 @@
       ]
     },
     {
+      "id": "unit-web-booking-requests-contract",
+      "file": "apps/web/tests/booking-requests-contract.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-017 booking requests API contract enforces tenant-scoped anti-bot proof for database writes",
+        "GAP-017 booking requests API contract pins local/database post-persist workflow parity and tenant-isolated consumers",
+        "GAP-017 booking runtime evidence plan keeps install, Prisma generation, Next build, browser smoke, DB smoke, and secret-safe artifacts explicit gates"
+      ],
+      "blockedBy": [
+        "Runtime booking flow evidence remains tracked outside closed GAP-017 API contract scope"
+      ]
+    },
+    {
       "id": "unit-web-booking-contact-runtime-static",
       "file": "apps/web/tests/booking-contact-runtime-static.test.ts",
       "priority": "high",
