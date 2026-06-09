@@ -22,6 +22,31 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Verify Phase 14 testing manifests
         run: pnpm test:phase14:static && pnpm test:manifest
+      - name: Run Phase 15 database operations runtime contracts
+        run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/database-operations-runtime-static.test.ts
+
+      - name: Upload Phase 15 database operations runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-operations-runtime-artifacts
+          path: |
+            coverage/database-operations-runtime.json
+            coverage/database-operations-verifier.json
+            coverage/database-provider-branch-redacted.json
+            coverage/database-prisma-generate.log
+            coverage/database-prisma-validate.log
+            coverage/database-migration-dry-run-redacted.json
+            coverage/database-destructive-sql-scan.json
+            coverage/database-staging-migration-apply-redacted.json
+            coverage/database-seed-policy-redacted.json
+            coverage/database-backup-restore-drill-redacted.json
+            coverage/database-tenant-isolation-smoke-redacted.json
+            coverage/database-branch-promotion-approval-redacted.json
+            coverage/database-production-data-safety-review.md
+            coverage/database-operations-ci-run-redacted.json
+            test-results/database-operations-runtime
+          if-no-files-found: warn
       - name: Run Phase 15 mobile deployment runtime contracts
         run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/mobile-deployment-runtime-static.test.ts
 
@@ -1044,6 +1069,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
