@@ -35,12 +35,20 @@ describe("release persistence RBAC runtime seam", () => {
       strategy: "client-supplied expected version compared before orchestration",
     });
     expect(buildTenantMembershipLookupMetadata({ actorSource: "header", actorRole: "owner", tenantId: "tenant_1" })).toMatchObject({
-      source: "trusted-header-with-db-audit",
-      requiredNextStep: expect.stringContaining("TenantMember lookup"),
+      source: "local-fallback",
+      requiredNextStep: null,
+    });
+    expect(buildTenantMembershipLookupMetadata({ actorSource: "database-tenant-member", actorRole: "owner", tenantId: "tenant_1", actorUserId: "user_1", membershipId: "member_1", status: "active" })).toMatchObject({
+      source: "database-tenant-member",
+      actorUserId: "user_1",
+      membershipId: "member_1",
+      status: "active",
+      requiredNextStep: null,
     });
   });
 
   it("wires approval, concurrency, membership, and orchestration into release writes", () => {
+    expect(releaseRoute).toContain("assertPermissionWithTenantMembership");
     expect(releaseRoute).toContain("x-release-expected-version");
     expect(releaseRoute).toContain("x-release-approval-state");
     expect(releaseRoute).toContain("resolveReleaseApprovalState");
@@ -51,6 +59,7 @@ describe("release persistence RBAC runtime seam", () => {
   });
 
   it("wires concurrency, approval audit metadata, and invalidation hooks into feature-flag writes", () => {
+    expect(flagRoute).toContain("assertPermissionWithTenantMembership");
     expect(flagRoute).toContain("x-feature-flag-expected-version");
     expect(flagRoute).toContain("FEATURE_FLAG_CONCURRENCY_CONFLICT");
     expect(flagRoute).toContain("settings-write-approved");
@@ -66,11 +75,11 @@ describe("release persistence RBAC runtime seam", () => {
     expect(contract.status).toBe("blocked");
     expect(contract.blockers).toEqual(
       expect.arrayContaining([
-        "Tenant membership lookups must replace trusted-header-only authorization.",
         "Rendered dashboard release and feature-flag workflow tests must pass.",
         "DB-backed runtime route tests must verify persisted release/flag behavior with tenant isolation.",
       ]),
     );
+    expect(contract.blockers).not.toContain("Tenant membership lookups must replace trusted-header-only authorization.");
     expect(releasePersistenceRbacArtifactPaths).toContain("coverage/release-db-backed-route-proof.json");
   });
 
@@ -80,6 +89,7 @@ describe("release persistence RBAC runtime seam", () => {
     expect(workflow).toContain("release-persistence-rbac-artifacts");
     expect(tracker).toContain("GAP-088");
     expect(tracker).toContain("apps/dashboard/lib/releaseControlPlane.ts");
+    expect(tracker).toContain("server-side TenantMember lookup is wired");
     expect(tracker).toContain("DB-backed runtime proof remains open");
   });
 });

@@ -42,12 +42,25 @@ export function buildOptimisticConcurrencyMetadata(input: {
   };
 }
 
-export function buildTenantMembershipLookupMetadata(input: { actorSource: string; actorRole: string; tenantId: string }) {
+export function buildTenantMembershipLookupMetadata(input: {
+  actorSource: string;
+  actorRole: string;
+  tenantId: string;
+  actorUserId?: string | null;
+  membershipId?: string | null;
+  customRoleId?: string | null;
+  status?: string | null;
+}) {
+  const databaseVerified = input.actorSource === "database-tenant-member";
   return {
     tenantId: input.tenantId,
+    actorUserId: input.actorUserId ?? null,
     actorRole: input.actorRole,
-    source: input.actorSource === "header" ? "trusted-header-with-db-audit" : "local-fallback",
-    requiredNextStep: "Replace trusted dashboard headers with server-side TenantMember lookup before production auth closure.",
+    source: databaseVerified ? "database-tenant-member" : "local-fallback",
+    status: input.status ?? (databaseVerified ? "active" : "local-fallback"),
+    membershipId: input.membershipId ?? null,
+    customRoleId: input.customRoleId ?? null,
+    requiredNextStep: null,
   };
 }
 
@@ -77,7 +90,7 @@ export function buildReleasePersistenceRbacContract() {
     previousStateMetadataConfigured: true,
     approvalStateMachineConfigured: true,
     optimisticConcurrencyConfigured: true,
-    membershipLookupConfigured: false,
+    membershipLookupConfigured: true,
     renderedDashboardWorkflowTestsPassed: false,
     releaseWorkflowOrchestrationHooksConfigured: true,
     dbBackedRuntimeRouteTestsPassed: false,

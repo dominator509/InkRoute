@@ -2,7 +2,7 @@
 import { createReleaseCandidate, createRollbackPlan, demoReleaseCandidate, buildReleaseHealthChecks } from "@inkroute/releases";
 import { releaseCreateInputSchema } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
-import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
+import { assertPermission, assertPermissionWithTenantMembership, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 import {
   buildOptimisticConcurrencyMetadata,
   buildReleaseWorkflowOrchestrationMetadata,
@@ -98,8 +98,9 @@ function buildReleaseFallback(actor: ReturnType<typeof resolveDashboardActor>) {
 
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
+  let membershipLookup;
   try {
-    assertPermission(actor, "release:read");
+    membershipLookup = await assertPermissionWithTenantMembership(actor, "release:read");
   } catch {
     return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read release records." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
   }
@@ -157,7 +158,8 @@ export async function GET(request: NextRequest) {
       ok: true,
       source: actor.source,
       tenantId,
-      actorRole: actor.role,
+      actorRole: membershipLookup.actorRole,
+      membershipLookup,
       status: "authenticated",
       release,
       releases: result.releases.map(toReleaseSummary),
@@ -178,8 +180,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const actor = resolveDashboardActor(request);
+  let membershipLookup;
   try {
-    assertPermission(actor, "release:write");
+    membershipLookup = await assertPermissionWithTenantMembership(actor, "release:write");
   } catch {
     return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to create release records." } }, { status: 403 });
   }
@@ -235,9 +238,9 @@ export async function POST(request: NextRequest) {
     channel: input.channel,
     requestedState: requestedApprovalState,
     productionBlocked: releaseCandidate.productionBlocked,
-    actorRole: actor.role,
+    actorRole: membershipLookup.actorRole,
   });
-  const membershipLookup = buildTenantMembershipLookupMetadata({ actorSource: actor.source, actorRole: actor.role, tenantId });
+  const membershipMetadata = buildTenantMembershipLookupMetadata({ ...membershipLookup, actorSource: membershipLookup.source });
 
   if (actor.source === "local-fallback") {
     return NextResponse.json(
@@ -247,7 +250,7 @@ export async function POST(request: NextRequest) {
         tenantId: actor.tenantId,
         persistence: "local-fallback",
         release: releaseCandidate,
-        approval: { state: approvalState, membershipLookup },
+        approval: { state: approvalState, membershipLookup: membershipMetadata },
         concurrency: buildOptimisticConcurrencyMetadata({ expectedVersion: expectedVersionHeader, currentVersion: input.version }),
         orchestration: buildReleaseWorkflowOrchestrationMetadata({ approvalState, channel: input.channel }),
         artifactPaths: releasePersistenceRbacArtifactPaths,
@@ -292,7 +295,7 @@ export async function POST(request: NextRequest) {
             channel: input.channel,
             source: "dashboard-api",
             approvalState,
-            membershipLookup,
+            membershipLookup: membershipMetadata,
             concurrency,
             orchestration: buildReleaseWorkflowOrchestrationMetadata({ approvalState, channel: input.channel, recordId: created.id }),
             artifactPaths: releasePersistenceRbacArtifactPaths,
@@ -315,7 +318,8 @@ export async function POST(request: NextRequest) {
         persistedAt: persisted.created.createdAt.toISOString(),
       },
       auditId: persisted.audit.id,
-      approval: { state: approvalState, membershipLookup },
+      approval: { state: approvalState, membershipLookup: membershipMetadata },
+      membershipLookup: membershipMetadata,
       concurrency: persisted.concurrency,
       orchestration: buildReleaseWorkflowOrchestrationMetadata({ approvalState, channel: input.channel, recordId: persisted.created.id }),
       artifactPaths: releasePersistenceRbacArtifactPaths,

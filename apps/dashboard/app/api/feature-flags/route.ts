@@ -2,7 +2,7 @@
 import { defaultFeatureFlags, evaluateFeatureFlags, type FeatureFlagDefinition } from "@inkroute/releases";
 import { featureFlagPatchInputSchema } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
-import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
+import { assertPermissionWithTenantMembership, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 import {
   buildOptimisticConcurrencyMetadata,
   buildTenantMembershipLookupMetadata,
@@ -185,8 +185,9 @@ function buildDecisionContext(actorRole: string, tenantId: string, environment: 
 
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
+  let membershipLookup;
   try {
-    assertPermission(actor, "release:read");
+    membershipLookup = await assertPermissionWithTenantMembership(actor, "release:read");
   } catch {
     return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read feature flags." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
   }
@@ -199,7 +200,7 @@ export async function GET(request: NextRequest) {
 
   const environment = normalizeEnvironment(params.get("environment"));
   const role = params.get("role");
-  const context = buildDecisionContext(actor.role, tenantId, environment, role);
+  const context = buildDecisionContext(membershipLookup.actorRole, tenantId, environment, role);
 
   if (actor.source === "local-fallback") {
     const decisions = evaluateFeatureFlags(defaultFeatureFlags, context);
@@ -208,7 +209,8 @@ export async function GET(request: NextRequest) {
         ok: true,
         source: actor.source,
         tenantId,
-        actorRole: actor.role,
+        actorRole: membershipLookup.actorRole,
+        membershipLookup,
         persistence: "local-fallback",
         environment,
         definitions: buildSafeResponseDefinitions([...defaultFeatureFlags]),
@@ -237,7 +239,7 @@ export async function GET(request: NextRequest) {
           metadata: {
             source: "dashboard-api",
             environment,
-            role: role ?? actor.role,
+            role: role ?? membershipLookup.actorRole,
             definitionCount: definitions.length,
             redactedFields: ["rules.secret", "rules.token", "rules.providerKey", "rules.privateRolloutNotes"],
           },
@@ -274,14 +276,15 @@ export async function GET(request: NextRequest) {
       throw error;
     }
     const definitions = [...defaultFeatureFlags];
-    const fallbackContext = buildDecisionContext(actor.role, tenantId, environment, role);
+    const fallbackContext = buildDecisionContext(membershipLookup.actorRole, tenantId, environment, role);
     const decisions = evaluateFeatureFlags(definitions, fallbackContext);
     return NextResponse.json(
       {
         ok: true,
         source: actor.source,
         tenantId,
-        actorRole: actor.role,
+        actorRole: membershipLookup.actorRole,
+        membershipLookup,
         persistence: "local-fallback",
         environment,
         definitions: buildSafeResponseDefinitions(definitions),
@@ -302,8 +305,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const actor = resolveDashboardActor(request);
+  let membershipLookup;
   try {
-    assertPermission(actor, "settings:write");
+    membershipLookup = await assertPermissionWithTenantMembership(actor, "settings:write");
   } catch {
     return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to modify feature flags." } }, { status: 403 });
   }
@@ -356,7 +360,7 @@ export async function POST(request: NextRequest) {
           rules: persistedRules,
         },
         concurrency: buildOptimisticConcurrencyMetadata({ expectedVersion: expectedVersionHeader, currentVersion: input.key }),
-        membershipLookup: buildTenantMembershipLookupMetadata({ actorSource: actor.source, actorRole: actor.role, tenantId }),
+        membershipLookup: buildTenantMembershipLookupMetadata({ ...membershipLookup, actorSource: membershipLookup.source }),
         artifactPaths: releasePersistenceRbacArtifactPaths,
         warning: "Local fallback mode: flag mutation is not persisted in database mode.",
         gapIds: ["GAP-088", "GAP-090", "GAP-093"],
@@ -375,7 +379,7 @@ export async function POST(request: NextRequest) {
       if (concurrency.conflict) {
         throw Object.assign(new Error("FEATURE_FLAG_CONCURRENCY_CONFLICT"), { code: "FEATURE_FLAG_CONCURRENCY_CONFLICT", concurrency });
       }
-      const membershipLookup = buildTenantMembershipLookupMetadata({ actorSource: actor.source, actorRole: actor.role, tenantId });
+      const membershipMetadata = buildTenantMembershipLookupMetadata({ ...membershipLookup, actorSource: membershipLookup.source });
       const featureFlag = await tx.featureFlag.upsert({
         where: { tenantId_key: { tenantId, key: input.key } },
         update: {
@@ -408,14 +412,14 @@ export async function POST(request: NextRequest) {
             previousEnabled: existing?.enabled ?? null,
             previousScope: existing?.scope ?? null,
             concurrency,
-            membershipLookup,
+            membershipLookup: membershipMetadata,
             approvalState: "settings-write-approved",
             orchestrationHook: "feature-flag-runtime-invalidation-pending",
             artifactPaths: releasePersistenceRbacArtifactPaths,
           },
         },
       });
-      return { featureFlag, audit, existing, concurrency, membershipLookup };
+      return { featureFlag, audit, existing, concurrency, membershipLookup: membershipMetadata };
     });
 
     return NextResponse.json({
