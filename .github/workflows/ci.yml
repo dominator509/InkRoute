@@ -1756,6 +1756,37 @@ jobs:
             test-results/sms-provider-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 9 notification persistence runtime contracts
+        run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/dashboard/tests/notification-persistence-runtime-static.test.ts apps/dashboard/tests/notification-persistence-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts
+
+      - name: Upload Phase 9 notification persistence runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notification-persistence-runtime-artifacts
+          path: |
+            coverage/notification-persistence-runtime.json
+            coverage/notification-persistence-notifications-typecheck.txt
+            coverage/notification-persistence-notifications-test.txt
+            coverage/notification-persistence-dashboard-typecheck.txt
+            coverage/notification-persistence-static-contract.json
+            coverage/notification-persistence-prisma-schema.json
+            coverage/notification-persistence-repository-contract.json
+            coverage/notification-persistence-message-transaction.json
+            coverage/notification-persistence-notification-delivery.json
+            coverage/notification-persistence-audit-log.json
+            coverage/notification-persistence-idempotency-key.json
+            coverage/notification-persistence-read-state.json
+            coverage/notification-persistence-status-transition.json
+            coverage/notification-persistence-provider-worker-handoff.json
+            coverage/notification-persistence-rbac-redaction.json
+            coverage/notification-persistence-tenant-isolation.json
+            coverage/notification-persistence-postgres-integration.json
+            coverage/notification-persistence-ci-evidence.json
+            coverage/notification-persistence-secret-safe-artifacts.json
+            test-results/notification-persistence-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 9 notification and messaging lifecycle contracts
         run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/email-provider-static.test.ts apps/web/tests/sms-provider-static.test.ts apps/web/tests/preference-center-static.test.ts apps/web/tests/notification-automation-static.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/notification-persistence-static.test.ts apps/dashboard/tests/notification-scheduler-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
 
