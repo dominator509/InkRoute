@@ -1492,6 +1492,23 @@
                                          "Mobile simulator crash-report UI execution pending",
                                          "Mobile physical-device crash proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-release-runtime-verification-static",
+                       "file":  "apps/web/tests/release-runtime-verification-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-087 release runtime matrix covers package tests/typecheck, release-health route smoke, dashboard release route smoke, feature-flag route smoke, app builds, and release-governance workflow proof",
+                                        "GAP-087 CI retains redacted release runtime, dashboard route, build, mobile typecheck, and workflow dry-run artifact paths",
+                                        "GAP-087 readiness planner remains blocked until builds, dashboard smokes, GitHub Actions logs, and CI artifacts are actually captured"
+                                    ],
+                       "blockedBy":  [
+                                         "Static release runtime verification test execution pending",
+                                         "Web/dashboard/mobile build evidence pending",
+                                         "Dashboard release/feature-flag runtime smoke execution pending",
+                                         "Release-governance GitHub Actions dry-run logs pending",
+                                         "CI artifact attachment pending"
+                                     ]
                    }
                ]
 }
