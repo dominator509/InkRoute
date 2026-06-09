@@ -237,6 +237,26 @@ jobs:
             test-results/handoff-tooling-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 16 agent task tracking runtime contracts
+        run: pnpm --filter @inkroute/handoff test && pnpm vitest run apps/web/tests/agent-task-tracking-runtime-static.test.ts
+
+      - name: Upload Phase 16 agent task tracking runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-task-tracking-runtime-artifacts
+          path: |
+            coverage/agent-task-tracking-runtime.json
+            coverage/agent-task-tracking-sync-verifier.json
+            coverage/agent-task-tracking-issue-create-redacted.json
+            coverage/agent-task-tracking-project-sync-redacted.json
+            coverage/agent-task-tracking-doc-links.json
+            coverage/agent-task-tracking-gap-links.json
+            coverage/agent-task-tracking-status-traceability.json
+            coverage/agent-task-tracking-ci-run-redacted.json
+            test-results/agent-task-tracking-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 16 handoff manifests
         run: pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next && pnpm handoff:verify-ledger && pnpm handoff:verify-tooling && pnpm handoff:verify-task-sync
       - name: Verify Phase 18 workspace runtime readiness
