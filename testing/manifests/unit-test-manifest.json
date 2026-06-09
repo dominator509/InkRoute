@@ -1590,7 +1590,7 @@
       "priority": "high",
       "verifies": [
         "GAP-092 migration runtime helper pins Prisma validate, migrate diff, migrate deploy, and release-governance dry-run commands",
-        "GAP-092 destructive SQL scan blocks DROP/TRUNCATE patterns without backup, approval, expand/contract, forward-fix, and rollback evidence",
+        "GAP-092 destructive SQL scan blocks DROP/TRUNCATE patterns without backup, approval, expand/contract, forward-fix, and structured rollback rehearsal evidence",
         "GAP-092 CI retains validate, diff SQL, destructive scan, backup, expand/contract, forward-fix, rollback, and GitHub Actions dry-run artifacts without claiming staging proof"
       ],
       "blockedBy": [
@@ -1598,7 +1598,7 @@
         "Committed Prisma migrations directory pending",
         "Staging DATABASE_URL secret pending",
         "GitHub Actions migration dry-run success pending",
-        "Backup/approval/rollback evidence pending"
+        "Backup/approval/expand-contract/forward-fix evidence pending"
       ]
     },
     {

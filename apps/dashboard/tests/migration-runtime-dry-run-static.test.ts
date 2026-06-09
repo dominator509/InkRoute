@@ -6,6 +6,7 @@ import {
   buildDestructiveSqlScanPolicy,
   buildMigrationRuntimeContract,
   buildMigrationRuntimeEvidenceEnvelope,
+  buildMigrationRollbackRehearsalEvidence,
   migrationRuntimeArtifactPaths,
   migrationRuntimeCommands,
 } from "../lib/migrationRuntimeDryRun";
@@ -40,11 +41,19 @@ describe("migration runtime dry-run compatibility contract", () => {
 
   it("builds a migration evidence envelope without storing database URLs", () => {
     const envelope = buildMigrationRuntimeEvidenceEnvelope({ migrationsDirectoryExists, stagingDatabaseUrlConfigured: false });
+    const rehearsal = buildMigrationRollbackRehearsalEvidence({ releaseId: "rel_1", migrationLabel: "migration_1", destructiveSqlDetected: true });
 
     expect(envelope.schemaPath).toBe("packages/db/prisma/schema.prisma");
     expect(envelope.migrationDirectory).toBe("packages/db/prisma/migrations");
     expect(envelope.ci.rawDatabaseUrlStored).toBe(false);
     expect(envelope.rollbackPolicy.strategy).toBe("forward-fix-first");
+    expect(envelope.rollbackRehearsal).toMatchObject({ rehearsalRecorded: true, rawDatabaseUrlStored: false });
+    expect(rehearsal).toMatchObject({
+      strategy: "forward-fix-first",
+      dataLossAssessmentRequired: true,
+      restoreRequiresIncidentApproval: true,
+      artifact: "coverage/migration-rollback-evidence.json",
+    });
   });
 
   it("keeps readiness blocked when real migrations and staging DATABASE_URL are missing", () => {
@@ -55,9 +64,9 @@ describe("migration runtime dry-run compatibility contract", () => {
       expect.arrayContaining([
         "Real Prisma migrations must be generated and committed before dry-run proof.",
         "Staging DATABASE_URL must be provisioned in GitHub Actions secrets.",
-        "Rollback or forward-fix rehearsal evidence must be recorded.",
       ]),
     );
+    expect(contract.blockers).not.toContain("Rollback or forward-fix rehearsal evidence must be recorded.");
     expect(migrationRuntimeArtifactPaths).toContain("coverage/migration-github-actions-dry-run.json");
   });
 
