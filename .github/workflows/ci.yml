@@ -348,6 +348,28 @@ jobs:
             test-results/static-dependency-audit-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 1 dependency install runtime contracts
+        run: pnpm --filter @inkroute/workspace test && pnpm vitest run apps/web/tests/dependency-install-runtime-static.test.ts
+
+      - name: Upload Phase 1 dependency install runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-install-runtime-artifacts
+          path: |
+            coverage/dependency-install-runtime.json
+            coverage/dependency-corepack-output.txt
+            coverage/dependency-install-output.txt
+            coverage/dependency-frozen-lockfile-output.txt
+            coverage/dependency-workspace-all-output.txt
+            coverage/dependency-typecheck-output.txt
+            coverage/dependency-lint-output.txt
+            coverage/dependency-unit-output.txt
+            coverage/dependency-ci-quality-job.json
+            coverage/dependency-production-blockers.json
+            test-results/dependency-install-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 18 workspace runtime readiness
         run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness && pnpm workspace:required-checks && pnpm workspace:toolchain
       - name: Run Phase 17 quality gate runtime contracts
