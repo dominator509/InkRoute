@@ -2532,6 +2532,20 @@
       ]
     },
     {
+      "id": "unit-web-prisma-validation-runtime-static",
+      "file": "apps/web/tests/prisma-validation-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-019 PrismaValidationRun Prisma model and app row contract plus Prisma validation command matrix covers CLI validation, relation-name review, implicit many-to-many review, enum compatibility review, generated SQL safety review, and secret-safe artifacts",
+        "GAP-019 schema relation, migration, runtime contract, artifact paths, and tracker row remain wired without claiming a fresh local validation rerun",
+        "GAP-019 readiness keeps database URL mode, generated SQL review, and validation output evidence explicit artifacts"
+      ],
+      "blockedBy": [
+        "Fresh Prisma validation evidence must be recaptured after schema changes",
+        "Provider-backed PrismaValidationRun transaction and secret-safe validation artifact proof pending"
+      ]
+    },
+    {
       "id": "unit-web-validator-launch-adoption-runtime-static",
       "file": "apps/web/tests/validator-launch-adoption-runtime-static.test.ts",
       "priority": "medium",

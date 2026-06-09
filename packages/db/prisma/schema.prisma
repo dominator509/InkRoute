@@ -415,6 +415,7 @@ model Tenant {
   releaseLaunchControlRuns ReleaseLaunchControlRun[]
   uiPackageAdoptionRuns UiPackageAdoptionRun[]
   seedRuntimeExecutionRuns SeedRuntimeExecutionRun[]
+  prismaValidationRuns PrismaValidationRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3535,6 +3536,32 @@ model SeedRuntimeExecutionRun {
   createdAt                           DateTime @default(now())
   updatedAt                           DateTime @updatedAt
   tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model PrismaValidationRun {
+  id                                String   @id @default(cuid())
+  tenantId                          String
+  runId                             String
+  commitSha                         String
+  schemaPath                        String
+  databaseUrlMode                   String
+  status                            String
+  commandMatrix                     Json
+  artifactManifest                  Json
+  relationNameEvidenceCaptured      Boolean  @default(false)
+  manyToManyEvidenceCaptured        Boolean  @default(false)
+  enumCompatibilityEvidenceCaptured Boolean  @default(false)
+  generatedSqlEvidenceCaptured      Boolean  @default(false)
+  secretSafeArtifactsCaptured       Boolean  @default(false)
+  validateOutputPath                String?
+  generatedSqlReviewPath            String?
+  createdAt                         DateTime @default(now())
+  updatedAt                         DateTime @updatedAt
+  tenant                            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])
