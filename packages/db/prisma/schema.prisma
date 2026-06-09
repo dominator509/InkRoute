@@ -417,6 +417,7 @@ model Tenant {
   seedRuntimeExecutionRuns SeedRuntimeExecutionRun[]
   prismaValidationRuns PrismaValidationRun[]
   validatorLaunchAdoptionRuns ValidatorLaunchAdoptionRun[]
+  tenantIsolationRuns TenantIsolationRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3589,6 +3590,34 @@ model ValidatorLaunchAdoptionRun {
   createdAt                       DateTime @default(now())
   updatedAt                       DateTime @updatedAt
   tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model TenantIsolationRun {
+  id                                    String   @id @default(cuid())
+  tenantId                              String
+  runId                                 String
+  commitSha                             String
+  status                                String
+  commandMatrix                         Json
+  artifactManifest                      Json
+  databaseLifecycleEvidenceCaptured     Boolean  @default(false)
+  repositoryAdoptionEvidenceCaptured    Boolean  @default(false)
+  tenantOwnedModelCoverageCaptured      Boolean  @default(false)
+  crossTenantDenialEvidenceCaptured     Boolean  @default(false)
+  missingTenantRejectionEvidenceCaptured Boolean @default(false)
+  auditRowEvidenceCaptured              Boolean  @default(false)
+  fixtureCleanupEvidenceCaptured        Boolean  @default(false)
+  ciEvidenceCaptured                    Boolean  @default(false)
+  secretSafeArtifactsCaptured           Boolean  @default(false)
+  modelCoverageReportPath               String?
+  denialMatrixReportPath                String?
+  createdAt                             DateTime @default(now())
+  updatedAt                             DateTime @updatedAt
+  tenant                                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

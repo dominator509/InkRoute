@@ -15,6 +15,47 @@ export interface TenantIsolationRuntimeMatrixEntry {
   readonly status: TenantIsolationRuntimeStatus;
 }
 
+
+export interface TenantIsolationRunPersistenceContract {
+  readonly prismaModel: "TenantIsolationRun";
+  readonly tenantRelation: "tenantIsolationRuns";
+  readonly migration: "20260609034400_add_tenant_isolation_runs";
+  readonly storesRunId: true;
+  readonly storesCommitSha: true;
+  readonly storesReadinessStatus: true;
+  readonly storesCommandMatrix: true;
+  readonly storesArtifactManifest: true;
+  readonly storesDatabaseLifecycleEvidence: true;
+  readonly storesRepositoryAdoptionEvidence: true;
+  readonly storesTenantOwnedModelCoverage: true;
+  readonly storesCrossTenantDenialEvidence: true;
+  readonly storesMissingTenantRejectionEvidence: true;
+  readonly storesAuditRowEvidence: true;
+  readonly storesFixtureCleanupEvidence: true;
+  readonly storesCiEvidence: true;
+  readonly storesSecretSafeArtifacts: true;
+}
+
+export const tenantIsolationRunPersistenceContract = {
+  prismaModel: "TenantIsolationRun",
+  tenantRelation: "tenantIsolationRuns",
+  migration: "20260609034400_add_tenant_isolation_runs",
+  storesRunId: true,
+  storesCommitSha: true,
+  storesReadinessStatus: true,
+  storesCommandMatrix: true,
+  storesArtifactManifest: true,
+  storesDatabaseLifecycleEvidence: true,
+  storesRepositoryAdoptionEvidence: true,
+  storesTenantOwnedModelCoverage: true,
+  storesCrossTenantDenialEvidence: true,
+  storesMissingTenantRejectionEvidence: true,
+  storesAuditRowEvidence: true,
+  storesFixtureCleanupEvidence: true,
+  storesCiEvidence: true,
+  storesSecretSafeArtifacts: true,
+} as const satisfies TenantIsolationRunPersistenceContract;
+
 export const tenantIsolationRuntimeCommands = [
   "pnpm --filter @inkroute/db typecheck",
   "pnpm --filter @inkroute/db test",

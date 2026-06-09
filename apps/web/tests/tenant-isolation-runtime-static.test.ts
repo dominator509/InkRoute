@@ -7,6 +7,7 @@ import {
   tenantIsolationRuntimeCommands,
   tenantIsolationRuntimeMatrix,
   tenantIsolationRuntimeReadiness,
+  tenantIsolationRunPersistenceContract,
 } from "../lib/tenantIsolationRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -21,6 +22,8 @@ describe("tenant isolation runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const tenantIsolationRunMigration = readRepoFile("packages/db/prisma/migrations/20260609034400_add_tenant_isolation_runs/migration.sql");
 
   it("pins tenant isolation commands, model coverage, matrix rows, and artifacts", () => {
     expect(tenantIsolationRuntimeCommands).toEqual([
@@ -95,13 +98,46 @@ describe("tenant isolation runtime contract", () => {
     );
   });
 
+  it("pins the TenantIsolationRun persistence model and migration", () => {
+    expect(tenantIsolationRunPersistenceContract).toEqual({
+      prismaModel: "TenantIsolationRun",
+      tenantRelation: "tenantIsolationRuns",
+      migration: "20260609034400_add_tenant_isolation_runs",
+      storesRunId: true,
+      storesCommitSha: true,
+      storesReadinessStatus: true,
+      storesCommandMatrix: true,
+      storesArtifactManifest: true,
+      storesDatabaseLifecycleEvidence: true,
+      storesRepositoryAdoptionEvidence: true,
+      storesTenantOwnedModelCoverage: true,
+      storesCrossTenantDenialEvidence: true,
+      storesMissingTenantRejectionEvidence: true,
+      storesAuditRowEvidence: true,
+      storesFixtureCleanupEvidence: true,
+      storesCiEvidence: true,
+      storesSecretSafeArtifacts: true,
+    });
+    expect(prismaSchema).toContain("model TenantIsolationRun");
+    expect(prismaSchema).toContain("tenantIsolationRuns TenantIsolationRun[]");
+    expect(prismaSchema).toContain("repositoryAdoptionEvidenceCaptured");
+    expect(prismaSchema).toContain("crossTenantDenialEvidenceCaptured");
+    expect(prismaSchema).toContain("secretSafeArtifactsCaptured");
+    expect(tenantIsolationRunMigration).toContain('CREATE TABLE "TenantIsolationRun"');
+    expect(tenantIsolationRunMigration).toContain('"commandMatrix" JSONB NOT NULL');
+    expect(tenantIsolationRunMigration).toContain('"artifactManifest" JSONB NOT NULL');
+    expect(tenantIsolationRunMigration).toContain('"TenantIsolationRun_tenantId_runId_key"');
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming live tenant isolation proof", () => {
     expect(ciWorkflow).toContain("Run Phase 2 tenant isolation runtime contracts");
     expect(ciWorkflow).toContain("tenant-isolation-runtime-static.test.ts");
     expect(ciWorkflow).toContain("tenant-isolation-runtime-artifacts");
     expect(ciWorkflow).toContain("coverage/tenant-isolation-runtime.json");
     expect(unitManifest).toContain("unit-web-tenant-isolation-runtime-static");
+    expect(unitManifest).toContain("TenantIsolationRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/tenantIsolationRuntime.ts");
+    expect(gapTracker).toContain("TenantIsolationRun Prisma model and app row contract");
     expect(gapTracker).toContain("live Prisma generate/migrate/seed, seeded multi-tenant fixtures, repository helper adoption, tenant-owned model coverage, cross-tenant denial tests, missing-tenant write rejection, audit-row integration, fixture cleanup, database evidence, CI evidence, and secret-safe artifacts remain open");
   });
 });
