@@ -304,6 +304,27 @@ jobs:
             test-results/documentation-audit-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 16 repository governance runtime contracts
+        run: pnpm --filter @inkroute/quality test && pnpm vitest run apps/web/tests/repository-governance-runtime-static.test.ts
+
+      - name: Upload Phase 16 repository governance runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repository-governance-runtime-artifacts
+          path: |
+            coverage/repository-governance-runtime.json
+            coverage/repository-governance-audit-output.txt
+            coverage/repository-governance-quality-all-output.txt
+            coverage/repository-branch-protection-redacted.json
+            coverage/repository-required-checks-redacted.json
+            coverage/repository-codeowners-review-redacted.json
+            coverage/repository-security-settings-redacted.json
+            coverage/repository-merge-rules-redacted.json
+            coverage/repository-enforcement-test-pr-redacted.json
+            test-results/repository-governance-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 17 quality gates
         run: pnpm quality:all
       - name: Verify PR GAP tracker diff evidence
