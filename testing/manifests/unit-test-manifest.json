@@ -2813,5 +2813,21 @@
         "Private file deletion, AuditLog, sanitized log/error, and legal/product approval proof pending",
         "Dashboard typecheck/build, CI evidence, and secret-safe artifact proof pending"
       ]
+    }
+    ,{
+      "id": "unit-dashboard-test-runtime-static",
+      "file": "apps/dashboard/tests/dashboard-test-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-041 dashboard test execution runtime matrix covers testing typecheck/tests, dashboard typecheck/build/test, route rendering tests, auth/RBAC/tenant-isolation tests, booking mutation lifecycle tests, provider-safe state tests, axe accessibility checks, keyboard navigation checks, Playwright critical-flow suite, CI artifact upload, branch protection required-check proof, flaky policy, and secret-safe artifacts",
+        "GAP-041 current dashboard runtime contract tests remain wired as scaffolding for auth guard, data layer, mutation, and build/runtime coverage while runnable app-level tests are added",
+        "GAP-041 readiness keeps real dashboard app tests, axe, keyboard, Playwright, CI artifacts, branch protection, flaky policy, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static dashboard test runtime execution pending",
+        "Runnable dashboard route/component/auth/RBAC/mutation/provider-safe state test proof pending",
+        "axe, keyboard, and Playwright dashboard critical-flow proof pending",
+        "CI artifacts, branch protection, flaky policy, and secret-safe artifact proof pending"
+      ]
     }  ]
 }

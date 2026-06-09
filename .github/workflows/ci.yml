@@ -850,6 +850,34 @@ jobs:
               coverage/dashboard-privacy-secret-safe-artifacts.json
               test-results/dashboard-privacy-runtime
             if-no-files-found: warn
+        - name: Run Phase 5 dashboard test execution runtime contracts
+          run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/dashboard/tests/dashboard-test-runtime-static.test.ts apps/dashboard/tests/dashboard-auth-guard-runtime-static.test.ts apps/dashboard/tests/dashboard-data-layer-runtime-static.test.ts apps/dashboard/tests/dashboard-mutation-runtime-static.test.ts apps/dashboard/tests/dashboard-build-runtime-static.test.ts
+
+        - name: Upload Phase 5 dashboard test execution runtime artifacts
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: dashboard-test-runtime-artifacts
+            path: |
+              coverage/dashboard-test-runtime.json
+              coverage/dashboard-test-testing-typecheck.txt
+              coverage/dashboard-test-testing-test.txt
+              coverage/dashboard-test-dashboard-typecheck.txt
+              coverage/dashboard-test-dashboard-build.txt
+              coverage/dashboard-test-dashboard-unit.txt
+              coverage/dashboard-test-route-rendering.json
+              coverage/dashboard-test-auth-rbac-tenant.json
+              coverage/dashboard-test-booking-mutation-lifecycle.json
+              coverage/dashboard-test-provider-safe-states.json
+              coverage/dashboard-test-axe-accessibility.json
+              coverage/dashboard-test-keyboard-navigation.json
+              coverage/dashboard-test-playwright-critical-flow.json
+              coverage/dashboard-test-ci-artifacts.json
+              coverage/dashboard-test-branch-protection.json
+              coverage/dashboard-test-flaky-policy.json
+              coverage/dashboard-test-secret-safe-artifacts.json
+              test-results/dashboard-test-runtime
+            if-no-files-found: warn
 
       - name: Run Phase 5 dashboard launch runtime contracts
         run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/dashboard-launch-runtime-static.test.ts
