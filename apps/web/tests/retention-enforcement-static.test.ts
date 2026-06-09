@@ -3,10 +3,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   buildRetentionEnforcementContract,
+  buildRetentionTombstonePersistenceContract,
   retentionEnforcementArtifactPaths,
   retentionEnforcementCommands,
   retentionEnforcementPreview,
   retentionEnforcementRuntimeContract,
+  retentionTombstonePersistencePreview,
 } from "../lib/retentionEnforcement";
 
 function readWorkspaceFile(path: string) {
@@ -65,6 +67,36 @@ describe("GAP-099 retention enforcement contract", () => {
     expect(contract.backupRestorePolicy.implication).toContain("tombstones");
   });
 
+  it("pins durable retention tombstones, dry-run reconciliation keys, restore replay, and redacted audit writes", () => {
+    const schema = readWorkspaceFile("packages/db/prisma/schema.prisma");
+    const contract = buildRetentionTombstonePersistenceContract({
+      tenantId: "tenant_demo",
+      privacyRequestId: "privacy_request_demo",
+      workerRunId: "retention_run_demo",
+      sourceRecordId: "message_due",
+      sourceRecordType: "Message",
+      category: "message",
+      action: "anonymize",
+      reason: "Past retention window.",
+      dryRunFingerprint: "sha256:redacted-dry-run",
+      executedAt: "2026-06-09T00:20:00.000Z",
+      restoreReplayAfter: "2026-06-09T00:20:00.000Z",
+      legalHoldSkipped: false,
+      rollbackNote: "Restore replay must apply tombstone before restored messages are queryable.",
+    });
+
+    expect(schema).toContain("model RetentionTombstone");
+    expect(schema).toContain("dryRunFingerprint");
+    expect(schema).toContain("restoreReplayAfter");
+    expect(schema).toContain("@@index([tenantId, sourceRecordType, sourceRecordId])");
+    expect(contract.transactionWrites).toEqual(["RetentionTombstone", "AuditLog"]);
+    expect(contract.reconciliationKeys).toContain("dryRunFingerprint");
+    expect(contract.restoreReplayGate).toBe("restore_replay_after_before_queryable");
+    expect(contract.redactedFields).toContain("storageObjectKey");
+    expect(contract.tenantIsolationKey).toBe("tenantId");
+    expect(retentionTombstonePersistencePreview.modelName).toBe("RetentionTombstone");
+  });
+
   it("blocks runtime readiness until scheduled workers, tombstones, restore replay, legal holds, audits, tenant isolation, and rollback docs exist", () => {
     expect(retentionEnforcementRuntimeContract.status).toBe("blocked");
     expect(retentionEnforcementRuntimeContract.blockers).toEqual(
@@ -98,6 +130,7 @@ describe("GAP-099 retention enforcement contract", () => {
     expect(retentionEnforcementCommands).toContain("node scripts/privacy/execute-retention-workers.mjs");
     expect(retentionEnforcementCommands).toContain("tenant-isolation retention integration test");
     expect(retentionEnforcementArtifactPaths).toContain("coverage/retention-backup-restore-tombstone-replay.json");
+    expect(manifest).toContain("RetentionTombstone Prisma model and app row contract are wired");
     expect(ci).toContain("Run Phase 13 retention enforcement contracts");
     expect(ci).toContain("apps/web/tests/retention-enforcement-static.test.ts");
     expect(ci).toContain("retention-enforcement-artifacts");

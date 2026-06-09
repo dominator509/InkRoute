@@ -28,6 +28,33 @@ export interface RetentionEnforcementContractInput {
   restorePolicyDocumented: boolean;
 }
 
+export interface RetentionTombstonePersistenceInput {
+  tenantId: string;
+  privacyRequestId?: string;
+  workerRunId: string;
+  sourceRecordId: string;
+  sourceRecordType: string;
+  category: RetentionCandidateRecord["category"];
+  action: "delete" | "anonymize" | "retain_legal_hold" | "export";
+  reason: string;
+  dryRunFingerprint: string;
+  executedAt: string;
+  restoreReplayAfter?: string;
+  storageObjectKey?: string;
+  legalHoldSkipped: boolean;
+  rollbackNote?: string;
+}
+
+export interface RetentionTombstonePersistenceContract {
+  modelName: "RetentionTombstone";
+  row: RetentionTombstonePersistenceInput;
+  transactionWrites: readonly ["RetentionTombstone", "AuditLog"];
+  reconciliationKeys: readonly ["tenantId", "workerRunId", "sourceRecordType", "sourceRecordId", "dryRunFingerprint"];
+  restoreReplayGate: "restore_replay_after_before_queryable";
+  redactedFields: readonly ["storageObjectKey", "redactedFields", "auditLogIds"];
+  tenantIsolationKey: "tenantId";
+}
+
 export const retentionEnforcementArtifactPaths = [
   "coverage/retention-enforcement-dry-run.json",
   "coverage/retention-scheduled-worker.json",
@@ -53,6 +80,20 @@ export const retentionEnforcementCommands = [
   "object-storage retention/delete integration test",
   "tenant-isolation retention integration test",
 ] as const;
+
+export function buildRetentionTombstonePersistenceContract(
+  input: RetentionTombstonePersistenceInput,
+): RetentionTombstonePersistenceContract {
+  return {
+    modelName: "RetentionTombstone",
+    row: input,
+    transactionWrites: ["RetentionTombstone", "AuditLog"],
+    reconciliationKeys: ["tenantId", "workerRunId", "sourceRecordType", "sourceRecordId", "dryRunFingerprint"],
+    restoreReplayGate: "restore_replay_after_before_queryable",
+    redactedFields: ["storageObjectKey", "redactedFields", "auditLogIds"],
+    tenantIsolationKey: "tenantId",
+  };
+}
 
 export function buildRetentionEnforcementContract(input: RetentionEnforcementContractInput) {
   const dryRun = buildRetentionEnforcementDryRun(input);
@@ -116,4 +157,21 @@ export const retentionEnforcementPreview = buildRetentionEnforcementContract({
   auditLogConfigured: false,
   backupPolicyDocumented: false,
   restorePolicyDocumented: false,
+});
+
+export const retentionTombstonePersistencePreview = buildRetentionTombstonePersistenceContract({
+  tenantId: "tenant_demo",
+  privacyRequestId: "privacy_request_demo",
+  workerRunId: "retention_run_demo",
+  sourceRecordId: "reference_due",
+  sourceRecordType: "FileAsset",
+  category: "reference_file",
+  action: "delete",
+  reason: "Past retention window and no legal hold.",
+  dryRunFingerprint: "sha256:redacted-dry-run",
+  executedAt: "2026-06-09T00:20:00.000Z",
+  restoreReplayAfter: "2026-06-09T00:20:00.000Z",
+  storageObjectKey: "private/tenant_demo/reference/reference_due.jpg",
+  legalHoldSkipped: false,
+  rollbackNote: "Restore only after tombstone replay keeps deleted record inaccessible.",
 });

@@ -362,6 +362,7 @@ model Tenant {
   auditLogs        AuditLog[]
   signedUrlGrants  SignedUrlGrant[]
   privacyRequests  PrivacyRequest[]
+  retentionTombstones RetentionTombstone[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -1396,6 +1397,34 @@ model PrivacyRequest {
   @@index([tenantId, requesterEmail])
   @@index([tenantId, dueAt])
   @@index([tenantId, legalHold])
+}
+
+model RetentionTombstone {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  privacyRequestId   String?
+  workerRunId        String
+  sourceRecordId     String
+  sourceRecordType   String
+  category           String
+  action             String
+  reason             String
+  dryRunFingerprint  String
+  executedAt         DateTime
+  restoreReplayAfter DateTime?
+  storageObjectKey   String?
+  redactedFields     Json?
+  auditLogIds        Json?
+  legalHoldSkipped   Boolean  @default(false)
+  rollbackNote       String?
+  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([tenantId, workerRunId])
+  @@index([tenantId, sourceRecordType, sourceRecordId])
+  @@index([tenantId, category])
+  @@index([tenantId, restoreReplayAfter])
 }
 
 model ErrorReport {
