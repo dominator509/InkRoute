@@ -1087,6 +1087,23 @@
                                          "Expo send and receipt polling worker smoke pending",
                                          "iOS and Android foreground/background/tap navigation QA pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-dashboard-notification-persistence-static",
+                       "file":  "apps/dashboard/tests/notification-persistence-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "GAP-064 dashboard notification persistence contract covers MessageThread, Message, Notification, NotificationDelivery, AuditLog, redacted previews, destination hashes, and idempotency seams",
+                                        "GAP-064 dashboard message POST requires message:write, tenant match, transaction writes, no-store responses, and redacted output",
+                                        "GAP-064 persistence readiness surfaces remaining read-state/status-transition/idempotency/Postgres isolation evidence gates"
+                                    ],
+                       "blockedBy":  [
+                                         "Static notification persistence test execution pending",
+                                         "Durable IdempotencyKey model/repository pending",
+                                         "Notification read-state model/repository pending",
+                                         "Delivery status transition integration tests pending",
+                                         "Seeded Postgres tenant isolation tests pending"
+                                     ]
                    }
                ]
 }
