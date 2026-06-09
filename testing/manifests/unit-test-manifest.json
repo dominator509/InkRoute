@@ -1645,6 +1645,23 @@
                                          "Auth AuditLog persistence proof pending",
                                          "Cross-tenant route integration proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-upload-scan-worker-static",
+                       "file":  "apps/web/tests/upload-scan-worker-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "GAP-096 post-upload worker contract consumes object bytes, magic-byte detection, malware verdicts, EXIF/GPS stripping, derivative generation, FileAsset scan persistence, and AuditLog actions",
+                                        "GAP-096 spoofed MIME, malware, unscanned, and unsafe derivative cases remain quarantined or rejected through package scan rules",
+                                        "GAP-096 CI retains upload scan worker, magic-byte, malware, metadata stripping, derivative, FileAsset persistence, quarantine, and route artifact paths"
+                                    ],
+                       "blockedBy":  [
+                                         "Static upload scan worker test execution pending",
+                                         "Object-storage byte inspection integration proof pending",
+                                         "Malware scanner provider proof pending",
+                                         "Metadata stripping and derivative worker proof pending",
+                                         "FileAsset scan persistence and private/public access proof pending"
+                                     ]
                    }
                ]
 }
