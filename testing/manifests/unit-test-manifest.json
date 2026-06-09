@@ -1155,6 +1155,24 @@
                                          "Legal-approved preference and STOP/START copy pending",
                                          "Pre-send suppression integration tests pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-dashboard-messaging-privacy-static",
+                       "file":  "apps/dashboard/tests/messaging-privacy-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-068 messaging privacy contract covers redaction, role visibility, secure attachments, export/delete/retention, moderation, audit, and idempotency seams",
+                                        "GAP-068 dashboard messaging privacy API enforces RBAC, tenant scope, no-store, and returns privacy workflow plans",
+                                        "GAP-068 messages page surfaces privacy findings, assistant visibility, retention, export, delete, and moderation plans"
+                                    ],
+                       "blockedBy":  [
+                                         "Static messaging privacy test execution pending",
+                                         "Durable MessagePrivacyEvent/MessageAuditLog/IdempotencyKey/export/delete/retention workflow repositories pending",
+                                         "Secure attachment authorization integration pending",
+                                         "Retention job implementation pending",
+                                         "Spam moderation and rate-limit integration pending",
+                                         "Postgres retention/export/delete integration tests pending"
+                                     ]
                    }
                ]
 }
