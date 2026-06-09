@@ -2941,7 +2941,8 @@
         "Physical-device auth/API/offline/push/crash/OTA/accessibility QA proof pending",
         "CI hooks, retained artifact links by checklist id, and secret-safe artifact proof pending"
       ]
-    }    ,{
+    }
+    ,{
       "id": "unit-stripe-checkout-runtime-static",
       "file": "apps/web/tests/stripe-checkout-runtime-static.test.ts",
       "priority": "critical",
@@ -2955,6 +2956,21 @@
         "Stripe SDK/API version/secret configuration and test-mode provider smoke proof pending",
         "Signed-token invalid/expired tests, tenant-scoped idempotency/persistence transaction, and PaymentAuditLog proof pending",
         "Webhook reconciliation, web typecheck/payment route tests, CI evidence, and secret-safe artifact proof pending"
+      ]
+    }    ,{
+      "id": "unit-stripe-webhook-runtime-static",
+      "file": "apps/web/tests/stripe-webhook-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-050 Stripe webhook runtime matrix covers payments typecheck/tests, web typecheck, webhook route tests, constructEvent raw-body verification, webhook secret config, invalid/stale signature rejection, replay protection, supported event coverage, provider object fetch, trusted tenant resolution, Deposit/Payment/Refund persistence, PaymentAuditLog persistence, BookingStateEvent persistence, tenant transaction, amount/currency mismatch rejection, Stripe CLI replay, CI evidence, and secret-safe artifacts",
+        "GAP-050 route adapter contract remains wired for StripeWebhookReplayStore, StripeWebhookReconciliationAdapter, event-id idempotency, audit persistence, replay persistence, transaction reconciliation, supported-event extraction, and webhook route surfacing",
+        "GAP-050 readiness keeps Stripe SDK constructEvent, STRIPE_WEBHOOK_SECRET, persistent replay protection, provider object verification, DB reconciliation, mismatch tests, Stripe CLI transcripts, web commands, CI, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static Stripe webhook runtime test execution pending",
+        "Stripe SDK constructEvent/webhook secret and invalid/stale signature proof pending",
+        "Persistent replay protection, provider object fetch, tenant transaction, and DB reconciliation proof pending",
+        "Amount/currency mismatch tests, Stripe CLI replay, web typecheck/payment route tests, CI evidence, and secret-safe artifact proof pending"
       ]
     }  ]
 }

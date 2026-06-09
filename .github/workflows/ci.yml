@@ -695,6 +695,37 @@ jobs:
             test-results/stripe-checkout-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 7 Stripe webhook runtime contracts
+        run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/stripe-webhook-runtime-static.test.ts apps/web/tests/stripe-webhook-static.test.ts
+
+      - name: Upload Phase 7 Stripe webhook runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stripe-webhook-runtime-artifacts
+          path: |
+            coverage/stripe-webhook-runtime.json
+            coverage/stripe-webhook-payments-typecheck.txt
+            coverage/stripe-webhook-payments-test.txt
+            coverage/stripe-webhook-web-typecheck.txt
+            coverage/stripe-webhook-route-tests.json
+            coverage/stripe-webhook-construct-event-raw-body-redacted.json
+            coverage/stripe-webhook-secret-redacted.json
+            coverage/stripe-webhook-invalid-stale-signatures.json
+            coverage/stripe-webhook-replay-protection.json
+            coverage/stripe-webhook-supported-events.json
+            coverage/stripe-webhook-provider-object-fetch.json
+            coverage/stripe-webhook-tenant-resolution.json
+            coverage/stripe-webhook-payment-persistence.json
+            coverage/stripe-webhook-audit-log.json
+            coverage/stripe-webhook-booking-state-event.json
+            coverage/stripe-webhook-tenant-transaction.json
+            coverage/stripe-webhook-amount-currency-mismatch.json
+            coverage/stripe-webhook-cli-replay-redacted.json
+            coverage/stripe-webhook-secret-safe-artifacts.json
+            test-results/stripe-webhook-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 7 live Stripe payments runtime contracts
         run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/live-stripe-payments-runtime-static.test.ts
 
