@@ -84,7 +84,21 @@ jobs:
 
 
       - name: Run Phase 10 SEO publication contracts
-        run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/dashboard/tests/seo-read-route-static.test.ts apps/dashboard/tests/seo-publication-route-static.test.ts apps/web/tests/sitemap-route.test.ts apps/web/tests/canonical-domain-runtime-static.test.ts
+        run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/dashboard/tests/seo-read-route-static.test.ts apps/dashboard/tests/seo-publication-route-static.test.ts apps/web/tests/sitemap-route.test.ts apps/web/tests/canonical-domain-runtime-static.test.ts apps/web/tests/structured-data-crawl-qa-static.test.ts
+
+      - name: Upload structured data crawl artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: structured-data-crawl-artifacts
+          path: |
+            coverage/structured-data-crawl.json
+            coverage/rich-results-compatible-report.json
+            coverage/sitemap-canonical-noindex-crawl.json
+            coverage/unsupported-schema-review.json
+            coverage/structured-data-closeout.md
+            test-results/structured-data-crawl
+          if-no-files-found: warn
       - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
@@ -133,6 +147,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 

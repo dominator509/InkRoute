@@ -1246,6 +1246,24 @@
                                          "Custom-domain deployment proof pending",
                                          "Rendered sitemap/canonical/noindex crawl pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-structured-data-crawl-qa-static",
+                       "file":  "apps/web/tests/structured-data-crawl-qa-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-073 rendered public route inventory covers JSON-LD, canonical, sitemap, robots, and noindex crawl targets",
+                                        "GAP-073 crawler contract extracts rendered JSON-LD and separates Rich Results-compatible schema checks from unsupported-schema review",
+                                        "GAP-073 CI retains crawl, Rich Results-compatible, sitemap/canonical/noindex, unsupported-schema review, and closeout artifacts without claiming unrun browser proof"
+                                    ],
+                       "blockedBy":  [
+                                         "Static structured-data crawl QA test execution pending",
+                                         "Rendered browser crawler execution pending",
+                                         "Google Rich Results-compatible report pending",
+                                         "Unsupported-schema review pending",
+                                         "Rendered sitemap/canonical/robots/noindex crawl pending",
+                                         "Structured-data closeout artifact pending"
+                                     ]
                    }
                ]
 }
