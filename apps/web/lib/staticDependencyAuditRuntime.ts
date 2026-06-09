@@ -11,6 +11,82 @@ export interface StaticDependencyAuditRuntimeMatrixEntry {
   readonly status: StaticDependencyAuditRuntimeStatus;
 }
 
+export interface StaticDependencyAuditRunPersistenceContract {
+  readonly model: "StaticDependencyAuditRun";
+  readonly tenantRelation: "staticDependencyAuditRuns";
+  readonly migration: "20260609032200_add_static_dependency_audit_runs";
+  readonly jsonFields: readonly [
+    "commandMatrix",
+    "coverageAreaManifest",
+    "locallyVerifiedAudit",
+    "artifactManifest",
+    "peerVersionReviewManifest",
+  ];
+  readonly evidenceBooleans: readonly [
+    "workspaceImportAuditPassed",
+    "workspacePackageTestsPassed",
+    "workspacePackageTypecheckPassed",
+    "dependencyInstallEvidenceCaptured",
+    "workspaceTypecheckPassed",
+    "webBuildEvidenceCaptured",
+    "dashboardBuildEvidenceCaptured",
+    "ciWorkspaceResolutionPassed",
+    "ciEvidenceCaptured",
+    "peerVersionReviewCaptured",
+    "runtimeResolutionProofCaptured",
+  ];
+  readonly artifactFields: readonly [
+    "workspaceImportAuditArtifactPath",
+    "workspacePackageTestArtifactPath",
+    "workspacePackageTypecheckArtifactPath",
+    "dependencyInstallArtifactPath",
+    "workspaceTypecheckArtifactPath",
+    "webBuildArtifactPath",
+    "dashboardBuildArtifactPath",
+    "ciWorkspaceResolutionArtifactPath",
+    "peerVersionReviewArtifactPath",
+    "ciRunUrl",
+  ];
+}
+
+export const staticDependencyAuditRunPersistenceContract: StaticDependencyAuditRunPersistenceContract = {
+  model: "StaticDependencyAuditRun",
+  tenantRelation: "staticDependencyAuditRuns",
+  migration: "20260609032200_add_static_dependency_audit_runs",
+  jsonFields: [
+    "commandMatrix",
+    "coverageAreaManifest",
+    "locallyVerifiedAudit",
+    "artifactManifest",
+    "peerVersionReviewManifest",
+  ],
+  evidenceBooleans: [
+    "workspaceImportAuditPassed",
+    "workspacePackageTestsPassed",
+    "workspacePackageTypecheckPassed",
+    "dependencyInstallEvidenceCaptured",
+    "workspaceTypecheckPassed",
+    "webBuildEvidenceCaptured",
+    "dashboardBuildEvidenceCaptured",
+    "ciWorkspaceResolutionPassed",
+    "ciEvidenceCaptured",
+    "peerVersionReviewCaptured",
+    "runtimeResolutionProofCaptured",
+  ],
+  artifactFields: [
+    "workspaceImportAuditArtifactPath",
+    "workspacePackageTestArtifactPath",
+    "workspacePackageTypecheckArtifactPath",
+    "dependencyInstallArtifactPath",
+    "workspaceTypecheckArtifactPath",
+    "webBuildArtifactPath",
+    "dashboardBuildArtifactPath",
+    "ciWorkspaceResolutionArtifactPath",
+    "peerVersionReviewArtifactPath",
+    "ciRunUrl",
+  ],
+};
+
 export const staticDependencyAuditCommands = [
   "node scripts/workspace/audit-workspace-imports.mjs",
   "pnpm --filter @inkroute/workspace test",

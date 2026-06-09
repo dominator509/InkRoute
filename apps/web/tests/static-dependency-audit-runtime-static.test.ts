@@ -6,6 +6,7 @@ import {
   staticDependencyAuditCommands,
   staticDependencyAuditCoverageAreas,
   staticDependencyAuditReadiness,
+  staticDependencyAuditRunPersistenceContract,
   staticDependencyAuditRuntimeMatrix,
 } from "../lib/staticDependencyAuditRuntime";
 
@@ -19,6 +20,10 @@ describe("static dependency audit runtime contract", () => {
   const workspaceProtocol = readRepoFile("docs/workspace/WORKSPACE_AUDIT_PROTOCOL.md");
   const workspaceImportManifest = readRepoFile("docs/workspace/manifests/workspace-import-audit.json");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const staticDependencyAuditMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609032200_add_static_dependency_audit_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -59,6 +64,33 @@ describe("static dependency audit runtime contract", () => {
     expect(staticDependencyAuditArtifactPaths).toContain("test-results/static-dependency-audit-runtime");
   });
 
+  it("pins the StaticDependencyAuditRun persistence model and migration", () => {
+    expect(staticDependencyAuditRunPersistenceContract.model).toBe("StaticDependencyAuditRun");
+    expect(staticDependencyAuditRunPersistenceContract.tenantRelation).toBe("staticDependencyAuditRuns");
+    expect(staticDependencyAuditRunPersistenceContract.migration).toBe("20260609032200_add_static_dependency_audit_runs");
+    expect(staticDependencyAuditRunPersistenceContract.jsonFields).toEqual([
+      "commandMatrix",
+      "coverageAreaManifest",
+      "locallyVerifiedAudit",
+      "artifactManifest",
+      "peerVersionReviewManifest",
+    ]);
+    expect(staticDependencyAuditRunPersistenceContract.evidenceBooleans).toContain("workspaceImportAuditPassed");
+    expect(staticDependencyAuditRunPersistenceContract.evidenceBooleans).toContain("peerVersionReviewCaptured");
+    expect(staticDependencyAuditRunPersistenceContract.evidenceBooleans).toContain("runtimeResolutionProofCaptured");
+    expect(staticDependencyAuditRunPersistenceContract.artifactFields).toContain("dependencyInstallArtifactPath");
+    expect(staticDependencyAuditRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(prismaSchema).toContain("staticDependencyAuditRuns StaticDependencyAuditRun[]");
+    expect(prismaSchema).toContain("model StaticDependencyAuditRun");
+    expect(prismaSchema).toContain("coverageAreaManifest");
+    expect(prismaSchema).toContain("runtimeResolutionProofCaptured");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(staticDependencyAuditMigration).toContain('CREATE TABLE "StaticDependencyAuditRun"');
+    expect(staticDependencyAuditMigration).toContain('"locallyVerifiedAudit" JSONB NOT NULL');
+    expect(staticDependencyAuditMigration).toContain('"runtimeResolutionProofCaptured" BOOLEAN NOT NULL DEFAULT false');
+    expect(staticDependencyAuditMigration).toContain('CREATE UNIQUE INDEX "StaticDependencyAuditRun_tenantId_runId_key"');
+  });
+
   it("keeps workspace import audit script, package tests, protocol, and manifest aligned", () => {
     expect(rootPackageJson).toContain("audit-workspace-imports.mjs");
     expect(workspacePackageJson).toContain('"typecheck"');
@@ -94,6 +126,8 @@ describe("static dependency audit runtime contract", () => {
     expect(ciWorkflow).toContain("static-dependency-audit-runtime-static.test.ts");
     expect(ciWorkflow).toContain("static-dependency-audit-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-static-dependency-audit-runtime-static");
+    expect(unitManifest).toContain("StaticDependencyAuditRun Prisma model and app row contract");
+    expect(gapTracker).toContain("StaticDependencyAuditRun");
     expect(gapTracker).toContain("apps/web/lib/staticDependencyAuditRuntime.ts");
     expect(gapTracker).toContain("live package test/typecheck, install/typecheck/build, CI, peer/version, and runtime resolution proof remain open");
   });

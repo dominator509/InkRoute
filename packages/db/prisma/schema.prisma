@@ -395,6 +395,7 @@ model Tenant {
   semanticDocumentationRuns SemanticDocumentationRun[]
   requiredChecksRuns RequiredChecksRun[]
   workspaceRuntimeToolchainRuns WorkspaceRuntimeToolchainRun[]
+  staticDependencyAuditRuns StaticDependencyAuditRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2578,6 +2579,47 @@ model WorkspaceRuntimeToolchainRun {
   tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                           DateTime @default(now())
   updatedAt                           DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model StaticDependencyAuditRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  commandMatrix                           Json
+  coverageAreaManifest                    Json
+  locallyVerifiedAudit                    Json
+  artifactManifest                        Json
+  peerVersionReviewManifest               Json
+  workspaceImportAuditPassed              Boolean  @default(false)
+  workspacePackageTestsPassed             Boolean  @default(false)
+  workspacePackageTypecheckPassed         Boolean  @default(false)
+  dependencyInstallEvidenceCaptured       Boolean  @default(false)
+  workspaceTypecheckPassed                Boolean  @default(false)
+  webBuildEvidenceCaptured                Boolean  @default(false)
+  dashboardBuildEvidenceCaptured          Boolean  @default(false)
+  ciWorkspaceResolutionPassed             Boolean  @default(false)
+  ciEvidenceCaptured                      Boolean  @default(false)
+  peerVersionReviewCaptured               Boolean  @default(false)
+  runtimeResolutionProofCaptured          Boolean  @default(false)
+  workspaceImportAuditArtifactPath        String?
+  workspacePackageTestArtifactPath        String?
+  workspacePackageTypecheckArtifactPath   String?
+  dependencyInstallArtifactPath           String?
+  workspaceTypecheckArtifactPath          String?
+  webBuildArtifactPath                    String?
+  dashboardBuildArtifactPath              String?
+  ciWorkspaceResolutionArtifactPath       String?
+  peerVersionReviewArtifactPath           String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])
