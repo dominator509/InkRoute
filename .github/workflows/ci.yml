@@ -1645,6 +1645,30 @@ jobs:
             test-results/booking-contact-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 4 booking flow runtime contracts
+        run: pnpm vitest run apps/web/tests/booking-flow-runtime-static.test.ts
+
+      - name: Upload Phase 4 booking flow runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking-flow-runtime-artifacts
+          path: |
+            coverage/booking-flow-runtime.json
+            coverage/booking-flow-install.txt
+            coverage/booking-flow-prisma-generate.txt
+            coverage/booking-flow-web-typecheck.txt
+            coverage/booking-flow-web-build.txt
+            coverage/booking-flow-contract-test.txt
+            coverage/booking-flow-next-route-smoke.json
+            coverage/booking-flow-local-fallback.json
+            coverage/booking-flow-db-transaction-smoke.json
+            coverage/booking-flow-provider-boundaries.json
+            coverage/booking-flow-client-server-boundaries.json
+            coverage/booking-flow-secret-safe-artifacts.json
+            test-results/booking-flow-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 10 SEO accessibility performance audit contracts
         run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/web/tests/seo-a11y-performance-audit-runtime-static.test.ts
 
