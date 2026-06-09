@@ -2413,6 +2413,22 @@
         "Google OAuth/sync, signed ICS, timezone/provider matrix, and travel publish proof pending",
         "dashboard/public smoke, CI, and secret-safe artifact proof pending"
       ]
+    },
+    {
+      "id": "unit-web-notification-launch-runtime-static",
+      "file": "apps/web/tests/notification-launch-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-010 notification launch runtime matrix covers notification typecheck/tests, Resend/Twilio/Expo SDK configuration, provider sandbox/device sends, queue worker, retry/dead-letter, NotificationDelivery/ProviderEvent/MessageThread/Message persistence, preference center, unsubscribe/STOP suppression, quiet-hours/rate limits, signed webhook replay verification, tenant isolation, redaction/privacy review, CI evidence, and secret-safe artifacts",
+        "GAP-010 package helper/tests, dashboard message/template redacted reads, webhook route boundaries, CI labels, artifact paths, and tracker row remain wired without claiming provider-backed messaging readiness",
+        "GAP-010 readiness keeps provider, queue, persistence, privacy, webhook, CI, and artifact evidence explicit blockers"
+      ],
+      "blockedBy": [
+        "Static notification launch runtime test execution pending",
+        "notification typecheck/tests and provider SDK configuration pending",
+        "provider sandbox/device sends, queue worker, persistence, suppression, signed webhook, retry/dead-letter, and tenant isolation proof pending",
+        "privacy/redaction, CI, and secret-safe artifact proof pending"
+      ]
     }
   ]
 }
