@@ -680,6 +680,33 @@ jobs:
             coverage/security-mobile-device-smoke.json
             test-results/security-app-runtime
           if-no-files-found: warn
+      - name: Run Phase 14 app E2E runtime contracts
+        run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/app-e2e-runtime-static.test.ts
+
+      - name: Upload Phase 14 app E2E runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-e2e-runtime-artifacts
+          path: |
+            coverage/app-e2e-runtime.json
+            coverage/app-e2e-web-build.log
+            coverage/app-e2e-dashboard-build.log
+            coverage/app-e2e-web-runtime.log
+            coverage/app-e2e-dashboard-runtime.log
+            coverage/app-e2e-playwright-install.log
+            coverage/app-e2e-public-booking-results.json
+            coverage/app-e2e-public-security-results.json
+            coverage/app-e2e-public-seo-results.json
+            coverage/app-e2e-dashboard-smoke-results.json
+            coverage/app-e2e-dashboard-security-results.json
+            coverage/app-e2e-dashboard-operator-results.json
+            coverage/app-e2e-manifest-check.json
+            coverage/playwright-report
+            coverage/playwright-results.json
+            coverage/playwright-junit.xml
+            test-results/app-e2e-runtime
+          if-no-files-found: warn
       - name: Run Phase 14 runner execution contracts
         run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/phase14-runner-execution-static.test.ts
 
@@ -750,6 +777,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 

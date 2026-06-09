@@ -1815,6 +1815,23 @@
                                          "Playwright browser install and CI artifact proof pending",
                                          "Runner failure triage, scaffold preservation, and flaky policy proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-app-e2e-runtime-static",
+                       "file":  "apps/web/tests/app-e2e-runtime-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-106 app E2E runtime matrix covers web/dashboard builds, Next runtime startup, Chromium browser install, public booking/security/SEO specs, dashboard smoke/security/operator specs, E2E manifest verification, trace/media retention, CI artifacts, flaky retries, and hardened failure commits",
+                                        "GAP-106 Playwright config retains web and dashboard projects, webServer commands, retries, HTML/JSON/JUnit reports, traces, screenshots, and videos before live runtime proof",
+                                        "GAP-106 CI retains app E2E runtime contract execution and artifact paths without claiming live Playwright execution has passed"
+                                    ],
+                       "blockedBy":  [
+                                         "Static app E2E runtime test execution pending",
+                                         "Web/dashboard build and runtime startup proof pending",
+                                         "Chromium install and public/dashboard Playwright spec output pending",
+                                         "CI E2E pass and retained artifact proof pending",
+                                         "Real Playwright failure hardening commit proof pending"
+                                     ]
                    }
                ]
 }
