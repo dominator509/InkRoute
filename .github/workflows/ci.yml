@@ -1599,6 +1599,29 @@ jobs:
             test-results/public-content-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 3 portfolio image performance runtime contracts
+        run: pnpm --filter @inkroute/config test && pnpm vitest run apps/web/tests/portfolio-image-performance-runtime-static.test.ts
+
+      - name: Upload Phase 3 portfolio image performance runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portfolio-image-performance-runtime-artifacts
+          path: |
+            coverage/portfolio-image-performance-runtime.json
+            coverage/portfolio-image-config-typecheck.txt
+            coverage/portfolio-image-config-test.txt
+            coverage/portfolio-image-web-typecheck.txt
+            coverage/portfolio-image-web-build.txt
+            coverage/portfolio-image-derivative-fixtures.json
+            coverage/portfolio-image-next-image-wiring.json
+            coverage/portfolio-image-private-original-denial.json
+            coverage/portfolio-image-browser-rendering.json
+            coverage/portfolio-image-lighthouse.json
+            coverage/portfolio-image-ci-evidence.json
+            test-results/portfolio-image-performance-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 13 legal review evidence contracts
         run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/legal-review-evidence-static.test.ts
 

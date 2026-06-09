@@ -2621,6 +2621,22 @@
         "DB/CMS seed, public route/API adoption, API JSON and rendered HTML redaction proof pending",
         "Cache revalidation, web build, browser smoke, CI evidence, and secret-safe artifact proof pending"
       ]
+    },
+    {
+      "id": "unit-web-portfolio-image-performance-runtime-static",
+      "file": "apps/web/tests/portfolio-image-performance-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-028 portfolio image performance runtime matrix covers @inkroute/config typecheck/tests, web typecheck/build, checked-in public derivative fixtures, next/image migration, derivative dimensions, responsive sizes, blur placeholders, private original separation, private original/reference denial, browser rendering, Lighthouse, CI evidence, and secret-safe artifacts",
+        "GAP-028 PortfolioCard, derivative metadata, safe public SVG fixtures, CI labels, artifact paths, and tracker row remain wired without claiming storage-backed image pipeline readiness",
+        "GAP-028 readiness keeps storage-backed derivatives, EXIF stripping, private denial, browser rendering, Lighthouse, web build, CI, and artifact evidence explicit blockers"
+      ],
+      "blockedBy": [
+        "Static portfolio image performance runtime test execution pending",
+        "Storage-backed derivative fixture and EXIF-stripping proof pending",
+        "Private original/reference denial and browser rendering proof pending",
+        "Lighthouse image audit, web typecheck/build, CI evidence, and secret-safe artifact proof pending"
+      ]
     }
   ]
 }
