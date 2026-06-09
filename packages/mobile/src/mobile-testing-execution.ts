@@ -14,6 +14,63 @@ export interface MobileTestingExecutionMatrixEntry {
   readonly status: MobileTestingExecutionStatus;
 }
 
+export interface MobileTestingRunPersistenceInput {
+  tenantId: string;
+  runId: string;
+  commitSha?: string;
+  status: "blocked" | "running" | "passed" | "failed" | "device_gated" | "provider_gated";
+  executionMatrix: readonly MobileTestingExecutionMatrixEntry[];
+  checklistIds: readonly string[];
+  artifactManifest: readonly string[];
+  mobileSupportTypecheckPassed: boolean;
+  mobileSupportTestsPassed: boolean;
+  mobileAppTypecheckPassed: boolean;
+  mobileStaticTestsPassed: boolean;
+  expoDependenciesInstalled: boolean;
+  expoRuntimeStarted: boolean;
+  iosSimulatorSmokePassed: boolean;
+  androidEmulatorSmokePassed: boolean;
+  physicalDeviceChecklistCompleted: boolean;
+  biometricQaPassed: boolean;
+  tenantApiSyncQaPassed: boolean;
+  offlineReconnectQaPassed: boolean;
+  pushDeliveryQaPassed: boolean;
+  crashCaptureQaPassed: boolean;
+  easPreviewBuildPassed: boolean;
+  easUpdateRollbackPassed: boolean;
+  accessibilityQaPassed: boolean;
+  ciMobileChecksPassed: boolean;
+  ciRunUrl?: string;
+}
+
+export interface MobileTestingRunPersistenceContract {
+  modelName: "MobileTestingRun";
+  row: MobileTestingRunPersistenceInput;
+  transactionWrites: readonly ["MobileTestingRun", "AuditLog"];
+  requiredMobileFlags: readonly [
+    "mobileSupportTypecheckPassed",
+    "mobileSupportTestsPassed",
+    "mobileAppTypecheckPassed",
+    "mobileStaticTestsPassed",
+    "expoDependenciesInstalled",
+    "expoRuntimeStarted",
+    "iosSimulatorSmokePassed",
+    "androidEmulatorSmokePassed",
+    "physicalDeviceChecklistCompleted",
+    "biometricQaPassed",
+    "tenantApiSyncQaPassed",
+    "offlineReconnectQaPassed",
+    "pushDeliveryQaPassed",
+    "crashCaptureQaPassed",
+    "easPreviewBuildPassed",
+    "easUpdateRollbackPassed",
+    "accessibilityQaPassed",
+    "ciMobileChecksPassed",
+  ];
+  artifactFields: readonly ["executionMatrix", "checklistIds", "artifactManifest"];
+  tenantIsolationKey: "tenantId";
+}
+
 export const mobileTestingExecutionArtifactPaths = [
   "coverage/mobile-testing-execution.json",
   "coverage/mobile-expo-install.log",
@@ -120,6 +177,38 @@ export const mobileTestingExecutionMatrix: readonly MobileTestingExecutionMatrix
   }
 ];
 
+export function buildMobileTestingRunPersistenceContract(
+  input: MobileTestingRunPersistenceInput,
+): MobileTestingRunPersistenceContract {
+  return {
+    modelName: "MobileTestingRun",
+    row: input,
+    transactionWrites: ["MobileTestingRun", "AuditLog"],
+    requiredMobileFlags: [
+      "mobileSupportTypecheckPassed",
+      "mobileSupportTestsPassed",
+      "mobileAppTypecheckPassed",
+      "mobileStaticTestsPassed",
+      "expoDependenciesInstalled",
+      "expoRuntimeStarted",
+      "iosSimulatorSmokePassed",
+      "androidEmulatorSmokePassed",
+      "physicalDeviceChecklistCompleted",
+      "biometricQaPassed",
+      "tenantApiSyncQaPassed",
+      "offlineReconnectQaPassed",
+      "pushDeliveryQaPassed",
+      "crashCaptureQaPassed",
+      "easPreviewBuildPassed",
+      "easUpdateRollbackPassed",
+      "accessibilityQaPassed",
+      "ciMobileChecksPassed",
+    ],
+    artifactFields: ["executionMatrix", "checklistIds", "artifactManifest"],
+    tenantIsolationKey: "tenantId",
+  };
+}
+
 export const mobileTestingExecutionReadiness = buildMobileTestingExecutionReadinessPlan({
   packageScripts: {
     typecheck: "tsc --noEmit",
@@ -147,4 +236,31 @@ export const mobileTestingExecutionReadiness = buildMobileTestingExecutionReadin
   qaChecklistManifestSynced: true,
   artifactsCaptured: false,
   ciMobileChecksPassed: false
+});
+
+export const mobileTestingRunPersistencePreview = buildMobileTestingRunPersistenceContract({
+  tenantId: "tenant_demo",
+  runId: "mobile-testing-demo",
+  status: "device_gated",
+  executionMatrix: mobileTestingExecutionMatrix,
+  checklistIds: mobileTestingExecutionChecklistIds,
+  artifactManifest: mobileTestingExecutionArtifactPaths,
+  mobileSupportTypecheckPassed: false,
+  mobileSupportTestsPassed: false,
+  mobileAppTypecheckPassed: false,
+  mobileStaticTestsPassed: false,
+  expoDependenciesInstalled: false,
+  expoRuntimeStarted: false,
+  iosSimulatorSmokePassed: false,
+  androidEmulatorSmokePassed: false,
+  physicalDeviceChecklistCompleted: false,
+  biometricQaPassed: false,
+  tenantApiSyncQaPassed: false,
+  offlineReconnectQaPassed: false,
+  pushDeliveryQaPassed: false,
+  crashCaptureQaPassed: false,
+  easPreviewBuildPassed: false,
+  easUpdateRollbackPassed: false,
+  accessibilityQaPassed: false,
+  ciMobileChecksPassed: false,
 });

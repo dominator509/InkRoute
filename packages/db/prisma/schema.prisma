@@ -372,6 +372,7 @@ model Tenant {
   phase14RunnerRuns Phase14RunnerRun[]
   appE2eRuntimeRuns AppE2eRuntimeRun[]
   dbIntegrationRuns DbIntegrationRun[]
+  mobileTestingRuns MobileTestingRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -1685,6 +1686,43 @@ model DbIntegrationRun {
   tenant                         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                      DateTime @default(now())
   updatedAt                      DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model MobileTestingRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String?
+  status                          String
+  executionMatrix                 Json
+  checklistIds                    Json
+  artifactManifest                Json
+  mobileSupportTypecheckPassed    Boolean  @default(false)
+  mobileSupportTestsPassed        Boolean  @default(false)
+  mobileAppTypecheckPassed        Boolean  @default(false)
+  mobileStaticTestsPassed         Boolean  @default(false)
+  expoDependenciesInstalled       Boolean  @default(false)
+  expoRuntimeStarted              Boolean  @default(false)
+  iosSimulatorSmokePassed         Boolean  @default(false)
+  androidEmulatorSmokePassed      Boolean  @default(false)
+  physicalDeviceChecklistCompleted Boolean @default(false)
+  biometricQaPassed               Boolean  @default(false)
+  tenantApiSyncQaPassed           Boolean  @default(false)
+  offlineReconnectQaPassed        Boolean  @default(false)
+  pushDeliveryQaPassed            Boolean  @default(false)
+  crashCaptureQaPassed            Boolean  @default(false)
+  easPreviewBuildPassed           Boolean  @default(false)
+  easUpdateRollbackPassed         Boolean  @default(false)
+  accessibilityQaPassed           Boolean  @default(false)
+  ciMobileChecksPassed            Boolean  @default(false)
+  ciRunUrl                        String?
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

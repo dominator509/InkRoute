@@ -2,11 +2,13 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
+  buildMobileTestingRunPersistenceContract,
   mobileTestingExecutionArtifactPaths,
   mobileTestingExecutionChecklistIds,
   mobileTestingExecutionCommands,
   mobileTestingExecutionMatrix,
-  mobileTestingExecutionReadiness
+  mobileTestingExecutionReadiness,
+  mobileTestingRunPersistencePreview
 } from "../src/mobile-testing-execution";
 
 const root = resolve(__dirname, "../../..");
@@ -118,6 +120,48 @@ describe("GAP-108 mobile testing execution wiring", () => {
     );
   });
 
+  it("pins durable MobileTestingRun rows, checklist ids, device/provider QA flags, EAS rollback, artifacts, and CI evidence", () => {
+    const schema = read("packages/db/prisma/schema.prisma");
+    const contract = buildMobileTestingRunPersistenceContract({
+      tenantId: "tenant_demo",
+      runId: "mobile-testing-demo",
+      commitSha: "abc1234",
+      status: "device_gated",
+      executionMatrix: mobileTestingExecutionMatrix,
+      checklistIds: mobileTestingExecutionChecklistIds,
+      artifactManifest: mobileTestingExecutionArtifactPaths,
+      mobileSupportTypecheckPassed: false,
+      mobileSupportTestsPassed: false,
+      mobileAppTypecheckPassed: false,
+      mobileStaticTestsPassed: false,
+      expoDependenciesInstalled: false,
+      expoRuntimeStarted: false,
+      iosSimulatorSmokePassed: false,
+      androidEmulatorSmokePassed: false,
+      physicalDeviceChecklistCompleted: false,
+      biometricQaPassed: false,
+      tenantApiSyncQaPassed: false,
+      offlineReconnectQaPassed: false,
+      pushDeliveryQaPassed: false,
+      crashCaptureQaPassed: false,
+      easPreviewBuildPassed: false,
+      easUpdateRollbackPassed: false,
+      accessibilityQaPassed: false,
+      ciMobileChecksPassed: false,
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/redacted"
+    });
+
+    expect(schema).toContain("model MobileTestingRun");
+    expect(schema).toContain("executionMatrix");
+    expect(schema).toContain("easUpdateRollbackPassed");
+    expect(schema).toContain("@@unique([tenantId, runId])");
+    expect(contract.transactionWrites).toEqual(["MobileTestingRun", "AuditLog"]);
+    expect(contract.requiredMobileFlags).toContain("offlineReconnectQaPassed");
+    expect(contract.artifactFields).toContain("checklistIds");
+    expect(contract.tenantIsolationKey).toBe("tenantId");
+    expect(mobileTestingRunPersistencePreview.modelName).toBe("MobileTestingRun");
+  });
+
   it("keeps CI, manifest registration, and tracker status aligned", () => {
     expect(ciWorkflow).toContain("Run Phase 14 mobile testing execution contracts");
     expect(ciWorkflow).toContain("packages/mobile/tests/mobile-testing-execution-static.test.ts");
@@ -125,6 +169,7 @@ describe("GAP-108 mobile testing execution wiring", () => {
     expect(ciWorkflow).toContain("coverage/mobile-testing-execution.json");
     expect(ciWorkflow).toContain("test-results/mobile-testing-execution");
     expect(unitManifest).toContain("unit-mobile-testing-execution-static");
+    expect(unitManifest).toContain("MobileTestingRun Prisma model and app row contract are wired");
     expect(gapTracker).toContain("packages/mobile/src/mobile-testing-execution.ts");
     expect(gapTracker).toContain("live Expo/device testing proof remains open");
   });
