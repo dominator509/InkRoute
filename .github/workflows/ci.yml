@@ -680,6 +680,31 @@ jobs:
             coverage/security-mobile-device-smoke.json
             test-results/security-app-runtime
           if-no-files-found: warn
+      - name: Run Phase 14 DB integration runtime contracts
+        run: pnpm --filter @inkroute/db test && pnpm vitest run packages/db/tests/db-integration-runtime-static.test.ts
+
+      - name: Upload Phase 14 DB integration runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-integration-runtime-artifacts
+          path: |
+            coverage/db-integration-runtime.json
+            coverage/db-postgres-provisioning-redacted.json
+            coverage/db-prisma-validate.log
+            coverage/db-prisma-generate.log
+            coverage/db-prisma-migrate.log
+            coverage/db-seed-execution.log
+            coverage/db-seed-verification.json
+            coverage/db-tenant-isolation-results.json
+            coverage/db-workflow-persistence-results.json
+            coverage/db-audit-log-integration-results.json
+            coverage/db-destructive-reset-guard.json
+            coverage/db-migration-rollback.md
+            coverage/db-command-transcript-redacted.log
+            coverage/db-ci-run-redacted.json
+            test-results/db-integration-runtime
+          if-no-files-found: warn
       - name: Run Phase 14 app E2E runtime contracts
         run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/app-e2e-runtime-static.test.ts
 
@@ -777,6 +802,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 

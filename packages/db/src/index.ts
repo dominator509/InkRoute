@@ -1,4 +1,4 @@
-export { prisma } from "./prisma";
+﻿export { prisma } from "./prisma";
 export {
   buildDbIntegrationRuntimeReadinessPlan,
   buildPrismaSchemaLifecycleReadinessPlan,
@@ -28,3 +28,10 @@ export type {
   TenantScopedMutation,
   TenantScopedWhere,
 } from "./tenant-scope";
+export {
+  dbIntegrationRuntimeArtifactPaths,
+  dbIntegrationRuntimeCommands,
+  dbIntegrationRuntimeMatrix,
+  dbIntegrationRuntimeReadiness,
+} from "./db-integration-runtime";
+export type { DbIntegrationRuntimeMatrixEntry, DbIntegrationRuntimeStatus } from "./db-integration-runtime";

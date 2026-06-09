@@ -1832,6 +1832,23 @@
                                          "CI E2E pass and retained artifact proof pending",
                                          "Real Playwright failure hardening commit proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-db-integration-runtime-static",
+                       "file":  "packages/db/tests/db-integration-runtime-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "GAP-107 DB integration runtime matrix covers non-production Postgres, DATABASE_URL/DIRECT_URL, Prisma validate/generate/migrate/seed/verify, tenant isolation, workflow persistence, audit-log integration, destructive reset guards, rollback notes, command transcripts, and CI DB artifacts",
+                                        "GAP-107 package scripts, DB integration manifest, manifest verifier, and static runtime readiness blockers stay aligned before live Postgres proof",
+                                        "GAP-107 CI retains DB integration runtime contract execution and secret-safe artifact paths without claiming live database execution has passed"
+                                    ],
+                       "blockedBy":  [
+                                         "Static DB integration runtime test execution pending",
+                                         "Non-production Postgres provisioning and DATABASE_URL proof pending",
+                                         "Prisma validate/generate/migrate/seed/verify command proof pending",
+                                         "Tenant isolation, workflow persistence, and audit-log integration proof pending",
+                                         "Destructive reset guard, rollback documentation, command transcript, and CI DB artifact proof pending"
+                                     ]
                    }
                ]
 }
