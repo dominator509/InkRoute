@@ -2008,13 +2008,13 @@
       "file": "apps/web/tests/database-operations-runtime-static.test.ts",
       "priority": "critical",
       "verifies": [
-        "GAP-117 database operations runtime matrix covers provider branch provisioning, Prisma generate/validate, migration dry-run/apply, destructive SQL scanning, seed policy, backup/restore drill, tenant-isolation smoke, branch promotion, production data safety, verifier output, and CI artifacts",
+        "GAP-117 database operations runtime matrix covers provider branch provisioning, Prisma generate/validate, migration dry-run/apply, destructive SQL scanning, seed policy, backup/restore drill, tenant-isolation smoke, branch promotion, production data safety, verifier output, DatabaseOperationsRun Prisma model and app row contract, and CI artifacts",
         "GAP-117 database operations evidence manifest, verifier, DB package scripts, destructive SQL gates, and deployment readiness blockers stay aligned before live provider DB proof",
         "GAP-117 CI retains database operations runtime contract and redacted artifact paths without claiming provider database operations have passed"
       ],
       "blockedBy": [
         "Static database operations runtime test execution pending",
-        "Provider database branch/provisioning proof pending",
+        "Provider-backed DatabaseOperationsRun transaction plus provider database branch/provisioning proof pending",
         "Prisma lifecycle and migration dry-run/apply proof pending",
         "Backup/restore, tenant-isolation, branch-promotion, and production data-safety proof pending"
       ]

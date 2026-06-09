@@ -5,7 +5,8 @@ import {
   databaseOperationsRuntimeArtifactPaths,
   databaseOperationsRuntimeCommands,
   databaseOperationsRuntimeMatrix,
-  databaseOperationsRuntimeReadiness
+  databaseOperationsRuntimeReadiness,
+  databaseOperationsRunPersistenceContract
 } from "../lib/databaseOperationsRuntime";
 
 const root = process.cwd();
@@ -17,6 +18,8 @@ const deploymentTests = read("packages/deployment/tests/deployment-readiness.tes
 const ciWorkflow = read(".github/workflows/ci.yml");
 const unitManifest = read("testing/manifests/unit-test-manifest.json");
 const gapTracker = read("GAP_TRACKER.md");
+const prismaSchema = read("packages/db/prisma/schema.prisma");
+const prismaMigration = read("packages/db/prisma/migrations/20260609020000_add_database_operations_runs/migration.sql");
 
 describe("GAP-117 database operations runtime wiring", () => {
   it("pins database operations commands, matrix entries, and redacted artifact paths", () => {
@@ -111,5 +114,39 @@ describe("GAP-117 database operations runtime wiring", () => {
     expect(unitManifest).toContain("unit-web-database-operations-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/databaseOperationsRuntime.ts");
     expect(gapTracker).toContain("live provider database operations proof remains open");
+  });
+
+  it("pins durable DatabaseOperationsRun persistence for provider DB operations proof", () => {
+    expect(databaseOperationsRunPersistenceContract.prismaModel).toBe("DatabaseOperationsRun");
+    expect(databaseOperationsRunPersistenceContract.tenantRelation).toBe("databaseOperationsRuns");
+    expect(databaseOperationsRunPersistenceContract.uniqueKey).toEqual(["tenantId", "runId"]);
+    expect(databaseOperationsRunPersistenceContract.jsonFields).toEqual([
+      "operationCheckMatrix",
+      "destructiveSqlScan",
+      "artifactManifest"
+    ]);
+    expect(databaseOperationsRunPersistenceContract.requiredBooleanProofs).toEqual(
+      expect.arrayContaining([
+        "providerBranchProvisioned",
+        "secretStoreReferenceConfigured",
+        "prismaGeneratePassed",
+        "migrationDryRunPassed",
+        "destructiveSqlScanPassed",
+        "backupRestoreDrillPassed",
+        "tenantIsolationSmokePassed",
+        "productionDataSafetyReviewed",
+        "ciDatabaseOperationsArtifactsCaptured"
+      ])
+    );
+    expect(databaseOperationsRunPersistenceContract.redactedArtifactFields).toContain("providerBranchArtifactPath");
+    expect(prismaSchema).toContain("databaseOperationsRuns DatabaseOperationsRun[]");
+    expect(prismaSchema).toContain("model DatabaseOperationsRun");
+    expect(prismaSchema).toContain("operationCheckMatrix                    Json");
+    expect(prismaSchema).toContain("destructiveSqlScanPassed                Boolean  @default(false)");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(prismaMigration).toContain('CREATE TABLE "DatabaseOperationsRun"');
+    expect(prismaMigration).toContain('"productionDataSafetyArtifactPath" TEXT');
+    expect(unitManifest).toContain("DatabaseOperationsRun Prisma model and app row contract");
+    expect(gapTracker).toContain("packages/db/prisma/migrations/20260609020000_add_database_operations_runs/migration.sql");
   });
 });

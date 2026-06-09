@@ -381,6 +381,7 @@ model Tenant {
   providerEnvironmentRuns ProviderEnvironmentRun[]
   secretManagementRuns SecretManagementRun[]
   mobileDeploymentRuns MobileDeploymentRun[]
+  databaseOperationsRuns DatabaseOperationsRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2004,6 +2005,47 @@ model MobileDeploymentRun {
   deviceQaArtifactPath                    String?
   otaRollbackArtifactPath                 String?
   storeReadinessArtifactPath              String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model DatabaseOperationsRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  operationCheckMatrix                    Json
+  destructiveSqlScan                      Json
+  artifactManifest                        Json
+  providerBranchProvisioned               Boolean  @default(false)
+  secretStoreReferenceConfigured          Boolean  @default(false)
+  verifierPassed                          Boolean  @default(false)
+  prismaGeneratePassed                    Boolean  @default(false)
+  prismaValidatePassed                    Boolean  @default(false)
+  migrationDryRunPassed                   Boolean  @default(false)
+  generatedSqlReviewed                    Boolean  @default(false)
+  destructiveSqlScanPassed                Boolean  @default(false)
+  stagingMigrationApplied                 Boolean  @default(false)
+  seedPolicyVerified                      Boolean  @default(false)
+  backupRestoreDrillPassed                Boolean  @default(false)
+  tenantIsolationSmokePassed              Boolean  @default(false)
+  branchPromotionApproved                 Boolean  @default(false)
+  productionDataSafetyReviewed            Boolean  @default(false)
+  ciDatabaseOperationsArtifactsCaptured   Boolean  @default(false)
+  providerBranchArtifactPath              String?
+  migrationDryRunArtifactPath             String?
+  destructiveSqlScanArtifactPath          String?
+  backupRestoreArtifactPath               String?
+  tenantIsolationArtifactPath             String?
+  branchPromotionArtifactPath             String?
+  productionDataSafetyArtifactPath        String?
   ciRunUrl                                String?
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())

@@ -13,6 +13,39 @@ export interface DatabaseOperationsRuntimeMatrixEntry {
   readonly status: DatabaseOperationsRuntimeStatus;
 }
 
+export interface DatabaseOperationsRunPersistenceContract {
+  readonly prismaModel: "DatabaseOperationsRun";
+  readonly tenantRelation: "databaseOperationsRuns";
+  readonly uniqueKey: readonly ["tenantId", "runId"];
+  readonly jsonFields: readonly ["operationCheckMatrix", "destructiveSqlScan", "artifactManifest"];
+  readonly requiredBooleanProofs: readonly [
+    "providerBranchProvisioned",
+    "secretStoreReferenceConfigured",
+    "verifierPassed",
+    "prismaGeneratePassed",
+    "prismaValidatePassed",
+    "migrationDryRunPassed",
+    "generatedSqlReviewed",
+    "destructiveSqlScanPassed",
+    "stagingMigrationApplied",
+    "seedPolicyVerified",
+    "backupRestoreDrillPassed",
+    "tenantIsolationSmokePassed",
+    "branchPromotionApproved",
+    "productionDataSafetyReviewed",
+    "ciDatabaseOperationsArtifactsCaptured"
+  ];
+  readonly redactedArtifactFields: readonly [
+    "providerBranchArtifactPath",
+    "migrationDryRunArtifactPath",
+    "destructiveSqlScanArtifactPath",
+    "backupRestoreArtifactPath",
+    "tenantIsolationArtifactPath",
+    "branchPromotionArtifactPath",
+    "productionDataSafetyArtifactPath"
+  ];
+}
+
 export const databaseOperationsRuntimeArtifactPaths = [
   "coverage/database-operations-runtime.json",
   "coverage/database-operations-verifier.json",
@@ -93,6 +126,39 @@ export const databaseOperationsRuntimeMatrix: readonly DatabaseOperationsRuntime
     status: "ci-gated"
   }
 ];
+
+export const databaseOperationsRunPersistenceContract: DatabaseOperationsRunPersistenceContract = {
+  prismaModel: "DatabaseOperationsRun",
+  tenantRelation: "databaseOperationsRuns",
+  uniqueKey: ["tenantId", "runId"],
+  jsonFields: ["operationCheckMatrix", "destructiveSqlScan", "artifactManifest"],
+  requiredBooleanProofs: [
+    "providerBranchProvisioned",
+    "secretStoreReferenceConfigured",
+    "verifierPassed",
+    "prismaGeneratePassed",
+    "prismaValidatePassed",
+    "migrationDryRunPassed",
+    "generatedSqlReviewed",
+    "destructiveSqlScanPassed",
+    "stagingMigrationApplied",
+    "seedPolicyVerified",
+    "backupRestoreDrillPassed",
+    "tenantIsolationSmokePassed",
+    "branchPromotionApproved",
+    "productionDataSafetyReviewed",
+    "ciDatabaseOperationsArtifactsCaptured"
+  ],
+  redactedArtifactFields: [
+    "providerBranchArtifactPath",
+    "migrationDryRunArtifactPath",
+    "destructiveSqlScanArtifactPath",
+    "backupRestoreArtifactPath",
+    "tenantIsolationArtifactPath",
+    "branchPromotionArtifactPath",
+    "productionDataSafetyArtifactPath"
+  ]
+};
 
 export const databaseOperationsRuntimeReadiness = buildDatabaseOperationsRuntimeReadinessPlan({
   providerStatus: "not_provisioned",
