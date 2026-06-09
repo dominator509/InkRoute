@@ -3122,6 +3122,39 @@ jobs:
               test-results/mobile-push-runtime
             if-no-files-found: warn
 
+      - name: Run Phase 9 app runtime/build runtime contracts
+        run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/phase9-app-runtime-build-runtime-static.test.ts apps/web/tests/phase9-app-runtime-build-static.test.ts
+
+      - name: Upload Phase 9 app runtime/build runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase9-app-runtime-build-runtime-artifacts
+          path: |
+            coverage/phase9-app-runtime-build-runtime.json
+            coverage/phase9-testing-package-typecheck.txt
+            coverage/phase9-testing-package-test.txt
+            coverage/phase9-web-build.log
+            coverage/phase9-dashboard-build.log
+            coverage/phase9-mobile-typecheck.txt
+            coverage/phase9-static-contract.json
+            coverage/phase9-notification-routes.json
+            coverage/phase9-provider-webhook-routes.json
+            coverage/phase9-booking-route-runtime-smoke.json
+            coverage/phase9-deposit-route-runtime-smoke.json
+            coverage/phase9-dashboard-template-smoke-redacted.json
+            coverage/phase9-dashboard-message-smoke-redacted.json
+            coverage/phase9-dashboard-provider-disabled.json
+            coverage/phase9-mobile-notification-screen.json
+            coverage/phase9-expo-simulator-notification-smoke.json
+            coverage/phase9-expo-device-notification-smoke-redacted.json
+            coverage/phase9-booking-to-notification-runtime-redacted.json
+            coverage/phase9-provider-disabled-runtime-proof.json
+            coverage/phase9-app-runtime-build-ci-evidence.json
+            coverage/phase9-app-runtime-build-secret-safe-artifacts.json
+            test-results/phase9-app-runtime-build
+          if-no-files-found: warn
+
       - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
