@@ -664,6 +664,37 @@ jobs:
             test-results/provider-session-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 7 Stripe Checkout runtime contracts
+        run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/stripe-checkout-runtime-static.test.ts apps/web/tests/stripe-checkout-static.test.ts
+
+      - name: Upload Phase 7 Stripe Checkout runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stripe-checkout-runtime-artifacts
+          path: |
+            coverage/stripe-checkout-runtime.json
+            coverage/stripe-checkout-payments-typecheck.txt
+            coverage/stripe-checkout-payments-test.txt
+            coverage/stripe-checkout-web-typecheck.txt
+            coverage/stripe-checkout-route-tests.json
+            coverage/stripe-checkout-sdk-config-redacted.json
+            coverage/stripe-checkout-secret-store-redacted.json
+            coverage/stripe-checkout-api-version.json
+            coverage/stripe-checkout-signed-token-auth.json
+            coverage/stripe-checkout-idempotency-before-provider.json
+            coverage/stripe-checkout-provider-session-persistence.json
+            coverage/stripe-checkout-payment-audit-log.json
+            coverage/stripe-checkout-tenant-transaction.json
+            coverage/stripe-checkout-redirect-allowlist.json
+            coverage/stripe-checkout-safe-browser-response.json
+            coverage/stripe-checkout-invalid-expired-token.json
+            coverage/stripe-checkout-webhook-reconciliation.json
+            coverage/stripe-checkout-test-mode-provider-redacted.json
+            coverage/stripe-checkout-secret-safe-artifacts.json
+            test-results/stripe-checkout-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 7 live Stripe payments runtime contracts
         run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/live-stripe-payments-runtime-static.test.ts
 

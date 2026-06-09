@@ -2925,7 +2925,8 @@
         "Preview/prod native build, OTA publish, device receipt, and rollback republish proof pending",
         "Adoption monitoring, release-health monitoring, mobile typecheck, CI evidence, and secret-safe artifact proof pending"
       ]
-    }    ,{
+    }
+    ,{
       "id": "unit-mobile-qa-runtime-static",
       "file": "apps/mobile/tests/mobile-qa-runtime-static.test.ts",
       "priority": "high",
@@ -2939,6 +2940,21 @@
         "Executable Expo component/render tests, mobile typecheck/tests, and simulator smoke proof pending",
         "Physical-device auth/API/offline/push/crash/OTA/accessibility QA proof pending",
         "CI hooks, retained artifact links by checklist id, and secret-safe artifact proof pending"
+      ]
+    }    ,{
+      "id": "unit-stripe-checkout-runtime-static",
+      "file": "apps/web/tests/stripe-checkout-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-049 Stripe Checkout runtime matrix covers payments typecheck/tests, web typecheck, payment route tests, Stripe SDK/API-version/secret config, signed token authorization, idempotency-before-provider persistence, provider session persistence, PaymentAuditLog persistence, tenant transaction, redirect allowlist, safe browser response, invalid/expired token tests, webhook reconciliation, test-mode provider smoke, CI evidence, and secret-safe artifacts",
+        "GAP-049 route adapter contract remains wired for StripeCheckoutProviderAdapter, StripeCheckoutPersistenceAdapter, idempotency sequencing, provider session persistence, PaymentAuditLog calls, safe browser response, and deposit route checkoutContract surfacing",
+        "GAP-049 readiness keeps live Stripe SDK install, secret/API version config, accepted booking or signed-token enforcement, DB-backed idempotency/persistence, webhook reconciliation, provider transcript, web commands, CI, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static Stripe Checkout runtime test execution pending",
+        "Stripe SDK/API version/secret configuration and test-mode provider smoke proof pending",
+        "Signed-token invalid/expired tests, tenant-scoped idempotency/persistence transaction, and PaymentAuditLog proof pending",
+        "Webhook reconciliation, web typecheck/payment route tests, CI evidence, and secret-safe artifact proof pending"
       ]
     }  ]
 }
