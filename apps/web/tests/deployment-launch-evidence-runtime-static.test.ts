@@ -6,6 +6,7 @@ import {
   deploymentLaunchEvidenceRuntimeCommands,
   deploymentLaunchEvidenceRuntimeMatrix,
   deploymentLaunchEvidenceRuntimeReadiness,
+  deploymentLaunchEvidenceRunPersistenceContract,
 } from "../lib/deploymentLaunchEvidenceRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -21,6 +22,8 @@ describe("deployment launch evidence runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const deploymentLaunchEvidenceRunMigration = readRepoFile("packages/db/prisma/migrations/20260609033800_add_deployment_launch_evidence_runs/migration.sql");
 
   it("pins deployment launch commands, matrix rows, and redacted artifact paths", () => {
     expect(deploymentLaunchEvidenceRuntimeCommands).toEqual([
@@ -90,13 +93,43 @@ describe("deployment launch evidence runtime contract", () => {
     );
   });
 
+  it("pins the DeploymentLaunchEvidenceRun persistence model and migration", () => {
+    expect(deploymentLaunchEvidenceRunPersistenceContract).toEqual({
+      prismaModel: "DeploymentLaunchEvidenceRun",
+      tenantRelation: "deploymentLaunchEvidenceRuns",
+      migration: "20260609033800_add_deployment_launch_evidence_runs",
+      storesRunId: true,
+      storesCommitSha: true,
+      storesReadinessStatus: true,
+      storesCommandMatrix: true,
+      storesArtifactManifest: true,
+      storesProviderGateEvidence: true,
+      storesEnvironmentGateEvidence: true,
+      storesDatabaseGateEvidence: true,
+      storesMobileGateEvidence: true,
+      storesCiGateEvidence: true,
+      storesRollbackGateEvidence: true,
+      storesSecretSafeArtifacts: true,
+    });
+    expect(prismaSchema).toContain("model DeploymentLaunchEvidenceRun");
+    expect(prismaSchema).toContain("deploymentLaunchEvidenceRuns DeploymentLaunchEvidenceRun[]");
+    expect(prismaSchema).toContain("providerGateEvidenceCaptured");
+    expect(prismaSchema).toContain("secretSafeArtifactsCaptured");
+    expect(deploymentLaunchEvidenceRunMigration).toContain('CREATE TABLE "DeploymentLaunchEvidenceRun"');
+    expect(deploymentLaunchEvidenceRunMigration).toContain('"commandMatrix" JSONB NOT NULL');
+    expect(deploymentLaunchEvidenceRunMigration).toContain('"artifactManifest" JSONB NOT NULL');
+    expect(deploymentLaunchEvidenceRunMigration).toContain('"DeploymentLaunchEvidenceRun_tenantId_runId_key"');
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming deployment launch readiness", () => {
     expect(ciWorkflow).toContain("Run Phase 15 deployment launch evidence runtime contracts");
     expect(ciWorkflow).toContain("deployment-launch-evidence-runtime-static.test.ts");
     expect(ciWorkflow).toContain("deployment-launch-evidence-runtime-artifacts");
     expect(ciWorkflow).toContain("coverage/deployment-launch-evidence-runtime.json");
     expect(unitManifest).toContain("unit-web-deployment-launch-evidence-runtime-static");
+    expect(unitManifest).toContain("DeploymentLaunchEvidenceRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/deploymentLaunchEvidenceRuntime.ts");
+    expect(gapTracker).toContain("DeploymentLaunchEvidenceRun Prisma model and app row contract");
     expect(gapTracker).toContain("live Vercel/GitHub environment setup, secret-backed provider evidence, preview/prod dry runs, database/storage operations, EAS/native credentials/OTA rollback, CI deployment gate, Sentry release upload, rollback drill, launch evidence packet, and secret-safe provider artifact proof remain open");
   });
 });

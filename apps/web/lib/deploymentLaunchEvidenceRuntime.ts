@@ -16,6 +16,43 @@ export interface DeploymentLaunchEvidenceRuntimeMatrixEntry {
   readonly status: DeploymentLaunchEvidenceRuntimeStatus;
 }
 
+
+export interface DeploymentLaunchEvidenceRunPersistenceContract {
+  readonly prismaModel: "DeploymentLaunchEvidenceRun";
+  readonly tenantRelation: "deploymentLaunchEvidenceRuns";
+  readonly migration: "20260609033800_add_deployment_launch_evidence_runs";
+  readonly storesRunId: true;
+  readonly storesCommitSha: true;
+  readonly storesReadinessStatus: true;
+  readonly storesCommandMatrix: true;
+  readonly storesArtifactManifest: true;
+  readonly storesProviderGateEvidence: true;
+  readonly storesEnvironmentGateEvidence: true;
+  readonly storesDatabaseGateEvidence: true;
+  readonly storesMobileGateEvidence: true;
+  readonly storesCiGateEvidence: true;
+  readonly storesRollbackGateEvidence: true;
+  readonly storesSecretSafeArtifacts: true;
+}
+
+export const deploymentLaunchEvidenceRunPersistenceContract = {
+  prismaModel: "DeploymentLaunchEvidenceRun",
+  tenantRelation: "deploymentLaunchEvidenceRuns",
+  migration: "20260609033800_add_deployment_launch_evidence_runs",
+  storesRunId: true,
+  storesCommitSha: true,
+  storesReadinessStatus: true,
+  storesCommandMatrix: true,
+  storesArtifactManifest: true,
+  storesProviderGateEvidence: true,
+  storesEnvironmentGateEvidence: true,
+  storesDatabaseGateEvidence: true,
+  storesMobileGateEvidence: true,
+  storesCiGateEvidence: true,
+  storesRollbackGateEvidence: true,
+  storesSecretSafeArtifacts: true,
+} as const satisfies DeploymentLaunchEvidenceRunPersistenceContract;
+
 export const deploymentLaunchEvidenceRuntimeCommands = [
   "pnpm --filter @inkroute/deployment typecheck",
   "pnpm --filter @inkroute/deployment test",

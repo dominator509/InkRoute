@@ -2472,13 +2472,13 @@
       "file": "apps/web/tests/deployment-launch-evidence-runtime-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-014 deployment launch evidence runtime matrix covers deployment package typecheck/tests, provider environment verification, secret verification, database ops, mobile deployment, Vercel preview smoke, production dry run, EAS preview build, OTA rollback, rollback drill, GitHub approval proof, Sentry release/source-map upload proof, launch evidence verification, and secret-safe provider artifacts",
+        "GAP-014 DeploymentLaunchEvidenceRun Prisma model and app row contract plus deployment launch evidence runtime matrix covers deployment package typecheck/tests, provider environment verification, secret verification, database ops, mobile deployment, Vercel preview smoke, production dry run, EAS preview build, OTA rollback, rollback drill, GitHub approval proof, Sentry release/source-map upload proof, launch evidence verification, and secret-safe provider artifacts",
         "GAP-014 deployment helper/tests, dashboard readiness API, release governance workflow, CI labels, artifact paths, and tracker row remain wired without claiming provider deployment readiness",
         "GAP-014 readiness keeps provider projects, environments, secrets, preview/prod dry runs, database/storage, EAS/native/OTA, CI, Sentry, rollback, launch packet, and provider artifact safety explicit blockers"
       ],
       "blockedBy": [
         "Static deployment launch evidence runtime test execution pending",
-        "Deployment package typecheck/test and provider environment proof pending",
+        "Provider-backed DeploymentLaunchEvidenceRun transaction plus deployment package typecheck/test and provider environment proof pending",
         "Vercel/GitHub environments, secrets, preview/prod dry runs, database/storage, EAS/native/OTA, and rollback proof pending",
         "CI deployment gate, Sentry release upload, launch evidence packet, and secret-safe provider artifact proof pending"
       ]

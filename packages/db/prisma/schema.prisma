@@ -411,6 +411,7 @@ model Tenant {
   observabilityLaunchRuns ObservabilityLaunchRun[]
   testingLaunchExecutionRuns TestingLaunchExecutionRun[]
   legalReviewRuns LegalReviewRun[]
+  deploymentLaunchEvidenceRuns DeploymentLaunchEvidenceRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3429,6 +3430,32 @@ model LegalReviewRun {
   @@unique([tenantId, runId])
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
+}
+
+model DeploymentLaunchEvidenceRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String
+  status                          String
+  commandMatrix                   Json
+  artifactManifest                Json
+  providerGateEvidenceCaptured    Boolean  @default(false)
+  environmentGateEvidenceCaptured Boolean  @default(false)
+  databaseGateEvidenceCaptured    Boolean  @default(false)
+  mobileGateEvidenceCaptured      Boolean  @default(false)
+  ciGateEvidenceCaptured          Boolean  @default(false)
+  rollbackGateEvidenceCaptured    Boolean  @default(false)
+  secretSafeArtifactsCaptured     Boolean  @default(false)
+  evidencePacketPath              String?
+  providerArtifactSafetyPath      String?
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
 }
 
 model ErrorReport {
