@@ -441,6 +441,33 @@ jobs:
             test-results/live-stripe-payments-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 1 provider storage upload runtime contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/provider-storage-upload-runtime-static.test.ts
+
+      - name: Upload Phase 1 provider storage upload runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-storage-upload-runtime-artifacts
+          path: |
+            coverage/provider-storage-upload-runtime.json
+            coverage/provider-storage-security-typecheck.txt
+            coverage/provider-storage-security-test.txt
+            coverage/provider-storage-web-typecheck.txt
+            coverage/provider-storage-upload-route-test.txt
+            coverage/provider-storage-config-redacted.json
+            coverage/provider-storage-bucket-policy.json
+            coverage/provider-storage-signed-url-provider.json
+            coverage/provider-storage-fileasset-persistence.json
+            coverage/provider-storage-scan-derivative-worker.json
+            coverage/provider-storage-private-original-denial.json
+            coverage/provider-storage-tenant-isolation.json
+            coverage/provider-storage-retention.json
+            coverage/provider-storage-ci-evidence.json
+            coverage/provider-storage-secret-safe-artifacts.json
+            test-results/provider-storage-upload-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 18 workspace runtime readiness
         run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness && pnpm workspace:required-checks && pnpm workspace:toolchain
       - name: Run Phase 17 quality gate runtime contracts

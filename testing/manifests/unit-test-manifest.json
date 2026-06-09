@@ -2333,6 +2333,22 @@
         "Real Checkout, provider idempotency persistence, lifecycle reconciliation, refunds, disputes, and tenant isolation pending",
         "Stripe CLI, booking-to-paid E2E, CI payment evidence, and secret-safe artifacts pending"
       ]
+    },
+    {
+      "id": "unit-web-provider-storage-upload-runtime-static",
+      "file": "apps/web/tests/provider-storage-upload-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-005 provider storage upload runtime matrix covers security/web typechecks, upload route tests, provider selection/config/secrets, private bucket ACL, derivative public policy, provider-backed signed upload/download URLs, server-owned tenant-scoped object keys, FileAsset/link/AuditLog/SignedUrlGrant persistence, malware scan provider, scan verdict/MIME/metadata/derivative persistence, metadata stripping, derivative generation, private-original public-read denial, approved derivative public-read verification, cross-tenant provider denial, privacy retention, CI evidence, and secret-safe artifacts",
+        "GAP-005 helper, upload policy tests, secure upload route, route tests, dashboard portfolio redaction tests, CI labels, artifact paths, and tracker row remain wired without claiming object storage is provisioned",
+        "GAP-005 readiness keeps provider storage, scan, persistence, integration, retention, CI, and secret-safe evidence explicit blockers"
+      ],
+      "blockedBy": [
+        "Static provider storage upload runtime test execution pending",
+        "Storage provider selection/config/secrets pending",
+        "Provider-backed signed URL, FileAsset/link/audit persistence, scan/derivative worker, and retention proof pending",
+        "Provider integration, CI evidence, and secret-safe artifact proof pending"
+      ]
     }
   ]
 }
