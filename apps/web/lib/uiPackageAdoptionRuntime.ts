@@ -15,6 +15,45 @@ export interface UiPackageAdoptionRuntimeMatrixEntry {
   readonly status: UiPackageAdoptionRuntimeStatus;
 }
 
+
+export interface UiPackageAdoptionRunPersistenceContract {
+  readonly prismaModel: "UiPackageAdoptionRun";
+  readonly tenantRelation: "uiPackageAdoptionRuns";
+  readonly migration: "20260609034000_add_ui_package_adoption_runs";
+  readonly storesRunId: true;
+  readonly storesCommitSha: true;
+  readonly storesReadinessStatus: true;
+  readonly storesCommandMatrix: true;
+  readonly storesArtifactManifest: true;
+  readonly storesPrimitiveAdoptionEvidence: true;
+  readonly storesFormNavDialogEvidence: true;
+  readonly storesAccessibilityEvidence: true;
+  readonly storesKeyboardFocusEvidence: true;
+  readonly storesVisualSmokeEvidence: true;
+  readonly storesBuildSmokeEvidence: true;
+  readonly storesDesignTokenDocsEvidence: true;
+  readonly storesSecretSafeArtifacts: true;
+}
+
+export const uiPackageAdoptionRunPersistenceContract = {
+  prismaModel: "UiPackageAdoptionRun",
+  tenantRelation: "uiPackageAdoptionRuns",
+  migration: "20260609034000_add_ui_package_adoption_runs",
+  storesRunId: true,
+  storesCommitSha: true,
+  storesReadinessStatus: true,
+  storesCommandMatrix: true,
+  storesArtifactManifest: true,
+  storesPrimitiveAdoptionEvidence: true,
+  storesFormNavDialogEvidence: true,
+  storesAccessibilityEvidence: true,
+  storesKeyboardFocusEvidence: true,
+  storesVisualSmokeEvidence: true,
+  storesBuildSmokeEvidence: true,
+  storesDesignTokenDocsEvidence: true,
+  storesSecretSafeArtifacts: true,
+} as const satisfies UiPackageAdoptionRunPersistenceContract;
+
 export const uiPackageAdoptionRuntimeCommands = [
   "pnpm --filter @inkroute/ui typecheck",
   "pnpm --filter @inkroute/ui test",

@@ -413,6 +413,7 @@ model Tenant {
   legalReviewRuns LegalReviewRun[]
   deploymentLaunchEvidenceRuns DeploymentLaunchEvidenceRun[]
   releaseLaunchControlRuns ReleaseLaunchControlRun[]
+  uiPackageAdoptionRuns UiPackageAdoptionRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3476,6 +3477,33 @@ model ReleaseLaunchControlRun {
   secretSafeArtifactsCaptured     Boolean  @default(false)
   releaseHealthEnvelopePath       String?
   rollbackDrillArtifactPath       String?
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model UiPackageAdoptionRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String
+  status                          String
+  commandMatrix                   Json
+  artifactManifest                Json
+  primitiveAdoptionEvidenceCaptured Boolean @default(false)
+  formNavDialogEvidenceCaptured   Boolean  @default(false)
+  accessibilityEvidenceCaptured   Boolean  @default(false)
+  keyboardFocusEvidenceCaptured   Boolean  @default(false)
+  visualSmokeEvidenceCaptured     Boolean  @default(false)
+  buildSmokeEvidenceCaptured      Boolean  @default(false)
+  designTokenDocsEvidenceCaptured Boolean  @default(false)
+  secretSafeArtifactsCaptured     Boolean  @default(false)
+  styleRegressionReviewPath       String?
+  visualArtifactManifestPath      String?
   createdAt                       DateTime @default(now())
   updatedAt                       DateTime @updatedAt
   tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)

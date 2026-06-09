@@ -6,6 +6,7 @@ import {
   uiPackageAdoptionRuntimeCommands,
   uiPackageAdoptionRuntimeMatrix,
   uiPackageAdoptionRuntimeReadiness,
+  uiPackageAdoptionRunPersistenceContract,
 } from "../lib/uiPackageAdoptionRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -21,6 +22,8 @@ describe("UI package adoption runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const uiPackageAdoptionRunMigration = readRepoFile("packages/db/prisma/migrations/20260609034000_add_ui_package_adoption_runs/migration.sql");
 
   it("pins UI package adoption commands, matrix rows, and artifact paths", () => {
     expect(uiPackageAdoptionRuntimeCommands).toEqual([
@@ -90,13 +93,45 @@ describe("UI package adoption runtime contract", () => {
     );
   });
 
+  it("pins the UiPackageAdoptionRun persistence model and migration", () => {
+    expect(uiPackageAdoptionRunPersistenceContract).toEqual({
+      prismaModel: "UiPackageAdoptionRun",
+      tenantRelation: "uiPackageAdoptionRuns",
+      migration: "20260609034000_add_ui_package_adoption_runs",
+      storesRunId: true,
+      storesCommitSha: true,
+      storesReadinessStatus: true,
+      storesCommandMatrix: true,
+      storesArtifactManifest: true,
+      storesPrimitiveAdoptionEvidence: true,
+      storesFormNavDialogEvidence: true,
+      storesAccessibilityEvidence: true,
+      storesKeyboardFocusEvidence: true,
+      storesVisualSmokeEvidence: true,
+      storesBuildSmokeEvidence: true,
+      storesDesignTokenDocsEvidence: true,
+      storesSecretSafeArtifacts: true,
+    });
+    expect(prismaSchema).toContain("model UiPackageAdoptionRun");
+    expect(prismaSchema).toContain("uiPackageAdoptionRuns UiPackageAdoptionRun[]");
+    expect(prismaSchema).toContain("primitiveAdoptionEvidenceCaptured");
+    expect(prismaSchema).toContain("designTokenDocsEvidenceCaptured");
+    expect(prismaSchema).toContain("secretSafeArtifactsCaptured");
+    expect(uiPackageAdoptionRunMigration).toContain('CREATE TABLE "UiPackageAdoptionRun"');
+    expect(uiPackageAdoptionRunMigration).toContain('"commandMatrix" JSONB NOT NULL');
+    expect(uiPackageAdoptionRunMigration).toContain('"artifactManifest" JSONB NOT NULL');
+    expect(uiPackageAdoptionRunMigration).toContain('"UiPackageAdoptionRun_tenantId_runId_key"');
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming app-wide UI adoption readiness", () => {
     expect(ciWorkflow).toContain("Run Phase 1 UI package adoption runtime contracts");
     expect(ciWorkflow).toContain("ui-package-adoption-runtime-static.test.ts");
     expect(ciWorkflow).toContain("ui-package-adoption-runtime-artifacts");
     expect(ciWorkflow).toContain("coverage/ui-package-adoption-runtime.json");
     expect(unitManifest).toContain("unit-web-ui-package-adoption-runtime-static");
+    expect(unitManifest).toContain("UiPackageAdoptionRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/uiPackageAdoptionRuntime.ts");
+    expect(gapTracker).toContain("UiPackageAdoptionRun Prisma model and app row contract");
     expect(gapTracker).toContain("live web/dashboard primitive adoption, form/nav/dialog coverage, accessibility/keyboard smoke, Storybook or visual smoke, app builds, app smoke tests, style-regression review, design-token documentation, and secret-safe visual artifacts remain open");
   });
 });
