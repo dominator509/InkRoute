@@ -680,6 +680,36 @@ jobs:
             coverage/security-mobile-device-smoke.json
             test-results/security-app-runtime
           if-no-files-found: warn
+      - name: Run Phase 14 mobile testing execution contracts
+        run: pnpm --filter @inkroute/mobile-support test && pnpm vitest run packages/mobile/tests/mobile-testing-execution-static.test.ts
+
+      - name: Upload Phase 14 mobile testing execution artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-testing-execution-artifacts
+          path: |
+            coverage/mobile-testing-execution.json
+            coverage/mobile-expo-install.log
+            coverage/mobile-expo-runtime.log
+            coverage/mobile-support-typecheck.log
+            coverage/mobile-support-test-results.json
+            coverage/mobile-app-typecheck.log
+            coverage/mobile-static-test-results.json
+            coverage/mobile-ios-simulator-smoke.json
+            coverage/mobile-android-emulator-smoke.json
+            coverage/mobile-physical-device-checklist.json
+            coverage/mobile-biometric-qa-redacted.json
+            coverage/mobile-tenant-api-sync-redacted.json
+            coverage/mobile-offline-reconnect-redacted.json
+            coverage/mobile-push-delivery-redacted.json
+            coverage/mobile-crash-capture-redacted.json
+            coverage/mobile-eas-preview-build-redacted.json
+            coverage/mobile-eas-update-rollback-redacted.json
+            coverage/mobile-accessibility-qa.json
+            coverage/mobile-ci-run-redacted.json
+            test-results/mobile-testing-execution
+          if-no-files-found: warn
       - name: Run Phase 14 DB integration runtime contracts
         run: pnpm --filter @inkroute/db test && pnpm vitest run packages/db/tests/db-integration-runtime-static.test.ts
 
@@ -802,6 +832,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 

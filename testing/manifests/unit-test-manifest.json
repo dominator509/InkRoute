@@ -1849,6 +1849,23 @@
                                          "Tenant isolation, workflow persistence, and audit-log integration proof pending",
                                          "Destructive reset guard, rollback documentation, command transcript, and CI DB artifact proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-mobile-testing-execution-static",
+                       "file":  "packages/mobile/tests/mobile-testing-execution-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-108 mobile testing execution matrix covers mobile-support typecheck/tests, mobile app typecheck/static tests, Expo dependency/runtime startup, iOS simulator, Android emulator, physical device checklist, biometric/API/offline/push/crash/OTA/accessibility QA, artifacts, and CI mobile checks",
+                                        "GAP-108 package scripts, mobile device QA checklist, manifest verifier, and readiness blockers stay aligned before live Expo/device proof",
+                                        "GAP-108 CI retains mobile testing execution contract and secret-safe artifact paths without claiming simulator/device/provider execution has passed"
+                                    ],
+                       "blockedBy":  [
+                                         "Static mobile testing execution test execution pending",
+                                         "Expo dependency install and runtime startup proof pending",
+                                         "iOS simulator, Android emulator, and physical-device checklist proof pending",
+                                         "Biometric/API/offline/push/crash/EAS OTA/accessibility QA proof pending",
+                                         "Retained artifacts and CI/mobile check proof pending"
+                                     ]
                    }
                ]
 }

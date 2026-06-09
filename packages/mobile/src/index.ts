@@ -1,4 +1,4 @@
-export type MobileScreenId =
+﻿export type MobileScreenId =
   | "auth"
   | "home"
   | "bookings"
@@ -1205,3 +1205,11 @@ export function getMobileScreen(id: MobileScreenId): MobileScreenDefinition {
   }
   return screen;
 }
+export {
+  mobileTestingExecutionArtifactPaths,
+  mobileTestingExecutionChecklistIds,
+  mobileTestingExecutionCommands,
+  mobileTestingExecutionMatrix,
+  mobileTestingExecutionReadiness,
+} from "./mobile-testing-execution";
+export type { MobileTestingExecutionMatrixEntry, MobileTestingExecutionStatus } from "./mobile-testing-execution";
