@@ -8,6 +8,7 @@ import {
   buildMobileDeviceQaRuntimeReadinessPlan,
   buildMobileRuntimeReadinessPlan,
   buildMobileScreenSyncRequirements,
+  buildMobileTestingExecutionReadinessPlan,
   getMobileScreen,
   buildOfflineIdempotencyKey,
   buildOfflineRuntimeReadinessPlan,
@@ -486,5 +487,76 @@ describe("mobile support helpers", () => {
       "Expo/EAS project id is still deployment-gated.",
       "Mobile device QA checklist still has blocking runtime/provider/manual items.",
     ]));
+  });
+  it("blocks mobile testing execution readiness until Expo, simulator, device, provider, OTA, accessibility, artifacts, and CI evidence exist", () => {
+    const plan = buildMobileTestingExecutionReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      mobileSupportTestsPassed: true,
+      mobileSupportTypecheckPassed: false,
+      mobileAppTypecheckPassed: false,
+      mobileStaticTestsPassed: true,
+      expoDependenciesInstalled: false,
+      expoRuntimeStarted: false,
+      iosSimulatorSmokePassed: false,
+      androidEmulatorSmokePassed: false,
+      physicalDeviceChecklistCompleted: false,
+      biometricLockQaPassed: false,
+      tenantApiSyncQaPassed: false,
+      offlineReconnectQaPassed: false,
+      pushTokenDeliveryQaPassed: false,
+      crashCaptureQaPassed: false,
+      easPreviewBuildPassed: false,
+      easUpdateRollbackPassed: false,
+      accessibilityQaPassed: false,
+      qaChecklistManifestSynced: true,
+      artifactsCaptured: false,
+      ciMobileChecksPassed: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck", "ios", "android"]);
+    expect(plan.requiredCommands).toContain("eas update --channel preview");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "Expo dependency install, runtime start, mobile typecheck, and static/security test output",
+      "iOS simulator, Android emulator, and physical device screen-smoke evidence",
+      "biometric, tenant API sync, offline reconnect, and push QA transcripts",
+      "crash capture, EAS preview/update rollback, and accessibility QA evidence",
+      "synced mobile QA checklist, retained artifacts, and CI/mobile check evidence",
+    ]));
+    expect(plan.blockers).toContain("Offline reconnect QA must prove encrypted queue persistence, idempotent replay, retry, and conflict handling.");
+    expect(plan.blockers).toContain("EAS update rollback QA must prove preview adoption and rollback republish on the same runtime.");
+  });
+
+  it("marks mobile testing execution ready only after Expo, simulator, device, provider, OTA, accessibility, artifact, and CI evidence exists", () => {
+    const plan = buildMobileTestingExecutionReadinessPlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit", ios: "expo start --ios", android: "expo start --android" },
+      mobileSupportTestsPassed: true,
+      mobileSupportTypecheckPassed: true,
+      mobileAppTypecheckPassed: true,
+      mobileStaticTestsPassed: true,
+      expoDependenciesInstalled: true,
+      expoRuntimeStarted: true,
+      iosSimulatorSmokePassed: true,
+      androidEmulatorSmokePassed: true,
+      physicalDeviceChecklistCompleted: true,
+      biometricLockQaPassed: true,
+      tenantApiSyncQaPassed: true,
+      offlineReconnectQaPassed: true,
+      pushTokenDeliveryQaPassed: true,
+      crashCaptureQaPassed: true,
+      easPreviewBuildPassed: true,
+      easUpdateRollbackPassed: true,
+      accessibilityQaPassed: true,
+      qaChecklistManifestSynced: true,
+      artifactsCaptured: true,
+      ciMobileChecksPassed: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
   });
 });

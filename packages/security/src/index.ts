@@ -150,6 +150,36 @@ export interface PrivateStorageAccessPlan {
   reasons: readonly string[];
 }
 
+export interface PrivateStorageRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  securityTestsPassed: boolean;
+  securityTypecheckPassed: boolean;
+  storageProviderConfigured: boolean;
+  storageEnvVarsConfigured: boolean;
+  privateBucketAclVerified: boolean;
+  serverOwnedObjectKeysEnforced: boolean;
+  signedUploadUrlsImplemented: boolean;
+  signedDownloadUrlsImplemented: boolean;
+  fileAssetPersistenceConfigured: boolean;
+  signedUrlGrantPersistenceConfigured: boolean;
+  signedUrlRevocationPersistenceConfigured: boolean;
+  auditLogPersistenceConfigured: boolean;
+  scanApprovalGateEnforced: boolean;
+  publicDerivativeSeparationEnforced: boolean;
+  privateOriginalPublicReadDenied: boolean;
+  approvedDerivativePublicReadVerified: boolean;
+  tenantScopedAccessIntegrationTestsPassed: boolean;
+  providerSandboxIntegrationTestsPassed: boolean;
+}
+
+export interface PrivateStorageRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export type FileAssetPersistenceStatus = "ready" | "blocked";
 export type FileAssetAccessLevel = "public_derivative" | "tenant_member" | "client_private" | "system_only";
 
@@ -938,6 +968,66 @@ export interface PrivacyRetentionRuntimeReadinessInput {
   dryRunEvidenceCollected: boolean;
 }
 
+export interface PrivacyRequestRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  securityTestsPassed: boolean;
+  securityTypecheckPassed: boolean;
+  publicRouteTestsPassed: boolean;
+  dashboardRouteTestsPassed: boolean;
+  privacyCasePersistenceConfigured: boolean;
+  identityProofingConfigured: boolean;
+  tenantRelationshipProofingConfigured: boolean;
+  requesterMismatchDenied: boolean;
+  exportWorkerConfigured: boolean;
+  deleteAnonymizeRectifyWorkersConfigured: boolean;
+  storageExportDeleteConfigured: boolean;
+  thirdPartyRedactionConfigured: boolean;
+  legalHoldHandlingConfigured: boolean;
+  notificationProviderConfigured: boolean;
+  notificationTemplatesApproved: boolean;
+  auditLogPersistenceConfigured: boolean;
+  statusTransitionPersistenceConfigured: boolean;
+  tenantIsolationIntegrationTestsPassed: boolean;
+  postgresStorageIntegrationTestsPassed: boolean;
+}
+
+export interface PrivacyRequestRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface RetentionEnforcementRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  securityTestsPassed: boolean;
+  securityTypecheckPassed: boolean;
+  attorneyRetentionScheduleApproved: boolean;
+  scheduledWorkerConfigured: boolean;
+  workerIdempotencyConfigured: boolean;
+  postgresRetentionExecutionVerified: boolean;
+  objectStorageRetentionExecutionVerified: boolean;
+  exportArtifactGenerationVerified: boolean;
+  deletionTombstonePersistenceConfigured: boolean;
+  anonymizationTombstonePersistenceConfigured: boolean;
+  restoreTombstoneReplayVerified: boolean;
+  backupRetentionPolicyDocumented: boolean;
+  legalHoldEnforcementVerified: boolean;
+  auditLogPersistenceConfigured: boolean;
+  tenantIsolationIntegrationTestsPassed: boolean;
+  dryRunToExecutionReconciliationVerified: boolean;
+  destructiveActionRollbackDocumented: boolean;
+}
+
+export interface RetentionEnforcementRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export interface PrivacyRetentionRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
@@ -1005,6 +1095,33 @@ export interface LegalReviewPacketPlan {
   reviewChecklist: readonly string[];
 }
 
+export interface LegalDocumentProductionReadinessInput {
+  packageScripts: readonly string[];
+  securityTestsPassed: boolean;
+  securityTypecheckPassed: boolean;
+  attorneyApprovalsRecorded: boolean;
+  allRequiredTopicsApproved: boolean;
+  jurisdictionPoliciesApproved: boolean;
+  reviewedPublicPageCopyCommitted: boolean;
+  placeholderCopyRemoved: boolean;
+  noindexRemovedAfterApproval: boolean;
+  consentVersionPersistenceConfigured: boolean;
+  studioPolicyVersionPersistenceConfigured: boolean;
+  acceptanceAuditPersistenceConfigured: boolean;
+  dashboardAcceptanceUiWired: boolean;
+  publicPageRouteSmokePassed: boolean;
+  consentAcceptanceRouteTestsPassed: boolean;
+  rollbackPlanDocumented: boolean;
+}
+
+export interface LegalDocumentProductionReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export interface PaymentPolicyLegalReviewRuntimeReadinessInput {
   packageScripts: readonly string[];
   securityTestsPassed: boolean;
@@ -1036,11 +1153,125 @@ export interface PaymentPolicyLegalReviewRuntimeReadinessPlan {
   blockers: readonly string[];
 }
 
+export interface AbuseControlRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  securityTestsPassed: boolean;
+  securityTypecheckPassed: boolean;
+  distributedLimiterConfigured: boolean;
+  limiterEnvVarsConfigured: boolean;
+  edgeOrMiddlewareWired: boolean;
+  routeFamilyPoliciesApplied: boolean;
+  tenantSafeKeysVerified: boolean;
+  botChallengeProviderConfigured: boolean;
+  botChallengeRouteTestsPassed: boolean;
+  providerWebhookSignatureBypassVerified: boolean;
+  invalidWebhookSignatureChallengeVerified: boolean;
+  privacySafeAbuseLogPersistenceConfigured: boolean;
+  abuseLogRedactionVerified: boolean;
+  alertDeliveryConfigured: boolean;
+  throttlingAlertSmokePassed: boolean;
+  failClosedBehaviorVerified: boolean;
+  publicRouteIntegrationTestsPassed: boolean;
+}
+
+export interface AbuseControlRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface SecurityAutomatedCoverageReadinessInput {
+  packageScripts: readonly string[];
+  securityPackageTestsPassed: boolean;
+  securityPackageTypecheckPassed: boolean;
+  routeVitestSuitePassed: boolean;
+  middlewareRuntimeSuitePassed: boolean;
+  middlewareStaticSuitePassed: boolean;
+  webE2eSecuritySuitePassed: boolean;
+  dashboardE2eSecuritySuitePassed: boolean;
+  fullUnitSuitePassed: boolean;
+  ciSecurityChecksPassed: boolean;
+  testManifestIncludesSecuritySuites: boolean;
+  dbBackedTenantIsolationTestsPassed: boolean;
+  storageProviderNegativeTestsPassed: boolean;
+  privacyWorkflowIntegrationTestsPassed: boolean;
+  authenticatedRoleBoundaryTestsPassed: boolean;
+  coverageArtifactsCollected: boolean;
+  failureModeFixturesDocumented: boolean;
+}
+
+export interface SecurityAutomatedCoverageReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface SecurityAppRuntimeVerificationInput {
+  packageScripts: readonly string[];
+  securityTestsPassed: boolean;
+  securityTypecheckPassed: boolean;
+  webTypecheckPassed: boolean;
+  webBuildPassed: boolean;
+  dashboardTypecheckPassed: boolean;
+  dashboardBuildPassed: boolean;
+  mobileTypecheckPassed: boolean;
+  nextConfigStaticTestsPassed: boolean;
+  mobileSecurityStaticTestsPassed: boolean;
+  webSecurityRoutesSmokePassed: boolean;
+  dashboardSecurityRoutesSmokePassed: boolean;
+  webMiddlewareRuntimeSmokePassed: boolean;
+  dashboardMiddlewareRuntimeSmokePassed: boolean;
+  mobileSystemStatusScreenSmokePassed: boolean;
+  browserRuntimeSmokePassed: boolean;
+  deviceRuntimeSmokePassed: boolean;
+  ciRuntimeEvidenceCollected: boolean;
+}
+
+export interface SecurityAppRuntimeVerificationPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export interface SecurityHeaderDraft {
   name: string;
   value: string;
   status: SecurityStatus;
   rationale: string;
+}
+
+export interface SecurityMiddlewareRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  securityTestsPassed: boolean;
+  securityTypecheckPassed: boolean;
+  webMiddlewareWired: boolean;
+  dashboardMiddlewareWired: boolean;
+  webHeaderBrowserSmokePassed: boolean;
+  dashboardHeaderBrowserSmokePassed: boolean;
+  productionHstsDeploymentVerified: boolean;
+  previewLocalHstsSuppressionVerified: boolean;
+  cspProviderConnectSourcesVerified: boolean;
+  cspFrameBaseFormInvariantsVerified: boolean;
+  csrfCookieMutationAttackTestsPassed: boolean;
+  csrfValidTokenAllowTestsPassed: boolean;
+  sameSiteCookieBehaviorVerified: boolean;
+  csrfSessionBindingVerified: boolean;
+  providerWebhookCsrfBypassReviewed: boolean;
+  routeRuntimeIntegrationTestsPassed: boolean;
+}
+
+export interface SecurityMiddlewareRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
 }
 
 export interface SecurityRuntimeEnforcementInput {
@@ -1366,6 +1597,59 @@ export function buildLegalReviewPacketPlan(input: LegalReviewPacketInput): Legal
       "SMS language includes opt-in, STOP, HELP, quiet hours, marketing/transactional boundaries, and retention.",
       "Noindex protections stay enabled until all required topics are approved and versioned acceptance/audit tracking is live.",
     ],
+  };
+}
+
+export function buildLegalDocumentProductionReadinessPlan(
+  input: LegalDocumentProductionReadinessInput,
+): LegalDocumentProductionReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
+  if (!input.securityTestsPassed) blockers.push("Run and pass @inkroute/security tests before marking legal documents production-ready.");
+  if (!input.securityTypecheckPassed) blockers.push("Run and pass @inkroute/security typecheck before marking legal documents production-ready.");
+  if (!input.attorneyApprovalsRecorded) blockers.push("Qualified attorney approval metadata must be recorded for every production legal document.");
+  if (!input.allRequiredTopicsApproved) blockers.push("Every required legal review topic must have reviewer, approval date, jurisdiction, and version metadata.");
+  if (!input.jurisdictionPoliciesApproved) blockers.push("Jurisdiction-specific studio policies must be approved before production publication.");
+  if (!input.reviewedPublicPageCopyCommitted) blockers.push("Reviewed privacy, terms, consent, safety, SMS, aftercare, deposit, tax, liability, and SaaS copy must be committed.");
+  if (!input.placeholderCopyRemoved) blockers.push("Placeholder and non-attorney-reviewed copy must be removed from public pages before launch.");
+  if (!input.noindexRemovedAfterApproval) blockers.push("Noindex must stay in place until attorney approval and reviewed copy are committed, then removal must be verified.");
+  if (!input.consentVersionPersistenceConfigured) blockers.push("Consent document version persistence must be configured for each accepted consent surface.");
+  if (!input.studioPolicyVersionPersistenceConfigured) blockers.push("Studio policy version persistence must be configured for jurisdiction-specific policies.");
+  if (!input.acceptanceAuditPersistenceConfigured) blockers.push("Acceptance audit persistence must record user, tenant, document, version, IP hash, user agent, timestamp, and source surface.");
+  if (!input.dashboardAcceptanceUiWired) blockers.push("Dashboard acceptance UI must require current legal document and studio policy versions.");
+  if (!input.publicPageRouteSmokePassed) blockers.push("Public legal page route smoke tests must prove reviewed copy and approved indexing state.");
+  if (!input.consentAcceptanceRouteTestsPassed) blockers.push("Consent acceptance route tests must prove versioned persistence and audit-log writes.");
+  if (!input.rollbackPlanDocumented) blockers.push("Rollback plan must document how to restore prior approved legal copy and acceptance versions.");
+
+  if (!input.attorneyApprovalsRecorded || !input.allRequiredTopicsApproved || !input.jurisdictionPoliciesApproved) {
+    requiredEvidence.push("attorney approval records for all required legal topics and jurisdiction policies");
+  }
+  if (!input.reviewedPublicPageCopyCommitted || !input.placeholderCopyRemoved || !input.noindexRemovedAfterApproval || !input.publicPageRouteSmokePassed) {
+    requiredEvidence.push("reviewed public legal pages with placeholder removal and approved indexing smoke evidence");
+  }
+  if (!input.consentVersionPersistenceConfigured || !input.studioPolicyVersionPersistenceConfigured || !input.acceptanceAuditPersistenceConfigured || !input.consentAcceptanceRouteTestsPassed) {
+    requiredEvidence.push("versioned consent/studio policy persistence plus acceptance audit route tests");
+  }
+  if (!input.dashboardAcceptanceUiWired || !input.rollbackPlanDocumented) {
+    requiredEvidence.push("dashboard acceptance UI proof and legal-copy rollback plan");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm vitest run apps/web/tests/legal-pages-route.test.ts apps/web/tests/consent-acceptance-route.test.ts",
+      "node scripts/legal/verify-approved-legal-pages.mjs",
+    ],
+    requiredEvidence,
+    blockers,
   };
 }
 
@@ -1780,6 +2064,65 @@ export function buildPrivateStorageAccessPlan(input: PrivateStorageAccessInput):
       "Write AuditLog entries for signed URL creation, download, revocation, and public derivative publication.",
     ],
     reasons,
+  };
+}
+
+export function buildPrivateStorageRuntimeReadinessPlan(
+  input: PrivateStorageRuntimeReadinessInput,
+): PrivateStorageRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
+  if (!input.securityTestsPassed) blockers.push("Run and pass @inkroute/security tests before marking private storage ready.");
+  if (!input.securityTypecheckPassed) blockers.push("Run and pass @inkroute/security typecheck before marking private storage ready.");
+  if (!input.storageProviderConfigured) blockers.push("S3 or Supabase private object storage provider must be configured.");
+  if (!input.storageEnvVarsConfigured) blockers.push("Private storage bucket, region, endpoint, and signing environment variables must be configured.");
+  if (!input.privateBucketAclVerified) blockers.push("Private bucket ACLs must deny public reads for original reference, consent, healed-photo, and document assets.");
+  if (!input.serverOwnedObjectKeysEnforced) blockers.push("Upload and download flows must use server-owned tenant/asset/subject object keys.");
+  if (!input.signedUploadUrlsImplemented) blockers.push("Provider signed upload URLs must be implemented with operation, object key, content type, and expiry scope.");
+  if (!input.signedDownloadUrlsImplemented) blockers.push("Provider signed download URLs must be implemented with scan, expiry, revocation, and tenant checks.");
+  if (!input.fileAssetPersistenceConfigured) blockers.push("FileAsset persistence must record object key, owner, scan status, derivative key, ACL, and retention metadata.");
+  if (!input.signedUrlGrantPersistenceConfigured) blockers.push("SignedUrlGrant persistence must record issuer, recipient, object key, scope, expiry, and use status.");
+  if (!input.signedUrlRevocationPersistenceConfigured) blockers.push("Signed URL revocation persistence must be checked before every private download grant.");
+  if (!input.auditLogPersistenceConfigured) blockers.push("AuditLog persistence must cover signed URL creation, download, revocation, and derivative publication.");
+  if (!input.scanApprovalGateEnforced) blockers.push("Private downloads and public derivative publication must require approved scan status.");
+  if (!input.publicDerivativeSeparationEnforced) blockers.push("Public portfolio reads must use separate scanned derivative object keys, never originals.");
+  if (!input.privateOriginalPublicReadDenied) blockers.push("Integration tests must prove private originals cannot be read publicly.");
+  if (!input.approvedDerivativePublicReadVerified) blockers.push("Integration tests must prove approved public derivatives can be read without exposing originals.");
+  if (!input.tenantScopedAccessIntegrationTestsPassed) blockers.push("Tenant-scoped storage access integration tests must deny cross-tenant object keys and grants.");
+  if (!input.providerSandboxIntegrationTestsPassed) blockers.push("Storage provider sandbox or emulator tests must exercise signed upload, signed download, ACL denial, and revocation.");
+
+  if (!input.storageProviderConfigured || !input.storageEnvVarsConfigured || !input.privateBucketAclVerified) {
+    requiredEvidence.push("configured S3/Supabase private bucket, signing environment, and ACL denial transcript");
+  }
+  if (!input.signedUploadUrlsImplemented || !input.signedDownloadUrlsImplemented || !input.serverOwnedObjectKeysEnforced) {
+    requiredEvidence.push("provider signed upload/download URL implementation smoke with server-owned object keys");
+  }
+  if (!input.fileAssetPersistenceConfigured || !input.signedUrlGrantPersistenceConfigured || !input.signedUrlRevocationPersistenceConfigured || !input.auditLogPersistenceConfigured) {
+    requiredEvidence.push("persisted FileAsset, SignedUrlGrant, revocation, and AuditLog rows for signed storage flows");
+  }
+  if (!input.scanApprovalGateEnforced || !input.publicDerivativeSeparationEnforced) {
+    requiredEvidence.push("scan-approved private download and separate public derivative publication proof");
+  }
+  if (!input.privateOriginalPublicReadDenied || !input.approvedDerivativePublicReadVerified || !input.tenantScopedAccessIntegrationTestsPassed || !input.providerSandboxIntegrationTestsPassed) {
+    requiredEvidence.push("private/public object access integration tests against provider sandbox or emulator");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts",
+      "node scripts/storage/verify-private-bucket-acl.mjs",
+      "node scripts/storage/verify-signed-url-grants.mjs",
+    ],
+    requiredEvidence,
+    blockers,
   };
 }
 
@@ -2293,6 +2636,124 @@ export interface DashboardPrivacyProjection {
   retentionWorkflowRequired: boolean;
 }
 
+export function buildPrivacyRequestRuntimeReadinessPlan(
+  input: PrivacyRequestRuntimeReadinessInput,
+): PrivacyRequestRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
+  if (!input.securityTestsPassed) blockers.push("Run and pass @inkroute/security tests before marking privacy requests ready.");
+  if (!input.securityTypecheckPassed) blockers.push("Run and pass @inkroute/security typecheck before marking privacy requests ready.");
+  if (!input.publicRouteTestsPassed) blockers.push("Public privacy request route tests must pass for structured errors, tenant lookup, and demo persistence.");
+  if (!input.dashboardRouteTestsPassed) blockers.push("Dashboard privacy request route tests must pass for tenant scope, role denial, redaction, and persistence.");
+  if (!input.privacyCasePersistenceConfigured) blockers.push("PrivacyRequest case persistence must store requester, tenant, type, status, identity proof, due dates, and fulfillment metadata.");
+  if (!input.identityProofingConfigured) blockers.push("Identity verification must gate export, delete, anonymize, and rectification execution.");
+  if (!input.tenantRelationshipProofingConfigured) blockers.push("Tenant/member relationship proofing must bind requester claims to the tenant data being exported or deleted.");
+  if (!input.requesterMismatchDenied) blockers.push("Requester identity and tenant mismatch denial tests must pass before production execution.");
+  if (!input.exportWorkerConfigured) blockers.push("Export worker must assemble tenant-scoped profile, booking, consent, file, message, payment, and audit-safe artifacts.");
+  if (!input.deleteAnonymizeRectifyWorkersConfigured) blockers.push("Delete, anonymize, and rectification workers must be configured for Postgres-owned privacy data.");
+  if (!input.storageExportDeleteConfigured) blockers.push("Storage export/delete workflow must handle private reference, consent, healed-photo, document, and public derivative objects.");
+  if (!input.thirdPartyRedactionConfigured) blockers.push("Exports must redact third-party artist/client/payment/provider data before delivery.");
+  if (!input.legalHoldHandlingConfigured) blockers.push("Legal hold handling must retain protected consent, payment, tax, and audit data while explaining partial denial.");
+  if (!input.notificationProviderConfigured) blockers.push("Notification provider must send intake, verification, status, fulfillment, and denial updates.");
+  if (!input.notificationTemplatesApproved) blockers.push("Attorney-approved privacy request notification templates must be versioned before production sends.");
+  if (!input.auditLogPersistenceConfigured) blockers.push("AuditLog persistence must cover intake, identity proofing, worker execution, export delivery, deletion/anonymization, legal hold, and closure.");
+  if (!input.statusTransitionPersistenceConfigured) blockers.push("PrivacyRequest status transitions must be persisted for intake, verification, processing, review, completed, denied, and legal-hold states.");
+  if (!input.tenantIsolationIntegrationTestsPassed) blockers.push("Tenant-isolation integration tests must deny cross-tenant privacy exports and deletions.");
+  if (!input.postgresStorageIntegrationTestsPassed) blockers.push("Postgres and object-storage integration tests must prove export/delete/anonymize execution and audit persistence.");
+
+  if (!input.privacyCasePersistenceConfigured || !input.statusTransitionPersistenceConfigured || !input.auditLogPersistenceConfigured) {
+    requiredEvidence.push("persisted PrivacyRequest status transitions and AuditLog records");
+  }
+  if (!input.identityProofingConfigured || !input.tenantRelationshipProofingConfigured || !input.requesterMismatchDenied || !input.tenantIsolationIntegrationTestsPassed) {
+    requiredEvidence.push("identity, tenant relationship, requester mismatch, and cross-tenant denial proof");
+  }
+  if (!input.exportWorkerConfigured || !input.deleteAnonymizeRectifyWorkersConfigured || !input.storageExportDeleteConfigured || !input.postgresStorageIntegrationTestsPassed) {
+    requiredEvidence.push("Postgres and object-storage export/delete/anonymize worker integration output");
+  }
+  if (!input.thirdPartyRedactionConfigured || !input.legalHoldHandlingConfigured) {
+    requiredEvidence.push("third-party redaction and legal-retention hold execution evidence");
+  }
+  if (!input.notificationProviderConfigured || !input.notificationTemplatesApproved) {
+    requiredEvidence.push("approved notification templates and provider delivery transcript");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm vitest run apps/web/tests/privacy-requests-public-route.test.ts apps/web/tests/privacy-requests-dashboard-route.test.ts",
+      "node scripts/privacy/verify-privacy-request-workers.mjs",
+      "node scripts/privacy/verify-privacy-request-notifications.mjs",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
+export function buildRetentionEnforcementRuntimeReadinessPlan(
+  input: RetentionEnforcementRuntimeReadinessInput,
+): RetentionEnforcementRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
+  if (!input.securityTestsPassed) blockers.push("Run and pass @inkroute/security tests before marking retention enforcement ready.");
+  if (!input.securityTypecheckPassed) blockers.push("Run and pass @inkroute/security typecheck before marking retention enforcement ready.");
+  if (!input.attorneyRetentionScheduleApproved) blockers.push("Attorney-approved retention, deletion, anonymization, export, and legal-hold schedule must be recorded.");
+  if (!input.scheduledWorkerConfigured) blockers.push("Scheduled retention worker must execute due DB and storage actions on an approved cadence.");
+  if (!input.workerIdempotencyConfigured) blockers.push("Retention workers must be idempotent across retries, partial failures, and duplicate schedule ticks.");
+  if (!input.postgresRetentionExecutionVerified) blockers.push("Postgres retention execution must be verified for delete, anonymize, retain, export, and legal-hold actions.");
+  if (!input.objectStorageRetentionExecutionVerified) blockers.push("Object-storage retention execution must be verified for private files, consent signatures, documents, and derivatives.");
+  if (!input.exportArtifactGenerationVerified) blockers.push("Export artifact generation must be verified for client, booking, consent, file, message, payment, audit-safe, and error-report data.");
+  if (!input.deletionTombstonePersistenceConfigured) blockers.push("Deletion tombstones must persist tenant, record, category, action, reason, timestamp, and worker run identifiers.");
+  if (!input.anonymizationTombstonePersistenceConfigured) blockers.push("Anonymization tombstones must persist field/category redaction evidence and worker run identifiers.");
+  if (!input.restoreTombstoneReplayVerified) blockers.push("Restore jobs must replay deletion and anonymization tombstones before restored data becomes queryable.");
+  if (!input.backupRetentionPolicyDocumented) blockers.push("Backup retention policy must document tombstone replay, restore limits, and legal-hold exceptions.");
+  if (!input.legalHoldEnforcementVerified) blockers.push("Legal hold enforcement must retain protected consent, payment, tax, and audit records while blocking destructive actions.");
+  if (!input.auditLogPersistenceConfigured) blockers.push("AuditLog persistence must cover dry-run decisions, execution attempts, tombstones, exports, holds, restores, and failures.");
+  if (!input.tenantIsolationIntegrationTestsPassed) blockers.push("Tenant-isolation integration tests must deny cross-tenant retention, export, deletion, and restore actions.");
+  if (!input.dryRunToExecutionReconciliationVerified) blockers.push("Dry-run decisions must reconcile to executed DB/storage actions, tombstones, audit rows, and skipped legal holds.");
+  if (!input.destructiveActionRollbackDocumented) blockers.push("Rollback and incident response notes must exist for failed or accidental destructive retention actions.");
+
+  if (!input.attorneyRetentionScheduleApproved || !input.legalHoldEnforcementVerified) {
+    requiredEvidence.push("attorney-approved retention schedule and legal-hold enforcement transcript");
+  }
+  if (!input.scheduledWorkerConfigured || !input.workerIdempotencyConfigured || !input.dryRunToExecutionReconciliationVerified) {
+    requiredEvidence.push("scheduled idempotent worker run with dry-run-to-execution reconciliation");
+  }
+  if (!input.postgresRetentionExecutionVerified || !input.objectStorageRetentionExecutionVerified || !input.exportArtifactGenerationVerified) {
+    requiredEvidence.push("Postgres, object-storage, and export artifact retention execution output");
+  }
+  if (!input.deletionTombstonePersistenceConfigured || !input.anonymizationTombstonePersistenceConfigured || !input.restoreTombstoneReplayVerified || !input.backupRetentionPolicyDocumented) {
+    requiredEvidence.push("deletion/anonymization tombstone persistence plus backup restore replay drill");
+  }
+  if (!input.auditLogPersistenceConfigured || !input.tenantIsolationIntegrationTestsPassed || !input.destructiveActionRollbackDocumented) {
+    requiredEvidence.push("audit persistence, tenant-isolation tests, and destructive-action rollback documentation");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "node scripts/privacy/run-retention-dry-run.mjs",
+      "node scripts/privacy/execute-retention-workers.mjs",
+      "node scripts/privacy/verify-backup-restore-tombstones.mjs",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
 export interface DashboardPrivacyRuntimeReadinessInput {
   packageScripts: Readonly<Record<string, string>>;
   securityTestsPassed: boolean;
@@ -2536,6 +2997,231 @@ export function buildSecurityHeaderPlan(extraConnectSources: string[] = []): Sec
     const connectSrc = [`'self'`, ...extraConnectSources].join(" ");
     return { ...header, value: header.value.replace("connect-src 'self'", `connect-src ${connectSrc}`) };
   });
+}
+
+export function buildAbuseControlRuntimeReadinessPlan(
+  input: AbuseControlRuntimeReadinessInput,
+): AbuseControlRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
+  if (!input.securityTestsPassed) blockers.push("Run and pass @inkroute/security tests before marking abuse controls ready.");
+  if (!input.securityTypecheckPassed) blockers.push("Run and pass @inkroute/security typecheck before marking abuse controls ready.");
+  if (!input.distributedLimiterConfigured) blockers.push("Distributed Redis/Upstash or edge rate limiter must be configured for production routes.");
+  if (!input.limiterEnvVarsConfigured) blockers.push("Limiter provider URL, token, namespace, and route-policy environment variables must be configured.");
+  if (!input.edgeOrMiddlewareWired) blockers.push("Web/dashboard edge middleware or route middleware must enforce abuse controls before handlers run.");
+  if (!input.routeFamilyPoliciesApplied) blockers.push("Public booking, upload, privacy, message, error-report, and provider webhook route-family policies must be applied.");
+  if (!input.tenantSafeKeysVerified) blockers.push("Rate-limit keys must hash IP/user identifiers and include tenant/route family without storing raw PII.");
+  if (!input.botChallengeProviderConfigured) blockers.push("Bot challenge provider or challenge strategy must be configured for suspicious public traffic.");
+  if (!input.botChallengeRouteTestsPassed) blockers.push("Route tests must prove suspicious public requests receive challenge responses before handler execution.");
+  if (!input.providerWebhookSignatureBypassVerified) blockers.push("Signed provider webhooks must bypass public bot challenges while retaining signature and replay validation.");
+  if (!input.invalidWebhookSignatureChallengeVerified) blockers.push("Invalid provider webhook signatures must be challenged or rejected and counted for abuse alerting.");
+  if (!input.privacySafeAbuseLogPersistenceConfigured) blockers.push("Privacy-safe AbuseEvent persistence must record hashed actor keys, tenant, route family, action, and reason.");
+  if (!input.abuseLogRedactionVerified) blockers.push("Abuse logs must prove raw IPs, tokens, payloads, signatures, and message bodies are redacted.");
+  if (!input.alertDeliveryConfigured) blockers.push("Alert delivery must be configured for throttling spikes, invalid signatures, limiter failures, and challenge surges.");
+  if (!input.throttlingAlertSmokePassed) blockers.push("Alert smoke tests must prove throttling and invalid-signature events reach the configured alert channel.");
+  if (!input.failClosedBehaviorVerified) blockers.push("Limiter/provider failure behavior must fail closed for public mutation routes and fail safe for signed provider callbacks.");
+  if (!input.publicRouteIntegrationTestsPassed) blockers.push("Public route integration tests must prove limiter decisions across booking, upload, privacy, message, and fallback error-report routes.");
+
+  if (!input.distributedLimiterConfigured || !input.limiterEnvVarsConfigured || !input.edgeOrMiddlewareWired || !input.routeFamilyPoliciesApplied) {
+    requiredEvidence.push("live distributed limiter configuration and middleware route-family enforcement proof");
+  }
+  if (!input.tenantSafeKeysVerified || !input.privacySafeAbuseLogPersistenceConfigured || !input.abuseLogRedactionVerified) {
+    requiredEvidence.push("privacy-safe hashed abuse keys and redacted AbuseEvent persistence evidence");
+  }
+  if (!input.botChallengeProviderConfigured || !input.botChallengeRouteTestsPassed) {
+    requiredEvidence.push("bot challenge provider configuration and suspicious-route challenge tests");
+  }
+  if (!input.providerWebhookSignatureBypassVerified || !input.invalidWebhookSignatureChallengeVerified || !input.failClosedBehaviorVerified) {
+    requiredEvidence.push("provider webhook bypass, invalid signature challenge, replay validation, and fail-closed behavior tests");
+  }
+  if (!input.alertDeliveryConfigured || !input.throttlingAlertSmokePassed || !input.publicRouteIntegrationTestsPassed) {
+    requiredEvidence.push("abuse alert delivery smoke and public-route limiter integration tests");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts apps/web/tests/privacy-requests-public-route.test.ts",
+      "node scripts/security/verify-abuse-rate-limits.mjs",
+      "node scripts/security/verify-abuse-alerts.mjs",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
+export function buildSecurityMiddlewareRuntimeReadinessPlan(
+  input: SecurityMiddlewareRuntimeReadinessInput,
+): SecurityMiddlewareRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
+  if (!input.securityTestsPassed) blockers.push("Run and pass @inkroute/security tests before marking security middleware ready.");
+  if (!input.securityTypecheckPassed) blockers.push("Run and pass @inkroute/security typecheck before marking security middleware ready.");
+  if (!input.webMiddlewareWired) blockers.push("Web app middleware or config must apply shared security headers and CSRF enforcement to runtime routes.");
+  if (!input.dashboardMiddlewareWired) blockers.push("Dashboard middleware or config must apply shared security headers and CSRF enforcement to runtime routes.");
+  if (!input.webHeaderBrowserSmokePassed) blockers.push("Browser smoke tests must prove web pages emit CSP, nosniff, referrer, permissions policy, and production-gated HSTS headers.");
+  if (!input.dashboardHeaderBrowserSmokePassed) blockers.push("Browser smoke tests must prove dashboard pages emit CSP, nosniff, referrer, permissions policy, and production-gated HSTS headers.");
+  if (!input.productionHstsDeploymentVerified) blockers.push("Production HTTPS deployment must verify HSTS is enabled only where preload policy is safe.");
+  if (!input.previewLocalHstsSuppressionVerified) blockers.push("Preview and local environments must prove HSTS suppression to avoid poisoning local development or previews.");
+  if (!input.cspProviderConnectSourcesVerified) blockers.push("CSP connect-src must be verified against live Sentry, Stripe, storage, analytics, and API providers.");
+  if (!input.cspFrameBaseFormInvariantsVerified) blockers.push("CSP frame-ancestors, base-uri, and form-action invariants must be tested against runtime responses.");
+  if (!input.csrfCookieMutationAttackTestsPassed) blockers.push("Cookie-authenticated POST/PATCH/DELETE attack simulations must be rejected without valid CSRF tokens.");
+  if (!input.csrfValidTokenAllowTestsPassed) blockers.push("Valid CSRF token and session-bound mutation tests must pass for legitimate dashboard/web flows.");
+  if (!input.sameSiteCookieBehaviorVerified) blockers.push("Session cookies must be verified as SameSite lax/strict with secure production behavior.");
+  if (!input.csrfSessionBindingVerified) blockers.push("CSRF tokens must be bound to the active session or request context before mutation allowance.");
+  if (!input.providerWebhookCsrfBypassReviewed) blockers.push("Provider webhook CSRF bypass rules must be reviewed so signed callbacks bypass CSRF without weakening public mutations.");
+  if (!input.routeRuntimeIntegrationTestsPassed) blockers.push("Runtime route integration tests must cover web/dashboard middleware headers and CSRF decisions.");
+
+  if (!input.webMiddlewareWired || !input.dashboardMiddlewareWired || !input.routeRuntimeIntegrationTestsPassed) {
+    requiredEvidence.push("web/dashboard middleware wiring plus runtime route integration tests");
+  }
+  if (!input.webHeaderBrowserSmokePassed || !input.dashboardHeaderBrowserSmokePassed || !input.productionHstsDeploymentVerified || !input.previewLocalHstsSuppressionVerified) {
+    requiredEvidence.push("browser header smoke tests with production HSTS and preview/local HSTS suppression proof");
+  }
+  if (!input.cspProviderConnectSourcesVerified || !input.cspFrameBaseFormInvariantsVerified) {
+    requiredEvidence.push("runtime CSP provider connect-src and frame/base/form invariant verification");
+  }
+  if (!input.csrfCookieMutationAttackTestsPassed || !input.csrfValidTokenAllowTestsPassed || !input.sameSiteCookieBehaviorVerified || !input.csrfSessionBindingVerified || !input.providerWebhookCsrfBypassReviewed) {
+    requiredEvidence.push("CSRF attack/allow simulations, SameSite session behavior, token binding, and signed webhook bypass review");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm vitest run apps/web/tests/security-runtime-middleware.test.ts apps/web/tests/security-runtime-middleware-static.test.ts apps/web/tests/dashboard-security-runtime-middleware-static.test.ts",
+      "pnpm exec playwright test apps/web/tests/e2e/security-runtime.spec.ts apps/dashboard/tests/e2e/security-runtime.spec.ts",
+      "node scripts/security/verify-runtime-security-headers.mjs",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
+export function buildSecurityAutomatedCoverageReadinessPlan(
+  input: SecurityAutomatedCoverageReadinessInput,
+): SecurityAutomatedCoverageReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
+  if (!input.securityPackageTestsPassed) blockers.push("@inkroute/security package tests must execute and pass with upload, privacy, abuse, header, CSRF, and readiness coverage.");
+  if (!input.securityPackageTypecheckPassed) blockers.push("@inkroute/security typecheck must execute and pass.");
+  if (!input.routeVitestSuitePassed) blockers.push("Security route Vitest suite must pass for secure uploads, privacy requests, dashboard privacy, and trust-status tenant/role denial.");
+  if (!input.middlewareRuntimeSuitePassed) blockers.push("Runtime middleware Vitest suite must pass for web/dashboard CSRF block/allow and shared headers.");
+  if (!input.middlewareStaticSuitePassed) blockers.push("Static middleware and Next config suites must prove web/dashboard wiring and security package transpilation.");
+  if (!input.webE2eSecuritySuitePassed) blockers.push("Web Playwright security smoke must pass for headers and cookie-authenticated CSRF rejection.");
+  if (!input.dashboardE2eSecuritySuitePassed) blockers.push("Dashboard Playwright security smoke must pass for headers and cookie-authenticated CSRF rejection.");
+  if (!input.fullUnitSuitePassed) blockers.push("Full unit test command must pass after security route/runtime suites are added.");
+  if (!input.ciSecurityChecksPassed) blockers.push("CI security and quality checks must pass with security suites included in manifests.");
+  if (!input.testManifestIncludesSecuritySuites) blockers.push("Unit/E2E/security manifests must include the route, middleware, static, and E2E security suites.");
+  if (!input.dbBackedTenantIsolationTestsPassed) blockers.push("DB-backed authenticated tenant-isolation tests must pass for privacy, trust, upload, and dashboard boundaries.");
+  if (!input.storageProviderNegativeTestsPassed) blockers.push("Storage provider or emulator negative tests must pass for unsafe upload, private original public denial, signed URL revocation, and derivative exposure.");
+  if (!input.privacyWorkflowIntegrationTestsPassed) blockers.push("Privacy workflow integration tests must pass with real auth/Postgres/storage or emulator-backed fixtures.");
+  if (!input.authenticatedRoleBoundaryTestsPassed) blockers.push("Authenticated role-boundary tests must pass for owner, manager, artist, assistant, and cross-tenant denial cases.");
+  if (!input.coverageArtifactsCollected) blockers.push("Coverage, Playwright, CI, and provider/emulator artifacts must be collected for audit handoff.");
+  if (!input.failureModeFixturesDocumented) blockers.push("Security failure-mode fixtures must document upload, privacy, trust, middleware, CSRF, and provider-backed negative cases.");
+
+  if (!input.securityPackageTestsPassed || !input.securityPackageTypecheckPassed || !input.fullUnitSuitePassed || !input.ciSecurityChecksPassed) {
+    requiredEvidence.push("executed package typecheck/tests, full unit suite, and CI security check transcript");
+  }
+  if (!input.routeVitestSuitePassed || !input.middlewareRuntimeSuitePassed || !input.middlewareStaticSuitePassed || !input.testManifestIncludesSecuritySuites) {
+    requiredEvidence.push("route, runtime middleware, static wiring, and manifest verification test output");
+  }
+  if (!input.webE2eSecuritySuitePassed || !input.dashboardE2eSecuritySuitePassed) {
+    requiredEvidence.push("web and dashboard Playwright security smoke artifacts");
+  }
+  if (!input.dbBackedTenantIsolationTestsPassed || !input.authenticatedRoleBoundaryTestsPassed || !input.privacyWorkflowIntegrationTestsPassed) {
+    requiredEvidence.push("authenticated DB-backed tenant isolation, role-boundary, and privacy workflow integration output");
+  }
+  if (!input.storageProviderNegativeTestsPassed || !input.coverageArtifactsCollected || !input.failureModeFixturesDocumented) {
+    requiredEvidence.push("storage provider negative-test artifacts, coverage bundle, and documented security failure fixtures");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts apps/web/tests/privacy-requests-public-route.test.ts apps/web/tests/privacy-requests-dashboard-route.test.ts apps/web/tests/dashboard-trust-status-route.test.ts apps/web/tests/security-runtime-middleware.test.ts apps/web/tests/security-runtime-middleware-static.test.ts apps/web/tests/dashboard-security-runtime-middleware-static.test.ts packages/security/tests/upload-policy.test.ts",
+      "pnpm exec playwright test apps/web/tests/e2e/security-runtime.spec.ts apps/dashboard/tests/e2e/security-runtime.spec.ts",
+      "pnpm test:unit",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
+export function buildSecurityAppRuntimeVerificationPlan(
+  input: SecurityAppRuntimeVerificationInput,
+): SecurityAppRuntimeVerificationPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
+  if (!input.securityTestsPassed) blockers.push("@inkroute/security tests must pass before app runtime verification can close.");
+  if (!input.securityTypecheckPassed) blockers.push("@inkroute/security typecheck must pass before app runtime verification can close.");
+  if (!input.webTypecheckPassed) blockers.push("Web app typecheck must pass with Phase 13 security imports, routes, pages, and middleware.");
+  if (!input.webBuildPassed) blockers.push("Web app build must pass under real Next dependencies with security pages, public routes, and middleware.");
+  if (!input.dashboardTypecheckPassed) blockers.push("Dashboard app typecheck must pass with Phase 13 security API routes, trust page, and middleware.");
+  if (!input.dashboardBuildPassed) blockers.push("Dashboard app build must pass under real Next dependencies with security pages, API routes, and middleware.");
+  if (!input.mobileTypecheckPassed) blockers.push("Mobile app typecheck must pass with SystemStatus security, tenant-isolation, privacy, and upload preview surfaces.");
+  if (!input.nextConfigStaticTestsPassed) blockers.push("Next config static tests must prove web/dashboard transpile @inkroute/security and preserve runtime security imports.");
+  if (!input.mobileSecurityStaticTestsPassed) blockers.push("Mobile security static tests must prove SystemStatus security posture and upload/privacy preview wiring.");
+  if (!input.webSecurityRoutesSmokePassed) blockers.push("Web route smoke tests must exercise trust, privacy, legal, consent, and secure-upload surfaces.");
+  if (!input.dashboardSecurityRoutesSmokePassed) blockers.push("Dashboard route smoke tests must exercise trust-status and privacy request security APIs.");
+  if (!input.webMiddlewareRuntimeSmokePassed) blockers.push("Web middleware runtime smoke must prove shared security headers and CSRF rejection execute at app boundary.");
+  if (!input.dashboardMiddlewareRuntimeSmokePassed) blockers.push("Dashboard middleware runtime smoke must prove shared security headers and CSRF rejection execute at app boundary.");
+  if (!input.mobileSystemStatusScreenSmokePassed) blockers.push("Mobile SystemStatus screen smoke must prove security posture, privacy, tenant isolation, and upload preview render under app dependencies.");
+  if (!input.browserRuntimeSmokePassed) blockers.push("Browser runtime smoke must prove web/dashboard Phase 13 surfaces load with headers and without integration errors.");
+  if (!input.deviceRuntimeSmokePassed) blockers.push("Device or emulator smoke must prove mobile Phase 13 security surfaces load without dependency/runtime errors.");
+  if (!input.ciRuntimeEvidenceCollected) blockers.push("CI/runtime artifact evidence must be collected for web, dashboard, mobile, route, middleware, browser, and device smoke commands.");
+
+  if (!input.webTypecheckPassed || !input.webBuildPassed || !input.dashboardTypecheckPassed || !input.dashboardBuildPassed || !input.mobileTypecheckPassed) {
+    requiredEvidence.push("web/dashboard/mobile typecheck and build command output");
+  }
+  if (!input.nextConfigStaticTestsPassed || !input.mobileSecurityStaticTestsPassed) {
+    requiredEvidence.push("Next config and mobile security static test output");
+  }
+  if (!input.webSecurityRoutesSmokePassed || !input.dashboardSecurityRoutesSmokePassed || !input.webMiddlewareRuntimeSmokePassed || !input.dashboardMiddlewareRuntimeSmokePassed) {
+    requiredEvidence.push("web/dashboard route and middleware runtime smoke transcripts");
+  }
+  if (!input.mobileSystemStatusScreenSmokePassed || !input.browserRuntimeSmokePassed || !input.deviceRuntimeSmokePassed || !input.ciRuntimeEvidenceCollected) {
+    requiredEvidence.push("browser, mobile device/emulator, and CI runtime artifact bundle");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm vitest run apps/web/tests/security-next-config-static.test.ts apps/mobile/tests/mobile-security-static.test.ts",
+      "pnpm --filter @inkroute/web typecheck && pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard typecheck && pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/mobile typecheck",
+    ],
+    requiredEvidence,
+    blockers,
+  };
 }
 
 export function buildSecurityRuntimeEnforcementPlan(input: SecurityRuntimeEnforcementInput): SecurityRuntimeEnforcementPlan {

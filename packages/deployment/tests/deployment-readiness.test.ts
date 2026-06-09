@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildDeploymentPlan,
   buildDeploymentPipelineReadinessPlan,
+  buildDeploymentToolingRuntimeVerificationPlan,
   buildDeploymentSteps,
   buildHandoffTasks,
   buildProductionLaunchChecklist,
@@ -134,5 +135,70 @@ describe("deployment readiness helpers", () => {
     expect(plan.blockers).toContain("GitHub environment secrets must be configured without placeholder values.");
     expect(plan.blockers).toContain("EAS preview build must succeed for mobile.");
     expect(plan.blockers).toContain("Launch evidence packet must include URLs, command logs, provider screenshots, redacted secrets proof, and rollback evidence.");
+  });
+  it("blocks deployment tooling runtime verification until scripts, route smoke, and CI evidence all pass", () => {
+    const plan = buildDeploymentToolingRuntimeVerificationPlan({
+      packageScripts: { test: "vitest run" },
+      rootScripts: ["deploy:check-env", "deploy:checklist"],
+      dependenciesInstalled: false,
+      deploymentPackageTestsPassed: true,
+      deploymentPackageTypecheckPassed: false,
+      deploymentScriptsExecuted: false,
+      deployCheckEnvPassed: true,
+      deployChecklistPassed: false,
+      deployGapsPassed: false,
+      routeContractTestsPassed: false,
+      dashboardBuildPassed: false,
+      dashboardDeploymentPageSmokePassed: false,
+      dashboardReadinessApiSmokePassed: false,
+      rollbackPreflightVerified: false,
+      productionApprovalBoundaryVerified: false,
+      ciDeploymentReportsCaptured: false,
+      blockersDocumented: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingPackageScripts).toEqual(["typecheck"]);
+    expect(plan.missingRootScripts).toEqual(["deploy:gaps", "test:unit"]);
+    expect(plan.requiredCommands).toContain("pnpm deploy:gaps");
+    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/dashboard build");
+    expect(plan.requiredEvidence).toEqual(
+      expect.arrayContaining([
+        "Dependency install output plus @inkroute/deployment typecheck and test output.",
+        "Dashboard build output plus deployment page and readiness API smoke output.",
+        "CI deployment report artifacts and documented blocker owner list.",
+      ]),
+    );
+    expect(plan.blockers).toContain("Dashboard deployment readiness route contract tests must pass.");
+    expect(plan.blockers).toContain("Dashboard build must pass before route smoke is meaningful.");
+    expect(plan.blockers).toContain("CI must capture deployment reports/artifacts.");
+    expect(plan.blockers).toContain("Any remaining deployment blockers must be documented with owners.");
+  });
+
+  it("marks deployment tooling runtime verification ready when package, dashboard, rollback, and CI evidence are present", () => {
+    const plan = buildDeploymentToolingRuntimeVerificationPlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      rootScripts: ["deploy:check-env", "deploy:checklist", "deploy:gaps", "test:unit"],
+      dependenciesInstalled: true,
+      deploymentPackageTestsPassed: true,
+      deploymentPackageTypecheckPassed: true,
+      deploymentScriptsExecuted: true,
+      deployCheckEnvPassed: true,
+      deployChecklistPassed: true,
+      deployGapsPassed: true,
+      routeContractTestsPassed: true,
+      dashboardBuildPassed: true,
+      dashboardDeploymentPageSmokePassed: true,
+      dashboardReadinessApiSmokePassed: true,
+      rollbackPreflightVerified: true,
+      productionApprovalBoundaryVerified: true,
+      ciDeploymentReportsCaptured: true,
+      blockersDocumented: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.missingPackageScripts).toEqual([]);
+    expect(plan.missingRootScripts).toEqual([]);
+    expect(plan.blockers).toEqual([]);
   });
 });

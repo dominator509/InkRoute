@@ -682,6 +682,102 @@ export interface MobileDeviceQaSummary {
   productionReady: boolean;
 }
 
+export interface MobileTestingExecutionReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  mobileSupportTestsPassed: boolean;
+  mobileSupportTypecheckPassed: boolean;
+  mobileAppTypecheckPassed: boolean;
+  mobileStaticTestsPassed: boolean;
+  expoDependenciesInstalled: boolean;
+  expoRuntimeStarted: boolean;
+  iosSimulatorSmokePassed: boolean;
+  androidEmulatorSmokePassed: boolean;
+  physicalDeviceChecklistCompleted: boolean;
+  biometricLockQaPassed: boolean;
+  tenantApiSyncQaPassed: boolean;
+  offlineReconnectQaPassed: boolean;
+  pushTokenDeliveryQaPassed: boolean;
+  crashCaptureQaPassed: boolean;
+  easPreviewBuildPassed: boolean;
+  easUpdateRollbackPassed: boolean;
+  accessibilityQaPassed: boolean;
+  qaChecklistManifestSynced: boolean;
+  artifactsCaptured: boolean;
+  ciMobileChecksPassed: boolean;
+}
+
+export interface MobileTestingExecutionReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export function buildMobileTestingExecutionReadinessPlan(
+  input: MobileTestingExecutionReadinessInput,
+): MobileTestingExecutionReadinessPlan {
+  const requiredScripts = ["test", "typecheck", "ios", "android"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/mobile package script is missing ${script}.`);
+  if (!input.mobileSupportTestsPassed) blockers.push("@inkroute/mobile-support tests must pass before mobile testing can close.");
+  if (!input.mobileSupportTypecheckPassed) blockers.push("@inkroute/mobile-support typecheck must pass before mobile testing can close.");
+  if (!input.mobileAppTypecheckPassed) blockers.push("@inkroute/mobile typecheck must pass with the Phase 14 mobile test scaffold.");
+  if (!input.mobileStaticTestsPassed) blockers.push("Mobile static/security tests must pass for screen registry and SystemStatus security surfaces.");
+  if (!input.expoDependenciesInstalled) blockers.push("Expo dependencies must install before simulator or device QA evidence is meaningful.");
+  if (!input.expoRuntimeStarted) blockers.push("Expo runtime must start locally or in a preview build before device QA evidence is meaningful.");
+  if (!input.iosSimulatorSmokePassed) blockers.push("iOS simulator screen smoke must pass.");
+  if (!input.androidEmulatorSmokePassed) blockers.push("Android emulator screen smoke must pass.");
+  if (!input.physicalDeviceChecklistCompleted) blockers.push("Physical device QA checklist must be completed for iOS and Android coverage.");
+  if (!input.biometricLockQaPassed) blockers.push("Biometric lock QA must prove secure session lock/unlock behavior.");
+  if (!input.tenantApiSyncQaPassed) blockers.push("Tenant API sync QA must prove auth headers, tenant scope, request ids, and safe errors.");
+  if (!input.offlineReconnectQaPassed) blockers.push("Offline reconnect QA must prove encrypted queue persistence, idempotent replay, retry, and conflict handling.");
+  if (!input.pushTokenDeliveryQaPassed) blockers.push("Push QA must prove permission flow, token registration, opt-out, delivery receipt, and tap routing.");
+  if (!input.crashCaptureQaPassed) blockers.push("Crash QA must prove sanitized crash capture without PII, medical, payment, or token data.");
+  if (!input.easPreviewBuildPassed) blockers.push("EAS preview build must pass before OTA/update QA is production-significant.");
+  if (!input.easUpdateRollbackPassed) blockers.push("EAS update rollback QA must prove preview adoption and rollback republish on the same runtime.");
+  if (!input.accessibilityQaPassed) blockers.push("Mobile accessibility QA must pass for VoiceOver/TalkBack, text scaling, contrast, and touch targets.");
+  if (!input.qaChecklistManifestSynced) blockers.push("Mobile device QA checklist manifest must match generated checklist items.");
+  if (!input.artifactsCaptured) blockers.push("Mobile QA artifacts must include simulator logs, screenshots/videos, provider transcripts, crash event, OTA evidence, and accessibility notes.");
+  if (!input.ciMobileChecksPassed) blockers.push("CI/mobile checks must pass or publish mobile QA artifact placeholders for manual/device evidence.");
+
+  if (!input.expoDependenciesInstalled || !input.expoRuntimeStarted || !input.mobileAppTypecheckPassed || !input.mobileStaticTestsPassed) {
+    requiredEvidence.push("Expo dependency install, runtime start, mobile typecheck, and static/security test output");
+  }
+  if (!input.iosSimulatorSmokePassed || !input.androidEmulatorSmokePassed || !input.physicalDeviceChecklistCompleted) {
+    requiredEvidence.push("iOS simulator, Android emulator, and physical device screen-smoke evidence");
+  }
+  if (!input.biometricLockQaPassed || !input.tenantApiSyncQaPassed || !input.offlineReconnectQaPassed || !input.pushTokenDeliveryQaPassed) {
+    requiredEvidence.push("biometric, tenant API sync, offline reconnect, and push QA transcripts");
+  }
+  if (!input.crashCaptureQaPassed || !input.easPreviewBuildPassed || !input.easUpdateRollbackPassed || !input.accessibilityQaPassed) {
+    requiredEvidence.push("crash capture, EAS preview/update rollback, and accessibility QA evidence");
+  }
+  if (!input.qaChecklistManifestSynced || !input.artifactsCaptured || !input.ciMobileChecksPassed) {
+    requiredEvidence.push("synced mobile QA checklist, retained artifacts, and CI/mobile check evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/mobile-support typecheck",
+      "pnpm --filter @inkroute/mobile-support test",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "pnpm --filter @inkroute/mobile test",
+      "pnpm --filter @inkroute/mobile ios",
+      "pnpm --filter @inkroute/mobile android",
+      "eas build --profile preview --platform all",
+      "eas update --channel preview",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
 export interface MobileRuntimeReadinessInput {
   packageScripts: Readonly<Record<string, string>>;
   appJsonProjectId?: string;

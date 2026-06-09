@@ -124,6 +124,33 @@ export interface DeploymentPipelineReadinessPlan {
   readonly blockers: readonly string[];
 }
 
+export interface DeploymentToolingVerificationInput {
+  readonly packageScripts: Readonly<Record<string, string>>;
+  readonly dependenciesInstalled: boolean;
+  readonly deploymentPackageTestsPassed: boolean;
+  readonly deploymentPackageTypecheckPassed: boolean;
+  readonly unitRouteContractTestsPassed: boolean;
+  readonly deployCheckEnvPassed: boolean;
+  readonly deployChecklistPassed: boolean;
+  readonly deployGapsPassed: boolean;
+  readonly webBuildPassed: boolean;
+  readonly dashboardBuildPassed: boolean;
+  readonly dashboardReadinessApiSmokePassed: boolean;
+  readonly dashboardDeploymentPageSmokePassed: boolean;
+  readonly rollbackPreflightVerified: boolean;
+  readonly blockedProductionApprovalVerified: boolean;
+  readonly ciCapturedDeploymentReports: boolean;
+  readonly documentedBlockersPublished: boolean;
+}
+
+export interface DeploymentToolingVerificationPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingScripts: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
+}
+
 export const deploymentEnvironmentRequirements: readonly EnvironmentRequirement[] = [
   {
     name: "NODE_ENV",
@@ -606,6 +633,66 @@ export function buildDeploymentPipelineReadinessPlan(input: DeploymentPipelineRe
   };
 }
 
+export function buildDeploymentToolingVerificationPlan(
+  input: DeploymentToolingVerificationInput,
+): DeploymentToolingVerificationPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/deployment package script is missing ${script}.`);
+  if (!input.dependenciesInstalled) blockers.push("Workspace dependencies must install before deployment tooling verification is meaningful.");
+  if (!input.deploymentPackageTestsPassed) blockers.push("@inkroute/deployment tests must pass.");
+  if (!input.deploymentPackageTypecheckPassed) blockers.push("@inkroute/deployment typecheck must pass.");
+  if (!input.unitRouteContractTestsPassed) blockers.push("Dashboard deployment readiness route contract tests must pass.");
+  if (!input.deployCheckEnvPassed) blockers.push("deploy:check-env script must pass or emit documented blockers.");
+  if (!input.deployChecklistPassed) blockers.push("deploy:checklist script must pass or emit documented launch blockers.");
+  if (!input.deployGapsPassed) blockers.push("deploy:gaps script must pass and summarize production gap blockers.");
+  if (!input.webBuildPassed) blockers.push("@inkroute/web build must pass before deployment route smoke evidence is meaningful.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass before deployment dashboard smoke evidence is meaningful.");
+  if (!input.dashboardReadinessApiSmokePassed) blockers.push("Dashboard deployment readiness API smoke must prove local fallback, RBAC denial, rollback preflight, and blocked approval boundaries.");
+  if (!input.dashboardDeploymentPageSmokePassed) blockers.push("Dashboard deployment page smoke must prove the deployment readiness UI renders current blocker data.");
+  if (!input.rollbackPreflightVerified) blockers.push("Rollback preflight boundaries must be verified before production deployment readiness.");
+  if (!input.blockedProductionApprovalVerified) blockers.push("Blocked production approval boundaries must prevent launch while required evidence is missing.");
+  if (!input.ciCapturedDeploymentReports) blockers.push("GitHub Actions must capture deployment check-env, checklist, gaps, route, and build reports.");
+  if (!input.documentedBlockersPublished) blockers.push("Deployment blockers must be published in a human-readable report for handoff.");
+
+  if (!input.dependenciesInstalled || !input.deploymentPackageTestsPassed || !input.deploymentPackageTypecheckPassed || !input.unitRouteContractTestsPassed) {
+    requiredEvidence.push("dependency install plus deployment package test/typecheck and dashboard route contract output");
+  }
+  if (!input.deployCheckEnvPassed || !input.deployChecklistPassed || !input.deployGapsPassed) {
+    requiredEvidence.push("deploy:check-env, deploy:checklist, and deploy:gaps script transcripts");
+  }
+  if (!input.webBuildPassed || !input.dashboardBuildPassed || !input.dashboardReadinessApiSmokePassed || !input.dashboardDeploymentPageSmokePassed) {
+    requiredEvidence.push("web/dashboard build output and deployment dashboard API/page smoke evidence");
+  }
+  if (!input.rollbackPreflightVerified || !input.blockedProductionApprovalVerified) {
+    requiredEvidence.push("rollback preflight and blocked production approval boundary evidence");
+  }
+  if (!input.ciCapturedDeploymentReports || !input.documentedBlockersPublished) {
+    requiredEvidence.push("CI deployment report artifacts and published blocker report");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm install --frozen-lockfile",
+      "pnpm --filter @inkroute/deployment typecheck",
+      "pnpm --filter @inkroute/deployment test",
+      "pnpm test:unit -- apps/web/tests/dashboard-deployment-readiness-route.test.ts",
+      "pnpm deploy:check-env",
+      "pnpm deploy:checklist",
+      "pnpm deploy:gaps",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
 export function buildProductionLaunchChecklist(): LaunchChecklistItem[] {
   return [
     {
@@ -748,5 +835,124 @@ export function summarizeLaunchChecklist(items: readonly LaunchChecklistItem[]) 
     productionBlockingCount: blocking.length,
     byStatus,
     blockerIds: blocking.map((item) => item.id),
+  };
+}
+
+export interface DeploymentToolingRuntimeVerificationInput {
+  readonly packageScripts: Readonly<Record<string, string>>;
+  readonly rootScripts: readonly string[];
+  readonly dependenciesInstalled: boolean;
+  readonly deploymentPackageTestsPassed: boolean;
+  readonly deploymentPackageTypecheckPassed: boolean;
+  readonly deploymentScriptsExecuted: boolean;
+  readonly deployCheckEnvPassed: boolean;
+  readonly deployChecklistPassed: boolean;
+  readonly deployGapsPassed: boolean;
+  readonly routeContractTestsPassed: boolean;
+  readonly dashboardBuildPassed: boolean;
+  readonly dashboardDeploymentPageSmokePassed: boolean;
+  readonly dashboardReadinessApiSmokePassed: boolean;
+  readonly rollbackPreflightVerified: boolean;
+  readonly productionApprovalBoundaryVerified: boolean;
+  readonly ciDeploymentReportsCaptured: boolean;
+  readonly blockersDocumented: boolean;
+}
+
+export interface DeploymentToolingRuntimeVerificationPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingPackageScripts: readonly string[];
+  readonly missingRootScripts: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
+}
+
+const requiredDeploymentPackageScripts = ["test", "typecheck"] as const;
+const requiredDeploymentRootScripts = [
+  "deploy:check-env",
+  "deploy:checklist",
+  "deploy:gaps",
+  "test:unit",
+] as const;
+
+export function buildDeploymentToolingRuntimeVerificationPlan(
+  input: DeploymentToolingRuntimeVerificationInput,
+): DeploymentToolingRuntimeVerificationPlan {
+  const packageScriptNames = new Set(Object.keys(input.packageScripts));
+  const rootScriptNames = new Set(input.rootScripts);
+  const missingPackageScripts = requiredDeploymentPackageScripts.filter((script) => !packageScriptNames.has(script));
+  const missingRootScripts = requiredDeploymentRootScripts.filter((script) => !rootScriptNames.has(script));
+
+  const requiredCommands = [
+    "pnpm install --frozen-lockfile",
+    "pnpm --filter @inkroute/deployment typecheck",
+    "pnpm --filter @inkroute/deployment test",
+    "pnpm test:unit -- apps/web/tests/dashboard-deployment-readiness-route.test.ts",
+    "pnpm deploy:check-env",
+    "pnpm deploy:checklist",
+    "pnpm deploy:gaps",
+    "pnpm --filter @inkroute/dashboard build",
+    "dashboard deployment page/API route smoke",
+  ];
+
+  const requiredEvidence = [
+    "Dependency install output plus @inkroute/deployment typecheck and test output.",
+    "Deployment script outputs for deploy:check-env, deploy:checklist, and deploy:gaps.",
+    "Dashboard build output plus deployment page and readiness API smoke output.",
+    "Rollback preflight and production approval boundary proof.",
+    "CI deployment report artifacts and documented blocker owner list.",
+  ];
+
+  const blockers: string[] = [];
+  if (missingPackageScripts.length > 0) {
+    blockers.push("Deployment package must expose test and typecheck scripts.");
+  }
+  if (missingRootScripts.length > 0) {
+    blockers.push("Root deployment and unit-test scripts must be wired.");
+  }
+  if (!input.dependenciesInstalled) {
+    blockers.push("Workspace dependencies must install before deployment scripts are meaningful.");
+  }
+  if (!input.deploymentPackageTestsPassed || !input.deploymentPackageTypecheckPassed) {
+    blockers.push("@inkroute/deployment tests and typecheck must pass.");
+  }
+  if (!input.deploymentScriptsExecuted) {
+    blockers.push("Deployment scripts must execute through package/root scripts.");
+  }
+  if (!input.deployCheckEnvPassed || !input.deployChecklistPassed || !input.deployGapsPassed) {
+    blockers.push("Deploy check-env, checklist, and gaps scripts must pass or emit documented blockers.");
+  }
+  if (!input.routeContractTestsPassed) {
+    blockers.push("Dashboard deployment readiness route contract tests must pass.");
+  }
+  if (!input.dashboardBuildPassed) {
+    blockers.push("Dashboard build must pass before route smoke is meaningful.");
+  }
+  if (!input.dashboardDeploymentPageSmokePassed) {
+    blockers.push("Dashboard deployment page smoke must pass.");
+  }
+  if (!input.dashboardReadinessApiSmokePassed) {
+    blockers.push("Dashboard readiness API smoke must pass.");
+  }
+  if (!input.rollbackPreflightVerified) {
+    blockers.push("Rollback preflight boundaries must be verified.");
+  }
+  if (!input.productionApprovalBoundaryVerified) {
+    blockers.push("Production approval boundary must be verified.");
+  }
+  if (!input.ciDeploymentReportsCaptured) {
+    blockers.push("CI must capture deployment reports/artifacts.");
+  }
+  if (!input.blockersDocumented) {
+    blockers.push("Any remaining deployment blockers must be documented with owners.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingPackageScripts,
+    missingRootScripts,
+    requiredCommands,
+    requiredEvidence,
+    blockers,
   };
 }

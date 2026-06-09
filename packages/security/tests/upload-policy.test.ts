@@ -3,14 +3,22 @@ import {
   buildDashboardPrivacyRuntimeReadinessPlan,
   buildPrivacyLifecyclePlan,
   buildPrivacyCaseWorkflowPlan,
+  buildPrivacyRequestRuntimeReadinessPlan,
   buildPrivacyRetentionRuntimeReadinessPlan,
+  buildRetentionEnforcementRuntimeReadinessPlan,
   buildRetentionEnforcementDryRun,
   buildLegalReviewPacketPlan,
+  buildLegalDocumentProductionReadinessPlan,
   buildPaymentPolicyLegalReviewRuntimeReadinessPlan,
   buildAbuseControlPlan,
+  buildAbuseControlRuntimeReadinessPlan,
   buildFileAssetPersistencePlan,
   buildSignedUploadIntentPlan,
   buildPrivateStorageAccessPlan,
+  buildPrivateStorageRuntimeReadinessPlan,
+  buildSecurityAppRuntimeVerificationPlan,
+  buildSecurityAutomatedCoverageReadinessPlan,
+  buildSecurityMiddlewareRuntimeReadinessPlan,
   buildSecurityRuntimeEnforcementPlan,
   buildUploadScanPipelinePlan,
   detectMimeTypeFromSignature,
@@ -280,6 +288,78 @@ describe("security and privacy helpers", () => {
     expect(unsafeDerivative.reasons).toContain("Public portfolio access must use a separate safe derivative object key.");
   });
 
+  it("blocks private storage runtime readiness until provider signing, persistence, ACLs, and access tests are proven", () => {
+    const plan = buildPrivateStorageRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      storageProviderConfigured: false,
+      storageEnvVarsConfigured: false,
+      privateBucketAclVerified: false,
+      serverOwnedObjectKeysEnforced: true,
+      signedUploadUrlsImplemented: false,
+      signedDownloadUrlsImplemented: false,
+      fileAssetPersistenceConfigured: false,
+      signedUrlGrantPersistenceConfigured: false,
+      signedUrlRevocationPersistenceConfigured: false,
+      auditLogPersistenceConfigured: false,
+      scanApprovalGateEnforced: true,
+      publicDerivativeSeparationEnforced: true,
+      privateOriginalPublicReadDenied: false,
+      approvedDerivativePublicReadVerified: false,
+      tenantScopedAccessIntegrationTestsPassed: false,
+      providerSandboxIntegrationTestsPassed: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.blockers).toEqual(expect.arrayContaining([
+      "Run and pass @inkroute/security typecheck before marking private storage ready.",
+      "S3 or Supabase private object storage provider must be configured.",
+      "Provider signed upload URLs must be implemented with operation, object key, content type, and expiry scope.",
+      "SignedUrlGrant persistence must record issuer, recipient, object key, scope, expiry, and use status.",
+      "Integration tests must prove private originals cannot be read publicly.",
+      "Tenant-scoped storage access integration tests must deny cross-tenant object keys and grants.",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "configured S3/Supabase private bucket, signing environment, and ACL denial transcript",
+      "persisted FileAsset, SignedUrlGrant, revocation, and AuditLog rows for signed storage flows",
+      "private/public object access integration tests against provider sandbox or emulator",
+    ]));
+    expect(plan.requiredCommands).toContain("node scripts/storage/verify-private-bucket-acl.mjs");
+  });
+
+  it("marks private storage runtime ready only after signed URL, persistence, ACL, and private/public proofs exist", () => {
+    const plan = buildPrivateStorageRuntimeReadinessPlan({
+      packageScripts: ["test", "typecheck"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: true,
+      storageProviderConfigured: true,
+      storageEnvVarsConfigured: true,
+      privateBucketAclVerified: true,
+      serverOwnedObjectKeysEnforced: true,
+      signedUploadUrlsImplemented: true,
+      signedDownloadUrlsImplemented: true,
+      fileAssetPersistenceConfigured: true,
+      signedUrlGrantPersistenceConfigured: true,
+      signedUrlRevocationPersistenceConfigured: true,
+      auditLogPersistenceConfigured: true,
+      scanApprovalGateEnforced: true,
+      publicDerivativeSeparationEnforced: true,
+      privateOriginalPublicReadDenied: true,
+      approvedDerivativePublicReadVerified: true,
+      tenantScopedAccessIntegrationTestsPassed: true,
+      providerSandboxIntegrationTestsPassed: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+  });
+
   it("redacts PII, payment fields, medical notes, and nested privacy details", () => {
     const redacted = redactRecord({
       email: "avery@example.com",
@@ -500,6 +580,76 @@ describe("security and privacy helpers", () => {
     expect(invalid.alert.shouldAlert).toBe(true);
   });
 
+  it("blocks abuse-control runtime readiness until distributed limiter, middleware, challenge, logs, alerts, and route tests exist", () => {
+    const plan = buildAbuseControlRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      distributedLimiterConfigured: false,
+      limiterEnvVarsConfigured: false,
+      edgeOrMiddlewareWired: false,
+      routeFamilyPoliciesApplied: false,
+      tenantSafeKeysVerified: false,
+      botChallengeProviderConfigured: false,
+      botChallengeRouteTestsPassed: false,
+      providerWebhookSignatureBypassVerified: false,
+      invalidWebhookSignatureChallengeVerified: false,
+      privacySafeAbuseLogPersistenceConfigured: false,
+      abuseLogRedactionVerified: false,
+      alertDeliveryConfigured: false,
+      throttlingAlertSmokePassed: false,
+      failClosedBehaviorVerified: false,
+      publicRouteIntegrationTestsPassed: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.blockers).toEqual(expect.arrayContaining([
+      "Distributed Redis/Upstash or edge rate limiter must be configured for production routes.",
+      "Web/dashboard edge middleware or route middleware must enforce abuse controls before handlers run.",
+      "Signed provider webhooks must bypass public bot challenges while retaining signature and replay validation.",
+      "Privacy-safe AbuseEvent persistence must record hashed actor keys, tenant, route family, action, and reason.",
+      "Alert smoke tests must prove throttling and invalid-signature events reach the configured alert channel.",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "live distributed limiter configuration and middleware route-family enforcement proof",
+      "privacy-safe hashed abuse keys and redacted AbuseEvent persistence evidence",
+      "provider webhook bypass, invalid signature challenge, replay validation, and fail-closed behavior tests",
+      "abuse alert delivery smoke and public-route limiter integration tests",
+    ]));
+    expect(plan.requiredCommands).toContain("node scripts/security/verify-abuse-rate-limits.mjs");
+  });
+
+  it("marks abuse-control runtime ready only after limiter, middleware, webhook, logging, alert, and route proofs exist", () => {
+    const plan = buildAbuseControlRuntimeReadinessPlan({
+      packageScripts: ["test", "typecheck"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: true,
+      distributedLimiterConfigured: true,
+      limiterEnvVarsConfigured: true,
+      edgeOrMiddlewareWired: true,
+      routeFamilyPoliciesApplied: true,
+      tenantSafeKeysVerified: true,
+      botChallengeProviderConfigured: true,
+      botChallengeRouteTestsPassed: true,
+      providerWebhookSignatureBypassVerified: true,
+      invalidWebhookSignatureChallengeVerified: true,
+      privacySafeAbuseLogPersistenceConfigured: true,
+      abuseLogRedactionVerified: true,
+      alertDeliveryConfigured: true,
+      throttlingAlertSmokePassed: true,
+      failClosedBehaviorVerified: true,
+      publicRouteIntegrationTestsPassed: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+  });
+
   it("enforces security headers with production-only HSTS and provider CSP connect sources", () => {
     const production = buildSecurityRuntimeEnforcementPlan({
       environment: "production",
@@ -581,6 +731,214 @@ describe("security and privacy helpers", () => {
     );
     expect(valid.status).toBe("ready");
     expect(valid.csrf).toMatchObject({ required: true, allowed: true });
+  });
+
+  it("blocks security middleware runtime readiness until web/dashboard wiring, browser headers, CSP, SameSite, and CSRF route proof exist", () => {
+    const plan = buildSecurityMiddlewareRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      webMiddlewareWired: false,
+      dashboardMiddlewareWired: false,
+      webHeaderBrowserSmokePassed: false,
+      dashboardHeaderBrowserSmokePassed: false,
+      productionHstsDeploymentVerified: false,
+      previewLocalHstsSuppressionVerified: false,
+      cspProviderConnectSourcesVerified: false,
+      cspFrameBaseFormInvariantsVerified: false,
+      csrfCookieMutationAttackTestsPassed: false,
+      csrfValidTokenAllowTestsPassed: false,
+      sameSiteCookieBehaviorVerified: false,
+      csrfSessionBindingVerified: false,
+      providerWebhookCsrfBypassReviewed: false,
+      routeRuntimeIntegrationTestsPassed: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.blockers).toEqual(expect.arrayContaining([
+      "Web app middleware or config must apply shared security headers and CSRF enforcement to runtime routes.",
+      "Dashboard middleware or config must apply shared security headers and CSRF enforcement to runtime routes.",
+      "CSP connect-src must be verified against live Sentry, Stripe, storage, analytics, and API providers.",
+      "Cookie-authenticated POST/PATCH/DELETE attack simulations must be rejected without valid CSRF tokens.",
+      "Provider webhook CSRF bypass rules must be reviewed so signed callbacks bypass CSRF without weakening public mutations.",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "web/dashboard middleware wiring plus runtime route integration tests",
+      "browser header smoke tests with production HSTS and preview/local HSTS suppression proof",
+      "runtime CSP provider connect-src and frame/base/form invariant verification",
+      "CSRF attack/allow simulations, SameSite session behavior, token binding, and signed webhook bypass review",
+    ]));
+    expect(plan.requiredCommands).toContain("node scripts/security/verify-runtime-security-headers.mjs");
+  });
+
+  it("marks security middleware runtime ready only after headers, CSP, HSTS, SameSite, CSRF, and route proofs exist", () => {
+    const plan = buildSecurityMiddlewareRuntimeReadinessPlan({
+      packageScripts: ["test", "typecheck"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: true,
+      webMiddlewareWired: true,
+      dashboardMiddlewareWired: true,
+      webHeaderBrowserSmokePassed: true,
+      dashboardHeaderBrowserSmokePassed: true,
+      productionHstsDeploymentVerified: true,
+      previewLocalHstsSuppressionVerified: true,
+      cspProviderConnectSourcesVerified: true,
+      cspFrameBaseFormInvariantsVerified: true,
+      csrfCookieMutationAttackTestsPassed: true,
+      csrfValidTokenAllowTestsPassed: true,
+      sameSiteCookieBehaviorVerified: true,
+      csrfSessionBindingVerified: true,
+      providerWebhookCsrfBypassReviewed: true,
+      routeRuntimeIntegrationTestsPassed: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+  });
+
+  it("blocks security automated coverage readiness until package, route, middleware, E2E, CI, DB, and storage suites execute", () => {
+    const plan = buildSecurityAutomatedCoverageReadinessPlan({
+      packageScripts: ["test"],
+      securityPackageTestsPassed: true,
+      securityPackageTypecheckPassed: false,
+      routeVitestSuitePassed: false,
+      middlewareRuntimeSuitePassed: false,
+      middlewareStaticSuitePassed: false,
+      webE2eSecuritySuitePassed: false,
+      dashboardE2eSecuritySuitePassed: false,
+      fullUnitSuitePassed: false,
+      ciSecurityChecksPassed: false,
+      testManifestIncludesSecuritySuites: true,
+      dbBackedTenantIsolationTestsPassed: false,
+      storageProviderNegativeTestsPassed: false,
+      privacyWorkflowIntegrationTestsPassed: false,
+      authenticatedRoleBoundaryTestsPassed: false,
+      coverageArtifactsCollected: false,
+      failureModeFixturesDocumented: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.blockers).toEqual(expect.arrayContaining([
+      "@inkroute/security typecheck must execute and pass.",
+      "Security route Vitest suite must pass for secure uploads, privacy requests, dashboard privacy, and trust-status tenant/role denial.",
+      "Web Playwright security smoke must pass for headers and cookie-authenticated CSRF rejection.",
+      "DB-backed authenticated tenant-isolation tests must pass for privacy, trust, upload, and dashboard boundaries.",
+      "Storage provider or emulator negative tests must pass for unsafe upload, private original public denial, signed URL revocation, and derivative exposure.",
+      "Coverage, Playwright, CI, and provider/emulator artifacts must be collected for audit handoff.",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "executed package typecheck/tests, full unit suite, and CI security check transcript",
+      "route, runtime middleware, static wiring, and manifest verification test output",
+      "web and dashboard Playwright security smoke artifacts",
+      "authenticated DB-backed tenant isolation, role-boundary, and privacy workflow integration output",
+      "storage provider negative-test artifacts, coverage bundle, and documented security failure fixtures",
+    ]));
+    expect(plan.requiredCommands).toContain("pnpm test:unit");
+  });
+
+  it("marks security automated coverage ready only after all scaffold, E2E, DB, provider, CI, and artifact evidence exists", () => {
+    const plan = buildSecurityAutomatedCoverageReadinessPlan({
+      packageScripts: ["test", "typecheck"],
+      securityPackageTestsPassed: true,
+      securityPackageTypecheckPassed: true,
+      routeVitestSuitePassed: true,
+      middlewareRuntimeSuitePassed: true,
+      middlewareStaticSuitePassed: true,
+      webE2eSecuritySuitePassed: true,
+      dashboardE2eSecuritySuitePassed: true,
+      fullUnitSuitePassed: true,
+      ciSecurityChecksPassed: true,
+      testManifestIncludesSecuritySuites: true,
+      dbBackedTenantIsolationTestsPassed: true,
+      storageProviderNegativeTestsPassed: true,
+      privacyWorkflowIntegrationTestsPassed: true,
+      authenticatedRoleBoundaryTestsPassed: true,
+      coverageArtifactsCollected: true,
+      failureModeFixturesDocumented: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+  });
+
+  it("blocks security app runtime verification until web, dashboard, mobile, route, middleware, browser, and device proof exists", () => {
+    const plan = buildSecurityAppRuntimeVerificationPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      webTypecheckPassed: false,
+      webBuildPassed: false,
+      dashboardTypecheckPassed: false,
+      dashboardBuildPassed: false,
+      mobileTypecheckPassed: false,
+      nextConfigStaticTestsPassed: true,
+      mobileSecurityStaticTestsPassed: true,
+      webSecurityRoutesSmokePassed: false,
+      dashboardSecurityRoutesSmokePassed: false,
+      webMiddlewareRuntimeSmokePassed: false,
+      dashboardMiddlewareRuntimeSmokePassed: false,
+      mobileSystemStatusScreenSmokePassed: false,
+      browserRuntimeSmokePassed: false,
+      deviceRuntimeSmokePassed: false,
+      ciRuntimeEvidenceCollected: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.blockers).toEqual(expect.arrayContaining([
+      "@inkroute/security typecheck must pass before app runtime verification can close.",
+      "Web app typecheck must pass with Phase 13 security imports, routes, pages, and middleware.",
+      "Dashboard app build must pass under real Next dependencies with security pages, API routes, and middleware.",
+      "Mobile app typecheck must pass with SystemStatus security, tenant-isolation, privacy, and upload preview surfaces.",
+      "Browser runtime smoke must prove web/dashboard Phase 13 surfaces load with headers and without integration errors.",
+      "Device or emulator smoke must prove mobile Phase 13 security surfaces load without dependency/runtime errors.",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "web/dashboard/mobile typecheck and build command output",
+      "web/dashboard route and middleware runtime smoke transcripts",
+      "browser, mobile device/emulator, and CI runtime artifact bundle",
+    ]));
+    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/mobile typecheck");
+  });
+
+  it("marks security app runtime verification ready only after all app dependency, route, middleware, browser, and mobile evidence exists", () => {
+    const plan = buildSecurityAppRuntimeVerificationPlan({
+      packageScripts: ["test", "typecheck"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: true,
+      webTypecheckPassed: true,
+      webBuildPassed: true,
+      dashboardTypecheckPassed: true,
+      dashboardBuildPassed: true,
+      mobileTypecheckPassed: true,
+      nextConfigStaticTestsPassed: true,
+      mobileSecurityStaticTestsPassed: true,
+      webSecurityRoutesSmokePassed: true,
+      dashboardSecurityRoutesSmokePassed: true,
+      webMiddlewareRuntimeSmokePassed: true,
+      dashboardMiddlewareRuntimeSmokePassed: true,
+      mobileSystemStatusScreenSmokePassed: true,
+      browserRuntimeSmokePassed: true,
+      deviceRuntimeSmokePassed: true,
+      ciRuntimeEvidenceCollected: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
   });
 
   it("blocks privacy lifecycle plans until requester identity is verified", () => {
@@ -770,6 +1128,150 @@ describe("security and privacy helpers", () => {
     expect(plan.requiredWorkers).toContain("backup-restore-reconciliation");
   });
 
+  it("blocks privacy request runtime readiness until identity, tenant proofing, workers, notifications, and audit evidence exist", () => {
+    const plan = buildPrivacyRequestRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      publicRouteTestsPassed: true,
+      dashboardRouteTestsPassed: false,
+      privacyCasePersistenceConfigured: false,
+      identityProofingConfigured: false,
+      tenantRelationshipProofingConfigured: false,
+      requesterMismatchDenied: false,
+      exportWorkerConfigured: false,
+      deleteAnonymizeRectifyWorkersConfigured: false,
+      storageExportDeleteConfigured: false,
+      thirdPartyRedactionConfigured: false,
+      legalHoldHandlingConfigured: false,
+      notificationProviderConfigured: false,
+      notificationTemplatesApproved: false,
+      auditLogPersistenceConfigured: false,
+      statusTransitionPersistenceConfigured: false,
+      tenantIsolationIntegrationTestsPassed: false,
+      postgresStorageIntegrationTestsPassed: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.blockers).toEqual(expect.arrayContaining([
+      "Run and pass @inkroute/security typecheck before marking privacy requests ready.",
+      "Dashboard privacy request route tests must pass for tenant scope, role denial, redaction, and persistence.",
+      "PrivacyRequest case persistence must store requester, tenant, type, status, identity proof, due dates, and fulfillment metadata.",
+      "Requester identity and tenant mismatch denial tests must pass before production execution.",
+      "Exports must redact third-party artist/client/payment/provider data before delivery.",
+      "Tenant-isolation integration tests must deny cross-tenant privacy exports and deletions.",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "persisted PrivacyRequest status transitions and AuditLog records",
+      "identity, tenant relationship, requester mismatch, and cross-tenant denial proof",
+      "Postgres and object-storage export/delete/anonymize worker integration output",
+      "approved notification templates and provider delivery transcript",
+    ]));
+    expect(plan.requiredCommands).toContain("node scripts/privacy/verify-privacy-request-workers.mjs");
+  });
+
+  it("marks privacy request runtime ready only after workflow, worker, notification, and integration proofs exist", () => {
+    const plan = buildPrivacyRequestRuntimeReadinessPlan({
+      packageScripts: ["test", "typecheck"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: true,
+      publicRouteTestsPassed: true,
+      dashboardRouteTestsPassed: true,
+      privacyCasePersistenceConfigured: true,
+      identityProofingConfigured: true,
+      tenantRelationshipProofingConfigured: true,
+      requesterMismatchDenied: true,
+      exportWorkerConfigured: true,
+      deleteAnonymizeRectifyWorkersConfigured: true,
+      storageExportDeleteConfigured: true,
+      thirdPartyRedactionConfigured: true,
+      legalHoldHandlingConfigured: true,
+      notificationProviderConfigured: true,
+      notificationTemplatesApproved: true,
+      auditLogPersistenceConfigured: true,
+      statusTransitionPersistenceConfigured: true,
+      tenantIsolationIntegrationTestsPassed: true,
+      postgresStorageIntegrationTestsPassed: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+  });
+
+  it("blocks retention enforcement runtime readiness until scheduled workers, tombstones, restore replay, and DB/storage execution are proven", () => {
+    const plan = buildRetentionEnforcementRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      attorneyRetentionScheduleApproved: false,
+      scheduledWorkerConfigured: false,
+      workerIdempotencyConfigured: false,
+      postgresRetentionExecutionVerified: false,
+      objectStorageRetentionExecutionVerified: false,
+      exportArtifactGenerationVerified: false,
+      deletionTombstonePersistenceConfigured: false,
+      anonymizationTombstonePersistenceConfigured: false,
+      restoreTombstoneReplayVerified: false,
+      backupRetentionPolicyDocumented: false,
+      legalHoldEnforcementVerified: false,
+      auditLogPersistenceConfigured: false,
+      tenantIsolationIntegrationTestsPassed: false,
+      dryRunToExecutionReconciliationVerified: false,
+      destructiveActionRollbackDocumented: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.blockers).toEqual(expect.arrayContaining([
+      "Attorney-approved retention, deletion, anonymization, export, and legal-hold schedule must be recorded.",
+      "Scheduled retention worker must execute due DB and storage actions on an approved cadence.",
+      "Deletion tombstones must persist tenant, record, category, action, reason, timestamp, and worker run identifiers.",
+      "Restore jobs must replay deletion and anonymization tombstones before restored data becomes queryable.",
+      "Tenant-isolation integration tests must deny cross-tenant retention, export, deletion, and restore actions.",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "attorney-approved retention schedule and legal-hold enforcement transcript",
+      "scheduled idempotent worker run with dry-run-to-execution reconciliation",
+      "deletion/anonymization tombstone persistence plus backup restore replay drill",
+    ]));
+    expect(plan.requiredCommands).toContain("node scripts/privacy/execute-retention-workers.mjs");
+  });
+
+  it("marks retention enforcement runtime ready only after destructive-action, tombstone, export, and restore proofs exist", () => {
+    const plan = buildRetentionEnforcementRuntimeReadinessPlan({
+      packageScripts: ["test", "typecheck"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: true,
+      attorneyRetentionScheduleApproved: true,
+      scheduledWorkerConfigured: true,
+      workerIdempotencyConfigured: true,
+      postgresRetentionExecutionVerified: true,
+      objectStorageRetentionExecutionVerified: true,
+      exportArtifactGenerationVerified: true,
+      deletionTombstonePersistenceConfigured: true,
+      anonymizationTombstonePersistenceConfigured: true,
+      restoreTombstoneReplayVerified: true,
+      backupRetentionPolicyDocumented: true,
+      legalHoldEnforcementVerified: true,
+      auditLogPersistenceConfigured: true,
+      tenantIsolationIntegrationTestsPassed: true,
+      dryRunToExecutionReconciliationVerified: true,
+      destructiveActionRollbackDocumented: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+  });
+
   it("blocks privacy retention runtime readiness without legal, worker, storage, and backup evidence", () => {
     const plan = buildPrivacyRetentionRuntimeReadinessPlan({
       packageScripts: ["test"],
@@ -862,6 +1364,72 @@ describe("security and privacy helpers", () => {
     expect(plan.pageProtections.noindexRequired).toBe(false);
     expect(plan.acceptanceAudit).toMatchObject({ configured: true, consentVersion: "consent-us-wa-v1" });
     expect(plan.approvedVersions.privacy_policy).toBe("privacy_policy-v1");
+  });
+
+  it("blocks legal document production readiness until counsel approval, reviewed copy, versioning, audits, and noindex proof exist", () => {
+    const plan = buildLegalDocumentProductionReadinessPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      attorneyApprovalsRecorded: false,
+      allRequiredTopicsApproved: false,
+      jurisdictionPoliciesApproved: false,
+      reviewedPublicPageCopyCommitted: false,
+      placeholderCopyRemoved: false,
+      noindexRemovedAfterApproval: false,
+      consentVersionPersistenceConfigured: false,
+      studioPolicyVersionPersistenceConfigured: false,
+      acceptanceAuditPersistenceConfigured: false,
+      dashboardAcceptanceUiWired: false,
+      publicPageRouteSmokePassed: false,
+      consentAcceptanceRouteTestsPassed: false,
+      rollbackPlanDocumented: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.blockers).toEqual(expect.arrayContaining([
+      "Qualified attorney approval metadata must be recorded for every production legal document.",
+      "Placeholder and non-attorney-reviewed copy must be removed from public pages before launch.",
+      "Noindex must stay in place until attorney approval and reviewed copy are committed, then removal must be verified.",
+      "Acceptance audit persistence must record user, tenant, document, version, IP hash, user agent, timestamp, and source surface.",
+      "Consent acceptance route tests must prove versioned persistence and audit-log writes.",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "attorney approval records for all required legal topics and jurisdiction policies",
+      "reviewed public legal pages with placeholder removal and approved indexing smoke evidence",
+      "versioned consent/studio policy persistence plus acceptance audit route tests",
+      "dashboard acceptance UI proof and legal-copy rollback plan",
+    ]));
+    expect(plan.requiredCommands).toContain("node scripts/legal/verify-approved-legal-pages.mjs");
+  });
+
+  it("marks legal documents production-ready only after reviewed copy, approvals, audits, routes, and rollback proof exist", () => {
+    const plan = buildLegalDocumentProductionReadinessPlan({
+      packageScripts: ["test", "typecheck"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: true,
+      attorneyApprovalsRecorded: true,
+      allRequiredTopicsApproved: true,
+      jurisdictionPoliciesApproved: true,
+      reviewedPublicPageCopyCommitted: true,
+      placeholderCopyRemoved: true,
+      noindexRemovedAfterApproval: true,
+      consentVersionPersistenceConfigured: true,
+      studioPolicyVersionPersistenceConfigured: true,
+      acceptanceAuditPersistenceConfigured: true,
+      dashboardAcceptanceUiWired: true,
+      publicPageRouteSmokePassed: true,
+      consentAcceptanceRouteTestsPassed: true,
+      rollbackPlanDocumented: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
   });
 
   it("blocks payment policy legal readiness until attorney, tax, approved copy, audit, and E2E evidence exist", () => {

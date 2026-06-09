@@ -147,6 +147,173 @@ export interface TestingRuntimeReadinessPlan {
   blockers: readonly string[];
 }
 
+export interface Phase14RunnerExecutionReadinessInput {
+  rootScripts: readonly string[];
+  lockfileCommitted: boolean;
+  frozenInstallPassed: boolean;
+  vitestWorkspaceResolved: boolean;
+  playwrightBrowsersInstalled: boolean;
+  phase14StaticPassed: boolean;
+  manifestVerificationPassed: boolean;
+  unitCommandPassed: boolean;
+  e2eCommandPassed: boolean;
+  typecheckCommandPassed: boolean;
+  ciWorkflowPassed: boolean;
+  ciArtifactsUploaded: boolean;
+  runnerFailuresTriaged: boolean;
+  runnerFixesCommitted: boolean;
+  scaffoldCoveragePreserved: boolean;
+  flakyRetryPolicyDocumented: boolean;
+}
+
+export interface Phase14RunnerExecutionReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface AppE2eRuntimeReadinessInput {
+  rootScripts: readonly string[];
+  webBuildPassed: boolean;
+  dashboardBuildPassed: boolean;
+  webRuntimeStarted: boolean;
+  dashboardRuntimeStarted: boolean;
+  playwrightBrowsersInstalled: boolean;
+  publicBookingSpecPassed: boolean;
+  publicSecurityRuntimeSpecPassed: boolean;
+  publicSeoSpecPassed: boolean;
+  dashboardSmokeSpecPassed: boolean;
+  dashboardSecurityRuntimeSpecPassed: boolean;
+  dashboardOperatorSurfacesSpecPassed: boolean;
+  e2eManifestVerificationPassed: boolean;
+  traceCaptureConfigured: boolean;
+  artifactsRetained: boolean;
+  failureScreenshotsVideosRetained: boolean;
+  flakyRetriesConfigured: boolean;
+  hardenedFailuresCommitted: boolean;
+  ciE2eJobPassed: boolean;
+}
+
+export interface AppE2eRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface AccessibilityVisualRuntimeReadinessInput {
+  rootScripts: readonly string[];
+  webA11ySpecPassed: boolean;
+  dashboardA11ySpecPassed: boolean;
+  axeReportsCollected: boolean;
+  lighthouseBudgetsPassed: boolean;
+  manualScreenReaderPassCompleted: boolean;
+  contrastAuditPassed: boolean;
+  responsiveLayoutChecksPassed: boolean;
+  visualBaselinesCaptured: boolean;
+  visualDiffsReviewed: boolean;
+  mobileAccessibilityQaPassed: boolean;
+  accessibilityManifestVerified: boolean;
+  artifactsRetained: boolean;
+  ciA11yVisualJobPassed: boolean;
+  regressionsTriagedAndFixed: boolean;
+}
+
+export interface AccessibilityVisualRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface ProviderContractRuntimeReadinessInput {
+  rootScripts: readonly string[];
+  staticWebhookContractSuitePassed: boolean;
+  providerManifestVerified: boolean;
+  stripeCliWebhookPassed: boolean;
+  stripeIdempotencyVerified: boolean;
+  googleCalendarOauthPassed: boolean;
+  googleCalendarSyncVerified: boolean;
+  storageSignedUrlTestsPassed: boolean;
+  storageUploadDownloadVerified: boolean;
+  resendEmailSandboxPassed: boolean;
+  twilioSmsSandboxPassed: boolean;
+  expoPushSandboxPassed: boolean;
+  sentryCaptureVerified: boolean;
+  authSessionFixturesPassed: boolean;
+  rateLimitStoreTestsPassed: boolean;
+  rawBodySignatureFixturesCommitted: boolean;
+  replayIdempotencyFixturesCommitted: boolean;
+  redactedProviderArtifactsRetained: boolean;
+  ciProviderContractJobPassed: boolean;
+}
+
+export interface ProviderContractRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface CiCoverageReportingReadinessInput {
+  rootScripts: readonly string[];
+  ciWorkflowRunsInstall: boolean;
+  ciWorkflowRunsTypecheck: boolean;
+  ciWorkflowRunsUnitCoverage: boolean;
+  ciWorkflowRunsE2e: boolean;
+  coverageThresholdsConfigured: boolean;
+  vitestCoverageArtifactUploaded: boolean;
+  playwrightReportArtifactUploaded: boolean;
+  playwrightTracesScreenshotsVideosUploaded: boolean;
+  junitJsonReportsPublished: boolean;
+  ciRunPassed: boolean;
+  branchProtectionRequiresCi: boolean;
+  flakyRetryPolicyConfigured: boolean;
+  flakyQuarantineDocumented: boolean;
+  testReportSummaryPublished: boolean;
+  artifactRetentionConfigured: boolean;
+  failureDebugArtifactsVerified: boolean;
+}
+
+export interface CiCoverageReportingReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface PerformanceLoadRuntimeReadinessInput {
+  rootScripts: readonly string[];
+  performanceBudgetVerifierPassed: boolean;
+  lighthouseCiPassed: boolean;
+  coreWebVitalsWithinBudget: boolean;
+  publicRouteBudgetsPassed: boolean;
+  dashboardRouteBudgetsPassed: boolean;
+  bookingLoadTestPassed: boolean;
+  webhookBurstTestPassed: boolean;
+  uploadIntentLoadTestPassed: boolean;
+  dbExplainPlansPassed: boolean;
+  imageOptimizationBenchmarksPassed: boolean;
+  regressionThresholdsConfigured: boolean;
+  performanceArtifactsRetained: boolean;
+  ciPerformanceJobPassed: boolean;
+  regressionsTriagedAndFixed: boolean;
+}
+
+export interface PerformanceLoadRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export interface Phase9AppRuntimeBuildReadinessInput {
   packageScripts: Readonly<Record<string, string>>;
   testingPackageTestsPassed: boolean;
@@ -561,6 +728,341 @@ export function buildTestingRuntimeReadinessPlan(input: TestingRuntimeReadinessI
       "Branch protection settings showing CI required before merge.",
       "Documented flaky-test handling and quarantine process.",
     ],
+    blockers,
+  };
+}
+
+export function buildPhase14RunnerExecutionReadinessPlan(
+  input: Phase14RunnerExecutionReadinessInput,
+): Phase14RunnerExecutionReadinessPlan {
+  const requiredScripts = ["test:phase14:static", "test:manifest", "test:unit", "test:e2e", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.rootScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing root ${script} script.`);
+  if (!input.lockfileCommitted) blockers.push("Committed pnpm-lock.yaml is required for reproducible Phase 14 runner execution.");
+  if (!input.frozenInstallPassed) blockers.push("pnpm install --frozen-lockfile must pass before runner evidence is production-significant.");
+  if (!input.vitestWorkspaceResolved) blockers.push("Vitest workspace must resolve all package, app, route, and contract test projects.");
+  if (!input.playwrightBrowsersInstalled) blockers.push("Playwright browsers must install before web/dashboard E2E execution.");
+  if (!input.phase14StaticPassed) blockers.push("Phase 14 static scaffold check must pass.");
+  if (!input.manifestVerificationPassed) blockers.push("Test manifest verification must pass with security route, middleware, E2E, Next config, and mobile static suites included.");
+  if (!input.unitCommandPassed) blockers.push("pnpm test:unit must execute and pass across packages and app contract tests.");
+  if (!input.e2eCommandPassed) blockers.push("pnpm test:e2e must execute and pass for configured web/dashboard Playwright projects.");
+  if (!input.typecheckCommandPassed) blockers.push("pnpm typecheck must execute and pass after runner/config fixes.");
+  if (!input.ciWorkflowPassed) blockers.push("GitHub Actions CI workflow must pass with install, manifest, typecheck, unit, and E2E gates.");
+  if (!input.ciArtifactsUploaded) blockers.push("CI must upload Vitest, coverage, Playwright, traces, screenshots, videos, and manifest artifacts.");
+  if (!input.runnerFailuresTriaged) blockers.push("Real runner failures must be triaged from local or CI output before marking Phase 14 ready.");
+  if (!input.runnerFixesCommitted) blockers.push("Fixes for TypeScript, module resolution, test environment, browser, or runner failures must be committed.");
+  if (!input.scaffoldCoveragePreserved) blockers.push("Runner fixes must preserve the Phase 14 scaffolded security, route, middleware, E2E, Next config, and mobile coverage.");
+  if (!input.flakyRetryPolicyDocumented) blockers.push("Flaky retry/quarantine policy must be documented before CI runner evidence is trusted.");
+
+  if (!input.lockfileCommitted || !input.frozenInstallPassed) {
+    requiredEvidence.push("committed lockfile and frozen pnpm install transcript");
+  }
+  if (!input.vitestWorkspaceResolved || !input.phase14StaticPassed || !input.manifestVerificationPassed || !input.unitCommandPassed || !input.typecheckCommandPassed) {
+    requiredEvidence.push("Vitest workspace, static manifest, unit, and typecheck execution output");
+  }
+  if (!input.playwrightBrowsersInstalled || !input.e2eCommandPassed) {
+    requiredEvidence.push("Playwright browser install and web/dashboard E2E execution output");
+  }
+  if (!input.ciWorkflowPassed || !input.ciArtifactsUploaded) {
+    requiredEvidence.push("passing CI workflow with retained Vitest, coverage, Playwright, trace, screenshot, video, and manifest artifacts");
+  }
+  if (!input.runnerFailuresTriaged || !input.runnerFixesCommitted || !input.scaffoldCoveragePreserved || !input.flakyRetryPolicyDocumented) {
+    requiredEvidence.push("triaged runner failure log, committed fixes, preserved scaffold coverage diff, and flaky-test policy");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm install --frozen-lockfile",
+      "pnpm test:phase14:static",
+      "pnpm test:manifest",
+      "pnpm typecheck",
+      "pnpm test:unit",
+      "pnpm exec playwright install --with-deps",
+      "pnpm test:e2e",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
+export function buildAppE2eRuntimeReadinessPlan(input: AppE2eRuntimeReadinessInput): AppE2eRuntimeReadinessPlan {
+  const requiredScripts = ["test:e2e"];
+  const missingScripts = requiredScripts.filter((script) => !input.rootScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing root ${script} script.`);
+  if (!input.webBuildPassed) blockers.push("@inkroute/web build must pass before public-site E2E smoke results are meaningful.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass before dashboard E2E smoke results are meaningful.");
+  if (!input.webRuntimeStarted) blockers.push("Web Next.js runtime must start for Playwright public booking, security, and SEO specs.");
+  if (!input.dashboardRuntimeStarted) blockers.push("Dashboard Next.js runtime must start for dashboard smoke, security, and operator surface specs.");
+  if (!input.playwrightBrowsersInstalled) blockers.push("Playwright Chromium browser must be installed before E2E execution.");
+  if (!input.publicBookingSpecPassed) blockers.push("Public booking Playwright smoke spec must pass.");
+  if (!input.publicSecurityRuntimeSpecPassed) blockers.push("Public security runtime Playwright spec must pass.");
+  if (!input.publicSeoSpecPassed) blockers.push("Public city/style SEO Playwright spec must pass.");
+  if (!input.dashboardSmokeSpecPassed) blockers.push("Dashboard smoke Playwright spec must pass.");
+  if (!input.dashboardSecurityRuntimeSpecPassed) blockers.push("Dashboard security runtime Playwright spec must pass.");
+  if (!input.dashboardOperatorSurfacesSpecPassed) blockers.push("Dashboard operator surfaces Playwright spec must pass for payments, releases, errors, messages, templates, SEO, and trust.");
+  if (!input.e2eManifestVerificationPassed) blockers.push("E2E manifest verification must include public booking, security runtime, SEO, dashboard smoke, dashboard security, and operator surface specs.");
+  if (!input.traceCaptureConfigured) blockers.push("Playwright trace capture must be configured for failed E2E runs.");
+  if (!input.artifactsRetained) blockers.push("Playwright reports and E2E artifacts must be retained locally or in CI.");
+  if (!input.failureScreenshotsVideosRetained) blockers.push("Failure screenshots and videos must be retained for E2E debugging.");
+  if (!input.flakyRetriesConfigured) blockers.push("E2E retry/flake handling must be configured before CI evidence is trusted.");
+  if (!input.hardenedFailuresCommitted) blockers.push("Fixes from real Playwright rendering, selector, routing, or timing failures must be committed.");
+  if (!input.ciE2eJobPassed) blockers.push("CI E2E job must pass with retained artifacts.");
+
+  if (!input.webBuildPassed || !input.dashboardBuildPassed || !input.webRuntimeStarted || !input.dashboardRuntimeStarted) {
+    requiredEvidence.push("web/dashboard build output and running Next.js runtime logs");
+  }
+  if (!input.playwrightBrowsersInstalled || !input.publicBookingSpecPassed || !input.publicSecurityRuntimeSpecPassed || !input.publicSeoSpecPassed) {
+    requiredEvidence.push("Playwright browser install plus public booking/security/SEO spec output");
+  }
+  if (!input.dashboardSmokeSpecPassed || !input.dashboardSecurityRuntimeSpecPassed || !input.dashboardOperatorSurfacesSpecPassed || !input.e2eManifestVerificationPassed) {
+    requiredEvidence.push("dashboard smoke/security/operator E2E output and manifest verification");
+  }
+  if (!input.traceCaptureConfigured || !input.artifactsRetained || !input.failureScreenshotsVideosRetained || !input.ciE2eJobPassed) {
+    requiredEvidence.push("retained Playwright report, traces, screenshots, videos, and CI E2E artifact bundle");
+  }
+  if (!input.flakyRetriesConfigured || !input.hardenedFailuresCommitted) {
+    requiredEvidence.push("documented E2E retry policy and committed fixes from real Playwright failures");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm exec playwright install --with-deps chromium",
+      "pnpm test:e2e",
+      "pnpm test:manifest",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
+export function buildAccessibilityVisualRuntimeReadinessPlan(
+  input: AccessibilityVisualRuntimeReadinessInput,
+): AccessibilityVisualRuntimeReadinessPlan {
+  const requiredScripts = ["test:e2e"];
+  const missingScripts = requiredScripts.filter((script) => !input.rootScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing root ${script} script.`);
+  if (!input.webA11ySpecPassed) blockers.push("Web Playwright @a11y spec must pass for public booking, navigation, labels, focus, and landmarks.");
+  if (!input.dashboardA11ySpecPassed) blockers.push("Dashboard Playwright @a11y spec must pass for navigation, tenant context, request regions, and labelled controls.");
+  if (!input.axeReportsCollected) blockers.push("Axe reports must be collected for public web and dashboard accessibility runs.");
+  if (!input.lighthouseBudgetsPassed) blockers.push("Lighthouse accessibility budgets must pass for critical public and dashboard routes.");
+  if (!input.manualScreenReaderPassCompleted) blockers.push("Manual screen-reader pass must cover VoiceOver/NVDA or equivalent public, dashboard, and mobile flows.");
+  if (!input.contrastAuditPassed) blockers.push("Color contrast audit must pass for public web, dashboard, and mobile high-risk surfaces.");
+  if (!input.responsiveLayoutChecksPassed) blockers.push("Responsive layout checks must pass for mobile, tablet, and desktop breakpoints.");
+  if (!input.visualBaselinesCaptured) blockers.push("Visual regression baselines must be captured for public web, dashboard, and mobile critical screens.");
+  if (!input.visualDiffsReviewed) blockers.push("Visual regression diffs must be reviewed and accepted or fixed.");
+  if (!input.mobileAccessibilityQaPassed) blockers.push("Mobile accessibility QA must pass for VoiceOver/TalkBack, text scaling, contrast, and touch targets.");
+  if (!input.accessibilityManifestVerified) blockers.push("Accessibility checklist and E2E manifests must verify required a11y/visual specs are present.");
+  if (!input.artifactsRetained) blockers.push("Accessibility, Lighthouse, visual baseline/diff, screenshot, and manual QA artifacts must be retained.");
+  if (!input.ciA11yVisualJobPassed) blockers.push("CI accessibility/visual job must pass or publish explicit retained artifacts.");
+  if (!input.regressionsTriagedAndFixed) blockers.push("Accessibility and visual regressions found during execution must be triaged and fixed or documented as accepted exceptions.");
+
+  if (!input.webA11ySpecPassed || !input.dashboardA11ySpecPassed || !input.axeReportsCollected) {
+    requiredEvidence.push("web/dashboard Playwright @a11y output and axe reports");
+  }
+  if (!input.lighthouseBudgetsPassed || !input.contrastAuditPassed || !input.responsiveLayoutChecksPassed) {
+    requiredEvidence.push("Lighthouse, contrast, and responsive layout audit reports");
+  }
+  if (!input.manualScreenReaderPassCompleted || !input.mobileAccessibilityQaPassed) {
+    requiredEvidence.push("manual screen-reader and mobile accessibility QA notes");
+  }
+  if (!input.visualBaselinesCaptured || !input.visualDiffsReviewed || !input.artifactsRetained) {
+    requiredEvidence.push("visual regression baselines, reviewed diffs, screenshots, and retained artifacts");
+  }
+  if (!input.accessibilityManifestVerified || !input.ciA11yVisualJobPassed || !input.regressionsTriagedAndFixed) {
+    requiredEvidence.push("manifest verification, CI accessibility/visual job output, and triaged regression log");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm test:e2e --project=web-chromium --grep @a11y",
+      "pnpm test:e2e --project=dashboard-chromium --grep @a11y",
+      "Lighthouse accessibility budget run for public and dashboard routes",
+      "visual regression baseline and diff review",
+      "manual screen-reader and mobile accessibility QA pass",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
+export function buildProviderContractRuntimeReadinessPlan(
+  input: ProviderContractRuntimeReadinessInput,
+): ProviderContractRuntimeReadinessPlan {
+  const requiredScripts = ["test:unit", "test:manifest"];
+  const missingScripts = requiredScripts.filter((script) => !input.rootScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing root ${script} script.`);
+  if (!input.staticWebhookContractSuitePassed) blockers.push("Static provider webhook contract suite must pass for Stripe, email, SMS, and Sentry route boundaries.");
+  if (!input.providerManifestVerified) blockers.push("Provider test manifest must verify all credential-gated provider suites and evidence requirements.");
+  if (!input.stripeCliWebhookPassed) blockers.push("Stripe CLI signed webhook replay must pass against the local or preview webhook route.");
+  if (!input.stripeIdempotencyVerified) blockers.push("Stripe payment webhook idempotency and audit-log replay behavior must be verified.");
+  if (!input.googleCalendarOauthPassed) blockers.push("Google Calendar OAuth sandbox flow must pass with test account consent.");
+  if (!input.googleCalendarSyncVerified) blockers.push("Google Calendar freebusy, sync-token, conflict, insert/update/delete, and disconnect flows must be verified.");
+  if (!input.storageSignedUrlTestsPassed) blockers.push("Storage signed URL contract tests must pass for upload/download expiry, revocation, ACL denial, and derivative access.");
+  if (!input.storageUploadDownloadVerified) blockers.push("Storage sandbox upload/download must verify object bytes, private originals, public derivatives, and scan-approved reads.");
+  if (!input.resendEmailSandboxPassed) blockers.push("Resend/email sandbox send and webhook delivery contract must pass.");
+  if (!input.twilioSmsSandboxPassed) blockers.push("Twilio SMS sandbox send, STOP handling, and webhook signature contract must pass.");
+  if (!input.expoPushSandboxPassed) blockers.push("Expo Push sandbox token, receipt, opt-out, and tap-routing contract must pass.");
+  if (!input.sentryCaptureVerified) blockers.push("Sentry web, dashboard, and mobile capture contracts must verify event ids, source maps, issue grouping, and redaction.");
+  if (!input.authSessionFixturesPassed) blockers.push("Auth session fixtures must verify login, refresh, expiry, RBAC, tenant membership, and cross-tenant denial.");
+  if (!input.rateLimitStoreTestsPassed) blockers.push("Rate-limit store contract tests must verify distributed counters, TTL, tenant-safe keys, bot challenge, and provider webhook bypass.");
+  if (!input.rawBodySignatureFixturesCommitted) blockers.push("Signed raw-body fixtures must be committed for Stripe, email, SMS, and Sentry webhook verification.");
+  if (!input.replayIdempotencyFixturesCommitted) blockers.push("Webhook replay/idempotency fixtures must be committed for duplicate delivery and out-of-order provider events.");
+  if (!input.redactedProviderArtifactsRetained) blockers.push("Provider sandbox artifacts must be retained with credentials, tokens, raw payloads, PII, and payment details redacted.");
+  if (!input.ciProviderContractJobPassed) blockers.push("CI provider-contract job must pass or publish credential-gated skip evidence and retained artifacts.");
+
+  if (!input.staticWebhookContractSuitePassed || !input.providerManifestVerified || !input.rawBodySignatureFixturesCommitted || !input.replayIdempotencyFixturesCommitted) {
+    requiredEvidence.push("static provider contract suite, manifest verification, signed raw-body fixtures, and replay/idempotency fixtures");
+  }
+  if (!input.stripeCliWebhookPassed || !input.stripeIdempotencyVerified || !input.googleCalendarOauthPassed || !input.googleCalendarSyncVerified) {
+    requiredEvidence.push("Stripe CLI webhook/idempotency and Google Calendar OAuth/sync sandbox transcripts");
+  }
+  if (!input.storageSignedUrlTestsPassed || !input.storageUploadDownloadVerified || !input.rateLimitStoreTestsPassed || !input.authSessionFixturesPassed) {
+    requiredEvidence.push("storage signed URL/upload/download, rate-limit store, and auth session fixture contract output");
+  }
+  if (!input.resendEmailSandboxPassed || !input.twilioSmsSandboxPassed || !input.expoPushSandboxPassed || !input.sentryCaptureVerified) {
+    requiredEvidence.push("email, SMS, push, and Sentry sandbox send/capture artifacts");
+  }
+  if (!input.redactedProviderArtifactsRetained || !input.ciProviderContractJobPassed) {
+    requiredEvidence.push("redacted provider artifact bundle and CI provider-contract job evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm test:manifest",
+      "pnpm vitest run apps/web/tests/provider-webhook-contracts.test.ts",
+      "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
+      "stripe trigger checkout.session.completed",
+      "provider sandbox contract suite for calendar/storage/email/sms/push/sentry/auth/rate-limit",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
+export function buildCiCoverageReportingReadinessPlan(
+  input: CiCoverageReportingReadinessInput,
+): CiCoverageReportingReadinessPlan {
+  const requiredScripts = ["test:unit:coverage", "test:e2e", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.rootScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing root ${script} script.`);
+  if (!input.ciWorkflowRunsInstall) blockers.push("CI workflow must run a frozen dependency install.");
+  if (!input.ciWorkflowRunsTypecheck) blockers.push("CI workflow must run workspace typecheck.");
+  if (!input.ciWorkflowRunsUnitCoverage) blockers.push("CI workflow must run unit tests with coverage.");
+  if (!input.ciWorkflowRunsE2e) blockers.push("CI workflow must run Playwright E2E tests or publish an explicit runtime blocker.");
+  if (!input.coverageThresholdsConfigured) blockers.push("Vitest coverage thresholds and reporters must be configured.");
+  if (!input.vitestCoverageArtifactUploaded) blockers.push("CI must upload the Vitest coverage artifact.");
+  if (!input.playwrightReportArtifactUploaded) blockers.push("CI must upload the Playwright HTML/JSON/JUnit report artifact.");
+  if (!input.playwrightTracesScreenshotsVideosUploaded) blockers.push("CI must retain Playwright failure traces, screenshots, and videos.");
+  if (!input.junitJsonReportsPublished) blockers.push("CI must publish machine-readable JUnit/JSON test reports.");
+  if (!input.ciRunPassed) blockers.push("A GitHub Actions CI run must pass on the PR branch.");
+  if (!input.branchProtectionRequiresCi) blockers.push("Branch protection must require the CI quality check before merge.");
+  if (!input.flakyRetryPolicyConfigured) blockers.push("Flaky-test retry policy must be configured for CI runs.");
+  if (!input.flakyQuarantineDocumented) blockers.push("Flaky-test quarantine/escalation policy must be documented.");
+  if (!input.testReportSummaryPublished) blockers.push("CI must publish a human-readable test report summary.");
+  if (!input.artifactRetentionConfigured) blockers.push("CI artifact retention window must be configured for coverage, reports, traces, screenshots, and videos.");
+  if (!input.failureDebugArtifactsVerified) blockers.push("A failed-test artifact path must be verified for debugging traces/screenshots/videos.");
+
+  if (!input.ciWorkflowRunsInstall || !input.ciWorkflowRunsTypecheck || !input.ciWorkflowRunsUnitCoverage || !input.ciWorkflowRunsE2e) {
+    requiredEvidence.push("CI workflow YAML and run log showing install, typecheck, coverage, and E2E gates");
+  }
+  if (!input.coverageThresholdsConfigured || !input.vitestCoverageArtifactUploaded || !input.junitJsonReportsPublished || !input.testReportSummaryPublished) {
+    requiredEvidence.push("coverage thresholds, Vitest coverage artifact, JUnit/JSON reports, and published test summary");
+  }
+  if (!input.playwrightReportArtifactUploaded || !input.playwrightTracesScreenshotsVideosUploaded || !input.failureDebugArtifactsVerified) {
+    requiredEvidence.push("Playwright report plus retained traces, screenshots, videos, and failed-test debug artifact proof");
+  }
+  if (!input.ciRunPassed || !input.branchProtectionRequiresCi || !input.flakyRetryPolicyConfigured || !input.flakyQuarantineDocumented || !input.artifactRetentionConfigured) {
+    requiredEvidence.push("passing CI run, branch protection settings, flaky-test policy, and artifact retention settings");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm test:unit:coverage",
+      "pnpm test:e2e",
+      "gh run view <ci-run-id> --json conclusion,status,url",
+      "gh api repos/:owner/:repo/actions/runs/<ci-run-id>/artifacts",
+      "verify branch protection requires CI quality check",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
+export function buildPerformanceLoadRuntimeReadinessPlan(
+  input: PerformanceLoadRuntimeReadinessInput,
+): PerformanceLoadRuntimeReadinessPlan {
+  const requiredScripts = ["test:performance:budgets"];
+  const missingScripts = requiredScripts.filter((script) => !input.rootScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing root ${script} script.`);
+  if (!input.performanceBudgetVerifierPassed) blockers.push("Performance budget manifest verifier must pass.");
+  if (!input.lighthouseCiPassed) blockers.push("Lighthouse CI must execute against public and dashboard route budgets.");
+  if (!input.coreWebVitalsWithinBudget) blockers.push("Core Web Vitals must stay within LCP, CLS, INP, TBT, and FCP budgets.");
+  if (!input.publicRouteBudgetsPassed) blockers.push("Public route performance budgets must pass for home, booking, and city/style SEO pages.");
+  if (!input.dashboardRouteBudgetsPassed) blockers.push("Dashboard route performance budgets must pass for overview and booking detail surfaces.");
+  if (!input.bookingLoadTestPassed) blockers.push("Public booking abuse/load test must meet RPS, p95, and error-rate targets.");
+  if (!input.webhookBurstTestPassed) blockers.push("Webhook burst load test must meet signed replay, idempotency, p95, and error-rate targets.");
+  if (!input.uploadIntentLoadTestPassed) blockers.push("Secure upload intent load test must meet rate-limit, signed URL, p95, and error-rate targets.");
+  if (!input.dbExplainPlansPassed) blockers.push("Database EXPLAIN/ANALYZE query-plan checks must pass for dashboard, SEO, and webhook idempotency queries.");
+  if (!input.imageOptimizationBenchmarksPassed) blockers.push("Image optimization benchmarks must pass for portfolio and private reference derivative budgets.");
+  if (!input.regressionThresholdsConfigured) blockers.push("Performance regression thresholds must be configured for CI comparison.");
+  if (!input.performanceArtifactsRetained) blockers.push("Lighthouse, load-test, EXPLAIN, image benchmark, and regression artifacts must be retained.");
+  if (!input.ciPerformanceJobPassed) blockers.push("CI performance/load job must pass or publish explicit retained performance artifacts.");
+  if (!input.regressionsTriagedAndFixed) blockers.push("Performance regressions must be triaged and fixed or accepted with documented rationale.");
+
+  if (!input.performanceBudgetVerifierPassed || !input.lighthouseCiPassed || !input.coreWebVitalsWithinBudget || !input.publicRouteBudgetsPassed || !input.dashboardRouteBudgetsPassed) {
+    requiredEvidence.push("performance budget verifier, Lighthouse CI, Core Web Vitals, and route budget reports");
+  }
+  if (!input.bookingLoadTestPassed || !input.webhookBurstTestPassed || !input.uploadIntentLoadTestPassed) {
+    requiredEvidence.push("booking, webhook, and upload-intent load-test reports");
+  }
+  if (!input.dbExplainPlansPassed || !input.imageOptimizationBenchmarksPassed) {
+    requiredEvidence.push("database EXPLAIN/ANALYZE query-plan output and image optimization benchmark report");
+  }
+  if (!input.regressionThresholdsConfigured || !input.performanceArtifactsRetained || !input.ciPerformanceJobPassed || !input.regressionsTriagedAndFixed) {
+    requiredEvidence.push("CI performance job, retained artifacts, regression thresholds, and triage log");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm test:performance:budgets",
+      "Lighthouse CI for public and dashboard route budgets",
+      "load test public booking, Stripe webhook, and secure upload intent endpoints",
+      "database EXPLAIN/ANALYZE query-plan checks",
+      "image optimization benchmark report",
+    ],
+    requiredEvidence,
     blockers,
   };
 }

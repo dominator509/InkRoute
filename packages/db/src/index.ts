@@ -1,5 +1,12 @@
 export { prisma } from "./prisma";
 export {
+  buildDbIntegrationRuntimeReadinessPlan,
+} from "./integration-readiness";
+export type {
+  DbIntegrationRuntimeReadinessInput,
+  DbIntegrationRuntimeReadinessPlan,
+} from "./integration-readiness";
+export {
   assertTenantScopedData,
   assertTenantScopedWhere,
   tenantOwnedModelNames,

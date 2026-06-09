@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { buildDbIntegrationRuntimeReadinessPlan } from "../src/index";
 
 const root = resolve(__dirname, "../../..");
 
@@ -93,5 +94,74 @@ describe("database integration test plan", () => {
     expect(seed).toContain("tenantId: tenant.id");
     expect(seed).toContain("Demo consent text for development only");
     expect(seed).toContain("Use fake data only");
+  });
+
+  it("blocks DB integration runtime readiness until Postgres lifecycle, tenant isolation, workflows, audit logs, and CI evidence exist", () => {
+    const plan = buildDbIntegrationRuntimeReadinessPlan({
+      packageScripts: {
+        "db:validate": "prisma validate",
+        "db:generate": "prisma generate",
+        "db:migrate": "prisma migrate dev",
+      },
+      postgresProvisioned: false,
+      databaseUrlConfigured: false,
+      prismaValidatePassed: true,
+      prismaGeneratePassed: false,
+      prismaMigratePassed: false,
+      prismaSeedPassed: false,
+      seedVerificationPassed: false,
+      tenantIsolationTestsPassed: false,
+      workflowPersistenceTestsPassed: false,
+      auditLogIntegrationTestsPassed: false,
+      destructiveResetGuarded: false,
+      migrationRollbackDocumented: false,
+      commandOutputCaptured: false,
+      ciDbJobPassed: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["db:seed", "db:verify-seed"]);
+    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/db test -- db-integration");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "non-production Postgres provisioning, DATABASE_URL configuration, and destructive-reset guard proof",
+      "Prisma validate/generate/migrate/seed/verify command output",
+      "tenant isolation, workflow persistence, and audit-log integration test output",
+      "migration rollback notes, captured command transcript, and CI DB job artifact",
+    ]));
+    expect(plan.blockers).toContain("Tenant-isolation integration tests must deny cross-tenant reads and writes across critical models.");
+    expect(plan.blockers).toContain("Audit-log integration tests must prove tenant-scoped actor, entity, action, and metadata writes.");
+  });
+
+  it("marks DB integration runtime ready only after lifecycle, seeded tenant, isolation, audit, transcript, and CI evidence exist", () => {
+    const plan = buildDbIntegrationRuntimeReadinessPlan({
+      packageScripts: {
+        "db:validate": "prisma validate",
+        "db:generate": "prisma generate",
+        "db:migrate": "prisma migrate dev",
+        "db:seed": "tsx prisma/seed.ts",
+        "db:verify-seed": "tsx scripts/verify-seed-readiness.ts",
+      },
+      postgresProvisioned: true,
+      databaseUrlConfigured: true,
+      prismaValidatePassed: true,
+      prismaGeneratePassed: true,
+      prismaMigratePassed: true,
+      prismaSeedPassed: true,
+      seedVerificationPassed: true,
+      tenantIsolationTestsPassed: true,
+      workflowPersistenceTestsPassed: true,
+      auditLogIntegrationTestsPassed: true,
+      destructiveResetGuarded: true,
+      migrationRollbackDocumented: true,
+      commandOutputCaptured: true,
+      ciDbJobPassed: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
   });
 });
