@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   providerStorageUploadArtifactPaths,
   providerStorageUploadReadinessAreas,
+  providerStorageUploadRunPersistenceContract,
   providerStorageUploadRuntimeCommands,
   providerStorageUploadRuntimeMatrix,
   providerStorageUploadRuntimeReadiness,
@@ -19,6 +20,10 @@ describe("provider storage upload runtime contract", () => {
   const uploadRouteTest = readRepoFile("apps/web/tests/secure-upload-intents-route.test.ts");
   const portfolioReadTest = readRepoFile("apps/dashboard/tests/portfolio-read-route-static.test.ts");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const providerStorageUploadMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609032900_add_provider_storage_upload_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -51,6 +56,36 @@ describe("provider storage upload runtime contract", () => {
     ]);
     expect(providerStorageUploadArtifactPaths).toContain("coverage/provider-storage-upload-runtime.json");
     expect(providerStorageUploadArtifactPaths).toContain("test-results/provider-storage-upload-runtime");
+  });
+
+  it("pins the ProviderStorageUploadRun persistence model and migration", () => {
+    expect(providerStorageUploadRunPersistenceContract.model).toBe("ProviderStorageUploadRun");
+    expect(providerStorageUploadRunPersistenceContract.tenantRelation).toBe("providerStorageUploadRuns");
+    expect(providerStorageUploadRunPersistenceContract.migration).toBe(
+      "20260609032900_add_provider_storage_upload_runs",
+    );
+    expect(providerStorageUploadRunPersistenceContract.jsonFields).toEqual([
+      "commandMatrix",
+      "readinessAreaManifest",
+      "artifactManifest",
+      "providerConfigurationManifest",
+      "bucketPolicyManifest",
+      "scanDerivativeManifest",
+    ]);
+    expect(providerStorageUploadRunPersistenceContract.evidenceBooleans).toContain("storageProviderSelected");
+    expect(providerStorageUploadRunPersistenceContract.evidenceBooleans).toContain("signedUrlGrantPersistenceConfigured");
+    expect(providerStorageUploadRunPersistenceContract.evidenceBooleans).toContain("secretSafeArtifactsCaptured");
+    expect(providerStorageUploadRunPersistenceContract.artifactFields).toContain("privateOriginalDenialArtifactPath");
+    expect(providerStorageUploadRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(prismaSchema).toContain("providerStorageUploadRuns ProviderStorageUploadRun[]");
+    expect(prismaSchema).toContain("model ProviderStorageUploadRun");
+    expect(prismaSchema).toContain("bucketPolicyManifest");
+    expect(prismaSchema).toContain("signedDownloadUrlsProviderBacked");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(providerStorageUploadMigration).toContain('CREATE TABLE "ProviderStorageUploadRun"');
+    expect(providerStorageUploadMigration).toContain('"providerConfigurationManifest" JSONB NOT NULL');
+    expect(providerStorageUploadMigration).toContain('"secretSafeArtifactsCaptured" BOOLEAN NOT NULL DEFAULT false');
+    expect(providerStorageUploadMigration).toContain('CREATE UNIQUE INDEX "ProviderStorageUploadRun_tenantId_runId_key"');
   });
 
   it("keeps helper, tests, upload route, and dashboard portfolio redaction wired", () => {
@@ -86,6 +121,8 @@ describe("provider storage upload runtime contract", () => {
     expect(ciWorkflow).toContain("provider-storage-upload-runtime-static.test.ts");
     expect(ciWorkflow).toContain("provider-storage-upload-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-provider-storage-upload-runtime-static");
+    expect(unitManifest).toContain("ProviderStorageUploadRun Prisma model and app row contract");
+    expect(gapTracker).toContain("ProviderStorageUploadRun");
     expect(gapTracker).toContain("apps/web/lib/providerStorageUploadRuntime.ts");
     expect(gapTracker).toContain("live storage provider selection/config/secrets, provider signed URLs, FileAsset/link/audit persistence, scan/derivative worker, provider integration tests, CI evidence, and secret-safe artifacts remain open");
   });

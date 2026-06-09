@@ -402,6 +402,7 @@ model Tenant {
   prismaLifecycleRuns PrismaLifecycleRun[]
   providerSessionRuns ProviderSessionRun[]
   liveStripePaymentsRuns LiveStripePaymentsRun[]
+  providerStorageUploadRuns ProviderStorageUploadRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2904,6 +2905,68 @@ model LiveStripePaymentsRun {
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())
   updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model ProviderStorageUploadRun {
+  id                                         String   @id @default(cuid())
+  tenantId                                   String
+  runId                                      String
+  commitSha                                  String?
+  status                                     String
+  commandMatrix                              Json
+  readinessAreaManifest                      Json
+  artifactManifest                           Json
+  providerConfigurationManifest              Json
+  bucketPolicyManifest                       Json
+  scanDerivativeManifest                     Json
+  securityTestsPassed                        Boolean  @default(false)
+  securityTypecheckPassed                    Boolean  @default(false)
+  webUploadRouteTestsPassed                  Boolean  @default(false)
+  webTypecheckPassed                         Boolean  @default(false)
+  storageProviderSelected                    Boolean  @default(false)
+  storageProviderConfigured                  Boolean  @default(false)
+  storageSecretsConfigured                   Boolean  @default(false)
+  privateBucketAclVerified                   Boolean  @default(false)
+  derivativeBucketPolicyVerified             Boolean  @default(false)
+  signedUploadUrlsProviderBacked             Boolean  @default(false)
+  signedDownloadUrlsProviderBacked           Boolean  @default(false)
+  serverOwnedObjectKeysEnforced              Boolean  @default(false)
+  fileAssetPersistenceTransactional          Boolean  @default(false)
+  auditLogPersistenceConfigured              Boolean  @default(false)
+  linkTablePersistenceConfigured             Boolean  @default(false)
+  signedUrlGrantPersistenceConfigured        Boolean  @default(false)
+  malwareScanProviderConfigured              Boolean  @default(false)
+  scanVerdictPersistenceConfigured           Boolean  @default(false)
+  metadataStrippingWorkerConfigured          Boolean  @default(false)
+  publicDerivativeGenerationConfigured       Boolean  @default(false)
+  privateOriginalPublicReadDenied            Boolean  @default(false)
+  approvedDerivativePublicReadVerified       Boolean  @default(false)
+  tenantScopedProviderIntegrationTestsPassed Boolean  @default(false)
+  privacyRetentionEnforced                   Boolean  @default(false)
+  ciEvidenceCaptured                         Boolean  @default(false)
+  secretSafeArtifactsCaptured                Boolean  @default(false)
+  securityTypecheckArtifactPath              String?
+  securityTestArtifactPath                   String?
+  webTypecheckArtifactPath                   String?
+  uploadRouteTestArtifactPath                String?
+  providerConfigArtifactPath                 String?
+  bucketPolicyArtifactPath                   String?
+  signedUrlProviderArtifactPath              String?
+  fileAssetPersistenceArtifactPath           String?
+  scanDerivativeWorkerArtifactPath           String?
+  privateOriginalDenialArtifactPath          String?
+  tenantIsolationArtifactPath                String?
+  retentionArtifactPath                      String?
+  ciEvidenceArtifactPath                     String?
+  secretSafeArtifactsPath                    String?
+  ciRunUrl                                   String?
+  tenant                                     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                                  DateTime @default(now())
+  updatedAt                                  DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])
