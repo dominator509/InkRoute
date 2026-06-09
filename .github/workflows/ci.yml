@@ -400,6 +400,26 @@ jobs:
             coverage/feature-flag-live-rollout-proof-redacted.json
             test-results/feature-flag-runtime
           if-no-files-found: warn
+      - name: Run Phase 12 mobile OTA production enablement contracts
+        run: pnpm --filter @inkroute/releases test && pnpm vitest run apps/mobile/tests/mobile-static.test.ts apps/mobile/tests/mobile-updates-static.test.ts apps/mobile/tests/mobile-ota-production-static.test.ts
+
+      - name: Upload mobile OTA production artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-ota-production-artifacts
+          path: |
+            coverage/mobile-ota-production-enablement.json
+            coverage/mobile-ota-expo-project-redacted.json
+            coverage/mobile-ota-preview-native-build.json
+            coverage/mobile-ota-production-native-build.json
+            coverage/mobile-ota-preview-update-id-redacted.json
+            coverage/mobile-ota-device-adoption-redacted.json
+            coverage/mobile-ota-adoption-monitoring.json
+            coverage/mobile-ota-rollback-republish-redacted.json
+            coverage/mobile-ota-release-health-link.json
+            test-results/mobile-ota-production
+          if-no-files-found: warn
       - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
@@ -448,6 +468,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
