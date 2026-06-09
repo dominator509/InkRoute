@@ -1,15 +1,19 @@
-import {
+﻿import {
   buildExpoPushDeliveryPlan,
+  buildExpoPushProviderRuntimeReadinessPlan,
   buildExpoPushReceiptProcessingPlan,
   buildExpoPushRegistrationPlan,
   buildExpoPushTapRoutingPlan,
+  buildProviderEventReconciliationPlan,
   type ClientConsentSnapshot,
   type ExpoPushDeliveryPlan,
+  type ExpoPushProviderRuntimeReadinessPlan,
   type ExpoPushReceiptProcessingPlan,
   type ExpoPushRegistrationPlan,
   type ExpoPushTapRoutingPlan,
   type NotificationTemplateContext,
   type NotificationTemplateKey,
+  type ProviderEventReconciliationPlan,
 } from "@inkroute/notifications";
 import { inkrouteDemoTenant } from "@inkroute/config";
 import { mobileNotificationConsent } from "./mobileDemo";
@@ -32,11 +36,30 @@ export interface MobilePushPersistenceAdapter {
   persistTap(plan: ExpoPushTapRoutingPlan): Promise<void>;
 }
 
+export interface ExpoPushProviderRepository {
+  persistPushToken(plan: ExpoPushRegistrationPlan): Promise<void>;
+  persistPushOptOut(input: { tenantId: string; userId: string; deviceId: string; optedOut: boolean }): Promise<void>;
+  claimReceiptIdempotency(input: { tenantId: string; receiptId: string; requestId: string }): Promise<"claimed" | "duplicate">;
+  persistDelivery(plan: ExpoPushDeliveryPlan): Promise<void>;
+  persistProviderEvent(input: { tenantId: string; reconciliation: ProviderEventReconciliationPlan; redactedPayload: Record<string, unknown> }): Promise<void>;
+  suppressInvalidToken(input: { tenantId: string; tokenHash: string; receiptId: string }): Promise<void>;
+  persistTapInteraction(plan: ExpoPushTapRoutingPlan): Promise<void>;
+  persistAuditLog(input: { tenantId: string; action: string; redactedMetadata: Record<string, unknown> }): Promise<void>;
+}
+
+export interface ExpoPushProviderContract {
+  runtimeReadiness: ExpoPushProviderRuntimeReadinessPlan;
+  invalidTokenReceipt: ExpoPushReceiptProcessingPlan;
+  receiptReconciliation: ProviderEventReconciliationPlan;
+  requiredRepositoryMethods: readonly (keyof ExpoPushProviderRepository)[];
+}
+
 export interface MobilePushContractPreview {
   registration: ExpoPushRegistrationPlan;
   delivery: ExpoPushDeliveryPlan;
   receipt: ExpoPushReceiptProcessingPlan;
   tap: ExpoPushTapRoutingPlan;
+  provider: ExpoPushProviderContract;
   boundary: string;
 }
 
@@ -88,6 +111,62 @@ export function buildMobilePushTapContract(input: {
   return buildExpoPushTapRoutingPlan(input);
 }
 
+export function buildExpoPushProviderContract(): ExpoPushProviderContract {
+  const invalidTokenReceipt = buildMobilePushReceiptContract({
+    tenantId: inkrouteDemoTenant.id,
+    deliveryId: "delivery_mobile_demo",
+    receiptId: "receipt_mobile_demo",
+    receiptStatus: "error",
+    requestId: "push_receipt_demo",
+    errorCode: "DeviceNotRegistered",
+    errorMessage: "Expo token is no longer registered.",
+  });
+
+  return {
+    runtimeReadiness: buildExpoPushProviderRuntimeReadinessPlan({
+      packageScripts: ["test", "typecheck"],
+      notificationTestsPassed: false,
+      notificationTypecheckPassed: false,
+      mobileTypecheckPassed: false,
+      expoProjectIdConfigured: false,
+      expoAccessTokenConfigured: false,
+      nativePushCredentialsConfigured: false,
+      permissionRuntimeImplemented: true,
+      tokenRegistrationRuntimeImplemented: true,
+      pushTokenPersistenceAvailable: false,
+      optOutPersistenceAvailable: false,
+      deliveryWorkerConfigured: false,
+      deliveryLogPersistenceAvailable: false,
+      auditLogPersistenceAvailable: false,
+      expoSendSmokePassed: false,
+      receiptWorkerConfigured: false,
+      receiptReplayProtectionAvailable: true,
+      invalidTokenSuppressionPersistenceAvailable: false,
+      deepLinkHandlerImplemented: true,
+      foregroundDeviceQaPassed: false,
+      backgroundDeviceQaPassed: false,
+      tapNavigationDeviceQaPassed: false,
+    }),
+    invalidTokenReceipt,
+    receiptReconciliation: buildProviderEventReconciliationPlan({
+      provider: "expo",
+      eventId: invalidTokenReceipt.receiptId,
+      eventType: invalidTokenReceipt.errorCode ?? invalidTokenReceipt.receiptStatus,
+      providerMessageId: invalidTokenReceipt.deliveryId,
+    }),
+    requiredRepositoryMethods: [
+      "persistPushToken",
+      "persistPushOptOut",
+      "claimReceiptIdempotency",
+      "persistDelivery",
+      "persistProviderEvent",
+      "suppressInvalidToken",
+      "persistTapInteraction",
+      "persistAuditLog",
+    ],
+  };
+}
+
 export async function persistMobilePushContracts(
   adapter: MobilePushPersistenceAdapter,
   preview: MobilePushContractPreview,
@@ -97,6 +176,53 @@ export async function persistMobilePushContracts(
   if (preview.receipt.status === "ready") await adapter.persistReceipt(preview.receipt);
   if (preview.tap.status === "ready") await adapter.persistTap(preview.tap);
 }
+
+export async function processExpoPushReceipt(
+  repository: ExpoPushProviderRepository,
+  input: {
+    tenantId: string;
+    receipt: ExpoPushReceiptProcessingPlan;
+    redactedPayload: Record<string, unknown>;
+  },
+): Promise<{ status: "processed" | "duplicate" | "blocked"; reconciliation: ProviderEventReconciliationPlan }> {
+  const reconciliation = buildProviderEventReconciliationPlan({
+    provider: "expo",
+    eventId: input.receipt.receiptId,
+    eventType: input.receipt.errorCode ?? input.receipt.receiptStatus,
+    providerMessageId: input.receipt.deliveryId,
+  });
+
+  if (input.receipt.status === "blocked" || reconciliation.blockers.length > 0) {
+    return { status: "blocked", reconciliation };
+  }
+
+  const claim = await repository.claimReceiptIdempotency({
+    tenantId: input.tenantId,
+    receiptId: input.receipt.receiptId,
+    requestId: input.receipt.idempotencyKey,
+  });
+  if (claim === "duplicate") {
+    return { status: "duplicate", reconciliation };
+  }
+
+  await repository.persistProviderEvent({ tenantId: input.tenantId, reconciliation, redactedPayload: input.redactedPayload });
+  if (reconciliation.shouldMarkPushTokenInactive) {
+    await repository.suppressInvalidToken({
+      tenantId: input.tenantId,
+      tokenHash: input.receipt.deliveryId,
+      receiptId: input.receipt.receiptId,
+    });
+  }
+  await repository.persistAuditLog({
+    tenantId: input.tenantId,
+    action: "expo_push_receipt_processed",
+    redactedMetadata: { receiptId: input.receipt.receiptId, status: input.receipt.receiptStatus, errorCode: input.receipt.errorCode ?? null },
+  });
+
+  return { status: "processed", reconciliation };
+}
+
+export const expoPushProviderContract = buildExpoPushProviderContract();
 
 export const mobilePushContractPreview: MobilePushContractPreview = {
   registration: buildMobilePushRegistrationPlan({
@@ -122,15 +248,7 @@ export const mobilePushContractPreview: MobilePushContractPreview = {
     requestId: "push_delivery_demo",
     deepLinkPath: "/bookings/booking_req_1001",
   }),
-  receipt: buildMobilePushReceiptContract({
-    tenantId: inkrouteDemoTenant.id,
-    deliveryId: "delivery_mobile_demo",
-    receiptId: "receipt_mobile_demo",
-    receiptStatus: "error",
-    requestId: "push_receipt_demo",
-    errorCode: "DeviceNotRegistered",
-    errorMessage: "Expo token is no longer registered.",
-  }),
+  receipt: expoPushProviderContract.invalidTokenReceipt,
   tap: buildMobilePushTapContract({
     tenantId: inkrouteDemoTenant.id,
     notificationId: "notification_mobile_demo",
@@ -139,6 +257,7 @@ export const mobilePushContractPreview: MobilePushContractPreview = {
     pushOptIn: mobileNotificationConsent.pushOptIn,
     requestId: "push_tap_demo",
   }),
+  provider: expoPushProviderContract,
   boundary:
-    "Mobile push now has app-side registration, delivery, receipt, opt-out, and safe tap-routing contracts; Expo credentials and foreground/background device proof remain runtime-gated.",
+    "Mobile push now has app-side registration, provider runtime readiness, delivery, receipt idempotency, invalid-token suppression, opt-out, and safe tap-routing contracts; Expo credentials and foreground/background device proof remain runtime-gated.",
 };

@@ -1070,6 +1070,23 @@
                                          "Sandbox sent/delivered/failed/STOP/HELP provider evidence pending",
                                          "Legal-approved SMS consent and STOP/HELP copy pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-mobile-expo-push-provider-static",
+                       "file":  "apps/mobile/tests/mobile-push-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-063 Expo push provider runtime readiness covers Expo project/access-token/native credential gates, permission/token runtime wiring, push-token and opt-out persistence seams, delivery worker, receipt worker, replay protection, invalid-token suppression, audit logs, safe deep links, and iOS/Android QA evidence",
+                                        "GAP-063 mobile push contract exposes provider receipt reconciliation and invalid-token suppression before future sends",
+                                        "GAP-063 notifications screen surfaces provider runtime status, receipt state, and tap route readiness without logging raw Expo tokens"
+                                    ],
+                       "blockedBy":  [
+                                         "Static mobile push provider test execution pending",
+                                         "Expo project/access token/APNs/FCM credential evidence pending",
+                                         "Durable PushToken/ProviderEvent/NotificationDelivery/NotificationInteraction/audit persistence pending",
+                                         "Expo send and receipt polling worker smoke pending",
+                                         "iOS and Android foreground/background/tap navigation QA pending"
+                                     ]
                    }
                ]
 }
