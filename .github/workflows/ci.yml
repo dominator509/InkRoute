@@ -680,6 +680,31 @@ jobs:
             coverage/security-mobile-device-smoke.json
             test-results/security-app-runtime
           if-no-files-found: warn
+      - name: Run Phase 14 performance load runtime contracts
+        run: pnpm test:performance:budgets && pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/performance-load-runtime-static.test.ts
+
+      - name: Upload Phase 14 performance load runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-load-runtime-artifacts
+          path: |
+            coverage/performance-load-runtime.json
+            coverage/performance-budget-verification.json
+            coverage/performance-lighthouse-ci.json
+            coverage/performance-core-web-vitals.json
+            coverage/performance-public-route-budgets.json
+            coverage/performance-dashboard-route-budgets.json
+            coverage/performance-booking-load.json
+            coverage/performance-webhook-burst.json
+            coverage/performance-upload-intent-load.json
+            coverage/performance-db-explain-analyze.json
+            coverage/performance-image-optimization.json
+            coverage/performance-regression-thresholds.json
+            coverage/performance-ci-run-redacted.json
+            coverage/performance-regression-triage.md
+            test-results/performance-load-runtime
+          if-no-files-found: warn
       - name: Run Phase 14 CI coverage reporting contracts
         run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/ci-coverage-reporting-static.test.ts
 
@@ -924,6 +949,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
