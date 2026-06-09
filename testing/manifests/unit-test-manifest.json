@@ -1792,7 +1792,7 @@
       "file": "apps/web/tests/security-app-runtime-verification-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-104 app runtime matrix covers web/dashboard typecheck and build, mobile typecheck, Next security-package transpilation, mobile SystemStatus security static coverage, web/dashboard route smoke, middleware smoke, browser smoke, and mobile device proof",
+        "GAP-104 app runtime matrix covers web/dashboard typecheck and build, mobile typecheck, Next security-package transpilation, mobile SystemStatus security static coverage, web/dashboard route smoke, middleware smoke, browser smoke, mobile device proof, and SecurityAppRuntimeRun Prisma model/app row contract are wired",
         "GAP-104 web/dashboard Next config and mobile SystemStatus security surfaces remain pinned before live runtime proof",
         "GAP-104 CI retains web/dashboard/mobile typecheck/build, route smoke, middleware smoke, browser smoke, mobile device, and app runtime artifact paths"
       ],
@@ -1801,7 +1801,7 @@
         "Web/dashboard typecheck and build proof pending",
         "Mobile typecheck and SystemStatus runtime proof pending",
         "Web/dashboard route and middleware smoke proof pending",
-        "Browser and device/emulator runtime proof pending"
+        "Provider-backed SecurityAppRuntimeRun transaction plus browser and device/emulator runtime proof pending"
       ]
     },
     {

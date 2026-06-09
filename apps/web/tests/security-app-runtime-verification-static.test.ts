@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildSecurityAppRuntimeRunPersistenceContract,
   securityAppRuntimeArtifactPaths,
   securityAppRuntimeCommands,
+  securityAppRuntimeRunPersistencePreview,
   securityAppRuntimeTargets,
   securityAppRuntimeVerificationPlan,
 } from "../lib/securityAppRuntimeVerification";
@@ -74,6 +76,39 @@ describe("GAP-104 security app runtime verification contract", () => {
     );
   });
 
+  it("pins durable SecurityAppRuntimeRun rows, runtime flags, device-gated targets, and artifact manifests", () => {
+    const schema = readWorkspaceFile("packages/db/prisma/schema.prisma");
+    const contract = buildSecurityAppRuntimeRunPersistenceContract({
+      tenantId: "tenant_demo",
+      runId: "security-app-runtime-demo",
+      commitSha: "abc1234",
+      status: "device_gated",
+      targetMatrix: securityAppRuntimeTargets,
+      artifactManifest: securityAppRuntimeArtifactPaths,
+      webTypecheckPassed: false,
+      webBuildPassed: false,
+      dashboardTypecheckPassed: false,
+      dashboardBuildPassed: false,
+      mobileTypecheckPassed: false,
+      routeSmokePassed: false,
+      middlewareSmokePassed: false,
+      browserRuntimeSmokePassed: false,
+      mobileDeviceSmokePassed: false,
+      deviceGatedTargets: ["mobile-device"],
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/redacted",
+    });
+
+    expect(schema).toContain("model SecurityAppRuntimeRun");
+    expect(schema).toContain("targetMatrix");
+    expect(schema).toContain("mobileDeviceSmokePassed");
+    expect(schema).toContain("@@unique([tenantId, runId])");
+    expect(contract.transactionWrites).toEqual(["SecurityAppRuntimeRun", "AuditLog"]);
+    expect(contract.requiredRuntimeFlags).toContain("browserRuntimeSmokePassed");
+    expect(contract.artifactFields).toContain("deviceGatedTargets");
+    expect(contract.tenantIsolationKey).toBe("tenantId");
+    expect(securityAppRuntimeRunPersistencePreview.modelName).toBe("SecurityAppRuntimeRun");
+  });
+
   it("pins CI, manifest, and tracker references for GAP-104", () => {
     const ci = readWorkspaceFile(".github/workflows/ci.yml");
     const manifest = readWorkspaceFile("testing/manifests/unit-test-manifest.json");
@@ -83,6 +118,7 @@ describe("GAP-104 security app runtime verification contract", () => {
     expect(ci).toContain("apps/web/tests/security-app-runtime-verification-static.test.ts");
     expect(ci).toContain("security-app-runtime-verification-artifacts");
     expect(manifest).toContain("unit-web-security-app-runtime-verification-static");
+    expect(manifest).toContain("SecurityAppRuntimeRun Prisma model and app row contract are wired");
     expect(tracker).toContain("apps/web/lib/securityAppRuntimeVerification.ts");
     expect(tracker).toContain("live app runtime/build/device proof remains open");
   });

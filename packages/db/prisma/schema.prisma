@@ -368,6 +368,7 @@ model Tenant {
   abuseEvents     AbuseEvent[]
   securityMiddlewareEvidence SecurityMiddlewareEvidence[]
   securityCoverageRuns SecurityCoverageRun[]
+  securityAppRuntimeRuns SecurityAppRuntimeRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -1553,6 +1554,34 @@ model SecurityCoverageRun {
   tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model SecurityAppRuntimeRun {
+  id                         String   @id @default(cuid())
+  tenantId                   String
+  runId                      String
+  commitSha                  String?
+  status                     String
+  targetMatrix               Json
+  artifactManifest           Json
+  webTypecheckPassed         Boolean  @default(false)
+  webBuildPassed             Boolean  @default(false)
+  dashboardTypecheckPassed   Boolean  @default(false)
+  dashboardBuildPassed       Boolean  @default(false)
+  mobileTypecheckPassed      Boolean  @default(false)
+  routeSmokePassed           Boolean  @default(false)
+  middlewareSmokePassed      Boolean  @default(false)
+  browserRuntimeSmokePassed  Boolean  @default(false)
+  mobileDeviceSmokePassed    Boolean  @default(false)
+  deviceGatedTargets         Json?
+  ciRunUrl                   String?
+  tenant                     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

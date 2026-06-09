@@ -10,6 +10,45 @@ export interface SecurityAppRuntimeTarget {
   status: "wired" | "execution-gated" | "device-gated";
 }
 
+export interface SecurityAppRuntimeRunPersistenceInput {
+  tenantId: string;
+  runId: string;
+  commitSha?: string;
+  status: "blocked" | "running" | "passed" | "failed" | "device_gated";
+  targetMatrix: readonly SecurityAppRuntimeTarget[];
+  artifactManifest: readonly string[];
+  webTypecheckPassed: boolean;
+  webBuildPassed: boolean;
+  dashboardTypecheckPassed: boolean;
+  dashboardBuildPassed: boolean;
+  mobileTypecheckPassed: boolean;
+  routeSmokePassed: boolean;
+  middlewareSmokePassed: boolean;
+  browserRuntimeSmokePassed: boolean;
+  mobileDeviceSmokePassed: boolean;
+  deviceGatedTargets: readonly string[];
+  ciRunUrl?: string;
+}
+
+export interface SecurityAppRuntimeRunPersistenceContract {
+  modelName: "SecurityAppRuntimeRun";
+  row: SecurityAppRuntimeRunPersistenceInput;
+  transactionWrites: readonly ["SecurityAppRuntimeRun", "AuditLog"];
+  requiredRuntimeFlags: readonly [
+    "webTypecheckPassed",
+    "webBuildPassed",
+    "dashboardTypecheckPassed",
+    "dashboardBuildPassed",
+    "mobileTypecheckPassed",
+    "routeSmokePassed",
+    "middlewareSmokePassed",
+    "browserRuntimeSmokePassed",
+    "mobileDeviceSmokePassed",
+  ];
+  artifactFields: readonly ["targetMatrix", "artifactManifest", "deviceGatedTargets"];
+  tenantIsolationKey: "tenantId";
+}
+
 export const securityAppRuntimeArtifactPaths = [
   "coverage/security-app-runtime-verification.json",
   "coverage/security-web-typecheck.log",
@@ -44,6 +83,29 @@ export const securityAppRuntimeTargets: readonly SecurityAppRuntimeTarget[] = [
 
 export const securityAppRuntimeCommands = securityAppRuntimeTargets.map((target) => target.command);
 
+export function buildSecurityAppRuntimeRunPersistenceContract(
+  input: SecurityAppRuntimeRunPersistenceInput,
+): SecurityAppRuntimeRunPersistenceContract {
+  return {
+    modelName: "SecurityAppRuntimeRun",
+    row: input,
+    transactionWrites: ["SecurityAppRuntimeRun", "AuditLog"],
+    requiredRuntimeFlags: [
+      "webTypecheckPassed",
+      "webBuildPassed",
+      "dashboardTypecheckPassed",
+      "dashboardBuildPassed",
+      "mobileTypecheckPassed",
+      "routeSmokePassed",
+      "middlewareSmokePassed",
+      "browserRuntimeSmokePassed",
+      "mobileDeviceSmokePassed",
+    ],
+    artifactFields: ["targetMatrix", "artifactManifest", "deviceGatedTargets"],
+    tenantIsolationKey: "tenantId",
+  };
+}
+
 export const securityAppRuntimeVerificationPlan = buildSecurityAppRuntimeVerificationPlan({
   packageScripts: ["test", "typecheck"],
   securityTestsPassed: false,
@@ -63,4 +125,22 @@ export const securityAppRuntimeVerificationPlan = buildSecurityAppRuntimeVerific
   browserRuntimeSmokePassed: false,
   deviceRuntimeSmokePassed: false,
   ciRuntimeEvidenceCollected: true,
+});
+
+export const securityAppRuntimeRunPersistencePreview = buildSecurityAppRuntimeRunPersistenceContract({
+  tenantId: "tenant_demo",
+  runId: "security-app-runtime-demo",
+  status: "device_gated",
+  targetMatrix: securityAppRuntimeTargets,
+  artifactManifest: securityAppRuntimeArtifactPaths,
+  webTypecheckPassed: false,
+  webBuildPassed: false,
+  dashboardTypecheckPassed: false,
+  dashboardBuildPassed: false,
+  mobileTypecheckPassed: false,
+  routeSmokePassed: false,
+  middlewareSmokePassed: false,
+  browserRuntimeSmokePassed: false,
+  mobileDeviceSmokePassed: false,
+  deviceGatedTargets: securityAppRuntimeTargets.filter((target) => target.status === "device-gated").map((target) => target.id),
 });
