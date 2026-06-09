@@ -495,6 +495,33 @@ jobs:
             test-results/public-web-launch-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 5 dashboard launch runtime contracts
+        run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/dashboard-launch-runtime-static.test.ts
+
+      - name: Upload Phase 5 dashboard launch runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-launch-runtime-artifacts
+          path: |
+            coverage/dashboard-launch-runtime.json
+            coverage/dashboard-typecheck.txt
+            coverage/dashboard-build.txt
+            coverage/dashboard-test.txt
+            coverage/dashboard-playwright-smoke.json
+            coverage/dashboard-seeded-tenant-data.json
+            coverage/dashboard-provider-auth-smoke.json
+            coverage/dashboard-tenant-scoped-apis.json
+            coverage/dashboard-prisma-repositories.json
+            coverage/dashboard-mutation-auditlog.json
+            coverage/dashboard-rbac-cross-tenant-denial.json
+            coverage/dashboard-field-redaction.json
+            coverage/dashboard-loading-empty-error-states.json
+            coverage/dashboard-ci-evidence.json
+            coverage/dashboard-secret-safe-artifacts.json
+            test-results/dashboard-launch-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 18 workspace runtime readiness
         run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness && pnpm workspace:required-checks && pnpm workspace:toolchain
       - name: Run Phase 17 quality gate runtime contracts
