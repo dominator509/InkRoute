@@ -1438,6 +1438,45 @@ jobs:
             coverage/security-mobile-device-smoke.json
             test-results/security-app-runtime
           if-no-files-found: warn
+      - name: Run Phase 14 testing launch execution runtime contracts
+        run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/testing-launch-execution-runtime-static.test.ts
+
+      - name: Upload Phase 14 testing launch execution runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testing-launch-execution-runtime-artifacts
+          path: |
+            coverage/testing-launch-execution-runtime.json
+            coverage/testing-frozen-install-output.txt
+            coverage/testing-phase14-static-output.txt
+            coverage/testing-manifest-output.txt
+            coverage/testing-typecheck-output.txt
+            coverage/testing-unit-output.json
+            coverage/testing-unit-coverage
+            coverage/testing-unit-coverage-summary.json
+            coverage/testing-e2e-output.json
+            coverage/playwright-report
+            coverage/playwright-results.json
+            coverage/playwright-junit.xml
+            coverage/playwright-traces
+            coverage/playwright-screenshots
+            coverage/playwright-videos
+            coverage/testing-web-build-output.txt
+            coverage/testing-dashboard-build-output.txt
+            coverage/testing-prisma-integration-output.json
+            coverage/testing-provider-sandbox-output-redacted.json
+            coverage/testing-security-output.json
+            coverage/testing-mobile-simulator-output.json
+            coverage/testing-mobile-device-output-redacted.json
+            coverage/testing-ci-quality-run-redacted.json
+            coverage/testing-branch-protection-required-checks-redacted.json
+            coverage/testing-flaky-policy.md
+            coverage/testing-failure-debug-artifacts.json
+            coverage/testing-secret-safe-artifacts.json
+            test-results/testing-launch-execution-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 14 performance load runtime contracts
         run: pnpm test:performance:budgets && pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/performance-load-runtime-static.test.ts
 
