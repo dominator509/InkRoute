@@ -37,6 +37,8 @@ jobs:
       - run: pnpm lint
       - name: Run unit tests with coverage
         run: pnpm test:unit:coverage
+      - name: Run Phase 7 payment lifecycle contracts
+        run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/payment-routes.test.ts apps/web/tests/stripe-webhook-static.test.ts apps/web/tests/payment-automation-static.test.ts apps/dashboard/tests/payment-operations-static.test.ts apps/dashboard/tests/payment-read-route-static.test.ts
       - name: Upload Vitest coverage artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -46,6 +48,17 @@ jobs:
             coverage/unit
             coverage/**/*.json
             coverage/**/*.lcov
+          if-no-files-found: warn
+      - name: Upload payment lifecycle artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payment-lifecycle-artifacts
+          path: |
+            coverage/payment-*.json
+            coverage/stripe-*-redacted.log
+            coverage/playwright-payment-results.json
+            test-results/payments
           if-no-files-found: warn
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium

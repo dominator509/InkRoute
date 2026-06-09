@@ -913,6 +913,23 @@
                                          "Tax/accounting reviewer approval",
                                          "Dashboard cross-tenant denial and E2E artifacts"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-payment-automation-static",
+                       "file":  "apps/web/tests/payment-automation-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-054 Phase 7 payment automated test matrix covers helpers, routes, Stripe signatures, Stripe CLI lifecycle, DB reconciliation, E2E, operations, receipt/export, tenant isolation, and replay idempotency",
+                                        "GAP-054 payment CI step runs package and route lifecycle contract tests",
+                                        "GAP-054 payment artifacts are retained through redacted-only artifact paths without claiming external Stripe or DB proof"
+                                    ],
+                       "blockedBy":  [
+                                         "Actual payment lifecycle command execution pending",
+                                         "Stripe CLI lifecycle transcript pending",
+                                         "Seeded DB reconciliation tests pending",
+                                         "Playwright payment E2E artifacts pending",
+                                         "CI payment artifact upload evidence pending"
+                                     ]
                    }
                ]
 }
