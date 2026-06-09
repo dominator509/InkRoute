@@ -7,6 +7,7 @@ import {
   providerSessionRuntimeControls,
   providerSessionRuntimeMatrix,
   providerSessionRuntimeReadiness,
+  providerSessionRunPersistenceContract,
 } from "../lib/providerSessionRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -18,6 +19,10 @@ describe("provider session runtime contract", () => {
   const dashboardMiddleware = readRepoFile("apps/dashboard/middleware.ts");
   const dashboardMiddlewareTest = readRepoFile("apps/dashboard/tests/dashboard-auth-middleware-static.test.ts");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const providerSessionMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609032700_add_provider_session_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -48,6 +53,33 @@ describe("provider session runtime contract", () => {
     ]);
     expect(providerSessionRuntimeArtifactPaths).toContain("coverage/provider-session-runtime.json");
     expect(providerSessionRuntimeArtifactPaths).toContain("test-results/provider-session-runtime");
+  });
+
+  it("pins the ProviderSessionRun persistence model and migration", () => {
+    expect(providerSessionRunPersistenceContract.model).toBe("ProviderSessionRun");
+    expect(providerSessionRunPersistenceContract.tenantRelation).toBe("providerSessionRuns");
+    expect(providerSessionRunPersistenceContract.migration).toBe("20260609032700_add_provider_session_runs");
+    expect(providerSessionRunPersistenceContract.jsonFields).toEqual([
+      "commandMatrix",
+      "controlManifest",
+      "artifactManifest",
+      "providerConfigurationManifest",
+      "tenantIsolationManifest",
+    ]);
+    expect(providerSessionRunPersistenceContract.evidenceBooleans).toContain("providerSelected");
+    expect(providerSessionRunPersistenceContract.evidenceBooleans).toContain("sessionRevocationPersisted");
+    expect(providerSessionRunPersistenceContract.evidenceBooleans).toContain("crossTenantSmokeTestsPassed");
+    expect(providerSessionRunPersistenceContract.artifactFields).toContain("tenantIsolationSmokeArtifactPath");
+    expect(providerSessionRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(prismaSchema).toContain("providerSessionRuns ProviderSessionRun[]");
+    expect(prismaSchema).toContain("model ProviderSessionRun");
+    expect(prismaSchema).toContain("providerConfigurationManifest");
+    expect(prismaSchema).toContain("tenantMembershipLookupPersisted");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(providerSessionMigration).toContain('CREATE TABLE "ProviderSessionRun"');
+    expect(providerSessionMigration).toContain('"providerConfigurationManifest" JSONB NOT NULL');
+    expect(providerSessionMigration).toContain('"sessionRevocationPersisted" BOOLEAN NOT NULL DEFAULT false');
+    expect(providerSessionMigration).toContain('CREATE UNIQUE INDEX "ProviderSessionRun_tenantId_runId_key"');
   });
 
   it("keeps auth helper, package tests, and dashboard middleware guardrails wired", () => {
@@ -84,6 +116,8 @@ describe("provider session runtime contract", () => {
     expect(ciWorkflow).toContain("provider-session-runtime-static.test.ts");
     expect(ciWorkflow).toContain("provider-session-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-provider-session-runtime-static");
+    expect(unitManifest).toContain("ProviderSessionRun Prisma model and app row contract");
+    expect(gapTracker).toContain("ProviderSessionRun");
     expect(gapTracker).toContain("apps/web/lib/providerSessionRuntime.ts");
     expect(gapTracker).toContain("live provider selection/env/callbacks, persisted session store, revocation, audit logs, provider-backed tests, tenant-isolation smoke tests, and command evidence remain open");
   });

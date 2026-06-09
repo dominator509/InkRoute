@@ -400,6 +400,7 @@ model Tenant {
   workspaceRequiredChecksRuns WorkspaceRequiredChecksRun[]
   dependencyInstallRuns DependencyInstallRun[]
   prismaLifecycleRuns PrismaLifecycleRun[]
+  providerSessionRuns ProviderSessionRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2798,6 +2799,56 @@ model PrismaLifecycleRun {
   tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                           DateTime @default(now())
   updatedAt                           DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model ProviderSessionRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  commandMatrix                           Json
+  controlManifest                         Json
+  artifactManifest                        Json
+  providerConfigurationManifest           Json
+  tenantIsolationManifest                 Json
+  authPackageTypecheckPassed              Boolean  @default(false)
+  authPackageTestsPassed                  Boolean  @default(false)
+  providerSelected                        Boolean  @default(false)
+  providerEnvConfigured                   Boolean  @default(false)
+  loginCallbackWired                      Boolean  @default(false)
+  logoutCallbackWired                     Boolean  @default(false)
+  sessionCallbackWired                    Boolean  @default(false)
+  userProvisioningConfigured              Boolean  @default(false)
+  tenantMembershipLookupPersisted         Boolean  @default(false)
+  customRoleLookupPersisted               Boolean  @default(false)
+  databaseSessionStoreConfigured          Boolean  @default(false)
+  sessionRevocationPersisted              Boolean  @default(false)
+  secureDashboardCookiesConfigured        Boolean  @default(false)
+  mobileTokenStorageConfigured            Boolean  @default(false)
+  auditLogWritesConfigured                Boolean  @default(false)
+  providerBackedTestsPassed               Boolean  @default(false)
+  crossTenantSmokeTestsPassed             Boolean  @default(false)
+  commandEvidenceCaptured                 Boolean  @default(false)
+  authTypecheckArtifactPath               String?
+  authTestArtifactPath                    String?
+  providerEnvArtifactPath                 String?
+  loginCallbackArtifactPath               String?
+  logoutCallbackArtifactPath              String?
+  sessionCallbackArtifactPath             String?
+  persistenceArtifactPath                 String?
+  securityControlsArtifactPath            String?
+  auditLogArtifactPath                    String?
+  tenantIsolationSmokeArtifactPath        String?
+  mobileRevocationSmokeArtifactPath       String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

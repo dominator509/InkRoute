@@ -14,6 +14,100 @@ export interface ProviderSessionRuntimeMatrixEntry {
   readonly status: ProviderSessionRuntimeStatus;
 }
 
+export interface ProviderSessionRunPersistenceContract {
+  readonly model: "ProviderSessionRun";
+  readonly tenantRelation: "providerSessionRuns";
+  readonly migration: "20260609032700_add_provider_session_runs";
+  readonly jsonFields: readonly [
+    "commandMatrix",
+    "controlManifest",
+    "artifactManifest",
+    "providerConfigurationManifest",
+    "tenantIsolationManifest",
+  ];
+  readonly evidenceBooleans: readonly [
+    "authPackageTypecheckPassed",
+    "authPackageTestsPassed",
+    "providerSelected",
+    "providerEnvConfigured",
+    "loginCallbackWired",
+    "logoutCallbackWired",
+    "sessionCallbackWired",
+    "userProvisioningConfigured",
+    "tenantMembershipLookupPersisted",
+    "customRoleLookupPersisted",
+    "databaseSessionStoreConfigured",
+    "sessionRevocationPersisted",
+    "secureDashboardCookiesConfigured",
+    "mobileTokenStorageConfigured",
+    "auditLogWritesConfigured",
+    "providerBackedTestsPassed",
+    "crossTenantSmokeTestsPassed",
+    "commandEvidenceCaptured",
+  ];
+  readonly artifactFields: readonly [
+    "authTypecheckArtifactPath",
+    "authTestArtifactPath",
+    "providerEnvArtifactPath",
+    "loginCallbackArtifactPath",
+    "logoutCallbackArtifactPath",
+    "sessionCallbackArtifactPath",
+    "persistenceArtifactPath",
+    "securityControlsArtifactPath",
+    "auditLogArtifactPath",
+    "tenantIsolationSmokeArtifactPath",
+    "mobileRevocationSmokeArtifactPath",
+    "ciRunUrl",
+  ];
+}
+
+export const providerSessionRunPersistenceContract: ProviderSessionRunPersistenceContract = {
+  model: "ProviderSessionRun",
+  tenantRelation: "providerSessionRuns",
+  migration: "20260609032700_add_provider_session_runs",
+  jsonFields: [
+    "commandMatrix",
+    "controlManifest",
+    "artifactManifest",
+    "providerConfigurationManifest",
+    "tenantIsolationManifest",
+  ],
+  evidenceBooleans: [
+    "authPackageTypecheckPassed",
+    "authPackageTestsPassed",
+    "providerSelected",
+    "providerEnvConfigured",
+    "loginCallbackWired",
+    "logoutCallbackWired",
+    "sessionCallbackWired",
+    "userProvisioningConfigured",
+    "tenantMembershipLookupPersisted",
+    "customRoleLookupPersisted",
+    "databaseSessionStoreConfigured",
+    "sessionRevocationPersisted",
+    "secureDashboardCookiesConfigured",
+    "mobileTokenStorageConfigured",
+    "auditLogWritesConfigured",
+    "providerBackedTestsPassed",
+    "crossTenantSmokeTestsPassed",
+    "commandEvidenceCaptured",
+  ],
+  artifactFields: [
+    "authTypecheckArtifactPath",
+    "authTestArtifactPath",
+    "providerEnvArtifactPath",
+    "loginCallbackArtifactPath",
+    "logoutCallbackArtifactPath",
+    "sessionCallbackArtifactPath",
+    "persistenceArtifactPath",
+    "securityControlsArtifactPath",
+    "auditLogArtifactPath",
+    "tenantIsolationSmokeArtifactPath",
+    "mobileRevocationSmokeArtifactPath",
+    "ciRunUrl",
+  ],
+};
+
 export const providerSessionRuntimeCommands = [
   "pnpm --filter @inkroute/auth typecheck",
   "pnpm --filter @inkroute/auth test",
