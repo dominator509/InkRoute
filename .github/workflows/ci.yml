@@ -259,6 +259,28 @@ jobs:
 
       - name: Verify Phase 16 handoff manifests
         run: pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next && pnpm handoff:verify-ledger && pnpm handoff:verify-tooling && pnpm handoff:verify-task-sync
+      - name: Run Phase 18 workspace runtime toolchain contracts
+        run: pnpm --filter @inkroute/workspace test && pnpm vitest run apps/web/tests/workspace-runtime-toolchain-static.test.ts
+
+      - name: Upload Phase 18 workspace runtime toolchain artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-runtime-toolchain-artifacts
+          path: |
+            coverage/workspace-runtime-toolchain.json
+            coverage/workspace-package-typecheck.txt
+            coverage/workspace-package-test.txt
+            coverage/workspace-toolchain-output.txt
+            coverage/workspace-all-output.txt
+            coverage/workspace-install-output.txt
+            coverage/workspace-web-build-output.txt
+            coverage/workspace-dashboard-build-output.txt
+            coverage/workspace-ci-job.json
+            coverage/workspace-production-blockers.json
+            test-results/workspace-runtime-toolchain
+          if-no-files-found: warn
+
       - name: Verify Phase 18 workspace runtime readiness
         run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness && pnpm workspace:required-checks && pnpm workspace:toolchain
       - name: Run Phase 17 quality gate runtime contracts
