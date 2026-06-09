@@ -325,6 +325,25 @@ jobs:
             test-results/repository-governance-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 17 required checks runtime contracts
+        run: pnpm --filter @inkroute/quality test && pnpm vitest run apps/web/tests/required-checks-runtime-static.test.ts
+
+      - name: Upload Phase 17 required checks runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: required-checks-runtime-artifacts
+          path: |
+            coverage/required-checks-runtime.json
+            coverage/required-checks-audit-output.txt
+            coverage/required-checks-quality-all-output.txt
+            coverage/required-checks-branch-protection-redacted.json
+            coverage/required-checks-repository-settings-redacted.json
+            coverage/required-checks-failing-pr-redacted.json
+            coverage/required-checks-codeowners-review-redacted.json
+            test-results/required-checks-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 17 quality gates
         run: pnpm quality:all
       - name: Verify PR GAP tracker diff evidence
