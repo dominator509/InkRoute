@@ -2,10 +2,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  authGuardAuditLogPlan,
   authSessionTenantGuardArtifactPaths,
   authSessionTenantGuardCommands,
   authSessionTenantGuardCoverageContract,
   authSessionTenantGuardSurfaceMatrix,
+  buildAuthGuardAuditLogPlan,
 } from "../lib/authSessionTenantGuardRuntime";
 
 function readWorkspaceFile(path: string) {
@@ -52,6 +54,14 @@ describe("GAP-095 auth session tenant guard runtime contract", () => {
   });
 
   it("tracks remaining provider-backed session, revocation, audit, and cross-tenant proof gates", () => {
+    const auditPlan = buildAuthGuardAuditLogPlan({
+      tenantId: "tenant_1",
+      actorUserId: "user_1",
+      routePath: "/api/security/privacy-requests",
+      decision: "csrf_failed",
+      source: "dashboard",
+    });
+
     expect(authSessionTenantGuardCommands).toContain("provider-backed login/logout integration tests");
     expect(authSessionTenantGuardCommands).toContain("CSRF-bound mutating route tests");
     expect(authSessionTenantGuardCommands).toContain("auth audit-log persistence tests");
@@ -65,6 +75,16 @@ describe("GAP-095 auth session tenant guard runtime contract", () => {
       ]),
     );
     expect(authSessionTenantGuardArtifactPaths).toContain("coverage/auth-provider-session-redacted.json");
+    expect(auditPlan).toMatchObject({
+      entityType: "AuthGuardDecision",
+      action: "auth_guard:csrf_failed",
+      metadata: {
+        rawSessionStored: false,
+        rawProviderPayloadStored: false,
+        artifact: "coverage/auth-audit-log-redacted.json",
+      },
+    });
+    expect(authGuardAuditLogPlan.metadata.redactedFields).toEqual(expect.arrayContaining(["sessionToken", "providerAccessToken"]));
     expect(authSessionTenantGuardCoverageContract.status).toBe("blocked");
     expect(authSessionTenantGuardCoverageContract.blockers).toEqual(
       expect.arrayContaining([
@@ -72,10 +92,10 @@ describe("GAP-095 auth session tenant guard runtime contract", () => {
         "Provider-backed login/logout callbacks must be wired.",
         "TenantMember/session lookups must be persisted and resolved server-side.",
         "Session revocation persistence must be checked before every sensitive route decision.",
-        "Auth decisions, provider callbacks, denials, tenant switches, and revocations must persist AuditLog rows.",
         "Cross-tenant route integration tests must prove tenant isolation.",
       ]),
     );
+    expect(authSessionTenantGuardCoverageContract.blockers).not.toContain("Auth decisions, provider callbacks, denials, tenant switches, and revocations must persist AuditLog rows.");
   });
 
   it("pins CI, manifest, and tracker references for GAP-095", () => {

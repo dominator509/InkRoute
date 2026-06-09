@@ -1642,7 +1642,7 @@
       "verifies": [
         "GAP-095 dashboard middleware enforces production session-cookie and cookie-authenticated CSRF boundaries",
         "GAP-095 dashboard trust/privacy APIs resolve tenant actor context before no-store route reads or mutations",
-        "GAP-095 mobile session/tenant security surfaces and provider-backed session, revocation, audit, and cross-tenant proof gates remain explicit"
+        "GAP-095 mobile session/tenant security surfaces plus provider-backed session, revocation, redacted audit metadata, and cross-tenant proof gates remain explicit"
       ],
       "blockedBy": [
         "Static auth session tenant guard test execution pending",

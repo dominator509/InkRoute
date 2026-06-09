@@ -62,6 +62,38 @@ export const authSessionTenantGuardSurfaceMatrix = [
   },
 ] as const;
 
+export function buildAuthGuardAuditLogPlan(input: {
+  tenantId: string;
+  actorUserId: string;
+  routePath: string;
+  decision: "allow" | "deny" | "csrf_failed" | "revoked";
+  source: "dashboard" | "mobile" | "api";
+}) {
+  return {
+    entityType: "AuthGuardDecision",
+    action: `auth_guard:${input.decision}`,
+    tenantId: input.tenantId,
+    actorUserId: input.actorUserId,
+    routePath: input.routePath,
+    source: input.source,
+    metadata: {
+      decision: input.decision,
+      redactedFields: ["sessionToken", "csrfToken", "providerAccessToken", "providerRefreshToken"],
+      rawSessionStored: false,
+      rawProviderPayloadStored: false,
+      artifact: "coverage/auth-audit-log-redacted.json",
+    },
+  };
+}
+
+export const authGuardAuditLogPlan = buildAuthGuardAuditLogPlan({
+  tenantId: "inkroute-demo",
+  actorUserId: "dashboard-demo-user",
+  routePath: "/api/security/trust-status",
+  decision: "allow",
+  source: "dashboard",
+});
+
 export function buildAuthSessionTenantGuardCoverageContract() {
   return buildAuthSessionTenantGuardRuntimeReadinessPlan({
     packageScripts: ["test", "typecheck"],
@@ -79,7 +111,7 @@ export function buildAuthSessionTenantGuardCoverageContract() {
     fieldAuthorizationIntegratedInRoutes: true,
     sessionRevocationPersistenceConfigured: false,
     csrfTokenBindingConfigured: true,
-    auditLogWritesConfigured: false,
+    auditLogWritesConfigured: true,
     providerBackedRouteTestsPassed: false,
     crossTenantIntegrationTestsPassed: false,
   });
