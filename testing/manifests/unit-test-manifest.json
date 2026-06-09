@@ -2541,6 +2541,22 @@
         "Route-wide public/dashboard/webhook/provider shared-schema adoption proof pending",
         "Malformed-payload, tenant/auth scope, sensitive-field redaction/encryption, CI, and secret-safe artifact proof pending"
       ]
+    },
+    {
+      "id": "unit-web-tenant-isolation-runtime-static",
+      "file": "apps/web/tests/tenant-isolation-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-022 tenant isolation runtime matrix covers db typecheck/tests, Prisma generate/migrate/seed, seeded multi-tenant fixtures, repository/service helper adoption, tenant-owned model coverage, cross-tenant read/write denial, missing-tenant write rejection, tenant-scoped audit rows, fixture cleanup, database evidence, CI evidence, and secret-safe artifacts",
+        "GAP-022 tenant scope helpers, tenant-owned model inventory contract, docs, DB manifest, CI labels, artifact paths, and tracker row remain wired without claiming live repository/database proof exists",
+        "GAP-022 readiness keeps database lifecycle, repository adoption, denial matrix, audit rows, fixture cleanup, CI, and secret-safe artifact evidence explicit blockers"
+      ],
+      "blockedBy": [
+        "Static tenant isolation runtime test execution pending",
+        "Prisma generate/migrate/seed and seeded multi-tenant fixture proof pending",
+        "Repository helper adoption, tenant-owned model coverage, cross-tenant denial, and missing-tenant rejection proof pending",
+        "Audit-row integration, fixture cleanup, database evidence, CI evidence, and secret-safe artifact proof pending"
+      ]
     }
   ]
 }

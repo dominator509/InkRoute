@@ -466,6 +466,35 @@ jobs:
             test-results/dependency-install-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 2 tenant isolation runtime contracts
+        run: pnpm --filter @inkroute/db test && pnpm vitest run apps/web/tests/tenant-isolation-runtime-static.test.ts
+
+      - name: Upload Phase 2 tenant isolation runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenant-isolation-runtime-artifacts
+          path: |
+            coverage/tenant-isolation-runtime.json
+            coverage/tenant-isolation-db-typecheck.txt
+            coverage/tenant-isolation-db-test.txt
+            coverage/tenant-isolation-prisma-generate.txt
+            coverage/tenant-isolation-prisma-migrate.txt
+            coverage/tenant-isolation-db-seed.txt
+            coverage/tenant-isolation-fixtures-redacted.json
+            coverage/tenant-isolation-repository-helper-adoption.json
+            coverage/tenant-isolation-model-coverage.json
+            coverage/tenant-isolation-cross-tenant-read-denial.json
+            coverage/tenant-isolation-cross-tenant-write-denial.json
+            coverage/tenant-isolation-missing-tenant-write-rejection.json
+            coverage/tenant-isolation-audit-rows-redacted.json
+            coverage/tenant-isolation-fixture-cleanup.json
+            coverage/tenant-isolation-database-evidence-redacted.json
+            coverage/tenant-isolation-ci-evidence.json
+            coverage/tenant-isolation-secret-safe-artifacts.json
+            test-results/tenant-isolation-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 2 seed runtime execution contracts
         run: pnpm --filter @inkroute/db test && pnpm vitest run apps/web/tests/seed-runtime-execution-static.test.ts
 
