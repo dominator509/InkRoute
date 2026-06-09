@@ -407,6 +407,7 @@ model Tenant {
   dashboardLaunchRuns DashboardLaunchRun[]
   mobileLaunchRuns MobileLaunchRun[]
   calendarLaunchRuns CalendarLaunchRun[]
+  notificationLaunchRuns NotificationLaunchRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3198,6 +3199,63 @@ model CalendarLaunchRun {
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())
   updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model NotificationLaunchRun {
+  id                                    String   @id @default(cuid())
+  tenantId                              String
+  runId                                 String
+  commitSha                             String?
+  status                                String
+  commandMatrix                         Json
+  controlManifest                       Json
+  artifactManifest                      Json
+  providerSendManifest                  Json
+  suppressionManifest                   Json
+  webhookReplayManifest                 Json
+  notificationsTypecheckPassed          Boolean  @default(false)
+  notificationsTestsPassed              Boolean  @default(false)
+  providerSdksConfigured                Boolean  @default(false)
+  resendSandboxSendPassed               Boolean  @default(false)
+  twilioSandboxSendPassed               Boolean  @default(false)
+  expoPushDeviceSendPassed              Boolean  @default(false)
+  queueWorkerImplemented                Boolean  @default(false)
+  deliveryPersistenceConfigured         Boolean  @default(false)
+  providerEventPersistenceConfigured    Boolean  @default(false)
+  messageThreadPersistenceConfigured    Boolean  @default(false)
+  messagePersistenceConfigured          Boolean  @default(false)
+  preferenceCenterImplemented           Boolean  @default(false)
+  unsubscribeStopSuppressionTested      Boolean  @default(false)
+  quietHoursRateLimitTested             Boolean  @default(false)
+  signedWebhookVerificationPassed       Boolean  @default(false)
+  retryDeadLetterFlowTested             Boolean  @default(false)
+  tenantIsolationTestsPassed            Boolean  @default(false)
+  redactionPrivacyReviewPassed          Boolean  @default(false)
+  ciEvidenceCaptured                    Boolean  @default(false)
+  secretSafeArtifactsCaptured           Boolean  @default(false)
+  notificationTypecheckArtifactPath     String?
+  notificationTestArtifactPath          String?
+  providerSandboxArtifactPath           String?
+  resendSandboxArtifactPath             String?
+  twilioSandboxArtifactPath             String?
+  expoPushDeviceArtifactPath            String?
+  queueWorkerArtifactPath               String?
+  persistenceArtifactPath               String?
+  preferenceSuppressionArtifactPath     String?
+  webhookSignatureReplayArtifactPath    String?
+  retryDeadLetterArtifactPath           String?
+  tenantIsolationArtifactPath           String?
+  redactionPrivacyArtifactPath          String?
+  ciEvidenceArtifactPath                String?
+  secretSafeArtifactsPath               String?
+  ciRunUrl                              String?
+  tenant                                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                             DateTime @default(now())
+  updatedAt                             DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

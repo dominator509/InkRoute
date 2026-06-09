@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   notificationLaunchArtifactPaths,
+  notificationLaunchRunPersistenceContract,
   notificationLaunchRuntimeCommands,
   notificationLaunchRuntimeControls,
   notificationLaunchRuntimeMatrix,
@@ -20,6 +21,10 @@ describe("notification launch runtime contract", () => {
   const emailWebhook = readRepoFile("apps/web/app/api/webhooks/email/route.ts");
   const smsWebhook = readRepoFile("apps/web/app/api/webhooks/sms/route.ts");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const notificationLaunchMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609033400_add_notification_launch_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -50,6 +55,34 @@ describe("notification launch runtime contract", () => {
     ]);
     expect(notificationLaunchArtifactPaths).toContain("coverage/notification-launch-runtime.json");
     expect(notificationLaunchArtifactPaths).toContain("test-results/notification-launch-runtime");
+  });
+
+  it("pins the NotificationLaunchRun persistence model and migration", () => {
+    expect(notificationLaunchRunPersistenceContract.model).toBe("NotificationLaunchRun");
+    expect(notificationLaunchRunPersistenceContract.tenantRelation).toBe("notificationLaunchRuns");
+    expect(notificationLaunchRunPersistenceContract.migration).toBe("20260609033400_add_notification_launch_runs");
+    expect(notificationLaunchRunPersistenceContract.jsonFields).toEqual([
+      "commandMatrix",
+      "controlManifest",
+      "artifactManifest",
+      "providerSendManifest",
+      "suppressionManifest",
+      "webhookReplayManifest",
+    ]);
+    expect(notificationLaunchRunPersistenceContract.evidenceBooleans).toContain("providerSdksConfigured");
+    expect(notificationLaunchRunPersistenceContract.evidenceBooleans).toContain("retryDeadLetterFlowTested");
+    expect(notificationLaunchRunPersistenceContract.evidenceBooleans).toContain("secretSafeArtifactsCaptured");
+    expect(notificationLaunchRunPersistenceContract.artifactFields).toContain("webhookSignatureReplayArtifactPath");
+    expect(notificationLaunchRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(prismaSchema).toContain("notificationLaunchRuns NotificationLaunchRun[]");
+    expect(prismaSchema).toContain("model NotificationLaunchRun");
+    expect(prismaSchema).toContain("providerSendManifest");
+    expect(prismaSchema).toContain("messagePersistenceConfigured");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(notificationLaunchMigration).toContain('CREATE TABLE "NotificationLaunchRun"');
+    expect(notificationLaunchMigration).toContain('"suppressionManifest" JSONB NOT NULL');
+    expect(notificationLaunchMigration).toContain('"secretSafeArtifactsCaptured" BOOLEAN NOT NULL DEFAULT false');
+    expect(notificationLaunchMigration).toContain('CREATE UNIQUE INDEX "NotificationLaunchRun_tenantId_runId_key"');
   });
 
   it("keeps package scripts, launch helper, dashboard reads, and webhook boundaries wired", () => {
@@ -90,6 +123,8 @@ describe("notification launch runtime contract", () => {
     expect(ciWorkflow).toContain("notification-launch-runtime-static.test.ts");
     expect(ciWorkflow).toContain("notification-launch-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-notification-launch-runtime-static");
+    expect(unitManifest).toContain("NotificationLaunchRun Prisma model and app row contract");
+    expect(gapTracker).toContain("NotificationLaunchRun");
     expect(gapTracker).toContain("apps/web/lib/notificationLaunchRuntime.ts");
     expect(gapTracker).toContain("live notification typecheck/tests, provider SDK configuration, sandbox/device sends, queue worker, delivery/provider/message persistence, preference/STOP/quiet-hours suppression, signed webhooks, retry/dead-letter, tenant isolation, privacy/redaction, CI evidence, and secret-safe artifacts remain open");
   });

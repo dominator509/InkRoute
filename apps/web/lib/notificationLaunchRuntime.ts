@@ -15,6 +15,114 @@ export interface NotificationLaunchRuntimeMatrixEntry {
   readonly status: NotificationLaunchRuntimeStatus;
 }
 
+export interface NotificationLaunchRunPersistenceContract {
+  readonly model: "NotificationLaunchRun";
+  readonly tenantRelation: "notificationLaunchRuns";
+  readonly migration: "20260609033400_add_notification_launch_runs";
+  readonly jsonFields: readonly [
+    "commandMatrix",
+    "controlManifest",
+    "artifactManifest",
+    "providerSendManifest",
+    "suppressionManifest",
+    "webhookReplayManifest",
+  ];
+  readonly evidenceBooleans: readonly [
+    "notificationsTypecheckPassed",
+    "notificationsTestsPassed",
+    "providerSdksConfigured",
+    "resendSandboxSendPassed",
+    "twilioSandboxSendPassed",
+    "expoPushDeviceSendPassed",
+    "queueWorkerImplemented",
+    "deliveryPersistenceConfigured",
+    "providerEventPersistenceConfigured",
+    "messageThreadPersistenceConfigured",
+    "messagePersistenceConfigured",
+    "preferenceCenterImplemented",
+    "unsubscribeStopSuppressionTested",
+    "quietHoursRateLimitTested",
+    "signedWebhookVerificationPassed",
+    "retryDeadLetterFlowTested",
+    "tenantIsolationTestsPassed",
+    "redactionPrivacyReviewPassed",
+    "ciEvidenceCaptured",
+    "secretSafeArtifactsCaptured",
+  ];
+  readonly artifactFields: readonly [
+    "notificationTypecheckArtifactPath",
+    "notificationTestArtifactPath",
+    "providerSandboxArtifactPath",
+    "resendSandboxArtifactPath",
+    "twilioSandboxArtifactPath",
+    "expoPushDeviceArtifactPath",
+    "queueWorkerArtifactPath",
+    "persistenceArtifactPath",
+    "preferenceSuppressionArtifactPath",
+    "webhookSignatureReplayArtifactPath",
+    "retryDeadLetterArtifactPath",
+    "tenantIsolationArtifactPath",
+    "redactionPrivacyArtifactPath",
+    "ciEvidenceArtifactPath",
+    "secretSafeArtifactsPath",
+    "ciRunUrl",
+  ];
+}
+
+export const notificationLaunchRunPersistenceContract: NotificationLaunchRunPersistenceContract = {
+  model: "NotificationLaunchRun",
+  tenantRelation: "notificationLaunchRuns",
+  migration: "20260609033400_add_notification_launch_runs",
+  jsonFields: [
+    "commandMatrix",
+    "controlManifest",
+    "artifactManifest",
+    "providerSendManifest",
+    "suppressionManifest",
+    "webhookReplayManifest",
+  ],
+  evidenceBooleans: [
+    "notificationsTypecheckPassed",
+    "notificationsTestsPassed",
+    "providerSdksConfigured",
+    "resendSandboxSendPassed",
+    "twilioSandboxSendPassed",
+    "expoPushDeviceSendPassed",
+    "queueWorkerImplemented",
+    "deliveryPersistenceConfigured",
+    "providerEventPersistenceConfigured",
+    "messageThreadPersistenceConfigured",
+    "messagePersistenceConfigured",
+    "preferenceCenterImplemented",
+    "unsubscribeStopSuppressionTested",
+    "quietHoursRateLimitTested",
+    "signedWebhookVerificationPassed",
+    "retryDeadLetterFlowTested",
+    "tenantIsolationTestsPassed",
+    "redactionPrivacyReviewPassed",
+    "ciEvidenceCaptured",
+    "secretSafeArtifactsCaptured",
+  ],
+  artifactFields: [
+    "notificationTypecheckArtifactPath",
+    "notificationTestArtifactPath",
+    "providerSandboxArtifactPath",
+    "resendSandboxArtifactPath",
+    "twilioSandboxArtifactPath",
+    "expoPushDeviceArtifactPath",
+    "queueWorkerArtifactPath",
+    "persistenceArtifactPath",
+    "preferenceSuppressionArtifactPath",
+    "webhookSignatureReplayArtifactPath",
+    "retryDeadLetterArtifactPath",
+    "tenantIsolationArtifactPath",
+    "redactionPrivacyArtifactPath",
+    "ciEvidenceArtifactPath",
+    "secretSafeArtifactsPath",
+    "ciRunUrl",
+  ],
+};
+
 export const notificationLaunchRuntimeCommands = [
   "pnpm --filter @inkroute/notifications typecheck",
   "pnpm --filter @inkroute/notifications test",
