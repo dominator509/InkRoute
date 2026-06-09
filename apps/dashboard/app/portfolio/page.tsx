@@ -9,7 +9,7 @@ export default function PortfolioManagerPage() {
       <DashboardPageHeader
         eyebrow="Portfolio CMS"
         title="Portfolio manager"
-        description="Manage portfolio metadata, style tags, freshness labels, placements, city context, attribution, and image SEO. Images are still placeholder paths."
+        description="Manage portfolio metadata, style tags, freshness labels, placements, city context, attribution, and image SEO. Tenant-scoped redacted portfolio read APIs now exist; image writes and derivatives remain provider-gated."
       />
 
       <section className="card table-card">
@@ -30,7 +30,7 @@ export default function PortfolioManagerPage() {
 
       <DisabledActionPanel
         title="Image workflow actions"
-        description="Upload, crop, reorder, publish, transform, and alt-text assistant actions require signed storage, image optimization, background jobs, and access control."
+        description="Portfolio reads now redact storage keys and private asset metadata. Upload, crop, reorder, publish, transform, and alt-text assistant actions still require signed storage, image optimization, background jobs, and access control."
         actions={["Upload image", "Generate derivative", "Publish to website", "Request healed photo"]}
       />
     </main>

@@ -18,7 +18,7 @@ export default function PaymentsPage() {
       <DashboardPageHeader
         eyebrow="Payments and deposits"
         title="Deposit protection"
-        description="Deposit policy estimates, checkout-session drafts, refund/no-show decisions, receipts, webhook interpretation, and audit boundaries. Stripe is still credential-gated."
+        description="Deposit policy estimates, checkout-session drafts, refund/no-show decisions, receipts, webhook interpretation, and audit boundaries. Tenant-scoped redacted payment read APIs now exist; Stripe write actions are still credential-gated."
       />
 
       <section className="metric-grid">
@@ -67,7 +67,7 @@ export default function PaymentsPage() {
 
       <DisabledActionPanel
         title="Stripe actions"
-        description="Checkout/session creation, webhook reconciliation, refund processing, no-show forfeiture, receipts, and payment audit logs require Stripe credentials, database persistence, idempotency, and production policy review."
+        description="Payment reads now have redacted dashboard APIs with AuditLog and PaymentAuditLog rows. Checkout/session creation, webhook reconciliation, refund processing, no-show forfeiture, receipts, and tax exports still require Stripe credentials, idempotency, and production policy review."
         actions={["Create deposit session", "Record manual payment", "Refund deposit", "Forfeit no-show deposit", "Export tax report"]}
       />
     </main>

@@ -14,7 +14,7 @@ export default function FormsPage() {
       <DashboardPageHeader
         eyebrow="Intake and consent"
         title="Form builder"
-        description="Manage tattoo-specific intake forms, consent forms, medical/safety acknowledgements, and healed-photo follow-ups. Legal review is still required."
+        description="Manage tattoo-specific intake forms, consent forms, medical/safety acknowledgements, and healed-photo follow-ups. Tenant-scoped redacted form read APIs now expose metadata while keeping raw answers, signatures, and medical payloads private."
       />
 
       <section className="grid three">
@@ -35,7 +35,7 @@ export default function FormsPage() {
 
       <DisabledActionPanel
         title="Form actions"
-        description="Form editing must support versioning, required-field validation, private storage, consent signature retention, audit logging, and attorney-reviewed copy before production."
+        description="GET /api/forms and GET /api/forms/[formId] now provide RBAC-gated, audited, no-store reads. Form editing, signature requests, private upload retention, and attorney-reviewed copy remain gated before production."
         actions={["Create intake form", "Publish consent form", "Send signature request", "Archive form version"]}
       />
     </main>

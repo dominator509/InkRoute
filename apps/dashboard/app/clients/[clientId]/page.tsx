@@ -31,7 +31,7 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
       <DashboardPageHeader
         eyebrow="Client detail"
         title={client.preferredName}
-        description="Client timeline, booking history, risk flags, consent, and payment context will live here once private CRM APIs are implemented."
+        description={`Client timeline, booking history, risk flags, consent, and payment context have a redacted tenant-scoped read API at GET /api/clients/${client.id}; this static page still needs a connected loader.`}
         actions={<a className="secondary-link" href="/clients">Back to clients</a>}
       />
 
@@ -70,7 +70,7 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
 
       <DisabledActionPanel
         title="Private CRM actions"
-        description="Client notes, consent re-send, healed-photo request, and message actions require authenticated APIs, retention policy, access logging, and notification providers."
+        description="Client reads now have authenticated redacted API routes with access logging. Client notes, consent re-send, healed-photo request, message actions, and export/delete workflows still require mutation APIs, retention policy, and notification providers."
         actions={["Add private note", "Send prep message", "Request healed photo", "Export client data"]}
       />
     </main>

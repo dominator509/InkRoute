@@ -12,7 +12,7 @@ export default function ClientsPage() {
       <DashboardPageHeader
         eyebrow="Client CRM"
         title="Client profiles"
-        description="A tattoo-specific CRM surface for request history, consent, payments, notes, healed-photo follow-ups, and no-show risk. Data is static demo content."
+        description="A tattoo-specific CRM surface for request history, consent, payments, notes, healed-photo follow-ups, and no-show risk. The dashboard API now exposes tenant-scoped redacted client read routes; this page still renders projected demo rows until UI loaders are connected."
       />
 
       <section className="card table-card">

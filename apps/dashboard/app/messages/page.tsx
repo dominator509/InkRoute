@@ -17,7 +17,7 @@ export default function MessagesPage() {
       <DashboardPageHeader
         eyebrow="Messaging"
         title="Client messaging and delivery logs"
-        description="Draft client threads, provider webhook interpretations, and redacted delivery-log records. Persistence, inbound routing, and provider reconciliation are still scaffolded only."
+        description="Draft client threads, provider webhook interpretations, and redacted delivery-log records. Tenant-scoped redacted message read APIs now exist; sending, inbound routing, and provider reconciliation remain gated."
       />
 
       <section className="dashboard-grid two">
@@ -73,14 +73,14 @@ export default function MessagesPage() {
 
       <IntegrationBoundaryCard
         title="Message center boundary"
-        status="Scaffolded"
-        description="Production messaging requires tenant-scoped thread persistence, inbound email/SMS routing, attachments policy, spam/rate limiting, delivery status reconciliation, and field-level redaction for client/medical/payment data."
+        status="Read APIs wired"
+        description="Message thread reads now enforce message RBAC, tenant scope, no-store responses, message body/provider id redaction, and AuditLog rows. Production sends still require inbound email/SMS routing, attachments policy, spam/rate limiting, and delivery status reconciliation."
         gapIds={["GAP-064", "GAP-066", "GAP-067", "GAP-068"]}
       />
 
       <DisabledActionPanel
         title="Message actions"
-        description="Sending, replying, assigning threads, marking read/unread, and syncing provider delivery state are disabled until authenticated APIs and provider workers exist."
+        description="Thread reads now have authenticated redacted APIs. Sending, replying, assigning threads, marking read/unread, and syncing provider delivery state still require mutation APIs and provider workers."
         actions={["Reply to client", "Assign thread", "Queue follow-up", "Mark read", "Sync delivery status", "Export message audit"]}
       />
     </main>

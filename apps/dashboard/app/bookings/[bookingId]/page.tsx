@@ -33,7 +33,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
       <DashboardPageHeader
         eyebrow="Booking detail"
         title={`${booking.clientName} · ${booking.city}`}
-        description="Static booking detail page showing the target review experience for artists, assistants, and studio managers. Mutations are disabled until API, auth, and audit logging exist."
+        description="Booking detail page showing projected request data and the dashboard lifecycle API boundary for artists, assistants, and studio managers."
         actions={<a className="secondary-link" href="/bookings">Back to inbox</a>}
       />
 
@@ -69,7 +69,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
 
       <DisabledActionPanel
         title="Lifecycle actions"
-        description="These buttons show intended artist actions but are disabled because mutations, RBAC, tenant checks, state event writes, notification queues, and audit logs are not implemented."
+        description={`These buttons are disabled in the static UI, but the server mutation path is wired at POST /api/bookings/${booking.id}/state with RBAC, tenant checks, BookingStateEvent writes, and AuditLog persistence. Notification queues and live client-side forms remain gated.`}
         actions={actions.length > 0 ? actions : ["Archive"]}
       />
 

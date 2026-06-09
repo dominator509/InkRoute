@@ -10,7 +10,7 @@ export default function TravelScheduleManagerPage() {
       <DashboardPageHeader
         eyebrow="Nomad Mode"
         title="Travel schedule manager"
-        description="Manage city stops, guest spots, waitlists, flash availability, calendar blocks, and public schedule revalidation. This Phase 8 surface remains static and non-mutating."
+        description="Manage city stops, guest spots, waitlists, flash availability, calendar blocks, and public schedule revalidation. Tenant-scoped redacted travel read APIs now exist; publish mutations and provider sync remain gated."
       />
 
       <section className="grid three">
@@ -69,7 +69,7 @@ export default function TravelScheduleManagerPage() {
 
       <DisabledActionPanel
         title="Travel publishing actions"
-        description="City updates should persist to Postgres, update waitlists, create audit logs, create or update calendar blocks, and trigger public site cache revalidation before production."
+        description="Travel reads now use redacted dashboard APIs with AuditLog rows. City updates still need mutation APIs that persist to Postgres, update waitlists, create calendar blocks, queue provider sync, and trigger public site cache revalidation."
         actions={["Add city", "Publish guest spot", "Open waitlist", "Generate availability", "Trigger public revalidation", "Queue calendar sync"]}
       />
     </main>

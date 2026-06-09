@@ -95,6 +95,76 @@
       "blockedBy": ["Static dashboard middleware wiring test execution pending"]
     },
     {
+      "id": "unit-dashboard-booking-state-route-static",
+      "file": "apps/dashboard/tests/booking-state-route-static.test.ts",
+      "priority": "critical",
+      "verifies": ["dashboard booking read routes", "dashboard booking state mutation route", "booking RBAC denial", "tenant mismatch denial", "booking transition planning", "booking projection redaction", "sensitive-read AuditLog persistence", "BookingStateEvent persistence", "AuditLog persistence"],
+      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded mutation smoke pending", "provider-backed dashboard auth pending"]
+    },
+    {
+      "id": "unit-dashboard-client-read-route-static",
+      "file": "apps/dashboard/tests/client-read-route-static.test.ts",
+      "priority": "critical",
+      "verifies": ["dashboard client read routes", "client RBAC denial", "tenant mismatch denial", "client projection redaction", "sensitive profile redaction", "sensitive-read AuditLog persistence", "no-store dashboard client reads"],
+      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded client read smoke pending", "provider-backed dashboard auth pending"]
+    },
+    {
+      "id": "unit-dashboard-payment-read-route-static",
+      "file": "apps/dashboard/tests/payment-read-route-static.test.ts",
+      "priority": "critical",
+      "verifies": ["dashboard payment read routes", "payment RBAC denial", "tenant mismatch denial", "payment provider id redaction", "payment metadata redaction", "AuditLog persistence", "PaymentAuditLog persistence", "no-store dashboard payment reads"],
+      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded payment read smoke pending", "Stripe provider write flows remain credential-gated"]
+    },
+    {
+      "id": "unit-dashboard-portfolio-read-route-static",
+      "file": "apps/dashboard/tests/portfolio-read-route-static.test.ts",
+      "priority": "critical",
+      "verifies": ["dashboard portfolio read routes", "portfolio RBAC denial", "tenant mismatch denial", "portfolio attribution redaction", "file object-key redaction", "private asset URL redaction", "AuditLog persistence", "no-store dashboard portfolio reads"],
+      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded portfolio read smoke pending", "storage provider write flows remain credential-gated"]
+    },
+    {
+      "id": "unit-dashboard-travel-read-route-static",
+      "file": "apps/dashboard/tests/travel-read-route-static.test.ts",
+      "priority": "high",
+      "verifies": ["dashboard travel read routes", "travel RBAC denial", "tenant mismatch denial", "internal travel note redaction", "guest spot URL redaction", "client-name redaction in travel context", "AuditLog persistence", "no-store dashboard travel reads"],
+      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded travel read smoke pending", "calendar provider write/sync flows remain credential-gated"]
+    },
+    {
+      "id": "unit-dashboard-message-read-route-static",
+      "file": "apps/dashboard/tests/message-read-route-static.test.ts",
+      "priority": "critical",
+      "verifies": ["dashboard message read routes", "message RBAC permission model", "message RBAC denial", "tenant mismatch denial", "message body redaction", "provider message id redaction", "client contact redaction", "AuditLog persistence", "no-store dashboard message reads"],
+      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded message read smoke pending", "provider send/inbound worker flows remain credential-gated"]
+    },
+    {
+      "id": "unit-dashboard-seo-read-route-static",
+      "file": "apps/dashboard/tests/seo-read-route-static.test.ts",
+      "priority": "high",
+      "verifies": ["dashboard SEO read route", "SEO RBAC denial", "tenant mismatch denial", "city SEO read loader", "style SEO read loader", "redirect read loader", "public portfolio filtering", "AuditLog persistence", "no-store dashboard SEO reads"],
+      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded SEO read smoke pending", "Search Console and publish/revalidation flows remain credential-gated"]
+    },
+    {
+      "id": "unit-dashboard-settings-read-route-static",
+      "file": "apps/dashboard/tests/settings-read-route-static.test.ts",
+      "priority": "critical",
+      "verifies": ["dashboard settings read route", "settings RBAC denial", "tenant mismatch denial", "member email redaction", "domain verification token omission", "provider secret boundary", "AuditLog persistence", "no-store dashboard settings reads"],
+      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded settings read smoke pending", "settings mutation/provider-secret flows remain gated"]
+    },
+    {
+      "id": "unit-dashboard-calendar-read-route-static",
+      "file": "apps/dashboard/tests/calendar-read-route-static.test.ts",
+      "priority": "high",
+      "verifies": ["dashboard calendar read route", "calendar RBAC permission model", "calendar RBAC denial", "tenant mismatch denial", "provider token omission", "provider account redaction", "external event id redaction", "raw payload redaction", "availability internal note redaction", "AuditLog persistence", "no-store dashboard calendar reads"],
+      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded calendar read smoke pending", "Google Calendar OAuth/provider sync flows remain credential-gated"]
+    },
+    {
+      "id": "unit-dashboard-form-read-route-static",
+      "file": "apps/dashboard/tests/form-read-route-static.test.ts",
+      "priority": "critical",
+      "verifies": ["dashboard form read routes", "form RBAC permission model", "form RBAC denial", "tenant mismatch denial", "intake metadata reads", "consent metadata reads", "medical safety metadata reads", "raw answer redaction", "signature data redaction", "medical acknowledgment redaction", "AuditLog persistence", "no-store dashboard form reads"],
+      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded form read smoke pending", "form write/signature request flows remain gated", "attorney-reviewed copy remains required"]
+    },
+    {
       "id": "unit-public-privacy-route",
       "file": "apps/web/tests/privacy-requests-public-route.test.ts",
       "priority": "critical",

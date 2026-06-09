@@ -10,7 +10,7 @@ export default function SettingsPage() {
       <DashboardPageHeader
         eyebrow="Tenant settings"
         title="Workspace settings"
-        description="Tenant profile, roles, permissions, policies, feature flags, and provider credentials. This is read-only static demo content."
+        description="Tenant profile, roles, permissions, policies, feature flags, and provider boundaries. Tenant-scoped redacted settings read API now exists; saves and provider secrets remain gated."
       />
 
       <section className="grid two">
@@ -45,7 +45,7 @@ export default function SettingsPage() {
 
       <DisabledActionPanel
         title="Settings actions"
-        description="Saving settings requires authenticated owner/studio manager roles, tenant-scoped APIs, provider secret handling, audit logs, and validation."
+        description="Settings reads now use a credential-safe tenant API with AuditLog rows. Saving settings still requires mutation APIs, provider secret handling, audit logs, and validation."
         actions={["Invite member", "Create custom role", "Connect provider", "Save policies"]}
       />
     </main>

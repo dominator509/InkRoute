@@ -14,7 +14,7 @@ export default function SeoManagerPage() {
       <DashboardPageHeader
         eyebrow="SEO engine"
         title="City, style, schema, sitemap, and attribution control center"
-        description="Preview the Phase 10 SEO engine for local city pages, tattoo style pages, canonical metadata, structured data, internal links, sitemap entries, image SEO, Search Console setup, and publish revalidation boundaries."
+        description="Preview the Phase 10 SEO engine for city pages, tattoo style pages, canonical metadata, structured data, internal links, sitemap entries, image SEO, Search Console setup, and publish revalidation boundaries. Tenant-scoped SEO read APIs now exist; publishing/provider actions remain gated."
       />
 
       <section className="metric-grid">
@@ -137,7 +137,7 @@ export default function SeoManagerPage() {
 
       <DisabledActionPanel
         title="SEO publishing actions"
-        description="Actions remain disabled until auth, Prisma data loaders, content mutations, Search Console credentials, sitemap submission, and build/runtime verification are complete."
+        description="SEO reads now have authenticated tenant-scoped dashboard APIs with AuditLog rows. Publishing actions remain disabled until content mutations, Search Console credentials, sitemap submission, revalidation workers, and build/runtime verification are complete."
         actions={["Create city page", "Create style page", "Preview JSON-LD", "Publish and revalidate", "Submit sitemap"]}
       />
     </main>
