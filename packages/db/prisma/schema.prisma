@@ -418,6 +418,7 @@ model Tenant {
   prismaValidationRuns PrismaValidationRun[]
   validatorLaunchAdoptionRuns ValidatorLaunchAdoptionRun[]
   tenantIsolationRuns TenantIsolationRun[]
+  domainAuthorizationRuns DomainAuthorizationRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3618,6 +3619,34 @@ model TenantIsolationRun {
   createdAt                             DateTime @default(now())
   updatedAt                             DateTime @updatedAt
   tenant                                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model DomainAuthorizationRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String
+  status                              String
+  commandMatrix                       Json
+  artifactManifest                    Json
+  providerSessionEvidenceCaptured     Boolean  @default(false)
+  customRoleEvidenceCaptured          Boolean  @default(false)
+  routeGuardEvidenceCaptured          Boolean  @default(false)
+  roleMatrixEvidenceCaptured          Boolean  @default(false)
+  fieldRedactionEvidenceCaptured      Boolean  @default(false)
+  auditLogEvidenceCaptured            Boolean  @default(false)
+  csrfRevocationEvidenceCaptured      Boolean  @default(false)
+  ciEvidenceCaptured                  Boolean  @default(false)
+  secretSafeArtifactsCaptured         Boolean  @default(false)
+  routeGuardReportPath                String?
+  auditLogReportPath                  String?
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

@@ -2595,13 +2595,13 @@
       "file": "apps/web/tests/domain-authorization-runtime-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-023 domain authorization runtime matrix covers auth package typecheck/tests, provider-backed session context, CustomRole database loading, dashboard/API/server-action route-guard adoption, built-in role matrix, custom-role route tests, cross-tenant route denial, field redaction serialization, authorization AuditLog persistence, CSRF-bound mutating routes, session revocation route tests, CI evidence, and secret-safe artifacts",
+        "GAP-023 DomainAuthorizationRun Prisma model and app row contract plus domain authorization runtime matrix covers auth package typecheck/tests, provider-backed session context, CustomRole database loading, dashboard/API/server-action route-guard adoption, built-in role matrix, custom-role route tests, cross-tenant route denial, field redaction serialization, authorization AuditLog persistence, CSRF-bound mutating routes, session revocation route tests, CI evidence, and secret-safe artifacts",
         "GAP-023 auth helper/tests, DB CustomRole/TenantMember/AuditLog models, current dashboard middleware boundary, representative dashboard route permissions, CI labels, artifact paths, and tracker row remain wired without claiming full route enforcement readiness",
         "GAP-023 readiness keeps provider sessions, DB roles, route guard adoption, role matrices, cross-tenant denial, field redaction, audits, CSRF, revocation, CI, and secret-safe artifact evidence explicit blockers"
       ],
       "blockedBy": [
         "Static domain authorization runtime test execution pending",
-        "Provider-backed sessions and DB-loaded CustomRole route proof pending",
+        "Provider-backed DomainAuthorizationRun transaction plus provider-backed sessions and DB-loaded CustomRole route proof pending",
         "Dashboard/API/server-action route-guard adoption, role matrix, custom-role, and cross-tenant denial proof pending",
         "Field redaction, AuditLog persistence, CSRF binding, session revocation, CI, and secret-safe artifact proof pending"
       ]

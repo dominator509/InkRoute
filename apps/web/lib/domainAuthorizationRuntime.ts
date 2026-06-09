@@ -16,6 +16,47 @@ export interface DomainAuthorizationRuntimeMatrixEntry {
   readonly status: DomainAuthorizationRuntimeStatus;
 }
 
+
+export interface DomainAuthorizationRunPersistenceContract {
+  readonly prismaModel: "DomainAuthorizationRun";
+  readonly tenantRelation: "domainAuthorizationRuns";
+  readonly migration: "20260609034500_add_domain_authorization_runs";
+  readonly storesRunId: true;
+  readonly storesCommitSha: true;
+  readonly storesReadinessStatus: true;
+  readonly storesCommandMatrix: true;
+  readonly storesArtifactManifest: true;
+  readonly storesProviderSessionEvidence: true;
+  readonly storesCustomRoleEvidence: true;
+  readonly storesRouteGuardEvidence: true;
+  readonly storesRoleMatrixEvidence: true;
+  readonly storesFieldRedactionEvidence: true;
+  readonly storesAuditLogEvidence: true;
+  readonly storesCsrfRevocationEvidence: true;
+  readonly storesCiEvidence: true;
+  readonly storesSecretSafeArtifacts: true;
+}
+
+export const domainAuthorizationRunPersistenceContract = {
+  prismaModel: "DomainAuthorizationRun",
+  tenantRelation: "domainAuthorizationRuns",
+  migration: "20260609034500_add_domain_authorization_runs",
+  storesRunId: true,
+  storesCommitSha: true,
+  storesReadinessStatus: true,
+  storesCommandMatrix: true,
+  storesArtifactManifest: true,
+  storesProviderSessionEvidence: true,
+  storesCustomRoleEvidence: true,
+  storesRouteGuardEvidence: true,
+  storesRoleMatrixEvidence: true,
+  storesFieldRedactionEvidence: true,
+  storesAuditLogEvidence: true,
+  storesCsrfRevocationEvidence: true,
+  storesCiEvidence: true,
+  storesSecretSafeArtifacts: true,
+} as const satisfies DomainAuthorizationRunPersistenceContract;
+
 export const domainAuthorizationRuntimeCommands = [
   "pnpm --filter @inkroute/auth typecheck",
   "pnpm --filter @inkroute/auth test",
