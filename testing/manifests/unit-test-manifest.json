@@ -2685,6 +2685,22 @@
         "Web typecheck/build, Next route runtime smoke, and client/server boundary proof pending",
         "Playwright booking/confirmation smoke, dev-DB transaction smoke, CI evidence, and secret-safe artifact proof pending"
       ]
+    },
+    {
+      "id": "unit-web-booking-persistence-api-runtime-static",
+      "file": "apps/web/tests/booking-persistence-api-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-032 booking persistence API matrix covers booking route contract tests, web typecheck/build, Prisma Client generation, Next route runtime smoke, dev-DB transaction smoke, provider worker boundary evidence, CI evidence, and secret-safe artifacts",
+        "GAP-032 route implementation remains attached to tenant resolution, DB-scope anti-bot proof, encryption policy gating, BookingRequest/BookingStateEvent/AuditLog transaction writes, local fallback, validators, security policy, and local workflow consumers",
+        "GAP-032 remains implemented for the route scaffold while runtime DB smoke, fresh CI, and provider worker execution stay explicit external evidence gates"
+      ],
+      "blockedBy": [
+        "Static booking persistence API runtime test execution pending",
+        "Fresh booking route contract, web typecheck/build, and Next route smoke proof pending",
+        "Generated Prisma Client and dev-DB transaction smoke proof pending",
+        "Provider worker execution, CI evidence, and secret-safe artifact proof pending"
+      ]
     }
   ]
 }

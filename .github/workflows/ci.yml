@@ -1645,6 +1645,27 @@ jobs:
             test-results/booking-contact-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 4 booking persistence API runtime contracts
+        run: pnpm vitest run apps/web/tests/booking-persistence-api-runtime-static.test.ts
+
+      - name: Upload Phase 4 booking persistence API runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking-persistence-api-runtime-artifacts
+          path: |
+            coverage/booking-persistence-api-runtime.json
+            coverage/booking-persistence-contract-test.txt
+            coverage/booking-persistence-web-typecheck.txt
+            coverage/booking-persistence-web-build.txt
+            coverage/booking-persistence-prisma-generate.txt
+            coverage/booking-persistence-next-route-smoke.json
+            coverage/booking-persistence-db-transaction.json
+            coverage/booking-persistence-provider-workers.json
+            coverage/booking-persistence-secret-safe-artifacts.json
+            test-results/booking-persistence-api-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 4 booking flow runtime contracts
         run: pnpm vitest run apps/web/tests/booking-flow-runtime-static.test.ts
 
