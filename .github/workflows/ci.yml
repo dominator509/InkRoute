@@ -466,6 +466,35 @@ jobs:
             test-results/dependency-install-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 2 domain authorization runtime contracts
+        run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/domain-authorization-runtime-static.test.ts
+
+      - name: Upload Phase 2 domain authorization runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: domain-authorization-runtime-artifacts
+          path: |
+            coverage/domain-authorization-runtime.json
+            coverage/domain-authorization-auth-typecheck.txt
+            coverage/domain-authorization-auth-test.txt
+            coverage/domain-authorization-provider-session-redacted.json
+            coverage/domain-authorization-custom-role-db-redacted.json
+            coverage/domain-authorization-dashboard-middleware.json
+            coverage/domain-authorization-api-route-guards.json
+            coverage/domain-authorization-server-action-guards.json
+            coverage/domain-authorization-role-matrix.json
+            coverage/domain-authorization-custom-role-routes.json
+            coverage/domain-authorization-cross-tenant-denial.json
+            coverage/domain-authorization-field-redaction.json
+            coverage/domain-authorization-audit-rows-redacted.json
+            coverage/domain-authorization-csrf-session-binding.json
+            coverage/domain-authorization-session-revocation.json
+            coverage/domain-authorization-ci-evidence.json
+            coverage/domain-authorization-secret-safe-artifacts.json
+            test-results/domain-authorization-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 2 tenant isolation runtime contracts
         run: pnpm --filter @inkroute/db test && pnpm vitest run apps/web/tests/tenant-isolation-runtime-static.test.ts
 
