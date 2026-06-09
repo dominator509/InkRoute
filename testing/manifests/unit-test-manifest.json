@@ -2349,6 +2349,22 @@
         "Provider-backed signed URL, FileAsset/link/audit persistence, scan/derivative worker, and retention proof pending",
         "Provider integration, CI evidence, and secret-safe artifact proof pending"
       ]
+    },
+    {
+      "id": "unit-web-public-web-launch-runtime-static",
+      "file": "apps/web/tests/public-web-launch-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-006 public web launch runtime matrix covers web typecheck/build/test, route smoke, desktop/mobile Playwright, accessibility, Lighthouse, tenant-scoped persistence, provider-backed routes, production local-runtime fallback behavior, real portfolio derivatives, placeholder asset disposition, runtime sitemap/robots/JSON-LD/canonical validation, legal-route review, CI evidence, and secret-safe artifacts",
+        "GAP-006 web package scripts, SEO helper tests, local-runtime boundary, CI labels, artifact paths, and tracker row remain wired without claiming public launch readiness",
+        "GAP-006 readiness keeps runtime/provider/browser/SEO/legal/CI evidence explicit blockers"
+      ],
+      "blockedBy": [
+        "Static public web launch runtime test execution pending",
+        "web typecheck/build/test and route smoke proof pending",
+        "Playwright, accessibility, Lighthouse, provider/database route, media derivative, and runtime SEO proof pending",
+        "legal-route review, CI evidence, and secret-safe artifact proof pending"
+      ]
     }
   ]
 }

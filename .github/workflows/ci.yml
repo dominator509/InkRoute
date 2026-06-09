@@ -468,6 +468,33 @@ jobs:
             test-results/provider-storage-upload-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 3 public web launch runtime contracts
+        run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/web/tests/public-web-launch-runtime-static.test.ts
+
+      - name: Upload Phase 3 public web launch runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-web-launch-runtime-artifacts
+          path: |
+            coverage/public-web-launch-runtime.json
+            coverage/public-web-typecheck.txt
+            coverage/public-web-build.txt
+            coverage/public-web-test.txt
+            coverage/public-web-route-smoke.json
+            coverage/public-web-playwright-desktop.json
+            coverage/public-web-playwright-mobile.json
+            coverage/public-web-axe-audit.json
+            coverage/public-web-lighthouse.json
+            coverage/public-web-provider-routes.json
+            coverage/public-web-media-derivatives.json
+            coverage/public-web-runtime-seo.json
+            coverage/public-web-legal-routes.json
+            coverage/public-web-ci-evidence.json
+            coverage/public-web-secret-safe-artifacts.json
+            test-results/public-web-launch-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 18 workspace runtime readiness
         run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness && pnpm workspace:required-checks && pnpm workspace:toolchain
       - name: Run Phase 17 quality gate runtime contracts
