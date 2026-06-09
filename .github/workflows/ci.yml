@@ -261,6 +261,29 @@ jobs:
         run: pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next && pnpm handoff:verify-ledger && pnpm handoff:verify-tooling && pnpm handoff:verify-task-sync
       - name: Verify Phase 18 workspace runtime readiness
         run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness && pnpm workspace:required-checks && pnpm workspace:toolchain
+      - name: Run Phase 17 quality gate runtime contracts
+        run: pnpm --filter @inkroute/quality test && pnpm vitest run apps/web/tests/quality-gate-runtime-static.test.ts
+
+      - name: Upload Phase 17 quality gate runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-gate-runtime-artifacts
+          path: |
+            coverage/quality-gate-runtime.json
+            coverage/quality-package-typecheck.txt
+            coverage/quality-package-test.txt
+            coverage/quality-docs-output.txt
+            coverage/quality-gaps-output.txt
+            coverage/quality-pr-gap-fixtures-output.txt
+            coverage/quality-governance-output.txt
+            coverage/quality-required-checks-output.txt
+            coverage/quality-gates-output.txt
+            coverage/quality-all-output.txt
+            coverage/quality-ci-job.json
+            test-results/quality-gate-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 17 quality gates
         run: pnpm quality:all
       - name: Verify PR GAP tracker diff evidence

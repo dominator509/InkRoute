@@ -2093,6 +2093,22 @@
         "GitHub issues and project items for every queued task pending",
         "Handoff docs, GAP_TRACKER links, and status traceability evidence pending"
       ]
+    },
+    {
+      "id": "unit-web-quality-gate-runtime-static",
+      "file": "apps/web/tests/quality-gate-runtime-static.test.ts",
+      "priority": "medium",
+      "verifies": [
+        "GAP-126 quality gate runtime matrix covers @inkroute/quality typecheck/test, documentation gates, gap evidence, PR gap fixtures, repository governance, required checks, quality gate summaries, quality:all, CI status, generated manifests, and artifact capture",
+        "GAP-126 root package scripts, quality package scripts, generated manifest paths, helper tests, quality protocol, CI labels, and tracker evidence remain wired before live runtime proof",
+        "GAP-126 static readiness keeps manifest coverage complete while preserving blockers for package commands, quality:all, CI quality job, and artifacts"
+      ],
+      "blockedBy": [
+        "Static quality gate runtime test execution pending",
+        "@inkroute/quality typecheck/test execution proof pending",
+        "pnpm quality:all execution proof pending",
+        "GitHub Actions quality job and artifact proof pending"
+      ]
     }
   ]
 }
