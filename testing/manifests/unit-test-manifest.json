@@ -1264,6 +1264,24 @@
                                          "Rendered sitemap/canonical/robots/noindex crawl pending",
                                          "Structured-data closeout artifact pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-seo-analytics-attribution-static",
+                       "file":  "apps/web/tests/seo-analytics-attribution-static.test.ts",
+                       "priority":  "medium",
+                       "verifies":  [
+                                        "GAP-074 public route middleware captures UTM and portfolio attribution cookies",
+                                        "GAP-074 public analytics ingestion normalizes, redacts, idempotency-tags, and tenant-scopes SEO attribution events",
+                                        "GAP-074 BookingRequest attribution fields remain wired for portfolioAttributionId and UTM persistence while durable analytics/Search Console reporting remains gated"
+                                    ],
+                       "blockedBy":  [
+                                         "Static SEO analytics attribution test execution pending",
+                                         "Durable analytics event and campaign persistence pending",
+                                         "Search Console import job and credentials pending",
+                                         "Tenant-scoped dashboard analytics report pending",
+                                         "Playwright click-through attribution proof pending",
+                                         "Persisted booking attribution integration test pending"
+                                     ]
                    }
                ]
 }

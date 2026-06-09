@@ -1,6 +1,7 @@
 ﻿import { NextResponse, type NextRequest } from "next/server";
 import { buildSecurityRuntimeEnforcementPlan } from "@inkroute/security";
 import { evaluatePublicCanonicalRequest } from "./lib/canonicalRuntime";
+import { attributionCookiesForUrl, seoAttributionCookieMaxAgeSeconds } from "./lib/seoAnalyticsAttribution";
 
 type RuntimeEnvironment = "development" | "preview" | "production";
 
@@ -39,6 +40,19 @@ function csrfTokenIsValid(request: NextRequest): { present: boolean; valid: bool
   };
 }
 
+function applyAttributionCookies(response: NextResponse, request: NextRequest): NextResponse {
+  const cookies = attributionCookiesForUrl(request.nextUrl.toString(), request.nextUrl.searchParams.get("portfolioItemId") ?? undefined);
+  for (const [name, value] of Object.entries(cookies)) {
+    response.cookies.set(name, value, {
+      httpOnly: false,
+      sameSite: "lax",
+      secure: requestUsesHttps(request),
+      maxAge: seoAttributionCookieMaxAgeSeconds,
+      path: "/",
+    });
+  }
+  return response;
+}
 function applyCanonicalHeaders(response: NextResponse, request: NextRequest): NextResponse {
   const canonical = evaluatePublicCanonicalRequest({
     host: request.headers.get("host") ?? request.nextUrl.host,
@@ -71,7 +85,7 @@ function applySecurityHeaders(response: NextResponse, request: NextRequest): Nex
   }
   response.headers.set("X-InkRoute-Security-Runtime", plan.status);
 
-  return applyCanonicalHeaders(response, request);
+  return applyAttributionCookies(applyCanonicalHeaders(response, request), request);
 }
 
 export function middleware(request: NextRequest) {
@@ -111,5 +125,6 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)"],
 };
+
 
 
