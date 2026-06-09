@@ -1730,6 +1730,23 @@
                                          "Legal page route smoke and noindex removal proof pending",
                                          "Payment policy legal/tax review and rollback drill proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-abuse-control-runtime-static",
+                       "file":  "apps/web/tests/abuse-control-runtime-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "GAP-101 abuse runtime contract maps route-family policies to tenant-safe keys, distributed limiter checks, bot challenges, provider webhook bypass/rejection, redacted AbuseEvent persistence, alerts, and fail-closed behavior",
+                                        "GAP-101 public booking/upload/privacy/message/error-report/dashboard mutation routes keep local abuse controls pinned while distributed middleware proof remains explicit",
+                                        "GAP-101 CI retains distributed limiter, bot challenge, provider webhook, invalid webhook, abuse redaction, alert, fail-closed, and public-route artifact paths"
+                                    ],
+                       "blockedBy":  [
+                                         "Static abuse control runtime test execution pending",
+                                         "Distributed Redis/Upstash limiter proof pending",
+                                         "Bot challenge provider route proof pending",
+                                         "Privacy-safe AbuseEvent persistence and redaction proof pending",
+                                         "Abuse alert/fail-closed/public-route integration proof pending"
+                                     ]
                    }
                ]
 }

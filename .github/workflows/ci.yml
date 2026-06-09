@@ -596,6 +596,24 @@ jobs:
             coverage/legal-payment-policy-review-redacted.json
             coverage/legal-copy-rollback-plan.md
             test-results/legal-review
+          if-no-files-found: warn      - name: Run Phase 13 abuse control runtime contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/abuse-control-runtime-static.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/privacy-requests-public-route.test.ts apps/web/tests/error-report-ingest-hardening-static.test.ts
+
+      - name: Upload abuse control runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: abuse-control-runtime-artifacts
+          path: |
+            coverage/abuse-control-runtime.json
+            coverage/abuse-rate-limit-distributed.json
+            coverage/abuse-bot-challenge.json
+            coverage/abuse-provider-webhook-bypass.json
+            coverage/abuse-invalid-webhook-challenge.json
+            coverage/abuse-event-redaction.json
+            coverage/abuse-alert-delivery-redacted.json
+            coverage/abuse-fail-closed.json
+            test-results/abuse-control-runtime
           if-no-files-found: warn      - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
@@ -644,6 +662,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
