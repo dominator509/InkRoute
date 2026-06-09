@@ -13,6 +13,36 @@ export interface HandoffToolingRuntimeMatrixEntry {
   readonly status: HandoffToolingRuntimeStatus;
 }
 
+export interface HandoffToolingRunPersistenceContract {
+  readonly prismaModel: "HandoffToolingRun";
+  readonly tenantRelation: "handoffToolingRuns";
+  readonly uniqueKey: readonly ["tenantId", "runId"];
+  readonly jsonFields: readonly ["rootScriptMatrix", "packageScriptMatrix", "reportArtifactManifest", "ciEvidenceManifest"];
+  readonly requiredBooleanProofs: readonly [
+    "dependenciesInstalled",
+    "packageTypecheckPassed",
+    "packageTestsPassed",
+    "verifyDocsPassed",
+    "handoffAuditPassed",
+    "handoffNextPassed",
+    "verifyLedgerPassed",
+    "verifyToolingPassed",
+    "verifyTaskSyncPassed",
+    "handoffAllPassed",
+    "queueLedgerParityVerified",
+    "ciRunCaptured",
+    "reportArtifactsCaptured"
+  ];
+  readonly artifactFields: readonly [
+    "installArtifactPath",
+    "packageTypecheckArtifactPath",
+    "packageTestArtifactPath",
+    "handoffScriptArtifactPath",
+    "toolingVerifierArtifactPath",
+    "handoffAllArtifactPath"
+  ];
+}
+
 export const handoffToolingRequiredRootScripts = [
   "handoff:verify-docs",
   "handoff:audit",
@@ -122,6 +152,36 @@ export const handoffToolingRuntimeMatrix = [
     status: "artifact-gated",
   },
 ] as const satisfies readonly HandoffToolingRuntimeMatrixEntry[];
+
+export const handoffToolingRunPersistenceContract: HandoffToolingRunPersistenceContract = {
+  prismaModel: "HandoffToolingRun",
+  tenantRelation: "handoffToolingRuns",
+  uniqueKey: ["tenantId", "runId"],
+  jsonFields: ["rootScriptMatrix", "packageScriptMatrix", "reportArtifactManifest", "ciEvidenceManifest"],
+  requiredBooleanProofs: [
+    "dependenciesInstalled",
+    "packageTypecheckPassed",
+    "packageTestsPassed",
+    "verifyDocsPassed",
+    "handoffAuditPassed",
+    "handoffNextPassed",
+    "verifyLedgerPassed",
+    "verifyToolingPassed",
+    "verifyTaskSyncPassed",
+    "handoffAllPassed",
+    "queueLedgerParityVerified",
+    "ciRunCaptured",
+    "reportArtifactsCaptured",
+  ],
+  artifactFields: [
+    "installArtifactPath",
+    "packageTypecheckArtifactPath",
+    "packageTestArtifactPath",
+    "handoffScriptArtifactPath",
+    "toolingVerifierArtifactPath",
+    "handoffAllArtifactPath",
+  ],
+};
 
 export const handoffToolingRuntimeReadiness = buildHandoffToolingRuntimeReadinessPlan({
   requiredRootScripts: [...handoffToolingRequiredRootScripts],

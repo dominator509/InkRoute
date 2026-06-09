@@ -11,6 +11,7 @@ import {
   handoffToolingRuntimeCommands,
   handoffToolingRuntimeMatrix,
   handoffToolingRuntimeReadiness,
+  handoffToolingRunPersistenceContract,
 } from "../lib/handoffToolingRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -23,6 +24,8 @@ describe("handoff tooling runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const prismaMigration = readRepoFile("packages/db/prisma/migrations/20260609024000_add_handoff_tooling_runs/migration.sql");
 
   it("pins every GAP-121 command, report, script, doc, CI label, and artifact path", () => {
     expect(handoffToolingRuntimeCommands).toEqual([
@@ -93,5 +96,40 @@ describe("handoff tooling runtime contract", () => {
     expect(unitManifest).toContain("unit-web-handoff-tooling-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/handoffToolingRuntime.ts");
     expect(gapTracker).toContain("live install, script execution, CI run, and artifact proof remain open");
+  });
+
+  it("pins durable HandoffToolingRun persistence for runtime tooling proof", () => {
+    expect(handoffToolingRunPersistenceContract.prismaModel).toBe("HandoffToolingRun");
+    expect(handoffToolingRunPersistenceContract.tenantRelation).toBe("handoffToolingRuns");
+    expect(handoffToolingRunPersistenceContract.uniqueKey).toEqual(["tenantId", "runId"]);
+    expect(handoffToolingRunPersistenceContract.jsonFields).toEqual([
+      "rootScriptMatrix",
+      "packageScriptMatrix",
+      "reportArtifactManifest",
+      "ciEvidenceManifest",
+    ]);
+    expect(handoffToolingRunPersistenceContract.requiredBooleanProofs).toEqual(
+      expect.arrayContaining([
+        "dependenciesInstalled",
+        "packageTypecheckPassed",
+        "packageTestsPassed",
+        "verifyDocsPassed",
+        "verifyLedgerPassed",
+        "verifyToolingPassed",
+        "handoffAllPassed",
+        "ciRunCaptured",
+        "reportArtifactsCaptured",
+      ]),
+    );
+    expect(handoffToolingRunPersistenceContract.artifactFields).toContain("toolingVerifierArtifactPath");
+    expect(prismaSchema).toContain("handoffToolingRuns HandoffToolingRun[]");
+    expect(prismaSchema).toContain("model HandoffToolingRun");
+    expect(prismaSchema).toContain("rootScriptMatrix                        Json");
+    expect(prismaSchema).toContain("verifyToolingPassed                     Boolean  @default(false)");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(prismaMigration).toContain('CREATE TABLE "HandoffToolingRun"');
+    expect(prismaMigration).toContain('"handoffAllArtifactPath" TEXT');
+    expect(unitManifest).toContain("HandoffToolingRun Prisma model and app row contract");
+    expect(gapTracker).toContain("packages/db/prisma/migrations/20260609024000_add_handoff_tooling_runs/migration.sql");
   });
 });
