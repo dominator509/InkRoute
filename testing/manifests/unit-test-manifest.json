@@ -2957,7 +2957,8 @@
         "Signed-token invalid/expired tests, tenant-scoped idempotency/persistence transaction, and PaymentAuditLog proof pending",
         "Webhook reconciliation, web typecheck/payment route tests, CI evidence, and secret-safe artifact proof pending"
       ]
-    }    ,{
+    }
+    ,{
       "id": "unit-stripe-webhook-runtime-static",
       "file": "apps/web/tests/stripe-webhook-runtime-static.test.ts",
       "priority": "critical",
@@ -2971,6 +2972,21 @@
         "Stripe SDK constructEvent/webhook secret and invalid/stale signature proof pending",
         "Persistent replay protection, provider object fetch, tenant transaction, and DB reconciliation proof pending",
         "Amount/currency mismatch tests, Stripe CLI replay, web typecheck/payment route tests, CI evidence, and secret-safe artifact proof pending"
+      ]
+    }    ,{
+      "id": "unit-payment-persistence-runtime-static",
+      "file": "apps/dashboard/tests/payment-persistence-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-051 payment persistence runtime matrix covers payments typecheck/tests, Prisma validation, repository contract, tenant scope, lifecycle transactions, idempotency store, deposit creation, provider-session persistence, paid/failed transitions, refund/dispute transitions, PaymentAuditLog, BookingStateEvent, cross-tenant denial, replay idempotency, seeded Postgres tests, dashboard repository reads, CI evidence, and secret-safe artifacts",
+        "GAP-051 dashboard payment persistence contract remains wired for TenantPaymentRepository, lifecycle action coverage, tenant/idempotency/transaction/audit controls, dashboard payment read routes, and payments page surfacing",
+        "GAP-051 readiness keeps real Prisma transactions, DB idempotency, lifecycle persistence, audit/BookingStateEvent writes, cross-tenant mutation tests, replay idempotency tests, seeded Postgres tests, command evidence, CI, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static payment persistence runtime test execution pending",
+        "Prisma transaction implementation, idempotency store, and lifecycle persistence proof pending",
+        "PaymentAuditLog/BookingStateEvent, cross-tenant denial, replay idempotency, and seeded Postgres proof pending",
+        "Dashboard repository route/action tests, command evidence, CI evidence, and secret-safe artifact proof pending"
       ]
     }  ]
 }

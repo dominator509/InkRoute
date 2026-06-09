@@ -1378,6 +1378,37 @@ jobs:
       - run: pnpm lint
       - name: Run unit tests with coverage
         run: pnpm test:unit:coverage
+      - name: Run Phase 7 payment persistence runtime contracts
+        run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/dashboard/tests/payment-persistence-runtime-static.test.ts apps/dashboard/tests/payment-persistence-static.test.ts
+
+      - name: Upload Phase 7 payment persistence runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payment-persistence-runtime-artifacts
+          path: |
+            coverage/payment-persistence-runtime.json
+            coverage/payment-persistence-payments-typecheck.txt
+            coverage/payment-persistence-payments-test.txt
+            coverage/payment-persistence-prisma-validate.txt
+            coverage/payment-persistence-repository-contract.json
+            coverage/payment-persistence-tenant-scope.json
+            coverage/payment-persistence-transactions.json
+            coverage/payment-persistence-idempotency.json
+            coverage/payment-persistence-deposit-create.json
+            coverage/payment-persistence-provider-session.json
+            coverage/payment-persistence-paid-failed-transitions.json
+            coverage/payment-persistence-refund-dispute-transitions.json
+            coverage/payment-persistence-audit-log.json
+            coverage/payment-persistence-booking-state-event.json
+            coverage/payment-persistence-cross-tenant-denial.json
+            coverage/payment-persistence-replay-idempotency.json
+            coverage/payment-persistence-seeded-postgres.json
+            coverage/payment-persistence-dashboard-repository-reads.json
+            coverage/payment-persistence-secret-safe-artifacts.json
+            test-results/payment-persistence-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 7 payment lifecycle contracts
         run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/payment-routes.test.ts apps/web/tests/stripe-webhook-static.test.ts apps/web/tests/payment-automation-static.test.ts apps/dashboard/tests/payment-operations-static.test.ts apps/dashboard/tests/payment-read-route-static.test.ts
       - name: Run Phase 8 calendar lifecycle contracts
