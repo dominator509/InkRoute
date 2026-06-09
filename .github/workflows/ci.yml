@@ -254,6 +254,23 @@ jobs:
             coverage/provider-webhook-live-sentry-proof-redacted.json
             test-results/provider-webhook-reconciliation
           if-no-files-found: warn
+      - name: Run Phase 11 alert escalation runtime contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/alert-escalation-runtime-static.test.ts
+
+      - name: Upload alert escalation runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alert-escalation-runtime-artifacts
+          path: |
+            coverage/alert-escalation-runtime.json
+            coverage/alert-worker-retry-dead-letter.json
+            coverage/alert-acknowledgement-state.json
+            coverage/alert-sanitized-payload-redacted.json
+            coverage/alert-live-critical-pager-redacted.json
+            coverage/alert-live-high-slack-redacted.json
+            test-results/observability-alerts
+          if-no-files-found: warn
       - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
@@ -302,6 +319,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 

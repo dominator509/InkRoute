@@ -1424,6 +1424,23 @@
                                          "Live Sentry webhook replay proof pending",
                                          "Provider status-update integration test pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-alert-escalation-runtime-static",
+                       "file":  "apps/web/tests/alert-escalation-runtime-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-083 alert enqueue route requires ALERT_WORKER_TOKEN before accepting internal delivery work",
+                                        "GAP-083 alert escalation builds sanitized payloads, suppresses high-risk external delivery, and records AlertDelivery AuditLog metadata",
+                                        "GAP-083 retry/backoff, dead-letter, acknowledgement, provider credential, and live provider artifact gates remain explicit"
+                                    ],
+                       "blockedBy":  [
+                                         "Static alert escalation runtime test execution pending",
+                                         "Slack/email/pager provider credentials pending",
+                                         "Durable worker executor integration pending",
+                                         "Live synthetic critical pager proof pending",
+                                         "Live synthetic high Slack proof pending"
+                                     ]
                    }
                ]
 }
