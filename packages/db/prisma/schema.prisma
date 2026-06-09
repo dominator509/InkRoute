@@ -416,6 +416,7 @@ model Tenant {
   uiPackageAdoptionRuns UiPackageAdoptionRun[]
   seedRuntimeExecutionRuns SeedRuntimeExecutionRun[]
   prismaValidationRuns PrismaValidationRun[]
+  validatorLaunchAdoptionRuns ValidatorLaunchAdoptionRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3562,6 +3563,32 @@ model PrismaValidationRun {
   createdAt                         DateTime @default(now())
   updatedAt                         DateTime @updatedAt
   tenant                            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model ValidatorLaunchAdoptionRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String
+  status                          String
+  commandMatrix                   Json
+  artifactManifest                Json
+  schemaDomainEvidenceCaptured    Boolean  @default(false)
+  routeAdoptionEvidenceCaptured   Boolean  @default(false)
+  malformedPayloadEvidenceCaptured Boolean @default(false)
+  tenantScopeEvidenceCaptured     Boolean  @default(false)
+  sensitiveFieldEvidenceCaptured  Boolean  @default(false)
+  ciEvidenceCaptured              Boolean  @default(false)
+  secretSafeArtifactsCaptured     Boolean  @default(false)
+  routeAdoptionReportPath         String?
+  sensitiveFieldReportPath        String?
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

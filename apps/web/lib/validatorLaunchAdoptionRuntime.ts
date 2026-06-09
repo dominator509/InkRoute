@@ -14,6 +14,43 @@ export interface ValidatorLaunchAdoptionRuntimeMatrixEntry {
   readonly status: ValidatorLaunchAdoptionRuntimeStatus;
 }
 
+
+export interface ValidatorLaunchAdoptionRunPersistenceContract {
+  readonly prismaModel: "ValidatorLaunchAdoptionRun";
+  readonly tenantRelation: "validatorLaunchAdoptionRuns";
+  readonly migration: "20260609034300_add_validator_launch_adoption_runs";
+  readonly storesRunId: true;
+  readonly storesCommitSha: true;
+  readonly storesReadinessStatus: true;
+  readonly storesCommandMatrix: true;
+  readonly storesArtifactManifest: true;
+  readonly storesSchemaDomainEvidence: true;
+  readonly storesRouteAdoptionEvidence: true;
+  readonly storesMalformedPayloadEvidence: true;
+  readonly storesTenantScopeEvidence: true;
+  readonly storesSensitiveFieldEvidence: true;
+  readonly storesCiEvidence: true;
+  readonly storesSecretSafeArtifacts: true;
+}
+
+export const validatorLaunchAdoptionRunPersistenceContract = {
+  prismaModel: "ValidatorLaunchAdoptionRun",
+  tenantRelation: "validatorLaunchAdoptionRuns",
+  migration: "20260609034300_add_validator_launch_adoption_runs",
+  storesRunId: true,
+  storesCommitSha: true,
+  storesReadinessStatus: true,
+  storesCommandMatrix: true,
+  storesArtifactManifest: true,
+  storesSchemaDomainEvidence: true,
+  storesRouteAdoptionEvidence: true,
+  storesMalformedPayloadEvidence: true,
+  storesTenantScopeEvidence: true,
+  storesSensitiveFieldEvidence: true,
+  storesCiEvidence: true,
+  storesSecretSafeArtifacts: true,
+} as const satisfies ValidatorLaunchAdoptionRunPersistenceContract;
+
 export const validatorLaunchAdoptionRuntimeCommands = [
   "pnpm --filter @inkroute/validators typecheck",
   "pnpm --filter @inkroute/validators test",

@@ -2550,13 +2550,13 @@
       "file": "apps/web/tests/validator-launch-adoption-runtime-static.test.ts",
       "priority": "medium",
       "verifies": [
-        "GAP-020 validator launch adoption runtime matrix covers validator typecheck/tests, schema-domain happy/error coverage, tenant/auth/form edge cases, public/dashboard/webhook/provider route shared-schema adoption, malformed-payload route tests, tenant-scope route tests, sensitive-field redaction/encryption policy tests, CI evidence, and secret-safe artifacts",
+        "GAP-020 ValidatorLaunchAdoptionRun Prisma model and app row contract plus validator launch adoption runtime matrix covers validator typecheck/tests, schema-domain happy/error coverage, tenant/auth/form edge cases, public/dashboard/webhook/provider route shared-schema adoption, malformed-payload route tests, tenant-scope route tests, sensitive-field redaction/encryption policy tests, CI evidence, and secret-safe artifacts",
         "GAP-020 package scripts, validator exports, readiness helper/tests, representative route imports, CI labels, artifact paths, and tracker row remain wired without claiming route-wide validator adoption proof exists",
         "GAP-020 readiness keeps installed-workspace command proof, route-wide adoption, malformed payload, tenant/auth scope, sensitive-field, CI, and secret-safe artifact evidence explicit blockers"
       ],
       "blockedBy": [
         "Static validator launch adoption runtime test execution pending",
-        "Validator package typecheck/test and schema-domain coverage proof pending",
+        "Provider-backed ValidatorLaunchAdoptionRun transaction plus validator package typecheck/test and schema-domain coverage proof pending",
         "Route-wide public/dashboard/webhook/provider shared-schema adoption proof pending",
         "Malformed-payload, tenant/auth scope, sensitive-field redaction/encryption, CI, and secret-safe artifact proof pending"
       ]

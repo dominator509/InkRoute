@@ -6,6 +6,7 @@ import {
   validatorLaunchAdoptionRuntimeCommands,
   validatorLaunchAdoptionRuntimeMatrix,
   validatorLaunchAdoptionRuntimeReadiness,
+  validatorLaunchAdoptionRunPersistenceContract,
 } from "../lib/validatorLaunchAdoptionRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -21,6 +22,8 @@ describe("validator launch adoption runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const validatorLaunchAdoptionRunMigration = readRepoFile("packages/db/prisma/migrations/20260609034300_add_validator_launch_adoption_runs/migration.sql");
 
   it("pins validator launch commands, matrix rows, and artifact paths", () => {
     expect(validatorLaunchAdoptionRuntimeCommands).toEqual([
@@ -90,13 +93,44 @@ describe("validator launch adoption runtime contract", () => {
     );
   });
 
+  it("pins the ValidatorLaunchAdoptionRun persistence model and migration", () => {
+    expect(validatorLaunchAdoptionRunPersistenceContract).toEqual({
+      prismaModel: "ValidatorLaunchAdoptionRun",
+      tenantRelation: "validatorLaunchAdoptionRuns",
+      migration: "20260609034300_add_validator_launch_adoption_runs",
+      storesRunId: true,
+      storesCommitSha: true,
+      storesReadinessStatus: true,
+      storesCommandMatrix: true,
+      storesArtifactManifest: true,
+      storesSchemaDomainEvidence: true,
+      storesRouteAdoptionEvidence: true,
+      storesMalformedPayloadEvidence: true,
+      storesTenantScopeEvidence: true,
+      storesSensitiveFieldEvidence: true,
+      storesCiEvidence: true,
+      storesSecretSafeArtifacts: true,
+    });
+    expect(prismaSchema).toContain("model ValidatorLaunchAdoptionRun");
+    expect(prismaSchema).toContain("validatorLaunchAdoptionRuns ValidatorLaunchAdoptionRun[]");
+    expect(prismaSchema).toContain("routeAdoptionEvidenceCaptured");
+    expect(prismaSchema).toContain("sensitiveFieldEvidenceCaptured");
+    expect(prismaSchema).toContain("secretSafeArtifactsCaptured");
+    expect(validatorLaunchAdoptionRunMigration).toContain('CREATE TABLE "ValidatorLaunchAdoptionRun"');
+    expect(validatorLaunchAdoptionRunMigration).toContain('"commandMatrix" JSONB NOT NULL');
+    expect(validatorLaunchAdoptionRunMigration).toContain('"artifactManifest" JSONB NOT NULL');
+    expect(validatorLaunchAdoptionRunMigration).toContain('"ValidatorLaunchAdoptionRun_tenantId_runId_key"');
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming route-wide validator launch adoption", () => {
     expect(ciWorkflow).toContain("Run Phase 2 validator launch adoption runtime contracts");
     expect(ciWorkflow).toContain("validator-launch-adoption-runtime-static.test.ts");
     expect(ciWorkflow).toContain("validator-launch-adoption-runtime-artifacts");
     expect(ciWorkflow).toContain("coverage/validator-launch-adoption-runtime.json");
     expect(unitManifest).toContain("unit-web-validator-launch-adoption-runtime-static");
+    expect(unitManifest).toContain("ValidatorLaunchAdoptionRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/validatorLaunchAdoptionRuntime.ts");
+    expect(gapTracker).toContain("ValidatorLaunchAdoptionRun Prisma model and app row contract");
     expect(gapTracker).toContain("live installed-workspace validator typecheck/tests, route-wide shared-schema adoption proof, malformed-payload tests, tenant/auth scope tests, sensitive-field redaction/encryption tests, CI evidence, and secret-safe artifacts remain open");
   });
 });
