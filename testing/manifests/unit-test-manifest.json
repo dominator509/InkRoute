@@ -1000,6 +1000,24 @@
                                          "Google and ICS timezone render smoke artifacts pending",
                                          "Seeded persistence-boundary tests pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-dashboard-travel-publish-static",
+                       "file":  "apps/dashboard/tests/travel-publish-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-060 travel publish contract covers publish, update, unpublish, and rollback actions",
+                                        "GAP-060 travel publish plans revalidation, consent-filtered waitlist notifications, mobile/dashboard/web sync events, audit logs, idempotency, and rollback controls",
+                                        "GAP-060 dashboard travel publish API blocks or returns repository-required instead of executing unconfigured durable writes",
+                                        "GAP-060 readiness remains blocked on public API, provider queue tests, rollback tests, tenant isolation, and E2E proof"
+                                    ],
+                       "blockedBy":  [
+                                         "Static travel publish test execution pending",
+                                         "Durable TravelStop/PublicTravelPage repository implementation pending",
+                                         "Public committed travel data API pending",
+                                         "Notification provider queue smoke pending",
+                                         "Nomad Mode dashboard-to-public E2E pending"
+                                     ]
                    }
                ]
 }
