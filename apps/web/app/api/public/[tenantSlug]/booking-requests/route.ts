@@ -83,6 +83,7 @@ function isDatabaseUnavailable(error: unknown): boolean {
   }
 
   if (!(error instanceof Error)) return false;
+  if (error.message.includes("PRISMA_CLIENT_UNAVAILABLE")) return true;
   const code = (error as { code?: string }).code;
   if (typeof code === "string" && ["P1000", "P1001", "P1002", "P1003", "P1008"].includes(code)) return true;
 
@@ -379,7 +380,7 @@ function detectProviderTokenIntake(payload: unknown): ProviderTokenIntake {
 
 function buildReferenceUploadContract(tenantSlug: string, bookingRequestId: string, scope: TenantResolution["source"]) {
   const isDbScope = scope === "database";
-  return {
+  const contract = {
     required: true,
     status: isDbScope ? "queued" : "local-runtime-ready",
     consumer: isDbScope ? "reference-upload-worker" : "reference-upload-intent-route",
@@ -409,6 +410,7 @@ function buildReferenceUploadContract(tenantSlug: string, bookingRequestId: stri
     ],
     gapIds: ["GAP-005", "GAP-021", "GAP-033", "GAP-096", "GAP-097"],
   };
+  return contract;
 }
 
 function buildNotificationQueueContract(input: BookingInput) {
@@ -735,40 +737,43 @@ function buildResponseBase(
     deposit: buildDepositQueueContract(input),
     calendar: buildCalendarQueueContract(input),
   };
+  const antiBotDetails = {
+    requiredFor: antiBot.requiredFor,
+    status: antiBot.status,
+    required: antiBot.required,
+    reason: antiBot.reason,
+    hasHeader: antiBot.hasHeader,
+    header: BOT_PROOF_HEADER,
+    bodyHash: antiBot.bodyHash,
+    secretConfigured: antiBot.secretConfigured,
+    proofWindowSeconds: BOT_PROOF_TTL_SECONDS,
+    requestNowUnixSeconds: antiBot.nowUnixSeconds,
+    ...(antiBot.proofIssuedAt !== undefined ? { proofIssuedAtUnixSeconds: antiBot.proofIssuedAt } : {}),
+    ...(antiBot.skewSeconds !== undefined ? { skewSeconds: antiBot.skewSeconds } : {}),
+  };
+  const encryptionDetails = {
+    policy: encryptionPolicy.status,
+    canPersist: encryptionPolicy.canPersist,
+    requiredFields: encryptionPolicy.requiredFields,
+    readiness: encryptionPolicy.readiness,
+    rotation: encryptionPolicy.rotation,
+    attempt: encryptionAttempt,
+    providerTokenPolicy: providerTokenPolicy,
+    providerTokenIntake: {
+      detected: providerTokenIntake.detected,
+      hasAccessToken: providerTokenIntake.hasAccessToken,
+      hasRefreshToken: providerTokenIntake.hasRefreshToken,
+      providerHint: providerTokenIntake.providerHint,
+    },
+    ...(cacheRefresh !== undefined ? { cacheRefresh } : {}),
+    lifecycle: buildKeyLifecycleSnapshot(encryptionPolicy, providerTokenPolicy, cacheRefresh),
+  };
+
   return {
     tenantSlug,
     tenantId: resolvedTenant.tenantId,
-    antiBot: {
-      requiredFor: antiBot.requiredFor,
-      status: antiBot.status,
-      required: antiBot.required,
-      reason: antiBot.reason,
-      hasHeader: antiBot.hasHeader,
-      header: BOT_PROOF_HEADER,
-      bodyHash: antiBot.bodyHash,
-      secretConfigured: antiBot.secretConfigured,
-      proofWindowSeconds: BOT_PROOF_TTL_SECONDS,
-      requestNowUnixSeconds: antiBot.nowUnixSeconds,
-      proofIssuedAtUnixSeconds: antiBot.proofIssuedAt,
-      skewSeconds: antiBot.skewSeconds,
-    },
-    encryption: {
-      policy: encryptionPolicy.status,
-      canPersist: encryptionPolicy.canPersist,
-      requiredFields: encryptionPolicy.requiredFields,
-      readiness: encryptionPolicy.readiness,
-      rotation: encryptionPolicy.rotation,
-      attempt: encryptionAttempt,
-      providerTokenPolicy: providerTokenPolicy,
-      providerTokenIntake: {
-        detected: providerTokenIntake.detected,
-        hasAccessToken: providerTokenIntake.hasAccessToken,
-        hasRefreshToken: providerTokenIntake.hasRefreshToken,
-        providerHint: providerTokenIntake.providerHint,
-      },
-      cacheRefresh: cacheRefresh,
-      lifecycle: buildKeyLifecycleSnapshot(encryptionPolicy, providerTokenPolicy, cacheRefresh),
-    },
+    antiBot: antiBotDetails,
+    encryption: encryptionDetails,
     workflows: {
       queueContract: {
         ...postPersistWorkflows,
@@ -1135,21 +1140,21 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             tenantId: persisted.booking.tenantId,
             artistId: persisted.booking.artistId,
             clientId: persisted.booking.clientId,
-            travelCityId: persisted.booking.travelCityId ?? undefined,
+            ...(persisted.booking.travelCityId ? { travelCityId: persisted.booking.travelCityId } : {}),
             status: persisted.booking.status,
             clientName: persisted.booking.clientNameSnapshot,
             clientEmail: persisted.booking.clientEmailSnapshot,
             preferredCity: persisted.booking.preferredCity,
-            preferredDate: persisted.booking.preferredDate?.toISOString(),
+            ...(persisted.booking.preferredDate ? { preferredDate: persisted.booking.preferredDate.toISOString() } : {}),
             style: persisted.booking.style,
             placement: persisted.booking.placement,
             sizeEstimate: persisted.booking.sizeEstimate,
-            budgetMin: persisted.booking.budgetMinCents ?? undefined,
-            budgetMax: persisted.booking.budgetMaxCents ?? undefined,
+            ...(persisted.booking.budgetMinCents !== null ? { budgetMin: persisted.booking.budgetMinCents } : {}),
+            ...(persisted.booking.budgetMaxCents !== null ? { budgetMax: persisted.booking.budgetMaxCents } : {}),
             ideaSummary: persisted.booking.ideaSummary,
             readinessScore: persisted.readinessScore,
             policyAccepted: Boolean(persisted.booking.policyAcceptedAt),
-            portfolioAttributionId: persisted.booking.portfolioAttributionId ?? undefined,
+            ...(persisted.booking.portfolioAttributionId ? { portfolioAttributionId: persisted.booking.portfolioAttributionId } : {}),
             createdAt: persisted.booking.createdAt.toISOString(),
           },
           auditId: persisted.auditId,

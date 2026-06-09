@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
   const requestInput: PrivacyRequestInput = {
     type: input.type,
     email: input.email,
-    ...(details ? { details } : {}),
+    ...(details !== undefined ? { details } : {}),
   };
 
   const actorResolution = resolveDashboardActor(request);
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
     email: requestInput.email,
     redactedSubmission,
     receivedAt: nowIso(),
-    ...(requestInput.details ? { details: requestInput.details } : {}),
+    ...(requestInput.details !== undefined ? { details: requestInput.details } : {}),
   };
 
   inMemoryPrivacyRequests.push(persisted);
