@@ -370,6 +370,28 @@ jobs:
             test-results/dependency-install-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 2 Prisma lifecycle runtime contracts
+        run: pnpm --filter @inkroute/db test && pnpm vitest run apps/web/tests/prisma-lifecycle-runtime-static.test.ts
+
+      - name: Upload Phase 2 Prisma lifecycle runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prisma-lifecycle-runtime-artifacts
+          path: |
+            coverage/prisma-lifecycle-runtime.json
+            coverage/prisma-validate-output.txt
+            coverage/prisma-generate-output.txt
+            coverage/prisma-migrate-output.txt
+            coverage/prisma-seed-readiness-output.txt
+            coverage/prisma-seed-output.txt
+            coverage/prisma-migration-sql-review.json
+            coverage/prisma-drift-check-output.txt
+            coverage/prisma-production-url-guard.json
+            coverage/prisma-db-lifecycle-ci-job.json
+            test-results/prisma-lifecycle-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 18 workspace runtime readiness
         run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness && pnpm workspace:required-checks && pnpm workspace:toolchain
       - name: Run Phase 17 quality gate runtime contracts

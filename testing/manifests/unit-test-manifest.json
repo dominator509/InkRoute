@@ -2285,6 +2285,22 @@
         "typecheck, lint, unit-test, and workspace:all proof pending",
         "GitHub Actions CI evidence pending"
       ]
+    },
+    {
+      "id": "unit-web-prisma-lifecycle-runtime-static",
+      "file": "apps/web/tests/prisma-lifecycle-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-002 Prisma lifecycle runtime matrix covers schema validate, client generate, migration generation/application, seed readiness, seed execution, SQL review, drift check, production URL guard, non-production database provisioning, DATABASE_URL/DIRECT_URL configuration, command evidence, and CI evidence",
+        "GAP-002 schema, seed, package scripts, lifecycle helper, DB tests, CI labels, artifact paths, and tracker row remain wired without touching production database state",
+        "GAP-002 readiness keeps DB provisioning and Prisma lifecycle command evidence explicit blockers while schema coverage remains pinned"
+      ],
+      "blockedBy": [
+        "Static Prisma lifecycle runtime test execution pending",
+        "Non-production Postgres provisioning and DATABASE_URL/DIRECT_URL proof pending",
+        "Prisma validate/generate/migrate, SQL review, seed, and drift proof pending",
+        "DB lifecycle CI evidence pending"
+      ]
     }
   ]
 }
