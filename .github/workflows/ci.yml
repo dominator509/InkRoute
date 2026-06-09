@@ -522,6 +522,34 @@ jobs:
             test-results/dashboard-launch-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 6 mobile launch runtime contracts
+        run: pnpm --filter @inkroute/mobile-support test && pnpm vitest run apps/web/tests/mobile-launch-runtime-static.test.ts
+
+      - name: Upload Phase 6 mobile launch runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-launch-runtime-artifacts
+          path: |
+            coverage/mobile-launch-runtime.json
+            coverage/mobile-support-typecheck.txt
+            coverage/mobile-support-test.txt
+            coverage/mobile-app-typecheck.txt
+            coverage/mobile-app-test.txt
+            coverage/mobile-expo-runtime.json
+            coverage/mobile-ios-simulator-smoke.json
+            coverage/mobile-android-emulator-smoke.json
+            coverage/mobile-eas-preview-build.json
+            coverage/mobile-eas-preview-update.json
+            coverage/mobile-auth-api-push-offline-qa.json
+            coverage/mobile-upload-crash-ota-qa.json
+            coverage/mobile-physical-device-qa.json
+            coverage/mobile-accessibility-qa.json
+            coverage/mobile-ci-evidence.json
+            coverage/mobile-secret-safe-artifacts.json
+            test-results/mobile-launch-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 18 workspace runtime readiness
         run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness && pnpm workspace:required-checks && pnpm workspace:toolchain
       - name: Run Phase 17 quality gate runtime contracts
