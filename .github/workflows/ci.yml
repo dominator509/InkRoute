@@ -957,6 +957,35 @@ jobs:
             test-results/mobile-api-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 6 mobile offline sync runtime contracts
+        run: pnpm --filter @inkroute/mobile-support test && pnpm vitest run apps/mobile/tests/offline-sync-runtime-static.test.ts apps/mobile/tests/offline-sync-static.test.ts
+
+      - name: Upload Phase 6 mobile offline sync runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-offline-sync-runtime-artifacts
+          path: |
+            coverage/mobile-offline-sync-runtime.json
+            coverage/mobile-offline-sync-support-typecheck.txt
+            coverage/mobile-offline-sync-support-test.txt
+            coverage/mobile-offline-sync-app-typecheck.txt
+            coverage/mobile-offline-sync-app-test.txt
+            coverage/mobile-offline-sync-adapter-contract.json
+            coverage/mobile-offline-sync-encrypted-store-redacted.json
+            coverage/mobile-offline-sync-at-rest-proof-redacted.json
+            coverage/mobile-offline-sync-device-restart.json
+            coverage/mobile-offline-sync-reconnect-worker.json
+            coverage/mobile-offline-sync-retry-backoff.json
+            coverage/mobile-offline-sync-conflict-resolution.json
+            coverage/mobile-offline-sync-server-conflict-tests.json
+            coverage/mobile-offline-sync-idempotency-persistence.json
+            coverage/mobile-offline-sync-audit-persistence.json
+            coverage/mobile-offline-sync-airplane-mode-redacted.json
+            coverage/mobile-offline-sync-secret-safe-artifacts.json
+            test-results/mobile-offline-sync-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 6 mobile launch runtime contracts
         run: pnpm --filter @inkroute/mobile-support test && pnpm vitest run apps/web/tests/mobile-launch-runtime-static.test.ts
 

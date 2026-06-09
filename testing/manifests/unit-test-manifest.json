@@ -2877,5 +2877,20 @@
         "Token persistence, opt-out persistence, delivery/receipt worker, and invalid-token suppression proof pending",
         "Foreground/background/tap device smoke, mobile typecheck, CI evidence, and secret-safe artifact proof pending"
       ]
+    }    ,{
+      "id": "unit-mobile-offline-sync-runtime-static",
+      "file": "apps/mobile/tests/offline-sync-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-045 mobile offline sync runtime matrix covers mobile-support typecheck/tests, mobile typecheck/tests, encrypted store adapter, sensitive at-rest proof, device restart persistence, reconnect worker scheduling, retry backoff, server conflict resolution, idempotency persistence, audit persistence, airplane-mode reconnect smoke, CI evidence, and secret-safe artifacts",
+        "GAP-045 mobile app offline worker contract remains wired for encrypted adapter gates, queue load/save hooks, idempotent replay through mobileApiFetch, redacted audit events, blocked/ready results, and Offline Notes screen surfacing",
+        "GAP-045 readiness keeps Expo SecureStore/encrypted SQLite replacement, at-rest encryption proof, device restart persistence, runtime scheduling, server conflict tests, audit persistence, mobile commands, reconnect smoke, CI, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static mobile offline sync runtime test execution pending",
+        "Expo SecureStore/encrypted SQLite adapter and at-rest encryption proof pending",
+        "Runtime reconnect worker, retry backoff, idempotency persistence, and audit persistence proof pending",
+        "Server conflict tests, device restart smoke, airplane-mode reconnect smoke, mobile typecheck/tests, CI evidence, and secret-safe artifact proof pending"
+      ]
     }  ]
 }
