@@ -1,15 +1,16 @@
-﻿import { buildObservabilityReportDraft, buildAgenticBugFixWorkflow, buildGithubIssueDraft } from "@inkroute/observability";
-import { prisma } from "@inkroute/db";
+﻿import { prisma } from "@inkroute/db";
+import { buildAgenticBugFixWorkflow, buildGithubIssueDraft, buildObservabilityReportDraft } from "@inkroute/observability";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
+
 import {
+  buildProviderWebhookReconciliationContract,
   buildProviderDeliveryId,
-  mapSentryActionToErrorStatus,
-  providerIssueOwnershipLookup,
+  buildSentryReconciliationPlan,
   providerWebhookReconciliationArtifactPaths,
-  providerWebhookReconciliationContract,
-  sanitizeProviderWebhookPayload,
 } from "../../../../lib/providerWebhookReconciliation";
+
+export const runtime = "nodejs";
 
 function verifySentrySignature(rawBody: string, signature: string, secret: string): boolean {
   const expected = createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
@@ -25,12 +26,88 @@ function verifySentrySignature(rawBody: string, signature: string, secret: strin
 }
 
 function isDatabaseUnavailable(error: unknown): boolean {
-  if (!process.env.DATABASE_URL) return true;
-  if (!(error instanceof Error)) return false;
-  const code = (error as { code?: string }).code;
-  if (typeof code === "string" && ["P1000", "P1001", "P1002", "P1003", "P1008"].includes(code)) return true;
-  const message = error.message.toLowerCase();
-  return message.includes("connect") && message.includes("database");
+  return error instanceof Error && /connect|timeout|ECONN|P10\d{2}|database|tenant/i.test(error.message);
+}
+
+async function persistProviderWebhookReconciliation(input: {
+  tenantId: string | null;
+  providerDeliveryId: string;
+  idempotencyKey: string;
+  providerFingerprint: string | null;
+  targetErrorStatus: "open" | "triaged" | "in_progress" | "resolved" | "ignored";
+  sanitizedPayload: Record<string, unknown>;
+  rawPayloadStored: boolean;
+}) {
+  if (!input.tenantId) {
+    return {
+      persistence: "tenant-unresolved",
+      auditLogId: null,
+      matchedErrorReportId: null,
+      statusMutated: false,
+      replayProtection: "idempotency-key-returned-no-tenant-write",
+    };
+  }
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const existingErrorReport = input.providerFingerprint
+        ? await tx.errorReport.findFirst({
+            where: { tenantId: input.tenantId, stackHash: input.providerFingerprint },
+            select: { id: true, status: true },
+          })
+        : null;
+
+      const updatedErrorReport = existingErrorReport
+        ? await tx.errorReport.update({
+            where: { id: existingErrorReport.id },
+            data: {
+              status: input.targetErrorStatus,
+              resolvedAt: ["resolved", "ignored"].includes(input.targetErrorStatus) ? new Date() : null,
+            },
+            select: { id: true, status: true, resolvedAt: true },
+          })
+        : null;
+
+      const auditLog = await tx.auditLog.create({
+        data: {
+          tenantId: input.tenantId!,
+          action: "observability.provider_webhook.reconcile",
+          entityType: "ProviderWebhookDelivery",
+          entityId: input.providerDeliveryId,
+          metadata: {
+            provider: "sentry",
+            providerDeliveryId: input.providerDeliveryId,
+            idempotencyKey: input.idempotencyKey,
+            providerFingerprint: input.providerFingerprint,
+            targetErrorStatus: input.targetErrorStatus,
+            previousErrorStatus: existingErrorReport?.status ?? null,
+            matchedErrorReportId: updatedErrorReport?.id ?? null,
+            statusMutated: Boolean(updatedErrorReport),
+            rawPayloadStored: input.rawPayloadStored,
+            sanitizedProviderPayload: input.sanitizedPayload,
+            replayProtection: "ProviderWebhookDelivery-shaped AuditLog seam; dedicated unique table remains required",
+          },
+        },
+        select: { id: true },
+      });
+
+      return {
+        persistence: "database-audit-log-transaction",
+        auditLogId: auditLog.id,
+        matchedErrorReportId: updatedErrorReport?.id ?? null,
+        statusMutated: Boolean(updatedErrorReport),
+        replayProtection: "audit-log-provider-delivery-seam",
+      };
+    });
+  } catch (error) {
+    return {
+      persistence: isDatabaseUnavailable(error) ? "database-unavailable" : "database-write-rejected",
+      auditLogId: null,
+      matchedErrorReportId: null,
+      statusMutated: false,
+      replayProtection: "idempotency-key-returned-transaction-not-committed",
+    };
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -38,7 +115,13 @@ export async function POST(request: NextRequest) {
 
   if (!signature) {
     return NextResponse.json(
-      { ok: false, error: { code: "MISSING_SENTRY_SIGNATURE", message: "Sentry webhook requests must include a provider signature header before production use." } },
+      {
+        ok: false,
+        error: {
+          code: "MISSING_SENTRY_SIGNATURE",
+          message: "Sentry webhook requests must include a provider signature header before production use.",
+        },
+      },
       { status: 400 },
     );
   }
@@ -48,7 +131,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         ok: false,
-        error: { code: "SENTRY_WEBHOOK_SECRET_NOT_CONFIGURED", message: "Sentry webhook signature verification requires SENTRY_WEBHOOK_SECRET." },
+        error: {
+          code: "SENTRY_WEBHOOK_SECRET_NOT_CONFIGURED",
+          message: "Sentry webhook signature verification requires SENTRY_WEBHOOK_SECRET.",
+        },
         data: {
           receivedSignatureHeader: "present",
           requiredNextWork: ["Configure SENTRY_WEBHOOK_SECRET before accepting provider webhook deliveries."],
@@ -62,7 +148,10 @@ export async function POST(request: NextRequest) {
   try {
     rawBody = await request.text();
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "WEBHOOK_BODY_UNREADABLE", message: "Webhook body could not be read." } }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, error: { code: "WEBHOOK_BODY_UNREADABLE", message: "Webhook body could not be read." } },
+      { status: 400 },
+    );
   }
 
   if (!verifySentrySignature(rawBody, signature, webhookSecret)) {
@@ -76,18 +165,16 @@ export async function POST(request: NextRequest) {
   try {
     body = JSON.parse(rawBody);
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "INVALID_WEBHOOK_JSON", message: "Webhook body must be valid JSON." } }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, error: { code: "INVALID_WEBHOOK_JSON", message: "Webhook body must be valid JSON." } },
+      { status: 400 },
+    );
   }
 
   const event = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
   const data = typeof event.data === "object" && event.data !== null ? (event.data as Record<string, unknown>) : event;
   const issueTitle = typeof data.title === "string" ? data.title : typeof event.title === "string" ? event.title : "Sentry webhook event preview";
   const culprit = typeof data.culprit === "string" ? data.culprit : undefined;
-  const action = typeof event.action === "string" ? event.action : "unknown";
-  const providerDeliveryId = buildProviderDeliveryId(event, data);
-  const targetErrorStatus = mapSentryActionToErrorStatus(action);
-  const ownership = providerIssueOwnershipLookup(data);
-  const sanitizedProviderPayload = sanitizeProviderWebhookPayload(event, data);
 
   const report = buildObservabilityReportDraft({
     source: "webhook",
@@ -98,93 +185,58 @@ export async function POST(request: NextRequest) {
     release: typeof data.release === "string" ? data.release : "sentry-webhook-preview",
     metadata: {
       provider: "sentry",
-      eventType: action,
-      providerDeliveryId,
+      eventType: typeof event.action === "string" ? event.action : "unknown",
+      providerDeliveryId: buildProviderDeliveryId(event, data),
       rawPayloadShape: Object.keys(event).slice(0, 12),
-      sanitizedProviderPayload,
     },
     tags: { phase: "11", provider: "sentry" },
   });
-
-  let persistence = "audit-log-seam";
-  let auditId: string | null = null;
-  let errorReportId: string | null = null;
-
-  try {
-    const result = await prisma.$transaction(async (tx) => {
-      const matchedReport = ownership.stackHash
-        ? await tx.errorReport.findFirst({
-            where: { ...(ownership.tenantId ? { tenantId: ownership.tenantId } : {}), stackHash: ownership.stackHash },
-            select: { id: true, tenantId: true, status: true },
-          })
-        : null;
-
-      const updatedReport = matchedReport
-        ? await tx.errorReport.update({
-            where: { id: matchedReport.id },
-            data: { status: targetErrorStatus, ...(targetErrorStatus === "resolved" ? { resolvedAt: new Date() } : {}) },
-            select: { id: true, tenantId: true, status: true },
-          })
-        : null;
-
-      const audit = await tx.auditLog.create({
-        data: {
-          tenantId: updatedReport?.tenantId ?? ownership.tenantId ?? null,
-          action: "observability:sentry_webhook.reconcile",
-          entityType: "ProviderWebhookDelivery",
-          entityId: providerDeliveryId,
-          metadata: {
-            provider: "sentry",
-            providerDeliveryId,
-            idempotencyKey: providerDeliveryId,
-            replayProtection: "audit-log-idempotency-seam",
-            action,
-            targetErrorStatus,
-            matchedErrorReportId: updatedReport?.id ?? null,
-            ownership,
-            sanitizedProviderPayload,
-            rawPayloadStored: false,
-            requiredFutureConstraint: "dedicated unique ProviderWebhookDelivery(provider, providerDeliveryId)",
-          },
-        },
-        select: { id: true },
-      });
-
-      return { auditId: audit.id, errorReportId: updatedReport?.id ?? null };
-    });
-    auditId = result.auditId;
-    errorReportId = result.errorReportId;
-    persistence = errorReportId ? "error-report-status-updated" : "delivery-audit-persisted";
-  } catch (error) {
-    if (!isDatabaseUnavailable(error)) throw error;
-    persistence = "local-preview-database-unavailable";
-  }
+  const reconciliationPlan = buildSentryReconciliationPlan({
+    event,
+    data,
+    fallbackTenantId: typeof data.tenantId === "string" ? data.tenantId : undefined,
+  });
+  const persistenceResult = await persistProviderWebhookReconciliation({
+    tenantId: reconciliationPlan.ownership.tenantId,
+    providerDeliveryId: reconciliationPlan.providerDeliveryId,
+    idempotencyKey: reconciliationPlan.idempotencyKey,
+    providerFingerprint: reconciliationPlan.providerFingerprint,
+    targetErrorStatus: reconciliationPlan.targetErrorStatus,
+    sanitizedPayload: reconciliationPlan.sanitizedPayload,
+    rawPayloadStored: reconciliationPlan.rawPayloadStored,
+  });
+  const reconciliationContract = buildProviderWebhookReconciliationContract();
 
   return NextResponse.json(
     {
       ok: true,
       data: {
         receivedSignatureHeader: "present",
-        providerDeliveryId,
-        idempotencyKey: providerDeliveryId,
+        providerDeliveryId: reconciliationPlan.providerDeliveryId,
+        idempotencyKey: reconciliationPlan.idempotencyKey,
         reconciliation: {
-          provider: "sentry",
-          action,
-          targetErrorStatus,
-          persistence,
-          auditId,
-          errorReportId,
-          ownership,
+          provider: reconciliationPlan.provider,
+          action: reconciliationPlan.action,
+          targetErrorStatus: reconciliationPlan.targetErrorStatus,
+          persistence: "not-yet-wired",
+          durablePersistence: persistenceResult.persistence,
+          auditLogId: persistenceResult.auditLogId,
+          matchedErrorReportId: persistenceResult.matchedErrorReportId,
+          statusMutated: persistenceResult.statusMutated,
+          replayProtection: persistenceResult.replayProtection,
+          ownership: reconciliationPlan.ownership,
+          rawPayloadStored: reconciliationPlan.rawPayloadStored,
+          sanitizedProviderPayload: reconciliationPlan.sanitizedPayload,
+          artifactPaths: providerWebhookReconciliationArtifactPaths,
+          contractStatus: reconciliationContract.status,
         },
         report,
         workflow: buildAgenticBugFixWorkflow(report),
         issueDraft: buildGithubIssueDraft(report),
-        providerWebhookReconciliation: providerWebhookReconciliationContract,
-        artifactPaths: providerWebhookReconciliationArtifactPaths,
         requiredNextWork: [
-          "Add a dedicated ProviderWebhookDelivery table with unique provider delivery id constraints for stronger replay protection.",
-          "Run live Sentry webhook replay tests against a verified provider delivery.",
-          "Create sanitized GitHub issues only after human-approved repo integration is configured.",
+          "Add a dedicated ProviderWebhookDelivery table with unique provider/idempotency constraints.",
+          "Run live Sentry webhook replay/idempotency proof against the configured provider secret.",
+          "Promote seeded ErrorReport status-mutation and provider no-PII artifact checks from static coverage to integration evidence.",
         ],
       },
     },
