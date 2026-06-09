@@ -2735,13 +2735,13 @@
       "file": "apps/web/tests/booking-flow-runtime-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-031 booking flow runtime matrix covers dependency install, Prisma Client generation, web typecheck/build, booking route contract tests, Playwright /booking smoke, Playwright /booking/confirmation smoke, Next public booking API route runtime smoke, local runtime fallback, dev-DB booking transaction smoke, provider-gated boundaries, client/server boundaries, CI evidence, and secret-safe artifacts",
+        "GAP-031 BookingFlowRuntimeRun Prisma model and app row contract plus booking flow runtime matrix covers dependency install, Prisma Client generation, web typecheck/build, booking route contract tests, Playwright /booking smoke, Playwright /booking/confirmation smoke, Next public booking API route runtime smoke, local runtime fallback, dev-DB booking transaction smoke, provider-gated boundaries, client/server boundaries, CI evidence, and secret-safe artifacts",
         "GAP-031 booking UI, confirmation page, API route, helper, local runtime consumers, CI labels, artifact paths, and tracker row remain wired without claiming runtime/browser/DB proof exists",
         "GAP-031 readiness keeps install, Prisma generation, Next runtime, browser smoke, DB transaction, CI, and redacted artifact evidence explicit blockers"
       ],
       "blockedBy": [
         "Static booking flow runtime test execution pending",
-        "Dependency install and Prisma Client generation proof pending",
+        "Provider-backed BookingFlowRuntimeRun transaction plus dependency install and Prisma Client generation proof pending",
         "Web typecheck/build, Next route runtime smoke, and client/server boundary proof pending",
         "Playwright booking/confirmation smoke, dev-DB transaction smoke, CI evidence, and secret-safe artifact proof pending"
       ]

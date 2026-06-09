@@ -6,6 +6,7 @@ import {
   bookingFlowRuntimeCommands,
   bookingFlowRuntimeMatrix,
   bookingFlowRuntimeReadiness,
+  bookingFlowRuntimeRunPersistenceContract,
 } from "../lib/bookingFlowRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -22,6 +23,8 @@ describe("booking flow runtime evidence contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const bookingFlowRuntimeRunMigration = readRepoFile("packages/db/prisma/migrations/20260609035300_add_booking_flow_runtime_runs/migration.sql");
 
   it("pins booking flow runtime commands, matrix rows, and artifact paths", () => {
     expect(bookingFlowRuntimeCommands).toEqual([
@@ -88,13 +91,46 @@ describe("booking flow runtime evidence contract", () => {
     expect(bookingFlowRuntimeReadiness.blockers).toContain("Booking runtime artifacts must be redacted and free of secrets, raw medical notes, payment data, provider tokens, and private file URLs.");
   });
 
+  it("pins the BookingFlowRuntimeRun persistence model and migration", () => {
+    expect(bookingFlowRuntimeRunPersistenceContract).toEqual({
+      prismaModel: "BookingFlowRuntimeRun",
+      tenantRelation: "bookingFlowRuntimeRuns",
+      migration: "20260609035300_add_booking_flow_runtime_runs",
+      storesRunId: true,
+      storesCommitSha: true,
+      storesReadinessStatus: true,
+      storesCommandMatrix: true,
+      storesArtifactManifest: true,
+      storesDependencyInstallEvidence: true,
+      storesPrismaGenerationEvidence: true,
+      storesWebTypecheckBuildEvidence: true,
+      storesRouteRuntimeSmokeEvidence: true,
+      storesBrowserSmokeEvidence: true,
+      storesDatabaseSmokeEvidence: true,
+      storesProviderBoundaryEvidence: true,
+      storesCiEvidence: true,
+      storesSecretSafeArtifacts: true,
+    });
+    expect(prismaSchema).toContain("model BookingFlowRuntimeRun");
+    expect(prismaSchema).toContain("bookingFlowRuntimeRuns BookingFlowRuntimeRun[]");
+    expect(prismaSchema).toContain("dependencyInstallEvidenceCaptured");
+    expect(prismaSchema).toContain("databaseSmokeEvidenceCaptured");
+    expect(prismaSchema).toContain("secretSafeArtifactsCaptured");
+    expect(bookingFlowRuntimeRunMigration).toContain('CREATE TABLE "BookingFlowRuntimeRun"');
+    expect(bookingFlowRuntimeRunMigration).toContain('"commandMatrix" JSONB NOT NULL');
+    expect(bookingFlowRuntimeRunMigration).toContain('"artifactManifest" JSONB NOT NULL');
+    expect(bookingFlowRuntimeRunMigration).toContain('"BookingFlowRuntimeRun_tenantId_runId_key"');
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming runtime evidence is complete", () => {
     expect(ciWorkflow).toContain("Run Phase 4 booking flow runtime contracts");
     expect(ciWorkflow).toContain("booking-flow-runtime-static.test.ts");
     expect(ciWorkflow).toContain("booking-flow-runtime-artifacts");
     expect(ciWorkflow).toContain("coverage/booking-flow-runtime.json");
     expect(unitManifest).toContain("unit-web-booking-flow-runtime-static");
+    expect(unitManifest).toContain("BookingFlowRuntimeRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/bookingFlowRuntime.ts");
+    expect(gapTracker).toContain("BookingFlowRuntimeRun Prisma model and app row contract");
     expect(gapTracker).toContain("live dependency install, Prisma Client generation, web typecheck/build, Next route runtime smoke, browser smoke, dev-DB transaction smoke, CI evidence, and secret-safe artifact review remain open");
   });
 });

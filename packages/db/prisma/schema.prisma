@@ -426,6 +426,7 @@ model Tenant {
   portfolioImagePerformanceRuns PortfolioImagePerformanceRun[]
   bookingContactRuns BookingContactRun[]
   seoA11yPerformanceAuditRuns SeoA11yPerformanceAuditRun[]
+  bookingFlowRuntimeRuns BookingFlowRuntimeRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3848,6 +3849,34 @@ model SeoA11yPerformanceAuditRun {
   createdAt                               DateTime @default(now())
   updatedAt                               DateTime @updatedAt
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model BookingFlowRuntimeRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String
+  status                              String
+  commandMatrix                       Json
+  artifactManifest                    Json
+  dependencyInstallEvidenceCaptured   Boolean  @default(false)
+  prismaGenerationEvidenceCaptured    Boolean  @default(false)
+  webTypecheckBuildEvidenceCaptured   Boolean  @default(false)
+  routeRuntimeSmokeEvidenceCaptured   Boolean  @default(false)
+  browserSmokeEvidenceCaptured        Boolean  @default(false)
+  databaseSmokeEvidenceCaptured       Boolean  @default(false)
+  providerBoundaryEvidenceCaptured    Boolean  @default(false)
+  ciEvidenceCaptured                  Boolean  @default(false)
+  secretSafeArtifactsCaptured         Boolean  @default(false)
+  routeSmokeReportPath                String?
+  browserSmokeReportPath              String?
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

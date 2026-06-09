@@ -15,6 +15,47 @@ export interface BookingFlowRuntimeMatrixEntry {
   readonly status: BookingFlowRuntimeStatus;
 }
 
+
+export interface BookingFlowRuntimeRunPersistenceContract {
+  readonly prismaModel: "BookingFlowRuntimeRun";
+  readonly tenantRelation: "bookingFlowRuntimeRuns";
+  readonly migration: "20260609035300_add_booking_flow_runtime_runs";
+  readonly storesRunId: true;
+  readonly storesCommitSha: true;
+  readonly storesReadinessStatus: true;
+  readonly storesCommandMatrix: true;
+  readonly storesArtifactManifest: true;
+  readonly storesDependencyInstallEvidence: true;
+  readonly storesPrismaGenerationEvidence: true;
+  readonly storesWebTypecheckBuildEvidence: true;
+  readonly storesRouteRuntimeSmokeEvidence: true;
+  readonly storesBrowserSmokeEvidence: true;
+  readonly storesDatabaseSmokeEvidence: true;
+  readonly storesProviderBoundaryEvidence: true;
+  readonly storesCiEvidence: true;
+  readonly storesSecretSafeArtifacts: true;
+}
+
+export const bookingFlowRuntimeRunPersistenceContract = {
+  prismaModel: "BookingFlowRuntimeRun",
+  tenantRelation: "bookingFlowRuntimeRuns",
+  migration: "20260609035300_add_booking_flow_runtime_runs",
+  storesRunId: true,
+  storesCommitSha: true,
+  storesReadinessStatus: true,
+  storesCommandMatrix: true,
+  storesArtifactManifest: true,
+  storesDependencyInstallEvidence: true,
+  storesPrismaGenerationEvidence: true,
+  storesWebTypecheckBuildEvidence: true,
+  storesRouteRuntimeSmokeEvidence: true,
+  storesBrowserSmokeEvidence: true,
+  storesDatabaseSmokeEvidence: true,
+  storesProviderBoundaryEvidence: true,
+  storesCiEvidence: true,
+  storesSecretSafeArtifacts: true,
+} as const satisfies BookingFlowRuntimeRunPersistenceContract;
+
 export const bookingFlowRuntimeCommands = [
   "pnpm install",
   "pnpm db:generate",
