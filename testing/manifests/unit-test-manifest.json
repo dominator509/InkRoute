@@ -1883,6 +1883,22 @@
                                          "Manual screen-reader, mobile accessibility, visual baseline, and visual diff proof pending",
                                          "CI accessibility/visual output and regression triage proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-provider-contract-runtime-static",
+                       "file":  "apps/web/tests/provider-contract-runtime-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "GAP-110 provider contract runtime matrix covers static webhook contracts, provider manifest verification, signed raw-body fixtures, replay/idempotency fixtures, Stripe CLI webhook/idempotency, Google Calendar OAuth/sync, storage signed URL/upload/download, Resend/Twilio/Expo Push sandbox sends, Sentry capture, auth fixtures, rate-limit stores, redacted artifacts, and CI provider-contract evidence",
+                                        "GAP-110 provider test plan, manifest verifier, and webhook static suite stay aligned before live provider sandbox proof",
+                                        "GAP-110 CI retains provider contract runtime artifact paths without claiming credential-gated provider execution has passed"
+                                    ],
+                       "blockedBy":  [
+                                         "Static provider contract runtime test execution pending",
+                                         "Signed raw-body and replay/idempotency fixture proof pending",
+                                         "Stripe, Google Calendar, storage, email, SMS, push, Sentry, auth, and rate-limit sandbox proof pending",
+                                         "Redacted provider artifact and CI provider-contract proof pending"
+                                     ]
                    }
                ]
 }

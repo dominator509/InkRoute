@@ -680,6 +680,35 @@ jobs:
             coverage/security-mobile-device-smoke.json
             test-results/security-app-runtime
           if-no-files-found: warn
+      - name: Run Phase 14 provider contract runtime contracts
+        run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/provider-contract-runtime-static.test.ts
+
+      - name: Upload Phase 14 provider contract runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-contract-runtime-artifacts
+          path: |
+            coverage/provider-contract-runtime.json
+            coverage/provider-contract-static-suite.json
+            coverage/provider-contract-manifest-check.json
+            coverage/provider-raw-body-fixtures.json
+            coverage/provider-replay-idempotency-fixtures.json
+            coverage/provider-stripe-cli-redacted.log
+            coverage/provider-stripe-idempotency.json
+            coverage/provider-google-calendar-oauth-redacted.json
+            coverage/provider-google-calendar-sync-redacted.json
+            coverage/provider-storage-signed-url.json
+            coverage/provider-storage-upload-download.json
+            coverage/provider-email-sandbox-redacted.json
+            coverage/provider-sms-sandbox-redacted.json
+            coverage/provider-push-sandbox-redacted.json
+            coverage/provider-sentry-capture-redacted.json
+            coverage/provider-auth-session-fixtures.json
+            coverage/provider-rate-limit-store.json
+            coverage/provider-contract-ci-run-redacted.json
+            test-results/provider-contract-runtime
+          if-no-files-found: warn
       - name: Run Phase 14 accessibility visual runtime contracts
         run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/accessibility-visual-runtime-static.test.ts
 
@@ -857,6 +886,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
