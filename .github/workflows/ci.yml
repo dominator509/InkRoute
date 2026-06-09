@@ -22,6 +22,30 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Verify Phase 14 testing manifests
         run: pnpm test:phase14:static && pnpm test:manifest
+      - name: Run Phase 15 production launch evidence runtime contracts
+        run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/production-launch-evidence-runtime-static.test.ts
+
+      - name: Upload Phase 15 production launch evidence runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-launch-evidence-runtime-artifacts
+          path: |
+            coverage/production-launch-evidence-runtime.json
+            coverage/production-launch-verifier.json
+            coverage/production-launch-ci-build-test-redacted.json
+            coverage/production-launch-database-ops-redacted.json
+            coverage/production-launch-provider-secret-redacted.json
+            coverage/production-launch-security-privacy-redacted.json
+            coverage/production-launch-a11y-seo-performance-redacted.json
+            coverage/production-launch-mobile-release-redacted.json
+            coverage/production-launch-legal-approval-redacted.json
+            coverage/production-launch-rollback-operations-redacted.json
+            coverage/production-launch-checklist-blockers.json
+            coverage/production-launch-approval-redacted.json
+            coverage/production-launch-ci-run-redacted.json
+            test-results/production-launch-evidence-runtime
+          if-no-files-found: warn
       - name: Run Phase 15 database operations runtime contracts
         run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/database-operations-runtime-static.test.ts
 
@@ -1069,6 +1093,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
