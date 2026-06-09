@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   mobileLaunchArtifactPaths,
   mobileLaunchReadinessAreas,
+  mobileLaunchRunPersistenceContract,
   mobileLaunchRuntimeCommands,
   mobileLaunchRuntimeMatrix,
   mobileLaunchRuntimeReadiness,
@@ -19,6 +20,10 @@ describe("mobile launch runtime contract", () => {
   const mobileTests = readRepoFile("packages/mobile/tests/mobile-support.test.ts");
   const qaChecklist = readRepoFile("testing/manifests/mobile-device-qa-checklist.json");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const mobileLaunchMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609033200_add_mobile_launch_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -54,6 +59,34 @@ describe("mobile launch runtime contract", () => {
     expect(mobileLaunchArtifactPaths).toContain("test-results/mobile-launch-runtime");
   });
 
+  it("pins the MobileLaunchRun persistence model and migration", () => {
+    expect(mobileLaunchRunPersistenceContract.model).toBe("MobileLaunchRun");
+    expect(mobileLaunchRunPersistenceContract.tenantRelation).toBe("mobileLaunchRuns");
+    expect(mobileLaunchRunPersistenceContract.migration).toBe("20260609033200_add_mobile_launch_runs");
+    expect(mobileLaunchRunPersistenceContract.jsonFields).toEqual([
+      "commandMatrix",
+      "readinessAreaManifest",
+      "artifactManifest",
+      "deviceQaManifest",
+      "providerQaManifest",
+      "easRuntimeManifest",
+    ]);
+    expect(mobileLaunchRunPersistenceContract.evidenceBooleans).toContain("expoRuntimeStarted");
+    expect(mobileLaunchRunPersistenceContract.evidenceBooleans).toContain("physicalDeviceQaCompleted");
+    expect(mobileLaunchRunPersistenceContract.evidenceBooleans).toContain("launchArtifactsSecretSafe");
+    expect(mobileLaunchRunPersistenceContract.artifactFields).toContain("easPreviewBuildArtifactPath");
+    expect(mobileLaunchRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(prismaSchema).toContain("mobileLaunchRuns MobileLaunchRun[]");
+    expect(prismaSchema).toContain("model MobileLaunchRun");
+    expect(prismaSchema).toContain("deviceQaManifest");
+    expect(prismaSchema).toContain("encryptedOfflineStoreQaPassed");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(mobileLaunchMigration).toContain('CREATE TABLE "MobileLaunchRun"');
+    expect(mobileLaunchMigration).toContain('"deviceQaManifest" JSONB NOT NULL');
+    expect(mobileLaunchMigration).toContain('"launchArtifactsSecretSafe" BOOLEAN NOT NULL DEFAULT false');
+    expect(mobileLaunchMigration).toContain('CREATE UNIQUE INDEX "MobileLaunchRun_tenantId_runId_key"');
+  });
+
   it("keeps mobile package scripts, Expo config, EAS config, helper tests, and QA checklist wired", () => {
     expect(mobilePackageJson).toContain('"typecheck"');
     expect(mobilePackageJson).toContain('"test"');
@@ -85,6 +118,8 @@ describe("mobile launch runtime contract", () => {
     expect(ciWorkflow).toContain("mobile-launch-runtime-static.test.ts");
     expect(ciWorkflow).toContain("mobile-launch-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-mobile-launch-runtime-static");
+    expect(unitManifest).toContain("MobileLaunchRun Prisma model and app row contract");
+    expect(gapTracker).toContain("MobileLaunchRun");
     expect(gapTracker).toContain("apps/web/lib/mobileLaunchRuntime.ts");
     expect(gapTracker).toContain("live mobile-support/app typecheck/tests, Expo runtime, iOS/Android smoke, EAS preview/update, auth/API/push/offline/upload/crash/OTA/accessibility QA, physical-device QA, CI evidence, and secret-safe artifacts remain open");
   });

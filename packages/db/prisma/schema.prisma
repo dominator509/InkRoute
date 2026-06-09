@@ -405,6 +405,7 @@ model Tenant {
   providerStorageUploadRuns ProviderStorageUploadRun[]
   publicWebLaunchRuns PublicWebLaunchRun[]
   dashboardLaunchRuns DashboardLaunchRun[]
+  mobileLaunchRuns MobileLaunchRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3077,6 +3078,65 @@ model DashboardLaunchRun {
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())
   updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model MobileLaunchRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String?
+  status                              String
+  commandMatrix                       Json
+  readinessAreaManifest               Json
+  artifactManifest                    Json
+  deviceQaManifest                    Json
+  providerQaManifest                  Json
+  easRuntimeManifest                  Json
+  mobileSupportTypecheckPassed        Boolean  @default(false)
+  mobileSupportTestsPassed            Boolean  @default(false)
+  mobileAppTypecheckPassed            Boolean  @default(false)
+  mobileAppTestsPassed                Boolean  @default(false)
+  expoRuntimeStarted                  Boolean  @default(false)
+  iosSimulatorSmokePassed             Boolean  @default(false)
+  androidEmulatorSmokePassed          Boolean  @default(false)
+  easPreviewBuildPassed               Boolean  @default(false)
+  easPreviewUpdatePassed              Boolean  @default(false)
+  authSessionBiometricQaPassed        Boolean  @default(false)
+  tenantApiClientQaPassed             Boolean  @default(false)
+  pushNotificationQaPassed            Boolean  @default(false)
+  encryptedOfflineStoreQaPassed       Boolean  @default(false)
+  uploadFlowQaPassed                  Boolean  @default(false)
+  crashReportingQaPassed              Boolean  @default(false)
+  otaUpdateRollbackQaPassed           Boolean  @default(false)
+  physicalDeviceQaCompleted           Boolean  @default(false)
+  accessibilityQaPassed               Boolean  @default(false)
+  appJsonProjectConfigured            Boolean  @default(false)
+  easChannelsConfigured               Boolean  @default(false)
+  ciEvidenceCaptured                  Boolean  @default(false)
+  launchArtifactsSecretSafe           Boolean  @default(false)
+  mobileSupportTypecheckArtifactPath  String?
+  mobileSupportTestArtifactPath       String?
+  mobileAppTypecheckArtifactPath      String?
+  mobileAppTestArtifactPath           String?
+  expoRuntimeArtifactPath             String?
+  iosSimulatorSmokeArtifactPath       String?
+  androidEmulatorSmokeArtifactPath    String?
+  easPreviewBuildArtifactPath         String?
+  easPreviewUpdateArtifactPath        String?
+  authApiPushOfflineQaArtifactPath    String?
+  uploadCrashOtaQaArtifactPath        String?
+  physicalDeviceQaArtifactPath        String?
+  accessibilityQaArtifactPath         String?
+  ciEvidenceArtifactPath              String?
+  secretSafeArtifactsPath             String?
+  ciRunUrl                            String?
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

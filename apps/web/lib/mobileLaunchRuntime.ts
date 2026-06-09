@@ -14,6 +14,118 @@ export interface MobileLaunchRuntimeMatrixEntry {
   readonly status: MobileLaunchRuntimeStatus;
 }
 
+export interface MobileLaunchRunPersistenceContract {
+  readonly model: "MobileLaunchRun";
+  readonly tenantRelation: "mobileLaunchRuns";
+  readonly migration: "20260609033200_add_mobile_launch_runs";
+  readonly jsonFields: readonly [
+    "commandMatrix",
+    "readinessAreaManifest",
+    "artifactManifest",
+    "deviceQaManifest",
+    "providerQaManifest",
+    "easRuntimeManifest",
+  ];
+  readonly evidenceBooleans: readonly [
+    "mobileSupportTypecheckPassed",
+    "mobileSupportTestsPassed",
+    "mobileAppTypecheckPassed",
+    "mobileAppTestsPassed",
+    "expoRuntimeStarted",
+    "iosSimulatorSmokePassed",
+    "androidEmulatorSmokePassed",
+    "easPreviewBuildPassed",
+    "easPreviewUpdatePassed",
+    "authSessionBiometricQaPassed",
+    "tenantApiClientQaPassed",
+    "pushNotificationQaPassed",
+    "encryptedOfflineStoreQaPassed",
+    "uploadFlowQaPassed",
+    "crashReportingQaPassed",
+    "otaUpdateRollbackQaPassed",
+    "physicalDeviceQaCompleted",
+    "accessibilityQaPassed",
+    "appJsonProjectConfigured",
+    "easChannelsConfigured",
+    "ciEvidenceCaptured",
+    "launchArtifactsSecretSafe",
+  ];
+  readonly artifactFields: readonly [
+    "mobileSupportTypecheckArtifactPath",
+    "mobileSupportTestArtifactPath",
+    "mobileAppTypecheckArtifactPath",
+    "mobileAppTestArtifactPath",
+    "expoRuntimeArtifactPath",
+    "iosSimulatorSmokeArtifactPath",
+    "androidEmulatorSmokeArtifactPath",
+    "easPreviewBuildArtifactPath",
+    "easPreviewUpdateArtifactPath",
+    "authApiPushOfflineQaArtifactPath",
+    "uploadCrashOtaQaArtifactPath",
+    "physicalDeviceQaArtifactPath",
+    "accessibilityQaArtifactPath",
+    "ciEvidenceArtifactPath",
+    "secretSafeArtifactsPath",
+    "ciRunUrl",
+  ];
+}
+
+export const mobileLaunchRunPersistenceContract: MobileLaunchRunPersistenceContract = {
+  model: "MobileLaunchRun",
+  tenantRelation: "mobileLaunchRuns",
+  migration: "20260609033200_add_mobile_launch_runs",
+  jsonFields: [
+    "commandMatrix",
+    "readinessAreaManifest",
+    "artifactManifest",
+    "deviceQaManifest",
+    "providerQaManifest",
+    "easRuntimeManifest",
+  ],
+  evidenceBooleans: [
+    "mobileSupportTypecheckPassed",
+    "mobileSupportTestsPassed",
+    "mobileAppTypecheckPassed",
+    "mobileAppTestsPassed",
+    "expoRuntimeStarted",
+    "iosSimulatorSmokePassed",
+    "androidEmulatorSmokePassed",
+    "easPreviewBuildPassed",
+    "easPreviewUpdatePassed",
+    "authSessionBiometricQaPassed",
+    "tenantApiClientQaPassed",
+    "pushNotificationQaPassed",
+    "encryptedOfflineStoreQaPassed",
+    "uploadFlowQaPassed",
+    "crashReportingQaPassed",
+    "otaUpdateRollbackQaPassed",
+    "physicalDeviceQaCompleted",
+    "accessibilityQaPassed",
+    "appJsonProjectConfigured",
+    "easChannelsConfigured",
+    "ciEvidenceCaptured",
+    "launchArtifactsSecretSafe",
+  ],
+  artifactFields: [
+    "mobileSupportTypecheckArtifactPath",
+    "mobileSupportTestArtifactPath",
+    "mobileAppTypecheckArtifactPath",
+    "mobileAppTestArtifactPath",
+    "expoRuntimeArtifactPath",
+    "iosSimulatorSmokeArtifactPath",
+    "androidEmulatorSmokeArtifactPath",
+    "easPreviewBuildArtifactPath",
+    "easPreviewUpdateArtifactPath",
+    "authApiPushOfflineQaArtifactPath",
+    "uploadCrashOtaQaArtifactPath",
+    "physicalDeviceQaArtifactPath",
+    "accessibilityQaArtifactPath",
+    "ciEvidenceArtifactPath",
+    "secretSafeArtifactsPath",
+    "ciRunUrl",
+  ],
+};
+
 export const mobileLaunchRuntimeCommands = [
   "pnpm --filter @inkroute/mobile-support typecheck",
   "pnpm --filter @inkroute/mobile-support test",

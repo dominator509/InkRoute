@@ -2392,13 +2392,13 @@
       "file": "apps/web/tests/mobile-launch-runtime-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-008 mobile launch runtime matrix covers mobile-support and mobile app typecheck/tests, Expo runtime start, iOS simulator smoke, Android emulator smoke, EAS preview build/update, auth/session/biometric QA, tenant API QA, push QA, encrypted offline store QA, upload QA, crash reporting QA, OTA rollback QA, physical-device QA, accessibility QA, app.json project config, EAS channels/runtime policy, CI evidence, and secret-safe artifacts",
+        "GAP-008 MobileLaunchRun Prisma model and app row contract plus mobile launch runtime matrix covers mobile-support and mobile app typecheck/tests, Expo runtime start, iOS simulator smoke, Android emulator smoke, EAS preview build/update, auth/session/biometric QA, tenant API QA, push QA, encrypted offline store QA, upload QA, crash reporting QA, OTA rollback QA, physical-device QA, accessibility QA, app.json project config, EAS channels/runtime policy, CI evidence, and secret-safe artifacts",
         "GAP-008 mobile package scripts, app.json, eas.json, helper tests, device QA checklist, CI labels, artifact paths, and tracker row remain wired without claiming device/provider readiness",
         "GAP-008 readiness keeps Expo, device, provider, EAS, QA, CI, and artifact evidence explicit blockers"
       ],
       "blockedBy": [
         "Static mobile launch runtime test execution pending",
-        "mobile-support/app typecheck and tests pending",
+        "Provider-backed MobileLaunchRun transaction plus mobile-support/app typecheck and tests pending",
         "Expo runtime, iOS/Android simulator smoke, EAS preview/update proof pending",
         "auth/API/push/offline/upload/crash/OTA/accessibility physical-device QA, CI, and secret-safe artifact proof pending"
       ]
