@@ -1747,6 +1747,23 @@
                                          "Privacy-safe AbuseEvent persistence and redaction proof pending",
                                          "Abuse alert/fail-closed/public-route integration proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-security-middleware-runtime-static",
+                       "file":  "apps/web/tests/security-middleware-runtime-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-102 security middleware runtime contract covers web/dashboard shared headers, cookie-authenticated CSRF attack rejection, valid CSRF session-bound allowance, SameSite behavior, HSTS deployment proof, CSP provider sources, CSP frame/base/form invariants, and signed webhook bypass review",
+                                        "GAP-102 existing runtime, static, and Playwright security tests remain in the evidence set for web and dashboard middleware",
+                                        "GAP-102 CI retains browser header, production HSTS, preview/local HSTS suppression, provider CSP, CSRF attack/allow, webhook bypass, and runtime artifact paths"
+                                    ],
+                       "blockedBy":  [
+                                         "Static security middleware runtime test execution pending",
+                                         "Browser header smoke proof pending",
+                                         "Production HSTS and provider CSP proof pending",
+                                         "SameSite/session-binding and signed webhook CSRF bypass proof pending",
+                                         "Runtime route integration proof pending"
+                                     ]
                    }
                ]
 }

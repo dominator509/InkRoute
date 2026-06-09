@@ -614,6 +614,26 @@ jobs:
             coverage/abuse-alert-delivery-redacted.json
             coverage/abuse-fail-closed.json
             test-results/abuse-control-runtime
+          if-no-files-found: warn      - name: Run Phase 13 security middleware runtime contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/security-runtime-middleware.test.ts apps/web/tests/security-runtime-middleware-static.test.ts apps/web/tests/dashboard-security-runtime-middleware-static.test.ts apps/web/tests/security-middleware-runtime-static.test.ts
+
+      - name: Upload security middleware runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-middleware-runtime-artifacts
+          path: |
+            coverage/security-middleware-runtime.json
+            coverage/security-web-header-browser-smoke.json
+            coverage/security-dashboard-header-browser-smoke.json
+            coverage/security-production-hsts.json
+            coverage/security-preview-local-hsts-suppression.json
+            coverage/security-provider-csp-connect-src.json
+            coverage/security-csp-frame-base-form-invariants.json
+            coverage/security-csrf-attack-rejection.json
+            coverage/security-csrf-valid-session-binding.json
+            coverage/security-webhook-csrf-bypass-review.json
+            test-results/security-middleware-runtime
           if-no-files-found: warn      - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
@@ -662,6 +682,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
