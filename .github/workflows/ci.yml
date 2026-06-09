@@ -39,6 +39,8 @@ jobs:
         run: pnpm test:unit:coverage
       - name: Run Phase 7 payment lifecycle contracts
         run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/payment-routes.test.ts apps/web/tests/stripe-webhook-static.test.ts apps/web/tests/payment-automation-static.test.ts apps/dashboard/tests/payment-operations-static.test.ts apps/dashboard/tests/payment-read-route-static.test.ts
+      - name: Run Phase 8 calendar lifecycle contracts
+        run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/web/tests/ics-feed-route.test.ts apps/web/tests/availability-preview-route.test.ts apps/web/tests/signed-ics-feed-static.test.ts apps/web/tests/calendar-automation-static.test.ts apps/dashboard/tests/availability-persistence-static.test.ts apps/dashboard/tests/google-calendar-sync-static.test.ts apps/dashboard/tests/timezone-recurrence-qa-static.test.ts apps/dashboard/tests/travel-publish-static.test.ts
       - name: Upload Vitest coverage artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -59,6 +61,21 @@ jobs:
             coverage/stripe-*-redacted.log
             coverage/playwright-payment-results.json
             test-results/payments
+          if-no-files-found: warn
+      - name: Upload calendar lifecycle artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calendar-lifecycle-artifacts
+          path: |
+            coverage/calendar-*.json
+            coverage/signed-ics-*.json
+            coverage/google-provider-redacted.json
+            coverage/timezone-provider-matrix.json
+            coverage/playwright-calendar-*.json
+            coverage/playwright-public-travel-results.json
+            test-results/calendar
+            test-results/travel
           if-no-files-found: warn
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium

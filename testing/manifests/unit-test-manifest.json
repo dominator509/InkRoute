@@ -1018,6 +1018,23 @@
                                          "Notification provider queue smoke pending",
                                          "Nomad Mode dashboard-to-public E2E pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-calendar-automation-static",
+                       "file":  "apps/web/tests/calendar-automation-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-059 calendar automated test matrix covers helper, signed ICS, availability route, Postgres, Google provider, timezone matrix, Playwright, concurrent hold, and signed-feed revocation suites",
+                                        "GAP-059 calendar CI step runs package and route/static lifecycle contracts",
+                                        "GAP-059 calendar artifacts are retained through redacted-only artifact paths without claiming DB, Google, or Playwright proof"
+                                    ],
+                       "blockedBy":  [
+                                         "Actual calendar lifecycle command execution pending",
+                                         "Seeded Postgres integration output pending",
+                                         "Google provider transcript pending",
+                                         "Playwright dashboard/public travel traces pending",
+                                         "CI calendar artifact upload evidence pending"
+                                     ]
                    }
                ]
 }
