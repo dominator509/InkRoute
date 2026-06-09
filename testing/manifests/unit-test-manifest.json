@@ -1052,6 +1052,24 @@
                                          "Durable NotificationDelivery/ProviderEvent/Suppression persistence pending",
                                          "Sandbox delivered/bounced/complained provider evidence pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-sms-provider-static",
+                       "file":  "apps/web/tests/sms-provider-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "GAP-062 Twilio SMS send contract requires SDK, account SID, auth token, messaging service, legal consent copy, consent proof, quiet-hours policy, suppression checks, idempotency, delivery/provider event writes, and redacted body previews",
+                                        "GAP-062 SMS webhook readiness requires raw-body capture, Twilio signature verifier, auth-token secret, request URL validation, tenant resolution, consent proof, durable persistence, idempotency, STOP suppression writes, HELP inbound-thread writes, and redaction",
+                                        "GAP-062 SMS webhook route surfaces provider readiness, STOP/HELP reconciliation, required writes, and controls without trusting unverified signatures"
+                                    ],
+                       "blockedBy":  [
+                                         "Static SMS provider test execution pending",
+                                         "Twilio SDK/account SID/auth token/messaging service configuration pending",
+                                         "Cryptographic route signature verification pending",
+                                         "Durable NotificationDelivery/ProviderEvent/Suppression/MessageThread persistence pending",
+                                         "Sandbox sent/delivered/failed/STOP/HELP provider evidence pending",
+                                         "Legal-approved SMS consent and STOP/HELP copy pending"
+                                     ]
                    }
                ]
 }

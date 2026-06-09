@@ -1,7 +1,8 @@
-import { interpretSmsWebhook } from "@inkroute/notifications";
+﻿import { interpretSmsWebhook } from "@inkroute/notifications";
 import { inkrouteDemoTenant } from "@inkroute/config";
 import { NextResponse, type NextRequest } from "next/server";
 import { persistWebhookEvent } from "../../../../lib/localRuntimeState";
+import { buildSmsProviderReconciliation, buildSmsWebhookReadinessFromPayload, smsProviderContract } from "../../../../lib/smsProvider";
 
 function getTenantSlugFromPayload(payload: Record<string, unknown>): string {
   const candidateSlug = typeof payload.tenantSlug === "string" ? payload.tenantSlug : undefined;
@@ -9,6 +10,14 @@ function getTenantSlugFromPayload(payload: Record<string, unknown>): string {
   if (candidateSlug === inkrouteDemoTenant.slug) return candidateSlug;
   if (candidateTenantId === inkrouteDemoTenant.id) return inkrouteDemoTenant.slug;
   return inkrouteDemoTenant.slug;
+}
+
+function getPayloadValue(payload: Record<string, unknown>, keys: readonly string[], fallback: string): string {
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === "string" && value.trim()) return value;
+  }
+  return fallback;
 }
 
 export async function POST(request: NextRequest) {
@@ -44,6 +53,23 @@ export async function POST(request: NextRequest) {
   }
 
   const tenantSlug = getTenantSlugFromPayload(eventPayload);
+  const eventId = getPayloadValue(eventPayload, ["EventSid", "MessageSid", "SmsSid", "event_id", "id"], "missing-sms-event-id");
+  const providerMessageId = getPayloadValue(eventPayload, ["MessageSid", "SmsSid", "message_id"], "");
+  const readiness = buildSmsWebhookReadinessFromPayload({
+    tenantId: tenantSlug,
+    eventId,
+    eventType,
+    ...(providerMessageId ? { providerMessageId } : {}),
+    ...(inboundBody ? { inboundBody } : {}),
+    rawBodyCaptured: true,
+    signatureHeaderPresent: true,
+  });
+  const reconciliation = buildSmsProviderReconciliation({
+    eventId,
+    eventType,
+    ...(providerMessageId ? { providerMessageId } : {}),
+    ...(inboundBody ? { inboundBody } : {}),
+  });
   const interpretation = interpretSmsWebhook(eventType, inboundBody);
   const storedWebhook = persistWebhookEvent(tenantSlug, {
     source: "sms",
@@ -60,6 +86,8 @@ export async function POST(request: NextRequest) {
         tenantSlug,
         storedWebhook,
         interpretation,
+        readiness,
+        reconciliation,
         inboundBodyProvided: typeof inboundBody === "string",
         rawBodyBytes: rawBody.length,
         localRuntime: {
@@ -73,8 +101,13 @@ export async function POST(request: NextRequest) {
             "Verify signature hash from Twilio before trusting payload content.",
             "Persist outbound/inbound message IDs and apply replay/idempotency checks.",
             "Handle inbound STOP by muting the sender destination immediately.",
-            "Queue inbound messages to tenant-scoped threads only after validation.",
+            "Queue HELP and client replies to tenant-scoped threads only after validation.",
           ],
+          sendPlan: smsProviderContract.sendPlan,
+          stopWebhookReadiness: smsProviderContract.stopWebhookReadiness,
+          helpWebhookReadiness: smsProviderContract.helpWebhookReadiness,
+          requiredWrites: readiness.requiredWrites,
+          requiredControls: readiness.requiredControls,
         },
       },
     },
