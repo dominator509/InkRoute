@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPaymentLifecyclePersistencePlan,
+  buildPaymentAutomatedTestReadinessPlan,
   buildPaymentOperationsWorkflowPlan,
+  buildPaymentOperationsRuntimeReadinessPlan,
+  buildPaymentPersistenceRuntimeReadinessPlan,
   buildStripeCheckoutExecutionReadiness,
+  buildStripeCheckoutRouteRuntimeReadinessPlan,
   buildStripeCheckoutSessionDraft,
   buildStripeWebhookReconciliationPlan,
+  buildStripeWebhookRuntimeReadinessPlan,
   calculateDepositPolicy,
   evaluateNoShowPolicy,
   evaluateRefundPolicy,
@@ -108,6 +113,50 @@ describe("payment policy engine", () => {
     expect(readiness.draft.idempotencyKey).toBe("deposit:tenant_demo:booking_demo:15000:usd");
     expect(readiness.requiredControls).toContain("Return only Stripe-hosted checkout URL to the browser; never return secret keys or raw provider payloads.");
     expect(readiness.blockers).toEqual([]);
+  });
+
+  it("blocks deposit-session route runtime readiness until Stripe, signed access, persistence, safe redirects, and webhook evidence exist", () => {
+    const plan = buildStripeCheckoutRouteRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      paymentsTestsPassed: true,
+      paymentsTypecheckPassed: false,
+      webPaymentRouteTestsPassed: true,
+      webTypecheckPassed: false,
+      stripeSdkInstalled: false,
+      stripeSecretConfigured: false,
+      stripeApiVersionPinned: false,
+      checkoutRouteUsesStripeClient: false,
+      acceptedBookingOrSignedTokenEnforced: false,
+      idempotencyKeyPersistedBeforeProviderCall: false,
+      providerSessionPersisted: false,
+      paymentAuditLogPersisted: false,
+      tenantScopedTransactionConfigured: false,
+      allowedRedirectHostsEnforced: false,
+      safeBrowserResponseVerified: false,
+      invalidTokenRejectedTested: false,
+      expiredTokenRejectedTested: false,
+      webhookReconciliationVerified: false,
+      stripeTestModeCheckoutVerified: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "pnpm --filter @inkroute/payments typecheck",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm test:unit -- apps/web/tests/payment-routes.test.ts",
+      "stripe trigger checkout.session.completed",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "Stripe Checkout client route wiring with secret-backed test-mode configuration",
+      "accepted-booking or signed-token authorization tests for valid, invalid, and expired deposit access",
+      "tenant-scoped transaction evidence for Deposit, Payment, PaymentAuditLog, and IdempotencyKey writes",
+      "safe redirect allowlist and browser response redaction test output",
+      "Stripe test-mode Checkout and verified webhook reconciliation transcript",
+    ]));
+    expect(plan.blockers).toContain("Deposit-session route must call the Stripe Checkout client instead of returning only a local preview.");
+    expect(plan.blockers).toContain("Browser response must expose only the hosted Checkout URL and redacted local ids.");
+    expect(plan.blockers).toContain("Stripe test-mode Checkout session creation must be verified with provider evidence.");
   });
 
   it("evaluates refund and no-show decisions with audit-friendly outcomes", () => {
@@ -228,6 +277,53 @@ describe("payment policy engine", () => {
     ).toBe("timestamp_outside_tolerance");
   });
 
+  it("blocks Stripe webhook runtime readiness until raw-body SDK verification, replay protection, provider checks, and DB reconciliation are proven", () => {
+    const plan = buildStripeWebhookRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      paymentsTestsPassed: true,
+      paymentsTypecheckPassed: false,
+      webWebhookRouteTestsPassed: true,
+      webTypecheckPassed: false,
+      stripeSdkInstalled: false,
+      constructEventUsesRawBody: false,
+      webhookSecretConfigured: false,
+      invalidSignatureRejected: true,
+      timestampToleranceEnforced: true,
+      replayProtectionPersisted: false,
+      supportedEventsCovered: ["checkout.session.completed", "payment_intent.succeeded", "payment_intent.payment_failed"],
+      providerObjectFetchConfigured: false,
+      tenantResolutionFromTrustedMetadata: true,
+      depositPaymentRefundPersistenceConfigured: false,
+      paymentAuditLogPersistenceConfigured: false,
+      bookingStateEventPersistenceConfigured: false,
+      tenantScopedTransactionConfigured: false,
+      amountCurrencyMismatchRejected: true,
+      unknownEventsLoggedAndIgnored: true,
+      stripeCliReplayVerified: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.missingSupportedEvents).toEqual(["checkout.session.expired", "charge.refunded", "charge.dispute.created"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "pnpm --filter @inkroute/payments typecheck",
+      "pnpm test:unit -- apps/web/tests/payment-routes.test.ts",
+      "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
+      "stripe trigger checkout.session.completed",
+      "stripe trigger charge.refunded",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "Stripe SDK constructEvent raw-body verification evidence with STRIPE_WEBHOOK_SECRET",
+      "persistent event-id replay protection and tenant-scoped transaction evidence",
+      "supported event reconciliation tests for success, failure, expiration, refund, dispute, and mismatch cases",
+      "Deposit, Payment, Refund, BookingStateEvent, and PaymentAuditLog persistence evidence",
+      "Stripe CLI replay transcript for supported events, invalid signature, and replay denial",
+    ]));
+    expect(plan.blockers).toContain("Webhook route must use Stripe constructEvent with the raw request body.");
+    expect(plan.blockers).toContain("Stripe event replay protection must persist provider event ids.");
+    expect(plan.blockers).toContain("Stripe CLI replay tests must verify success, failure, expiration, refund, dispute, invalid signature, and replay behavior.");
+  });
+
   it("plans tenant-scoped provider session persistence with audit and idempotency writes", () => {
     const plan = buildPaymentLifecyclePersistencePlan({
       tenantId: "tenant_demo",
@@ -257,6 +353,50 @@ describe("payment policy engine", () => {
     });
     expect(plan.requiredControls).toContain("Execute all writes in one tenant-scoped database transaction.");
     expect(plan.blockers).toEqual([]);
+  });
+
+  it("blocks payment persistence runtime readiness until repositories, transactions, audit logs, tenant isolation, and seeded Postgres evidence exist", () => {
+    const plan = buildPaymentPersistenceRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      paymentsTestsPassed: true,
+      paymentsTypecheckPassed: false,
+      dbSchemaIncludesPaymentModels: false,
+      repositoriesImplemented: false,
+      tenantScopedQueriesEnforced: false,
+      transactionalMutationsImplemented: false,
+      idempotencyStoreImplemented: false,
+      depositCreationPersisted: false,
+      providerSessionPersisted: false,
+      paidTransitionPersisted: false,
+      failedTransitionPersisted: false,
+      refundTransitionPersisted: false,
+      disputeTransitionPersisted: false,
+      paymentAuditLogPersistedForEveryMutation: false,
+      bookingStateEventPersistedForLifecycleChanges: false,
+      crossTenantIsolationTestsPassed: false,
+      replayIdempotencyTestsPassed: false,
+      seededPostgresIntegrationTestsPassed: false,
+      dashboardPaymentReadsUseRepository: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "pnpm --filter @inkroute/payments typecheck",
+      "pnpm --filter @inkroute/db prisma validate",
+      "payment persistence seeded Postgres integration tests",
+      "dashboard payment repository route/action tests",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "Prisma models and tenant-scoped payment repository/service implementation",
+      "deposit, provider-session, paid, and failed transition persistence test output",
+      "refund and dispute persistence test output",
+      "PaymentAuditLog and BookingStateEvent persistence evidence for every lifecycle mutation",
+      "seeded Postgres integration tests for tenant isolation and idempotent replay",
+    ]));
+    expect(plan.blockers).toContain("Tenant-scoped payment repositories/services must be implemented.");
+    expect(plan.blockers).toContain("Every payment lifecycle mutation must persist a PaymentAuditLog row.");
+    expect(plan.blockers).toContain("Seeded Postgres integration tests must pass for payment persistence lifecycle.");
   });
 
   it("plans paid, refunded, and disputed lifecycle writes through the audit transaction", () => {
@@ -483,5 +623,90 @@ describe("payment policy engine", () => {
       "Accounting export requires tax/accounting review approval.",
       "Accounting export requires a reviewer id.",
     ]);
+  });
+
+  it("blocks payment operations runtime readiness until refund, no-show, dispute, receipt, export, review, and E2E evidence exist", () => {
+    const plan = buildPaymentOperationsRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      paymentsTestsPassed: true,
+      paymentsTypecheckPassed: false,
+      dashboardPaymentActionsImplemented: false,
+      refundActionAuthorized: false,
+      stripeRefundsTestModeVerified: false,
+      refundPersistenceConfigured: false,
+      noShowForfeitureActionImplemented: false,
+      noShowAuditPersistenceConfigured: false,
+      disputeEvidenceWorkflowImplemented: false,
+      disputeProviderSyncVerified: false,
+      receiptGenerationImplemented: false,
+      receiptDeliveryProviderConfigured: false,
+      receiptDeliveryTested: false,
+      accountingExportImplemented: false,
+      exportRedactionVerified: false,
+      taxAccountingReviewApproved: false,
+      idempotencyConfiguredForOperations: false,
+      paymentAuditLogPersistedForOperations: false,
+      tenantAuthorizationTestsPassed: false,
+      dashboardE2eEvidenceAttached: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "pnpm --filter @inkroute/payments typecheck",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "stripe refunds.create test-mode smoke",
+      "dashboard payment operations E2E smoke",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "authorized dashboard/server actions with cross-tenant denial tests",
+      "Stripe test-mode refund transcript and persisted Refund/PaymentAuditLog records",
+      "no-show forfeiture action evidence with BookingStateEvent and PaymentAuditLog rows",
+      "dispute evidence files and Stripe test-mode dispute sync transcript",
+      "generated and delivered receipt evidence with redacted client/payment data",
+      "accounting export file, redaction proof, and tax/accounting review approval",
+      "idempotency, audit-log, and dashboard E2E evidence for all payment operations",
+    ]));
+    expect(plan.blockers).toContain("Stripe test-mode refund execution must be verified.");
+    expect(plan.blockers).toContain("Tax/accounting review must approve export fields and retention policy.");
+    expect(plan.blockers).toContain("Dashboard E2E evidence must cover refund, no-show, dispute, receipt, and export flows.");
+  });
+
+  it("blocks payment automated test readiness until helper, route, Stripe CLI, DB, E2E, CI, and artifact evidence exists", () => {
+    const plan = buildPaymentAutomatedTestReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      paymentsUnitTestsPassed: true,
+      paymentRouteTestsPassed: true,
+      stripeSdkSignatureTestsPassed: false,
+      stripeCliLifecycleTestsPassed: false,
+      dbReconciliationTestsPassed: false,
+      bookingToPaidE2ePassed: false,
+      refundNoShowDisputeTestsPassed: false,
+      receiptExportTestsPassed: false,
+      crossTenantPaymentTestsPassed: false,
+      replayIdempotencyTestsPassed: false,
+      ciPaymentTestJobConfigured: false,
+      artifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "pnpm --filter @inkroute/payments test",
+      "pnpm vitest run apps/web/tests/payment-routes.test.ts",
+      "payment DB reconciliation integration tests",
+      "Stripe CLI payment lifecycle tests",
+      "Playwright booking-to-paid payment E2E flow",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "payment helper, route-boundary, and Stripe signature test output",
+      "Stripe CLI lifecycle transcript for checkout success/failure/expiration/refund/dispute/replay",
+      "seeded DB reconciliation, tenant isolation, and idempotent replay test output",
+      "Playwright/dashboard E2E evidence for booking-to-paid, refund/no-show/dispute, receipt, and export flows",
+      "CI payment test job configuration and retained artifacts",
+    ]));
+    expect(plan.blockers).toContain("Stripe CLI lifecycle tests must cover checkout completed, failed payment, expired checkout, refund, dispute, invalid signature, and replay.");
+    expect(plan.blockers).toContain("Booking-to-paid Playwright/E2E flow must pass.");
+    expect(plan.blockers).toContain("Payment test artifacts must capture Stripe CLI logs, DB reconciliation output, and E2E screenshots/traces.");
   });
 });

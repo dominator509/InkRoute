@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildGithubReleaseWorkflowPlan } from "../src/index";
+import { buildCicdDeploymentAutomationReadinessPlan, buildGithubReleaseWorkflowPlan } from "../src/index";
 
 const root = resolve(__dirname, "../../..");
 
@@ -57,5 +57,81 @@ describe("release governance workflow scaffold", () => {
     expect(ci).toContain("pnpm lint");
     expect(ci).toContain("pnpm test:unit");
     expect(ci).toContain("pnpm test:e2e");
+  });
+
+  it("plans ready CI/CD deployment automation with protected environments, deploy gates, CI result writes, and live dispatch proof", () => {
+    const plan = buildCicdDeploymentAutomationReadinessPlan({
+      packageScripts: ["test", "typecheck"],
+      releasesTestsPassed: true,
+      releasesTypecheckPassed: true,
+      workflowSourceTestsPassed: true,
+      protectedGithubEnvironmentsConfigured: true,
+      githubSecretsConfigured: true,
+      previewDeployJobEnabled: true,
+      stagingDeployJobEnabled: true,
+      productionDeployJobEnabled: true,
+      vercelDeployConfigured: true,
+      prismaDryRunConfigured: true,
+      prismaMigrateDeployConfigured: true,
+      easUpdatePublishConfigured: true,
+      sentryArtifactUploadConfigured: true,
+      searchConsoleSubmissionConfigured: true,
+      ciPrerequisiteChecksRequired: true,
+      releaseRecordCiResultWritesConfigured: true,
+      noSecretLiteralsVerified: true,
+      liveWorkflowDispatchProofCaptured: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.missingScripts).toEqual([]);
+    expect(plan.requiredEvidence).toEqual([]);
+    expect(plan.blockers).toEqual([]);
+    expect(plan.requiredCommands).toContain("release-governance workflow_dispatch dry run");
+    expect(plan.requiredCommands).toContain("Sentry/Search Console release step smoke");
+  });
+
+  it("blocks CI/CD deployment automation until protected environments, secrets, deploy jobs, release gates, CI result writes, and live proof exist", () => {
+    const plan = buildCicdDeploymentAutomationReadinessPlan({
+      packageScripts: ["test"],
+      releasesTestsPassed: true,
+      releasesTypecheckPassed: false,
+      workflowSourceTestsPassed: true,
+      protectedGithubEnvironmentsConfigured: false,
+      githubSecretsConfigured: false,
+      previewDeployJobEnabled: false,
+      stagingDeployJobEnabled: false,
+      productionDeployJobEnabled: false,
+      vercelDeployConfigured: false,
+      prismaDryRunConfigured: true,
+      prismaMigrateDeployConfigured: false,
+      easUpdatePublishConfigured: false,
+      sentryArtifactUploadConfigured: false,
+      searchConsoleSubmissionConfigured: false,
+      ciPrerequisiteChecksRequired: true,
+      releaseRecordCiResultWritesConfigured: false,
+      noSecretLiteralsVerified: true,
+      liveWorkflowDispatchProofCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredEvidence).toEqual([
+      "GitHub protected environment and secret configuration evidence",
+      "preview, staging, production, and Vercel deployment job evidence",
+      "Prisma, EAS, Sentry, and Search Console deployment gate evidence",
+      "ReleaseRecord CI result write and live workflow dispatch evidence",
+    ]);
+    expect(plan.blockers).toEqual(
+      expect.arrayContaining([
+        "Missing @inkroute/releases typecheck script.",
+        "@inkroute/releases typecheck must pass before CI/CD automation readiness.",
+        "GitHub preview, staging, and production protected environments must be configured.",
+        "Required GitHub environment/repository secrets must be configured outside source control.",
+        "Production deployment job must be enabled behind protected-environment approval.",
+        "Prisma migrate deploy must be configured behind migration safety gates.",
+        "ReleaseRecord CI result links must be persisted after workflow execution.",
+        "Live release-governance workflow dispatch proof is required before closing GAP-089.",
+      ]),
+    );
   });
 });

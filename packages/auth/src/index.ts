@@ -853,6 +853,36 @@ export interface DomainAuthorizationRuntimeReadinessPlan {
   blockers: readonly string[];
 }
 
+export interface AuthSessionTenantGuardRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  authTestsPassed: boolean;
+  authTypecheckPassed: boolean;
+  authProviderSelected: boolean;
+  providerLoginLogoutWired: boolean;
+  secureDashboardCookiesConfigured: boolean;
+  mobileTokenStorageConfigured: boolean;
+  serverTenantMembershipPersistenceConfigured: boolean;
+  routeMiddlewareAdaptersConfigured: boolean;
+  dashboardRoutesIntegrated: boolean;
+  mobileApiRoutesIntegrated: boolean;
+  sensitiveServerRoutesIntegrated: boolean;
+  fieldAuthorizationIntegratedInRoutes: boolean;
+  sessionRevocationPersistenceConfigured: boolean;
+  csrfTokenBindingConfigured: boolean;
+  auditLogWritesConfigured: boolean;
+  providerBackedRouteTestsPassed: boolean;
+  crossTenantIntegrationTestsPassed: boolean;
+}
+
+export interface AuthSessionTenantGuardRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 export type DashboardSurfaceKind = "page" | "api" | "server_action";
 export type DashboardSurfaceMode = "static_demo" | "read_only_api" | "mutation_api" | "provider_action";
 
@@ -958,6 +988,69 @@ export function buildDomainAuthorizationRuntimeReadinessPlan(input: DomainAuthor
       "Bind CSRF validation to cookie-authenticated mutating routes.",
       "Persist redacted authorization audit rows for allow and deny decisions.",
       "Apply field-level redaction for private client, medical, payment, consent, and system fields.",
+    ],
+    blockers,
+  };
+}
+
+export function buildAuthSessionTenantGuardRuntimeReadinessPlan(input: AuthSessionTenantGuardRuntimeReadinessInput): AuthSessionTenantGuardRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/auth package script is missing ${script}.`);
+  if (!input.authTestsPassed) blockers.push("@inkroute/auth authorization, guard, and session readiness tests must pass.");
+  if (!input.authTypecheckPassed) blockers.push("@inkroute/auth typecheck must pass in the installed workspace.");
+  if (!input.authProviderSelected) blockers.push("Production auth provider must be selected and configured.");
+  if (!input.providerLoginLogoutWired) blockers.push("Provider-backed login/logout callbacks must be wired.");
+  if (!input.secureDashboardCookiesConfigured) blockers.push("Dashboard sessions must use secure HttpOnly SameSite cookies with rotation.");
+  if (!input.mobileTokenStorageConfigured) blockers.push("Mobile refresh/access token storage must use secure device storage and logout clearing.");
+  if (!input.serverTenantMembershipPersistenceConfigured) blockers.push("TenantMember/session lookups must be persisted and resolved server-side.");
+  if (!input.routeMiddlewareAdaptersConfigured) blockers.push("Dashboard, mobile API, public API, and server-action middleware adapters must call auth guard helpers.");
+  if (!input.dashboardRoutesIntegrated) blockers.push("Dashboard pages and API routes must integrate tenant/session guards before data loading or mutation.");
+  if (!input.mobileApiRoutesIntegrated) blockers.push("Mobile API routes must integrate tenant/session guards before returning tenant data.");
+  if (!input.sensitiveServerRoutesIntegrated) blockers.push("Sensitive server routes and provider actions must integrate tenant/session guards.");
+  if (!input.fieldAuthorizationIntegratedInRoutes) blockers.push("Real routes must apply field-level authorization/redaction before serialization.");
+  if (!input.sessionRevocationPersistenceConfigured) blockers.push("Session revocation persistence must be checked before every sensitive route decision.");
+  if (!input.csrfTokenBindingConfigured) blockers.push("Cookie-authenticated mutating routes must bind CSRF tokens to the active session.");
+  if (!input.auditLogWritesConfigured) blockers.push("Auth decisions, provider callbacks, denials, tenant switches, and revocations must persist AuditLog rows.");
+  if (!input.providerBackedRouteTestsPassed) blockers.push("Provider-backed login/logout and guarded route integration tests must pass.");
+  if (!input.crossTenantIntegrationTestsPassed) blockers.push("Cross-tenant route integration tests must prove tenant isolation.");
+
+  if (!input.authProviderSelected || !input.providerLoginLogoutWired || !input.providerBackedRouteTestsPassed) {
+    requiredEvidence.push("auth provider selection, login/logout callback, and provider-backed route test evidence");
+  }
+  if (!input.secureDashboardCookiesConfigured || !input.mobileTokenStorageConfigured || !input.sessionRevocationPersistenceConfigured || !input.csrfTokenBindingConfigured) {
+    requiredEvidence.push("secure cookie, mobile token storage, revocation, and CSRF binding evidence");
+  }
+  if (!input.serverTenantMembershipPersistenceConfigured || !input.routeMiddlewareAdaptersConfigured || !input.dashboardRoutesIntegrated || !input.mobileApiRoutesIntegrated || !input.sensitiveServerRoutesIntegrated) {
+    requiredEvidence.push("server tenant membership persistence and route middleware integration evidence");
+  }
+  if (!input.fieldAuthorizationIntegratedInRoutes || !input.auditLogWritesConfigured || !input.crossTenantIntegrationTestsPassed) {
+    requiredEvidence.push("field authorization, audit-log write, and cross-tenant integration evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/auth typecheck",
+      "pnpm --filter @inkroute/auth test",
+      "provider-backed login/logout integration tests",
+      "dashboard/mobile/API route guard integration tests",
+      "cross-tenant denial integration tests",
+      "CSRF-bound mutating route tests",
+      "auth audit-log persistence tests",
+    ],
+    requiredEvidence,
+    requiredControls: [
+      "Resolve provider-backed user, session, TenantMember, and CustomRole rows server-side before authorization.",
+      "Use secure dashboard cookies and secure mobile token storage with logout/revocation clearing.",
+      "Authorize dashboard pages, mobile APIs, public APIs, server actions, and provider actions before data loading or mutation.",
+      "Bind CSRF tokens to cookie-authenticated mutating route sessions.",
+      "Apply field-level authorization/redaction before serializing private client, medical, payment, consent, and system fields.",
+      "Persist redacted AuditLog rows for login, logout, refresh, revocation, tenant switches, provider callbacks, and allow/deny decisions.",
     ],
     blockers,
   };

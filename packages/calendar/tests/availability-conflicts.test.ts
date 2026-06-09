@@ -2,12 +2,18 @@ import { describe, expect, it } from "vitest";
 import {
   buildAvailabilitySlots,
   buildAvailabilityPersistencePlan,
+  buildAvailabilityRuntimeReadinessPlan,
+  buildCalendarAutomatedTestReadinessPlan,
   buildCalendarRuntimeReadinessPlan,
+  buildGoogleCalendarRuntimeReadinessPlan,
   buildGoogleCalendarProviderSyncPlan,
+  buildSignedIcsFeedRuntimeReadinessPlan,
   buildSignedIcsFeedDraft,
   buildSignedIcsFeedTokenHash,
   buildTimezoneRecurrenceQaPlan,
+  buildTimezoneRuntimeReadinessPlan,
   buildTravelPublishMutationPlan,
+  buildTravelPublishRuntimeReadinessPlan,
   auditCalendarTimezones,
   detectCalendarConflicts,
   evaluateSignedIcsFeedAccess,
@@ -165,6 +171,46 @@ describe("calendar availability", () => {
     ).toBe("expired");
   });
 
+  it("blocks signed ICS feed runtime readiness until durable tokens, revocation, access logs, and calendar imports are proven", () => {
+    const plan = buildSignedIcsFeedRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      calendarTestsPassed: true,
+      calendarTypecheckPassed: false,
+      webRouteTestsPassed: true,
+      webTypecheckPassed: false,
+      tokenCreationImplemented: false,
+      hashedTokenPersistenceConfigured: false,
+      expiryRotationPersistenceConfigured: false,
+      revocationUiImplemented: false,
+      revocationApiImplemented: false,
+      revokedTokenRouteRejectionTested: false,
+      tenantArtistScopeEnforced: true,
+      durableAccessLogPersistenceConfigured: false,
+      privateCacheHeadersVerified: true,
+      appleCalendarImportTested: false,
+      googleCalendarImportTested: false,
+      outlookCalendarImportTested: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm vitest run apps/web/tests/ics-feed-route.test.ts",
+      "signed ICS token DB integration tests",
+      "Apple/Google/Outlook ICS import smoke tests",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "tenant-scoped signed-feed token creation, hashed persistence, expiry, and rotation evidence",
+      "revocation UI/API evidence and revoked-token route rejection test output",
+      "tenant/artist scope enforcement, durable access-log persistence, and private cache-header route tests",
+      "Apple, Google, and Outlook calendar import smoke-test artifacts",
+    ]));
+    expect(plan.blockers).toContain("Hashed signed-feed token persistence must be configured.");
+    expect(plan.blockers).toContain("Feed-token revocation API must be implemented.");
+    expect(plan.blockers).toContain("Durable ICS feed access-log persistence must be configured.");
+  });
+
   it("audits IANA timezones across blocks, windows, travel stops, and required city matrix", () => {
     expect(isValidIanaTimezone("America/Los_Angeles")).toBe(true);
     expect(isValidIanaTimezone("America/Phoenix")).toBe(true);
@@ -302,6 +348,49 @@ describe("calendar availability", () => {
     ]);
   });
 
+  it("blocks availability runtime readiness until repositories, transactions, persisted conflicts, concurrency, audit, and tenant isolation are proven", () => {
+    const plan = buildAvailabilityRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      calendarTestsPassed: true,
+      calendarTypecheckPassed: false,
+      dbSchemaIncludesAvailabilityModels: false,
+      repositoriesImplemented: false,
+      tenantScopedQueriesEnforced: false,
+      transactionalWindowCreationImplemented: false,
+      transactionalSlotHoldImplemented: false,
+      appointmentConfirmationImplemented: false,
+      holdReleaseImplemented: false,
+      auditLogPersistenceConfigured: false,
+      idempotencyStoreConfigured: false,
+      conflictDetectionAgainstPersistedRows: false,
+      concurrentHoldProtectionConfigured: false,
+      overlappingSlotDbRejectionTested: false,
+      crossTenantIsolationTestsPassed: false,
+      seededPostgresIntegrationTestsPassed: false,
+      dashboardAndApiUseRepository: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/db prisma validate",
+      "availability persistence seeded Postgres integration tests",
+      "concurrent slot hold race-condition tests",
+      "dashboard/API availability repository tests",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "Prisma availability models plus dashboard/API repository wiring evidence",
+      "transactional availability window, hold, appointment confirmation, and release test output",
+      "persisted conflict detection and concurrent hold rejection evidence",
+      "CalendarAuditLog and IdempotencyKey persistence evidence for every availability mutation",
+      "seeded Postgres tenant isolation and availability lifecycle integration test output",
+    ]));
+    expect(plan.blockers).toContain("Tenant-scoped availability repositories/services must be implemented.");
+    expect(plan.blockers).toContain("Concurrent slot hold protection must lock or constrain tenant/artist/time ranges.");
+    expect(plan.blockers).toContain("Seeded Postgres integration tests must prove availability persistence lifecycle.");
+  });
+
   it("plans Google OAuth connection and event upsert with encrypted token and audit writes", () => {
     const oauth = buildGoogleCalendarProviderSyncPlan({
       tenantId: "tenant_demo",
@@ -411,6 +500,54 @@ describe("calendar availability", () => {
     ]);
   });
 
+  it("blocks Google Calendar runtime readiness until SDK, OAuth, encrypted tokens, worker sync, push, idempotency, and provider evidence exist", () => {
+    const plan = buildGoogleCalendarRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      calendarTestsPassed: true,
+      calendarTypecheckPassed: false,
+      googleSdkInstalled: false,
+      oauthAppConfigured: false,
+      oauthCallbackRouteImplemented: false,
+      requiredScopesConfigured: false,
+      encryptedTokenRepositoryImplemented: false,
+      providerWorkerImplemented: false,
+      freebusySmokeTested: false,
+      eventInsertUpdateDeleteSmokeTested: false,
+      fullSyncImplemented: false,
+      incrementalSyncTokenPersisted: false,
+      invalidSyncTokenFullResyncTested: false,
+      pushChannelRenewalImplemented: false,
+      pushWebhookHandlerImplemented: false,
+      retryBackoffConfigured: false,
+      idempotencyStoreConfigured: false,
+      calendarAuditLogPersistenceConfigured: false,
+      tenantIsolationTestsPassed: false,
+      googleTestCalendarEvidenceAttached: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "pnpm --filter @inkroute/calendar typecheck",
+      "Google OAuth callback smoke test",
+      "Google FreeBusy test-calendar smoke",
+      "Google event insert/update/delete smoke",
+      "Google invalid sync-token full-resync smoke",
+      "Google push channel renewal/webhook smoke",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "Google SDK/client setup plus OAuth app, scopes, and callback route evidence",
+      "encrypted token repository, provider worker, and CalendarAuditLog persistence evidence",
+      "Google test calendar FreeBusy and event insert/update/delete smoke-test output",
+      "full sync, incremental sync-token persistence, and invalid-token recovery evidence",
+      "Google push channel renewal and webhook handler test output",
+      "retry/idempotency, tenant-isolation, and Google test-calendar artifact evidence",
+    ]));
+    expect(plan.blockers).toContain("Google OAuth callback route must exchange code and persist encrypted tokens.");
+    expect(plan.blockers).toContain("Invalid sync-token recovery must trigger and verify full resync.");
+    expect(plan.blockers).toContain("Google test calendar evidence must be attached for OAuth, freebusy, event sync, push, and recovery flows.");
+  });
+
   it("plans timezone recurrence QA across DST, recurrence, provider render, and all-day travel cases", () => {
     const plan = buildTimezoneRecurrenceQaPlan({
       temporalStrategySelected: true,
@@ -504,6 +641,45 @@ describe("calendar availability", () => {
     ]));
   });
 
+  it("blocks calendar automated test readiness until route, DB, Google, timezone matrix, Playwright, CI, and artifact evidence exist", () => {
+    const plan = buildCalendarAutomatedTestReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      calendarHelperTestsPassed: true,
+      signedIcsRouteTestsPassed: true,
+      availabilityPreviewRouteTestsPassed: true,
+      postgresIntegrationTestsPassed: false,
+      googleProviderTestsPassed: false,
+      timezoneProviderMatrixTestsPassed: false,
+      dashboardCalendarPlaywrightPassed: false,
+      publicTravelPlaywrightPassed: false,
+      concurrentHoldRaceTestsPassed: false,
+      signedIcsRevocationDbTestsPassed: false,
+      ciCalendarTestJobConfigured: false,
+      artifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "pnpm --filter @inkroute/calendar test",
+      "pnpm vitest run apps/web/tests/ics-feed-route.test.ts",
+      "pnpm vitest run apps/web/tests/availability-preview-route.test.ts",
+      "calendar Postgres integration tests",
+      "Google test-calendar provider tests",
+      "Playwright dashboard/public travel calendar smoke",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "Postgres integration output for availability persistence, concurrent holds, audit logs, and signed-feed revocation",
+      "Google test-calendar provider integration transcript",
+      "DST/recurrence provider matrix output for internal, Google, and ICS render paths",
+      "Playwright dashboard calendar and public travel smoke-test artifacts",
+      "CI calendar test job configuration and retained artifacts",
+    ]));
+    expect(plan.blockers).toContain("Postgres calendar integration tests must pass for availability, holds, appointments, audit logs, and feed tokens.");
+    expect(plan.blockers).toContain("Playwright public travel page smoke tests must pass.");
+    expect(plan.blockers).toContain("Calendar test artifacts must capture DB logs, Google provider transcripts, Playwright traces, and ICS import output.");
+  });
+
   it("blocks timezone recurrence QA when strategy, coverage, recurrence expansion, or provider labels are missing", () => {
     const plan = buildTimezoneRecurrenceQaPlan({
       temporalStrategySelected: false,
@@ -537,6 +713,48 @@ describe("calendar availability", () => {
       "Recurring availability case must include a recurrence rule and expanded occurrence count.",
       "Timezone case must use a valid IANA timezone.",
     ]);
+  });
+
+  it("blocks timezone runtime readiness until strategy, boundary validation, DST, recurrence, provider render, and stored-data evidence exist", () => {
+    const plan = buildTimezoneRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      calendarTestsPassed: true,
+      calendarTypecheckPassed: false,
+      timezoneStrategySelected: false,
+      temporalOrDateLibraryImplemented: false,
+      routeIanaValidationEnforced: false,
+      persistenceIanaValidationEnforced: false,
+      storedUtcAndTimezoneVerified: false,
+      dstSpringForwardTested: true,
+      dstFallBackTested: false,
+      recurringAvailabilityExpansionTested: false,
+      allDayTravelWindowTested: false,
+      crossCityRenderingTested: false,
+      providerRenderSmokeTested: false,
+      googleProviderTimezoneSmokeTested: false,
+      icsProviderTimezoneSmokeTested: false,
+      seededPersistenceBoundaryTestsPassed: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "pnpm --filter @inkroute/calendar typecheck",
+      "timezone route/persistence boundary tests",
+      "stored recurrence expansion integration tests",
+      "Google Calendar timezone render smoke",
+      "ICS timezone import/render smoke",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "documented Temporal/date-library strategy with route, persistence, provider, and render usage",
+      "route and persistence tests proving valid IANA timezone enforcement and UTC+timezone storage",
+      "DST, recurrence expansion, and all-day travel-window test output",
+      "cross-city internal, Google, and ICS provider render smoke-test artifacts",
+      "seeded persistence-boundary tests for stored availability, appointments, travel windows, and recurrence expansion",
+    ]));
+    expect(plan.blockers).toContain("Temporal or an explicit timezone/date library must be implemented at route, persistence, and provider boundaries.");
+    expect(plan.blockers).toContain("Recurring availability expansion must be tested against stored windows.");
+    expect(plan.blockers).toContain("ICS timezone rendering/import smoke test must pass.");
   });
 
   it("plans real-time travel publish writes with revalidation, waitlist, and sync events", () => {
@@ -635,5 +853,50 @@ describe("calendar availability", () => {
       "Travel update and rollback require the previous travel stop snapshot.",
       "Provider action failure requires rollback before publishing public state.",
     ]);
+  });
+
+  it("blocks travel publish runtime readiness until dashboard mutation, public data, revalidation, notification, sync, rollback, and E2E evidence exist", () => {
+    const plan = buildTravelPublishRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      calendarTestsPassed: true,
+      calendarTypecheckPassed: false,
+      dashboardMutationRouteImplemented: false,
+      dashboardAuthorizationEnforced: false,
+      persistedTravelRepositoryImplemented: false,
+      publicDataApiImplemented: false,
+      cacheRevalidationCalledAfterCommit: false,
+      cityWaitlistMatchingImplemented: false,
+      consentFilteredNotificationQueueImplemented: false,
+      notificationProviderQueueTested: false,
+      mobileSyncTransportImplemented: false,
+      dashboardSyncTransportImplemented: false,
+      webSyncEventPersistenceConfigured: false,
+      auditLogPersistenceConfigured: false,
+      rollbackExecutorImplemented: false,
+      failedProviderRollbackTested: false,
+      tenantIsolationTestsPassed: false,
+      e2eTravelPublishFlowPassed: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/web typecheck",
+      "travel publish repository integration tests",
+      "Nomad Mode dashboard-to-public E2E smoke",
+      "travel publish failed-provider rollback tests",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "authorized dashboard travel mutation route and cross-tenant denial tests",
+      "persisted travel repository, public data API, and post-commit revalidation evidence",
+      "city waitlist matching and consent-filtered notification queue execution evidence",
+      "mobile, dashboard, and web sync-event transport evidence",
+      "TravelAuditLog persistence plus failed-provider rollback executor test output",
+      "dashboard-to-public Nomad Mode publish E2E artifact with waitlist and rollback coverage",
+    ]));
+    expect(plan.blockers).toContain("Dashboard travel publish/update/unpublish/rollback mutation route must be implemented.");
+    expect(plan.blockers).toContain("Public page, city, artist, sitemap, and schema cache revalidation must run after commit.");
+    expect(plan.blockers).toContain("End-to-end travel publish flow must prove dashboard edits update public site and waitlist jobs.");
   });
 });

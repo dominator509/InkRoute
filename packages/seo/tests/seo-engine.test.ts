@@ -5,6 +5,7 @@ import {
   auditSeoTechnicalReadiness,
   auditJsonLdRichResultCompatibility,
   buildCitySeoBrief,
+  buildCanonicalDomainRuntimeReadinessPlan,
   buildFaqSchema,
   buildInternalLinkPlan,
   buildMetadataDraft,
@@ -13,11 +14,16 @@ import {
   buildPortfolioImageSchema,
   buildTravelEventSchema,
   buildSearchConsoleOperationPlan,
+  buildSearchConsoleRuntimeReadinessPlan,
+  buildSeoAutomatedTestReadinessPlan,
+  buildSeoPublicationRuntimeReadinessPlan,
   buildSeoImagePipelinePlan,
+  buildSeoImagePipelineRuntimeReadinessPlan,
   buildSeoPublicationMutationPlan,
   buildSeoRedirectDecision,
   buildSitemapPlan,
   buildStyleSeoBrief,
+  buildStructuredDataCrawlQaReadinessPlan,
   buildWebPageSchema,
   buildWebsiteSchema,
   composeJsonLdGraph,
@@ -339,6 +345,70 @@ describe("SEO engine helpers", () => {
     expect(failing.findings.some((finding) => finding.code === "JSON_LD_ITEM_TYPE_MISSING")).toBe(true);
   });
 
+  it("summarizes structured-data crawl QA readiness across rendered JSON-LD extraction, rich-result checks, sitemap/canonical crawl, artifacts, and closeout evidence", () => {
+    const plan = buildStructuredDataCrawlQaReadinessPlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      seoPackageTestsPassed: true,
+      seoPackageTypecheckPassed: true,
+      webBuildPassed: true,
+      renderedPageCrawlerConfigured: true,
+      renderedJsonLdExtractionImplemented: true,
+      publicPageInventoryConfigured: true,
+      googleRichResultsCompatibleChecksPassed: true,
+      structuredDataCriticalErrorsAbsent: true,
+      unsupportedSchemaWarningsReviewed: true,
+      demoContentReplacedOrDocumented: true,
+      sitemapCanonicalCrawlPassed: true,
+      canonicalUrlConsistencyVerified: true,
+      robotsNoindexCrawlVerified: true,
+      crawlArtifactsCaptured: true,
+      closeoutEvidenceAttached: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredControls).toContain("Extract JSON-LD from rendered public pages instead of relying only on helper snapshots.");
+    expect(plan.requiredCommands).toContain("Google Rich Results-compatible structured-data validation");
+  });
+
+  it("blocks structured-data crawl QA readiness until rendered-page crawl, rich-result validation, unsupported-schema review, sitemap/canonical crawl, artifacts, and closeout evidence exist", () => {
+    const plan = buildStructuredDataCrawlQaReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      seoPackageTestsPassed: true,
+      seoPackageTypecheckPassed: false,
+      webBuildPassed: false,
+      renderedPageCrawlerConfigured: false,
+      renderedJsonLdExtractionImplemented: false,
+      publicPageInventoryConfigured: false,
+      googleRichResultsCompatibleChecksPassed: false,
+      structuredDataCriticalErrorsAbsent: false,
+      unsupportedSchemaWarningsReviewed: false,
+      demoContentReplacedOrDocumented: false,
+      sitemapCanonicalCrawlPassed: false,
+      canonicalUrlConsistencyVerified: false,
+      robotsNoindexCrawlVerified: false,
+      crawlArtifactsCaptured: false,
+      closeoutEvidenceAttached: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredEvidence).toEqual([
+      "rendered-page crawler, JSON-LD extraction, and public page inventory evidence",
+      "Google Rich Results-compatible validation and unsupported-schema review evidence",
+      "production/demo content, sitemap, canonical, robots, and noindex crawl evidence",
+      "crawl artifact capture and closeout attachment evidence",
+    ]);
+    expect(plan.blockers).toContain("Rendered-page crawler tooling must be configured.");
+    expect(plan.blockers).toContain("Google Rich Results-compatible structured-data checks must pass.");
+    expect(plan.blockers).toContain("Demo schema content must be replaced with production content or documented as intentional.");
+    expect(plan.blockers).toContain("Structured-data crawl and rich-results evidence must be attached to closeout.");
+  });
+
   it("plans public web launch readiness across static, local-runtime, provider, and asset blockers", () => {
     const plan = buildPublicWebReadinessPlan({
       packageScripts: {
@@ -561,6 +631,85 @@ describe("SEO engine helpers", () => {
     expect(plan.writes.some((write) => write.model === "AuditLog")).toBe(true);
   });
 
+  it("summarizes SEO publication runtime readiness across dashboard CRUD, Prisma repositories, tenant transactions, audit logs, revalidation, and integration tests", () => {
+    const plan = buildSeoPublicationRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      seoPackageTestsPassed: true,
+      seoPackageTypecheckPassed: true,
+      dashboardBuildPassed: true,
+      prismaModelsMigrated: true,
+      dashboardCrudRoutesImplemented: true,
+      authenticatedDashboardApiImplemented: true,
+      rbacEnforced: true,
+      tenantIsolationEnforced: true,
+      prismaTransactionsConfigured: true,
+      seoCityPageRepositoryImplemented: true,
+      seoStylePageRepositoryImplemented: true,
+      seoRedirectRepositoryImplemented: true,
+      faqReviewImageAssociationPersistenceAvailable: true,
+      publishStatePersistenceAvailable: true,
+      auditLogPersistenceAvailable: true,
+      revalidationJobPersistenceAvailable: true,
+      idempotencyStoreAvailable: true,
+      previewToPublishFlowImplemented: true,
+      archiveRedirectFlowImplemented: true,
+      prismaIntegrationTestsPassed: true,
+      tenantIsolationTestsPassed: true,
+      dashboardPublishFlowTestsPassed: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredControls).toContain("Use buildSeoPublicationMutationPlan as the service contract before every database mutation.");
+    expect(plan.requiredCommands).toContain("SEO tenant isolation tests");
+  });
+
+  it("blocks SEO publication runtime readiness until dashboard APIs, Prisma repositories, transactions, audit logs, revalidation jobs, and tests exist", () => {
+    const plan = buildSeoPublicationRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      seoPackageTestsPassed: true,
+      seoPackageTypecheckPassed: false,
+      dashboardBuildPassed: false,
+      prismaModelsMigrated: false,
+      dashboardCrudRoutesImplemented: false,
+      authenticatedDashboardApiImplemented: false,
+      rbacEnforced: false,
+      tenantIsolationEnforced: false,
+      prismaTransactionsConfigured: false,
+      seoCityPageRepositoryImplemented: false,
+      seoStylePageRepositoryImplemented: false,
+      seoRedirectRepositoryImplemented: false,
+      faqReviewImageAssociationPersistenceAvailable: false,
+      publishStatePersistenceAvailable: false,
+      auditLogPersistenceAvailable: false,
+      revalidationJobPersistenceAvailable: false,
+      idempotencyStoreAvailable: false,
+      previewToPublishFlowImplemented: false,
+      archiveRedirectFlowImplemented: false,
+      prismaIntegrationTestsPassed: false,
+      tenantIsolationTestsPassed: false,
+      dashboardPublishFlowTestsPassed: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredEvidence).toEqual([
+      "Prisma migration and SEO repository implementation evidence",
+      "authenticated dashboard SEO CRUD, RBAC, preview, publish, archive, and redirect flow evidence",
+      "tenant-scoped transaction, audit, and idempotency evidence",
+      "SEO association, publish-state, and revalidation job persistence evidence",
+      "SEO Prisma integration, tenant isolation, and dashboard publish-flow test evidence",
+    ]);
+    expect(plan.blockers).toContain("Dashboard SEO CRUD mutation routes must be implemented.");
+    expect(plan.blockers).toContain("SEO publication mutations must run inside Prisma transactions.");
+    expect(plan.blockers).toContain("SEO revalidation jobs must persist after publication commits.");
+    expect(plan.blockers).toContain("Dashboard SEO publish/edit/archive flow tests must pass.");
+  });
+
   it("resolves tenant canonical domains while excluding draft and noindex routes from sitemap entries", () => {
     const published = createSeoRouteRecord({
       path: "/cities/seattle-wa",
@@ -660,6 +809,77 @@ describe("SEO engine helpers", () => {
     expect(policy.blockers.join(" ")).toContain("Duplicate canonical paths");
   });
 
+  it("summarizes canonical/domain runtime readiness across middleware, repositories, redirects, sitemap exclusion, noindex, custom domains, and deployment proof", () => {
+    const plan = buildCanonicalDomainRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      seoPackageTestsPassed: true,
+      seoPackageTypecheckPassed: true,
+      webBuildPassed: true,
+      middlewareImplemented: true,
+      tenantDomainRepositoryImplemented: true,
+      seoRedirectRepositoryImplemented: true,
+      canonicalPolicyWiredToPublicRoutes: true,
+      allowedHostValidationEnforced: true,
+      httpsRedirectEnforced: true,
+      canonicalHostRedirectEnforced: true,
+      persistedRedirectsExecuted: true,
+      redirectStatusCodesPreserved: true,
+      draftArchiveNoindexSitemapExclusionRuntimeVerified: true,
+      noindexHeadersOrMetaRuntimeVerified: true,
+      canonicalTagsUseTenantPrimaryHost: true,
+      customDomainRouteTestsPassed: true,
+      duplicateCanonicalRuntimeTestsPassed: true,
+      deploymentDomainProofAvailable: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredControls).toContain("Execute persisted tenant-scoped SeoRedirect records with their configured status codes.");
+    expect(plan.requiredCommands).toContain("runtime sitemap exclusion and noindex route tests");
+  });
+
+  it("blocks canonical/domain runtime readiness until middleware, repositories, redirects, sitemap/noindex assertions, custom-domain tests, and deployment proof exist", () => {
+    const plan = buildCanonicalDomainRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      seoPackageTestsPassed: true,
+      seoPackageTypecheckPassed: false,
+      webBuildPassed: false,
+      middlewareImplemented: false,
+      tenantDomainRepositoryImplemented: false,
+      seoRedirectRepositoryImplemented: false,
+      canonicalPolicyWiredToPublicRoutes: false,
+      allowedHostValidationEnforced: false,
+      httpsRedirectEnforced: false,
+      canonicalHostRedirectEnforced: false,
+      persistedRedirectsExecuted: false,
+      redirectStatusCodesPreserved: false,
+      draftArchiveNoindexSitemapExclusionRuntimeVerified: false,
+      noindexHeadersOrMetaRuntimeVerified: false,
+      canonicalTagsUseTenantPrimaryHost: false,
+      customDomainRouteTestsPassed: false,
+      duplicateCanonicalRuntimeTestsPassed: false,
+      deploymentDomainProofAvailable: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredEvidence).toEqual([
+      "public middleware/route canonical policy and allowed-host validation evidence",
+      "tenant domain and SeoRedirect repository runtime evidence",
+      "HTTPS/canonical host redirect, status-code, and canonical tag evidence",
+      "sitemap exclusion, noindex, and duplicate canonical runtime test evidence",
+      "custom-domain route test and deployment-domain proof evidence",
+    ]);
+    expect(plan.blockers).toContain("Public canonical/domain middleware or route handler must be implemented.");
+    expect(plan.blockers).toContain("Persisted SeoRedirect records must execute at runtime.");
+    expect(plan.blockers).toContain("Runtime sitemap must exclude draft, archived, private, and noindex content.");
+    expect(plan.blockers).toContain("Deployment-domain proof must show configured tenant primary and allowed hosts.");
+  });
+
   it("builds tenant-scoped redirect and noindex decisions", () => {
     const route = createSeoRouteRecord({
       path: "/cities/seattle-wa",
@@ -757,6 +977,79 @@ describe("SEO engine helpers", () => {
     expect(importPlan.dashboardStatus).toBe("ready_for_provider");
   });
 
+  it("summarizes Search Console runtime readiness across provider execution, verified properties, sitemap submission, imports, indexing monitoring, dashboard status, audit, and idempotency", () => {
+    const plan = buildSearchConsoleRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      seoPackageTestsPassed: true,
+      seoPackageTypecheckPassed: true,
+      providerRoutesImplemented: true,
+      backgroundJobsImplemented: true,
+      credentialsConfigured: true,
+      OAuthOrServiceAccountFlowImplemented: true,
+      tenantOwnershipPersistenceAvailable: true,
+      tenantOwnershipChecksEnforced: true,
+      verifiedPropertyProofAvailable: true,
+      sitemapSubmissionImplemented: true,
+      sitemapSubmittedForVerifiedProperty: true,
+      queryPageImportImplemented: true,
+      importedRowsPersisted: true,
+      indexingMonitoringImplemented: true,
+      dashboardStatusImplemented: true,
+      approvedFixtureTestsPassed: true,
+      providerSandboxOrTestPropertyPassed: true,
+      auditLogPersistenceAvailable: true,
+      idempotencyStoreAvailable: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredControls).toContain("Submit sitemaps only for verified properties owned by the tenant.");
+    expect(plan.requiredCommands).toContain("verified test-property sitemap submission smoke");
+  });
+
+  it("blocks Search Console runtime readiness until credentialed provider routes, tenant ownership proof, sitemap submission, imports, dashboard status, audit, and idempotency exist", () => {
+    const plan = buildSearchConsoleRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      seoPackageTestsPassed: true,
+      seoPackageTypecheckPassed: false,
+      providerRoutesImplemented: false,
+      backgroundJobsImplemented: false,
+      credentialsConfigured: false,
+      OAuthOrServiceAccountFlowImplemented: false,
+      tenantOwnershipPersistenceAvailable: false,
+      tenantOwnershipChecksEnforced: false,
+      verifiedPropertyProofAvailable: false,
+      sitemapSubmissionImplemented: false,
+      sitemapSubmittedForVerifiedProperty: false,
+      queryPageImportImplemented: false,
+      importedRowsPersisted: false,
+      indexingMonitoringImplemented: false,
+      dashboardStatusImplemented: false,
+      approvedFixtureTestsPassed: false,
+      providerSandboxOrTestPropertyPassed: false,
+      auditLogPersistenceAvailable: false,
+      idempotencyStoreAvailable: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredEvidence).toEqual([
+      "credential-managed provider route/job execution evidence",
+      "tenant ownership persistence, ownership checks, and verified property proof evidence",
+      "verified-property sitemap submission evidence",
+      "query/page import, persisted rows, indexing monitoring, and dashboard status evidence",
+      "fixture/provider execution, audit, and idempotency evidence",
+    ]);
+    expect(plan.blockers).toContain("Google Search Console credentials must be configured in a secret store.");
+    expect(plan.blockers).toContain("Sitemap must be submitted for a verified test property.");
+    expect(plan.blockers).toContain("Dashboard Search Console import/monitoring status must be implemented.");
+    expect(plan.blockers).toContain("Search Console operation idempotency store must be available.");
+  });
+
   it("plans public image SEO derivatives while keeping source uploads private", () => {
     const item: PortfolioItem = {
       id: "portfolio_image_001",
@@ -828,5 +1121,152 @@ describe("SEO engine helpers", () => {
     expect(plan.blockers.join(" ")).toContain("Original portfolio uploads must remain private");
     expect(plan.blockers.join(" ")).toContain("Reviewed alt text");
     expect(plan.blockers.join(" ")).toContain("Reviewed caption");
+  });
+
+  it("summarizes image SEO pipeline runtime readiness across processing workers, storage metadata, ACLs, CDN headers, and Lighthouse audits", () => {
+    const plan = buildSeoImagePipelineRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      seoPackageTestsPassed: true,
+      seoPackageTypecheckPassed: true,
+      imageProcessingWorkerImplemented: true,
+      storageProviderConfigured: true,
+      sourceDimensionProbeImplemented: true,
+      exifStrippingImplemented: true,
+      responsiveDerivativeGenerationImplemented: true,
+      blurPlaceholderGenerationImplemented: true,
+      fileAssetPersistenceAvailable: true,
+      portfolioImagePersistenceAvailable: true,
+      derivativeMetadataPersistenceAvailable: true,
+      privateOriginalAclEnforced: true,
+      publicDerivativeAclEnforced: true,
+      cdnCacheHeadersConfigured: true,
+      immutableDerivativeUrlsConfigured: true,
+      uploadImageProcessingTestsPassed: true,
+      privateOriginalAccessTestsPassed: true,
+      publicDerivativeLoadTestsPassed: true,
+      cdnHeaderTestsPassed: true,
+      lighthouseImageAuditPassed: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredControls).toContain("Keep original uploads private and strip EXIF before creating public derivatives.");
+    expect(plan.requiredCommands).toContain("Lighthouse image optimization audit");
+  });
+
+  it("blocks image SEO pipeline runtime readiness until processing, persistence, ACL, CDN, and Lighthouse evidence exist", () => {
+    const plan = buildSeoImagePipelineRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      seoPackageTestsPassed: true,
+      seoPackageTypecheckPassed: false,
+      imageProcessingWorkerImplemented: false,
+      storageProviderConfigured: false,
+      sourceDimensionProbeImplemented: false,
+      exifStrippingImplemented: false,
+      responsiveDerivativeGenerationImplemented: false,
+      blurPlaceholderGenerationImplemented: false,
+      fileAssetPersistenceAvailable: false,
+      portfolioImagePersistenceAvailable: false,
+      derivativeMetadataPersistenceAvailable: false,
+      privateOriginalAclEnforced: false,
+      publicDerivativeAclEnforced: false,
+      cdnCacheHeadersConfigured: false,
+      immutableDerivativeUrlsConfigured: false,
+      uploadImageProcessingTestsPassed: false,
+      privateOriginalAccessTestsPassed: false,
+      publicDerivativeLoadTestsPassed: false,
+      cdnHeaderTestsPassed: false,
+      lighthouseImageAuditPassed: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredEvidence).toEqual([
+      "storage-backed image processing worker and upload test evidence",
+      "dimension probe, EXIF stripping, responsive derivative, and blur placeholder evidence",
+      "FileAsset, PortfolioImage, and derivative metadata persistence evidence",
+      "private original and public derivative ACL/load test evidence",
+      "CDN cache header, immutable URL, and Lighthouse image audit evidence",
+    ]);
+    expect(plan.blockers).toContain("Image processing worker must be implemented.");
+    expect(plan.blockers).toContain("Private original ACL enforcement must be verified.");
+    expect(plan.blockers).toContain("CDN cache header tests must pass.");
+    expect(plan.blockers).toContain("Lighthouse image optimization audit must pass.");
+  });
+
+  it("summarizes SEO automated test readiness across helpers, snapshots, preview routes, linked runtime evidence, and CI gates", () => {
+    const plan = buildSeoAutomatedTestReadinessPlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      seoPackageTestsPassed: true,
+      seoPackageTypecheckPassed: true,
+      routeRecordTestsPassed: true,
+      sitemapGenerationTestsPassed: true,
+      metadataDraftTestsPassed: true,
+      auditTestsPassed: true,
+      contentBriefTestsPassed: true,
+      internalLinkTestsPassed: true,
+      jsonLdGraphTestsPassed: true,
+      imagePipelineTestsPassed: true,
+      canonicalRedirectTestsPassed: true,
+      searchConsolePlanTestsPassed: true,
+      webSitemapRouteTestsPassed: true,
+      seoPreviewRouteTestsPassed: true,
+      sitemapPreviewRouteTestsPassed: true,
+      structuredDataSnapshotTestsPassed: true,
+      runtimeBuildEvidenceCoveredByGap076: true,
+      crawlEvidenceCoveredByGap073: true,
+      ciRunsSeoTestGate: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredSuites).toContain("JSON-LD graph and structured-data snapshot tests");
+    expect(plan.requiredCommands).toContain("CI SEO package and preview route test gate");
+  });
+
+  it("blocks SEO automated test readiness until helper, preview route, linked runtime, crawl, and CI evidence exist", () => {
+    const plan = buildSeoAutomatedTestReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      seoPackageTestsPassed: true,
+      seoPackageTypecheckPassed: false,
+      routeRecordTestsPassed: true,
+      sitemapGenerationTestsPassed: true,
+      metadataDraftTestsPassed: true,
+      auditTestsPassed: true,
+      contentBriefTestsPassed: false,
+      internalLinkTestsPassed: false,
+      jsonLdGraphTestsPassed: false,
+      imagePipelineTestsPassed: false,
+      canonicalRedirectTestsPassed: false,
+      searchConsolePlanTestsPassed: false,
+      webSitemapRouteTestsPassed: true,
+      seoPreviewRouteTestsPassed: false,
+      sitemapPreviewRouteTestsPassed: false,
+      structuredDataSnapshotTestsPassed: false,
+      runtimeBuildEvidenceCoveredByGap076: false,
+      crawlEvidenceCoveredByGap073: false,
+      ciRunsSeoTestGate: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredEvidence).toEqual([
+      "content brief, internal-link, JSON-LD, and structured-data snapshot test output",
+      "image pipeline, canonical/redirect, and Search Console planner test output",
+      "web sitemap, SEO preview, and sitemap preview route test output",
+      "linked GAP-073/GAP-076 runtime evidence and CI SEO test-gate evidence",
+    ]);
+    expect(plan.blockers).toContain("City/style content brief tests must pass.");
+    expect(plan.blockers).toContain("SEO preview route tests must pass.");
+    expect(plan.blockers).toContain("Runtime/build evidence must be covered by GAP-076.");
+    expect(plan.blockers).toContain("CI must run the SEO package and preview route test gate.");
   });
 });

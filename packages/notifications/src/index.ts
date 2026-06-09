@@ -251,6 +251,319 @@ export interface ProviderEventReconciliationPlan {
   requiredChecks: readonly string[];
 }
 
+export interface EmailWebhookRuntimeReadinessInput {
+  tenantId?: string;
+  eventId: string;
+  eventType: string;
+  providerMessageId?: string;
+  rawBodyCaptured: boolean;
+  signatureHeaderPresent: boolean;
+  signatureVerifierConfigured: boolean;
+  webhookSecretConfigured: boolean;
+  signatureTimestampWithinTolerance: boolean;
+  tenantResolved: boolean;
+  deliveryLogPersistenceAvailable: boolean;
+  providerEventPersistenceAvailable: boolean;
+  suppressionPersistenceAvailable: boolean;
+  idempotencyStoreAvailable: boolean;
+  payloadRedacted: boolean;
+  alreadyProcessedEventIds?: readonly string[];
+}
+
+export interface EmailWebhookRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  provider: "resend";
+  tenantId: string | null;
+  eventId: string;
+  eventType: string;
+  normalizedStatus: NotificationStatus;
+  idempotencyKey: string;
+  shouldUpdateDeliveryLog: boolean;
+  shouldSuppressDestination: boolean;
+  requiredWrites: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface SmsWebhookRuntimeReadinessInput {
+  tenantId?: string;
+  eventId: string;
+  eventType: string;
+  providerMessageId?: string;
+  inboundBody?: string;
+  rawBodyCaptured: boolean;
+  signatureHeaderPresent: boolean;
+  signatureVerifierConfigured: boolean;
+  twilioAuthTokenConfigured: boolean;
+  requestUrlValidated: boolean;
+  tenantResolved: boolean;
+  consentProofAvailable: boolean;
+  quietHoursPolicyConfigured: boolean;
+  deliveryLogPersistenceAvailable: boolean;
+  providerEventPersistenceAvailable: boolean;
+  suppressionPersistenceAvailable: boolean;
+  inboundThreadPersistenceAvailable: boolean;
+  idempotencyStoreAvailable: boolean;
+  payloadRedacted: boolean;
+  alreadyProcessedEventIds?: readonly string[];
+}
+
+export interface SmsWebhookRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  provider: "twilio";
+  tenantId: string | null;
+  eventId: string;
+  eventType: string;
+  normalizedStatus: NotificationStatus;
+  idempotencyKey: string;
+  shouldUpdateDeliveryLog: boolean;
+  shouldSuppressDestination: boolean;
+  shouldCreateInboundThread: boolean;
+  requiredWrites: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface ExpoPushProviderRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  notificationTestsPassed: boolean;
+  notificationTypecheckPassed: boolean;
+  mobileTypecheckPassed: boolean;
+  expoProjectIdConfigured: boolean;
+  expoAccessTokenConfigured: boolean;
+  nativePushCredentialsConfigured: boolean;
+  permissionRuntimeImplemented: boolean;
+  tokenRegistrationRuntimeImplemented: boolean;
+  pushTokenPersistenceAvailable: boolean;
+  optOutPersistenceAvailable: boolean;
+  deliveryWorkerConfigured: boolean;
+  deliveryLogPersistenceAvailable: boolean;
+  auditLogPersistenceAvailable: boolean;
+  expoSendSmokePassed: boolean;
+  receiptWorkerConfigured: boolean;
+  receiptReplayProtectionAvailable: boolean;
+  invalidTokenSuppressionPersistenceAvailable: boolean;
+  deepLinkHandlerImplemented: boolean;
+  foregroundDeviceQaPassed: boolean;
+  backgroundDeviceQaPassed: boolean;
+  tapNavigationDeviceQaPassed: boolean;
+}
+
+export interface ExpoPushProviderRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  provider: "expo";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface NotificationPersistenceRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  notificationTestsPassed: boolean;
+  notificationTypecheckPassed: boolean;
+  prismaModelsMigrated: boolean;
+  repositoriesImplemented: boolean;
+  tenantScopedQueriesEnforced: boolean;
+  transactionalWritesConfigured: boolean;
+  messageThreadPersistenceAvailable: boolean;
+  messagePersistenceAvailable: boolean;
+  notificationPersistenceAvailable: boolean;
+  deliveryPersistenceAvailable: boolean;
+  deliveryStatusTransitionPersistenceAvailable: boolean;
+  readStatePersistenceAvailable: boolean;
+  auditLogPersistenceAvailable: boolean;
+  idempotencyStoreAvailable: boolean;
+  destinationHashingEnforced: boolean;
+  bodyPreviewRedactionEnforced: boolean;
+  rbacIntegrationEnforced: boolean;
+  postgresIntegrationTestsPassed: boolean;
+  crossTenantIsolationTestsPassed: boolean;
+}
+
+export interface NotificationPersistenceRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface NotificationSchedulerRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  notificationTestsPassed: boolean;
+  notificationTypecheckPassed: boolean;
+  queueStrategySelected: boolean;
+  queueBackendConfigured: boolean;
+  schedulerProcessConfigured: boolean;
+  workerProcessConfigured: boolean;
+  notificationJobPersistenceAvailable: boolean;
+  appointmentRelativeSchedulingImplemented: boolean;
+  aftercareSequenceSchedulingImplemented: boolean;
+  marketingSequenceSchedulingImplemented: boolean;
+  cancellationOnAppointmentChangeImplemented: boolean;
+  dueJobClaimingTransactional: boolean;
+  providerReadyGateEnforced: boolean;
+  idempotencyStoreAvailable: boolean;
+  retryBackoffExecutorConfigured: boolean;
+  deadLetterPersistenceAvailable: boolean;
+  workerAuditLogPersistenceAvailable: boolean;
+  clockSkewPolicyConfigured: boolean;
+  postgresQueueIntegrationTestsPassed: boolean;
+  retryDeadLetterIntegrationTestsPassed: boolean;
+  cancellationIntegrationTestsPassed: boolean;
+}
+
+export interface NotificationSchedulerRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface ProviderWebhookRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  notificationTestsPassed: boolean;
+  notificationTypecheckPassed: boolean;
+  webRouteTestsPassed: boolean;
+  emailSignatureVerificationImplemented: boolean;
+  smsSignatureVerificationImplemented: boolean;
+  pushReceiptTrustedSourceVerified: boolean;
+  rawBodyPreservedForVerification: boolean;
+  webhookSecretsConfigured: boolean;
+  replayProtectionPersistenceAvailable: boolean;
+  providerEventPersistenceAvailable: boolean;
+  deliveryLogPersistenceAvailable: boolean;
+  exactlyOnceDeliveryUpdatesEnforced: boolean;
+  suppressionPersistenceAvailable: boolean;
+  inboundRoutingPersistenceAvailable: boolean;
+  invalidPushTokenPersistenceAvailable: boolean;
+  tenantResolutionEnforced: boolean;
+  payloadRedactionEnforced: boolean;
+  failedWebhookAlertingConfigured: boolean;
+  providerSandboxWebhookTestsPassed: boolean;
+  routeInvalidSignatureTestsPassed: boolean;
+}
+
+export interface ProviderWebhookRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface PreferenceCenterRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  notificationTestsPassed: boolean;
+  notificationTypecheckPassed: boolean;
+  webRouteTestsPassed: boolean;
+  dashboardTestsPassed: boolean;
+  preferenceCenterPageImplemented: boolean;
+  unsubscribePageImplemented: boolean;
+  preferenceApiImplemented: boolean;
+  signedPreferenceTokensIssued: boolean;
+  preferenceTokenHashPersistenceAvailable: boolean;
+  tokenExpiryEnforced: boolean;
+  forgedTokenRejectionTested: boolean;
+  listUnsubscribeHeadersConfigured: boolean;
+  emailUnsubscribePersistenceAvailable: boolean;
+  smsStopPersistenceAvailable: boolean;
+  smsStartPersistenceAvailable: boolean;
+  tenantChannelSettingsUiImplemented: boolean;
+  tenantChannelSettingsPersistenceAvailable: boolean;
+  transactionalVsMarketingControlsEnforced: boolean;
+  suppressionAppliedBeforeSend: boolean;
+  auditLogPersistenceAvailable: boolean;
+  idempotencyStoreAvailable: boolean;
+  legalApprovedPreferenceCopyAvailable: boolean;
+  routeApiTestsPassed: boolean;
+}
+
+export interface PreferenceCenterRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface MessagingPrivacyRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  notificationTestsPassed: boolean;
+  notificationTypecheckPassed: boolean;
+  dashboardTestsPassed: boolean;
+  messagingApiTestsPassed: boolean;
+  redactionServiceImplemented: boolean;
+  piiDetectionConfigured: boolean;
+  medicalPaymentPrivateUrlDetectionConfigured: boolean;
+  bodyPreviewRedactionEnforced: boolean;
+  roleGatedMessageUiImplemented: boolean;
+  roleGatedApiAuthorizationEnforced: boolean;
+  unauthorizedRoleDenialTestsPassed: boolean;
+  secureAttachmentAuthorizationImplemented: boolean;
+  attachmentPolicyTestsPassed: boolean;
+  exportWorkflowPersistenceAvailable: boolean;
+  deleteWorkflowPersistenceAvailable: boolean;
+  retentionWorkflowPersistenceAvailable: boolean;
+  retentionJobConfigured: boolean;
+  providerPayloadExportOmissionEnforced: boolean;
+  privateUrlExportOmissionEnforced: boolean;
+  moderationRateLimitIntegrationConfigured: boolean;
+  spamModerationTestsPassed: boolean;
+  auditLogPersistenceAvailable: boolean;
+  idempotencyStoreAvailable: boolean;
+  postgresRetentionIntegrationTestsPassed: boolean;
+}
+
+export interface MessagingPrivacyRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface NotificationAutomatedTestReadinessInput {
+  packageScripts: readonly string[];
+  notificationUnitTestsPassed: boolean;
+  notificationTypecheckPassed: boolean;
+  publicRouteContractTestsPassed: boolean;
+  providerWebhookRouteTestsPassed: boolean;
+  queueIntegrationTestsPassed: boolean;
+  dashboardTemplateSmokeTestsPassed: boolean;
+  dashboardMessageSmokeTestsPassed: boolean;
+  mobileNotificationSmokeTestsPassed: boolean;
+  expoPushDeviceQaPassed: boolean;
+  providerSandboxEmailTestsPassed: boolean;
+  providerSandboxSmsTestsPassed: boolean;
+  providerSandboxPushReceiptTestsPassed: boolean;
+  preferenceOptOutPersistenceTestsPassed: boolean;
+  smsStopPersistenceTestsPassed: boolean;
+  bookingToAftercareE2ePassed: boolean;
+  bookingToDepositNotificationE2ePassed: boolean;
+  travelWaitlistNotificationE2ePassed: boolean;
+  retentionExportDeleteIntegrationTestsPassed: boolean;
+  ciPhase9NotificationJobConfigured: boolean;
+  testArtifactsPublished: boolean;
+}
+
+export interface NotificationAutomatedTestReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  requiredSuites: readonly string[];
+  blockers: readonly string[];
+}
+
 export const notificationTemplateCatalog: Record<NotificationTemplateKey, { purpose: MessagePurpose; defaultChannels: NotificationChannel[]; requiresHumanReview?: boolean; sensitive?: boolean }> = {
   booking_request_received: { purpose: "transactional", defaultChannels: ["email", "push", "in_app"] },
   booking_request_needs_info: { purpose: "transactional", defaultChannels: ["email", "sms", "push", "in_app"] },
@@ -948,6 +1261,600 @@ export function buildProviderEventReconciliationPlan(input: ProviderEventReconci
     shouldMarkPushTokenInactive,
     blockers,
     requiredChecks,
+  };
+}
+
+export function buildEmailWebhookRuntimeReadinessPlan(input: EmailWebhookRuntimeReadinessInput): EmailWebhookRuntimeReadinessPlan {
+  const reconciliation = buildProviderEventReconciliationPlan({
+    provider: "resend",
+    eventId: input.eventId,
+    eventType: input.eventType,
+    providerMessageId: input.providerMessageId,
+    alreadyProcessedEventIds: input.alreadyProcessedEventIds,
+  });
+  const blockers: string[] = [...reconciliation.blockers];
+
+  if (!input.tenantId?.trim()) blockers.unshift("Tenant scope is required before email webhook reconciliation.");
+  if (!input.rawBodyCaptured) blockers.push("Raw email webhook body must be captured before signature verification.");
+  if (!input.signatureHeaderPresent) blockers.push("Email provider signature header is required.");
+  if (!input.signatureVerifierConfigured) blockers.push("Resend/Svix webhook verifier must be configured before trusting webhook payloads.");
+  if (!input.webhookSecretConfigured) blockers.push("Email webhook secret must be configured in a secret store.");
+  if (!input.signatureTimestampWithinTolerance) blockers.push("Email webhook signature timestamp must be inside replay tolerance.");
+  if (!input.tenantResolved) blockers.push("Webhook payload must resolve to a tenant before delivery mutation.");
+  if (!input.deliveryLogPersistenceAvailable) blockers.push("NotificationDelivery persistence must be available before webhook reconciliation.");
+  if (!input.providerEventPersistenceAvailable) blockers.push("ProviderEvent persistence must be available for webhook replay protection.");
+  if (reconciliation.shouldSuppressDestination && !input.suppressionPersistenceAvailable) blockers.push("Suppression persistence must be available for bounce, complaint, or unsubscribe events.");
+  if (!input.idempotencyStoreAvailable) blockers.push("Idempotency store must be available before applying email webhook side effects.");
+  if (!input.payloadRedacted) blockers.push("Email webhook payload must be redacted before audit logging or previews.");
+
+  const requiredWrites = reconciliation.shouldSuppressDestination
+    ? ["ProviderEvent", "NotificationDelivery", "SuppressionListEntry", "NotificationAuditLog", "IdempotencyKey"]
+    : ["ProviderEvent", "NotificationDelivery", "NotificationAuditLog", "IdempotencyKey"];
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    provider: "resend",
+    tenantId: input.tenantId?.trim() ? input.tenantId : null,
+    eventId: input.eventId,
+    eventType: input.eventType,
+    normalizedStatus: reconciliation.interpretation.normalizedStatus,
+    idempotencyKey: reconciliation.idempotencyKey,
+    shouldUpdateDeliveryLog: blockers.length === 0 && reconciliation.shouldUpdateDeliveryLog,
+    shouldSuppressDestination: blockers.length === 0 && reconciliation.shouldSuppressDestination,
+    requiredWrites,
+    requiredControls: [
+      "Verify Resend/Svix signatures against the exact raw request body before JSON parsing is trusted.",
+      "Reject missing signatures, stale timestamps, replayed provider event ids, and tenantless payloads before delivery updates.",
+      "Persist ProviderEvent idempotency before mutating NotificationDelivery state.",
+      "Persist bounce, complaint, and unsubscribe events to suppression state before future email sends.",
+      "Store only redacted webhook payload summaries and destination hashes in audit logs.",
+    ],
+    blockers,
+  };
+}
+
+export function buildSmsWebhookRuntimeReadinessPlan(input: SmsWebhookRuntimeReadinessInput): SmsWebhookRuntimeReadinessPlan {
+  const reconciliation = buildProviderEventReconciliationPlan({
+    provider: "twilio",
+    eventId: input.eventId,
+    eventType: input.eventType,
+    providerMessageId: input.providerMessageId,
+    inboundBody: input.inboundBody,
+    alreadyProcessedEventIds: input.alreadyProcessedEventIds,
+  });
+  const blockers: string[] = [...reconciliation.blockers];
+
+  if (!input.tenantId?.trim()) blockers.unshift("Tenant scope is required before SMS webhook reconciliation.");
+  if (!input.rawBodyCaptured) blockers.push("Raw SMS webhook body must be captured before signature verification.");
+  if (!input.signatureHeaderPresent) blockers.push("Twilio signature header is required.");
+  if (!input.signatureVerifierConfigured) blockers.push("Twilio webhook verifier must be configured before trusting callback payloads.");
+  if (!input.twilioAuthTokenConfigured) blockers.push("Twilio auth token must be configured in a secret store for webhook verification.");
+  if (!input.requestUrlValidated) blockers.push("Twilio webhook request URL must be validated as part of signature verification.");
+  if (!input.tenantResolved) blockers.push("SMS webhook payload must resolve to a tenant before delivery or suppression mutation.");
+  if (!input.consentProofAvailable) blockers.push("Stored SMS consent proof must be available before applying inbound SMS state changes.");
+  if (!input.quietHoursPolicyConfigured) blockers.push("Quiet-hours policy must be configured before SMS callback processing is promoted.");
+  if (!input.deliveryLogPersistenceAvailable) blockers.push("NotificationDelivery persistence must be available before SMS callback reconciliation.");
+  if (!input.providerEventPersistenceAvailable) blockers.push("ProviderEvent persistence must be available for SMS callback replay protection.");
+  if (reconciliation.shouldSuppressDestination && !input.suppressionPersistenceAvailable) blockers.push("Suppression persistence must be available for STOP or unsubscribe SMS events.");
+  if (reconciliation.shouldCreateInboundThread && !input.inboundThreadPersistenceAvailable) blockers.push("Inbound message thread persistence must be available for HELP or client replies.");
+  if (!input.idempotencyStoreAvailable) blockers.push("Idempotency store must be available before applying SMS callback side effects.");
+  if (!input.payloadRedacted) blockers.push("SMS webhook payload must be redacted before audit logging or previews.");
+
+  const requiredWrites = reconciliation.shouldSuppressDestination
+    ? ["ProviderEvent", "SuppressionListEntry", "ClientNotificationPreference", "NotificationAuditLog", "IdempotencyKey"]
+    : reconciliation.shouldCreateInboundThread
+      ? ["ProviderEvent", "MessageThread", "Message", "NotificationAuditLog", "IdempotencyKey"]
+      : ["ProviderEvent", "NotificationDelivery", "NotificationAuditLog", "IdempotencyKey"];
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    provider: "twilio",
+    tenantId: input.tenantId?.trim() ? input.tenantId : null,
+    eventId: input.eventId,
+    eventType: input.eventType,
+    normalizedStatus: reconciliation.interpretation.normalizedStatus,
+    idempotencyKey: reconciliation.idempotencyKey,
+    shouldUpdateDeliveryLog: blockers.length === 0 && reconciliation.shouldUpdateDeliveryLog,
+    shouldSuppressDestination: blockers.length === 0 && reconciliation.shouldSuppressDestination,
+    shouldCreateInboundThread: blockers.length === 0 && reconciliation.shouldCreateInboundThread,
+    requiredWrites,
+    requiredControls: [
+      "Verify Twilio signatures against the exact raw request body, request URL, and auth token before trusting callback fields.",
+      "Reject missing signatures, replayed MessageSid/EventSid values, tenantless payloads, and callbacks without stored consent proof.",
+      "Persist ProviderEvent idempotency before mutating delivery, suppression, or inbound thread state.",
+      "Apply STOP and unsubscribe callbacks to suppression state before future SMS sends.",
+      "Route HELP and client replies into tenant-scoped message threads with redacted previews.",
+      "Store only redacted phone numbers, message previews, and provider payload summaries in audit logs.",
+    ],
+    blockers,
+  };
+}
+
+export function buildExpoPushProviderRuntimeReadinessPlan(input: ExpoPushProviderRuntimeReadinessInput): ExpoPushProviderRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing @inkroute/notifications ${script} script.`);
+  if (!input.notificationTestsPassed) blockers.push("@inkroute/notifications push provider tests must pass.");
+  if (!input.notificationTypecheckPassed) blockers.push("@inkroute/notifications typecheck must pass.");
+  if (!input.mobileTypecheckPassed) blockers.push("@inkroute/mobile typecheck must pass with push runtime wiring.");
+  if (!input.expoProjectIdConfigured) blockers.push("Expo project id must be configured before push delivery.");
+  if (!input.expoAccessTokenConfigured) blockers.push("Expo access token must be configured in a secret store.");
+  if (!input.nativePushCredentialsConfigured) blockers.push("iOS APNs and Android FCM credentials must be configured before device delivery.");
+  if (!input.permissionRuntimeImplemented) blockers.push("Mobile runtime must request and persist push permission state.");
+  if (!input.tokenRegistrationRuntimeImplemented) blockers.push("Mobile runtime must register Expo push tokens after permission is granted.");
+  if (!input.pushTokenPersistenceAvailable) blockers.push("Tenant/user/device-scoped push token persistence must be available.");
+  if (!input.optOutPersistenceAvailable) blockers.push("Push opt-out persistence must be available before sending.");
+  if (!input.deliveryWorkerConfigured) blockers.push("Expo push delivery worker must be configured.");
+  if (!input.deliveryLogPersistenceAvailable) blockers.push("NotificationDelivery persistence must be available for push sends.");
+  if (!input.auditLogPersistenceAvailable) blockers.push("Audit-log persistence must be available for push registration, sends, receipts, and taps.");
+  if (!input.expoSendSmokePassed) blockers.push("Expo push send smoke test must pass against a real Expo token.");
+  if (!input.receiptWorkerConfigured) blockers.push("Expo receipt polling worker must be configured.");
+  if (!input.receiptReplayProtectionAvailable) blockers.push("Expo receipt processing must have replay/idempotency protection.");
+  if (!input.invalidTokenSuppressionPersistenceAvailable) blockers.push("Invalid-token suppression persistence must be available for Expo receipt failures.");
+  if (!input.deepLinkHandlerImplemented) blockers.push("Mobile push tap deep-link handler must be implemented.");
+  if (!input.foregroundDeviceQaPassed) blockers.push("Foreground push delivery must pass iOS/Android device QA.");
+  if (!input.backgroundDeviceQaPassed) blockers.push("Background push delivery must pass iOS/Android device QA.");
+  if (!input.tapNavigationDeviceQaPassed) blockers.push("Push tap navigation must pass iOS/Android device QA.");
+
+  if (!input.expoProjectIdConfigured || !input.expoAccessTokenConfigured || !input.nativePushCredentialsConfigured) {
+    requiredEvidence.push("Expo project, secret, APNs, and FCM configuration evidence");
+  }
+  if (!input.pushTokenPersistenceAvailable || !input.optOutPersistenceAvailable) {
+    requiredEvidence.push("tenant/user/device push token and opt-out persistence evidence");
+  }
+  if (!input.deliveryWorkerConfigured || !input.receiptWorkerConfigured || !input.invalidTokenSuppressionPersistenceAvailable) {
+    requiredEvidence.push("Expo delivery worker, receipt polling, and invalid-token suppression evidence");
+  }
+  if (!input.foregroundDeviceQaPassed || !input.backgroundDeviceQaPassed || !input.tapNavigationDeviceQaPassed) {
+    requiredEvidence.push("foreground/background/tap-navigation iOS and Android device QA evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    provider: "expo",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/notifications typecheck",
+      "pnpm --filter @inkroute/notifications test",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "Expo push send smoke test against a real device token",
+      "Expo receipt polling smoke test",
+      "iOS foreground/background/tap push QA",
+      "Android foreground/background/tap push QA",
+    ],
+    requiredEvidence,
+    requiredControls: [
+      "Register Expo push tokens only after permission is granted and opt-out state is checked.",
+      "Persist push tokens by tenant, user, device, app build, and platform without logging raw tokens.",
+      "Resolve consent and push opt-out state immediately before each provider send.",
+      "Persist NotificationDelivery, ProviderEvent, PushToken, NotificationInteraction, and audit records transactionally.",
+      "Poll Expo receipts, apply replay protection, and suppress DeviceNotRegistered or invalid tokens before future sends.",
+      "Allow only safe internal deep links for push tap routing.",
+      "Collect foreground, background, and tap-navigation QA evidence on iOS and Android.",
+    ],
+    blockers,
+  };
+}
+
+export function buildNotificationPersistenceRuntimeReadinessPlan(input: NotificationPersistenceRuntimeReadinessInput): NotificationPersistenceRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing @inkroute/notifications ${script} script.`);
+  if (!input.notificationTestsPassed) blockers.push("@inkroute/notifications persistence tests must pass.");
+  if (!input.notificationTypecheckPassed) blockers.push("@inkroute/notifications typecheck must pass.");
+  if (!input.prismaModelsMigrated) blockers.push("Notification/message Prisma models must be migrated before runtime persistence.");
+  if (!input.repositoriesImplemented) blockers.push("Notification/message repositories must be implemented before runtime persistence.");
+  if (!input.tenantScopedQueriesEnforced) blockers.push("All notification/message repository queries must enforce tenant scope.");
+  if (!input.transactionalWritesConfigured) blockers.push("Notification/message mutations must be committed in database transactions.");
+  if (!input.messageThreadPersistenceAvailable) blockers.push("MessageThread persistence must be available.");
+  if (!input.messagePersistenceAvailable) blockers.push("Message persistence must be available.");
+  if (!input.notificationPersistenceAvailable) blockers.push("Notification persistence must be available.");
+  if (!input.deliveryPersistenceAvailable) blockers.push("NotificationDelivery persistence must be available.");
+  if (!input.deliveryStatusTransitionPersistenceAvailable) blockers.push("Delivery status transition persistence must be available.");
+  if (!input.readStatePersistenceAvailable) blockers.push("NotificationReadState persistence must be available.");
+  if (!input.auditLogPersistenceAvailable) blockers.push("NotificationAuditLog persistence must be available.");
+  if (!input.idempotencyStoreAvailable) blockers.push("Idempotency store must be available for persistence mutations.");
+  if (!input.destinationHashingEnforced) blockers.push("Notification destinations must be hashed or redacted before persistence.");
+  if (!input.bodyPreviewRedactionEnforced) blockers.push("Message and notification body previews must be redacted before persistence.");
+  if (!input.rbacIntegrationEnforced) blockers.push("Notification/message reads and writes must enforce dashboard/client RBAC.");
+  if (!input.postgresIntegrationTestsPassed) blockers.push("Postgres integration tests must pass for notification/message repositories.");
+  if (!input.crossTenantIsolationTestsPassed) blockers.push("Cross-tenant notification/message isolation tests must pass.");
+
+  if (!input.prismaModelsMigrated || !input.repositoriesImplemented) {
+    requiredEvidence.push("Prisma migration and repository implementation evidence");
+  }
+  if (!input.transactionalWritesConfigured || !input.idempotencyStoreAvailable || !input.auditLogPersistenceAvailable) {
+    requiredEvidence.push("transactional audit/idempotency write evidence");
+  }
+  if (!input.destinationHashingEnforced || !input.bodyPreviewRedactionEnforced) {
+    requiredEvidence.push("redacted destination and body-preview persistence evidence");
+  }
+  if (!input.postgresIntegrationTestsPassed || !input.crossTenantIsolationTestsPassed) {
+    requiredEvidence.push("Postgres tenant-isolation and persistence integration test evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/notifications typecheck",
+      "pnpm --filter @inkroute/notifications test",
+      "notification repository Postgres integration tests",
+      "cross-tenant notification/message isolation tests",
+      "delivery status transition and read/unread state integration tests",
+    ],
+    requiredEvidence,
+    requiredControls: [
+      "Wrap notification, delivery, message, audit, read-state, and idempotency writes in tenant-scoped transactions.",
+      "Require tenant id in every repository filter and reject unscoped reads or writes.",
+      "Persist NotificationAuditLog rows for message append, delivery record, status update, read-state, redaction, export, and delete actions.",
+      "Hash destinations and store only redacted body previews before writing provider or message records.",
+      "Apply RBAC before dashboard, artist, assistant, or client message reads.",
+      "Use idempotency keys for provider callbacks, queue jobs, read-state mutations, and preference-linked writes.",
+      "Prove status transitions, read/unread state, and tenant isolation against Postgres repositories.",
+    ],
+    blockers,
+  };
+}
+
+export function buildNotificationSchedulerRuntimeReadinessPlan(input: NotificationSchedulerRuntimeReadinessInput): NotificationSchedulerRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing @inkroute/notifications ${script} script.`);
+  if (!input.notificationTestsPassed) blockers.push("@inkroute/notifications scheduler tests must pass.");
+  if (!input.notificationTypecheckPassed) blockers.push("@inkroute/notifications typecheck must pass.");
+  if (!input.queueStrategySelected) blockers.push("Notification queue strategy must be selected.");
+  if (!input.queueBackendConfigured) blockers.push("Notification queue backend must be configured before scheduler promotion.");
+  if (!input.schedulerProcessConfigured) blockers.push("Notification scheduler process must be configured.");
+  if (!input.workerProcessConfigured) blockers.push("Notification worker process must be configured.");
+  if (!input.notificationJobPersistenceAvailable) blockers.push("NotificationJob persistence must be available.");
+  if (!input.appointmentRelativeSchedulingImplemented) blockers.push("Appointment-relative notification scheduling must be implemented.");
+  if (!input.aftercareSequenceSchedulingImplemented) blockers.push("Aftercare sequence scheduling must be implemented.");
+  if (!input.marketingSequenceSchedulingImplemented) blockers.push("Waitlist, flash-drop, healed-photo, and review sequence scheduling must be implemented.");
+  if (!input.cancellationOnAppointmentChangeImplemented) blockers.push("Scheduled jobs must cancel or reschedule when appointments change.");
+  if (!input.dueJobClaimingTransactional) blockers.push("Due-job claiming must be transactional to prevent duplicate sends.");
+  if (!input.providerReadyGateEnforced) blockers.push("Scheduler worker must require a ready provider send plan before dispatch.");
+  if (!input.idempotencyStoreAvailable) blockers.push("Scheduler and worker idempotency store must be available.");
+  if (!input.retryBackoffExecutorConfigured) blockers.push("Retry/backoff executor must be configured.");
+  if (!input.deadLetterPersistenceAvailable) blockers.push("DeadLetterJob persistence must be available.");
+  if (!input.workerAuditLogPersistenceAvailable) blockers.push("NotificationWorkerAuditLog persistence must be available.");
+  if (!input.clockSkewPolicyConfigured) blockers.push("Scheduler clock-skew and timezone policy must be configured.");
+  if (!input.postgresQueueIntegrationTestsPassed) blockers.push("Postgres queue integration tests must pass.");
+  if (!input.retryDeadLetterIntegrationTestsPassed) blockers.push("Retry/backoff and dead-letter integration tests must pass.");
+  if (!input.cancellationIntegrationTestsPassed) blockers.push("Persisted appointment reschedule/cancel integration tests must pass.");
+
+  if (!input.queueStrategySelected || !input.queueBackendConfigured || !input.notificationJobPersistenceAvailable) {
+    requiredEvidence.push("queue backend and NotificationJob persistence evidence");
+  }
+  if (!input.schedulerProcessConfigured || !input.workerProcessConfigured || !input.dueJobClaimingTransactional) {
+    requiredEvidence.push("scheduler/worker process and transactional due-job claiming evidence");
+  }
+  if (!input.retryBackoffExecutorConfigured || !input.deadLetterPersistenceAvailable || !input.workerAuditLogPersistenceAvailable) {
+    requiredEvidence.push("retry, dead-letter, and worker audit persistence evidence");
+  }
+  if (!input.postgresQueueIntegrationTestsPassed || !input.retryDeadLetterIntegrationTestsPassed || !input.cancellationIntegrationTestsPassed) {
+    requiredEvidence.push("queue, retry/dead-letter, and appointment cancellation integration test evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/notifications typecheck",
+      "pnpm --filter @inkroute/notifications test",
+      "notification scheduler Postgres queue integration tests",
+      "notification retry/backoff and dead-letter integration tests",
+      "appointment reschedule/cancel scheduled-job cancellation integration tests",
+      "idempotent due-job worker concurrency test",
+    ],
+    requiredEvidence,
+    requiredControls: [
+      "Persist NotificationJob rows with tenant, trigger, template, scheduledAt, appointment/client references, and idempotency key.",
+      "Claim due jobs transactionally so concurrent workers cannot dispatch duplicate provider sends.",
+      "Require provider send-plan readiness immediately before job dispatch.",
+      "Cancel or reschedule future jobs when appointments are rescheduled, cancelled, completed, or deleted.",
+      "Apply bounded retry/backoff and persist exhausted jobs to DeadLetterJob with worker audit details.",
+      "Persist NotificationWorkerAuditLog rows for schedule, process, retry, cancel, and dead-letter actions.",
+      "Define scheduler clock-skew/timezone policy before appointment-relative automations run in production.",
+    ],
+    blockers,
+  };
+}
+
+export function buildProviderWebhookRuntimeReadinessPlan(input: ProviderWebhookRuntimeReadinessInput): ProviderWebhookRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing @inkroute/notifications ${script} script.`);
+  if (!input.notificationTestsPassed) blockers.push("@inkroute/notifications provider webhook tests must pass.");
+  if (!input.notificationTypecheckPassed) blockers.push("@inkroute/notifications typecheck must pass.");
+  if (!input.webRouteTestsPassed) blockers.push("Provider webhook route contract tests must pass.");
+  if (!input.emailSignatureVerificationImplemented) blockers.push("Email provider cryptographic signature verification must be implemented.");
+  if (!input.smsSignatureVerificationImplemented) blockers.push("SMS provider cryptographic signature verification must be implemented.");
+  if (!input.pushReceiptTrustedSourceVerified) blockers.push("Push receipt processing must verify trusted Expo receipt source.");
+  if (!input.rawBodyPreservedForVerification) blockers.push("Webhook routes must preserve raw request bodies for signature verification.");
+  if (!input.webhookSecretsConfigured) blockers.push("Provider webhook secrets must be configured in a secret store.");
+  if (!input.replayProtectionPersistenceAvailable) blockers.push("Durable replay protection must persist provider event ids before side effects.");
+  if (!input.providerEventPersistenceAvailable) blockers.push("ProviderEvent persistence must be available.");
+  if (!input.deliveryLogPersistenceAvailable) blockers.push("NotificationDelivery persistence must be available for reconciliation.");
+  if (!input.exactlyOnceDeliveryUpdatesEnforced) blockers.push("Delivery-log updates must be exactly-once under replay and concurrent callbacks.");
+  if (!input.suppressionPersistenceAvailable) blockers.push("Suppression persistence must be available for bounces, complaints, unsubscribes, and STOP events.");
+  if (!input.inboundRoutingPersistenceAvailable) blockers.push("Inbound thread/message persistence must be available for HELP and client replies.");
+  if (!input.invalidPushTokenPersistenceAvailable) blockers.push("Invalid push-token persistence must be available for Expo receipt failures.");
+  if (!input.tenantResolutionEnforced) blockers.push("Provider webhook payloads must resolve tenant scope before mutation.");
+  if (!input.payloadRedactionEnforced) blockers.push("Provider webhook payloads must be redacted before audit logging.");
+  if (!input.failedWebhookAlertingConfigured) blockers.push("Failed webhook verification or reconciliation must emit alerting.");
+  if (!input.providerSandboxWebhookTestsPassed) blockers.push("Provider sandbox webhook and receipt tests must pass.");
+  if (!input.routeInvalidSignatureTestsPassed) blockers.push("Route-level invalid-signature rejection tests must pass.");
+
+  if (!input.emailSignatureVerificationImplemented || !input.smsSignatureVerificationImplemented || !input.rawBodyPreservedForVerification || !input.webhookSecretsConfigured) {
+    requiredEvidence.push("provider signature verification and raw-body route evidence");
+  }
+  if (!input.replayProtectionPersistenceAvailable || !input.exactlyOnceDeliveryUpdatesEnforced || !input.providerEventPersistenceAvailable) {
+    requiredEvidence.push("durable replay protection and exactly-once ProviderEvent evidence");
+  }
+  if (!input.deliveryLogPersistenceAvailable || !input.suppressionPersistenceAvailable || !input.inboundRoutingPersistenceAvailable || !input.invalidPushTokenPersistenceAvailable) {
+    requiredEvidence.push("delivery, suppression, inbound routing, and invalid-token persistence evidence");
+  }
+  if (!input.providerSandboxWebhookTestsPassed || !input.routeInvalidSignatureTestsPassed || !input.failedWebhookAlertingConfigured) {
+    requiredEvidence.push("provider sandbox, invalid-signature, and failed-webhook alerting evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/notifications typecheck",
+      "pnpm --filter @inkroute/notifications test",
+      "pnpm vitest run apps/web/tests/provider-webhook-routes.test.ts",
+      "email provider sandbox webhook replay and invalid-signature tests",
+      "Twilio sandbox callback replay and invalid-signature tests",
+      "Expo receipt polling invalid-token integration test",
+      "concurrent provider callback exactly-once delivery-log test",
+    ],
+    requiredEvidence,
+    requiredControls: [
+      "Verify provider signatures against raw request bodies before parsing payloads for trusted side effects.",
+      "Persist ProviderEvent ids transactionally before delivery, suppression, inbound, or push-token mutations.",
+      "Apply exactly-once delivery status updates under replayed and concurrent provider callbacks.",
+      "Persist bounce, complaint, unsubscribe, STOP, HELP, inbound reply, and invalid push-token outcomes in tenant scope.",
+      "Resolve tenant scope before any provider webhook mutation and reject tenantless payloads.",
+      "Redact provider payloads, destinations, message bodies, and tokens before audit logs or previews.",
+      "Alert on failed signature verification, replay attempts, reconciliation failures, and dead-lettered webhook events.",
+    ],
+    blockers,
+  };
+}
+
+export function buildPreferenceCenterRuntimeReadinessPlan(input: PreferenceCenterRuntimeReadinessInput): PreferenceCenterRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing @inkroute/notifications ${script} script.`);
+  if (!input.notificationTestsPassed) blockers.push("@inkroute/notifications preference tests must pass.");
+  if (!input.notificationTypecheckPassed) blockers.push("@inkroute/notifications typecheck must pass.");
+  if (!input.webRouteTestsPassed) blockers.push("Preference/unsubscribe web route tests must pass.");
+  if (!input.dashboardTestsPassed) blockers.push("Tenant notification settings dashboard tests must pass.");
+  if (!input.preferenceCenterPageImplemented) blockers.push("Client preference center page must be implemented.");
+  if (!input.unsubscribePageImplemented) blockers.push("One-click email unsubscribe page must be implemented.");
+  if (!input.preferenceApiImplemented) blockers.push("Preference mutation API routes must be implemented.");
+  if (!input.signedPreferenceTokensIssued) blockers.push("Signed preference tokens must be issued for client preference links.");
+  if (!input.preferenceTokenHashPersistenceAvailable) blockers.push("Preference token hashes must be persisted instead of raw tokens.");
+  if (!input.tokenExpiryEnforced) blockers.push("Preference token expiration must be enforced.");
+  if (!input.forgedTokenRejectionTested) blockers.push("Forged, expired, tenant-mismatched, and reused preference tokens must be rejected by tests.");
+  if (!input.listUnsubscribeHeadersConfigured) blockers.push("Transactional email provider sends must include configured List-Unsubscribe headers where applicable.");
+  if (!input.emailUnsubscribePersistenceAvailable) blockers.push("Email unsubscribe persistence must be available.");
+  if (!input.smsStopPersistenceAvailable) blockers.push("SMS STOP suppression persistence must be available.");
+  if (!input.smsStartPersistenceAvailable) blockers.push("SMS START re-consent persistence must be available.");
+  if (!input.tenantChannelSettingsUiImplemented) blockers.push("Tenant channel settings dashboard UI must be implemented.");
+  if (!input.tenantChannelSettingsPersistenceAvailable) blockers.push("Tenant channel settings persistence must be available.");
+  if (!input.transactionalVsMarketingControlsEnforced) blockers.push("Transactional notification permission must be separated from marketing opt-in.");
+  if (!input.suppressionAppliedBeforeSend) blockers.push("Email unsubscribe and SMS STOP suppression must be applied immediately before provider sends.");
+  if (!input.auditLogPersistenceAvailable) blockers.push("Preference mutation audit-log persistence must be available.");
+  if (!input.idempotencyStoreAvailable) blockers.push("Preference mutation idempotency store must be available.");
+  if (!input.legalApprovedPreferenceCopyAvailable) blockers.push("Preference, unsubscribe, SMS STOP/START, and tenant settings copy must be legal-approved.");
+  if (!input.routeApiTestsPassed) blockers.push("Preference center, unsubscribe, STOP/START, and tenant settings route/API tests must pass.");
+
+  if (!input.preferenceCenterPageImplemented || !input.unsubscribePageImplemented || !input.preferenceApiImplemented || !input.tenantChannelSettingsUiImplemented) {
+    requiredEvidence.push("client preference center, unsubscribe page, preference API, and tenant settings UI evidence");
+  }
+  if (!input.signedPreferenceTokensIssued || !input.preferenceTokenHashPersistenceAvailable || !input.tokenExpiryEnforced || !input.forgedTokenRejectionTested) {
+    requiredEvidence.push("signed preference token issuance, hash persistence, expiry, and forgery rejection evidence");
+  }
+  if (!input.emailUnsubscribePersistenceAvailable || !input.smsStopPersistenceAvailable || !input.smsStartPersistenceAvailable || !input.suppressionAppliedBeforeSend) {
+    requiredEvidence.push("email unsubscribe, SMS STOP/START, and pre-send suppression persistence evidence");
+  }
+  if (!input.auditLogPersistenceAvailable || !input.idempotencyStoreAvailable || !input.legalApprovedPreferenceCopyAvailable || !input.routeApiTestsPassed) {
+    requiredEvidence.push("audit, idempotency, legal copy, and route/API test evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/notifications typecheck",
+      "pnpm --filter @inkroute/notifications test",
+      "preference center and unsubscribe route/API tests",
+      "tenant notification settings dashboard tests",
+      "signed preference token forgery and expiry tests",
+      "pre-send suppression integration tests",
+    ],
+    requiredEvidence,
+    requiredControls: [
+      "Issue scoped signed preference links and persist only hashed token values.",
+      "Reject expired, forged, reused, or tenant/client-mismatched preference tokens before mutation.",
+      "Separate transactional notification permission from marketing opt-in and preserve required service-message behavior.",
+      "Persist email unsubscribe, SMS STOP, SMS START, and tenant setting changes with audit logs and idempotency keys.",
+      "Apply email unsubscribe and SMS STOP suppression immediately before provider send planning.",
+      "Include List-Unsubscribe headers or equivalent provider metadata where applicable.",
+      "Use legal-approved preference, unsubscribe, STOP, START, and tenant-settings copy before production launch.",
+    ],
+    blockers,
+  };
+}
+
+export function buildMessagingPrivacyRuntimeReadinessPlan(input: MessagingPrivacyRuntimeReadinessInput): MessagingPrivacyRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing @inkroute/notifications ${script} script.`);
+  if (!input.notificationTestsPassed) blockers.push("@inkroute/notifications messaging privacy tests must pass.");
+  if (!input.notificationTypecheckPassed) blockers.push("@inkroute/notifications typecheck must pass.");
+  if (!input.dashboardTestsPassed) blockers.push("Dashboard messaging privacy and role-visibility tests must pass.");
+  if (!input.messagingApiTestsPassed) blockers.push("Messaging privacy API tests must pass.");
+  if (!input.redactionServiceImplemented) blockers.push("Production message redaction service must be implemented.");
+  if (!input.piiDetectionConfigured) blockers.push("PII detection must be configured for message bodies and previews.");
+  if (!input.medicalPaymentPrivateUrlDetectionConfigured) blockers.push("Medical, payment, and private URL detection must be configured.");
+  if (!input.bodyPreviewRedactionEnforced) blockers.push("Message body previews must be redacted before persistence and display.");
+  if (!input.roleGatedMessageUiImplemented) blockers.push("Dashboard message UI must enforce role-based field visibility.");
+  if (!input.roleGatedApiAuthorizationEnforced) blockers.push("Messaging APIs must enforce role-based authorization before returning fields.");
+  if (!input.unauthorizedRoleDenialTestsPassed) blockers.push("Unauthorized role denial tests must pass for messaging UI/API.");
+  if (!input.secureAttachmentAuthorizationImplemented) blockers.push("Secure message attachment authorization service must be implemented.");
+  if (!input.attachmentPolicyTestsPassed) blockers.push("Secure attachment policy tests must pass.");
+  if (!input.exportWorkflowPersistenceAvailable) blockers.push("Message export workflow persistence must be available.");
+  if (!input.deleteWorkflowPersistenceAvailable) blockers.push("Message delete workflow persistence must be available.");
+  if (!input.retentionWorkflowPersistenceAvailable) blockers.push("Message retention workflow persistence must be available.");
+  if (!input.retentionJobConfigured) blockers.push("Message retention job must be configured.");
+  if (!input.providerPayloadExportOmissionEnforced) blockers.push("Message exports must omit raw provider payloads.");
+  if (!input.privateUrlExportOmissionEnforced) blockers.push("Message exports must omit private URLs and signed attachment URLs.");
+  if (!input.moderationRateLimitIntegrationConfigured) blockers.push("Messaging spam moderation and rate-limit integration must be configured.");
+  if (!input.spamModerationTestsPassed) blockers.push("Messaging spam moderation and rate-limit tests must pass.");
+  if (!input.auditLogPersistenceAvailable) blockers.push("Messaging privacy audit-log persistence must be available.");
+  if (!input.idempotencyStoreAvailable) blockers.push("Messaging privacy idempotency store must be available.");
+  if (!input.postgresRetentionIntegrationTestsPassed) blockers.push("Postgres retention/delete/export integration tests must pass.");
+
+  if (!input.redactionServiceImplemented || !input.piiDetectionConfigured || !input.medicalPaymentPrivateUrlDetectionConfigured || !input.bodyPreviewRedactionEnforced) {
+    requiredEvidence.push("production redaction service and sensitive-content detection evidence");
+  }
+  if (!input.roleGatedMessageUiImplemented || !input.roleGatedApiAuthorizationEnforced || !input.unauthorizedRoleDenialTestsPassed) {
+    requiredEvidence.push("role-gated messaging UI/API and unauthorized-role denial evidence");
+  }
+  if (!input.secureAttachmentAuthorizationImplemented || !input.attachmentPolicyTestsPassed) {
+    requiredEvidence.push("secure attachment authorization and policy test evidence");
+  }
+  if (!input.exportWorkflowPersistenceAvailable || !input.deleteWorkflowPersistenceAvailable || !input.retentionWorkflowPersistenceAvailable || !input.retentionJobConfigured || !input.postgresRetentionIntegrationTestsPassed) {
+    requiredEvidence.push("persistence-backed export, delete, retention job, and Postgres integration evidence");
+  }
+  if (!input.moderationRateLimitIntegrationConfigured || !input.spamModerationTestsPassed || !input.auditLogPersistenceAvailable || !input.idempotencyStoreAvailable) {
+    requiredEvidence.push("moderation/rate-limit, audit, idempotency, and spam test evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/notifications typecheck",
+      "pnpm --filter @inkroute/notifications test",
+      "dashboard messaging role-visibility tests",
+      "messaging privacy API authorization tests",
+      "secure attachment authorization tests",
+      "message export/delete/retention Postgres integration tests",
+      "messaging spam moderation and rate-limit tests",
+    ],
+    requiredEvidence,
+    requiredControls: [
+      "Redact PII, phone, email, payment, medical, private URL, and signed attachment URL content before persistence, previews, logs, or exports.",
+      "Enforce role-based field visibility in both dashboard UI and messaging APIs.",
+      "Authorize message attachments through a secure attachment policy before display or export.",
+      "Persist export, delete, retention, moderation, redaction, and attachment-access audit events with idempotency keys.",
+      "Omit raw provider payloads, private URLs, signed URLs, and secrets from message exports.",
+      "Run retention jobs against persisted messages and preserve audit evidence for deletes and exports.",
+      "Apply spam moderation and rate limits before storing or routing suspicious inbound messages.",
+    ],
+    blockers,
+  };
+}
+
+export function buildNotificationAutomatedTestReadinessPlan(input: NotificationAutomatedTestReadinessInput): NotificationAutomatedTestReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+  const requiredSuites = [
+    "@inkroute/notifications unit tests",
+    "@inkroute/notifications typecheck",
+    "public notification preview and messaging route contract tests",
+    "provider webhook route contract tests",
+    "notification queue integration tests",
+    "dashboard template and message Playwright smoke tests",
+    "mobile notification and Expo push device QA",
+    "provider sandbox email/SMS/push receipt tests",
+    "preference opt-out and SMS STOP persistence tests",
+    "booking-to-deposit, booking-to-aftercare, and travel waitlist notification E2E flows",
+    "message retention/export/delete integration tests",
+    "CI Phase 9 notification job with published artifacts",
+  ];
+
+  for (const script of missingScripts) blockers.push(`Missing @inkroute/notifications ${script} script.`);
+  if (!input.notificationUnitTestsPassed) blockers.push("@inkroute/notifications unit tests must pass.");
+  if (!input.notificationTypecheckPassed) blockers.push("@inkroute/notifications typecheck must pass.");
+  if (!input.publicRouteContractTestsPassed) blockers.push("Public notification preview and messaging route contract tests must pass.");
+  if (!input.providerWebhookRouteTestsPassed) blockers.push("Provider webhook route contract tests must pass.");
+  if (!input.queueIntegrationTestsPassed) blockers.push("Notification queue integration tests must pass.");
+  if (!input.dashboardTemplateSmokeTestsPassed) blockers.push("Dashboard template smoke tests must pass.");
+  if (!input.dashboardMessageSmokeTestsPassed) blockers.push("Dashboard message smoke tests must pass.");
+  if (!input.mobileNotificationSmokeTestsPassed) blockers.push("Mobile notification smoke tests must pass.");
+  if (!input.expoPushDeviceQaPassed) blockers.push("Expo push iOS/Android device QA must pass.");
+  if (!input.providerSandboxEmailTestsPassed) blockers.push("Email provider sandbox tests must pass.");
+  if (!input.providerSandboxSmsTestsPassed) blockers.push("SMS provider sandbox tests must pass.");
+  if (!input.providerSandboxPushReceiptTestsPassed) blockers.push("Expo push receipt sandbox tests must pass.");
+  if (!input.preferenceOptOutPersistenceTestsPassed) blockers.push("Preference opt-out persistence tests must pass.");
+  if (!input.smsStopPersistenceTestsPassed) blockers.push("SMS STOP persistence tests must pass.");
+  if (!input.bookingToAftercareE2ePassed) blockers.push("Booking-to-aftercare notification E2E flow must pass.");
+  if (!input.bookingToDepositNotificationE2ePassed) blockers.push("Booking-to-deposit notification E2E flow must pass.");
+  if (!input.travelWaitlistNotificationE2ePassed) blockers.push("Travel waitlist notification E2E flow must pass.");
+  if (!input.retentionExportDeleteIntegrationTestsPassed) blockers.push("Message retention/export/delete integration tests must pass.");
+  if (!input.ciPhase9NotificationJobConfigured) blockers.push("CI must include a Phase 9 notification/messaging test job.");
+  if (!input.testArtifactsPublished) blockers.push("Phase 9 notification/messaging test artifacts must be published.");
+
+  if (!input.queueIntegrationTestsPassed || !input.preferenceOptOutPersistenceTestsPassed || !input.smsStopPersistenceTestsPassed || !input.retentionExportDeleteIntegrationTestsPassed) {
+    requiredEvidence.push("queue, opt-out, STOP, and retention/export/delete integration test evidence");
+  }
+  if (!input.dashboardTemplateSmokeTestsPassed || !input.dashboardMessageSmokeTestsPassed || !input.mobileNotificationSmokeTestsPassed || !input.expoPushDeviceQaPassed) {
+    requiredEvidence.push("dashboard/mobile smoke and Expo device QA evidence");
+  }
+  if (!input.providerSandboxEmailTestsPassed || !input.providerSandboxSmsTestsPassed || !input.providerSandboxPushReceiptTestsPassed) {
+    requiredEvidence.push("email, SMS, and push provider sandbox evidence");
+  }
+  if (!input.bookingToAftercareE2ePassed || !input.bookingToDepositNotificationE2ePassed || !input.travelWaitlistNotificationE2ePassed) {
+    requiredEvidence.push("booking, deposit, aftercare, and travel notification E2E evidence");
+  }
+  if (!input.ciPhase9NotificationJobConfigured || !input.testArtifactsPublished) {
+    requiredEvidence.push("CI Phase 9 notification job and published artifact evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/notifications typecheck",
+      "pnpm --filter @inkroute/notifications test",
+      "pnpm vitest run apps/web/tests/notification-messaging-routes.test.ts",
+      "pnpm vitest run apps/web/tests/provider-webhook-routes.test.ts",
+      "notification queue integration test command",
+      "Playwright dashboard templates/messages smoke tests",
+      "Expo iOS/Android push device QA",
+      "provider sandbox email/SMS/push receipt tests",
+      "booking-to-deposit/aftercare/travel notification E2E tests",
+    ],
+    requiredEvidence,
+    requiredSuites,
+    blockers,
   };
 }
 

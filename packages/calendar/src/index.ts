@@ -167,6 +167,35 @@ export interface AvailabilityPersistencePlan {
   blockers: readonly string[];
 }
 
+export interface AvailabilityRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  calendarTestsPassed: boolean;
+  calendarTypecheckPassed: boolean;
+  dbSchemaIncludesAvailabilityModels: boolean;
+  repositoriesImplemented: boolean;
+  tenantScopedQueriesEnforced: boolean;
+  transactionalWindowCreationImplemented: boolean;
+  transactionalSlotHoldImplemented: boolean;
+  appointmentConfirmationImplemented: boolean;
+  holdReleaseImplemented: boolean;
+  auditLogPersistenceConfigured: boolean;
+  idempotencyStoreConfigured: boolean;
+  conflictDetectionAgainstPersistedRows: boolean;
+  concurrentHoldProtectionConfigured: boolean;
+  overlappingSlotDbRejectionTested: boolean;
+  crossTenantIsolationTestsPassed: boolean;
+  seededPostgresIntegrationTestsPassed: boolean;
+  dashboardAndApiUseRepository: boolean;
+}
+
+export interface AvailabilityRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export type GoogleCalendarSyncAction =
   | "oauth_connect"
   | "freebusy_check"
@@ -224,6 +253,38 @@ export interface GoogleCalendarProviderSyncPlan {
   blockers: readonly string[];
 }
 
+export interface GoogleCalendarRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  calendarTestsPassed: boolean;
+  calendarTypecheckPassed: boolean;
+  googleSdkInstalled: boolean;
+  oauthAppConfigured: boolean;
+  oauthCallbackRouteImplemented: boolean;
+  requiredScopesConfigured: boolean;
+  encryptedTokenRepositoryImplemented: boolean;
+  providerWorkerImplemented: boolean;
+  freebusySmokeTested: boolean;
+  eventInsertUpdateDeleteSmokeTested: boolean;
+  fullSyncImplemented: boolean;
+  incrementalSyncTokenPersisted: boolean;
+  invalidSyncTokenFullResyncTested: boolean;
+  pushChannelRenewalImplemented: boolean;
+  pushWebhookHandlerImplemented: boolean;
+  retryBackoffConfigured: boolean;
+  idempotencyStoreConfigured: boolean;
+  calendarAuditLogPersistenceConfigured: boolean;
+  tenantIsolationTestsPassed: boolean;
+  googleTestCalendarEvidenceAttached: boolean;
+}
+
+export interface GoogleCalendarRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export type TimezoneQaCheck =
   | "iana_validation"
   | "dst_transition"
@@ -264,6 +325,34 @@ export interface TimezoneRecurrenceQaPlan {
   coveredChecks: readonly TimezoneQaCheck[];
   findings: readonly TimezoneRecurrenceQaFinding[];
   requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface TimezoneRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  calendarTestsPassed: boolean;
+  calendarTypecheckPassed: boolean;
+  timezoneStrategySelected: boolean;
+  temporalOrDateLibraryImplemented: boolean;
+  routeIanaValidationEnforced: boolean;
+  persistenceIanaValidationEnforced: boolean;
+  storedUtcAndTimezoneVerified: boolean;
+  dstSpringForwardTested: boolean;
+  dstFallBackTested: boolean;
+  recurringAvailabilityExpansionTested: boolean;
+  allDayTravelWindowTested: boolean;
+  crossCityRenderingTested: boolean;
+  providerRenderSmokeTested: boolean;
+  googleProviderTimezoneSmokeTested: boolean;
+  icsProviderTimezoneSmokeTested: boolean;
+  seededPersistenceBoundaryTestsPassed: boolean;
+}
+
+export interface TimezoneRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
   blockers: readonly string[];
 }
 
@@ -313,6 +402,36 @@ export interface TravelPublishMutationPlan {
   blockers: readonly string[];
 }
 
+export interface TravelPublishRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  calendarTestsPassed: boolean;
+  calendarTypecheckPassed: boolean;
+  dashboardMutationRouteImplemented: boolean;
+  dashboardAuthorizationEnforced: boolean;
+  persistedTravelRepositoryImplemented: boolean;
+  publicDataApiImplemented: boolean;
+  cacheRevalidationCalledAfterCommit: boolean;
+  cityWaitlistMatchingImplemented: boolean;
+  consentFilteredNotificationQueueImplemented: boolean;
+  notificationProviderQueueTested: boolean;
+  mobileSyncTransportImplemented: boolean;
+  dashboardSyncTransportImplemented: boolean;
+  webSyncEventPersistenceConfigured: boolean;
+  auditLogPersistenceConfigured: boolean;
+  rollbackExecutorImplemented: boolean;
+  failedProviderRollbackTested: boolean;
+  tenantIsolationTestsPassed: boolean;
+  e2eTravelPublishFlowPassed: boolean;
+}
+
+export interface TravelPublishRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export interface CalendarRuntimeReadinessInput {
   packageScripts: Readonly<Record<string, string>>;
   packageTestsPassed: boolean;
@@ -336,6 +455,58 @@ export interface CalendarRuntimeReadinessPlan {
   missingScripts: readonly string[];
   requiredCommands: readonly string[];
   requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface CalendarAutomatedTestReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  calendarHelperTestsPassed: boolean;
+  signedIcsRouteTestsPassed: boolean;
+  availabilityPreviewRouteTestsPassed: boolean;
+  postgresIntegrationTestsPassed: boolean;
+  googleProviderTestsPassed: boolean;
+  timezoneProviderMatrixTestsPassed: boolean;
+  dashboardCalendarPlaywrightPassed: boolean;
+  publicTravelPlaywrightPassed: boolean;
+  concurrentHoldRaceTestsPassed: boolean;
+  signedIcsRevocationDbTestsPassed: boolean;
+  ciCalendarTestJobConfigured: boolean;
+  artifactsCaptured: boolean;
+}
+
+export interface CalendarAutomatedTestReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface SignedIcsFeedRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  calendarTestsPassed: boolean;
+  calendarTypecheckPassed: boolean;
+  webRouteTestsPassed: boolean;
+  webTypecheckPassed: boolean;
+  tokenCreationImplemented: boolean;
+  hashedTokenPersistenceConfigured: boolean;
+  expiryRotationPersistenceConfigured: boolean;
+  revocationUiImplemented: boolean;
+  revocationApiImplemented: boolean;
+  revokedTokenRouteRejectionTested: boolean;
+  tenantArtistScopeEnforced: boolean;
+  durableAccessLogPersistenceConfigured: boolean;
+  privateCacheHeadersVerified: boolean;
+  appleCalendarImportTested: boolean;
+  googleCalendarImportTested: boolean;
+  outlookCalendarImportTested: boolean;
+}
+
+export interface SignedIcsFeedRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
   blockers: readonly string[];
 }
 
@@ -512,6 +683,62 @@ export function buildTimezoneRecurrenceQaPlan(input: TimezoneRecurrenceQaPlanInp
   };
 }
 
+export function buildTimezoneRuntimeReadinessPlan(input: TimezoneRuntimeReadinessInput): TimezoneRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/calendar package script is missing ${script}.`);
+  if (!input.calendarTestsPassed) blockers.push("@inkroute/calendar timezone tests must pass.");
+  if (!input.calendarTypecheckPassed) blockers.push("@inkroute/calendar typecheck must pass.");
+  if (!input.timezoneStrategySelected) blockers.push("Timezone/date strategy must be selected before production scheduling.");
+  if (!input.temporalOrDateLibraryImplemented) blockers.push("Temporal or an explicit timezone/date library must be implemented at route, persistence, and provider boundaries.");
+  if (!input.routeIanaValidationEnforced) blockers.push("Routes must reject missing, untrimmed, or non-IANA timezone identifiers.");
+  if (!input.persistenceIanaValidationEnforced) blockers.push("Persistence layer must reject invalid timezone identifiers before writing scheduling records.");
+  if (!input.storedUtcAndTimezoneVerified) blockers.push("Scheduling records must store canonical UTC instants plus IANA timezone identifiers.");
+  if (!input.dstSpringForwardTested) blockers.push("DST spring-forward behavior must be tested.");
+  if (!input.dstFallBackTested) blockers.push("DST fall-back behavior must be tested.");
+  if (!input.recurringAvailabilityExpansionTested) blockers.push("Recurring availability expansion must be tested against stored windows.");
+  if (!input.allDayTravelWindowTested) blockers.push("All-day/travel windows must be tested without floating-time drift.");
+  if (!input.crossCityRenderingTested) blockers.push("Cross-city appointment rendering must be tested for Los Angeles, Phoenix, New York, and Chicago.");
+  if (!input.providerRenderSmokeTested) blockers.push("Internal/provider rendered calendar labels must be smoke-tested.");
+  if (!input.googleProviderTimezoneSmokeTested) blockers.push("Google Calendar timezone rendering smoke test must pass.");
+  if (!input.icsProviderTimezoneSmokeTested) blockers.push("ICS timezone rendering/import smoke test must pass.");
+  if (!input.seededPersistenceBoundaryTestsPassed) blockers.push("Seeded persistence-boundary tests must prove timezone validation and recurrence expansion against stored data.");
+
+  if (!input.timezoneStrategySelected || !input.temporalOrDateLibraryImplemented) {
+    requiredEvidence.push("documented Temporal/date-library strategy with route, persistence, provider, and render usage");
+  }
+  if (!input.routeIanaValidationEnforced || !input.persistenceIanaValidationEnforced || !input.storedUtcAndTimezoneVerified) {
+    requiredEvidence.push("route and persistence tests proving valid IANA timezone enforcement and UTC+timezone storage");
+  }
+  if (!input.dstSpringForwardTested || !input.dstFallBackTested || !input.recurringAvailabilityExpansionTested || !input.allDayTravelWindowTested) {
+    requiredEvidence.push("DST, recurrence expansion, and all-day travel-window test output");
+  }
+  if (!input.crossCityRenderingTested || !input.providerRenderSmokeTested || !input.googleProviderTimezoneSmokeTested || !input.icsProviderTimezoneSmokeTested) {
+    requiredEvidence.push("cross-city internal, Google, and ICS provider render smoke-test artifacts");
+  }
+  if (!input.seededPersistenceBoundaryTestsPassed) {
+    requiredEvidence.push("seeded persistence-boundary tests for stored availability, appointments, travel windows, and recurrence expansion");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "timezone route/persistence boundary tests",
+      "stored recurrence expansion integration tests",
+      "Google Calendar timezone render smoke",
+      "ICS timezone import/render smoke",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
 export function buildCalendarRuntimeReadinessPlan(input: CalendarRuntimeReadinessInput): CalendarRuntimeReadinessPlan {
   const requiredScripts = ["build", "typecheck", "test"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
@@ -554,6 +781,62 @@ export function buildCalendarRuntimeReadinessPlan(input: CalendarRuntimeReadines
       "Run DST, recurrence, provider render, and all-day travel timezone QA before launch.",
       "Emit dashboard/mobile/public revalidation events after committed travel and scheduling mutations.",
     ],
+    blockers,
+  };
+}
+
+export function buildCalendarAutomatedTestReadinessPlan(
+  input: CalendarAutomatedTestReadinessInput,
+): CalendarAutomatedTestReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/calendar package script is missing ${script}.`);
+  if (!input.calendarHelperTestsPassed) blockers.push("@inkroute/calendar helper/planning tests must pass.");
+  if (!input.signedIcsRouteTestsPassed) blockers.push("Signed ICS feed route tests must pass.");
+  if (!input.availabilityPreviewRouteTestsPassed) blockers.push("Availability preview route tests must pass.");
+  if (!input.postgresIntegrationTestsPassed) blockers.push("Postgres calendar integration tests must pass for availability, holds, appointments, audit logs, and feed tokens.");
+  if (!input.googleProviderTestsPassed) blockers.push("Google provider integration tests must pass against a test calendar.");
+  if (!input.timezoneProviderMatrixTestsPassed) blockers.push("DST/recurrence provider matrix tests must pass across internal, Google, and ICS outputs.");
+  if (!input.dashboardCalendarPlaywrightPassed) blockers.push("Playwright dashboard calendar smoke tests must pass.");
+  if (!input.publicTravelPlaywrightPassed) blockers.push("Playwright public travel page smoke tests must pass.");
+  if (!input.concurrentHoldRaceTestsPassed) blockers.push("Concurrent hold race-condition tests must pass.");
+  if (!input.signedIcsRevocationDbTestsPassed) blockers.push("Signed ICS revocation DB tests must pass.");
+  if (!input.ciCalendarTestJobConfigured) blockers.push("CI must run calendar helper, route, DB, provider, timezone, and Playwright smoke tests.");
+  if (!input.artifactsCaptured) blockers.push("Calendar test artifacts must capture DB logs, Google provider transcripts, Playwright traces, and ICS import output.");
+
+  if (!input.calendarHelperTestsPassed || !input.signedIcsRouteTestsPassed || !input.availabilityPreviewRouteTestsPassed) {
+    requiredEvidence.push("calendar helper and public route test output");
+  }
+  if (!input.postgresIntegrationTestsPassed || !input.concurrentHoldRaceTestsPassed || !input.signedIcsRevocationDbTestsPassed) {
+    requiredEvidence.push("Postgres integration output for availability persistence, concurrent holds, audit logs, and signed-feed revocation");
+  }
+  if (!input.googleProviderTestsPassed) requiredEvidence.push("Google test-calendar provider integration transcript");
+  if (!input.timezoneProviderMatrixTestsPassed) {
+    requiredEvidence.push("DST/recurrence provider matrix output for internal, Google, and ICS render paths");
+  }
+  if (!input.dashboardCalendarPlaywrightPassed || !input.publicTravelPlaywrightPassed) {
+    requiredEvidence.push("Playwright dashboard calendar and public travel smoke-test artifacts");
+  }
+  if (!input.ciCalendarTestJobConfigured || !input.artifactsCaptured) {
+    requiredEvidence.push("CI calendar test job configuration and retained artifacts");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "pnpm vitest run apps/web/tests/ics-feed-route.test.ts",
+      "pnpm vitest run apps/web/tests/availability-preview-route.test.ts",
+      "calendar Postgres integration tests",
+      "Google test-calendar provider tests",
+      "Playwright dashboard/public travel calendar smoke",
+    ],
+    requiredEvidence,
     blockers,
   };
 }
@@ -870,6 +1153,70 @@ export function buildGoogleCalendarProviderSyncPlan(input: GoogleCalendarSyncPla
   };
 }
 
+export function buildGoogleCalendarRuntimeReadinessPlan(input: GoogleCalendarRuntimeReadinessInput): GoogleCalendarRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/calendar package script is missing ${script}.`);
+  if (!input.calendarTestsPassed) blockers.push("@inkroute/calendar Google sync tests must pass.");
+  if (!input.calendarTypecheckPassed) blockers.push("@inkroute/calendar typecheck must pass.");
+  if (!input.googleSdkInstalled) blockers.push("Google Calendar SDK/client dependency must be installed and pinned.");
+  if (!input.oauthAppConfigured) blockers.push("Google OAuth app, redirect URI, and client credentials must be configured.");
+  if (!input.oauthCallbackRouteImplemented) blockers.push("Google OAuth callback route must exchange code and persist encrypted tokens.");
+  if (!input.requiredScopesConfigured) blockers.push("Required Google Calendar scopes must be configured and consented.");
+  if (!input.encryptedTokenRepositoryImplemented) blockers.push("Encrypted Google token repository must be implemented.");
+  if (!input.providerWorkerImplemented) blockers.push("Google Calendar provider worker must execute sync operations.");
+  if (!input.freebusySmokeTested) blockers.push("Google FreeBusy smoke test must pass against a test calendar.");
+  if (!input.eventInsertUpdateDeleteSmokeTested) blockers.push("Google event insert/update/delete smoke test must pass.");
+  if (!input.fullSyncImplemented) blockers.push("Full calendar sync must be implemented.");
+  if (!input.incrementalSyncTokenPersisted) blockers.push("Incremental sync token persistence must be implemented.");
+  if (!input.invalidSyncTokenFullResyncTested) blockers.push("Invalid sync-token recovery must trigger and verify full resync.");
+  if (!input.pushChannelRenewalImplemented) blockers.push("Google push channel renewal must be implemented.");
+  if (!input.pushWebhookHandlerImplemented) blockers.push("Google push webhook/channel handler must be implemented and verified.");
+  if (!input.retryBackoffConfigured) blockers.push("Google provider retry/backoff policy must be configured.");
+  if (!input.idempotencyStoreConfigured) blockers.push("Google provider operations must claim idempotency keys before provider calls.");
+  if (!input.calendarAuditLogPersistenceConfigured) blockers.push("CalendarAuditLog persistence must be configured for every Google provider operation.");
+  if (!input.tenantIsolationTestsPassed) blockers.push("Google calendar provider tests must deny cross-tenant connection and event access.");
+  if (!input.googleTestCalendarEvidenceAttached) blockers.push("Google test calendar evidence must be attached for OAuth, freebusy, event sync, push, and recovery flows.");
+
+  if (!input.googleSdkInstalled || !input.oauthAppConfigured || !input.oauthCallbackRouteImplemented || !input.requiredScopesConfigured) {
+    requiredEvidence.push("Google SDK/client setup plus OAuth app, scopes, and callback route evidence");
+  }
+  if (!input.encryptedTokenRepositoryImplemented || !input.providerWorkerImplemented || !input.calendarAuditLogPersistenceConfigured) {
+    requiredEvidence.push("encrypted token repository, provider worker, and CalendarAuditLog persistence evidence");
+  }
+  if (!input.freebusySmokeTested || !input.eventInsertUpdateDeleteSmokeTested) {
+    requiredEvidence.push("Google test calendar FreeBusy and event insert/update/delete smoke-test output");
+  }
+  if (!input.fullSyncImplemented || !input.incrementalSyncTokenPersisted || !input.invalidSyncTokenFullResyncTested) {
+    requiredEvidence.push("full sync, incremental sync-token persistence, and invalid-token recovery evidence");
+  }
+  if (!input.pushChannelRenewalImplemented || !input.pushWebhookHandlerImplemented) {
+    requiredEvidence.push("Google push channel renewal and webhook handler test output");
+  }
+  if (!input.retryBackoffConfigured || !input.idempotencyStoreConfigured || !input.tenantIsolationTestsPassed || !input.googleTestCalendarEvidenceAttached) {
+    requiredEvidence.push("retry/idempotency, tenant-isolation, and Google test-calendar artifact evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "Google OAuth callback smoke test",
+      "Google FreeBusy test-calendar smoke",
+      "Google event insert/update/delete smoke",
+      "Google invalid sync-token full-resync smoke",
+      "Google push channel renewal/webhook smoke",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
 export function buildTravelPublishPlan(stop: TravelStop): TravelPublishPlan {
   const citySlug = slugify(`${stop.city}-${stop.region}`);
   return {
@@ -1002,6 +1349,68 @@ export function buildTravelPublishMutationPlan(input: TravelPublishMutationPlanI
   };
 }
 
+export function buildTravelPublishRuntimeReadinessPlan(input: TravelPublishRuntimeReadinessInput): TravelPublishRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/calendar package script is missing ${script}.`);
+  if (!input.calendarTestsPassed) blockers.push("@inkroute/calendar travel publish tests must pass.");
+  if (!input.calendarTypecheckPassed) blockers.push("@inkroute/calendar typecheck must pass.");
+  if (!input.dashboardMutationRouteImplemented) blockers.push("Dashboard travel publish/update/unpublish/rollback mutation route must be implemented.");
+  if (!input.dashboardAuthorizationEnforced) blockers.push("Dashboard travel publish mutations must enforce tenant, artist, and role authorization.");
+  if (!input.persistedTravelRepositoryImplemented) blockers.push("Tenant-scoped persisted TravelStop/PublicTravelPage repository must be implemented.");
+  if (!input.publicDataApiImplemented) blockers.push("Public travel data API must read committed travel publish state.");
+  if (!input.cacheRevalidationCalledAfterCommit) blockers.push("Public page, city, artist, sitemap, and schema cache revalidation must run after commit.");
+  if (!input.cityWaitlistMatchingImplemented) blockers.push("City waitlist matching must select eligible clients for changed travel stops.");
+  if (!input.consentFilteredNotificationQueueImplemented) blockers.push("Waitlist notification queue must filter by explicit client consent.");
+  if (!input.notificationProviderQueueTested) blockers.push("Notification provider queue execution must be tested for travel publish jobs.");
+  if (!input.mobileSyncTransportImplemented) blockers.push("Mobile sync transport must receive committed travel changes.");
+  if (!input.dashboardSyncTransportImplemented) blockers.push("Dashboard sync transport must reflect committed travel changes.");
+  if (!input.webSyncEventPersistenceConfigured) blockers.push("Web revalidation/sync events must be persisted after travel mutations.");
+  if (!input.auditLogPersistenceConfigured) blockers.push("TravelAuditLog persistence must be configured for publish/update/unpublish/rollback actions.");
+  if (!input.rollbackExecutorImplemented) blockers.push("Travel publish rollback executor must be implemented.");
+  if (!input.failedProviderRollbackTested) blockers.push("Failed provider action rollback tests must pass.");
+  if (!input.tenantIsolationTestsPassed) blockers.push("Cross-tenant travel publish mutation tests must be denied.");
+  if (!input.e2eTravelPublishFlowPassed) blockers.push("End-to-end travel publish flow must prove dashboard edits update public site and waitlist jobs.");
+
+  if (!input.dashboardMutationRouteImplemented || !input.dashboardAuthorizationEnforced || !input.tenantIsolationTestsPassed) {
+    requiredEvidence.push("authorized dashboard travel mutation route and cross-tenant denial tests");
+  }
+  if (!input.persistedTravelRepositoryImplemented || !input.publicDataApiImplemented || !input.cacheRevalidationCalledAfterCommit) {
+    requiredEvidence.push("persisted travel repository, public data API, and post-commit revalidation evidence");
+  }
+  if (!input.cityWaitlistMatchingImplemented || !input.consentFilteredNotificationQueueImplemented || !input.notificationProviderQueueTested) {
+    requiredEvidence.push("city waitlist matching and consent-filtered notification queue execution evidence");
+  }
+  if (!input.mobileSyncTransportImplemented || !input.dashboardSyncTransportImplemented || !input.webSyncEventPersistenceConfigured) {
+    requiredEvidence.push("mobile, dashboard, and web sync-event transport evidence");
+  }
+  if (!input.auditLogPersistenceConfigured || !input.rollbackExecutorImplemented || !input.failedProviderRollbackTested) {
+    requiredEvidence.push("TravelAuditLog persistence plus failed-provider rollback executor test output");
+  }
+  if (!input.e2eTravelPublishFlowPassed) {
+    requiredEvidence.push("dashboard-to-public Nomad Mode publish E2E artifact with waitlist and rollback coverage");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/web typecheck",
+      "travel publish repository integration tests",
+      "Nomad Mode dashboard-to-public E2E smoke",
+      "travel publish failed-provider rollback tests",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
 export function buildSignedIcsFeedDraft(input: { tenantSlug: string; artistSlug: string; expiresInDays?: number }): SignedIcsFeedDraft {
   return {
     path: `/api/public/${input.tenantSlug}/calendar/${input.artistSlug}/travel.ics?token=SIGNED_FEED_TOKEN_PLACEHOLDER`,
@@ -1083,6 +1492,61 @@ export function evaluateSignedIcsFeedAccess(input: {
     cacheControl: allowCache,
     shouldLogAccess: true,
     reason: "Signed ICS feed token is valid for this tenant and artist.",
+  };
+}
+
+export function buildSignedIcsFeedRuntimeReadinessPlan(
+  input: SignedIcsFeedRuntimeReadinessInput,
+): SignedIcsFeedRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/calendar package script is missing ${script}.`);
+  if (!input.calendarTestsPassed) blockers.push("@inkroute/calendar signed ICS tests must pass.");
+  if (!input.calendarTypecheckPassed) blockers.push("@inkroute/calendar typecheck must pass.");
+  if (!input.webRouteTestsPassed) blockers.push("Web ICS feed route tests must pass.");
+  if (!input.webTypecheckPassed) blockers.push("@inkroute/web typecheck must pass with signed ICS route wiring.");
+  if (!input.tokenCreationImplemented) blockers.push("Signed feed-token creation must be implemented.");
+  if (!input.hashedTokenPersistenceConfigured) blockers.push("Hashed signed-feed token persistence must be configured.");
+  if (!input.expiryRotationPersistenceConfigured) blockers.push("Signed feed-token expiry and rotation persistence must be configured.");
+  if (!input.revocationUiImplemented) blockers.push("Feed-token revocation UI must be implemented.");
+  if (!input.revocationApiImplemented) blockers.push("Feed-token revocation API must be implemented.");
+  if (!input.revokedTokenRouteRejectionTested) blockers.push("Route tests must reject revoked tokens loaded from durable storage.");
+  if (!input.tenantArtistScopeEnforced) blockers.push("ICS feed route must enforce tenant and artist token scope.");
+  if (!input.durableAccessLogPersistenceConfigured) blockers.push("Durable ICS feed access-log persistence must be configured.");
+  if (!input.privateCacheHeadersVerified) blockers.push("Private/no-store rejection and private short-cache success headers must be verified.");
+  if (!input.appleCalendarImportTested) blockers.push("Apple Calendar import smoke test must pass.");
+  if (!input.googleCalendarImportTested) blockers.push("Google Calendar import smoke test must pass.");
+  if (!input.outlookCalendarImportTested) blockers.push("Outlook Calendar import smoke test must pass.");
+
+  if (!input.tokenCreationImplemented || !input.hashedTokenPersistenceConfigured || !input.expiryRotationPersistenceConfigured) {
+    requiredEvidence.push("tenant-scoped signed-feed token creation, hashed persistence, expiry, and rotation evidence");
+  }
+  if (!input.revocationUiImplemented || !input.revocationApiImplemented || !input.revokedTokenRouteRejectionTested) {
+    requiredEvidence.push("revocation UI/API evidence and revoked-token route rejection test output");
+  }
+  if (!input.tenantArtistScopeEnforced || !input.durableAccessLogPersistenceConfigured || !input.privateCacheHeadersVerified) {
+    requiredEvidence.push("tenant/artist scope enforcement, durable access-log persistence, and private cache-header route tests");
+  }
+  if (!input.appleCalendarImportTested || !input.googleCalendarImportTested || !input.outlookCalendarImportTested) {
+    requiredEvidence.push("Apple, Google, and Outlook calendar import smoke-test artifacts");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm vitest run apps/web/tests/ics-feed-route.test.ts",
+      "signed ICS token DB integration tests",
+      "Apple/Google/Outlook ICS import smoke tests",
+    ],
+    requiredEvidence,
+    blockers,
   };
 }
 
@@ -1175,6 +1639,63 @@ export function buildAvailabilityPersistencePlan(input: AvailabilityPersistenceP
       "Lock the tenant/artist/time range or use an equivalent exclusion constraint before inserting slot holds.",
       "Write CalendarAuditLog for every window, hold, appointment, and release mutation.",
     ],
+    blockers,
+  };
+}
+
+export function buildAvailabilityRuntimeReadinessPlan(input: AvailabilityRuntimeReadinessInput): AvailabilityRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/calendar package script is missing ${script}.`);
+  if (!input.calendarTestsPassed) blockers.push("@inkroute/calendar availability tests must pass.");
+  if (!input.calendarTypecheckPassed) blockers.push("@inkroute/calendar typecheck must pass.");
+  if (!input.dbSchemaIncludesAvailabilityModels) blockers.push("Prisma schema must include AvailabilityWindow, AvailabilityHold, Appointment, CalendarAuditLog, and IdempotencyKey models.");
+  if (!input.repositoriesImplemented) blockers.push("Tenant-scoped availability repositories/services must be implemented.");
+  if (!input.tenantScopedQueriesEnforced) blockers.push("Availability repositories must enforce tenant scope on every read and write.");
+  if (!input.transactionalWindowCreationImplemented) blockers.push("Availability window creation must run in a tenant-scoped transaction.");
+  if (!input.transactionalSlotHoldImplemented) blockers.push("Slot hold creation must run in a tenant-scoped transaction.");
+  if (!input.appointmentConfirmationImplemented) blockers.push("Appointment confirmation must persist Appointment, hold, booking, audit, and idempotency writes.");
+  if (!input.holdReleaseImplemented) blockers.push("Hold release must persist hold release state, CalendarAuditLog, and idempotency writes.");
+  if (!input.auditLogPersistenceConfigured) blockers.push("CalendarAuditLog persistence must be configured for every availability mutation.");
+  if (!input.idempotencyStoreConfigured) blockers.push("Idempotency store must be configured before availability mutations execute.");
+  if (!input.conflictDetectionAgainstPersistedRows) blockers.push("Conflict detection must query persisted appointments, holds, windows, and travel blocks.");
+  if (!input.concurrentHoldProtectionConfigured) blockers.push("Concurrent slot hold protection must lock or constrain tenant/artist/time ranges.");
+  if (!input.overlappingSlotDbRejectionTested) blockers.push("Overlapping slot persistence rejection must be tested against DB rows.");
+  if (!input.crossTenantIsolationTestsPassed) blockers.push("Cross-tenant availability reads and mutations must be denied by tests.");
+  if (!input.seededPostgresIntegrationTestsPassed) blockers.push("Seeded Postgres integration tests must prove availability persistence lifecycle.");
+  if (!input.dashboardAndApiUseRepository) blockers.push("Dashboard and API availability surfaces must use the tenant-scoped repository/service layer.");
+
+  if (!input.dbSchemaIncludesAvailabilityModels || !input.repositoriesImplemented || !input.dashboardAndApiUseRepository) {
+    requiredEvidence.push("Prisma availability models plus dashboard/API repository wiring evidence");
+  }
+  if (!input.transactionalWindowCreationImplemented || !input.transactionalSlotHoldImplemented || !input.appointmentConfirmationImplemented || !input.holdReleaseImplemented) {
+    requiredEvidence.push("transactional availability window, hold, appointment confirmation, and release test output");
+  }
+  if (!input.conflictDetectionAgainstPersistedRows || !input.concurrentHoldProtectionConfigured || !input.overlappingSlotDbRejectionTested) {
+    requiredEvidence.push("persisted conflict detection and concurrent hold rejection evidence");
+  }
+  if (!input.auditLogPersistenceConfigured || !input.idempotencyStoreConfigured) {
+    requiredEvidence.push("CalendarAuditLog and IdempotencyKey persistence evidence for every availability mutation");
+  }
+  if (!input.crossTenantIsolationTestsPassed || !input.seededPostgresIntegrationTestsPassed) {
+    requiredEvidence.push("seeded Postgres tenant isolation and availability lifecycle integration test output");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "pnpm --filter @inkroute/db prisma validate",
+      "availability persistence seeded Postgres integration tests",
+      "concurrent slot hold race-condition tests",
+      "dashboard/API availability repository tests",
+    ],
+    requiredEvidence,
     blockers,
   };
 }

@@ -6,6 +6,7 @@ import {
   buildPrivacyRetentionRuntimeReadinessPlan,
   buildRetentionEnforcementDryRun,
   buildLegalReviewPacketPlan,
+  buildPaymentPolicyLegalReviewRuntimeReadinessPlan,
   buildAbuseControlPlan,
   buildFileAssetPersistencePlan,
   buildSignedUploadIntentPlan,
@@ -861,5 +862,50 @@ describe("security and privacy helpers", () => {
     expect(plan.pageProtections.noindexRequired).toBe(false);
     expect(plan.acceptanceAudit).toMatchObject({ configured: true, consentVersion: "consent-us-wa-v1" });
     expect(plan.approvedVersions.privacy_policy).toBe("privacy_policy-v1");
+  });
+
+  it("blocks payment policy legal readiness until attorney, tax, approved copy, audit, and E2E evidence exist", () => {
+    const plan = buildPaymentPolicyLegalReviewRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      webTypecheckPassed: false,
+      dashboardTypecheckPassed: false,
+      attorneyApprovalRecorded: false,
+      taxAccountingApprovalRecorded: false,
+      reviewedPaymentCopyCommitted: true,
+      reviewedCancellationCopyCommitted: false,
+      reviewedNoShowCopyCommitted: false,
+      reviewedRefundCopyCommitted: false,
+      reviewedSmsConsentCopyCommitted: false,
+      reviewedReceiptCopyCommitted: false,
+      reviewedTaxDisclosureCopyCommitted: false,
+      termsPrivacyConsentUpdated: false,
+      placeholdersRemovedFromPaymentFlows: false,
+      acceptanceAuditConfigured: false,
+      policyVersioningConfigured: false,
+      e2eApprovedLanguageVerified: false,
+      rollbackCopyPlanDocumented: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "payment policy approved-copy E2E sweep",
+      "legal/tax approval packet review",
+    ]));
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "signed attorney and tax/accounting approval records for payment policy language",
+      "committed reviewed copy for deposits, cancellation, no-show, refund, SMS, receipts, and tax disclosures",
+      "versioned Terms/Privacy/Consent/studio policy updates plus acceptance audit evidence",
+      "E2E screenshots or test output proving approved copy appears in booking, dashboard payment, receipt, and SMS flows",
+      "documented policy-copy correction and rollback plan",
+    ]));
+    expect(plan.blockers).toContain("Attorney approval must be recorded for payment, cancellation, no-show, refund, SMS, receipt, and liability language.");
+    expect(plan.blockers).toContain("Tax/accounting approval must be recorded for receipt and accounting export language.");
+    expect(plan.blockers).toContain("Demo/planning placeholders must be removed from payment-facing flows before launch.");
   });
 });

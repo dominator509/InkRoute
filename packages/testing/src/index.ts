@@ -147,6 +147,65 @@ export interface TestingRuntimeReadinessPlan {
   blockers: readonly string[];
 }
 
+export interface Phase9AppRuntimeBuildReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  testingPackageTestsPassed: boolean;
+  testingPackageTypecheckPassed: boolean;
+  webBuildPassed: boolean;
+  dashboardBuildPassed: boolean;
+  mobileTypecheckPassed: boolean;
+  notificationRouteTestsPassed: boolean;
+  providerWebhookRouteTestsPassed: boolean;
+  bookingRouteRuntimeSmokePassed: boolean;
+  depositRouteRuntimeSmokePassed: boolean;
+  dashboardTemplatesPlaywrightSmokePassed: boolean;
+  dashboardMessagesPlaywrightSmokePassed: boolean;
+  dashboardProviderDisabledStatesVerified: boolean;
+  mobileNotificationScreenSmokePassed: boolean;
+  expoSimulatorNotificationSmokePassed: boolean;
+  expoDeviceNotificationSmokePassed: boolean;
+  bookingToNotificationRuntimeSmokePassed: boolean;
+  providerSendsDisabledInRuntimeSmoke: boolean;
+  runtimeArtifactsCaptured: boolean;
+  ciRequiresPhase9AppRuntimeGate: boolean;
+}
+
+export interface Phase9AppRuntimeBuildReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface Phase10SeoAppRuntimeBuildReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  testingPackageTestsPassed: boolean;
+  testingPackageTypecheckPassed: boolean;
+  webBuildPassed: boolean;
+  dashboardBuildPassed: boolean;
+  sitemapRouteTestsPassed: boolean;
+  seoPreviewRouteTestsPassed: boolean;
+  sitemapPreviewRouteTestsPassed: boolean;
+  dashboardSeoBrowserSmokePassed: boolean;
+  dashboardSeoPublishInteractionSmokePassed: boolean;
+  renderedPublicSeoCrawlPassed: boolean;
+  renderedSitemapCrawlPassed: boolean;
+  databaseBackedSeoRoutesWired: boolean;
+  sitemapRuntimeEvidenceCaptured: boolean;
+  apiPreviewRuntimeEvidenceCaptured: boolean;
+  canonicalRuntimeEvidenceCaptured: boolean;
+  ciRequiresPhase10SeoRuntimeGate: boolean;
+}
+
+export interface Phase10SeoAppRuntimeBuildReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export function createTestCase(input: TestCaseRecord): TestCaseRecord {
   return input;
 }
@@ -502,6 +561,127 @@ export function buildTestingRuntimeReadinessPlan(input: TestingRuntimeReadinessI
       "Branch protection settings showing CI required before merge.",
       "Documented flaky-test handling and quarantine process.",
     ],
+    blockers,
+  };
+}
+
+export function buildPhase9AppRuntimeBuildReadinessPlan(input: Phase9AppRuntimeBuildReadinessInput): Phase9AppRuntimeBuildReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/testing package script is missing ${script}.`);
+  if (!input.testingPackageTestsPassed) blockers.push("@inkroute/testing Phase 9 app runtime matrix tests must pass.");
+  if (!input.testingPackageTypecheckPassed) blockers.push("@inkroute/testing typecheck must pass.");
+  if (!input.webBuildPassed) blockers.push("@inkroute/web build must pass with Phase 9 notification and messaging routes.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with templates and messages pages.");
+  if (!input.mobileTypecheckPassed) blockers.push("@inkroute/mobile typecheck must pass with notification screen wiring.");
+  if (!input.notificationRouteTestsPassed) blockers.push("Notification preview and messaging route tests must pass.");
+  if (!input.providerWebhookRouteTestsPassed) blockers.push("Provider webhook route tests must pass.");
+  if (!input.bookingRouteRuntimeSmokePassed) blockers.push("Booking route runtime smoke must pass with notification workflow handoff.");
+  if (!input.depositRouteRuntimeSmokePassed) blockers.push("Deposit route runtime smoke must pass with provider sends disabled.");
+  if (!input.dashboardTemplatesPlaywrightSmokePassed) blockers.push("Dashboard templates Playwright smoke test must pass.");
+  if (!input.dashboardMessagesPlaywrightSmokePassed) blockers.push("Dashboard messages Playwright smoke test must pass.");
+  if (!input.dashboardProviderDisabledStatesVerified) blockers.push("Dashboard provider-disabled states must be verified before runtime promotion.");
+  if (!input.mobileNotificationScreenSmokePassed) blockers.push("Mobile notification screen smoke test must pass.");
+  if (!input.expoSimulatorNotificationSmokePassed) blockers.push("Expo simulator notification screen smoke test must pass.");
+  if (!input.expoDeviceNotificationSmokePassed) blockers.push("Expo device notification screen smoke test must pass.");
+  if (!input.bookingToNotificationRuntimeSmokePassed) blockers.push("Booking-to-notification runtime smoke must pass with provider sends disabled.");
+  if (!input.providerSendsDisabledInRuntimeSmoke) blockers.push("Runtime smoke tests must prove provider sends remain disabled or sandboxed.");
+  if (!input.runtimeArtifactsCaptured) blockers.push("Phase 9 runtime smoke artifacts must be captured.");
+  if (!input.ciRequiresPhase9AppRuntimeGate) blockers.push("CI must require the Phase 9 app runtime/build gate before merge.");
+
+  if (!input.webBuildPassed || !input.dashboardBuildPassed || !input.mobileTypecheckPassed) {
+    requiredEvidence.push("web build, dashboard build, and mobile typecheck output");
+  }
+  if (!input.notificationRouteTestsPassed || !input.providerWebhookRouteTestsPassed || !input.bookingRouteRuntimeSmokePassed || !input.depositRouteRuntimeSmokePassed) {
+    requiredEvidence.push("Phase 9 API route and booking/deposit runtime smoke output");
+  }
+  if (!input.dashboardTemplatesPlaywrightSmokePassed || !input.dashboardMessagesPlaywrightSmokePassed || !input.dashboardProviderDisabledStatesVerified) {
+    requiredEvidence.push("dashboard templates/messages Playwright smoke and provider-disabled state evidence");
+  }
+  if (!input.mobileNotificationScreenSmokePassed || !input.expoSimulatorNotificationSmokePassed || !input.expoDeviceNotificationSmokePassed) {
+    requiredEvidence.push("mobile notification screen simulator and device smoke evidence");
+  }
+  if (!input.bookingToNotificationRuntimeSmokePassed || !input.providerSendsDisabledInRuntimeSmoke || !input.runtimeArtifactsCaptured || !input.ciRequiresPhase9AppRuntimeGate) {
+    requiredEvidence.push("booking-to-notification runtime, provider-disabled, artifact, and CI required-gate evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/testing typecheck",
+      "pnpm --filter @inkroute/testing test",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "pnpm vitest run apps/web/tests/notification-messaging-routes.test.ts",
+      "pnpm vitest run apps/web/tests/provider-webhook-routes.test.ts",
+      "Playwright dashboard templates/messages smoke tests",
+      "Expo simulator notification screen smoke test",
+      "Expo device notification screen smoke test",
+      "booking-to-notification runtime smoke with provider sends disabled",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
+export function buildPhase10SeoAppRuntimeBuildReadinessPlan(input: Phase10SeoAppRuntimeBuildReadinessInput): Phase10SeoAppRuntimeBuildReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/testing package script is missing ${script}.`);
+  if (!input.testingPackageTestsPassed) blockers.push("@inkroute/testing Phase 10 SEO runtime matrix tests must pass.");
+  if (!input.testingPackageTypecheckPassed) blockers.push("@inkroute/testing typecheck must pass.");
+  if (!input.webBuildPassed) blockers.push("@inkroute/web build must pass with Phase 10 SEO routes.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with SEO manager page.");
+  if (!input.sitemapRouteTestsPassed) blockers.push("Sitemap route smoke tests must pass.");
+  if (!input.seoPreviewRouteTestsPassed) blockers.push("SEO preview API route tests must pass.");
+  if (!input.sitemapPreviewRouteTestsPassed) blockers.push("Sitemap preview API route tests must pass.");
+  if (!input.dashboardSeoBrowserSmokePassed) blockers.push("Dashboard SEO browser smoke test must pass.");
+  if (!input.dashboardSeoPublishInteractionSmokePassed) blockers.push("Dashboard SEO publish/edit/archive interaction smoke test must pass.");
+  if (!input.renderedPublicSeoCrawlPassed) blockers.push("Rendered public SEO route crawl must pass.");
+  if (!input.renderedSitemapCrawlPassed) blockers.push("Rendered sitemap crawl must pass.");
+  if (!input.databaseBackedSeoRoutesWired) blockers.push("Database-backed SEO routes must be wired before production runtime evidence is complete.");
+  if (!input.sitemapRuntimeEvidenceCaptured) blockers.push("Sitemap runtime evidence must be captured.");
+  if (!input.apiPreviewRuntimeEvidenceCaptured) blockers.push("SEO and sitemap preview API runtime evidence must be captured.");
+  if (!input.canonicalRuntimeEvidenceCaptured) blockers.push("Canonical/runtime crawl evidence must be captured.");
+  if (!input.ciRequiresPhase10SeoRuntimeGate) blockers.push("CI must require the Phase 10 SEO app runtime/build gate before merge.");
+
+  if (!input.webBuildPassed || !input.dashboardBuildPassed || !input.sitemapRouteTestsPassed || !input.seoPreviewRouteTestsPassed || !input.sitemapPreviewRouteTestsPassed) {
+    requiredEvidence.push("web/dashboard build and sitemap/SEO preview route test output");
+  }
+  if (!input.dashboardSeoBrowserSmokePassed || !input.dashboardSeoPublishInteractionSmokePassed) {
+    requiredEvidence.push("dashboard SEO browser and publish/edit/archive interaction smoke evidence");
+  }
+  if (!input.renderedPublicSeoCrawlPassed || !input.renderedSitemapCrawlPassed || !input.canonicalRuntimeEvidenceCaptured) {
+    requiredEvidence.push("rendered public SEO route, sitemap, and canonical crawl evidence");
+  }
+  if (!input.databaseBackedSeoRoutesWired || !input.sitemapRuntimeEvidenceCaptured || !input.apiPreviewRuntimeEvidenceCaptured || !input.ciRequiresPhase10SeoRuntimeGate) {
+    requiredEvidence.push("database-backed SEO route, runtime artifact, API preview, and CI required-gate evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/testing typecheck",
+      "pnpm --filter @inkroute/testing test",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm vitest run apps/web/tests/sitemap-route.test.ts",
+      "SEO preview and sitemap preview route tests",
+      "dashboard SEO browser smoke test",
+      "dashboard SEO publish/edit/archive interaction smoke test",
+      "rendered public SEO route crawl",
+      "rendered sitemap/canonical crawl",
+    ],
+    requiredEvidence,
     blockers,
   };
 }

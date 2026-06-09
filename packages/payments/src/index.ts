@@ -142,6 +142,37 @@ export interface StripeCheckoutExecutionReadiness {
   blockers: readonly string[];
 }
 
+export interface StripeCheckoutRouteRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  paymentsTestsPassed: boolean;
+  paymentsTypecheckPassed: boolean;
+  webPaymentRouteTestsPassed: boolean;
+  webTypecheckPassed: boolean;
+  stripeSdkInstalled: boolean;
+  stripeSecretConfigured: boolean;
+  stripeApiVersionPinned: boolean;
+  checkoutRouteUsesStripeClient: boolean;
+  acceptedBookingOrSignedTokenEnforced: boolean;
+  idempotencyKeyPersistedBeforeProviderCall: boolean;
+  providerSessionPersisted: boolean;
+  paymentAuditLogPersisted: boolean;
+  tenantScopedTransactionConfigured: boolean;
+  allowedRedirectHostsEnforced: boolean;
+  safeBrowserResponseVerified: boolean;
+  invalidTokenRejectedTested: boolean;
+  expiredTokenRejectedTested: boolean;
+  webhookReconciliationVerified: boolean;
+  stripeTestModeCheckoutVerified: boolean;
+}
+
+export interface StripeCheckoutRouteRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export interface RefundPolicyInput {
   amountPaidCents: number;
   requestedRefundCents?: number;
@@ -231,6 +262,39 @@ export interface StripeWebhookSignatureVerificationResult {
   reason: string;
 }
 
+export interface StripeWebhookRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  paymentsTestsPassed: boolean;
+  paymentsTypecheckPassed: boolean;
+  webWebhookRouteTestsPassed: boolean;
+  webTypecheckPassed: boolean;
+  stripeSdkInstalled: boolean;
+  constructEventUsesRawBody: boolean;
+  webhookSecretConfigured: boolean;
+  invalidSignatureRejected: boolean;
+  timestampToleranceEnforced: boolean;
+  replayProtectionPersisted: boolean;
+  supportedEventsCovered: readonly StripeWebhookEventType[];
+  providerObjectFetchConfigured: boolean;
+  tenantResolutionFromTrustedMetadata: boolean;
+  depositPaymentRefundPersistenceConfigured: boolean;
+  paymentAuditLogPersistenceConfigured: boolean;
+  bookingStateEventPersistenceConfigured: boolean;
+  tenantScopedTransactionConfigured: boolean;
+  amountCurrencyMismatchRejected: boolean;
+  unknownEventsLoggedAndIgnored: boolean;
+  stripeCliReplayVerified: boolean;
+}
+
+export interface StripeWebhookRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  missingSupportedEvents: readonly StripeWebhookEventType[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export type PaymentLifecycleAction =
   | "create_deposit"
   | "record_checkout_session"
@@ -279,6 +343,37 @@ export interface PaymentLifecyclePersistencePlan {
   idempotencyKey: string | null;
   writes: readonly PaymentLifecycleWrite[];
   requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface PaymentPersistenceRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  paymentsTestsPassed: boolean;
+  paymentsTypecheckPassed: boolean;
+  dbSchemaIncludesPaymentModels: boolean;
+  repositoriesImplemented: boolean;
+  tenantScopedQueriesEnforced: boolean;
+  transactionalMutationsImplemented: boolean;
+  idempotencyStoreImplemented: boolean;
+  depositCreationPersisted: boolean;
+  providerSessionPersisted: boolean;
+  paidTransitionPersisted: boolean;
+  failedTransitionPersisted: boolean;
+  refundTransitionPersisted: boolean;
+  disputeTransitionPersisted: boolean;
+  paymentAuditLogPersistedForEveryMutation: boolean;
+  bookingStateEventPersistedForLifecycleChanges: boolean;
+  crossTenantIsolationTestsPassed: boolean;
+  replayIdempotencyTestsPassed: boolean;
+  seededPostgresIntegrationTestsPassed: boolean;
+  dashboardPaymentReadsUseRepository: boolean;
+}
+
+export interface PaymentPersistenceRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
   blockers: readonly string[];
 }
 
@@ -337,6 +432,62 @@ export interface PaymentOperationsWorkflowPlan {
   idempotencyKey: string | null;
   writes: readonly PaymentOperationsWrite[];
   requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface PaymentOperationsRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  paymentsTestsPassed: boolean;
+  paymentsTypecheckPassed: boolean;
+  dashboardPaymentActionsImplemented: boolean;
+  refundActionAuthorized: boolean;
+  stripeRefundsTestModeVerified: boolean;
+  refundPersistenceConfigured: boolean;
+  noShowForfeitureActionImplemented: boolean;
+  noShowAuditPersistenceConfigured: boolean;
+  disputeEvidenceWorkflowImplemented: boolean;
+  disputeProviderSyncVerified: boolean;
+  receiptGenerationImplemented: boolean;
+  receiptDeliveryProviderConfigured: boolean;
+  receiptDeliveryTested: boolean;
+  accountingExportImplemented: boolean;
+  exportRedactionVerified: boolean;
+  taxAccountingReviewApproved: boolean;
+  idempotencyConfiguredForOperations: boolean;
+  paymentAuditLogPersistedForOperations: boolean;
+  tenantAuthorizationTestsPassed: boolean;
+  dashboardE2eEvidenceAttached: boolean;
+}
+
+export interface PaymentOperationsRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface PaymentAutomatedTestReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  paymentsUnitTestsPassed: boolean;
+  paymentRouteTestsPassed: boolean;
+  stripeSdkSignatureTestsPassed: boolean;
+  stripeCliLifecycleTestsPassed: boolean;
+  dbReconciliationTestsPassed: boolean;
+  bookingToPaidE2ePassed: boolean;
+  refundNoShowDisputeTestsPassed: boolean;
+  receiptExportTestsPassed: boolean;
+  crossTenantPaymentTestsPassed: boolean;
+  replayIdempotencyTestsPassed: boolean;
+  ciPaymentTestJobConfigured: boolean;
+  artifactsCaptured: boolean;
+}
+
+export interface PaymentAutomatedTestReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
   blockers: readonly string[];
 }
 
@@ -535,6 +686,67 @@ export function buildStripeCheckoutExecutionReadiness(input: StripeCheckoutExecu
       "Return only Stripe-hosted checkout URL to the browser; never return secret keys or raw provider payloads.",
       "Reconcile final payment state only through verified Stripe webhooks.",
     ],
+    blockers,
+  };
+}
+
+export function buildStripeCheckoutRouteRuntimeReadinessPlan(
+  input: StripeCheckoutRouteRuntimeReadinessInput,
+): StripeCheckoutRouteRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/payments package script is missing ${script}.`);
+  if (!input.paymentsTestsPassed) blockers.push("@inkroute/payments tests must pass.");
+  if (!input.paymentsTypecheckPassed) blockers.push("@inkroute/payments typecheck must pass.");
+  if (!input.webPaymentRouteTestsPassed) blockers.push("Web payment route tests must pass.");
+  if (!input.webTypecheckPassed) blockers.push("@inkroute/web typecheck must pass with Stripe route wiring.");
+  if (!input.stripeSdkInstalled) blockers.push("Stripe SDK must be installed in the web/runtime dependency graph.");
+  if (!input.stripeSecretConfigured) blockers.push("STRIPE_SECRET_KEY must be configured in the secret store.");
+  if (!input.stripeApiVersionPinned) blockers.push("Stripe API version must be pinned for Checkout session creation.");
+  if (!input.checkoutRouteUsesStripeClient) blockers.push("Deposit-session route must call the Stripe Checkout client instead of returning only a local preview.");
+  if (!input.acceptedBookingOrSignedTokenEnforced) blockers.push("Deposit-session route must require an accepted booking or short-lived signed deposit token.");
+  if (!input.idempotencyKeyPersistedBeforeProviderCall) blockers.push("Idempotency key must be persisted before calling Stripe Checkout.");
+  if (!input.providerSessionPersisted) blockers.push("Stripe provider session id and redirect URL must be persisted after Checkout creation.");
+  if (!input.paymentAuditLogPersisted) blockers.push("PaymentAuditLog must be persisted for Checkout session creation attempts and outcomes.");
+  if (!input.tenantScopedTransactionConfigured) blockers.push("Deposit, Payment, PaymentAuditLog, and IdempotencyKey writes must run in one tenant-scoped transaction.");
+  if (!input.allowedRedirectHostsEnforced) blockers.push("Success and cancel redirect hosts must be allowlisted at the route boundary.");
+  if (!input.safeBrowserResponseVerified) blockers.push("Browser response must expose only the hosted Checkout URL and redacted local ids.");
+  if (!input.invalidTokenRejectedTested) blockers.push("Invalid signed deposit token rejection must be tested.");
+  if (!input.expiredTokenRejectedTested) blockers.push("Expired signed deposit token rejection must be tested.");
+  if (!input.webhookReconciliationVerified) blockers.push("Verified Stripe webhook reconciliation must prove final payment state.");
+  if (!input.stripeTestModeCheckoutVerified) blockers.push("Stripe test-mode Checkout session creation must be verified with provider evidence.");
+
+  if (!input.checkoutRouteUsesStripeClient || !input.stripeSdkInstalled || !input.stripeSecretConfigured) {
+    requiredEvidence.push("Stripe Checkout client route wiring with secret-backed test-mode configuration");
+  }
+  if (!input.acceptedBookingOrSignedTokenEnforced || !input.invalidTokenRejectedTested || !input.expiredTokenRejectedTested) {
+    requiredEvidence.push("accepted-booking or signed-token authorization tests for valid, invalid, and expired deposit access");
+  }
+  if (!input.idempotencyKeyPersistedBeforeProviderCall || !input.providerSessionPersisted || !input.paymentAuditLogPersisted || !input.tenantScopedTransactionConfigured) {
+    requiredEvidence.push("tenant-scoped transaction evidence for Deposit, Payment, PaymentAuditLog, and IdempotencyKey writes");
+  }
+  if (!input.safeBrowserResponseVerified || !input.allowedRedirectHostsEnforced) {
+    requiredEvidence.push("safe redirect allowlist and browser response redaction test output");
+  }
+  if (!input.webhookReconciliationVerified || !input.stripeTestModeCheckoutVerified) {
+    requiredEvidence.push("Stripe test-mode Checkout and verified webhook reconciliation transcript");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/payments typecheck",
+      "pnpm --filter @inkroute/payments test",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm test:unit -- apps/web/tests/payment-routes.test.ts",
+      "stripe checkout session create test-mode smoke",
+      "stripe trigger checkout.session.completed",
+    ],
+    requiredEvidence,
     blockers,
   };
 }
@@ -839,6 +1051,76 @@ export function buildStripeWebhookReconciliationPlan(input: StripeWebhookReconci
   };
 }
 
+export function buildStripeWebhookRuntimeReadinessPlan(input: StripeWebhookRuntimeReadinessInput): StripeWebhookRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const requiredEvents: StripeWebhookEventType[] = [
+    "checkout.session.completed",
+    "checkout.session.expired",
+    "payment_intent.succeeded",
+    "payment_intent.payment_failed",
+    "charge.refunded",
+    "charge.dispute.created",
+  ];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const missingSupportedEvents = requiredEvents.filter((eventType) => !input.supportedEventsCovered.includes(eventType));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/payments package script is missing ${script}.`);
+  if (!input.paymentsTestsPassed) blockers.push("@inkroute/payments webhook tests must pass.");
+  if (!input.paymentsTypecheckPassed) blockers.push("@inkroute/payments typecheck must pass.");
+  if (!input.webWebhookRouteTestsPassed) blockers.push("Web Stripe webhook route tests must pass.");
+  if (!input.webTypecheckPassed) blockers.push("@inkroute/web typecheck must pass with webhook route wiring.");
+  if (!input.stripeSdkInstalled) blockers.push("Stripe SDK must be installed before production webhook verification.");
+  if (!input.constructEventUsesRawBody) blockers.push("Webhook route must use Stripe constructEvent with the raw request body.");
+  if (!input.webhookSecretConfigured) blockers.push("STRIPE_WEBHOOK_SECRET must be configured in the secret store.");
+  if (!input.invalidSignatureRejected) blockers.push("Invalid Stripe signatures must be rejected before parsing trusted events.");
+  if (!input.timestampToleranceEnforced) blockers.push("Stripe webhook timestamp tolerance must reject stale replay attempts.");
+  if (!input.replayProtectionPersisted) blockers.push("Stripe event replay protection must persist provider event ids.");
+  if (missingSupportedEvents.length > 0) blockers.push(`Stripe webhook coverage is missing event types: ${missingSupportedEvents.join(", ")}.`);
+  if (!input.providerObjectFetchConfigured) blockers.push("Supported payment/refund/dispute events must fetch or verify provider objects before reconciliation.");
+  if (!input.tenantResolutionFromTrustedMetadata) blockers.push("Tenant resolution must use trusted provider metadata or persisted provider ids.");
+  if (!input.depositPaymentRefundPersistenceConfigured) blockers.push("Deposit, Payment, and Refund persistence must be configured for webhook reconciliation.");
+  if (!input.paymentAuditLogPersistenceConfigured) blockers.push("PaymentAuditLog persistence must be configured for every accepted and rejected Stripe event.");
+  if (!input.bookingStateEventPersistenceConfigured) blockers.push("BookingStateEvent persistence must be configured for payment success/failure lifecycle changes.");
+  if (!input.tenantScopedTransactionConfigured) blockers.push("Webhook reconciliation writes must run in one tenant-scoped transaction.");
+  if (!input.amountCurrencyMismatchRejected) blockers.push("Amount and currency mismatches must block reconciliation.");
+  if (!input.unknownEventsLoggedAndIgnored) blockers.push("Unknown Stripe events must be logged with redaction and ignored safely.");
+  if (!input.stripeCliReplayVerified) blockers.push("Stripe CLI replay tests must verify success, failure, expiration, refund, dispute, invalid signature, and replay behavior.");
+
+  if (!input.stripeSdkInstalled || !input.constructEventUsesRawBody || !input.webhookSecretConfigured || !input.invalidSignatureRejected) {
+    requiredEvidence.push("Stripe SDK constructEvent raw-body verification evidence with STRIPE_WEBHOOK_SECRET");
+  }
+  if (!input.replayProtectionPersisted || !input.tenantScopedTransactionConfigured) {
+    requiredEvidence.push("persistent event-id replay protection and tenant-scoped transaction evidence");
+  }
+  if (missingSupportedEvents.length > 0 || !input.providerObjectFetchConfigured || !input.amountCurrencyMismatchRejected) {
+    requiredEvidence.push("supported event reconciliation tests for success, failure, expiration, refund, dispute, and mismatch cases");
+  }
+  if (!input.depositPaymentRefundPersistenceConfigured || !input.paymentAuditLogPersistenceConfigured || !input.bookingStateEventPersistenceConfigured) {
+    requiredEvidence.push("Deposit, Payment, Refund, BookingStateEvent, and PaymentAuditLog persistence evidence");
+  }
+  if (!input.stripeCliReplayVerified) requiredEvidence.push("Stripe CLI replay transcript for supported events, invalid signature, and replay denial");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    missingSupportedEvents,
+    requiredCommands: [
+      "pnpm --filter @inkroute/payments typecheck",
+      "pnpm --filter @inkroute/payments test",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm test:unit -- apps/web/tests/payment-routes.test.ts",
+      "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
+      "stripe trigger checkout.session.completed",
+      "stripe trigger payment_intent.payment_failed",
+      "stripe trigger charge.refunded",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
 function paymentLifecycleTargetStatus(action: PaymentLifecycleAction): PaymentStatus {
   switch (action) {
     case "mark_paid":
@@ -957,6 +1239,66 @@ export function buildPaymentLifecyclePersistencePlan(input: PaymentLifecyclePlan
   };
 }
 
+export function buildPaymentPersistenceRuntimeReadinessPlan(
+  input: PaymentPersistenceRuntimeReadinessInput,
+): PaymentPersistenceRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/payments package script is missing ${script}.`);
+  if (!input.paymentsTestsPassed) blockers.push("@inkroute/payments lifecycle tests must pass.");
+  if (!input.paymentsTypecheckPassed) blockers.push("@inkroute/payments typecheck must pass.");
+  if (!input.dbSchemaIncludesPaymentModels) blockers.push("Prisma schema must include Deposit, Payment, Refund, PaymentAuditLog, and IdempotencyKey models.");
+  if (!input.repositoriesImplemented) blockers.push("Tenant-scoped payment repositories/services must be implemented.");
+  if (!input.tenantScopedQueriesEnforced) blockers.push("Payment repositories must enforce tenant scope on every read and write.");
+  if (!input.transactionalMutationsImplemented) blockers.push("Payment lifecycle mutations must run in database transactions.");
+  if (!input.idempotencyStoreImplemented) blockers.push("Idempotency store must be implemented for provider sessions, webhooks, refunds, and retries.");
+  if (!input.depositCreationPersisted) blockers.push("Deposit creation must persist Deposit and initial PaymentAuditLog records.");
+  if (!input.providerSessionPersisted) blockers.push("Provider Checkout session ids and redirect URLs must persist after Stripe creation.");
+  if (!input.paidTransitionPersisted) blockers.push("Paid transition must persist Payment, Deposit, BookingStateEvent, PaymentAuditLog, and IdempotencyKey writes.");
+  if (!input.failedTransitionPersisted) blockers.push("Failed payment transition must persist PaymentAuditLog and safe retry state.");
+  if (!input.refundTransitionPersisted) blockers.push("Refund transition must persist Refund, Payment, PaymentAuditLog, and IdempotencyKey writes.");
+  if (!input.disputeTransitionPersisted) blockers.push("Dispute transition must persist disputed Payment state and PaymentAuditLog evidence.");
+  if (!input.paymentAuditLogPersistedForEveryMutation) blockers.push("Every payment lifecycle mutation must persist a PaymentAuditLog row.");
+  if (!input.bookingStateEventPersistedForLifecycleChanges) blockers.push("BookingStateEvent rows must be persisted for payment lifecycle changes that affect booking state.");
+  if (!input.crossTenantIsolationTestsPassed) blockers.push("Cross-tenant payment repository reads and mutations must be denied by tests.");
+  if (!input.replayIdempotencyTestsPassed) blockers.push("Replay idempotency tests must prove duplicate provider events do not duplicate writes.");
+  if (!input.seededPostgresIntegrationTestsPassed) blockers.push("Seeded Postgres integration tests must pass for payment persistence lifecycle.");
+  if (!input.dashboardPaymentReadsUseRepository) blockers.push("Dashboard payment reads must use the tenant-scoped repository/service layer.");
+
+  if (!input.dbSchemaIncludesPaymentModels || !input.repositoriesImplemented || !input.transactionalMutationsImplemented) {
+    requiredEvidence.push("Prisma models and tenant-scoped payment repository/service implementation");
+  }
+  if (!input.depositCreationPersisted || !input.providerSessionPersisted || !input.paidTransitionPersisted || !input.failedTransitionPersisted) {
+    requiredEvidence.push("deposit, provider-session, paid, and failed transition persistence test output");
+  }
+  if (!input.refundTransitionPersisted || !input.disputeTransitionPersisted) {
+    requiredEvidence.push("refund and dispute persistence test output");
+  }
+  if (!input.paymentAuditLogPersistedForEveryMutation || !input.bookingStateEventPersistedForLifecycleChanges) {
+    requiredEvidence.push("PaymentAuditLog and BookingStateEvent persistence evidence for every lifecycle mutation");
+  }
+  if (!input.crossTenantIsolationTestsPassed || !input.replayIdempotencyTestsPassed || !input.seededPostgresIntegrationTestsPassed) {
+    requiredEvidence.push("seeded Postgres integration tests for tenant isolation and idempotent replay");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/payments typecheck",
+      "pnpm --filter @inkroute/payments test",
+      "pnpm --filter @inkroute/db prisma validate",
+      "payment persistence seeded Postgres integration tests",
+      "dashboard payment repository route/action tests",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
 function paymentOperationsWriteModels(action: PaymentOperationsWorkflowAction): PaymentOperationsWriteModel[] {
   switch (action) {
     case "execute_refund":
@@ -1069,6 +1411,128 @@ export function buildPaymentOperationsWorkflowPlan(input: PaymentOperationsWorkf
       "Store redacted provider references only; never persist secret keys or raw unredacted provider payloads.",
       "Require accounting/tax review before enabling export files for production bookkeeping.",
     ],
+    blockers,
+  };
+}
+
+export function buildPaymentOperationsRuntimeReadinessPlan(
+  input: PaymentOperationsRuntimeReadinessInput,
+): PaymentOperationsRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/payments package script is missing ${script}.`);
+  if (!input.paymentsTestsPassed) blockers.push("@inkroute/payments operation tests must pass.");
+  if (!input.paymentsTypecheckPassed) blockers.push("@inkroute/payments typecheck must pass.");
+  if (!input.dashboardPaymentActionsImplemented) blockers.push("Dashboard/server payment operation actions must be implemented.");
+  if (!input.refundActionAuthorized) blockers.push("Refund action must enforce tenant authorization and payment ownership.");
+  if (!input.stripeRefundsTestModeVerified) blockers.push("Stripe test-mode refund execution must be verified.");
+  if (!input.refundPersistenceConfigured) blockers.push("Refund execution must persist Refund, Payment, PaymentAuditLog, and IdempotencyKey writes.");
+  if (!input.noShowForfeitureActionImplemented) blockers.push("No-show forfeiture action must be implemented.");
+  if (!input.noShowAuditPersistenceConfigured) blockers.push("No-show forfeiture must persist BookingStateEvent and PaymentAuditLog records.");
+  if (!input.disputeEvidenceWorkflowImplemented) blockers.push("Dispute evidence workflow must collect and persist evidence files.");
+  if (!input.disputeProviderSyncVerified) blockers.push("Stripe dispute evidence sync must be verified in test mode.");
+  if (!input.receiptGenerationImplemented) blockers.push("Receipt generation must be implemented with stable receipt numbers.");
+  if (!input.receiptDeliveryProviderConfigured) blockers.push("Receipt delivery provider must be configured before sending receipts.");
+  if (!input.receiptDeliveryTested) blockers.push("Receipt delivery must be tested with redacted client/payment data.");
+  if (!input.accountingExportImplemented) blockers.push("Accounting export workflow must be implemented.");
+  if (!input.exportRedactionVerified) blockers.push("Accounting export must redact non-accounting PII, medical notes, and provider secrets.");
+  if (!input.taxAccountingReviewApproved) blockers.push("Tax/accounting review must approve export fields and retention policy.");
+  if (!input.idempotencyConfiguredForOperations) blockers.push("Refund, no-show, dispute, receipt, and export operations must claim idempotency keys.");
+  if (!input.paymentAuditLogPersistedForOperations) blockers.push("Every payment operation must persist PaymentAuditLog evidence.");
+  if (!input.tenantAuthorizationTestsPassed) blockers.push("Tenant authorization tests must deny cross-tenant payment operations.");
+  if (!input.dashboardE2eEvidenceAttached) blockers.push("Dashboard E2E evidence must cover refund, no-show, dispute, receipt, and export flows.");
+
+  if (!input.dashboardPaymentActionsImplemented || !input.tenantAuthorizationTestsPassed) {
+    requiredEvidence.push("authorized dashboard/server actions with cross-tenant denial tests");
+  }
+  if (!input.stripeRefundsTestModeVerified || !input.refundPersistenceConfigured) {
+    requiredEvidence.push("Stripe test-mode refund transcript and persisted Refund/PaymentAuditLog records");
+  }
+  if (!input.noShowForfeitureActionImplemented || !input.noShowAuditPersistenceConfigured) {
+    requiredEvidence.push("no-show forfeiture action evidence with BookingStateEvent and PaymentAuditLog rows");
+  }
+  if (!input.disputeEvidenceWorkflowImplemented || !input.disputeProviderSyncVerified) {
+    requiredEvidence.push("dispute evidence files and Stripe test-mode dispute sync transcript");
+  }
+  if (!input.receiptGenerationImplemented || !input.receiptDeliveryProviderConfigured || !input.receiptDeliveryTested) {
+    requiredEvidence.push("generated and delivered receipt evidence with redacted client/payment data");
+  }
+  if (!input.accountingExportImplemented || !input.exportRedactionVerified || !input.taxAccountingReviewApproved) {
+    requiredEvidence.push("accounting export file, redaction proof, and tax/accounting review approval");
+  }
+  if (!input.idempotencyConfiguredForOperations || !input.paymentAuditLogPersistedForOperations || !input.dashboardE2eEvidenceAttached) {
+    requiredEvidence.push("idempotency, audit-log, and dashboard E2E evidence for all payment operations");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/payments typecheck",
+      "pnpm --filter @inkroute/payments test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm test:unit -- apps/dashboard tests for payment operations",
+      "stripe refunds.create test-mode smoke",
+      "dashboard payment operations E2E smoke",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
+export function buildPaymentAutomatedTestReadinessPlan(
+  input: PaymentAutomatedTestReadinessInput,
+): PaymentAutomatedTestReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/payments package script is missing ${script}.`);
+  if (!input.paymentsUnitTestsPassed) blockers.push("@inkroute/payments unit tests must pass.");
+  if (!input.paymentRouteTestsPassed) blockers.push("Web payment route boundary tests must pass.");
+  if (!input.stripeSdkSignatureTestsPassed) blockers.push("Stripe SDK signature verification tests must pass.");
+  if (!input.stripeCliLifecycleTestsPassed) blockers.push("Stripe CLI lifecycle tests must cover checkout completed, failed payment, expired checkout, refund, dispute, invalid signature, and replay.");
+  if (!input.dbReconciliationTestsPassed) blockers.push("DB reconciliation tests must prove Deposit, Payment, Refund, BookingStateEvent, PaymentAuditLog, and IdempotencyKey writes.");
+  if (!input.bookingToPaidE2ePassed) blockers.push("Booking-to-paid Playwright/E2E flow must pass.");
+  if (!input.refundNoShowDisputeTestsPassed) blockers.push("Refund, no-show forfeiture, and dispute workflow tests must pass.");
+  if (!input.receiptExportTestsPassed) blockers.push("Receipt generation/delivery and accounting export tests must pass.");
+  if (!input.crossTenantPaymentTestsPassed) blockers.push("Cross-tenant payment access and mutation denial tests must pass.");
+  if (!input.replayIdempotencyTestsPassed) blockers.push("Replay/idempotency tests must prove duplicate provider events and operation retries do not duplicate writes.");
+  if (!input.ciPaymentTestJobConfigured) blockers.push("CI must run payment unit, route, DB reconciliation, Stripe lifecycle, and E2E payment tests.");
+  if (!input.artifactsCaptured) blockers.push("Payment test artifacts must capture Stripe CLI logs, DB reconciliation output, and E2E screenshots/traces.");
+
+  if (!input.paymentsUnitTestsPassed || !input.paymentRouteTestsPassed || !input.stripeSdkSignatureTestsPassed) {
+    requiredEvidence.push("payment helper, route-boundary, and Stripe signature test output");
+  }
+  if (!input.stripeCliLifecycleTestsPassed) {
+    requiredEvidence.push("Stripe CLI lifecycle transcript for checkout success/failure/expiration/refund/dispute/replay");
+  }
+  if (!input.dbReconciliationTestsPassed || !input.crossTenantPaymentTestsPassed || !input.replayIdempotencyTestsPassed) {
+    requiredEvidence.push("seeded DB reconciliation, tenant isolation, and idempotent replay test output");
+  }
+  if (!input.bookingToPaidE2ePassed || !input.refundNoShowDisputeTestsPassed || !input.receiptExportTestsPassed) {
+    requiredEvidence.push("Playwright/dashboard E2E evidence for booking-to-paid, refund/no-show/dispute, receipt, and export flows");
+  }
+  if (!input.ciPaymentTestJobConfigured || !input.artifactsCaptured) {
+    requiredEvidence.push("CI payment test job configuration and retained artifacts");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/payments typecheck",
+      "pnpm --filter @inkroute/payments test",
+      "pnpm vitest run apps/web/tests/payment-routes.test.ts",
+      "payment DB reconciliation integration tests",
+      "Stripe CLI payment lifecycle tests",
+      "Playwright booking-to-paid payment E2E flow",
+    ],
+    requiredEvidence,
     blockers,
   };
 }

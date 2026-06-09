@@ -1005,6 +1005,37 @@ export interface LegalReviewPacketPlan {
   reviewChecklist: readonly string[];
 }
 
+export interface PaymentPolicyLegalReviewRuntimeReadinessInput {
+  packageScripts: readonly string[];
+  securityTestsPassed: boolean;
+  securityTypecheckPassed: boolean;
+  webTypecheckPassed: boolean;
+  dashboardTypecheckPassed: boolean;
+  attorneyApprovalRecorded: boolean;
+  taxAccountingApprovalRecorded: boolean;
+  reviewedPaymentCopyCommitted: boolean;
+  reviewedCancellationCopyCommitted: boolean;
+  reviewedNoShowCopyCommitted: boolean;
+  reviewedRefundCopyCommitted: boolean;
+  reviewedSmsConsentCopyCommitted: boolean;
+  reviewedReceiptCopyCommitted: boolean;
+  reviewedTaxDisclosureCopyCommitted: boolean;
+  termsPrivacyConsentUpdated: boolean;
+  placeholdersRemovedFromPaymentFlows: boolean;
+  acceptanceAuditConfigured: boolean;
+  policyVersioningConfigured: boolean;
+  e2eApprovedLanguageVerified: boolean;
+  rollbackCopyPlanDocumented: boolean;
+}
+
+export interface PaymentPolicyLegalReviewRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export interface SecurityHeaderDraft {
   name: string;
   value: string;
@@ -1335,6 +1366,73 @@ export function buildLegalReviewPacketPlan(input: LegalReviewPacketInput): Legal
       "SMS language includes opt-in, STOP, HELP, quiet hours, marketing/transactional boundaries, and retention.",
       "Noindex protections stay enabled until all required topics are approved and versioned acceptance/audit tracking is live.",
     ],
+  };
+}
+
+export function buildPaymentPolicyLegalReviewRuntimeReadinessPlan(
+  input: PaymentPolicyLegalReviewRuntimeReadinessInput,
+): PaymentPolicyLegalReviewRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/security package script is missing ${script}.`);
+  if (!input.securityTestsPassed) blockers.push("@inkroute/security legal review tests must pass.");
+  if (!input.securityTypecheckPassed) blockers.push("@inkroute/security typecheck must pass.");
+  if (!input.webTypecheckPassed) blockers.push("@inkroute/web typecheck must pass with approved public legal/payment copy.");
+  if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass with approved payment operations copy.");
+  if (!input.attorneyApprovalRecorded) blockers.push("Attorney approval must be recorded for payment, cancellation, no-show, refund, SMS, receipt, and liability language.");
+  if (!input.taxAccountingApprovalRecorded) blockers.push("Tax/accounting approval must be recorded for receipt and accounting export language.");
+  if (!input.reviewedPaymentCopyCommitted) blockers.push("Reviewed deposit/payment copy must be committed.");
+  if (!input.reviewedCancellationCopyCommitted) blockers.push("Reviewed cancellation copy must be committed.");
+  if (!input.reviewedNoShowCopyCommitted) blockers.push("Reviewed no-show copy must be committed.");
+  if (!input.reviewedRefundCopyCommitted) blockers.push("Reviewed refund copy must be committed.");
+  if (!input.reviewedSmsConsentCopyCommitted) blockers.push("Reviewed SMS consent, STOP, HELP, and quiet-hours copy must be committed.");
+  if (!input.reviewedReceiptCopyCommitted) blockers.push("Reviewed receipt copy must be committed.");
+  if (!input.reviewedTaxDisclosureCopyCommitted) blockers.push("Reviewed tax/accounting disclosure copy must be committed.");
+  if (!input.termsPrivacyConsentUpdated) blockers.push("Terms, privacy, consent, and studio policy documents must be updated with reviewed payment policy language.");
+  if (!input.placeholdersRemovedFromPaymentFlows) blockers.push("Demo/planning placeholders must be removed from payment-facing flows before launch.");
+  if (!input.acceptanceAuditConfigured) blockers.push("Versioned acceptance audit must record legal document versions accepted by clients/users.");
+  if (!input.policyVersioningConfigured) blockers.push("Payment policy versions must be attached to bookings, deposits, receipts, and exports.");
+  if (!input.e2eApprovedLanguageVerified) blockers.push("E2E flows must verify approved payment/refund/no-show/SMS/receipt/tax language is displayed.");
+  if (!input.rollbackCopyPlanDocumented) blockers.push("Rollback plan for correcting approved policy copy must be documented.");
+
+  if (!input.attorneyApprovalRecorded || !input.taxAccountingApprovalRecorded) {
+    requiredEvidence.push("signed attorney and tax/accounting approval records for payment policy language");
+  }
+  if (
+    !input.reviewedPaymentCopyCommitted ||
+    !input.reviewedCancellationCopyCommitted ||
+    !input.reviewedNoShowCopyCommitted ||
+    !input.reviewedRefundCopyCommitted ||
+    !input.reviewedSmsConsentCopyCommitted ||
+    !input.reviewedReceiptCopyCommitted ||
+    !input.reviewedTaxDisclosureCopyCommitted
+  ) {
+    requiredEvidence.push("committed reviewed copy for deposits, cancellation, no-show, refund, SMS, receipts, and tax disclosures");
+  }
+  if (!input.termsPrivacyConsentUpdated || !input.acceptanceAuditConfigured || !input.policyVersioningConfigured) {
+    requiredEvidence.push("versioned Terms/Privacy/Consent/studio policy updates plus acceptance audit evidence");
+  }
+  if (!input.placeholdersRemovedFromPaymentFlows || !input.e2eApprovedLanguageVerified) {
+    requiredEvidence.push("E2E screenshots or test output proving approved copy appears in booking, dashboard payment, receipt, and SMS flows");
+  }
+  if (!input.rollbackCopyPlanDocumented) requiredEvidence.push("documented policy-copy correction and rollback plan");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "payment policy approved-copy E2E sweep",
+      "legal/tax approval packet review",
+    ],
+    requiredEvidence,
+    blockers,
   };
 }
 

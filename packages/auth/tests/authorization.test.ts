@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assertPermission,
+  buildAuthSessionTenantGuardRuntimeReadinessPlan,
   buildDashboardReadinessPlan,
   buildDomainAuthorizationRuntimeReadinessPlan,
   buildMobileAuthRuntimeReadinessPlan,
@@ -629,5 +630,78 @@ describe("auth authorization helpers", () => {
     expect(plan.blockers).toContain("CustomRole rows must be loaded from the database before runtime authorization decisions.");
     expect(plan.blockers).toContain("Authorization allow/deny decisions must persist AuditLog rows with tenant, actor, route, and permission metadata.");
     expect(plan.blockers).toContain("Route tests must cover owner, artist, assistant, studio manager, admin, and custom roles.");
+  });
+
+  it("plans ready production auth/session/tenant guards with provider-backed sessions, middleware, CSRF, revocation, field redaction, and audits", () => {
+    const plan = buildAuthSessionTenantGuardRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      authTestsPassed: true,
+      authTypecheckPassed: true,
+      authProviderSelected: true,
+      providerLoginLogoutWired: true,
+      secureDashboardCookiesConfigured: true,
+      mobileTokenStorageConfigured: true,
+      serverTenantMembershipPersistenceConfigured: true,
+      routeMiddlewareAdaptersConfigured: true,
+      dashboardRoutesIntegrated: true,
+      mobileApiRoutesIntegrated: true,
+      sensitiveServerRoutesIntegrated: true,
+      fieldAuthorizationIntegratedInRoutes: true,
+      sessionRevocationPersistenceConfigured: true,
+      csrfTokenBindingConfigured: true,
+      auditLogWritesConfigured: true,
+      providerBackedRouteTestsPassed: true,
+      crossTenantIntegrationTestsPassed: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.missingScripts).toEqual([]);
+    expect(plan.requiredEvidence).toEqual([]);
+    expect(plan.blockers).toEqual([]);
+    expect(plan.requiredCommands).toContain("provider-backed login/logout integration tests");
+    expect(plan.requiredControls).toContain("Bind CSRF tokens to cookie-authenticated mutating route sessions.");
+  });
+
+  it("blocks production auth/session/tenant guards until provider, storage, middleware, route integrations, revocation, CSRF, audits, and cross-tenant tests exist", () => {
+    const plan = buildAuthSessionTenantGuardRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      authTestsPassed: true,
+      authTypecheckPassed: false,
+      authProviderSelected: false,
+      providerLoginLogoutWired: false,
+      secureDashboardCookiesConfigured: false,
+      mobileTokenStorageConfigured: false,
+      serverTenantMembershipPersistenceConfigured: false,
+      routeMiddlewareAdaptersConfigured: false,
+      dashboardRoutesIntegrated: false,
+      mobileApiRoutesIntegrated: false,
+      sensitiveServerRoutesIntegrated: false,
+      fieldAuthorizationIntegratedInRoutes: false,
+      sessionRevocationPersistenceConfigured: false,
+      csrfTokenBindingConfigured: false,
+      auditLogWritesConfigured: false,
+      providerBackedRouteTestsPassed: false,
+      crossTenantIntegrationTestsPassed: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredEvidence).toEqual([
+      "auth provider selection, login/logout callback, and provider-backed route test evidence",
+      "secure cookie, mobile token storage, revocation, and CSRF binding evidence",
+      "server tenant membership persistence and route middleware integration evidence",
+      "field authorization, audit-log write, and cross-tenant integration evidence",
+    ]);
+    expect(plan.blockers).toEqual(
+      expect.arrayContaining([
+        "@inkroute/auth package script is missing typecheck.",
+        "@inkroute/auth typecheck must pass in the installed workspace.",
+        "Production auth provider must be selected and configured.",
+        "Dashboard sessions must use secure HttpOnly SameSite cookies with rotation.",
+        "TenantMember/session lookups must be persisted and resolved server-side.",
+        "Cookie-authenticated mutating routes must bind CSRF tokens to the active session.",
+        "Cross-tenant route integration tests must prove tenant isolation.",
+      ]),
+    );
   });
 });

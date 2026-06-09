@@ -710,6 +710,34 @@ export interface MobileRuntimeReadinessPlan {
   blockers: readonly string[];
 }
 
+export interface MobileDeviceQaRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  mobileSupportTestsPassed: boolean;
+  mobileSupportTypecheckPassed: boolean;
+  mobileAppTypecheckPassed: boolean;
+  mobileStaticTestsPassed: boolean;
+  expoComponentRenderTestsPassed: boolean;
+  iosSimulatorSmokePassed: boolean;
+  androidEmulatorSmokePassed: boolean;
+  physicalDeviceSmokePassed: boolean;
+  accessibilityChecksPassed: boolean;
+  offlineQaPassed: boolean;
+  pushQaPassed: boolean;
+  crashQaPassed: boolean;
+  otaRollbackQaPassed: boolean;
+  qaManifestSynced: boolean;
+  ciHooksConfigured: boolean;
+  qaArtifactsAttached: boolean;
+}
+
+export interface MobileDeviceQaRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export function buildMobileDeviceQaChecklist(): MobileDeviceQaItem[] {
   return [
     {
@@ -825,6 +853,65 @@ export function summarizeMobileDeviceQa(items: readonly MobileDeviceQaItem[] = b
     missingAreas,
     blockingItemIds,
     productionReady: missingAreas.length === 0 && blockingItemIds.length === 0,
+  };
+}
+
+export function buildMobileDeviceQaRuntimeReadinessPlan(
+  input: MobileDeviceQaRuntimeReadinessInput,
+): MobileDeviceQaRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck", "ios", "android"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/mobile package script is missing ${script}.`);
+  if (!input.mobileSupportTestsPassed) blockers.push("@inkroute/mobile-support device QA tests must pass.");
+  if (!input.mobileSupportTypecheckPassed) blockers.push("@inkroute/mobile-support typecheck must pass.");
+  if (!input.mobileAppTypecheckPassed) blockers.push("@inkroute/mobile typecheck must pass.");
+  if (!input.mobileStaticTestsPassed) blockers.push("@inkroute/mobile static tests must pass.");
+  if (!input.expoComponentRenderTestsPassed) blockers.push("Expo app component/render tests must cover registered screens.");
+  if (!input.iosSimulatorSmokePassed) blockers.push("iOS simulator screen smoke must pass.");
+  if (!input.androidEmulatorSmokePassed) blockers.push("Android emulator screen smoke must pass.");
+  if (!input.physicalDeviceSmokePassed) blockers.push("Physical device smoke must cover auth, API sync, offline, push, crash, and OTA flows.");
+  if (!input.accessibilityChecksPassed) blockers.push("Mobile accessibility checks must pass for VoiceOver/TalkBack, text scaling, contrast, and touch targets.");
+  if (!input.offlineQaPassed) blockers.push("Offline reconnect QA must prove encrypted persistence, retry, idempotency, and conflict handling.");
+  if (!input.pushQaPassed) blockers.push("Push notification QA must prove permission, token registration, opt-out, receipt, and tap routing.");
+  if (!input.crashQaPassed) blockers.push("Crash QA must prove sanitized crash capture without PII, medical, payment, or token data.");
+  if (!input.otaRollbackQaPassed) blockers.push("OTA rollback QA must prove preview update adoption and rollback republish on the same runtime.");
+  if (!input.qaManifestSynced) blockers.push("Mobile device QA manifest must match generated checklist items.");
+  if (!input.ciHooksConfigured) blockers.push("Mobile QA CI hooks must run package static tests and preserve runtime artifact placeholders.");
+  if (!input.qaArtifactsAttached) blockers.push("Mobile QA artifacts must include simulator screenshots/logs, accessibility notes, provider/device transcripts, and release evidence.");
+
+  if (!input.expoComponentRenderTestsPassed || !input.mobileStaticTestsPassed) {
+    requiredEvidence.push("Expo app component/render and static test output for every registered screen");
+  }
+  if (!input.iosSimulatorSmokePassed || !input.androidEmulatorSmokePassed || !input.physicalDeviceSmokePassed) {
+    requiredEvidence.push("iOS, Android, and physical device smoke screenshots or videos");
+  }
+  if (!input.accessibilityChecksPassed) {
+    requiredEvidence.push("VoiceOver/TalkBack, text scaling, contrast, and touch-target QA notes");
+  }
+  if (!input.offlineQaPassed || !input.pushQaPassed || !input.crashQaPassed || !input.otaRollbackQaPassed) {
+    requiredEvidence.push("offline, push, crash, and OTA rollback runtime QA transcripts");
+  }
+  if (!input.ciHooksConfigured || !input.qaArtifactsAttached) {
+    requiredEvidence.push("CI job links and retained mobile QA artifacts");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/mobile-support typecheck",
+      "pnpm --filter @inkroute/mobile-support test",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "pnpm --filter @inkroute/mobile test",
+      "pnpm --filter @inkroute/mobile ios",
+      "pnpm --filter @inkroute/mobile android",
+      "manual physical-device QA for auth/api/offline/push/crash/OTA/accessibility",
+    ],
+    requiredEvidence,
+    blockers,
   };
 }
 

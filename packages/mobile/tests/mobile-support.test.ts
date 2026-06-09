@@ -5,6 +5,7 @@ import {
   buildMobileApiRuntimeReadinessPlan,
   buildMobileApiRequestPlan,
   buildMobileDeviceQaChecklist,
+  buildMobileDeviceQaRuntimeReadinessPlan,
   buildMobileRuntimeReadinessPlan,
   buildMobileScreenSyncRequirements,
   getMobileScreen,
@@ -377,6 +378,54 @@ describe("mobile support helpers", () => {
     expect(manifest.checks.map((check) => check.id)).toEqual(checklist.map((item) => item.id));
     expect(manifest.checks.every((check) => check.evidenceRequired.length > 0)).toBe(true);
     expect(manifest.checks.filter((check) => check.gaps.includes("GAP-108")).length).toBeGreaterThanOrEqual(9);
+  });
+
+  it("blocks Phase 6 mobile device QA readiness until Expo app, simulator, accessibility, provider, and artifact evidence exists", () => {
+    const plan = buildMobileDeviceQaRuntimeReadinessPlan({
+      packageScripts: {
+        test: "vitest run apps/mobile/tests/**/*.test.ts",
+        ios: "expo start --ios",
+      },
+      mobileSupportTestsPassed: true,
+      mobileSupportTypecheckPassed: false,
+      mobileAppTypecheckPassed: false,
+      mobileStaticTestsPassed: true,
+      expoComponentRenderTestsPassed: false,
+      iosSimulatorSmokePassed: false,
+      androidEmulatorSmokePassed: false,
+      physicalDeviceSmokePassed: false,
+      accessibilityChecksPassed: false,
+      offlineQaPassed: false,
+      pushQaPassed: false,
+      crashQaPassed: false,
+      otaRollbackQaPassed: false,
+      qaManifestSynced: true,
+      ciHooksConfigured: false,
+      qaArtifactsAttached: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck", "android"]);
+    expect(plan.requiredCommands).toEqual(
+      expect.arrayContaining([
+        "pnpm --filter @inkroute/mobile-support test",
+        "pnpm --filter @inkroute/mobile typecheck",
+        "pnpm --filter @inkroute/mobile ios",
+        "pnpm --filter @inkroute/mobile android",
+        "manual physical-device QA for auth/api/offline/push/crash/OTA/accessibility",
+      ]),
+    );
+    expect(plan.requiredEvidence).toEqual(
+      expect.arrayContaining([
+        "Expo app component/render and static test output for every registered screen",
+        "iOS, Android, and physical device smoke screenshots or videos",
+        "VoiceOver/TalkBack, text scaling, contrast, and touch-target QA notes",
+        "offline, push, crash, and OTA rollback runtime QA transcripts",
+        "CI job links and retained mobile QA artifacts",
+      ]),
+    );
+    expect(plan.blockers).toContain("Expo app component/render tests must cover registered screens.");
+    expect(plan.blockers).toContain("Mobile QA artifacts must include simulator screenshots/logs, accessibility notes, provider/device transcripts, and release evidence.");
   });
 
   it("keeps production-blocking integration boundaries visible", () => {
