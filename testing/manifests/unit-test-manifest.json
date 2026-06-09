@@ -1173,6 +1173,26 @@
                                          "Spam moderation and rate-limit integration pending",
                                          "Postgres retention/export/delete integration tests pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-notification-automation-static",
+                       "file":  "apps/web/tests/notification-automation-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-069 test matrix covers package, public route, provider webhook, queue, dashboard, mobile, Expo, provider sandbox, opt-out/STOP, retention/export/delete, and E2E suites",
+                                        "GAP-069 CI runs notification/messaging lifecycle static/package/route contracts",
+                                        "GAP-069 artifacts are retained through redacted-only artifact paths without claiming provider/device/E2E proof"
+                                    ],
+                       "blockedBy":  [
+                                         "Static notification automation test execution pending",
+                                         "Real queue integration tests pending",
+                                         "Dashboard Playwright smoke tests pending",
+                                         "Expo device QA pending",
+                                         "Provider sandbox tests pending",
+                                         "Preference/STOP persistence integration tests pending",
+                                         "Retention/export/delete integration tests pending",
+                                         "Notification E2E artifacts pending"
+                                     ]
                    }
                ]
 }
