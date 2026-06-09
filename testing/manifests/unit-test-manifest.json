@@ -1959,7 +1959,7 @@
       "file": "apps/web/tests/provider-environment-runtime-static.test.ts",
       "priority": "critical",
       "verifies": [
-        "GAP-114 provider environment runtime matrix covers preview/staging/production web, dashboard, database, storage, mobile, observability, and CI/CD surfaces; redacted evidence labels; safe secret-store destinations; provider smoke checks; GitHub environment protections; and CI artifacts",
+        "GAP-114 provider environment runtime matrix covers preview/staging/production web, dashboard, database, storage, mobile, observability, and CI/CD surfaces; redacted evidence labels; safe secret-store destinations; provider smoke checks; GitHub environment protections; ProviderEnvironmentRun Prisma model and app row contract; and CI artifacts",
         "GAP-114 provider environment evidence manifest, verifier script, and deployment readiness blockers stay aligned before live provider provisioning proof",
         "GAP-114 CI retains provider environment runtime contract and redacted artifact paths without claiming provider projects have been provisioned"
       ],
@@ -1967,7 +1967,7 @@
         "Static provider environment runtime test execution pending",
         "Preview/staging/production provider project provisioning proof pending",
         "Secret-store destination and redacted evidence label proof pending",
-        "Provider smoke checks and GitHub environment protection proof pending"
+        "Provider-backed ProviderEnvironmentRun transaction plus provider smoke checks, GitHub environment protection proof, and redacted handoff artifact proof pending"
       ]
     },
     {

@@ -378,6 +378,7 @@ model Tenant {
   ciCoverageRuns CiCoverageRun[]
   performanceLoadRuns PerformanceLoadRun[]
   deploymentToolingRuns DeploymentToolingRun[]
+  providerEnvironmentRuns ProviderEnvironmentRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -1896,6 +1897,40 @@ model DeploymentToolingRun {
   tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                           DateTime @default(now())
   updatedAt                           DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model ProviderEnvironmentRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  environmentMatrix                       Json
+  surfaceMatrix                           Json
+  artifactManifest                        Json
+  verifierPassed                          Boolean  @default(false)
+  strictEnvCheckPassed                    Boolean  @default(false)
+  previewProvisioned                      Boolean  @default(false)
+  stagingProvisioned                      Boolean  @default(false)
+  productionProvisioned                   Boolean  @default(false)
+  webDashboardSmokePassed                 Boolean  @default(false)
+  databaseMigrationDryRunPassed           Boolean  @default(false)
+  storagePrivateAclSmokePassed            Boolean  @default(false)
+  mobilePreviewBuildPassed                Boolean  @default(false)
+  observabilitySourceMapSmokePassed       Boolean  @default(false)
+  githubEnvironmentProtectionsConfigured  Boolean  @default(false)
+  secretStoreDestinationsConfigured       Boolean  @default(false)
+  redactedEvidenceLabelsRecorded          Boolean  @default(false)
+  ciProviderEnvironmentArtifactsCaptured  Boolean  @default(false)
+  redactedHandoffArtifactPath             String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

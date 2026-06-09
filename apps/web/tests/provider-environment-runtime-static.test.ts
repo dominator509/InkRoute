@@ -6,7 +6,8 @@ import {
   providerEnvironmentRuntimeCommands,
   providerEnvironmentRuntimeMatrix,
   providerEnvironmentRuntimeReadiness,
-  providerEnvironmentRuntimeSurfaces
+  providerEnvironmentRuntimeSurfaces,
+  providerEnvironmentRunPersistenceContract
 } from "../lib/providerEnvironmentRuntime";
 
 const root = process.cwd();
@@ -17,6 +18,10 @@ const deploymentTests = read("packages/deployment/tests/deployment-readiness.tes
 const ciWorkflow = read(".github/workflows/ci.yml");
 const unitManifest = read("testing/manifests/unit-test-manifest.json");
 const gapTracker = read("GAP_TRACKER.md");
+const prismaSchema = read("packages/db/prisma/schema.prisma");
+const prismaMigration = read(
+  "packages/db/prisma/migrations/20260609017000_add_provider_environment_runs/migration.sql"
+);
 
 describe("GAP-114 provider environment runtime wiring", () => {
   it("pins provider environment commands, surfaces, matrix entries, and artifacts", () => {
@@ -102,5 +107,35 @@ describe("GAP-114 provider environment runtime wiring", () => {
     expect(unitManifest).toContain("unit-web-provider-environment-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/providerEnvironmentRuntime.ts");
     expect(gapTracker).toContain("live provider provisioning proof remains open");
+  });
+
+  it("pins durable ProviderEnvironmentRun persistence before provider provisioning proof is captured", () => {
+    expect(providerEnvironmentRunPersistenceContract.prismaModel).toBe("ProviderEnvironmentRun");
+    expect(providerEnvironmentRunPersistenceContract.tenantRelation).toBe("providerEnvironmentRuns");
+    expect(providerEnvironmentRunPersistenceContract.uniqueKey).toEqual(["tenantId", "runId"]);
+    expect(providerEnvironmentRunPersistenceContract.jsonFields).toEqual([
+      "environmentMatrix",
+      "surfaceMatrix",
+      "artifactManifest"
+    ]);
+    expect(providerEnvironmentRunPersistenceContract.requiredBooleanProofs).toEqual(
+      expect.arrayContaining([
+        "previewProvisioned",
+        "stagingProvisioned",
+        "productionProvisioned",
+        "secretStoreDestinationsConfigured",
+        "redactedEvidenceLabelsRecorded",
+        "ciProviderEnvironmentArtifactsCaptured"
+      ])
+    );
+    expect(prismaSchema).toContain("providerEnvironmentRuns ProviderEnvironmentRun[]");
+    expect(prismaSchema).toContain("model ProviderEnvironmentRun");
+    expect(prismaSchema).toContain("environmentMatrix                       Json");
+    expect(prismaSchema).toContain("githubEnvironmentProtectionsConfigured  Boolean  @default(false)");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(prismaMigration).toContain('CREATE TABLE "ProviderEnvironmentRun"');
+    expect(prismaMigration).toContain('"redactedHandoffArtifactPath" TEXT');
+    expect(unitManifest).toContain("ProviderEnvironmentRun Prisma model and app row contract");
+    expect(gapTracker).toContain("packages/db/prisma/migrations/20260609017000_add_provider_environment_runs/migration.sql");
   });
 });

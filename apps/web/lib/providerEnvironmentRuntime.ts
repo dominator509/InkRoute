@@ -14,6 +14,30 @@ export interface ProviderEnvironmentRuntimeMatrixEntry {
   readonly status: ProviderEnvironmentRuntimeStatus;
 }
 
+export interface ProviderEnvironmentRunPersistenceContract {
+  readonly prismaModel: "ProviderEnvironmentRun";
+  readonly tenantRelation: "providerEnvironmentRuns";
+  readonly uniqueKey: readonly ["tenantId", "runId"];
+  readonly jsonFields: readonly ["environmentMatrix", "surfaceMatrix", "artifactManifest"];
+  readonly requiredBooleanProofs: readonly [
+    "verifierPassed",
+    "strictEnvCheckPassed",
+    "previewProvisioned",
+    "stagingProvisioned",
+    "productionProvisioned",
+    "webDashboardSmokePassed",
+    "databaseMigrationDryRunPassed",
+    "storagePrivateAclSmokePassed",
+    "mobilePreviewBuildPassed",
+    "observabilitySourceMapSmokePassed",
+    "githubEnvironmentProtectionsConfigured",
+    "secretStoreDestinationsConfigured",
+    "redactedEvidenceLabelsRecorded",
+    "ciProviderEnvironmentArtifactsCaptured"
+  ];
+  readonly redactedArtifactField: "redactedHandoffArtifactPath";
+}
+
 export const providerEnvironmentRuntimeSurfaces: readonly ProviderEnvironmentSurface[] = [
   "web",
   "dashboard",
@@ -94,6 +118,30 @@ export const providerEnvironmentRuntimeMatrix: readonly ProviderEnvironmentRunti
     status: "ci-gated"
   }
 ];
+
+export const providerEnvironmentRunPersistenceContract: ProviderEnvironmentRunPersistenceContract = {
+  prismaModel: "ProviderEnvironmentRun",
+  tenantRelation: "providerEnvironmentRuns",
+  uniqueKey: ["tenantId", "runId"],
+  jsonFields: ["environmentMatrix", "surfaceMatrix", "artifactManifest"],
+  requiredBooleanProofs: [
+    "verifierPassed",
+    "strictEnvCheckPassed",
+    "previewProvisioned",
+    "stagingProvisioned",
+    "productionProvisioned",
+    "webDashboardSmokePassed",
+    "databaseMigrationDryRunPassed",
+    "storagePrivateAclSmokePassed",
+    "mobilePreviewBuildPassed",
+    "observabilitySourceMapSmokePassed",
+    "githubEnvironmentProtectionsConfigured",
+    "secretStoreDestinationsConfigured",
+    "redactedEvidenceLabelsRecorded",
+    "ciProviderEnvironmentArtifactsCaptured"
+  ],
+  redactedArtifactField: "redactedHandoffArtifactPath"
+};
 
 export const providerEnvironmentRuntimeReadiness = buildProviderEnvironmentRuntimeReadinessPlan({
   environments: [
