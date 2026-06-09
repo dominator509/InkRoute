@@ -13,6 +13,40 @@ export interface RepositoryGovernanceRuntimeMatrixEntry {
   readonly status: RepositoryGovernanceRuntimeStatus;
 }
 
+export interface RepositoryGovernanceRunPersistenceContract {
+  readonly prismaModel: "RepositoryGovernanceRun";
+  readonly tenantRelation: "repositoryGovernanceRuns";
+  readonly uniqueKey: readonly ["tenantId", "runId"];
+  readonly jsonFields: readonly ["sourcePrerequisiteMatrix", "externalSettingsMatrix", "enforcementTestMatrix", "artifactManifest"];
+  readonly requiredBooleanProofs: readonly [
+    "governanceAuditPassed",
+    "qualityAllGovernancePassed",
+    "requiredFilesPresent",
+    "codeownersCoveragePassed",
+    "prTemplateEvidenceTermsPresent",
+    "issueTemplateEvidenceTermsPresent",
+    "ciGovernanceTermsPresent",
+    "branchProtectionActive",
+    "requiredStatusChecksEnforced",
+    "codeownersReviewRequired",
+    "secretScanningEnabled",
+    "dependabotOrSecurityAlertsEnabled",
+    "mergeRulesConfigured",
+    "enforcementTestPrCaptured",
+    "redactedSettingsEvidenceCaptured"
+  ];
+  readonly redactedArtifactFields: readonly [
+    "governanceAuditArtifactPath",
+    "qualityAllArtifactPath",
+    "branchProtectionArtifactPath",
+    "requiredChecksArtifactPath",
+    "codeownersReviewArtifactPath",
+    "securitySettingsArtifactPath",
+    "mergeRulesArtifactPath",
+    "enforcementTestPrArtifactPath"
+  ];
+}
+
 export const repositoryGovernanceRuntimeCommands = [
   "pnpm quality:governance",
   "pnpm quality:all",
@@ -105,6 +139,40 @@ export const repositoryGovernanceRuntimeMatrix = [
     status: "enforcement-gated",
   },
 ] as const satisfies readonly RepositoryGovernanceRuntimeMatrixEntry[];
+
+export const repositoryGovernanceRunPersistenceContract: RepositoryGovernanceRunPersistenceContract = {
+  prismaModel: "RepositoryGovernanceRun",
+  tenantRelation: "repositoryGovernanceRuns",
+  uniqueKey: ["tenantId", "runId"],
+  jsonFields: ["sourcePrerequisiteMatrix", "externalSettingsMatrix", "enforcementTestMatrix", "artifactManifest"],
+  requiredBooleanProofs: [
+    "governanceAuditPassed",
+    "qualityAllGovernancePassed",
+    "requiredFilesPresent",
+    "codeownersCoveragePassed",
+    "prTemplateEvidenceTermsPresent",
+    "issueTemplateEvidenceTermsPresent",
+    "ciGovernanceTermsPresent",
+    "branchProtectionActive",
+    "requiredStatusChecksEnforced",
+    "codeownersReviewRequired",
+    "secretScanningEnabled",
+    "dependabotOrSecurityAlertsEnabled",
+    "mergeRulesConfigured",
+    "enforcementTestPrCaptured",
+    "redactedSettingsEvidenceCaptured",
+  ],
+  redactedArtifactFields: [
+    "governanceAuditArtifactPath",
+    "qualityAllArtifactPath",
+    "branchProtectionArtifactPath",
+    "requiredChecksArtifactPath",
+    "codeownersReviewArtifactPath",
+    "securitySettingsArtifactPath",
+    "mergeRulesArtifactPath",
+    "enforcementTestPrArtifactPath",
+  ],
+};
 
 export const repositoryGovernanceRuntimeReadiness = buildRepositoryGovernanceRuntimeReadinessPlan({
   governanceAuditPassed: true,

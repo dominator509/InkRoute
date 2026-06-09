@@ -2136,14 +2136,14 @@
       "file": "apps/web/tests/repository-governance-runtime-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-125 repository governance runtime matrix covers source governance audit, CODEOWNERS coverage, PR/issue templates, CI governance terms, branch protection, required status checks, CODEOWNERS review, secret scanning, security alerts, merge rules, test PR proof, and redacted settings evidence",
+        "GAP-125 repository governance runtime matrix covers source governance audit, CODEOWNERS coverage, PR/issue templates, CI governance terms, branch protection, required status checks, CODEOWNERS review, secret scanning, security alerts, merge rules, test PR proof, RepositoryGovernanceRun Prisma model and app row contract, and redacted settings evidence",
         "GAP-125 source-controlled governance prerequisites remain complete while external GitHub repository settings remain explicit blockers",
         "GAP-125 CI labels, artifact paths, unit manifest, and tracker row stay wired without claiming branch protection is configured"
       ],
       "blockedBy": [
         "Static repository governance runtime test execution pending",
         "pnpm quality:governance and quality:all execution proof pending",
-        "GitHub branch protection, required checks, CODEOWNERS review, secret scanning, security alerts, and merge rules evidence pending",
+        "Provider-backed RepositoryGovernanceRun transaction plus GitHub branch protection, required checks, CODEOWNERS review, secret scanning, security alerts, and merge rules evidence pending",
         "Redacted enforcement test PR proof pending"
       ]
     },

@@ -7,6 +7,7 @@ import {
   repositoryGovernanceRuntimeCommands,
   repositoryGovernanceRuntimeMatrix,
   repositoryGovernanceRuntimeReadiness,
+  repositoryGovernanceRunPersistenceContract,
   repositoryGovernanceSourcePrerequisites,
 } from "../lib/repositoryGovernanceRuntime";
 
@@ -23,6 +24,8 @@ describe("repository governance runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const prismaMigration = readRepoFile("packages/db/prisma/migrations/20260609028000_add_repository_governance_runs/migration.sql");
 
   it("pins governance commands, prerequisites, external settings, matrix rows, and artifacts", () => {
     expect(repositoryGovernanceRuntimeCommands).toEqual([
@@ -109,5 +112,39 @@ describe("repository governance runtime contract", () => {
     expect(unitManifest).toContain("unit-web-repository-governance-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/repositoryGovernanceRuntime.ts");
     expect(gapTracker).toContain("live GitHub branch protection, required-check, CODEOWNERS review, secret-scanning, security-alert, merge-rule, and enforcement-test evidence remain open");
+  });
+
+  it("pins durable RepositoryGovernanceRun persistence for GitHub settings enforcement proof", () => {
+    expect(repositoryGovernanceRunPersistenceContract.prismaModel).toBe("RepositoryGovernanceRun");
+    expect(repositoryGovernanceRunPersistenceContract.tenantRelation).toBe("repositoryGovernanceRuns");
+    expect(repositoryGovernanceRunPersistenceContract.uniqueKey).toEqual(["tenantId", "runId"]);
+    expect(repositoryGovernanceRunPersistenceContract.jsonFields).toEqual([
+      "sourcePrerequisiteMatrix",
+      "externalSettingsMatrix",
+      "enforcementTestMatrix",
+      "artifactManifest",
+    ]);
+    expect(repositoryGovernanceRunPersistenceContract.requiredBooleanProofs).toEqual(
+      expect.arrayContaining([
+        "governanceAuditPassed",
+        "branchProtectionActive",
+        "requiredStatusChecksEnforced",
+        "codeownersReviewRequired",
+        "secretScanningEnabled",
+        "mergeRulesConfigured",
+        "enforcementTestPrCaptured",
+        "redactedSettingsEvidenceCaptured",
+      ]),
+    );
+    expect(repositoryGovernanceRunPersistenceContract.redactedArtifactFields).toContain("branchProtectionArtifactPath");
+    expect(prismaSchema).toContain("repositoryGovernanceRuns RepositoryGovernanceRun[]");
+    expect(prismaSchema).toContain("model RepositoryGovernanceRun");
+    expect(prismaSchema).toContain("externalSettingsMatrix                  Json");
+    expect(prismaSchema).toContain("redactedSettingsEvidenceCaptured        Boolean  @default(false)");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(prismaMigration).toContain('CREATE TABLE "RepositoryGovernanceRun"');
+    expect(prismaMigration).toContain('"enforcementTestPrArtifactPath" TEXT');
+    expect(unitManifest).toContain("RepositoryGovernanceRun Prisma model and app row contract");
+    expect(gapTracker).toContain("packages/db/prisma/migrations/20260609028000_add_repository_governance_runs/migration.sql");
   });
 });

@@ -389,6 +389,7 @@ model Tenant {
   agentTaskTrackingRuns AgentTaskTrackingRun[]
   prGapEvidenceEnforcementRuns PrGapEvidenceEnforcementRun[]
   documentationAuditRuns DocumentationAuditRun[]
+  repositoryGovernanceRuns RepositoryGovernanceRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2328,6 +2329,49 @@ model DocumentationAuditRun {
   providerReviewArtifactPath              String?
   legalReviewArtifactPath                 String?
   staleProviderStatusArtifactPath         String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model RepositoryGovernanceRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  sourcePrerequisiteMatrix                Json
+  externalSettingsMatrix                  Json
+  enforcementTestMatrix                   Json
+  artifactManifest                        Json
+  governanceAuditPassed                   Boolean  @default(false)
+  qualityAllGovernancePassed              Boolean  @default(false)
+  requiredFilesPresent                    Boolean  @default(false)
+  codeownersCoveragePassed                Boolean  @default(false)
+  prTemplateEvidenceTermsPresent          Boolean  @default(false)
+  issueTemplateEvidenceTermsPresent       Boolean  @default(false)
+  ciGovernanceTermsPresent                Boolean  @default(false)
+  branchProtectionActive                  Boolean  @default(false)
+  requiredStatusChecksEnforced            Boolean  @default(false)
+  codeownersReviewRequired                Boolean  @default(false)
+  secretScanningEnabled                   Boolean  @default(false)
+  dependabotOrSecurityAlertsEnabled       Boolean  @default(false)
+  mergeRulesConfigured                    Boolean  @default(false)
+  enforcementTestPrCaptured               Boolean  @default(false)
+  redactedSettingsEvidenceCaptured        Boolean  @default(false)
+  governanceAuditArtifactPath             String?
+  qualityAllArtifactPath                  String?
+  branchProtectionArtifactPath            String?
+  requiredChecksArtifactPath              String?
+  codeownersReviewArtifactPath            String?
+  securitySettingsArtifactPath            String?
+  mergeRulesArtifactPath                  String?
+  enforcementTestPrArtifactPath           String?
   ciRunUrl                                String?
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())
