@@ -3005,7 +3005,8 @@
         "Receipt delivery, accounting export, tax/accounting review, and tenant authorization tests pending",
         "Dashboard E2E artifacts, dashboard typecheck/tests, CI evidence, and secret-safe artifact proof pending"
       ]
-    }    ,{
+    }
+    ,{
       "id": "unit-payment-automation-runtime-static",
       "file": "apps/web/tests/payment-automation-runtime-static.test.ts",
       "priority": "high",
@@ -3019,6 +3020,21 @@
         "Stripe CLI lifecycle transcript and Stripe signature proof pending",
         "Seeded DB reconciliation, cross-tenant, and replay idempotency proof pending",
         "Playwright/dashboard E2E artifacts, CI artifact upload evidence, and secret-safe artifact proof pending"
+      ]
+    }    ,{
+      "id": "unit-signed-ics-feed-runtime-static",
+      "file": "apps/web/tests/signed-ics-feed-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-055 signed ICS feed runtime matrix covers calendar typecheck/tests, web typecheck, route tests, token hash creation, token persistence, expiry/rotation, revocation UI/API, revoked-token route rejection, tenant/artist scope, durable access logs, private cache headers, Apple/Google/Outlook import smoke tests, CI evidence, and secret-safe artifacts",
+        "GAP-055 signed feed contract remains wired for hashed token creation, rotation/revocation planning, repository methods, durable access logging seam, local demo token fallback, private cache decisions, and travel ICS route evaluation",
+        "GAP-055 readiness keeps durable token repository/table, revocation dashboard UI, revoked-token DB route tests, persisted access logs, client import smoke artifacts, command evidence, CI, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static signed ICS feed runtime test execution pending",
+        "Durable token table/repository and revoked-token route rejection tests pending",
+        "Revocation dashboard UI, access-log persistence, and web typecheck proof pending",
+        "Apple/Google/Outlook import smoke artifacts, CI evidence, and secret-safe artifact proof pending"
       ]
     }  ]
 }

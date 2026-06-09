@@ -1470,6 +1470,36 @@ jobs:
 
       - name: Run Phase 7 payment lifecycle contracts
         run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/payment-routes.test.ts apps/web/tests/stripe-webhook-static.test.ts apps/web/tests/payment-automation-static.test.ts apps/dashboard/tests/payment-operations-static.test.ts apps/dashboard/tests/payment-read-route-static.test.ts
+      - name: Run Phase 8 signed ICS feed runtime contracts
+        run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/web/tests/signed-ics-feed-runtime-static.test.ts apps/web/tests/signed-ics-feed-static.test.ts apps/web/tests/ics-feed-route.test.ts
+
+      - name: Upload Phase 8 signed ICS feed runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-ics-feed-runtime-artifacts
+          path: |
+            coverage/signed-ics-feed-runtime.json
+            coverage/signed-ics-feed-calendar-typecheck.txt
+            coverage/signed-ics-feed-calendar-test.txt
+            coverage/signed-ics-feed-web-typecheck.txt
+            coverage/signed-ics-feed-route-tests.json
+            coverage/signed-ics-feed-token-create-hash.json
+            coverage/signed-ics-feed-token-persistence.json
+            coverage/signed-ics-feed-expiry-rotation.json
+            coverage/signed-ics-feed-revocation-ui.json
+            coverage/signed-ics-feed-revocation-api.json
+            coverage/signed-ics-feed-revoked-route-rejection.json
+            coverage/signed-ics-feed-tenant-artist-scope.json
+            coverage/signed-ics-feed-access-log-persistence.json
+            coverage/signed-ics-feed-cache-headers.json
+            coverage/signed-ics-feed-apple-import-redacted.json
+            coverage/signed-ics-feed-google-import-redacted.json
+            coverage/signed-ics-feed-outlook-import-redacted.json
+            coverage/signed-ics-feed-secret-safe-artifacts.json
+            test-results/signed-ics-feed-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 8 calendar lifecycle contracts
         run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/web/tests/ics-feed-route.test.ts apps/web/tests/availability-preview-route.test.ts apps/web/tests/signed-ics-feed-static.test.ts apps/web/tests/calendar-automation-static.test.ts apps/dashboard/tests/availability-persistence-static.test.ts apps/dashboard/tests/google-calendar-sync-static.test.ts apps/dashboard/tests/timezone-recurrence-qa-static.test.ts apps/dashboard/tests/travel-publish-static.test.ts
       - name: Upload Vitest coverage artifacts
