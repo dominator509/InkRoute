@@ -4,6 +4,7 @@ import {
   buildAuthSessionTenantGuardRuntimeReadinessPlan,
   buildDashboardLaunchEvidencePlan,
   buildDashboardReadinessPlan,
+  buildDomainAuthorizationRouteEvidencePlan,
   buildDomainAuthorizationRuntimeReadinessPlan,
   buildMobileAuthRuntimeReadinessPlan,
   buildProviderSessionStoreReadinessPlan,
@@ -698,6 +699,73 @@ describe("auth authorization helpers", () => {
     expect(plan.blockers).toContain("CustomRole rows must be loaded from the database before runtime authorization decisions.");
     expect(plan.blockers).toContain("Authorization allow/deny decisions must persist AuditLog rows with tenant, actor, route, and permission metadata.");
     expect(plan.blockers).toContain("Route tests must cover owner, artist, assistant, studio manager, admin, and custom roles.");
+  });
+
+  it("summarizes domain authorization route evidence across DB roles, middleware, role matrices, audits, CSRF, revocation, CI, and artifacts", () => {
+    const plan = buildDomainAuthorizationRouteEvidencePlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      authTestsPassed: true,
+      authTypecheckPassed: true,
+      customRolesLoadedFromDatabase: true,
+      dashboardMiddlewareUsesRouteGuard: true,
+      apiMiddlewareUsesRouteGuard: true,
+      serverActionsUseRouteGuard: true,
+      routeRoleMatrixTestsPassed: true,
+      customRoleRouteTestsPassed: true,
+      crossTenantDenialTestsPassed: true,
+      fieldRedactionRouteTestsPassed: true,
+      authorizationAuditRowsPersisted: true,
+      csrfSessionBindingTestsPassed: true,
+      sessionRevocationTestsPassed: true,
+      providerBackedSessionTestsPassed: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredCommands).toContain("CustomRole database loading route tests");
+    expect(plan.requiredControls).toContain("Apply route guards before dashboard/API/server-action data loading or mutation side effects.");
+  });
+
+  it("blocks domain authorization route evidence until DB roles, route guards, role matrices, audits, CSRF, revocation, CI, and safe artifacts exist", () => {
+    const plan = buildDomainAuthorizationRouteEvidencePlan({
+      packageScripts: { test: "vitest run" },
+      authTestsPassed: true,
+      authTypecheckPassed: false,
+      customRolesLoadedFromDatabase: false,
+      dashboardMiddlewareUsesRouteGuard: false,
+      apiMiddlewareUsesRouteGuard: false,
+      serverActionsUseRouteGuard: false,
+      routeRoleMatrixTestsPassed: false,
+      customRoleRouteTestsPassed: false,
+      crossTenantDenialTestsPassed: false,
+      fieldRedactionRouteTestsPassed: false,
+      authorizationAuditRowsPersisted: false,
+      csrfSessionBindingTestsPassed: false,
+      sessionRevocationTestsPassed: false,
+      providerBackedSessionTestsPassed: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredEvidence).toEqual([
+      "auth package test/typecheck and provider-backed session evidence",
+      "database CustomRole loading and dashboard/API/server-action route-guard adoption evidence",
+      "built-in role matrix, custom-role, and cross-tenant route denial evidence",
+      "field redaction and authorization AuditLog persistence evidence",
+      "CSRF session binding and session revocation route evidence",
+      "CI domain authorization route evidence and secret-safe artifact proof",
+    ]);
+    expect(plan.blockers).toContain("CustomRole rows must be loaded from tenant-scoped database storage in guarded route tests.");
+    expect(plan.blockers).toContain("Cross-tenant dashboard/API/server-action denial tests must pass.");
+    expect(plan.blockers).toContain("Authorization route artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.");
   });
 
   it("plans ready production auth/session/tenant guards with provider-backed sessions, middleware, CSRF, revocation, field redaction, and audits", () => {

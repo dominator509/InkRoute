@@ -13,6 +13,7 @@ import {
   buildPerformanceLoadRuntimeReadinessPlan,
   buildProviderContractRuntimeReadinessPlan,
   buildRouteSmokeManifest,
+  buildTestingLaunchExecutionEvidencePlan,
   buildTestingRuntimeReadinessPlan,
   phase14Suites,
   summarizeDashboardTestRequirements,
@@ -659,5 +660,87 @@ describe("Phase 14 testing manifest", () => {
     expect(plan.blockers).toContain("Rendered public SEO route crawl must pass.");
     expect(plan.blockers).toContain("Database-backed SEO routes must be wired before production runtime evidence is complete.");
     expect(plan.blockers).toContain("CI must require the Phase 10 SEO app runtime/build gate before merge.");
+  });
+
+  it("summarizes Phase 14 testing launch execution evidence across install, static, manifest, typecheck, unit, coverage, E2E, builds, integrations, mobile, CI, and artifacts", () => {
+    const plan = buildTestingLaunchExecutionEvidencePlan({
+      rootScripts: ["test:phase14:static", "test:manifest", "typecheck", "test:unit", "test:unit:coverage", "test:e2e"],
+      lockfileInstallPassed: true,
+      staticChecksPassed: true,
+      manifestChecksPassed: true,
+      typecheckPassed: true,
+      unitTestsPassed: true,
+      unitCoveragePassed: true,
+      e2eTestsPassed: true,
+      webBuildPassed: true,
+      dashboardBuildPassed: true,
+      prismaIntegrationTestsPassed: true,
+      providerSandboxTestsPassed: true,
+      securityTestsPassed: true,
+      mobileSimulatorTestsPassed: true,
+      mobileDeviceTestsPassed: true,
+      coverageThresholdsMet: true,
+      coverageArtifactsUploaded: true,
+      playwrightArtifactsUploaded: true,
+      junitJsonReportsPublished: true,
+      ciRunPassed: true,
+      branchProtectionRequiresCi: true,
+      flakyTestPolicyDocumented: true,
+      failureDebugArtifactsVerified: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredCommands).toContain("pnpm install --frozen-lockfile");
+    expect(plan.requiredCommands).toContain("branch protection required-check proof");
+  });
+
+  it("blocks Phase 14 testing launch execution evidence until full command, integration, provider, mobile, CI, branch-protection, flaky-policy, and secret-safe artifact proof exists", () => {
+    const plan = buildTestingLaunchExecutionEvidencePlan({
+      rootScripts: ["test:manifest", "test:unit"],
+      lockfileInstallPassed: false,
+      staticChecksPassed: false,
+      manifestChecksPassed: true,
+      typecheckPassed: false,
+      unitTestsPassed: true,
+      unitCoveragePassed: false,
+      e2eTestsPassed: false,
+      webBuildPassed: false,
+      dashboardBuildPassed: false,
+      prismaIntegrationTestsPassed: false,
+      providerSandboxTestsPassed: false,
+      securityTestsPassed: false,
+      mobileSimulatorTestsPassed: false,
+      mobileDeviceTestsPassed: false,
+      coverageThresholdsMet: false,
+      coverageArtifactsUploaded: false,
+      playwrightArtifactsUploaded: false,
+      junitJsonReportsPublished: false,
+      ciRunPassed: false,
+      branchProtectionRequiresCi: false,
+      flakyTestPolicyDocumented: false,
+      failureDebugArtifactsVerified: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["test:phase14:static", "typecheck", "test:unit:coverage", "test:e2e"]);
+    expect(plan.requiredEvidence).toEqual([
+      "install, static, manifest, and typecheck command evidence",
+      "unit test, coverage threshold, and coverage artifact evidence",
+      "Playwright E2E report, traces, screenshots, videos, and failure-debug artifact evidence",
+      "app build, database integration, provider sandbox, and security test evidence",
+      "mobile simulator and device test evidence",
+      "CI reports, branch protection, flaky policy, and secret-safe artifact evidence",
+    ]);
+    expect(plan.blockers).toContain("pnpm install --frozen-lockfile must pass before testing launch execution is ready.");
+    expect(plan.blockers).toContain("Provider sandbox tests must pass or remain explicitly launch-blocking.");
+    expect(plan.blockers).toContain("Branch protection must require the CI quality check before merge.");
+    expect(plan.blockers).toContain("Testing artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.");
   });
 });

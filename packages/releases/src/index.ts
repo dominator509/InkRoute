@@ -1520,6 +1520,106 @@ export function buildReleaseAutomatedTestReadinessPlan(input: ReleaseAutomatedTe
   };
 }
 
+export interface ReleaseLaunchControlEvidenceInput {
+  packageScripts: readonly string[];
+  releasesTestsPassed: boolean;
+  releasesTypecheckPassed: boolean;
+  releaseRecordPersistenceVerified: boolean;
+  featureFlagPersistenceVerified: boolean;
+  rbacTenantScopeVerified: boolean;
+  optimisticConcurrencyVerified: boolean;
+  auditRowsPersisted: boolean;
+  protectedGithubEnvironmentsConfigured: boolean;
+  signedDeploymentJobsConfigured: boolean;
+  ciRequiredChecksPassed: boolean;
+  previewDeployJobPassed: boolean;
+  productionDeployApprovalDryRunPassed: boolean;
+  migrationGateDryRunPassed: boolean;
+  incidentLinkedRollbackDrillPassed: boolean;
+  easUpdateGovernanceVerified: boolean;
+  rolloutControlsVerified: boolean;
+  killSwitchDrillPassed: boolean;
+  releaseHealthEnvelopeVerified: boolean;
+  providerBackedRouteTestsPassed: boolean;
+  ciArtifactsCaptured: boolean;
+  secretSafeArtifactsCaptured: boolean;
+}
+
+export interface ReleaseLaunchControlEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export function buildReleaseLaunchControlEvidencePlan(input: ReleaseLaunchControlEvidenceInput): ReleaseLaunchControlEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing @inkroute/releases ${script} script.`);
+  if (!input.releasesTestsPassed) blockers.push("@inkroute/releases tests must pass before release launch control is ready.");
+  if (!input.releasesTypecheckPassed) blockers.push("@inkroute/releases typecheck must pass before release launch control is ready.");
+  if (!input.releaseRecordPersistenceVerified) blockers.push("ReleaseRecord persistence must be verified against the production data path.");
+  if (!input.featureFlagPersistenceVerified) blockers.push("FeatureFlag persistence must be verified with tenant/environment scope.");
+  if (!input.rbacTenantScopeVerified) blockers.push("Release and feature-flag APIs must verify RBAC and tenant scope.");
+  if (!input.optimisticConcurrencyVerified) blockers.push("Release and feature-flag mutations must enforce optimistic concurrency.");
+  if (!input.auditRowsPersisted) blockers.push("Release and feature-flag mutations must persist audit rows.");
+  if (!input.protectedGithubEnvironmentsConfigured) blockers.push("GitHub preview, staging, and production protected environments must be configured.");
+  if (!input.signedDeploymentJobsConfigured) blockers.push("Deployment jobs must be signed or otherwise provenance-verified.");
+  if (!input.ciRequiredChecksPassed) blockers.push("CI required checks must pass before release promotion.");
+  if (!input.previewDeployJobPassed) blockers.push("Preview deployment job must pass under release governance.");
+  if (!input.productionDeployApprovalDryRunPassed) blockers.push("Production deployment approval dry run must pass without mutating production.");
+  if (!input.migrationGateDryRunPassed) blockers.push("Migration gate dry run must pass before release promotion.");
+  if (!input.incidentLinkedRollbackDrillPassed) blockers.push("Incident-linked rollback drill must pass for web, dashboard, mobile OTA, database, and flags.");
+  if (!input.easUpdateGovernanceVerified) blockers.push("EAS update governance must verify channels, runtime versions, adoption, and rollback.");
+  if (!input.rolloutControlsVerified) blockers.push("Tenant-scoped rollout controls must be verified.");
+  if (!input.killSwitchDrillPassed) blockers.push("Feature-flag kill-switch drill must pass.");
+  if (!input.releaseHealthEnvelopeVerified) blockers.push("Release-health envelope must report tenant-safe release, flag, deployment, and rollback state.");
+  if (!input.providerBackedRouteTestsPassed) blockers.push("Provider-backed release and feature-flag route integration tests must pass.");
+  if (!input.ciArtifactsCaptured) blockers.push("Release launch CI artifacts must be captured.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Release launch artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.");
+
+  if (!input.releaseRecordPersistenceVerified || !input.featureFlagPersistenceVerified || !input.rbacTenantScopeVerified || !input.optimisticConcurrencyVerified || !input.auditRowsPersisted) {
+    requiredEvidence.push("ReleaseRecord/FeatureFlag persistence, RBAC, tenant-scope, concurrency, and audit evidence");
+  }
+  if (!input.protectedGithubEnvironmentsConfigured || !input.signedDeploymentJobsConfigured || !input.ciRequiredChecksPassed || !input.previewDeployJobPassed || !input.productionDeployApprovalDryRunPassed) {
+    requiredEvidence.push("protected environment, signed job, CI required-check, preview deploy, and production approval dry-run evidence");
+  }
+  if (!input.migrationGateDryRunPassed || !input.incidentLinkedRollbackDrillPassed) {
+    requiredEvidence.push("migration gate and incident-linked rollback drill evidence");
+  }
+  if (!input.easUpdateGovernanceVerified) requiredEvidence.push("EAS update governance, channel, runtime, adoption, and rollback evidence");
+  if (!input.rolloutControlsVerified || !input.killSwitchDrillPassed || !input.releaseHealthEnvelopeVerified) {
+    requiredEvidence.push("tenant rollout, kill-switch drill, and release-health envelope evidence");
+  }
+  if (!input.providerBackedRouteTestsPassed || !input.ciArtifactsCaptured || !input.secretSafeArtifactsCaptured) {
+    requiredEvidence.push("provider-backed route, CI artifact, and secret-safe launch evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/releases typecheck",
+      "pnpm --filter @inkroute/releases test",
+      "provider-backed release/feature-flag route integration tests",
+      "release-governance GitHub Actions workflow execution",
+      "protected environment approval dry run",
+      "signed deployment provenance check",
+      "migration gate dry run",
+      "incident-linked rollback drill",
+      "EAS update governance drill",
+      "feature-flag kill-switch drill",
+      "release-health envelope smoke",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
 export function buildReleaseHealthChecks(candidate: ReleaseCandidate): readonly ReleaseHealthCheck[] {
   return [
     {

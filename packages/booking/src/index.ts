@@ -683,6 +683,38 @@ export interface DomainEventAuditReadinessPlan {
   blockers: readonly string[];
 }
 
+export interface DomainEventAuditTransactionEvidenceInput {
+  packageScripts: Readonly<Record<string, string>>;
+  bookingTestsPassed: boolean;
+  bookingTypecheckPassed: boolean;
+  paymentTestsPassed: boolean;
+  paymentTypecheckPassed: boolean;
+  prismaTransactionServicesImplemented: boolean;
+  tenantScopedRepositoriesImplemented: boolean;
+  bookingStateMutationAtomicityPassed: boolean;
+  paymentStateMutationAtomicityPassed: boolean;
+  bookingStateEventRowsPersisted: boolean;
+  auditLogRowsPersisted: boolean;
+  paymentAuditLogRowsPersisted: boolean;
+  idempotencyPersistenceEnforced: boolean;
+  replayedMutationReturnsOriginalResult: boolean;
+  providerRollbackIntegrationPassed: boolean;
+  invalidTransitionDenialPassed: boolean;
+  crossTenantMutationDenialPassed: boolean;
+  databaseIntegrationEvidenceCaptured: boolean;
+  ciEvidenceCaptured: boolean;
+  secretSafeArtifactsCaptured: boolean;
+}
+
+export interface DomainEventAuditTransactionEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 const dashboardProviderActions: Record<
   Exclude<DashboardMutationAction, BookingLifecycleAction>,
   {
@@ -955,6 +987,80 @@ export function buildDomainEventAuditReadinessPlan(input: DomainEventAuditReadin
       "Use idempotency keys for dashboard actions, provider webhooks, payment lifecycle updates, and rollback attempts.",
       "Make invalid state transitions impossible through the service layer, not just through UI disabled states.",
       "Attach provider failure rollback records before retrying or surfacing deposit/calendar/upload/notification failures.",
+    ],
+    blockers,
+  };
+}
+
+export function buildDomainEventAuditTransactionEvidencePlan(
+  input: DomainEventAuditTransactionEvidenceInput,
+): DomainEventAuditTransactionEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/booking package script is missing ${script}.`);
+  if (!input.bookingTestsPassed) blockers.push("@inkroute/booking tests must pass before transaction evidence is ready.");
+  if (!input.bookingTypecheckPassed) blockers.push("@inkroute/booking typecheck must pass before transaction evidence is ready.");
+  if (!input.paymentTestsPassed) blockers.push("@inkroute/payments tests must pass before transaction evidence is ready.");
+  if (!input.paymentTypecheckPassed) blockers.push("@inkroute/payments typecheck must pass before transaction evidence is ready.");
+  if (!input.prismaTransactionServicesImplemented) blockers.push("Booking/payment lifecycle services must execute writes inside Prisma transactions.");
+  if (!input.tenantScopedRepositoriesImplemented) blockers.push("Booking/payment repositories must enforce tenant scope on reads and writes.");
+  if (!input.bookingStateMutationAtomicityPassed) blockers.push("Booking state mutation atomicity tests must pass.");
+  if (!input.paymentStateMutationAtomicityPassed) blockers.push("Payment/deposit/refund state mutation atomicity tests must pass.");
+  if (!input.bookingStateEventRowsPersisted) blockers.push("BookingStateEvent rows must persist for booking lifecycle changes.");
+  if (!input.auditLogRowsPersisted) blockers.push("AuditLog rows must persist for booking/dashboard lifecycle decisions.");
+  if (!input.paymentAuditLogRowsPersisted) blockers.push("PaymentAuditLog rows must persist for payment/deposit/refund lifecycle decisions.");
+  if (!input.idempotencyPersistenceEnforced) blockers.push("Idempotency keys must persist and block duplicate lifecycle mutations.");
+  if (!input.replayedMutationReturnsOriginalResult) blockers.push("Replayed lifecycle mutations must return the original committed result without duplicate writes.");
+  if (!input.providerRollbackIntegrationPassed) blockers.push("Provider rollback integration tests must pass for deposit, upload, notification, calendar, and release failures.");
+  if (!input.invalidTransitionDenialPassed) blockers.push("Invalid booking/payment transitions must be denied before transaction writes.");
+  if (!input.crossTenantMutationDenialPassed) blockers.push("Cross-tenant lifecycle mutation denial tests must pass.");
+  if (!input.databaseIntegrationEvidenceCaptured) blockers.push("Database transaction evidence must be captured.");
+  if (!input.ciEvidenceCaptured) blockers.push("CI evidence for domain event/audit transactions must be captured.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Domain event/audit artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.");
+
+  if (!input.bookingTestsPassed || !input.bookingTypecheckPassed || !input.paymentTestsPassed || !input.paymentTypecheckPassed) {
+    requiredEvidence.push("booking/payment package test and typecheck evidence");
+  }
+  if (!input.prismaTransactionServicesImplemented || !input.tenantScopedRepositoriesImplemented) {
+    requiredEvidence.push("Prisma transaction service and tenant-scoped repository evidence");
+  }
+  if (!input.bookingStateMutationAtomicityPassed || !input.paymentStateMutationAtomicityPassed || !input.bookingStateEventRowsPersisted || !input.auditLogRowsPersisted || !input.paymentAuditLogRowsPersisted) {
+    requiredEvidence.push("atomic booking/payment state, event, audit, and payment-audit persistence evidence");
+  }
+  if (!input.idempotencyPersistenceEnforced || !input.replayedMutationReturnsOriginalResult) {
+    requiredEvidence.push("idempotency persistence and replay original-result evidence");
+  }
+  if (!input.providerRollbackIntegrationPassed || !input.invalidTransitionDenialPassed || !input.crossTenantMutationDenialPassed) {
+    requiredEvidence.push("provider rollback, invalid-transition denial, and cross-tenant denial evidence");
+  }
+  if (!input.databaseIntegrationEvidenceCaptured || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
+    requiredEvidence.push("database integration, CI, and secret-safe artifact evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/booking typecheck",
+      "pnpm --filter @inkroute/booking test",
+      "pnpm --filter @inkroute/payments typecheck",
+      "pnpm --filter @inkroute/payments test",
+      "booking/payment lifecycle Prisma transaction integration tests",
+      "booking/payment idempotency replay integration tests",
+      "provider failure rollback integration tests",
+      "cross-tenant lifecycle mutation denial tests",
+      "GitHub Actions domain event/audit transaction evidence job",
+    ],
+    requiredEvidence,
+    requiredControls: [
+      "Commit state mutation, domain event, audit row, payment audit row, and idempotency key in the same tenant-scoped transaction.",
+      "Reject invalid lifecycle transitions, missing tenant scope, missing actor, and duplicate idempotency keys before side effects.",
+      "Return original mutation results for idempotency replays without duplicate BookingStateEvent, AuditLog, PaymentAuditLog, or provider rollback writes.",
+      "Record provider rollback/failure audit rows before retrying or exposing provider failure states.",
+      "Redact client, medical, payment, provider, and private URL data from transaction evidence artifacts.",
     ],
     blockers,
   };

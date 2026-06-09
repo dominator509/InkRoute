@@ -12,6 +12,7 @@ import {
   buildProviderRuntimeGates,
   buildReleaseAutomatedTestReadinessPlan,
   buildReleaseHealthChecks,
+  buildReleaseLaunchControlEvidencePlan,
   buildReleaseControlPlaneReadinessPlan,
   buildReleasePersistenceRbacReadinessPlan,
   buildReleaseRuntimeVerificationPlan,
@@ -796,7 +797,85 @@ describe("release and feature flag governance", () => {
         "GitHub Actions release-governance workflow execution evidence must be captured.",
         "Real CI secrets and protected environments must be configured for production-like workflow tests.",
         "CI artifacts must be captured for package, route, Playwright, Expo/device, provider, and workflow tests.",
-      ]),
+      ]), 
     );
+  });
+
+  it("summarizes release launch-control evidence across persistence, RBAC, protected environments, signed jobs, migrations, rollback, EAS, rollout controls, CI, and artifacts", () => {
+    const plan = buildReleaseLaunchControlEvidencePlan({
+      packageScripts: ["test", "typecheck"],
+      releasesTestsPassed: true,
+      releasesTypecheckPassed: true,
+      releaseRecordPersistenceVerified: true,
+      featureFlagPersistenceVerified: true,
+      rbacTenantScopeVerified: true,
+      optimisticConcurrencyVerified: true,
+      auditRowsPersisted: true,
+      protectedGithubEnvironmentsConfigured: true,
+      signedDeploymentJobsConfigured: true,
+      ciRequiredChecksPassed: true,
+      previewDeployJobPassed: true,
+      productionDeployApprovalDryRunPassed: true,
+      migrationGateDryRunPassed: true,
+      incidentLinkedRollbackDrillPassed: true,
+      easUpdateGovernanceVerified: true,
+      rolloutControlsVerified: true,
+      killSwitchDrillPassed: true,
+      releaseHealthEnvelopeVerified: true,
+      providerBackedRouteTestsPassed: true,
+      ciArtifactsCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredCommands).toContain("incident-linked rollback drill");
+    expect(plan.requiredCommands).toContain("feature-flag kill-switch drill");
+  });
+
+  it("blocks release launch-control evidence until persisted controls, protected environments, signed jobs, migration gates, rollback, EAS, rollout, provider, CI, and secret-safe evidence exist", () => {
+    const plan = buildReleaseLaunchControlEvidencePlan({
+      packageScripts: ["test"],
+      releasesTestsPassed: true,
+      releasesTypecheckPassed: false,
+      releaseRecordPersistenceVerified: false,
+      featureFlagPersistenceVerified: false,
+      rbacTenantScopeVerified: false,
+      optimisticConcurrencyVerified: false,
+      auditRowsPersisted: false,
+      protectedGithubEnvironmentsConfigured: false,
+      signedDeploymentJobsConfigured: false,
+      ciRequiredChecksPassed: false,
+      previewDeployJobPassed: false,
+      productionDeployApprovalDryRunPassed: false,
+      migrationGateDryRunPassed: false,
+      incidentLinkedRollbackDrillPassed: false,
+      easUpdateGovernanceVerified: false,
+      rolloutControlsVerified: false,
+      killSwitchDrillPassed: false,
+      releaseHealthEnvelopeVerified: false,
+      providerBackedRouteTestsPassed: false,
+      ciArtifactsCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredEvidence).toEqual([
+      "ReleaseRecord/FeatureFlag persistence, RBAC, tenant-scope, concurrency, and audit evidence",
+      "protected environment, signed job, CI required-check, preview deploy, and production approval dry-run evidence",
+      "migration gate and incident-linked rollback drill evidence",
+      "EAS update governance, channel, runtime, adoption, and rollback evidence",
+      "tenant rollout, kill-switch drill, and release-health envelope evidence",
+      "provider-backed route, CI artifact, and secret-safe launch evidence",
+    ]);
+    expect(plan.blockers).toContain("GitHub preview, staging, and production protected environments must be configured.");
+    expect(plan.blockers).toContain("Incident-linked rollback drill must pass for web, dashboard, mobile OTA, database, and flags.");
+    expect(plan.blockers).toContain("Feature-flag kill-switch drill must pass.");
+    expect(plan.blockers).toContain("Release launch artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.");
   });
   });

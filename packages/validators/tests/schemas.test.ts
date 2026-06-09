@@ -18,6 +18,7 @@ import {
   releaseCreateInputSchema,
   featureFlagPatchInputSchema,
   deploymentReadinessMutationSchema,
+  buildValidatorLaunchAdoptionEvidencePlan,
   buildValidatorRuntimeReadinessPlan,
 } from "../src/index";
 
@@ -259,5 +260,74 @@ describe("validator happy/error paths", () => {
     expect(plan.requiredEvidence).toContain("Route contract tests showing API handlers import and use shared schemas instead of ad-hoc parsing.");
     expect(plan.blockers).toContain("Message, notification, consent, preview, and provider webhook schemas need happy/error coverage.");
     expect(plan.blockers).toContain("Public, dashboard, webhook, release, privacy, upload, payment, notification, and observability routes must use shared validator schemas.");
+  });
+
+  it("summarizes validator launch adoption evidence across schema domains, route adoption, tenant scope, sensitive fields, CI, and safe artifacts", () => {
+    const plan = buildValidatorLaunchAdoptionEvidencePlan({
+      packageScripts: ["typecheck", "test"],
+      validatorsTypecheckPassed: true,
+      validatorsTestsPassed: true,
+      bookingTravelPortfolioPaymentCovered: true,
+      peopleConsentFormsSeoCovered: true,
+      messagingObservabilityReleaseCovered: true,
+      tenancyAuthEdgeCasesCovered: true,
+      dynamicFormEdgeCasesCovered: true,
+      publicRoutesUseSharedSchemas: true,
+      dashboardRoutesUseSharedSchemas: true,
+      webhookRoutesUseSharedSchemas: true,
+      providerPayloadRoutesUseSharedSchemas: true,
+      malformedPayloadRouteTestsPassed: true,
+      tenantScopeRouteTestsPassed: true,
+      sensitiveFieldsSecurityAligned: true,
+      redactionEncryptionPolicyTestsPassed: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredCommands).toContain("validator route adoption static scan");
+    expect(plan.requiredControls).toContain("Reject malformed public, dashboard, webhook, provider, and mobile payloads before side effects.");
+  });
+
+  it("blocks validator launch adoption evidence until route-wide schema use, edge coverage, sensitive-field policy, CI, and artifact proof exist", () => {
+    const plan = buildValidatorLaunchAdoptionEvidencePlan({
+      packageScripts: ["test"],
+      validatorsTypecheckPassed: false,
+      validatorsTestsPassed: true,
+      bookingTravelPortfolioPaymentCovered: true,
+      peopleConsentFormsSeoCovered: false,
+      messagingObservabilityReleaseCovered: false,
+      tenancyAuthEdgeCasesCovered: false,
+      dynamicFormEdgeCasesCovered: false,
+      publicRoutesUseSharedSchemas: false,
+      dashboardRoutesUseSharedSchemas: false,
+      webhookRoutesUseSharedSchemas: false,
+      providerPayloadRoutesUseSharedSchemas: false,
+      malformedPayloadRouteTestsPassed: false,
+      tenantScopeRouteTestsPassed: false,
+      sensitiveFieldsSecurityAligned: false,
+      redactionEncryptionPolicyTestsPassed: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredEvidence).toEqual([
+      "validator package typecheck and test command evidence",
+      "schema-domain happy/error and tenant/auth/form edge-case coverage evidence",
+      "public, dashboard, webhook, and provider route shared-schema adoption evidence",
+      "malformed-payload and tenant-scope route contract evidence",
+      "sensitive-field redaction and encryption-gate security evidence",
+      "CI validator launch evidence and secret-safe artifact proof",
+    ]);
+    expect(plan.blockers).toContain("Public API routes must use shared validator schemas.");
+    expect(plan.blockers).toContain("Webhook routes must use shared validator schemas before side effects.");
+    expect(plan.blockers).toContain("Security contract tests must prove accepted sensitive fields are redacted or encryption-gated before persistence.");
   });
 });

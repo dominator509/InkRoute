@@ -20,6 +20,7 @@ import {
   buildMessagingPrivacyPlan,
   buildMessagingPrivacyRuntimeReadinessPlan,
   buildMobilePushRuntimeReadinessPlan,
+  buildNotificationLaunchEvidencePlan,
   buildNotificationAutomatedTestReadinessPlan,
   buildNotificationRuntimeReadinessPlan,
   buildProviderEventReconciliationPlan,
@@ -1710,5 +1711,80 @@ describe("notification delivery planning", () => {
     expect(plan.blockers).toContain("Expo push iOS/Android device QA must pass.");
     expect(plan.blockers).toContain("Booking-to-aftercare notification E2E flow must pass.");
     expect(plan.blockers).toContain("Phase 9 notification/messaging test artifacts must be published.");
+  });
+
+  it("summarizes notification launch evidence across providers, queues, persistence, preferences, webhooks, retries, privacy, CI, and artifacts", () => {
+    const plan = buildNotificationLaunchEvidencePlan({
+      packageScripts: ["test", "typecheck"],
+      notificationsTypecheckPassed: true,
+      notificationsTestsPassed: true,
+      providerSdksConfigured: true,
+      resendSandboxSendPassed: true,
+      twilioSandboxSendPassed: true,
+      expoPushDeviceSendPassed: true,
+      queueWorkerImplemented: true,
+      deliveryPersistenceConfigured: true,
+      providerEventPersistenceConfigured: true,
+      messageThreadPersistenceConfigured: true,
+      preferenceCenterImplemented: true,
+      unsubscribeStopSuppressionTested: true,
+      quietHoursRateLimitTested: true,
+      signedWebhookVerificationPassed: true,
+      retryDeadLetterFlowTested: true,
+      tenantIsolationTestsPassed: true,
+      redactionPrivacyReviewPassed: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredCommands).toContain("notification provider sandbox tests");
+    expect(plan.requiredControls).toContain("Verify provider signatures against raw webhook bodies and reject replayed events before side effects.");
+  });
+
+  it("blocks notification launch evidence until provider runtime, queue, persistence, preference, webhook, retry, tenant, privacy, CI, and redacted artifacts exist", () => {
+    const plan = buildNotificationLaunchEvidencePlan({
+      packageScripts: ["test"],
+      notificationsTypecheckPassed: false,
+      notificationsTestsPassed: true,
+      providerSdksConfigured: false,
+      resendSandboxSendPassed: false,
+      twilioSandboxSendPassed: false,
+      expoPushDeviceSendPassed: false,
+      queueWorkerImplemented: false,
+      deliveryPersistenceConfigured: false,
+      providerEventPersistenceConfigured: false,
+      messageThreadPersistenceConfigured: false,
+      preferenceCenterImplemented: false,
+      unsubscribeStopSuppressionTested: false,
+      quietHoursRateLimitTested: false,
+      signedWebhookVerificationPassed: false,
+      retryDeadLetterFlowTested: false,
+      tenantIsolationTestsPassed: false,
+      redactionPrivacyReviewPassed: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredEvidence).toEqual([
+      "Resend, Twilio, and Expo provider sandbox/device send evidence",
+      "queue worker retry, idempotency, and dead-letter evidence",
+      "tenant-scoped NotificationDelivery, ProviderEvent, and MessageThread persistence evidence",
+      "preference center, unsubscribe, STOP, quiet-hours, and rate-limit evidence",
+      "signed webhook verification and replay rejection evidence",
+      "redacted artifact and privacy review evidence",
+      "GitHub Actions notification launch evidence",
+    ]);
+    expect(plan.blockers).toContain("Resend, Twilio, and Expo provider SDK runtimes must be configured.");
+    expect(plan.blockers).toContain("Notification queue worker must be implemented before provider-backed delivery.");
+    expect(plan.blockers).toContain("Provider webhook signature and replay verification tests must pass.");
+    expect(plan.blockers).toContain("Launch artifacts must prove secrets and raw destinations are redacted.");
   });
 });

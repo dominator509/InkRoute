@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildDeploymentPlan,
   buildDatabaseOperationsRuntimeReadinessPlan,
+  buildDeploymentLaunchEvidencePlan,
   buildDeploymentPipelineReadinessPlan,
   buildLaunchOperationsRuntimeReadinessPlan,
   buildMobileDeploymentRuntimeReadinessPlan,
@@ -784,5 +785,83 @@ describe("deployment readiness helpers", () => {
     expect(plan.unassignedOwnerFields).toEqual([]);
     expect(plan.unsafeEvidenceFields).toEqual([]);
     expect(plan.blockers).toEqual([]);
+  });
+
+  it("blocks deployment launch evidence until providers, environments, secrets, preview/prod dry runs, database ops, EAS, rollback, Sentry, and artifacts are proven", () => {
+    const plan = buildDeploymentLaunchEvidencePlan({
+      packageScripts: { test: "vitest run" },
+      deploymentTestsPassed: true,
+      deploymentTypecheckPassed: false,
+      vercelProjectsConfigured: false,
+      githubEnvironmentsConfigured: false,
+      secretsConfiguredAndRedacted: false,
+      previewDeploymentPassed: false,
+      productionDryRunPassed: false,
+      productionApprovalGateVerified: false,
+      strictEnvironmentCheckPassed: false,
+      databaseMigrationDryRunPassed: false,
+      backupRestoreDrillPassed: false,
+      storageProviderConfigured: false,
+      easProjectConfigured: false,
+      easPreviewBuildPassed: false,
+      nativeCredentialsConfigured: false,
+      otaRollbackTestPassed: false,
+      ciDeploymentGatePassed: false,
+      sentryReleaseUploadVerified: false,
+      deploymentRollbackTestPassed: false,
+      launchEvidencePacketCaptured: false,
+      providerArtifactsSecretSafe: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredEvidence).toEqual([
+      "Vercel web/dashboard project, preview deployment, and production dry-run evidence",
+      "GitHub protected environment, approval gate, and CI deployment gate evidence",
+      "strict environment, secret redaction, and provider artifact safety evidence",
+      "managed database migration dry-run, backup/restore, and storage provider evidence",
+      "EAS project, preview build, native credential, and OTA rollback evidence",
+      "Sentry release upload, rollback test, and launch evidence packet",
+    ]);
+    expect(plan.blockers).toContain("Vercel web and dashboard projects must be configured with redacted project evidence.");
+    expect(plan.blockers).toContain("Production deployment must be protected by verified approval gates.");
+    expect(plan.blockers).toContain("Mobile OTA rollback test must pass.");
+    expect(plan.blockers).toContain("Provider artifacts must be redacted and free of secrets, tokens, raw PII, medical, or payment data.");
+  });
+
+  it("marks deployment launch evidence ready when provider projects, environments, dry runs, database ops, EAS, rollback, Sentry, and artifacts align", () => {
+    const plan = buildDeploymentLaunchEvidencePlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      deploymentTestsPassed: true,
+      deploymentTypecheckPassed: true,
+      vercelProjectsConfigured: true,
+      githubEnvironmentsConfigured: true,
+      secretsConfiguredAndRedacted: true,
+      previewDeploymentPassed: true,
+      productionDryRunPassed: true,
+      productionApprovalGateVerified: true,
+      strictEnvironmentCheckPassed: true,
+      databaseMigrationDryRunPassed: true,
+      backupRestoreDrillPassed: true,
+      storageProviderConfigured: true,
+      easProjectConfigured: true,
+      easPreviewBuildPassed: true,
+      nativeCredentialsConfigured: true,
+      otaRollbackTestPassed: true,
+      ciDeploymentGatePassed: true,
+      sentryReleaseUploadVerified: true,
+      deploymentRollbackTestPassed: true,
+      launchEvidencePacketCaptured: true,
+      providerArtifactsSecretSafe: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredCommands).toContain("production deployment dry run");
+    expect(plan.requiredCommands).toContain("pnpm deploy:verify-launch-evidence");
   });
 });

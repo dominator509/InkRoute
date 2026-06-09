@@ -2819,6 +2819,106 @@ export function buildMobilePushRuntimeReadinessPlan(input: MobilePushRuntimeRead
   };
 }
 
+export interface NotificationLaunchEvidenceInput {
+  packageScripts: readonly string[];
+  notificationsTypecheckPassed: boolean;
+  notificationsTestsPassed: boolean;
+  providerSdksConfigured: boolean;
+  resendSandboxSendPassed: boolean;
+  twilioSandboxSendPassed: boolean;
+  expoPushDeviceSendPassed: boolean;
+  queueWorkerImplemented: boolean;
+  deliveryPersistenceConfigured: boolean;
+  providerEventPersistenceConfigured: boolean;
+  messageThreadPersistenceConfigured: boolean;
+  preferenceCenterImplemented: boolean;
+  unsubscribeStopSuppressionTested: boolean;
+  quietHoursRateLimitTested: boolean;
+  signedWebhookVerificationPassed: boolean;
+  retryDeadLetterFlowTested: boolean;
+  tenantIsolationTestsPassed: boolean;
+  redactionPrivacyReviewPassed: boolean;
+  ciEvidenceCaptured: boolean;
+  secretSafeArtifactsCaptured: boolean;
+}
+
+export interface NotificationLaunchEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+export function buildNotificationLaunchEvidencePlan(input: NotificationLaunchEvidenceInput): NotificationLaunchEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing @inkroute/notifications ${script} script.`);
+  if (!input.notificationsTypecheckPassed) blockers.push("@inkroute/notifications typecheck must pass before notification launch.");
+  if (!input.notificationsTestsPassed) blockers.push("@inkroute/notifications tests must pass before notification launch.");
+  if (!input.providerSdksConfigured) blockers.push("Resend, Twilio, and Expo provider SDK runtimes must be configured.");
+  if (!input.resendSandboxSendPassed) blockers.push("Resend sandbox email send must pass with redacted evidence.");
+  if (!input.twilioSandboxSendPassed) blockers.push("Twilio sandbox SMS send must pass with STOP/HELP controls.");
+  if (!input.expoPushDeviceSendPassed) blockers.push("Expo push device send must pass on a real device or simulator evidence run.");
+  if (!input.queueWorkerImplemented) blockers.push("Notification queue worker must be implemented before provider-backed delivery.");
+  if (!input.deliveryPersistenceConfigured) blockers.push("Tenant-scoped NotificationDelivery persistence must be configured.");
+  if (!input.providerEventPersistenceConfigured) blockers.push("Tenant-scoped ProviderEvent persistence must be configured.");
+  if (!input.messageThreadPersistenceConfigured) blockers.push("Tenant-scoped MessageThread persistence must be configured.");
+  if (!input.preferenceCenterImplemented) blockers.push("Preference center and tenant channel settings must be implemented.");
+  if (!input.unsubscribeStopSuppressionTested) blockers.push("Email unsubscribe and SMS STOP suppression must be tested before launch.");
+  if (!input.quietHoursRateLimitTested) blockers.push("SMS quiet-hours and notification rate-limit behavior must be tested.");
+  if (!input.signedWebhookVerificationPassed) blockers.push("Provider webhook signature and replay verification tests must pass.");
+  if (!input.retryDeadLetterFlowTested) blockers.push("Notification retry and dead-letter flows must be tested.");
+  if (!input.tenantIsolationTestsPassed) blockers.push("Notification delivery, provider event, and message thread tenant isolation tests must pass.");
+  if (!input.redactionPrivacyReviewPassed) blockers.push("Notification payload redaction and privacy review must pass.");
+  if (!input.ciEvidenceCaptured) blockers.push("Notification launch CI evidence must be captured.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Launch artifacts must prove secrets and raw destinations are redacted.");
+
+  if (!input.providerSdksConfigured || !input.resendSandboxSendPassed || !input.twilioSandboxSendPassed || !input.expoPushDeviceSendPassed) {
+    requiredEvidence.push("Resend, Twilio, and Expo provider sandbox/device send evidence");
+  }
+  if (!input.queueWorkerImplemented || !input.retryDeadLetterFlowTested) {
+    requiredEvidence.push("queue worker retry, idempotency, and dead-letter evidence");
+  }
+  if (!input.deliveryPersistenceConfigured || !input.providerEventPersistenceConfigured || !input.messageThreadPersistenceConfigured || !input.tenantIsolationTestsPassed) {
+    requiredEvidence.push("tenant-scoped NotificationDelivery, ProviderEvent, and MessageThread persistence evidence");
+  }
+  if (!input.preferenceCenterImplemented || !input.unsubscribeStopSuppressionTested || !input.quietHoursRateLimitTested) {
+    requiredEvidence.push("preference center, unsubscribe, STOP, quiet-hours, and rate-limit evidence");
+  }
+  if (!input.signedWebhookVerificationPassed) requiredEvidence.push("signed webhook verification and replay rejection evidence");
+  if (!input.redactionPrivacyReviewPassed || !input.secretSafeArtifactsCaptured) requiredEvidence.push("redacted artifact and privacy review evidence");
+  if (!input.ciEvidenceCaptured) requiredEvidence.push("GitHub Actions notification launch evidence");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/notifications typecheck",
+      "pnpm --filter @inkroute/notifications test",
+      "notification provider sandbox tests",
+      "notification queue worker integration tests",
+      "provider webhook signature/replay tests",
+      "message thread/preference suppression integration tests",
+      "Expo push device smoke",
+      "GitHub Actions notification launch evidence job",
+    ],
+    requiredEvidence,
+    requiredControls: [
+      "Resolve consent, preference, suppression, quiet-hours, and rate-limit state immediately before every send.",
+      "Persist NotificationDelivery, ProviderEvent, MessageThread, Message, audit, and idempotency records with tenant scope.",
+      "Verify provider signatures against raw webhook bodies and reject replayed events before side effects.",
+      "Process unsubscribe, STOP/HELP, bounce/complaint, invalid push token, retry, and dead-letter flows before future delivery attempts.",
+      "Redact raw destinations, provider payloads, message bodies, private URLs, and secrets from CI artifacts and logs.",
+    ],
+    blockers,
+  };
+}
+
 export const providerBoundaryMatrix: Array<{ provider: NotificationProvider; channel: NotificationChannel; credentialEnvVars: string[]; productionRequirement: string; gapId: string }> = [
   { provider: "resend", channel: "email", credentialEnvVars: ["RESEND_API_KEY", "EMAIL_FROM"], productionRequirement: "Transactional email domain, sender verification, provider webhooks, unsubscribe footer, delivery logs.", gapId: "GAP-061" },
   { provider: "twilio", channel: "sms", credentialEnvVars: ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_MESSAGING_SERVICE_SID"], productionRequirement: "SMS consent capture, STOP/HELP handling, quiet hours, delivery callbacks, phone number compliance.", gapId: "GAP-062" },

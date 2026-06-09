@@ -1188,6 +1188,118 @@ export function buildPhase10SeoAppRuntimeBuildReadinessPlan(input: Phase10SeoApp
   };
 }
 
+export interface TestingLaunchExecutionEvidenceInput {
+  rootScripts: readonly string[];
+  lockfileInstallPassed: boolean;
+  staticChecksPassed: boolean;
+  manifestChecksPassed: boolean;
+  typecheckPassed: boolean;
+  unitTestsPassed: boolean;
+  unitCoveragePassed: boolean;
+  e2eTestsPassed: boolean;
+  webBuildPassed: boolean;
+  dashboardBuildPassed: boolean;
+  prismaIntegrationTestsPassed: boolean;
+  providerSandboxTestsPassed: boolean;
+  securityTestsPassed: boolean;
+  mobileSimulatorTestsPassed: boolean;
+  mobileDeviceTestsPassed: boolean;
+  coverageThresholdsMet: boolean;
+  coverageArtifactsUploaded: boolean;
+  playwrightArtifactsUploaded: boolean;
+  junitJsonReportsPublished: boolean;
+  ciRunPassed: boolean;
+  branchProtectionRequiresCi: boolean;
+  flakyTestPolicyDocumented: boolean;
+  failureDebugArtifactsVerified: boolean;
+  secretSafeArtifactsCaptured: boolean;
+}
+
+export interface TestingLaunchExecutionEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export function buildTestingLaunchExecutionEvidencePlan(
+  input: TestingLaunchExecutionEvidenceInput,
+): TestingLaunchExecutionEvidencePlan {
+  const requiredScripts = ["test:phase14:static", "test:manifest", "typecheck", "test:unit", "test:unit:coverage", "test:e2e"];
+  const missingScripts = requiredScripts.filter((script) => !input.rootScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing root ${script} script.`);
+  if (!input.lockfileInstallPassed) blockers.push("pnpm install --frozen-lockfile must pass before testing launch execution is ready.");
+  if (!input.staticChecksPassed) blockers.push("Phase 14 static checks must pass.");
+  if (!input.manifestChecksPassed) blockers.push("Testing manifest checks must pass.");
+  if (!input.typecheckPassed) blockers.push("Workspace typecheck must pass.");
+  if (!input.unitTestsPassed) blockers.push("Unit test suite must pass.");
+  if (!input.unitCoveragePassed) blockers.push("Unit coverage suite must pass.");
+  if (!input.e2eTestsPassed) blockers.push("Playwright E2E suite must pass.");
+  if (!input.webBuildPassed) blockers.push("@inkroute/web build must pass.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass.");
+  if (!input.prismaIntegrationTestsPassed) blockers.push("Prisma/database integration tests must pass.");
+  if (!input.providerSandboxTestsPassed) blockers.push("Provider sandbox tests must pass or remain explicitly launch-blocking.");
+  if (!input.securityTestsPassed) blockers.push("Security test suite must pass.");
+  if (!input.mobileSimulatorTestsPassed) blockers.push("Mobile simulator tests must pass.");
+  if (!input.mobileDeviceTestsPassed) blockers.push("Mobile device tests must pass or remain explicitly launch-blocking.");
+  if (!input.coverageThresholdsMet) blockers.push("Coverage thresholds must be met.");
+  if (!input.coverageArtifactsUploaded) blockers.push("Coverage artifacts must be uploaded and retained.");
+  if (!input.playwrightArtifactsUploaded) blockers.push("Playwright reports, traces, screenshots, and videos must be uploaded and retained.");
+  if (!input.junitJsonReportsPublished) blockers.push("JUnit/JSON test reports must be published.");
+  if (!input.ciRunPassed) blockers.push("CI quality run must pass on the PR branch.");
+  if (!input.branchProtectionRequiresCi) blockers.push("Branch protection must require the CI quality check before merge.");
+  if (!input.flakyTestPolicyDocumented) blockers.push("Flaky-test retry, quarantine, and ownership policy must be documented.");
+  if (!input.failureDebugArtifactsVerified) blockers.push("Failure debug artifacts must be verified for failed test reproduction.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Testing artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.");
+
+  if (!input.lockfileInstallPassed || !input.staticChecksPassed || !input.manifestChecksPassed || !input.typecheckPassed) {
+    requiredEvidence.push("install, static, manifest, and typecheck command evidence");
+  }
+  if (!input.unitTestsPassed || !input.unitCoveragePassed || !input.coverageThresholdsMet || !input.coverageArtifactsUploaded) {
+    requiredEvidence.push("unit test, coverage threshold, and coverage artifact evidence");
+  }
+  if (!input.e2eTestsPassed || !input.playwrightArtifactsUploaded || !input.failureDebugArtifactsVerified) {
+    requiredEvidence.push("Playwright E2E report, traces, screenshots, videos, and failure-debug artifact evidence");
+  }
+  if (!input.webBuildPassed || !input.dashboardBuildPassed || !input.prismaIntegrationTestsPassed || !input.providerSandboxTestsPassed || !input.securityTestsPassed) {
+    requiredEvidence.push("app build, database integration, provider sandbox, and security test evidence");
+  }
+  if (!input.mobileSimulatorTestsPassed || !input.mobileDeviceTestsPassed) {
+    requiredEvidence.push("mobile simulator and device test evidence");
+  }
+  if (!input.junitJsonReportsPublished || !input.ciRunPassed || !input.branchProtectionRequiresCi || !input.flakyTestPolicyDocumented || !input.secretSafeArtifactsCaptured) {
+    requiredEvidence.push("CI reports, branch protection, flaky policy, and secret-safe artifact evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm install --frozen-lockfile",
+      "pnpm test:phase14:static",
+      "pnpm test:manifest",
+      "pnpm typecheck",
+      "pnpm test:unit",
+      "pnpm test:unit:coverage",
+      "pnpm test:e2e",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "Prisma/database integration test suite",
+      "provider sandbox test suite",
+      "security test suite",
+      "Expo simulator and device test suites",
+      "GitHub Actions CI quality run with retained artifacts",
+      "branch protection required-check proof",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
 export const phase14Suites: TestSuiteRecord[] = [
   {
     id: "unit-domain-packages",

@@ -3,6 +3,7 @@ import {
   buildDashboardPrivacyRuntimeReadinessPlan,
   buildPrivacyLifecyclePlan,
   buildPrivacyCaseWorkflowPlan,
+  buildPrivacyRetentionDryRunEvidencePlan,
   buildPrivacyRequestRuntimeReadinessPlan,
   buildPrivacyRetentionRuntimeReadinessPlan,
   buildRetentionEnforcementRuntimeReadinessPlan,
@@ -1309,6 +1310,79 @@ describe("security and privacy helpers", () => {
       "Restore jobs must replay deletion/anonymization tombstones before restored data becomes queryable.",
       "Privacy workers must verify tenant isolation for cross-tenant export/delete attempts.",
     ]));
+  });
+
+  it("blocks privacy retention dry-run evidence until workers, legal approval, storage, tombstones, CI, and redaction are proven", () => {
+    const plan = buildPrivacyRetentionDryRunEvidencePlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      attorneyApprovalCaptured: false,
+      identityVerificationWorkerIntegrated: true,
+      exportWorkerPersisted: false,
+      deleteAnonymizeWorkerPersisted: false,
+      caseAuditPersistenceConfigured: false,
+      prismaDryRunPassed: false,
+      objectStorageDryRunPassed: false,
+      tenantIsolationDryRunPassed: false,
+      legalHoldEnforced: false,
+      notificationTemplatesApproved: false,
+      backupRestoreTombstoneReplayPassed: false,
+      retentionReportCaptured: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "privacy request worker integration tests",
+      "Prisma privacy delete/anonymize dry run",
+      "object storage deletion dry run",
+      "backup/restore tombstone replay drill",
+    ]));
+    expect(plan.requiredControls).toContain("Keep all evidence artifacts redacted, secret-safe, and free of client PII or medical details.");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "attorney approval packet for retention schedule, legal holds, destructive actions, and notification templates",
+      "persisted identity, export, delete/anonymize, PrivacyRequest/PrivacyCase, tombstone, and AuditLog worker output",
+      "Prisma, object-storage, tenant-isolation, and legal-hold privacy dry-run transcripts",
+      "backup/restore tombstone replay drill output",
+      "redacted CI artifact bundle with retention report and no secrets or client PII",
+    ]));
+    expect(plan.blockers).toEqual(expect.arrayContaining([
+      "Delete/anonymize worker dry-runs must persist tombstones, skipped legal holds, and audit events.",
+      "Tenant-isolation privacy dry-run must deny cross-tenant export/delete attempts.",
+      "Privacy retention artifacts must be redacted and free of secrets, client PII, medical notes, and provider tokens.",
+    ]));
+  });
+
+  it("marks privacy retention dry-run evidence ready when legal, workers, storage, tombstones, CI, and redaction align", () => {
+    const plan = buildPrivacyRetentionDryRunEvidencePlan({
+      packageScripts: ["test", "typecheck"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: true,
+      attorneyApprovalCaptured: true,
+      identityVerificationWorkerIntegrated: true,
+      exportWorkerPersisted: true,
+      deleteAnonymizeWorkerPersisted: true,
+      caseAuditPersistenceConfigured: true,
+      prismaDryRunPassed: true,
+      objectStorageDryRunPassed: true,
+      tenantIsolationDryRunPassed: true,
+      legalHoldEnforced: true,
+      notificationTemplatesApproved: true,
+      backupRestoreTombstoneReplayPassed: true,
+      retentionReportCaptured: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
   });
 
   it("blocks legal review packets until every topic has attorney approval, versions, and acceptance audits", () => {

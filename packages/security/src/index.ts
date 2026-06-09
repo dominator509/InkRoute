@@ -1006,6 +1006,26 @@ export interface PrivacyRetentionRuntimeReadinessInput {
   dryRunEvidenceCollected: boolean;
 }
 
+export interface PrivacyRetentionDryRunEvidenceInput {
+  packageScripts: readonly string[];
+  securityTestsPassed: boolean;
+  securityTypecheckPassed: boolean;
+  attorneyApprovalCaptured: boolean;
+  identityVerificationWorkerIntegrated: boolean;
+  exportWorkerPersisted: boolean;
+  deleteAnonymizeWorkerPersisted: boolean;
+  caseAuditPersistenceConfigured: boolean;
+  prismaDryRunPassed: boolean;
+  objectStorageDryRunPassed: boolean;
+  tenantIsolationDryRunPassed: boolean;
+  legalHoldEnforced: boolean;
+  notificationTemplatesApproved: boolean;
+  backupRestoreTombstoneReplayPassed: boolean;
+  retentionReportCaptured: boolean;
+  ciEvidenceCaptured: boolean;
+  secretSafeArtifactsCaptured: boolean;
+}
+
 export interface PrivacyRequestRuntimeReadinessInput {
   packageScripts: readonly string[];
   securityTestsPassed: boolean;
@@ -1070,6 +1090,15 @@ export interface PrivacyRetentionRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
   requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface PrivacyRetentionDryRunEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredControls: readonly string[];
   requiredEvidence: readonly string[];
   blockers: readonly string[];
 }
@@ -2618,6 +2647,74 @@ export function buildPrivacyRetentionRuntimeReadinessPlan(input: PrivacyRetentio
       "pnpm --filter @inkroute/security test -- privacy-workers",
       "node scripts/privacy/run-retention-dry-run.mjs",
       "node scripts/privacy/verify-backup-restore-tombstones.mjs",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
+export function buildPrivacyRetentionDryRunEvidencePlan(
+  input: PrivacyRetentionDryRunEvidenceInput,
+): PrivacyRetentionDryRunEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
+  if (!input.securityTestsPassed) blockers.push("@inkroute/security tests must pass before privacy retention dry-run evidence can close.");
+  if (!input.securityTypecheckPassed) blockers.push("@inkroute/security typecheck must pass before privacy retention dry-run evidence can close.");
+  if (!input.attorneyApprovalCaptured) blockers.push("Attorney approval must be captured for retention, export, delete, anonymization, notification, and legal-hold behavior.");
+  if (!input.identityVerificationWorkerIntegrated) blockers.push("Identity verification worker must gate privacy export/delete dry-runs.");
+  if (!input.exportWorkerPersisted) blockers.push("Export worker dry-runs must persist case status, output metadata, and audit events.");
+  if (!input.deleteAnonymizeWorkerPersisted) blockers.push("Delete/anonymize worker dry-runs must persist tombstones, skipped legal holds, and audit events.");
+  if (!input.caseAuditPersistenceConfigured) blockers.push("PrivacyRequest/PrivacyCase and AuditLog persistence must be configured before evidence is launch-ready.");
+  if (!input.prismaDryRunPassed) blockers.push("Prisma privacy export/delete/anonymize dry-run must pass against non-production fixtures.");
+  if (!input.objectStorageDryRunPassed) blockers.push("Object storage privacy export/delete dry-run must pass against private-file fixtures.");
+  if (!input.tenantIsolationDryRunPassed) blockers.push("Tenant-isolation privacy dry-run must deny cross-tenant export/delete attempts.");
+  if (!input.legalHoldEnforced) blockers.push("Legal holds must block destructive privacy actions during dry-run execution.");
+  if (!input.notificationTemplatesApproved) blockers.push("Attorney-approved privacy notification templates must be versioned before production sends.");
+  if (!input.backupRestoreTombstoneReplayPassed) blockers.push("Backup/restore tombstone replay drill must pass before destructive retention launch.");
+  if (!input.retentionReportCaptured) blockers.push("Retention dry-run report must capture case ids, worker ids, actions, skips, tombstones, and audit-row references.");
+  if (!input.ciEvidenceCaptured) blockers.push("CI evidence for privacy retention dry-runs must be captured.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Privacy retention artifacts must be redacted and free of secrets, client PII, medical notes, and provider tokens.");
+
+  if (!input.attorneyApprovalCaptured || !input.notificationTemplatesApproved) {
+    requiredEvidence.push("attorney approval packet for retention schedule, legal holds, destructive actions, and notification templates");
+  }
+  if (!input.identityVerificationWorkerIntegrated || !input.exportWorkerPersisted || !input.deleteAnonymizeWorkerPersisted || !input.caseAuditPersistenceConfigured) {
+    requiredEvidence.push("persisted identity, export, delete/anonymize, PrivacyRequest/PrivacyCase, tombstone, and AuditLog worker output");
+  }
+  if (!input.prismaDryRunPassed || !input.objectStorageDryRunPassed || !input.tenantIsolationDryRunPassed || !input.legalHoldEnforced) {
+    requiredEvidence.push("Prisma, object-storage, tenant-isolation, and legal-hold privacy dry-run transcripts");
+  }
+  if (!input.backupRestoreTombstoneReplayPassed) {
+    requiredEvidence.push("backup/restore tombstone replay drill output");
+  }
+  if (!input.retentionReportCaptured || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
+    requiredEvidence.push("redacted CI artifact bundle with retention report and no secrets or client PII");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "privacy request worker integration tests",
+      "Prisma privacy delete/anonymize dry run",
+      "object storage deletion dry run",
+      "tenant isolation privacy dry run",
+      "backup/restore tombstone replay drill",
+      "GitHub Actions privacy retention evidence job",
+    ],
+    requiredControls: [
+      "Verify requester identity before export, delete, anonymize, or rectify workers run.",
+      "Persist privacy case status, worker output metadata, tombstones, and audit events transactionally.",
+      "Execute Prisma and object-storage dry-runs only against non-production fixtures.",
+      "Enforce legal holds before any destructive action is planned or executed.",
+      "Replay deletion/anonymization tombstones after backup restore before restored data is queryable.",
+      "Keep all evidence artifacts redacted, secret-safe, and free of client PII or medical details.",
     ],
     requiredEvidence,
     blockers,

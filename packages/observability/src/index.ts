@@ -1852,6 +1852,123 @@ export function buildObservabilityRuntimeVerificationPlan(input: ObservabilityRu
   };
 }
 
+export interface ObservabilityLaunchEvidenceInput {
+  packageScripts: readonly string[];
+  observabilityTypecheckPassed: boolean;
+  observabilityTestsPassed: boolean;
+  webBuildPassed: boolean;
+  dashboardBuildPassed: boolean;
+  mobileTypecheckPassed: boolean;
+  sentryWebSdkConfigured: boolean;
+  sentryDashboardSdkConfigured: boolean;
+  sentryMobileSdkConfigured: boolean;
+  openTelemetryExporterConfigured: boolean;
+  structuredLoggingConfigured: boolean;
+  sourceMapsUploaded: boolean;
+  mobileDebugSymbolsUploaded: boolean;
+  forcedWebCaptureVerified: boolean;
+  forcedDashboardCaptureVerified: boolean;
+  forcedApiCaptureVerified: boolean;
+  forcedWebhookCaptureVerified: boolean;
+  forcedMobileCrashVerified: boolean;
+  errorReportPersistenceConfigured: boolean;
+  dashboardTenantTriageReadsVerified: boolean;
+  sentryWebhookSignatureReplayVerified: boolean;
+  alertRoutingVerified: boolean;
+  releaseIncidentLinkageVerified: boolean;
+  redactionNoPiiVerified: boolean;
+  ciEvidenceCaptured: boolean;
+  secretSafeArtifactsCaptured: boolean;
+}
+
+export interface ObservabilityLaunchEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+export function buildObservabilityLaunchEvidencePlan(input: ObservabilityLaunchEvidenceInput): ObservabilityLaunchEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`Missing @inkroute/observability ${script} script.`);
+  if (!input.observabilityTypecheckPassed) blockers.push("@inkroute/observability typecheck must pass before observability launch.");
+  if (!input.observabilityTestsPassed) blockers.push("@inkroute/observability tests must pass before observability launch.");
+  if (!input.webBuildPassed) blockers.push("@inkroute/web build must pass with observability wiring.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with observability wiring.");
+  if (!input.mobileTypecheckPassed) blockers.push("@inkroute/mobile typecheck must pass with crash capture wiring.");
+  if (!input.sentryWebSdkConfigured) blockers.push("Sentry web SDK must be configured for public web runtime.");
+  if (!input.sentryDashboardSdkConfigured) blockers.push("Sentry dashboard SDK must be configured for private dashboard runtime.");
+  if (!input.sentryMobileSdkConfigured) blockers.push("Sentry mobile SDK must be configured for Expo/React Native runtime.");
+  if (!input.openTelemetryExporterConfigured) blockers.push("OpenTelemetry exporter and service metadata must be configured.");
+  if (!input.structuredLoggingConfigured) blockers.push("Structured logging must be configured across web, dashboard, API, webhook, worker, and mobile surfaces.");
+  if (!input.sourceMapsUploaded) blockers.push("Web and dashboard source maps must upload and resolve stack frames.");
+  if (!input.mobileDebugSymbolsUploaded) blockers.push("Mobile source maps/debug symbols must upload and resolve crash frames.");
+  if (!input.forcedWebCaptureVerified) blockers.push("Forced public web error capture must be verified.");
+  if (!input.forcedDashboardCaptureVerified) blockers.push("Forced dashboard error capture must be verified.");
+  if (!input.forcedApiCaptureVerified) blockers.push("Forced API error capture must be verified.");
+  if (!input.forcedWebhookCaptureVerified) blockers.push("Forced webhook error capture must be verified without trusting unsigned provider payloads.");
+  if (!input.forcedMobileCrashVerified) blockers.push("Forced mobile crash capture must be verified.");
+  if (!input.errorReportPersistenceConfigured) blockers.push("Sanitized ErrorReport persistence must be configured.");
+  if (!input.dashboardTenantTriageReadsVerified) blockers.push("Dashboard triage reads must be tenant-isolated and backed by persisted ErrorReport rows.");
+  if (!input.sentryWebhookSignatureReplayVerified) blockers.push("Sentry/provider webhook signature and replay verification must pass.");
+  if (!input.alertRoutingVerified) blockers.push("High/critical alert routing must be verified with privacy fallback.");
+  if (!input.releaseIncidentLinkageVerified) blockers.push("Release incident linkage must be verified for Sentry issues and ErrorReport records.");
+  if (!input.redactionNoPiiVerified) blockers.push("Redaction and no-PII proof must cover messages, metadata, tags, logs, alerts, telemetry, provider payloads, and dashboard views.");
+  if (!input.ciEvidenceCaptured) blockers.push("Observability launch CI evidence must be captured.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Observability artifacts must prove secrets, tokens, raw provider payloads, and raw PII are redacted.");
+
+  if (!input.sentryWebSdkConfigured || !input.sentryDashboardSdkConfigured || !input.sentryMobileSdkConfigured || !input.openTelemetryExporterConfigured) {
+    requiredEvidence.push("Sentry web/dashboard/mobile SDK and OpenTelemetry exporter configuration evidence");
+  }
+  if (!input.sourceMapsUploaded || !input.mobileDebugSymbolsUploaded) {
+    requiredEvidence.push("source-map and mobile debug-symbol upload/resolution evidence");
+  }
+  if (!input.forcedWebCaptureVerified || !input.forcedDashboardCaptureVerified || !input.forcedApiCaptureVerified || !input.forcedWebhookCaptureVerified || !input.forcedMobileCrashVerified) {
+    requiredEvidence.push("forced web, dashboard, API, webhook, and mobile capture evidence");
+  }
+  if (!input.errorReportPersistenceConfigured || !input.dashboardTenantTriageReadsVerified) {
+    requiredEvidence.push("sanitized ErrorReport persistence and tenant-isolated dashboard triage evidence");
+  }
+  if (!input.sentryWebhookSignatureReplayVerified) requiredEvidence.push("Sentry/provider webhook signature and replay evidence");
+  if (!input.alertRoutingVerified || !input.releaseIncidentLinkageVerified) requiredEvidence.push("alert routing and release incident linkage evidence");
+  if (!input.redactionNoPiiVerified || !input.secretSafeArtifactsCaptured) requiredEvidence.push("redaction, no-PII, and secret-safe artifact evidence");
+  if (!input.ciEvidenceCaptured) requiredEvidence.push("GitHub Actions observability launch evidence");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/observability typecheck",
+      "pnpm --filter @inkroute/observability test",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "forced web/dashboard/API/webhook Sentry capture smoke",
+      "forced Expo mobile crash capture smoke",
+      "source-map and debug-symbol resolution check",
+      "tenant-isolated ErrorReport dashboard triage test",
+      "Sentry/provider webhook signature replay test",
+      "GitHub Actions observability launch evidence job",
+    ],
+    requiredEvidence,
+    requiredControls: [
+      "Run redaction before external capture, persistence, alert routing, issue handoff, telemetry export, or dashboard display.",
+      "Tag events with tenant-safe release, environment, route, request ID, trace ID, and surface metadata only.",
+      "Upload source maps and debug symbols from CI with secret-backed credentials and redacted artifacts.",
+      "Persist only sanitized ErrorReport summaries and enforce tenant isolation for dashboard triage reads.",
+      "Verify provider webhook signatures and replay protection before reconciling Sentry issue actions.",
+      "Route high-risk payloads to dashboard-only review instead of external alerts or issue handoff.",
+    ],
+    blockers,
+  };
+}
+
 export function buildObservabilityRuntimeReadinessPlan(input: ObservabilityRuntimeReadinessInput): ObservabilityRuntimeReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));

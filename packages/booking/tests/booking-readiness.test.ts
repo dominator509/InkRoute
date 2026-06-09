@@ -5,6 +5,7 @@ import {
   buildDashboardMutationPlan,
   buildDashboardMutationRuntimeReadinessPlan,
   buildDomainEventAuditReadinessPlan,
+  buildDomainEventAuditTransactionEvidencePlan,
   calculateTattooReadinessScore,
   createBookingTransitionPlan,
   emptyBookingDraft,
@@ -393,6 +394,78 @@ describe("booking readiness", () => {
     expect(plan.blockers).toContain("Prisma service layer must execute state changes and event/audit writes in one transaction.");
     expect(plan.blockers).toContain("Idempotency store must reject replayed booking/payment lifecycle mutations.");
     expect(plan.blockers).toContain("Database integration tests must prove state mutation, event row, audit row, idempotency, and rollback behavior atomically.");
+  });
+
+  it("blocks domain event/audit transaction evidence until atomic booking/payment writes, idempotency, rollback, denials, CI, and safe artifacts exist", () => {
+    const plan = buildDomainEventAuditTransactionEvidencePlan({
+      packageScripts: { test: "vitest run" },
+      bookingTestsPassed: true,
+      bookingTypecheckPassed: false,
+      paymentTestsPassed: true,
+      paymentTypecheckPassed: false,
+      prismaTransactionServicesImplemented: false,
+      tenantScopedRepositoriesImplemented: false,
+      bookingStateMutationAtomicityPassed: false,
+      paymentStateMutationAtomicityPassed: false,
+      bookingStateEventRowsPersisted: false,
+      auditLogRowsPersisted: false,
+      paymentAuditLogRowsPersisted: false,
+      idempotencyPersistenceEnforced: false,
+      replayedMutationReturnsOriginalResult: false,
+      providerRollbackIntegrationPassed: false,
+      invalidTransitionDenialPassed: false,
+      crossTenantMutationDenialPassed: false,
+      databaseIntegrationEvidenceCaptured: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredEvidence).toEqual([
+      "booking/payment package test and typecheck evidence",
+      "Prisma transaction service and tenant-scoped repository evidence",
+      "atomic booking/payment state, event, audit, and payment-audit persistence evidence",
+      "idempotency persistence and replay original-result evidence",
+      "provider rollback, invalid-transition denial, and cross-tenant denial evidence",
+      "database integration, CI, and secret-safe artifact evidence",
+    ]);
+    expect(plan.blockers).toContain("Booking/payment lifecycle services must execute writes inside Prisma transactions.");
+    expect(plan.blockers).toContain("Replayed lifecycle mutations must return the original committed result without duplicate writes.");
+    expect(plan.blockers).toContain("Domain event/audit artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.");
+  });
+
+  it("marks domain event/audit transaction evidence ready when atomic writes, idempotency, rollback, denials, CI, and safe artifacts align", () => {
+    const plan = buildDomainEventAuditTransactionEvidencePlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      bookingTestsPassed: true,
+      bookingTypecheckPassed: true,
+      paymentTestsPassed: true,
+      paymentTypecheckPassed: true,
+      prismaTransactionServicesImplemented: true,
+      tenantScopedRepositoriesImplemented: true,
+      bookingStateMutationAtomicityPassed: true,
+      paymentStateMutationAtomicityPassed: true,
+      bookingStateEventRowsPersisted: true,
+      auditLogRowsPersisted: true,
+      paymentAuditLogRowsPersisted: true,
+      idempotencyPersistenceEnforced: true,
+      replayedMutationReturnsOriginalResult: true,
+      providerRollbackIntegrationPassed: true,
+      invalidTransitionDenialPassed: true,
+      crossTenantMutationDenialPassed: true,
+      databaseIntegrationEvidenceCaptured: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredControls).toContain("Commit state mutation, domain event, audit row, payment audit row, and idempotency key in the same tenant-scoped transaction.");
   });
 
   it("returns travel booking calls to action for open, waitlist, and closed statuses", () => {

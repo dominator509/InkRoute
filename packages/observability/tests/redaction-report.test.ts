@@ -10,6 +10,7 @@ import {
   buildGithubIssueRuntimeDispatchPlan,
   buildMobileCrashRuntimeReadinessPlan,
   buildObservabilityAutomatedCoverageReadinessPlan,
+  buildObservabilityLaunchEvidencePlan,
   buildObservabilityReportDraft,
   buildObservabilityRuntimeReadinessPlan,
   buildObservabilityRuntimeVerificationPlan,
@@ -1232,5 +1233,93 @@ describe("observability redaction and triage", () => {
     expect(plan.blockers).toContain("Forced webhook error response envelope and provider-gated behavior must be verified.");
     expect(plan.blockers).toContain("Forced-error screenshots, logs, persistence, and provider payloads must be proven free of raw PII.");
     expect(plan.blockers).toContain("Runtime verification screenshots, logs, and provider evidence must be attached to closeout.");
+  });
+
+  it("summarizes observability launch evidence across SDKs, telemetry, artifacts, forced captures, persistence, webhooks, alerts, redaction, and CI", () => {
+    const plan = buildObservabilityLaunchEvidencePlan({
+      packageScripts: ["test", "typecheck"],
+      observabilityTypecheckPassed: true,
+      observabilityTestsPassed: true,
+      webBuildPassed: true,
+      dashboardBuildPassed: true,
+      mobileTypecheckPassed: true,
+      sentryWebSdkConfigured: true,
+      sentryDashboardSdkConfigured: true,
+      sentryMobileSdkConfigured: true,
+      openTelemetryExporterConfigured: true,
+      structuredLoggingConfigured: true,
+      sourceMapsUploaded: true,
+      mobileDebugSymbolsUploaded: true,
+      forcedWebCaptureVerified: true,
+      forcedDashboardCaptureVerified: true,
+      forcedApiCaptureVerified: true,
+      forcedWebhookCaptureVerified: true,
+      forcedMobileCrashVerified: true,
+      errorReportPersistenceConfigured: true,
+      dashboardTenantTriageReadsVerified: true,
+      sentryWebhookSignatureReplayVerified: true,
+      alertRoutingVerified: true,
+      releaseIncidentLinkageVerified: true,
+      redactionNoPiiVerified: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredCommands).toContain("forced web/dashboard/API/webhook Sentry capture smoke");
+    expect(plan.requiredControls).toContain("Persist only sanitized ErrorReport summaries and enforce tenant isolation for dashboard triage reads.");
+  });
+
+  it("blocks observability launch evidence until live SDKs, OTel, source maps, forced captures, persistence, webhook signatures, alerts, redaction, CI, and secret-safe artifacts exist", () => {
+    const plan = buildObservabilityLaunchEvidencePlan({
+      packageScripts: ["test"],
+      observabilityTypecheckPassed: false,
+      observabilityTestsPassed: true,
+      webBuildPassed: false,
+      dashboardBuildPassed: false,
+      mobileTypecheckPassed: false,
+      sentryWebSdkConfigured: false,
+      sentryDashboardSdkConfigured: false,
+      sentryMobileSdkConfigured: false,
+      openTelemetryExporterConfigured: false,
+      structuredLoggingConfigured: false,
+      sourceMapsUploaded: false,
+      mobileDebugSymbolsUploaded: false,
+      forcedWebCaptureVerified: false,
+      forcedDashboardCaptureVerified: false,
+      forcedApiCaptureVerified: false,
+      forcedWebhookCaptureVerified: false,
+      forcedMobileCrashVerified: false,
+      errorReportPersistenceConfigured: false,
+      dashboardTenantTriageReadsVerified: false,
+      sentryWebhookSignatureReplayVerified: false,
+      alertRoutingVerified: false,
+      releaseIncidentLinkageVerified: false,
+      redactionNoPiiVerified: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredEvidence).toEqual([
+      "Sentry web/dashboard/mobile SDK and OpenTelemetry exporter configuration evidence",
+      "source-map and mobile debug-symbol upload/resolution evidence",
+      "forced web, dashboard, API, webhook, and mobile capture evidence",
+      "sanitized ErrorReport persistence and tenant-isolated dashboard triage evidence",
+      "Sentry/provider webhook signature and replay evidence",
+      "alert routing and release incident linkage evidence",
+      "redaction, no-PII, and secret-safe artifact evidence",
+      "GitHub Actions observability launch evidence",
+    ]);
+    expect(plan.blockers).toContain("Sentry web SDK must be configured for public web runtime.");
+    expect(plan.blockers).toContain("OpenTelemetry exporter and service metadata must be configured.");
+    expect(plan.blockers).toContain("Dashboard triage reads must be tenant-isolated and backed by persisted ErrorReport rows.");
+    expect(plan.blockers).toContain("Observability artifacts must prove secrets, tokens, raw provider payloads, and raw PII are redacted.");
   });
 });

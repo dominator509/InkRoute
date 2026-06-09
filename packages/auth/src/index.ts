@@ -1115,6 +1115,108 @@ export function buildAuthSessionTenantGuardRuntimeReadinessPlan(input: AuthSessi
   };
 }
 
+export interface DomainAuthorizationRouteEvidenceInput {
+  packageScripts: Readonly<Record<string, string>>;
+  authTestsPassed: boolean;
+  authTypecheckPassed: boolean;
+  customRolesLoadedFromDatabase: boolean;
+  dashboardMiddlewareUsesRouteGuard: boolean;
+  apiMiddlewareUsesRouteGuard: boolean;
+  serverActionsUseRouteGuard: boolean;
+  routeRoleMatrixTestsPassed: boolean;
+  customRoleRouteTestsPassed: boolean;
+  crossTenantDenialTestsPassed: boolean;
+  fieldRedactionRouteTestsPassed: boolean;
+  authorizationAuditRowsPersisted: boolean;
+  csrfSessionBindingTestsPassed: boolean;
+  sessionRevocationTestsPassed: boolean;
+  providerBackedSessionTestsPassed: boolean;
+  ciEvidenceCaptured: boolean;
+  secretSafeArtifactsCaptured: boolean;
+}
+
+export interface DomainAuthorizationRouteEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+export function buildDomainAuthorizationRouteEvidencePlan(
+  input: DomainAuthorizationRouteEvidenceInput,
+): DomainAuthorizationRouteEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/auth package script is missing ${script}.`);
+  if (!input.authTestsPassed) blockers.push("@inkroute/auth tests must pass before domain authorization route evidence is ready.");
+  if (!input.authTypecheckPassed) blockers.push("@inkroute/auth typecheck must pass before domain authorization route evidence is ready.");
+  if (!input.customRolesLoadedFromDatabase) blockers.push("CustomRole rows must be loaded from tenant-scoped database storage in guarded route tests.");
+  if (!input.dashboardMiddlewareUsesRouteGuard) blockers.push("Dashboard middleware must use domain route-guard primitives.");
+  if (!input.apiMiddlewareUsesRouteGuard) blockers.push("API middleware/routes must use domain route-guard primitives.");
+  if (!input.serverActionsUseRouteGuard) blockers.push("Server/provider actions must use domain route-guard primitives.");
+  if (!input.routeRoleMatrixTestsPassed) blockers.push("Route role-matrix tests must pass for owner, artist, assistant, studio manager, admin, and base denials.");
+  if (!input.customRoleRouteTestsPassed) blockers.push("Custom-role route tests must pass for tenant grants, invalid permissions, inactive roles, and cross-tenant ignores.");
+  if (!input.crossTenantDenialTestsPassed) blockers.push("Cross-tenant dashboard/API/server-action denial tests must pass.");
+  if (!input.fieldRedactionRouteTestsPassed) blockers.push("Field authorization/redaction route tests must pass before serialization.");
+  if (!input.authorizationAuditRowsPersisted) blockers.push("Authorization allow/deny route decisions must persist redacted AuditLog rows.");
+  if (!input.csrfSessionBindingTestsPassed) blockers.push("Cookie-authenticated mutating route tests must prove CSRF tokens bind to the active session.");
+  if (!input.sessionRevocationTestsPassed) blockers.push("Guarded route tests must prove revoked sessions are denied.");
+  if (!input.providerBackedSessionTestsPassed) blockers.push("Provider-backed session tests must pass for guarded route context.");
+  if (!input.ciEvidenceCaptured) blockers.push("Domain authorization route CI evidence must be captured.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Authorization route artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.");
+
+  if (!input.authTestsPassed || !input.authTypecheckPassed || !input.providerBackedSessionTestsPassed) {
+    requiredEvidence.push("auth package test/typecheck and provider-backed session evidence");
+  }
+  if (!input.customRolesLoadedFromDatabase || !input.dashboardMiddlewareUsesRouteGuard || !input.apiMiddlewareUsesRouteGuard || !input.serverActionsUseRouteGuard) {
+    requiredEvidence.push("database CustomRole loading and dashboard/API/server-action route-guard adoption evidence");
+  }
+  if (!input.routeRoleMatrixTestsPassed || !input.customRoleRouteTestsPassed || !input.crossTenantDenialTestsPassed) {
+    requiredEvidence.push("built-in role matrix, custom-role, and cross-tenant route denial evidence");
+  }
+  if (!input.fieldRedactionRouteTestsPassed || !input.authorizationAuditRowsPersisted) {
+    requiredEvidence.push("field redaction and authorization AuditLog persistence evidence");
+  }
+  if (!input.csrfSessionBindingTestsPassed || !input.sessionRevocationTestsPassed) {
+    requiredEvidence.push("CSRF session binding and session revocation route evidence");
+  }
+  if (!input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
+    requiredEvidence.push("CI domain authorization route evidence and secret-safe artifact proof");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/auth typecheck",
+      "pnpm --filter @inkroute/auth test",
+      "dashboard middleware route-guard contract tests",
+      "dashboard/API/server-action role matrix tests",
+      "CustomRole database loading route tests",
+      "cross-tenant route denial tests",
+      "field redaction route serialization tests",
+      "authorization AuditLog persistence tests",
+      "CSRF-bound mutating route tests",
+      "session revocation route tests",
+      "GitHub Actions domain authorization evidence job",
+    ],
+    requiredEvidence,
+    requiredControls: [
+      "Resolve provider-backed session, TenantMember, and CustomRole rows server-side before route authorization.",
+      "Apply route guards before dashboard/API/server-action data loading or mutation side effects.",
+      "Reject invalid permissions, inactive roles, cross-tenant roles, tenant mismatches, revoked sessions, and CSRF mismatches.",
+      "Persist redacted AuditLog rows for allow and deny decisions.",
+      "Apply field authorization before serializing private client, medical, payment, consent, and system data.",
+    ],
+    blockers,
+  };
+}
+
 export function buildProviderSessionStoreReadinessPlan(
   input: ProviderSessionStoreReadinessInput,
 ): ProviderSessionStoreReadinessPlan {

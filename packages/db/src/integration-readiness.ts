@@ -55,6 +55,36 @@ export interface PrismaSchemaLifecycleReadinessPlan {
   blockers: readonly string[];
 }
 
+export interface SeedRuntimeExecutionEvidenceInput {
+  packageScripts: Readonly<Record<string, string>>;
+  seedReadinessVerifierPassed: boolean;
+  postgresProvisioned: boolean;
+  databaseUrlConfigured: boolean;
+  prismaClientGenerated: boolean;
+  migrationApplied: boolean;
+  seedCommandPassed: boolean;
+  seededTenantFound: boolean;
+  seededTenantMembersFound: boolean;
+  seededBookingWorkflowFound: boolean;
+  seededPaymentsFilesMessagesFound: boolean;
+  seededSeoReleaseFlagsFound: boolean;
+  auditLogsCreated: boolean;
+  fakeDataOnlyVerified: boolean;
+  noProductionProviderCredentialsUsed: boolean;
+  webApiSeededDataSmokePassed: boolean;
+  dashboardSeededDataSmokePassed: boolean;
+  commandEvidenceCaptured: boolean;
+  ciOrCleanCheckoutEvidenceCaptured: boolean;
+}
+
+export interface SeedRuntimeExecutionEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export function buildDbIntegrationRuntimeReadinessPlan(
   input: DbIntegrationRuntimeReadinessInput,
 ): DbIntegrationRuntimeReadinessPlan {
@@ -160,6 +190,69 @@ export function buildPrismaSchemaLifecycleReadinessPlan(
       "Production URL destructive-command guard proof.",
       "CI or clean-checkout Prisma lifecycle evidence.",
     ],
+    blockers,
+  };
+}
+
+export function buildSeedRuntimeExecutionEvidencePlan(
+  input: SeedRuntimeExecutionEvidenceInput,
+): SeedRuntimeExecutionEvidencePlan {
+  const requiredScripts = ["db:validate", "db:generate", "db:migrate", "db:seed", "db:verify-seed"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/db package script is missing ${script}.`);
+  if (!input.seedReadinessVerifierPassed) blockers.push("Seed readiness verifier must pass before runtime seed execution.");
+  if (!input.postgresProvisioned) blockers.push("A non-production Postgres database must be provisioned for seed execution.");
+  if (!input.databaseUrlConfigured) blockers.push("DATABASE_URL must target the non-production seed database.");
+  if (!input.prismaClientGenerated) blockers.push("Prisma Client must be generated before seed execution.");
+  if (!input.migrationApplied) blockers.push("Current Prisma migration must apply before seed execution.");
+  if (!input.seedCommandPassed) blockers.push("pnpm --filter @inkroute/db db:seed must pass.");
+  if (!input.seededTenantFound) blockers.push("Seeded demo tenant must be readable after seed execution.");
+  if (!input.seededTenantMembersFound) blockers.push("Seeded demo tenant members must be readable after seed execution.");
+  if (!input.seededBookingWorkflowFound) blockers.push("Seeded booking, appointment, and lifecycle workflow records must be readable.");
+  if (!input.seededPaymentsFilesMessagesFound) blockers.push("Seeded payment, file, message, notification, and consent records must be readable.");
+  if (!input.seededSeoReleaseFlagsFound) blockers.push("Seeded SEO, release, and feature-flag records must be readable.");
+  if (!input.auditLogsCreated) blockers.push("Seed execution must create audit-log records for demo setup.");
+  if (!input.fakeDataOnlyVerified) blockers.push("Seeded data must be verified as fake/demo-only with legal placeholder language.");
+  if (!input.noProductionProviderCredentialsUsed) blockers.push("Seed execution must not use production provider credentials or live provider endpoints.");
+  if (!input.webApiSeededDataSmokePassed) blockers.push("Web/API smoke must read seeded demo records.");
+  if (!input.dashboardSeededDataSmokePassed) blockers.push("Dashboard smoke must read seeded demo records.");
+  if (!input.commandEvidenceCaptured) blockers.push("Seed command transcript and seeded-record query evidence must be captured.");
+  if (!input.ciOrCleanCheckoutEvidenceCaptured) blockers.push("CI or clean-checkout seed execution evidence must be captured.");
+
+  if (!input.seedReadinessVerifierPassed || !input.fakeDataOnlyVerified || !input.noProductionProviderCredentialsUsed) {
+    requiredEvidence.push("seed readiness, fake-data, legal-placeholder, and production-provider ban evidence");
+  }
+  if (!input.postgresProvisioned || !input.databaseUrlConfigured || !input.prismaClientGenerated || !input.migrationApplied || !input.seedCommandPassed) {
+    requiredEvidence.push("non-production Postgres, DATABASE_URL, Prisma generate, migration, and seed command evidence");
+  }
+  if (!input.seededTenantFound || !input.seededTenantMembersFound || !input.seededBookingWorkflowFound || !input.seededPaymentsFilesMessagesFound || !input.seededSeoReleaseFlagsFound || !input.auditLogsCreated) {
+    requiredEvidence.push("seeded tenant, membership, workflow, payment/file/message, SEO/release/flag, and audit-log query evidence");
+  }
+  if (!input.webApiSeededDataSmokePassed || !input.dashboardSeededDataSmokePassed) {
+    requiredEvidence.push("web/API and dashboard seeded-data smoke evidence");
+  }
+  if (!input.commandEvidenceCaptured || !input.ciOrCleanCheckoutEvidenceCaptured) {
+    requiredEvidence.push("captured command transcript and CI or clean-checkout seed evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm db:verify-seed",
+      "pnpm --filter @inkroute/db db:validate",
+      "pnpm --filter @inkroute/db db:generate",
+      "pnpm --filter @inkroute/db db:migrate",
+      "pnpm --filter @inkroute/db db:seed",
+      "seeded demo tenant query smoke",
+      "web/API seeded-data smoke",
+      "dashboard seeded-data smoke",
+      "GitHub Actions seed execution evidence job",
+    ],
+    requiredEvidence,
     blockers,
   };
 }

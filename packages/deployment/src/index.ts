@@ -2015,3 +2015,108 @@ export function buildLaunchOperationsRuntimeReadinessPlan(
     blockers,
   };
 }
+
+export interface DeploymentLaunchEvidenceInput {
+  readonly packageScripts: Readonly<Record<string, string>>;
+  readonly deploymentTestsPassed: boolean;
+  readonly deploymentTypecheckPassed: boolean;
+  readonly vercelProjectsConfigured: boolean;
+  readonly githubEnvironmentsConfigured: boolean;
+  readonly secretsConfiguredAndRedacted: boolean;
+  readonly previewDeploymentPassed: boolean;
+  readonly productionDryRunPassed: boolean;
+  readonly productionApprovalGateVerified: boolean;
+  readonly strictEnvironmentCheckPassed: boolean;
+  readonly databaseMigrationDryRunPassed: boolean;
+  readonly backupRestoreDrillPassed: boolean;
+  readonly storageProviderConfigured: boolean;
+  readonly easProjectConfigured: boolean;
+  readonly easPreviewBuildPassed: boolean;
+  readonly nativeCredentialsConfigured: boolean;
+  readonly otaRollbackTestPassed: boolean;
+  readonly ciDeploymentGatePassed: boolean;
+  readonly sentryReleaseUploadVerified: boolean;
+  readonly deploymentRollbackTestPassed: boolean;
+  readonly launchEvidencePacketCaptured: boolean;
+  readonly providerArtifactsSecretSafe: boolean;
+}
+
+export interface DeploymentLaunchEvidencePlan {
+  readonly status: "ready" | "blocked";
+  readonly missingScripts: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
+}
+
+export function buildDeploymentLaunchEvidencePlan(input: DeploymentLaunchEvidenceInput): DeploymentLaunchEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/deployment package script is missing ${script}.`);
+  if (!input.deploymentTestsPassed) blockers.push("@inkroute/deployment tests must pass before deployment launch evidence is ready.");
+  if (!input.deploymentTypecheckPassed) blockers.push("@inkroute/deployment typecheck must pass before deployment launch evidence is ready.");
+  if (!input.vercelProjectsConfigured) blockers.push("Vercel web and dashboard projects must be configured with redacted project evidence.");
+  if (!input.githubEnvironmentsConfigured) blockers.push("GitHub preview, staging, and production environments must be configured.");
+  if (!input.secretsConfiguredAndRedacted) blockers.push("Deployment secrets must be configured and proven redacted in evidence.");
+  if (!input.previewDeploymentPassed) blockers.push("Preview deployment must pass for web and dashboard.");
+  if (!input.productionDryRunPassed) blockers.push("Production deployment dry run must pass without mutating production.");
+  if (!input.productionApprovalGateVerified) blockers.push("Production deployment must be protected by verified approval gates.");
+  if (!input.strictEnvironmentCheckPassed) blockers.push("Strict environment verification must pass for preview and production.");
+  if (!input.databaseMigrationDryRunPassed) blockers.push("Database migration dry run must pass against the managed provider.");
+  if (!input.backupRestoreDrillPassed) blockers.push("Backup/restore drill must pass before launch.");
+  if (!input.storageProviderConfigured) blockers.push("Storage provider and bucket policies must be configured with redacted evidence.");
+  if (!input.easProjectConfigured) blockers.push("EAS mobile project must be configured.");
+  if (!input.easPreviewBuildPassed) blockers.push("EAS preview build must pass.");
+  if (!input.nativeCredentialsConfigured) blockers.push("Mobile native credentials must be configured with redacted evidence.");
+  if (!input.otaRollbackTestPassed) blockers.push("Mobile OTA rollback test must pass.");
+  if (!input.ciDeploymentGatePassed) blockers.push("CI deployment gate must pass before deployment launch evidence is ready.");
+  if (!input.sentryReleaseUploadVerified) blockers.push("Sentry release/source-map upload must be verified.");
+  if (!input.deploymentRollbackTestPassed) blockers.push("Deployment rollback test must pass for web, dashboard, mobile OTA, and database recovery path.");
+  if (!input.launchEvidencePacketCaptured) blockers.push("Launch evidence packet must be captured.");
+  if (!input.providerArtifactsSecretSafe) blockers.push("Provider artifacts must be redacted and free of secrets, tokens, raw PII, medical, or payment data.");
+
+  if (!input.vercelProjectsConfigured || !input.previewDeploymentPassed || !input.productionDryRunPassed) {
+    requiredEvidence.push("Vercel web/dashboard project, preview deployment, and production dry-run evidence");
+  }
+  if (!input.githubEnvironmentsConfigured || !input.productionApprovalGateVerified || !input.ciDeploymentGatePassed) {
+    requiredEvidence.push("GitHub protected environment, approval gate, and CI deployment gate evidence");
+  }
+  if (!input.secretsConfiguredAndRedacted || !input.strictEnvironmentCheckPassed || !input.providerArtifactsSecretSafe) {
+    requiredEvidence.push("strict environment, secret redaction, and provider artifact safety evidence");
+  }
+  if (!input.databaseMigrationDryRunPassed || !input.backupRestoreDrillPassed || !input.storageProviderConfigured) {
+    requiredEvidence.push("managed database migration dry-run, backup/restore, and storage provider evidence");
+  }
+  if (!input.easProjectConfigured || !input.easPreviewBuildPassed || !input.nativeCredentialsConfigured || !input.otaRollbackTestPassed) {
+    requiredEvidence.push("EAS project, preview build, native credential, and OTA rollback evidence");
+  }
+  if (!input.sentryReleaseUploadVerified || !input.deploymentRollbackTestPassed || !input.launchEvidencePacketCaptured) {
+    requiredEvidence.push("Sentry release upload, rollback test, and launch evidence packet");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/deployment typecheck",
+      "pnpm --filter @inkroute/deployment test",
+      "pnpm deploy:verify-provider-envs",
+      "pnpm deploy:verify-secrets",
+      "pnpm deploy:verify-database-ops",
+      "pnpm deploy:verify-mobile",
+      "Vercel preview deployment smoke",
+      "production deployment dry run",
+      "EAS preview build",
+      "mobile OTA rollback test",
+      "deployment rollback drill",
+      "GitHub protected environment approval proof",
+      "Sentry release/source-map upload proof",
+      "pnpm deploy:verify-launch-evidence",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}

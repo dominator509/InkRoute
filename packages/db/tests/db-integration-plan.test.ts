@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildDbIntegrationRuntimeReadinessPlan, buildPrismaSchemaLifecycleReadinessPlan } from "../src/index";
+import { buildDbIntegrationRuntimeReadinessPlan, buildPrismaSchemaLifecycleReadinessPlan, buildSeedRuntimeExecutionEvidencePlan } from "../src/index";
 
 const root = resolve(__dirname, "../../..");
 
@@ -228,6 +228,86 @@ describe("database integration test plan", () => {
       migrationRollbackDocumented: true,
       commandOutputCaptured: true,
       ciDbJobPassed: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+  });
+
+  it("blocks seed runtime execution evidence until a real dev database is generated, migrated, seeded, queried, smoked, and captured safely", () => {
+    const plan = buildSeedRuntimeExecutionEvidencePlan({
+      packageScripts: {
+        "db:validate": "prisma validate",
+        "db:generate": "prisma generate",
+        "db:migrate": "prisma migrate dev",
+        "db:verify-seed": "node ../../scripts/db/verify-seed-readiness.mjs",
+      },
+      seedReadinessVerifierPassed: true,
+      postgresProvisioned: false,
+      databaseUrlConfigured: false,
+      prismaClientGenerated: false,
+      migrationApplied: false,
+      seedCommandPassed: false,
+      seededTenantFound: false,
+      seededTenantMembersFound: false,
+      seededBookingWorkflowFound: false,
+      seededPaymentsFilesMessagesFound: false,
+      seededSeoReleaseFlagsFound: false,
+      auditLogsCreated: false,
+      fakeDataOnlyVerified: false,
+      noProductionProviderCredentialsUsed: false,
+      webApiSeededDataSmokePassed: false,
+      dashboardSeededDataSmokePassed: false,
+      commandEvidenceCaptured: false,
+      ciOrCleanCheckoutEvidenceCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["db:seed"]);
+    expect(plan.requiredCommands).toContain("web/API seeded-data smoke");
+    expect(plan.requiredEvidence).toEqual([
+      "seed readiness, fake-data, legal-placeholder, and production-provider ban evidence",
+      "non-production Postgres, DATABASE_URL, Prisma generate, migration, and seed command evidence",
+      "seeded tenant, membership, workflow, payment/file/message, SEO/release/flag, and audit-log query evidence",
+      "web/API and dashboard seeded-data smoke evidence",
+      "captured command transcript and CI or clean-checkout seed evidence",
+    ]);
+    expect(plan.blockers).toContain("A non-production Postgres database must be provisioned for seed execution.");
+    expect(plan.blockers).toContain("Seeded demo tenant must be readable after seed execution.");
+    expect(plan.blockers).toContain("Seed execution must not use production provider credentials or live provider endpoints.");
+  });
+
+  it("marks seed runtime execution evidence ready when fake seeded data is generated, migrated, queried, smoked, and captured safely", () => {
+    const plan = buildSeedRuntimeExecutionEvidencePlan({
+      packageScripts: {
+        "db:validate": "prisma validate",
+        "db:generate": "prisma generate",
+        "db:migrate": "prisma migrate dev",
+        "db:seed": "tsx prisma/seed.ts",
+        "db:verify-seed": "node ../../scripts/db/verify-seed-readiness.mjs",
+      },
+      seedReadinessVerifierPassed: true,
+      postgresProvisioned: true,
+      databaseUrlConfigured: true,
+      prismaClientGenerated: true,
+      migrationApplied: true,
+      seedCommandPassed: true,
+      seededTenantFound: true,
+      seededTenantMembersFound: true,
+      seededBookingWorkflowFound: true,
+      seededPaymentsFilesMessagesFound: true,
+      seededSeoReleaseFlagsFound: true,
+      auditLogsCreated: true,
+      fakeDataOnlyVerified: true,
+      noProductionProviderCredentialsUsed: true,
+      webApiSeededDataSmokePassed: true,
+      dashboardSeededDataSmokePassed: true,
+      commandEvidenceCaptured: true,
+      ciOrCleanCheckoutEvidenceCaptured: true,
     });
 
     expect(plan).toMatchObject({
