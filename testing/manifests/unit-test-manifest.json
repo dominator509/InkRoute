@@ -1458,6 +1458,23 @@
                                          "Worker runtime instrumentation pending",
                                          "Live OTLP trace/log backend ingestion proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-dashboard-github-issue-automation-static",
+                       "file":  "apps/dashboard/tests/github-issue-automation-static.test.ts",
+                       "priority":  "medium",
+                       "verifies":  [
+                                        "GAP-085 dashboard GitHub issue approval route enforces RBAC, tenant matching, and explicit human approval",
+                                        "GAP-085 route builds sanitized createIssueRequest payloads, stores human approval audit metadata, and persists ErrorReport issue-link status",
+                                        "GAP-085 GitHub API dispatch is wired behind token/repository/template/enable gates while live repo proof remains explicit"
+                                    ],
+                       "blockedBy":  [
+                                         "Static GitHub issue automation test execution pending",
+                                         "GitHub token/repository/label/assignee/template configuration pending",
+                                         "Rendered dashboard approval UI smoke pending",
+                                         "Live synthetic GitHub issue creation proof pending",
+                                         "Provider-backed ErrorReport issue-link integration test pending"
+                                     ]
                    }
                ]
 }
