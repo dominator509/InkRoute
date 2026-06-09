@@ -41,10 +41,39 @@ export interface UploadScanWorkerPlan {
   status: UploadScanPipelinePlan["status"];
   quarantineRequired: boolean;
   publicDerivativeAllowed: boolean;
+  derivativeMetadata: ReturnType<typeof buildUploadDerivativeMetadataPlan>;
   actions: readonly UploadScanWorkerAction[];
   requiredWrites: readonly string[];
   artifactPaths: readonly string[];
   plan: UploadScanPipelinePlan;
+}
+
+export function buildUploadDerivativeMetadataPlan(input: {
+  tenantId: string;
+  fileAssetId: string;
+  sourceObjectKey: string;
+  detectedMimeType: string | null;
+  exifMetadataPresent: boolean;
+  normalizedDerivativeGenerated: boolean;
+  publicDerivativeAllowed: boolean;
+}) {
+  const extension = input.detectedMimeType === "image/png" ? "png" : "webp";
+  const derivativeObjectKey = `public/${input.tenantId}/derivatives/${input.fileAssetId}.${extension}`;
+  return {
+    sourceObjectKey: input.sourceObjectKey,
+    derivativeObjectKey,
+    detectedMimeType: input.detectedMimeType,
+    strippedMetadata: {
+      exifRemoved: input.exifMetadataPresent,
+      gpsRemoved: input.exifMetadataPresent,
+      privateFieldsRetained: false,
+    },
+    normalizedDerivativeGenerated: input.normalizedDerivativeGenerated,
+    storageVisibility: input.publicDerivativeAllowed ? "public_derivative" : "system_private",
+    cacheControl: input.publicDerivativeAllowed ? "public, max-age=31536000, immutable" : "no-store",
+    fileAssetFields: ["derivativeObjectKey", "derivativeMimeType", "metadataStripped", "storageVisibility"],
+    artifact: "coverage/upload-normalized-derivative.json",
+  };
 }
 
 export const uploadScanWorkerArtifactPaths = [
@@ -94,18 +123,29 @@ export function buildUploadScanWorkerPlan(input: UploadScanWorkerInput): UploadS
   if (plan.quarantineRequired || plan.status === "rejected") {
     actions.push("quarantine-or-reject-object");
   }
+  const detectedMimeType = detectMimeTypeFromSignature(input.fileSignatureHex);
+  const derivativeMetadata = buildUploadDerivativeMetadataPlan({
+    tenantId: input.tenantId,
+    fileAssetId: input.fileAssetId,
+    sourceObjectKey: input.objectKey,
+    detectedMimeType,
+    exifMetadataPresent: input.exifMetadataPresent,
+    normalizedDerivativeGenerated: input.normalizedDerivativeGenerated,
+    publicDerivativeAllowed: plan.publicDerivativeAllowed,
+  });
 
   return {
     gapIds: ["GAP-096", "GAP-097"],
     tenantId: input.tenantId,
     fileAssetId: input.fileAssetId,
     objectKey: input.objectKey,
-    detectedMimeType: detectMimeTypeFromSignature(input.fileSignatureHex),
+    detectedMimeType,
     status: plan.status,
     quarantineRequired: plan.quarantineRequired,
     publicDerivativeAllowed: plan.publicDerivativeAllowed,
+    derivativeMetadata,
     actions,
-    requiredWrites: ["FileAsset.scanStatus", "FileAsset.detectedMimeType", "FileAsset.derivativeObjectKey", "AuditLog.uploadScanVerdict"],
+    requiredWrites: ["FileAsset.scanStatus", "FileAsset.detectedMimeType", "FileAsset.derivativeObjectKey", "FileAsset.metadataStripped", "AuditLog.uploadScanVerdict"],
     artifactPaths: uploadScanWorkerArtifactPaths,
     plan,
   };

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildUploadDerivativeMetadataPlan,
   buildUploadScanWorkerPlan,
   uploadScanWorkerArtifactPaths,
   uploadScanWorkerCommands,
@@ -32,8 +33,14 @@ describe("GAP-096 upload scan worker static contract", () => {
     expect(uploadScanWorkerPreview.quarantineRequired).toBe(true);
     expect(uploadScanWorkerPreview.actions).toContain("quarantine-or-reject-object");
     expect(uploadScanWorkerPreview.requiredWrites).toEqual(
-      expect.arrayContaining(["FileAsset.scanStatus", "FileAsset.detectedMimeType", "AuditLog.uploadScanVerdict"]),
+      expect.arrayContaining(["FileAsset.scanStatus", "FileAsset.detectedMimeType", "FileAsset.metadataStripped", "AuditLog.uploadScanVerdict"]),
     );
+    expect(uploadScanWorkerPreview.derivativeMetadata).toMatchObject({
+      sourceObjectKey: "private/tenant_demo/reference/fileasset_demo.jpg",
+      storageVisibility: "system_private",
+      cacheControl: "no-store",
+      artifact: "coverage/upload-normalized-derivative.json",
+    });
 
     const spoofed = buildUploadScanWorkerPlan({
       tenantId: "tenant_demo",
@@ -72,6 +79,30 @@ describe("GAP-096 upload scan worker static contract", () => {
 
     expect(malware.status).toBe("rejected");
     expect(malware.publicDerivativeAllowed).toBe(false);
+  });
+
+  it("builds derivative metadata that strips EXIF/GPS and separates public derivatives from private originals", () => {
+    const derivative = buildUploadDerivativeMetadataPlan({
+      tenantId: "tenant_demo",
+      fileAssetId: "fileasset_public",
+      sourceObjectKey: "private/tenant_demo/portfolio/fileasset_public.jpg",
+      detectedMimeType: "image/jpeg",
+      exifMetadataPresent: true,
+      normalizedDerivativeGenerated: true,
+      publicDerivativeAllowed: true,
+    });
+
+    expect(derivative).toMatchObject({
+      derivativeObjectKey: "public/tenant_demo/derivatives/fileasset_public.webp",
+      storageVisibility: "public_derivative",
+      cacheControl: "public, max-age=31536000, immutable",
+      strippedMetadata: {
+        exifRemoved: true,
+        gpsRemoved: true,
+        privateFieldsRetained: false,
+      },
+    });
+    expect(derivative.fileAssetFields).toEqual(expect.arrayContaining(["derivativeObjectKey", "metadataStripped", "storageVisibility"]));
   });
 
   it("keeps upload policy and secure intent routes wired to scan and private derivative blockers", () => {
