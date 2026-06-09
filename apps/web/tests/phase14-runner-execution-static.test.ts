@@ -2,10 +2,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildPhase14RunnerRunPersistenceContract,
   phase14RunnerArtifactPaths,
   phase14RunnerCommands,
   phase14RunnerExecutionMatrix,
-  phase14RunnerExecutionReadiness
+  phase14RunnerExecutionReadiness,
+  phase14RunnerRunPersistencePreview
 } from "../lib/phase14RunnerExecution";
 
 const root = process.cwd();
@@ -97,6 +99,45 @@ describe("GAP-105 Phase 14 runner execution wiring", () => {
     );
   });
 
+  it("pins durable Phase14RunnerRun rows, command matrix, artifact manifest, triage, scaffold, and flaky policy fields", () => {
+    const schema = read("packages/db/prisma/schema.prisma");
+    const contract = buildPhase14RunnerRunPersistenceContract({
+      tenantId: "tenant_demo",
+      runId: "phase14-runner-demo",
+      commitSha: "abc1234",
+      status: "ci_gated",
+      commandMatrix: phase14RunnerExecutionMatrix,
+      artifactManifest: phase14RunnerArtifactPaths,
+      frozenInstallPassed: false,
+      lockfileReproducible: true,
+      staticChecksPassed: false,
+      manifestChecksPassed: false,
+      typecheckPassed: false,
+      unitPassed: false,
+      playwrightBrowsersInstalled: false,
+      e2ePassed: false,
+      ciPassed: false,
+      runnerFailuresTriaged: false,
+      runnerFixesCommitted: false,
+      scaffoldCoveragePreserved: true,
+      flakyPolicyDocumented: false,
+      triageArtifactPath: "coverage/phase14-runner-failure-triage.md",
+      scaffoldDiffArtifactPath: "coverage/phase14-scaffold-coverage-diff.json",
+      flakyPolicyArtifactPath: "coverage/phase14-flaky-policy.md",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/redacted"
+    });
+
+    expect(schema).toContain("model Phase14RunnerRun");
+    expect(schema).toContain("commandMatrix");
+    expect(schema).toContain("flakyPolicyDocumented");
+    expect(schema).toContain("@@unique([tenantId, runId])");
+    expect(contract.transactionWrites).toEqual(["Phase14RunnerRun", "AuditLog"]);
+    expect(contract.requiredRunnerFlags).toContain("playwrightBrowsersInstalled");
+    expect(contract.artifactFields).toContain("flakyPolicyArtifactPath");
+    expect(contract.tenantIsolationKey).toBe("tenantId");
+    expect(phase14RunnerRunPersistencePreview.modelName).toBe("Phase14RunnerRun");
+  });
+
   it("keeps CI artifacts, manifest registration, and tracker status aligned", () => {
     expect(ciWorkflow).toContain("Run Phase 14 runner execution contracts");
     expect(ciWorkflow).toContain("apps/web/tests/phase14-runner-execution-static.test.ts");
@@ -104,6 +145,7 @@ describe("GAP-105 Phase 14 runner execution wiring", () => {
     expect(ciWorkflow).toContain("coverage/phase14-manifest-check.json");
     expect(ciWorkflow).toContain("coverage/phase14-unit-results.json");
     expect(unitManifest).toContain("unit-web-phase14-runner-execution-static");
+    expect(unitManifest).toContain("Phase14RunnerRun Prisma model and app row contract are wired");
     expect(gapTracker).toContain("apps/web/lib/phase14RunnerExecution.ts");
     expect(gapTracker).toContain("live runner execution proof remains open");
   });

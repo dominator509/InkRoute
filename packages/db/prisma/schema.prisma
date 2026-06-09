@@ -369,6 +369,7 @@ model Tenant {
   securityMiddlewareEvidence SecurityMiddlewareEvidence[]
   securityCoverageRuns SecurityCoverageRun[]
   securityAppRuntimeRuns SecurityAppRuntimeRun[]
+  phase14RunnerRuns Phase14RunnerRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -1578,6 +1579,40 @@ model SecurityAppRuntimeRun {
   browserRuntimeSmokePassed  Boolean  @default(false)
   mobileDeviceSmokePassed    Boolean  @default(false)
   deviceGatedTargets         Json?
+  ciRunUrl                   String?
+  tenant                     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model Phase14RunnerRun {
+  id                         String   @id @default(cuid())
+  tenantId                   String
+  runId                      String
+  commitSha                  String?
+  status                     String
+  commandMatrix              Json
+  artifactManifest           Json
+  frozenInstallPassed        Boolean  @default(false)
+  lockfileReproducible       Boolean  @default(false)
+  staticChecksPassed         Boolean  @default(false)
+  manifestChecksPassed       Boolean  @default(false)
+  typecheckPassed            Boolean  @default(false)
+  unitPassed                 Boolean  @default(false)
+  playwrightBrowsersInstalled Boolean @default(false)
+  e2ePassed                  Boolean  @default(false)
+  ciPassed                   Boolean  @default(false)
+  runnerFailuresTriaged      Boolean  @default(false)
+  runnerFixesCommitted       Boolean  @default(false)
+  scaffoldCoveragePreserved  Boolean  @default(false)
+  flakyPolicyDocumented      Boolean  @default(false)
+  triageArtifactPath         String?
+  scaffoldDiffArtifactPath   String?
+  flakyPolicyArtifactPath    String?
   ciRunUrl                   String?
   tenant                     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                  DateTime @default(now())

@@ -13,6 +13,55 @@ export interface Phase14RunnerExecutionMatrixEntry {
   readonly status: Phase14RunnerExecutionStatus;
 }
 
+export interface Phase14RunnerRunPersistenceInput {
+  tenantId: string;
+  runId: string;
+  commitSha?: string;
+  status: "blocked" | "running" | "passed" | "failed" | "ci_gated";
+  commandMatrix: readonly Phase14RunnerExecutionMatrixEntry[];
+  artifactManifest: readonly string[];
+  frozenInstallPassed: boolean;
+  lockfileReproducible: boolean;
+  staticChecksPassed: boolean;
+  manifestChecksPassed: boolean;
+  typecheckPassed: boolean;
+  unitPassed: boolean;
+  playwrightBrowsersInstalled: boolean;
+  e2ePassed: boolean;
+  ciPassed: boolean;
+  runnerFailuresTriaged: boolean;
+  runnerFixesCommitted: boolean;
+  scaffoldCoveragePreserved: boolean;
+  flakyPolicyDocumented: boolean;
+  triageArtifactPath?: string;
+  scaffoldDiffArtifactPath?: string;
+  flakyPolicyArtifactPath?: string;
+  ciRunUrl?: string;
+}
+
+export interface Phase14RunnerRunPersistenceContract {
+  modelName: "Phase14RunnerRun";
+  row: Phase14RunnerRunPersistenceInput;
+  transactionWrites: readonly ["Phase14RunnerRun", "AuditLog"];
+  requiredRunnerFlags: readonly [
+    "frozenInstallPassed",
+    "lockfileReproducible",
+    "staticChecksPassed",
+    "manifestChecksPassed",
+    "typecheckPassed",
+    "unitPassed",
+    "playwrightBrowsersInstalled",
+    "e2ePassed",
+    "ciPassed",
+    "runnerFailuresTriaged",
+    "runnerFixesCommitted",
+    "scaffoldCoveragePreserved",
+    "flakyPolicyDocumented",
+  ];
+  artifactFields: readonly ["commandMatrix", "artifactManifest", "triageArtifactPath", "scaffoldDiffArtifactPath", "flakyPolicyArtifactPath"];
+  tenantIsolationKey: "tenantId";
+}
+
 export const phase14RunnerArtifactPaths = [
   "coverage/phase14-runner-execution.json",
   "coverage/phase14-frozen-install.log",
@@ -91,6 +140,33 @@ export const phase14RunnerExecutionMatrix: readonly Phase14RunnerExecutionMatrix
   }
 ];
 
+export function buildPhase14RunnerRunPersistenceContract(
+  input: Phase14RunnerRunPersistenceInput,
+): Phase14RunnerRunPersistenceContract {
+  return {
+    modelName: "Phase14RunnerRun",
+    row: input,
+    transactionWrites: ["Phase14RunnerRun", "AuditLog"],
+    requiredRunnerFlags: [
+      "frozenInstallPassed",
+      "lockfileReproducible",
+      "staticChecksPassed",
+      "manifestChecksPassed",
+      "typecheckPassed",
+      "unitPassed",
+      "playwrightBrowsersInstalled",
+      "e2ePassed",
+      "ciPassed",
+      "runnerFailuresTriaged",
+      "runnerFixesCommitted",
+      "scaffoldCoveragePreserved",
+      "flakyPolicyDocumented",
+    ],
+    artifactFields: ["commandMatrix", "artifactManifest", "triageArtifactPath", "scaffoldDiffArtifactPath", "flakyPolicyArtifactPath"],
+    tenantIsolationKey: "tenantId",
+  };
+}
+
 export const phase14RunnerExecutionReadiness = buildPhase14RunnerExecutionReadinessPlan({
   rootScripts: [
     "test:phase14:static",
@@ -114,4 +190,28 @@ export const phase14RunnerExecutionReadiness = buildPhase14RunnerExecutionReadin
   runnerFixesCommitted: false,
   scaffoldCoveragePreserved: true,
   flakyRetryPolicyDocumented: false
+});
+
+export const phase14RunnerRunPersistencePreview = buildPhase14RunnerRunPersistenceContract({
+  tenantId: "tenant_demo",
+  runId: "phase14-runner-demo",
+  status: "ci_gated",
+  commandMatrix: phase14RunnerExecutionMatrix,
+  artifactManifest: phase14RunnerArtifactPaths,
+  frozenInstallPassed: false,
+  lockfileReproducible: true,
+  staticChecksPassed: false,
+  manifestChecksPassed: false,
+  typecheckPassed: false,
+  unitPassed: false,
+  playwrightBrowsersInstalled: false,
+  e2ePassed: false,
+  ciPassed: false,
+  runnerFailuresTriaged: false,
+  runnerFixesCommitted: false,
+  scaffoldCoveragePreserved: true,
+  flakyPolicyDocumented: false,
+  triageArtifactPath: "coverage/phase14-runner-failure-triage.md",
+  scaffoldDiffArtifactPath: "coverage/phase14-scaffold-coverage-diff.json",
+  flakyPolicyArtifactPath: "coverage/phase14-flaky-policy.md",
 });
