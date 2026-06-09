@@ -2,11 +2,13 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  accessibilityVisualRunPersistencePreview,
   accessibilityVisualRuntimeArtifactPaths,
   accessibilityVisualRuntimeCommands,
   accessibilityVisualRuntimeMatrix,
   accessibilityVisualRuntimeReadiness,
-  accessibilityVisualRuntimeSpecFiles
+  accessibilityVisualRuntimeSpecFiles,
+  buildAccessibilityVisualRunPersistenceContract
 } from "../lib/accessibilityVisualRuntime";
 
 const root = process.cwd();
@@ -102,6 +104,44 @@ describe("GAP-109 accessibility and visual runtime wiring", () => {
     );
   });
 
+  it("pins durable AccessibilityVisualRun rows, a11y/visual/manual flags, artifacts, CI, and triage evidence", () => {
+    const schema = read("packages/db/prisma/schema.prisma");
+    const contract = buildAccessibilityVisualRunPersistenceContract({
+      tenantId: "tenant_demo",
+      runId: "accessibility-visual-demo",
+      commitSha: "abc1234",
+      status: "manual_gated",
+      runtimeMatrix: accessibilityVisualRuntimeMatrix,
+      specFiles: accessibilityVisualRuntimeSpecFiles,
+      artifactManifest: accessibilityVisualRuntimeArtifactPaths,
+      webA11ySpecPassed: false,
+      dashboardA11ySpecPassed: false,
+      axeReportsCollected: false,
+      lighthouseBudgetsPassed: false,
+      contrastAuditPassed: false,
+      responsiveChecksPassed: false,
+      screenReaderPassCompleted: false,
+      mobileAccessibilityQaPassed: false,
+      visualBaselinesCaptured: false,
+      visualDiffsReviewed: false,
+      artifactsRetained: true,
+      ciAccessibilityVisualPassed: false,
+      regressionsTriagedAndFixed: false,
+      triageArtifactPath: "coverage/accessibility-visual-regression-triage.md",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/redacted"
+    });
+
+    expect(schema).toContain("model AccessibilityVisualRun");
+    expect(schema).toContain("axeReportsCollected");
+    expect(schema).toContain("visualDiffsReviewed");
+    expect(schema).toContain("@@unique([tenantId, runId])");
+    expect(contract.transactionWrites).toEqual(["AccessibilityVisualRun", "AuditLog"]);
+    expect(contract.requiredA11yVisualFlags).toContain("screenReaderPassCompleted");
+    expect(contract.artifactFields).toContain("triageArtifactPath");
+    expect(contract.tenantIsolationKey).toBe("tenantId");
+    expect(accessibilityVisualRunPersistencePreview.modelName).toBe("AccessibilityVisualRun");
+  });
+
   it("keeps CI, manifest registration, and tracker status aligned", () => {
     expect(ciWorkflow).toContain("Run Phase 14 accessibility visual runtime contracts");
     expect(ciWorkflow).toContain("apps/web/tests/accessibility-visual-runtime-static.test.ts");
@@ -109,6 +149,7 @@ describe("GAP-109 accessibility and visual runtime wiring", () => {
     expect(ciWorkflow).toContain("coverage/accessibility-visual-runtime.json");
     expect(ciWorkflow).toContain("test-results/accessibility-visual-runtime");
     expect(unitManifest).toContain("unit-web-accessibility-visual-runtime-static");
+    expect(unitManifest).toContain("AccessibilityVisualRun Prisma model and app row contract are wired");
     expect(gapTracker).toContain("apps/web/lib/accessibilityVisualRuntime.ts");
     expect(gapTracker).toContain("live accessibility and visual regression proof remains open");
   });

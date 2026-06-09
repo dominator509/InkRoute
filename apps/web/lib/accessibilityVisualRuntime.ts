@@ -13,6 +13,54 @@ export interface AccessibilityVisualRuntimeMatrixEntry {
   readonly status: AccessibilityVisualRuntimeStatus;
 }
 
+export interface AccessibilityVisualRunPersistenceInput {
+  tenantId: string;
+  runId: string;
+  commitSha?: string;
+  status: "blocked" | "running" | "passed" | "failed" | "manual_gated";
+  runtimeMatrix: readonly AccessibilityVisualRuntimeMatrixEntry[];
+  specFiles: readonly string[];
+  artifactManifest: readonly string[];
+  webA11ySpecPassed: boolean;
+  dashboardA11ySpecPassed: boolean;
+  axeReportsCollected: boolean;
+  lighthouseBudgetsPassed: boolean;
+  contrastAuditPassed: boolean;
+  responsiveChecksPassed: boolean;
+  screenReaderPassCompleted: boolean;
+  mobileAccessibilityQaPassed: boolean;
+  visualBaselinesCaptured: boolean;
+  visualDiffsReviewed: boolean;
+  artifactsRetained: boolean;
+  ciAccessibilityVisualPassed: boolean;
+  regressionsTriagedAndFixed: boolean;
+  triageArtifactPath?: string;
+  ciRunUrl?: string;
+}
+
+export interface AccessibilityVisualRunPersistenceContract {
+  modelName: "AccessibilityVisualRun";
+  row: AccessibilityVisualRunPersistenceInput;
+  transactionWrites: readonly ["AccessibilityVisualRun", "AuditLog"];
+  requiredA11yVisualFlags: readonly [
+    "webA11ySpecPassed",
+    "dashboardA11ySpecPassed",
+    "axeReportsCollected",
+    "lighthouseBudgetsPassed",
+    "contrastAuditPassed",
+    "responsiveChecksPassed",
+    "screenReaderPassCompleted",
+    "mobileAccessibilityQaPassed",
+    "visualBaselinesCaptured",
+    "visualDiffsReviewed",
+    "artifactsRetained",
+    "ciAccessibilityVisualPassed",
+    "regressionsTriagedAndFixed",
+  ];
+  artifactFields: readonly ["runtimeMatrix", "specFiles", "artifactManifest", "triageArtifactPath"];
+  tenantIsolationKey: "tenantId";
+}
+
 export const accessibilityVisualRuntimeArtifactPaths = [
   "coverage/accessibility-visual-runtime.json",
   "coverage/accessibility-web-a11y-results.json",
@@ -91,6 +139,33 @@ export const accessibilityVisualRuntimeMatrix: readonly AccessibilityVisualRunti
   }
 ];
 
+export function buildAccessibilityVisualRunPersistenceContract(
+  input: AccessibilityVisualRunPersistenceInput,
+): AccessibilityVisualRunPersistenceContract {
+  return {
+    modelName: "AccessibilityVisualRun",
+    row: input,
+    transactionWrites: ["AccessibilityVisualRun", "AuditLog"],
+    requiredA11yVisualFlags: [
+      "webA11ySpecPassed",
+      "dashboardA11ySpecPassed",
+      "axeReportsCollected",
+      "lighthouseBudgetsPassed",
+      "contrastAuditPassed",
+      "responsiveChecksPassed",
+      "screenReaderPassCompleted",
+      "mobileAccessibilityQaPassed",
+      "visualBaselinesCaptured",
+      "visualDiffsReviewed",
+      "artifactsRetained",
+      "ciAccessibilityVisualPassed",
+      "regressionsTriagedAndFixed",
+    ],
+    artifactFields: ["runtimeMatrix", "specFiles", "artifactManifest", "triageArtifactPath"],
+    tenantIsolationKey: "tenantId",
+  };
+}
+
 export const accessibilityVisualRuntimeReadiness = buildAccessibilityVisualRuntimeReadinessPlan({
   rootScripts: ["test:e2e"],
   webA11ySpecPassed: false,
@@ -107,4 +182,27 @@ export const accessibilityVisualRuntimeReadiness = buildAccessibilityVisualRunti
   artifactsRetained: true,
   ciA11yVisualJobPassed: false,
   regressionsTriagedAndFixed: false
+});
+
+export const accessibilityVisualRunPersistencePreview = buildAccessibilityVisualRunPersistenceContract({
+  tenantId: "tenant_demo",
+  runId: "accessibility-visual-demo",
+  status: "manual_gated",
+  runtimeMatrix: accessibilityVisualRuntimeMatrix,
+  specFiles: accessibilityVisualRuntimeSpecFiles,
+  artifactManifest: accessibilityVisualRuntimeArtifactPaths,
+  webA11ySpecPassed: false,
+  dashboardA11ySpecPassed: false,
+  axeReportsCollected: false,
+  lighthouseBudgetsPassed: false,
+  contrastAuditPassed: false,
+  responsiveChecksPassed: false,
+  screenReaderPassCompleted: false,
+  mobileAccessibilityQaPassed: false,
+  visualBaselinesCaptured: false,
+  visualDiffsReviewed: false,
+  artifactsRetained: true,
+  ciAccessibilityVisualPassed: false,
+  regressionsTriagedAndFixed: false,
+  triageArtifactPath: "coverage/accessibility-visual-regression-triage.md",
 });
