@@ -126,6 +126,17 @@ export interface LocalWebhookEventRecord {
   createdAt: string;
 }
 
+export interface LocalContactSubmissionRecord {
+  id: string;
+  tenantId: string;
+  name: string;
+  email: string;
+  subject: string;
+  redactedSubmission: Record<string, unknown>;
+  auditMetadata: Record<string, unknown>;
+  createdAt: string;
+}
+
 export interface LocalTenantState {
   bookings: Map<string, LocalBookingRecord>;
   depositSessions: Map<string, LocalDepositSessionRecord>;
@@ -135,6 +146,7 @@ export interface LocalTenantState {
   postPersistWorkflowConsumers: Map<string, LocalBookingWorkflowConsumerRecord>;
   errorReports: Map<string, LocalErrorReportRecord>;
   webhookEvents: Map<string, LocalWebhookEventRecord>;
+  contactSubmissions: Map<string, LocalContactSubmissionRecord>;
 }
 
 type TenantStore = Map<MaybeTenantSlug, LocalTenantState>;
@@ -205,6 +217,7 @@ function getTenantState(tenantSlug: string): LocalTenantState {
     postPersistWorkflowConsumers: new Map(),
     errorReports: new Map(),
     webhookEvents: new Map(),
+    contactSubmissions: new Map(),
   };
   tenantStates.set(tenantSlug, created);
   return created;
@@ -605,4 +618,44 @@ export function persistWebhookEvent(
 
   tenant.webhookEvents.set(id, record);
   return record;
+}
+
+
+export function persistContactSubmission(
+  tenantSlug: string,
+  input: { name: string; email: string; subject?: string; message: string; source?: string; clientIp?: string },
+): LocalContactSubmissionRecord {
+  const tenant = getTenantState(tenantSlug);
+  const tenantId = resolveTenant(tenantSlug)?.tenantId ?? tenantSlug;
+  const now = nowIsoDate();
+  const id = nextId("contact");
+  const subject = safeText(input.subject, "General contact");
+  const redactedSubmission = redactRecord({
+    name: input.name,
+    email: input.email,
+    subject,
+    message: input.message,
+  });
+  const record: LocalContactSubmissionRecord = {
+    id,
+    tenantId,
+    name: input.name,
+    email: input.email,
+    subject,
+    redactedSubmission,
+    auditMetadata: {
+      route: "/api/public/[tenantSlug]/contact",
+      source: input.source ?? "public_contact_form",
+      clientIp: input.clientIp ?? "unknown-ip",
+      persistence: "local-runtime",
+      notificationBoundary: "provider-gated",
+    },
+    createdAt: now,
+  };
+  tenant.contactSubmissions.set(id, record);
+  return record;
+}
+
+export function getContactSubmissions(tenantSlug: string): LocalContactSubmissionRecord[] {
+  return Array.from(getTenantState(tenantSlug).contactSubmissions.values()).sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1));
 }

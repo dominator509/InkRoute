@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { calculateTattooReadinessScore, emptyBookingDraft } from "@inkroute/booking";
+import { buildBookingPostSubmitPlan, calculateTattooReadinessScore, emptyBookingDraft, type BookingDraft } from "@inkroute/booking";
 import { bookingRequestInputSchema, type BookingRequestInput } from "@inkroute/validators";
 import {
   evaluateEncryptionPolicy,
@@ -303,6 +303,34 @@ async function evaluateBotProof(request: NextRequest, tenantSlug: string, bodyTe
 function shouldCollectReferenceUpload(input: BookingInput): boolean {
   const intent = `${input.ideaSummary} ${input.style} ${input.placement}`.toLowerCase();
   return ["reference", "reference photo", "reference image", "reference pictures", "photo", "upload", "inspo", "inspiration", "example"].some((keyword) => intent.includes(keyword));
+}
+
+
+function buildBookingDraftFromInput(input: BookingInput): BookingDraft {
+  return {
+    ...emptyBookingDraft,
+    preferredCitySlug: input.preferredCity,
+    preferredDateWindow: input.preferredDate ? new Date(input.preferredDate).toISOString() : "Flexible",
+    style: input.style,
+    placement: input.placement,
+    sizeEstimate: input.sizeEstimate,
+    budgetRange:
+      input.budgetMin !== undefined && input.budgetMax !== undefined
+        ? `$${input.budgetMin}-${input.budgetMax}`
+        : input.budgetMin !== undefined
+          ? `From $${input.budgetMin}`
+          : input.budgetMax !== undefined
+            ? `Up to $${input.budgetMax}`
+            : "Requested after consultation",
+    ideaSummary: input.ideaSummary,
+    clientName: input.clientName,
+    clientEmail: input.clientEmail,
+    policyAccepted: input.policyAccepted,
+    ageAcknowledged: true,
+    privacyAcknowledged: true,
+    depositBoundaryAcknowledged: true,
+    ...(input.portfolioAttributionId ? { portfolioAttributionId: input.portfolioAttributionId } : {}),
+  };
 }
 
 function buildReadinessScore(input: BookingInput): number {
@@ -775,6 +803,12 @@ function buildResponseBase(
     antiBot: antiBotDetails,
     encryption: encryptionDetails,
     workflows: {
+      packagePostSubmitPlan: buildBookingPostSubmitPlan({
+        tenantId: resolvedTenant.tenantId,
+        bookingRequestId: bookingRequestId ?? "pending",
+        submittedAt: new Date().toISOString(),
+        draft: buildBookingDraftFromInput(input),
+      }),
       queueContract: {
         ...postPersistWorkflows,
         referenceUpload: shouldCollectReferenceUpload(input)

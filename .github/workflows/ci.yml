@@ -1622,6 +1622,29 @@ jobs:
             test-results/portfolio-image-performance-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 4 booking contact runtime contracts
+        run: pnpm --filter @inkroute/booking test && pnpm vitest run apps/web/tests/booking-contact-runtime-static.test.ts
+
+      - name: Upload Phase 4 booking contact runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking-contact-runtime-artifacts
+          path: |
+            coverage/booking-contact-runtime.json
+            coverage/booking-contact-booking-typecheck.txt
+            coverage/booking-contact-booking-test.txt
+            coverage/booking-contact-web-typecheck.txt
+            coverage/booking-contact-web-build.txt
+            coverage/booking-contact-route-plan.json
+            coverage/booking-contact-contact-persistence.json
+            coverage/booking-contact-provider-boundaries.json
+            coverage/booking-contact-api-e2e.json
+            coverage/booking-contact-browser-e2e.json
+            coverage/booking-contact-ci-evidence.json
+            test-results/booking-contact-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 13 legal review evidence contracts
         run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/legal-review-evidence-static.test.ts
 
