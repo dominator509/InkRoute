@@ -2909,7 +2909,8 @@
         "Forced simulator/device crash capture and sanitized ErrorReport/dashboard persistence proof pending",
         "Offline buffering, no-PII provider payload, mobile typecheck, CI evidence, and secret-safe artifact proof pending"
       ]
-    }    ,{
+    }
+    ,{
       "id": "unit-mobile-updates-runtime-static",
       "file": "apps/mobile/tests/mobile-updates-runtime-static.test.ts",
       "priority": "high",
@@ -2923,6 +2924,21 @@
         "Real EAS project id/update URL, credentials, app config, and eas.json channel proof pending",
         "Preview/prod native build, OTA publish, device receipt, and rollback republish proof pending",
         "Adoption monitoring, release-health monitoring, mobile typecheck, CI evidence, and secret-safe artifact proof pending"
+      ]
+    }    ,{
+      "id": "unit-mobile-qa-runtime-static",
+      "file": "apps/mobile/tests/mobile-qa-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-048 mobile QA runtime matrix covers mobile-support typecheck/tests, mobile typecheck/tests, Expo component/render tests, iOS simulator smoke, Android emulator smoke, physical-device smoke, accessibility, offline reconnect, push delivery, crash capture, OTA rollback, manifest sync, CI hooks, artifact retention, and secret-safe artifacts",
+        "GAP-048 mobile app QA execution contract remains wired for every registered screen, App.tsx switch coverage, API/offline/push/crash/OTA evidence slots, QA checklist ids, and visible app QA status",
+        "GAP-048 readiness keeps executable Expo render tests, simulator/device smoke, accessibility, provider/device QA, CI hooks, artifact retention, mobile commands, and secret-safe evidence explicit until proof exists"
+      ],
+      "blockedBy": [
+        "Static mobile QA runtime test execution pending",
+        "Executable Expo component/render tests, mobile typecheck/tests, and simulator smoke proof pending",
+        "Physical-device auth/API/offline/push/crash/OTA/accessibility QA proof pending",
+        "CI hooks, retained artifact links by checklist id, and secret-safe artifact proof pending"
       ]
     }  ]
 }

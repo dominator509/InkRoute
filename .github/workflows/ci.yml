@@ -1044,6 +1044,36 @@ jobs:
             test-results/mobile-updates-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 6 mobile QA runtime contracts
+        run: pnpm --filter @inkroute/mobile-support test && pnpm vitest run apps/mobile/tests/mobile-qa-runtime-static.test.ts apps/mobile/tests/mobile-qa-static.test.ts
+
+      - name: Upload Phase 6 mobile QA runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-qa-runtime-artifacts
+          path: |
+            coverage/mobile-qa-runtime.json
+            coverage/mobile-qa-support-typecheck.txt
+            coverage/mobile-qa-support-test.txt
+            coverage/mobile-qa-app-typecheck.txt
+            coverage/mobile-qa-app-test.txt
+            coverage/mobile-qa-component-render.json
+            coverage/mobile-qa-ios-simulator-redacted.json
+            coverage/mobile-qa-android-emulator-redacted.json
+            coverage/mobile-qa-physical-device-redacted.json
+            coverage/mobile-qa-accessibility.json
+            coverage/mobile-qa-offline-reconnect-redacted.json
+            coverage/mobile-qa-push-redacted.json
+            coverage/mobile-qa-crash-redacted.json
+            coverage/mobile-qa-ota-rollback-redacted.json
+            coverage/mobile-qa-manifest-sync.json
+            coverage/mobile-qa-ci-hooks.json
+            coverage/mobile-qa-artifact-retention.json
+            coverage/mobile-qa-secret-safe-artifacts.json
+            test-results/mobile-qa-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 6 mobile launch runtime contracts
         run: pnpm --filter @inkroute/mobile-support test && pnpm vitest run apps/web/tests/mobile-launch-runtime-static.test.ts
 
