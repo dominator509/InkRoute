@@ -344,6 +344,26 @@ jobs:
             test-results/required-checks-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 17 semantic documentation runtime contracts
+        run: pnpm --filter @inkroute/quality test && pnpm vitest run apps/web/tests/semantic-documentation-runtime-static.test.ts
+
+      - name: Upload Phase 17 semantic documentation runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semantic-documentation-runtime-artifacts
+          path: |
+            coverage/semantic-documentation-runtime.json
+            coverage/semantic-documentation-link-path-output.txt
+            coverage/semantic-documentation-consistency-output.txt
+            coverage/semantic-documentation-inventory-output.txt
+            coverage/semantic-documentation-ci-quality-docs.json
+            coverage/semantic-documentation-runtime-proof-boundary.json
+            coverage/semantic-documentation-provider-proof-boundary.json
+            coverage/semantic-documentation-legal-review-boundary.json
+            test-results/semantic-documentation-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 17 quality gates
         run: pnpm quality:all
       - name: Verify PR GAP tracker diff evidence
