@@ -6,6 +6,7 @@ import {
   workspaceRequiredChecksArtifactPaths,
   workspaceRequiredChecksCommands,
   workspaceRequiredChecksReadiness,
+  workspaceRequiredChecksRunPersistenceContract,
   workspaceRequiredChecksRuntimeMatrix,
 } from "../lib/workspaceRequiredChecksRuntime";
 
@@ -18,6 +19,10 @@ describe("workspace required checks runtime contract", () => {
   const workspaceTests = readRepoFile("packages/workspace/tests/workspace-audit.test.ts");
   const qualityRequiredChecksContract = readRepoFile("docs/quality/manifests/required-checks-contract.json");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const workspaceRequiredChecksMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609032400_add_workspace_required_checks_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -45,6 +50,37 @@ describe("workspace required checks runtime contract", () => {
     ]);
     expect(workspaceRequiredChecksArtifactPaths).toContain("coverage/workspace-required-checks-runtime.json");
     expect(workspaceRequiredChecksArtifactPaths).toContain("test-results/workspace-required-checks-runtime");
+  });
+
+  it("pins the WorkspaceRequiredChecksRun persistence model and migration", () => {
+    expect(workspaceRequiredChecksRunPersistenceContract.model).toBe("WorkspaceRequiredChecksRun");
+    expect(workspaceRequiredChecksRunPersistenceContract.tenantRelation).toBe("workspaceRequiredChecksRuns");
+    expect(workspaceRequiredChecksRunPersistenceContract.migration).toBe(
+      "20260609032400_add_workspace_required_checks_runs",
+    );
+    expect(workspaceRequiredChecksRunPersistenceContract.jsonFields).toEqual([
+      "commandMatrix",
+      "branchProtectionCheckMatrix",
+      "artifactManifest",
+      "mergeBlockProofManifest",
+      "redactedLogManifest",
+    ]);
+    expect(workspaceRequiredChecksRunPersistenceContract.evidenceBooleans).toContain("workspaceRequiredChecksPassed");
+    expect(workspaceRequiredChecksRunPersistenceContract.evidenceBooleans).toContain("prGapDiffCheckBlocksMerge");
+    expect(workspaceRequiredChecksRunPersistenceContract.evidenceBooleans).toContain("logsRedacted");
+    expect(workspaceRequiredChecksRunPersistenceContract.artifactFields).toContain("branchProtectionArtifactPath");
+    expect(workspaceRequiredChecksRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(prismaSchema).toContain("workspaceRequiredChecksRuns WorkspaceRequiredChecksRun[]");
+    expect(prismaSchema).toContain("model WorkspaceRequiredChecksRun");
+    expect(prismaSchema).toContain("mergeBlockProofManifest");
+    expect(prismaSchema).toContain("prGapDiffCheckBlocksMerge");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(workspaceRequiredChecksMigration).toContain('CREATE TABLE "WorkspaceRequiredChecksRun"');
+    expect(workspaceRequiredChecksMigration).toContain('"branchProtectionCheckMatrix" JSONB NOT NULL');
+    expect(workspaceRequiredChecksMigration).toContain('"logsRedacted" BOOLEAN NOT NULL DEFAULT false');
+    expect(workspaceRequiredChecksMigration).toContain(
+      'CREATE UNIQUE INDEX "WorkspaceRequiredChecksRun_tenantId_runId_key"',
+    );
   });
 
   it("keeps workspace and quality required-check contracts wired", () => {
@@ -79,6 +115,8 @@ describe("workspace required checks runtime contract", () => {
     expect(ciWorkflow).toContain("workspace-required-checks-runtime-static.test.ts");
     expect(ciWorkflow).toContain("workspace-required-checks-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-workspace-required-checks-runtime-static");
+    expect(unitManifest).toContain("WorkspaceRequiredChecksRun Prisma model and app row contract");
+    expect(gapTracker).toContain("WorkspaceRequiredChecksRun");
     expect(gapTracker).toContain("apps/web/lib/workspaceRequiredChecksRuntime.ts");
     expect(gapTracker).toContain("live command, CI, branch-protection, failing-PR merge-block, PR gap-diff merge-block, and redacted-log evidence remain open");
   });

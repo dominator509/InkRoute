@@ -397,6 +397,7 @@ model Tenant {
   workspaceRuntimeToolchainRuns WorkspaceRuntimeToolchainRun[]
   staticDependencyAuditRuns StaticDependencyAuditRun[]
   runtimeEvidenceRuns RuntimeEvidenceRun[]
+  workspaceRequiredChecksRuns WorkspaceRequiredChecksRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2667,6 +2668,46 @@ model RuntimeEvidenceRun {
   tenant                            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                         DateTime @default(now())
   updatedAt                         DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model WorkspaceRequiredChecksRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  commandMatrix                           Json
+  branchProtectionCheckMatrix             Json
+  artifactManifest                        Json
+  mergeBlockProofManifest                 Json
+  redactedLogManifest                     Json
+  requiredChecksAuditPassed               Boolean  @default(false)
+  workspaceRequiredChecksPassed           Boolean  @default(false)
+  workspaceAllPassed                      Boolean  @default(false)
+  qualityRequiredChecksPassed             Boolean  @default(false)
+  ciQualityJobPassed                      Boolean  @default(false)
+  branchProtectionEvidenceCaptured        Boolean  @default(false)
+  branchProtectionChecksConfigured        Boolean  @default(false)
+  failingWorkspaceAuditBlocksMerge        Boolean  @default(false)
+  prGapDiffCheckBlocksMerge               Boolean  @default(false)
+  evidenceCaptured                        Boolean  @default(false)
+  logsRedacted                            Boolean  @default(false)
+  workspaceRequiredChecksArtifactPath     String?
+  workspaceAllArtifactPath                String?
+  qualityRequiredChecksArtifactPath       String?
+  ciQualityArtifactPath                   String?
+  branchProtectionArtifactPath            String?
+  failingWorkspacePrArtifactPath          String?
+  failingPrGapDiffArtifactPath            String?
+  redactedLogsArtifactPath                String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

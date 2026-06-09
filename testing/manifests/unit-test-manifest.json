@@ -2216,13 +2216,13 @@
       "file": "apps/web/tests/workspace-required-checks-runtime-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-133 workspace required checks runtime matrix covers workspace:required-checks, workspace:all, quality:required-checks, CI / quality, branch-protection required checks, failing workspace-audit PR merge-block proof, PR GAP tracker diff merge-block proof, and redacted logs",
+        "GAP-133 WorkspaceRequiredChecksRun Prisma model and app row contract plus workspace required checks runtime matrix covers workspace:required-checks, workspace:all, quality:required-checks, CI / quality, branch-protection required checks, failing workspace-audit PR merge-block proof, PR GAP tracker diff merge-block proof, and redacted logs",
         "GAP-133 workspace and quality required-check contracts, verifier, helper tests, CI labels, artifact paths, and tracker row remain wired before live branch-protection proof",
         "GAP-133 readiness keeps branch-protection and merge-block evidence explicit until GitHub proof exists"
       ],
       "blockedBy": [
         "Static workspace required checks runtime test execution pending",
-        "workspace:required-checks, workspace:all, and quality:required-checks command proof pending",
+        "Provider-backed WorkspaceRequiredChecksRun transaction plus workspace:required-checks, workspace:all, and quality:required-checks command proof pending",
         "GitHub branch protection and CI quality evidence pending",
         "Failing workspace-audit PR, failing PR gap-diff merge-block, and redacted log proof pending"
       ]

@@ -14,6 +14,80 @@ export interface WorkspaceRequiredChecksRuntimeMatrixEntry {
   readonly status: WorkspaceRequiredChecksRuntimeStatus;
 }
 
+export interface WorkspaceRequiredChecksRunPersistenceContract {
+  readonly model: "WorkspaceRequiredChecksRun";
+  readonly tenantRelation: "workspaceRequiredChecksRuns";
+  readonly migration: "20260609032400_add_workspace_required_checks_runs";
+  readonly jsonFields: readonly [
+    "commandMatrix",
+    "branchProtectionCheckMatrix",
+    "artifactManifest",
+    "mergeBlockProofManifest",
+    "redactedLogManifest",
+  ];
+  readonly evidenceBooleans: readonly [
+    "requiredChecksAuditPassed",
+    "workspaceRequiredChecksPassed",
+    "workspaceAllPassed",
+    "qualityRequiredChecksPassed",
+    "ciQualityJobPassed",
+    "branchProtectionEvidenceCaptured",
+    "branchProtectionChecksConfigured",
+    "failingWorkspaceAuditBlocksMerge",
+    "prGapDiffCheckBlocksMerge",
+    "evidenceCaptured",
+    "logsRedacted",
+  ];
+  readonly artifactFields: readonly [
+    "workspaceRequiredChecksArtifactPath",
+    "workspaceAllArtifactPath",
+    "qualityRequiredChecksArtifactPath",
+    "ciQualityArtifactPath",
+    "branchProtectionArtifactPath",
+    "failingWorkspacePrArtifactPath",
+    "failingPrGapDiffArtifactPath",
+    "redactedLogsArtifactPath",
+    "ciRunUrl",
+  ];
+}
+
+export const workspaceRequiredChecksRunPersistenceContract: WorkspaceRequiredChecksRunPersistenceContract = {
+  model: "WorkspaceRequiredChecksRun",
+  tenantRelation: "workspaceRequiredChecksRuns",
+  migration: "20260609032400_add_workspace_required_checks_runs",
+  jsonFields: [
+    "commandMatrix",
+    "branchProtectionCheckMatrix",
+    "artifactManifest",
+    "mergeBlockProofManifest",
+    "redactedLogManifest",
+  ],
+  evidenceBooleans: [
+    "requiredChecksAuditPassed",
+    "workspaceRequiredChecksPassed",
+    "workspaceAllPassed",
+    "qualityRequiredChecksPassed",
+    "ciQualityJobPassed",
+    "branchProtectionEvidenceCaptured",
+    "branchProtectionChecksConfigured",
+    "failingWorkspaceAuditBlocksMerge",
+    "prGapDiffCheckBlocksMerge",
+    "evidenceCaptured",
+    "logsRedacted",
+  ],
+  artifactFields: [
+    "workspaceRequiredChecksArtifactPath",
+    "workspaceAllArtifactPath",
+    "qualityRequiredChecksArtifactPath",
+    "ciQualityArtifactPath",
+    "branchProtectionArtifactPath",
+    "failingWorkspacePrArtifactPath",
+    "failingPrGapDiffArtifactPath",
+    "redactedLogsArtifactPath",
+    "ciRunUrl",
+  ],
+};
+
 export const workspaceRequiredChecksCommands = [
   "pnpm workspace:required-checks",
   "pnpm workspace:all",
