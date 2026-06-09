@@ -374,6 +374,7 @@ model Tenant {
   dbIntegrationRuns DbIntegrationRun[]
   mobileTestingRuns MobileTestingRun[]
   accessibilityVisualRuns AccessibilityVisualRun[]
+  providerContractRuns ProviderContractRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -1757,6 +1758,42 @@ model AccessibilityVisualRun {
   tenant                       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                    DateTime @default(now())
   updatedAt                    DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model ProviderContractRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String?
+  status                          String
+  runtimeMatrix                   Json
+  artifactManifest                Json
+  staticWebhookContractsPassed    Boolean  @default(false)
+  providerManifestVerified        Boolean  @default(false)
+  rawBodyFixturesCommitted        Boolean  @default(false)
+  replayIdempotencyFixturesCommitted Boolean @default(false)
+  stripeCliWebhookPassed          Boolean  @default(false)
+  stripeIdempotencyVerified       Boolean  @default(false)
+  googleCalendarOauthPassed       Boolean  @default(false)
+  googleCalendarSyncVerified      Boolean  @default(false)
+  storageSignedUrlPassed          Boolean  @default(false)
+  storageUploadDownloadPassed     Boolean  @default(false)
+  resendSandboxPassed             Boolean  @default(false)
+  twilioSandboxPassed             Boolean  @default(false)
+  expoPushSandboxPassed           Boolean  @default(false)
+  sentryCaptureVerified           Boolean  @default(false)
+  authSessionFixturesPassed       Boolean  @default(false)
+  rateLimitStorePassed            Boolean  @default(false)
+  redactedArtifactsRetained       Boolean  @default(false)
+  ciProviderContractPassed        Boolean  @default(false)
+  ciRunUrl                        String?
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

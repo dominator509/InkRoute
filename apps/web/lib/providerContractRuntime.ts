@@ -13,6 +13,62 @@ export interface ProviderContractRuntimeMatrixEntry {
   readonly status: ProviderContractRuntimeStatus;
 }
 
+export interface ProviderContractRunPersistenceInput {
+  tenantId: string;
+  runId: string;
+  commitSha?: string;
+  status: "blocked" | "running" | "passed" | "failed" | "provider_gated";
+  runtimeMatrix: readonly ProviderContractRuntimeMatrixEntry[];
+  artifactManifest: readonly string[];
+  staticWebhookContractsPassed: boolean;
+  providerManifestVerified: boolean;
+  rawBodyFixturesCommitted: boolean;
+  replayIdempotencyFixturesCommitted: boolean;
+  stripeCliWebhookPassed: boolean;
+  stripeIdempotencyVerified: boolean;
+  googleCalendarOauthPassed: boolean;
+  googleCalendarSyncVerified: boolean;
+  storageSignedUrlPassed: boolean;
+  storageUploadDownloadPassed: boolean;
+  resendSandboxPassed: boolean;
+  twilioSandboxPassed: boolean;
+  expoPushSandboxPassed: boolean;
+  sentryCaptureVerified: boolean;
+  authSessionFixturesPassed: boolean;
+  rateLimitStorePassed: boolean;
+  redactedArtifactsRetained: boolean;
+  ciProviderContractPassed: boolean;
+  ciRunUrl?: string;
+}
+
+export interface ProviderContractRunPersistenceContract {
+  modelName: "ProviderContractRun";
+  row: ProviderContractRunPersistenceInput;
+  transactionWrites: readonly ["ProviderContractRun", "AuditLog"];
+  requiredProviderFlags: readonly [
+    "staticWebhookContractsPassed",
+    "providerManifestVerified",
+    "rawBodyFixturesCommitted",
+    "replayIdempotencyFixturesCommitted",
+    "stripeCliWebhookPassed",
+    "stripeIdempotencyVerified",
+    "googleCalendarOauthPassed",
+    "googleCalendarSyncVerified",
+    "storageSignedUrlPassed",
+    "storageUploadDownloadPassed",
+    "resendSandboxPassed",
+    "twilioSandboxPassed",
+    "expoPushSandboxPassed",
+    "sentryCaptureVerified",
+    "authSessionFixturesPassed",
+    "rateLimitStorePassed",
+    "redactedArtifactsRetained",
+    "ciProviderContractPassed",
+  ];
+  artifactFields: readonly ["runtimeMatrix", "artifactManifest"];
+  tenantIsolationKey: "tenantId";
+}
+
 export const providerContractRuntimeArtifactPaths = [
   "coverage/provider-contract-runtime.json",
   "coverage/provider-contract-static-suite.json",
@@ -101,6 +157,38 @@ export const providerContractRuntimeMatrix: readonly ProviderContractRuntimeMatr
   }
 ];
 
+export function buildProviderContractRunPersistenceContract(
+  input: ProviderContractRunPersistenceInput,
+): ProviderContractRunPersistenceContract {
+  return {
+    modelName: "ProviderContractRun",
+    row: input,
+    transactionWrites: ["ProviderContractRun", "AuditLog"],
+    requiredProviderFlags: [
+      "staticWebhookContractsPassed",
+      "providerManifestVerified",
+      "rawBodyFixturesCommitted",
+      "replayIdempotencyFixturesCommitted",
+      "stripeCliWebhookPassed",
+      "stripeIdempotencyVerified",
+      "googleCalendarOauthPassed",
+      "googleCalendarSyncVerified",
+      "storageSignedUrlPassed",
+      "storageUploadDownloadPassed",
+      "resendSandboxPassed",
+      "twilioSandboxPassed",
+      "expoPushSandboxPassed",
+      "sentryCaptureVerified",
+      "authSessionFixturesPassed",
+      "rateLimitStorePassed",
+      "redactedArtifactsRetained",
+      "ciProviderContractPassed",
+    ],
+    artifactFields: ["runtimeMatrix", "artifactManifest"],
+    tenantIsolationKey: "tenantId",
+  };
+}
+
 export const providerContractRuntimeReadiness = buildProviderContractRuntimeReadinessPlan({
   rootScripts: ["test:unit", "test:manifest"],
   staticWebhookContractSuitePassed: false,
@@ -121,4 +209,30 @@ export const providerContractRuntimeReadiness = buildProviderContractRuntimeRead
   replayIdempotencyFixturesCommitted: false,
   redactedProviderArtifactsRetained: true,
   ciProviderContractJobPassed: false
+});
+
+export const providerContractRunPersistencePreview = buildProviderContractRunPersistenceContract({
+  tenantId: "tenant_demo",
+  runId: "provider-contract-demo",
+  status: "provider_gated",
+  runtimeMatrix: providerContractRuntimeMatrix,
+  artifactManifest: providerContractRuntimeArtifactPaths,
+  staticWebhookContractsPassed: false,
+  providerManifestVerified: true,
+  rawBodyFixturesCommitted: false,
+  replayIdempotencyFixturesCommitted: false,
+  stripeCliWebhookPassed: false,
+  stripeIdempotencyVerified: false,
+  googleCalendarOauthPassed: false,
+  googleCalendarSyncVerified: false,
+  storageSignedUrlPassed: false,
+  storageUploadDownloadPassed: false,
+  resendSandboxPassed: false,
+  twilioSandboxPassed: false,
+  expoPushSandboxPassed: false,
+  sentryCaptureVerified: false,
+  authSessionFixturesPassed: false,
+  rateLimitStorePassed: false,
+  redactedArtifactsRetained: true,
+  ciProviderContractPassed: false,
 });

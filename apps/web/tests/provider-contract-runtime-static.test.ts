@@ -2,10 +2,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildProviderContractRunPersistenceContract,
   providerContractRuntimeArtifactPaths,
   providerContractRuntimeCommands,
   providerContractRuntimeMatrix,
-  providerContractRuntimeReadiness
+  providerContractRuntimeReadiness,
+  providerContractRunPersistencePreview
 } from "../lib/providerContractRuntime";
 
 const root = process.cwd();
@@ -100,6 +102,47 @@ describe("GAP-110 provider contract runtime wiring", () => {
     );
   });
 
+  it("pins durable ProviderContractRun rows, fixture gates, provider sandbox flags, redacted artifacts, and CI evidence", () => {
+    const schema = read("packages/db/prisma/schema.prisma");
+    const contract = buildProviderContractRunPersistenceContract({
+      tenantId: "tenant_demo",
+      runId: "provider-contract-demo",
+      commitSha: "abc1234",
+      status: "provider_gated",
+      runtimeMatrix: providerContractRuntimeMatrix,
+      artifactManifest: providerContractRuntimeArtifactPaths,
+      staticWebhookContractsPassed: false,
+      providerManifestVerified: true,
+      rawBodyFixturesCommitted: false,
+      replayIdempotencyFixturesCommitted: false,
+      stripeCliWebhookPassed: false,
+      stripeIdempotencyVerified: false,
+      googleCalendarOauthPassed: false,
+      googleCalendarSyncVerified: false,
+      storageSignedUrlPassed: false,
+      storageUploadDownloadPassed: false,
+      resendSandboxPassed: false,
+      twilioSandboxPassed: false,
+      expoPushSandboxPassed: false,
+      sentryCaptureVerified: false,
+      authSessionFixturesPassed: false,
+      rateLimitStorePassed: false,
+      redactedArtifactsRetained: true,
+      ciProviderContractPassed: false,
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/redacted"
+    });
+
+    expect(schema).toContain("model ProviderContractRun");
+    expect(schema).toContain("stripeCliWebhookPassed");
+    expect(schema).toContain("rateLimitStorePassed");
+    expect(schema).toContain("@@unique([tenantId, runId])");
+    expect(contract.transactionWrites).toEqual(["ProviderContractRun", "AuditLog"]);
+    expect(contract.requiredProviderFlags).toContain("rawBodyFixturesCommitted");
+    expect(contract.artifactFields).toContain("artifactManifest");
+    expect(contract.tenantIsolationKey).toBe("tenantId");
+    expect(providerContractRunPersistencePreview.modelName).toBe("ProviderContractRun");
+  });
+
   it("keeps CI, manifest registration, and tracker status aligned", () => {
     expect(ciWorkflow).toContain("Run Phase 14 provider contract runtime contracts");
     expect(ciWorkflow).toContain("apps/web/tests/provider-contract-runtime-static.test.ts");
@@ -107,6 +150,7 @@ describe("GAP-110 provider contract runtime wiring", () => {
     expect(ciWorkflow).toContain("coverage/provider-contract-runtime.json");
     expect(ciWorkflow).toContain("test-results/provider-contract-runtime");
     expect(unitManifest).toContain("unit-web-provider-contract-runtime-static");
+    expect(unitManifest).toContain("ProviderContractRun Prisma model and app row contract are wired");
     expect(gapTracker).toContain("apps/web/lib/providerContractRuntime.ts");
     expect(gapTracker).toContain("live provider sandbox execution proof remains open");
   });
