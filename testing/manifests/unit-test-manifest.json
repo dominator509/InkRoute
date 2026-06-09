@@ -2493,6 +2493,22 @@
         "Protected environments, signed deployment provenance, CI checks, preview/prod approval dry runs, migration gate, and rollback proof pending",
         "EAS governance, rollout controls, kill-switch drills, release-health smoke, CI artifacts, and secret-safe artifact proof pending"
       ]
+    },
+    {
+      "id": "unit-web-ui-package-adoption-runtime-static",
+      "file": "apps/web/tests/ui-package-adoption-runtime-static.test.ts",
+      "priority": "medium",
+      "verifies": [
+        "GAP-016 UI package adoption runtime matrix covers UI package typecheck/tests, export contract, web/dashboard primitive adoption, form field adoption, navigation/surface adoption, dialog adoption, accessibility smoke, keyboard focus smoke, Storybook or visual smoke, visual artifacts, web/dashboard builds, app smoke tests, style-regression review, design-token docs, and secret-safe artifacts",
+        "GAP-016 UI exports, readiness helper, package tests, docs, CI labels, artifact paths, and tracker row remain wired without claiming app-wide adoption readiness",
+        "GAP-016 readiness keeps app adoption, accessibility, keyboard, visual, build, smoke, style-review, documentation, and secret-safe artifact evidence explicit blockers"
+      ],
+      "blockedBy": [
+        "Static UI package adoption runtime test execution pending",
+        "UI package typecheck/test and export-contract command evidence pending",
+        "Web/dashboard primitive adoption plus form/nav/dialog app smoke proof pending",
+        "Accessibility/keyboard, Storybook or visual smoke, build, style-review, design-token docs, and secret-safe artifact proof pending"
+      ]
     }
   ]
 }

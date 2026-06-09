@@ -413,6 +413,37 @@ jobs:
             test-results/static-dependency-audit-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 1 UI package adoption runtime contracts
+        run: pnpm --filter @inkroute/ui test && pnpm vitest run apps/web/tests/ui-package-adoption-runtime-static.test.ts
+
+      - name: Upload Phase 1 UI package adoption runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-package-adoption-runtime-artifacts
+          path: |
+            coverage/ui-package-adoption-runtime.json
+            coverage/ui-package-typecheck.txt
+            coverage/ui-package-test.txt
+            coverage/ui-export-contract.json
+            coverage/ui-web-adoption-smoke.json
+            coverage/ui-dashboard-adoption-smoke.json
+            coverage/ui-form-field-adoption.json
+            coverage/ui-nav-surface-adoption.json
+            coverage/ui-dialog-adoption.json
+            coverage/ui-accessibility-smoke.json
+            coverage/ui-keyboard-focus-smoke.json
+            coverage/ui-storybook-visual-smoke.json
+            coverage/ui-visual-regression-artifacts-redacted.json
+            coverage/ui-web-build.txt
+            coverage/ui-dashboard-build.txt
+            coverage/ui-app-smoke-tests.json
+            coverage/ui-style-regression-review.md
+            coverage/ui-design-token-docs.json
+            coverage/ui-secret-safe-artifacts.json
+            test-results/ui-package-adoption-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 1 dependency install runtime contracts
         run: pnpm --filter @inkroute/workspace test && pnpm vitest run apps/web/tests/dependency-install-runtime-static.test.ts
 
