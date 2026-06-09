@@ -102,6 +102,19 @@
       ]
     },
     {
+      "id": "unit-security-encryption-rotation",
+      "file": "packages/security/tests/encryption-rotation.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-021 encryption/key management policy denies sensitive database persistence when encryption keys are missing",
+        "GAP-021 encryption/key management policy emits explicit rotation metadata for primary, secondary, and dual-key states",
+        "GAP-021 encryption/key management cache invalidation refreshes cache-version metadata and keeps disabled-key fallback redacted"
+      ],
+      "blockedBy": [
+        "Runtime key-material lifecycle and provider-token operational hardening remain tracked under GAP-034 only"
+      ]
+    },
+    {
       "id": "unit-security-policy",
       "file": "packages/security/tests/upload-policy.test.ts",
       "priority": "critical",
