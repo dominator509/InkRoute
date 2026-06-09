@@ -2653,6 +2653,22 @@
         "Booking/contact API and browser E2E proof pending",
         "Provider sandbox, web typecheck/build, CI evidence, and secret-safe artifact proof pending"
       ]
+    },
+    {
+      "id": "unit-web-seo-a11y-performance-audit-runtime-static",
+      "file": "apps/web/tests/seo-a11y-performance-audit-runtime-static.test.ts",
+      "priority": "medium",
+      "verifies": [
+        "GAP-030 SEO/a11y/performance audit runtime matrix covers @inkroute/seo typecheck/tests, web typecheck/build, rendered browser crawl route targets, JSON-LD schema validation, sitemap/canonical browser checks, axe accessibility audit, Lighthouse/Core Web Vitals, mobile visual QA, heading/focus/contrast/label/landmark fixes, CI evidence, and secret-safe artifacts",
+        "GAP-030 SEO helper/tests, web SEO engine, sitemap route, dashboard SEO review, CI labels, artifact paths, and tracker row remain wired without claiming rendered browser audit execution",
+        "GAP-030 readiness keeps browser crawl, schema validator, sitemap/canonical, axe, Lighthouse, CWV, mobile QA, CI, and redacted artifact evidence explicit blockers"
+      ],
+      "blockedBy": [
+        "Static SEO/a11y/performance audit runtime test execution pending",
+        "Rendered browser crawl, schema validator, and sitemap/canonical browser proof pending",
+        "axe accessibility, heading/focus/contrast fix, Lighthouse/Core Web Vitals, and mobile visual QA proof pending",
+        "Web typecheck/build, CI evidence, and secret-safe artifact proof pending"
+      ]
     }
   ]
 }

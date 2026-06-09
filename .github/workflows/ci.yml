@@ -1645,6 +1645,30 @@ jobs:
             test-results/booking-contact-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 10 SEO accessibility performance audit contracts
+        run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/web/tests/seo-a11y-performance-audit-runtime-static.test.ts
+
+      - name: Upload Phase 10 SEO accessibility performance audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-a11y-performance-audit-artifacts
+          path: |
+            coverage/seo-a11y-performance-runtime.json
+            coverage/seo-a11y-seo-typecheck.txt
+            coverage/seo-a11y-seo-test.txt
+            coverage/seo-a11y-web-typecheck.txt
+            coverage/seo-a11y-web-build.txt
+            coverage/seo-a11y-browser-crawl.json
+            coverage/seo-a11y-schema-validator.json
+            coverage/seo-a11y-sitemap-canonical.json
+            coverage/seo-a11y-axe.json
+            coverage/seo-a11y-lighthouse-cwv.json
+            coverage/seo-a11y-mobile-visual-qa.json
+            coverage/seo-a11y-ci-evidence.json
+            test-results/seo-a11y-performance-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 13 legal review evidence contracts
         run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/legal-review-evidence-static.test.ts
 
