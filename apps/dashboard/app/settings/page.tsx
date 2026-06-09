@@ -1,4 +1,4 @@
-import { rolePermissions } from "@inkroute/auth";
+﻿import { rolePermissions } from "@inkroute/auth";
 import { DashboardPageHeader } from "../../components/DashboardPageHeader";
 import { DisabledActionPanel } from "../../components/DisabledActionPanel";
 import { StatusPill } from "../../components/StatusPill";
@@ -43,6 +43,30 @@ export default function SettingsPage() {
         </div>
       </section>
 
+      <section className="dashboard-grid two">
+        <div className="card">
+          <p className="eyebrow">Notification preferences</p>
+          <h2>Tenant channel controls</h2>
+          <div className="stacked-list">
+            <div className="stacked-item">
+              <strong>Preference center and unsubscribe APIs</strong>
+              <span>Client routes expose hashed-token, expiry, email unsubscribe, SMS STOP/START, and List-Unsubscribe plans.</span>
+              <StatusPill label="GAP-067 wired" tone="warning" />
+            </div>
+            <div className="stacked-item">
+              <strong>Tenant notification settings</strong>
+              <span>Tenant setting changes require legal-approved copy, audit logs, idempotency, and durable TenantNotificationSetting persistence.</span>
+              <StatusPill label="repository gated" tone="danger" />
+            </div>
+          </div>
+        </div>
+        <div className="card">
+          <p className="eyebrow">Suppression before send</p>
+          <h2>Email unsubscribe and SMS STOP</h2>
+          <p>Provider send plans now have explicit destination suppression gates; production still needs durable preference, suppression, token, audit, and idempotency stores before enabling live mutations.</p>
+        </div>
+      </section>
+
       <DisabledActionPanel
         title="Settings actions"
         description="Settings reads now use a credential-safe tenant API with AuditLog rows. Saving settings still requires mutation APIs, provider secret handling, audit logs, and validation."
@@ -51,3 +75,4 @@ export default function SettingsPage() {
     </main>
   );
 }
+

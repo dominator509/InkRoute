@@ -1138,6 +1138,23 @@
                                          "Provider sandbox and invalid-signature evidence pending",
                                          "Failed-webhook alerting integration pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-preference-center-static",
+                       "file":  "apps/web/tests/preference-center-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "GAP-067 preference center contract covers signed token hashing, mutation plans, List-Unsubscribe metadata, email unsubscribe, SMS STOP/START, tenant channel settings, audit, idempotency, and legal-copy gates",
+                                        "GAP-067 public preference and unsubscribe APIs expose mutation/write plans without storing raw preference tokens",
+                                        "GAP-067 client preference page and dashboard settings page surface preference center and tenant notification settings readiness"
+                                    ],
+                       "blockedBy":  [
+                                         "Static preference center test execution pending",
+                                         "Durable PreferenceToken/ClientNotificationPreference/SuppressionListEntry/TenantNotificationSetting/NotificationAuditLog/IdempotencyKey models pending",
+                                         "Signed token crypto implementation and forgery/expiry tests pending",
+                                         "Legal-approved preference and STOP/START copy pending",
+                                         "Pre-send suppression integration tests pending"
+                                     ]
                    }
                ]
 }
