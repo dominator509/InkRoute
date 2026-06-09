@@ -2989,7 +2989,8 @@
         "PaymentAuditLog/BookingStateEvent, cross-tenant denial, replay idempotency, and seeded Postgres proof pending",
         "Dashboard repository route/action tests, command evidence, CI evidence, and secret-safe artifact proof pending"
       ]
-    }    ,{
+    }
+    ,{
       "id": "unit-payment-operations-runtime-static",
       "file": "apps/dashboard/tests/payment-operations-runtime-static.test.ts",
       "priority": "high",
@@ -3003,6 +3004,21 @@
         "Stripe test-mode refund and dispute provider sync proof pending",
         "Receipt delivery, accounting export, tax/accounting review, and tenant authorization tests pending",
         "Dashboard E2E artifacts, dashboard typecheck/tests, CI evidence, and secret-safe artifact proof pending"
+      ]
+    }    ,{
+      "id": "unit-payment-automation-runtime-static",
+      "file": "apps/web/tests/payment-automation-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-054 payment automation runtime matrix covers payments typecheck/tests, route boundary tests, Stripe signature tests, Stripe CLI lifecycle, DB reconciliation, booking-to-paid E2E, refund/no-show/dispute workflows, receipt/export tests, cross-tenant payment tests, replay idempotency, CI payment job, artifact retention, and secret-safe artifacts",
+        "GAP-054 existing payment automation contract remains wired for package helpers, deposit-session and webhook routes, payment route tests, suite ids, redacted-only policy, and retained artifact paths",
+        "GAP-054 readiness keeps actual command execution, Stripe CLI lifecycle transcripts, seeded DB reconciliation, tenant isolation, replay idempotency, Playwright/dashboard E2E artifacts, CI upload evidence, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static payment automation runtime test execution pending",
+        "Stripe CLI lifecycle transcript and Stripe signature proof pending",
+        "Seeded DB reconciliation, cross-tenant, and replay idempotency proof pending",
+        "Playwright/dashboard E2E artifacts, CI artifact upload evidence, and secret-safe artifact proof pending"
       ]
     }  ]
 }

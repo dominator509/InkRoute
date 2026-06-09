@@ -1441,6 +1441,33 @@ jobs:
             test-results/payment-operations-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 7 payment automation runtime contracts
+        run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/payment-automation-runtime-static.test.ts apps/web/tests/payment-automation-static.test.ts apps/web/tests/payment-routes.test.ts
+
+      - name: Upload Phase 7 payment automation runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payment-automation-runtime-artifacts
+          path: |
+            coverage/payment-automation-runtime.json
+            coverage/payment-automation-payments-typecheck.txt
+            coverage/payment-automation-payments-test.txt
+            coverage/payment-automation-route-boundary.json
+            coverage/payment-automation-stripe-signature.json
+            coverage/payment-automation-stripe-cli-lifecycle-redacted.log
+            coverage/payment-automation-db-reconciliation.json
+            coverage/payment-automation-booking-to-paid-e2e-redacted.json
+            coverage/payment-automation-refund-no-show-dispute.json
+            coverage/payment-automation-receipt-export.json
+            coverage/payment-automation-cross-tenant.json
+            coverage/payment-automation-replay-idempotency.json
+            coverage/payment-automation-ci-job.json
+            coverage/payment-automation-artifact-retention.json
+            coverage/payment-automation-secret-safe-artifacts.json
+            test-results/payment-automation-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 7 payment lifecycle contracts
         run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/payment-routes.test.ts apps/web/tests/stripe-webhook-static.test.ts apps/web/tests/payment-automation-static.test.ts apps/dashboard/tests/payment-operations-static.test.ts apps/dashboard/tests/payment-read-route-static.test.ts
       - name: Run Phase 8 calendar lifecycle contracts
