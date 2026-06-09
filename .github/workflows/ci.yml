@@ -516,6 +516,24 @@ jobs:
             coverage/upload-fileasset-scan-persistence.json
             coverage/upload-quarantine-rejection.json
             test-results/upload-scan-worker
+          if-no-files-found: warn      - name: Run Phase 13 private storage signed URL contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts apps/web/tests/private-storage-signed-url-static.test.ts
+
+      - name: Upload private storage signed URL artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-storage-signed-url-artifacts
+          path: |
+            coverage/private-storage-signed-url-plan.json
+            coverage/private-storage-provider-env-redacted.json
+            coverage/private-storage-private-acl-denial.json
+            coverage/private-storage-signed-upload-url.json
+            coverage/private-storage-signed-download-url.json
+            coverage/private-storage-signed-url-revocation.json
+            coverage/private-storage-fileasset-grant-persistence.json
+            coverage/private-storage-public-derivative-access.json
+            test-results/private-storage-signed-urls
           if-no-files-found: warn      - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
@@ -564,6 +582,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
