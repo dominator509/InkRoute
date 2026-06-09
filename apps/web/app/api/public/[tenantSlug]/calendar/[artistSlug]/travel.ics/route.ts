@@ -1,9 +1,8 @@
-import { buildSignedIcsFeedTokenHash, buildTravelScheduleIcs, evaluateSignedIcsFeedAccess } from "@inkroute/calendar";
+import { buildTravelScheduleIcs } from "@inkroute/calendar";
 import { demoTravelStops, inkrouteDemoArtist, inkrouteDemoTenant } from "@inkroute/config";
+import { evaluateSignedIcsFeedRequest } from "../../../../../../../lib/signedIcsFeeds";
 
 export const dynamic = "force-dynamic";
-
-const localDemoFeedToken = "inkroute-demo-travel-feed-token";
 
 export async function GET(request: Request, context: { params: Promise<{ tenantSlug: string; artistSlug: string }> }) {
   const { tenantSlug, artistSlug } = await context.params;
@@ -12,17 +11,13 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
   }
 
   const token = new URL(request.url).searchParams.get("token") ?? undefined;
-  const access = evaluateSignedIcsFeedAccess({
+  const { decision: access } = await evaluateSignedIcsFeedRequest({
     ...(token ? { token } : {}),
-    record: {
-      tokenHash: buildSignedIcsFeedTokenHash(localDemoFeedToken),
-      tenantSlug: inkrouteDemoTenant.slug,
-      artistSlug: inkrouteDemoArtist.slug,
-      expiresAt: "2099-01-01T00:00:00.000Z",
-    },
     tenantSlug,
     artistSlug,
     now: new Date().toISOString(),
+    userAgent: request.headers.get("user-agent"),
+    ipHash: request.headers.get("x-forwarded-for") ? "redacted-forwarded-for-present" : null,
   });
 
   if (!access.allowed) {

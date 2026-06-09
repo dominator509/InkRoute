@@ -930,6 +930,23 @@
                                          "Playwright payment E2E artifacts pending",
                                          "CI payment artifact upload evidence pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-signed-ics-feed-static",
+                       "file":  "apps/web/tests/signed-ics-feed-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-055 signed ICS token creation stores hashes rather than raw tokens",
+                                        "GAP-055 signed ICS repository contract covers create, rotate, revoke, lookup, and access logs",
+                                        "GAP-055 travel ICS route uses the signed feed service contract and private cache headers",
+                                        "GAP-055 runtime readiness remains blocked on tests, revocation UI, revoked-token DB rejection, and Apple/Google/Outlook imports"
+                                    ],
+                       "blockedBy":  [
+                                         "Static signed ICS feed test execution pending",
+                                         "Durable token table/repository implementation pending",
+                                         "Revocation dashboard UI pending",
+                                         "Apple/Google/Outlook import smoke artifacts pending"
+                                     ]
                    }
                ]
 }
