@@ -2733,5 +2733,21 @@
         "Persisted worker, audit payload, retry/rollback, operator-review, and idempotency proof pending",
         "CI evidence and secret-safe provider artifact proof pending"
       ]
+    }
+    ,{
+      "id": "unit-dashboard-auth-guard-runtime-static",
+      "file": "apps/dashboard/tests/dashboard-auth-guard-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-036 dashboard auth guard runtime matrix covers auth typecheck/tests, dashboard typecheck/build, middleware guard, protected layout guard, API helper guard, provider-backed sessions, TenantMember/CustomRole DB lookup, unauthorized states, AuditLog persistence, browser login/logout, tenant-switch, cross-tenant denial, no-store cache policy, CI evidence, and secret-safe artifacts",
+        "GAP-036 dashboard middleware, protected layout, and API helper all call shared @inkroute/auth guard decisions before private dashboard reads or mutations",
+        "GAP-036 readiness keeps provider session, persisted membership/custom role, browser smoke, audit, CI, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static dashboard auth guard runtime test execution pending",
+        "Provider-backed dashboard session and TenantMember/CustomRole DB lookup proof pending",
+        "Browser login/logout, tenant-switch, cross-tenant denial, no-store, and AuditLog proof pending",
+        "Dashboard typecheck/build, CI evidence, and secret-safe artifact proof pending"
+      ]
     }  ]
 }

@@ -712,6 +712,35 @@ jobs:
             coverage/public-web-secret-safe-artifacts.json
             test-results/public-web-launch-runtime
           if-no-files-found: warn
+        - name: Run Phase 5 dashboard auth guard runtime contracts
+          run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/dashboard/tests/dashboard-auth-guard-runtime-static.test.ts
+
+        - name: Upload Phase 5 dashboard auth guard runtime artifacts
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: dashboard-auth-guard-runtime-artifacts
+            path: |
+              coverage/dashboard-auth-guard-runtime.json
+              coverage/dashboard-auth-auth-typecheck.txt
+              coverage/dashboard-auth-auth-test.txt
+              coverage/dashboard-auth-dashboard-typecheck.txt
+              coverage/dashboard-auth-dashboard-build.txt
+              coverage/dashboard-auth-middleware-guard.json
+              coverage/dashboard-auth-layout-guard.json
+              coverage/dashboard-auth-api-helper-guard.json
+              coverage/dashboard-auth-provider-session-redacted.json
+              coverage/dashboard-auth-tenantmember-customrole-redacted.json
+              coverage/dashboard-auth-unauthorized-states.json
+              coverage/dashboard-auth-auditlog-redacted.json
+              coverage/dashboard-auth-browser-login-logout.json
+              coverage/dashboard-auth-browser-tenant-switch.json
+              coverage/dashboard-auth-browser-cross-tenant-denial.json
+              coverage/dashboard-auth-no-store-cache.json
+              coverage/dashboard-auth-ci-evidence.json
+              coverage/dashboard-auth-secret-safe-artifacts.json
+              test-results/dashboard-auth-guard-runtime
+            if-no-files-found: warn
 
       - name: Run Phase 5 dashboard launch runtime contracts
         run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/dashboard-launch-runtime-static.test.ts

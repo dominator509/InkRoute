@@ -1,6 +1,7 @@
-import { hasPermission, type TenantAccessContext } from "@inkroute/auth";
+import { evaluateApiRouteGuard, hasPermission, type TenantAccessContext } from "@inkroute/auth";
 import { inkrouteDemoTenant } from "@inkroute/config";
 import type { Permission, Role } from "@inkroute/types";
+import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const FALLBACK_ACTOR_ID = "dashboard-demo-user";
@@ -80,6 +81,37 @@ export function assertPermission(context: DashboardActorContext, permission: Per
   if (!hasPermission(context.role, permission)) {
     throw new Error("FORBIDDEN");
   }
+}
+
+export function evaluateDashboardApiGuard(request: NextRequest, permission: Permission, routePath = request.nextUrl.pathname) {
+  const actor = resolveDashboardActor(request);
+  const guard = evaluateApiRouteGuard({
+    context: toTenantAccessContext(actor),
+    tenantId: actor.tenantId,
+    permission,
+    routePath,
+    now: new Date().toISOString(),
+  });
+
+  return { actor, guard };
+}
+
+export function dashboardApiGuardFailureResponse(error: unknown, routePath: string) {
+  if (error instanceof Error && error.message === "AUTH_REQUIRED") {
+    return NextResponse.json(
+      { ok: false, error: { code: "UNAUTHENTICATED", routePath } },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  if (error instanceof Error && error.message === "FORBIDDEN") {
+    return NextResponse.json(
+      { ok: false, error: { code: "FORBIDDEN", routePath } },
+      { status: 403, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  return undefined;
 }
 
 export function isDatabaseUnavailable(error: unknown): boolean {
