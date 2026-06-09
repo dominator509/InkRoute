@@ -2239,3 +2239,103 @@ export function buildFaqSchema(items: Array<{ question: string; answer: string }
     })),
   };
 }
+
+export interface SeoA11yPerformanceAuditEvidenceInput {
+  packageScripts: Readonly<Record<string, string>>;
+  seoTestsPassed: boolean;
+  seoTypecheckPassed: boolean;
+  webTypecheckPassed: boolean;
+  webBuildPassed: boolean;
+  browserCrawlPassed: boolean;
+  schemaValidatorPassed: boolean;
+  sitemapCanonicalChecksPassed: boolean;
+  axeAuditPassed: boolean;
+  lighthouseAuditPassed: boolean;
+  coreWebVitalsCaptured: boolean;
+  mobileVisualQaPassed: boolean;
+  headingFocusContrastIssuesFixed: boolean;
+  structuredDataSnapshotsCaptured: boolean;
+  ciArtifactsCaptured: boolean;
+  secretSafeArtifactsCaptured: boolean;
+}
+
+export interface SeoA11yPerformanceAuditEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredControls: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export function buildSeoA11yPerformanceAuditEvidencePlan(
+  input: SeoA11yPerformanceAuditEvidenceInput,
+): SeoA11yPerformanceAuditEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/seo package script is missing ${script}.`);
+  if (!input.seoTestsPassed) blockers.push("@inkroute/seo tests must pass before SEO/accessibility/performance audit evidence can close.");
+  if (!input.seoTypecheckPassed) blockers.push("@inkroute/seo typecheck must pass before SEO/accessibility/performance audit evidence can close.");
+  if (!input.webTypecheckPassed) blockers.push("@inkroute/web typecheck must pass before browser audit evidence can be trusted.");
+  if (!input.webBuildPassed) blockers.push("@inkroute/web build must pass before production-like SEO/accessibility/performance audits.");
+  if (!input.browserCrawlPassed) blockers.push("Browser crawl must cover public home, portfolio, booking, travel, FAQ, city, style, privacy, and legal routes.");
+  if (!input.schemaValidatorPassed) blockers.push("Structured data validator must pass for rendered JSON-LD graphs.");
+  if (!input.sitemapCanonicalChecksPassed) blockers.push("Sitemap and canonical browser checks must pass for rendered public routes.");
+  if (!input.axeAuditPassed) blockers.push("axe accessibility audit must pass for launch-critical public routes.");
+  if (!input.lighthouseAuditPassed) blockers.push("Lighthouse audit must pass for launch-critical public routes.");
+  if (!input.coreWebVitalsCaptured) blockers.push("Core Web Vitals evidence must be captured for launch-critical public routes.");
+  if (!input.mobileVisualQaPassed) blockers.push("Mobile visual QA must pass for public route layouts, navigation, forms, and portfolio media.");
+  if (!input.headingFocusContrastIssuesFixed) blockers.push("Heading, focus, contrast, label, and landmark issues found by audits must be fixed or explicitly accepted.");
+  if (!input.structuredDataSnapshotsCaptured) blockers.push("Rendered structured-data snapshots must be captured for schema, sitemap, and canonical review.");
+  if (!input.ciArtifactsCaptured) blockers.push("CI artifacts must capture SEO, accessibility, performance, crawl, and mobile visual QA evidence.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("SEO/accessibility/performance artifacts must be redacted and free of secrets, client-private data, raw medical notes, private file URLs, and provider tokens.");
+
+  if (!input.webTypecheckPassed || !input.webBuildPassed) {
+    requiredEvidence.push("web typecheck and production build evidence");
+  }
+  if (!input.browserCrawlPassed || !input.sitemapCanonicalChecksPassed || !input.schemaValidatorPassed || !input.structuredDataSnapshotsCaptured) {
+    requiredEvidence.push("browser crawl, sitemap/canonical, schema validator, and structured-data snapshot evidence");
+  }
+  if (!input.axeAuditPassed || !input.headingFocusContrastIssuesFixed) {
+    requiredEvidence.push("axe accessibility audit output plus heading/focus/contrast fix evidence");
+  }
+  if (!input.lighthouseAuditPassed || !input.coreWebVitalsCaptured) {
+    requiredEvidence.push("Lighthouse and Core Web Vitals evidence for launch-critical routes");
+  }
+  if (!input.mobileVisualQaPassed) {
+    requiredEvidence.push("mobile visual QA screenshots or transcript evidence");
+  }
+  if (!input.ciArtifactsCaptured || !input.secretSafeArtifactsCaptured) {
+    requiredEvidence.push("CI artifact bundle with redaction/secret-safety proof");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/seo typecheck",
+      "pnpm --filter @inkroute/seo test",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm --filter @inkroute/web build",
+      "browser crawl for public Phase 10 routes",
+      "schema validator for rendered JSON-LD",
+      "sitemap and canonical browser checks",
+      "axe accessibility audit for public routes",
+      "Lighthouse/Core Web Vitals audit",
+      "mobile visual QA sweep",
+      "GitHub Actions SEO accessibility performance evidence job",
+    ],
+    requiredControls: [
+      "Audit rendered routes, not only package-level metadata helpers.",
+      "Validate JSON-LD, sitemap, canonical URLs, and internal links against browser-visible output.",
+      "Fix heading order, focus state, landmark, label, contrast, and form accessibility issues before launch.",
+      "Capture Lighthouse and Core Web Vitals evidence for launch-critical desktop and mobile routes.",
+      "Keep audit artifacts redacted and free of client-private, medical, payment, provider, and private file data.",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}

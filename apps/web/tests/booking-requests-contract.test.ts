@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import {
+  buildBookingFlowRuntimeEvidencePlan,
   buildPostPersistWorkflowPlans,
   evaluateBotProof,
   shouldCollectReferenceUpload,
@@ -129,5 +130,77 @@ describe("booking request queue/consumer contracts", () => {
 
     const otherTenant = executeBookingPostPersistWorkflowConsumers(`other-${tenantSlug}`, booking.request.id, "local-fallback");
     expect(otherTenant).toHaveLength(0);
+  });
+
+  it("blocks booking flow runtime evidence until install, Prisma, Next build, browser smoke, DB smoke, and safe artifacts exist", () => {
+    const plan = buildBookingFlowRuntimeEvidencePlan({
+      packageScripts: { typecheck: "tsc --noEmit", test: "playwright test" },
+      dependenciesInstalled: false,
+      prismaClientGenerated: false,
+      webTypecheckPassed: false,
+      webBuildPassed: false,
+      bookingRouteContractTestsPassed: true,
+      bookingPageBrowserSmokePassed: false,
+      confirmationPageBrowserSmokePassed: false,
+      nextRouteRuntimeSmokePassed: false,
+      localRuntimeFallbackVerified: true,
+      databaseRuntimeSmokePassed: false,
+      providerGatedBoundariesPreserved: true,
+      clientServerComponentBoundaryVerified: false,
+      ciArtifactsCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["build"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "pnpm install",
+      "pnpm db:generate",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm --filter @inkroute/web build",
+      "Playwright booking page smoke for /booking",
+      "Playwright booking confirmation smoke for /booking/confirmation",
+      "dev-DB booking transaction smoke",
+    ]));
+    expect(plan.requiredControls).toContain("Verify booking and confirmation pages in a real Next runtime, not only package helpers.");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "dependency install and generated Prisma Client evidence",
+      "web typecheck/build and client/server boundary evidence",
+      "booking API contract and Next route runtime smoke evidence",
+      "booking and confirmation browser smoke evidence",
+      "local fallback, database runtime, and provider-gated boundary evidence",
+      "CI artifact bundle with redaction/secret-safety proof",
+    ]));
+    expect(plan.blockers).toContain("Generated Prisma Client must be available before web typecheck/build runtime evidence can close.");
+    expect(plan.blockers).toContain("Browser smoke must prove /booking loads, validates input, and submits without client/server component errors.");
+    expect(plan.blockers).toContain("Booking runtime artifacts must be redacted and free of secrets, raw medical notes, payment data, provider tokens, and private file URLs.");
+  });
+
+  it("marks booking flow runtime evidence ready when Next runtime, DB smoke, browser smoke, and artifacts align", () => {
+    const plan = buildBookingFlowRuntimeEvidencePlan({
+      packageScripts: { typecheck: "tsc --noEmit", build: "next build", test: "playwright test" },
+      dependenciesInstalled: true,
+      prismaClientGenerated: true,
+      webTypecheckPassed: true,
+      webBuildPassed: true,
+      bookingRouteContractTestsPassed: true,
+      bookingPageBrowserSmokePassed: true,
+      confirmationPageBrowserSmokePassed: true,
+      nextRouteRuntimeSmokePassed: true,
+      localRuntimeFallbackVerified: true,
+      databaseRuntimeSmokePassed: true,
+      providerGatedBoundariesPreserved: true,
+      clientServerComponentBoundaryVerified: true,
+      ciArtifactsCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredControls).toContain("Preserve explicit provider-gated reference upload, deposit, notification, and calendar boundaries.");
   });
 });

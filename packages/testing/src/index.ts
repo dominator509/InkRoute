@@ -1374,3 +1374,108 @@ export const phase14Suites: TestSuiteRecord[] = [
     ]
   }
 ];
+
+export interface DashboardTestExecutionEvidenceInput {
+  packageScripts: Readonly<Record<string, string>>;
+  testingPackageTestsPassed: boolean;
+  testingPackageTypecheckPassed: boolean;
+  dashboardTypecheckPassed: boolean;
+  dashboardBuildPassed: boolean;
+  dashboardUnitTestsPassed: boolean;
+  dashboardRouteRenderingTestsPassed: boolean;
+  dashboardAuthGuardTestsPassed: boolean;
+  dashboardRbacTenantIsolationTestsPassed: boolean;
+  dashboardMutationLifecycleTestsPassed: boolean;
+  dashboardProviderSafeStateTestsPassed: boolean;
+  dashboardAccessibilityAxePassed: boolean;
+  dashboardKeyboardChecksPassed: boolean;
+  playwrightDashboardSuitePassed: boolean;
+  ciArtifactsUploaded: boolean;
+  branchProtectionRequiresDashboardGate: boolean;
+  flakyDashboardPolicyDocumented: boolean;
+  secretSafeArtifactsCaptured: boolean;
+}
+
+export interface DashboardTestExecutionEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredControls: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export function buildDashboardTestExecutionEvidencePlan(
+  input: DashboardTestExecutionEvidenceInput,
+): DashboardTestExecutionEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/testing package script is missing ${script}.`);
+  if (!input.testingPackageTestsPassed) blockers.push("@inkroute/testing tests must pass before dashboard test execution evidence can close.");
+  if (!input.testingPackageTypecheckPassed) blockers.push("@inkroute/testing typecheck must pass before dashboard test execution evidence can close.");
+  if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass before dashboard app test evidence can close.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass before dashboard browser/E2E evidence can close.");
+  if (!input.dashboardUnitTestsPassed) blockers.push("Runnable dashboard unit/component tests must pass.");
+  if (!input.dashboardRouteRenderingTestsPassed) blockers.push("Dashboard route rendering tests must pass for protected and public-support routes.");
+  if (!input.dashboardAuthGuardTestsPassed) blockers.push("Dashboard auth guard tests must pass with provider-backed or seeded auth fixtures.");
+  if (!input.dashboardRbacTenantIsolationTestsPassed) blockers.push("Dashboard RBAC and tenant-isolation tests must pass.");
+  if (!input.dashboardMutationLifecycleTestsPassed) blockers.push("Dashboard booking lifecycle mutation tests must pass.");
+  if (!input.dashboardProviderSafeStateTestsPassed) blockers.push("Dashboard provider-safe disabled/loading/failure/retry state tests must pass.");
+  if (!input.dashboardAccessibilityAxePassed) blockers.push("Dashboard axe accessibility checks must pass.");
+  if (!input.dashboardKeyboardChecksPassed) blockers.push("Dashboard keyboard navigation checks must pass.");
+  if (!input.playwrightDashboardSuitePassed) blockers.push("Playwright dashboard critical-flow suite must pass.");
+  if (!input.ciArtifactsUploaded) blockers.push("Dashboard test CI artifacts must be uploaded and retained.");
+  if (!input.branchProtectionRequiresDashboardGate) blockers.push("Branch protection must require the dashboard test gate before merge.");
+  if (!input.flakyDashboardPolicyDocumented) blockers.push("Dashboard flaky-test retry, quarantine, and ownership policy must be documented.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Dashboard test artifacts must be redacted and free of secrets, tokens, raw PII, medical notes, payment data, provider tokens, and private file URLs.");
+
+  if (!input.dashboardTypecheckPassed || !input.dashboardBuildPassed) {
+    requiredEvidence.push("dashboard typecheck and build command evidence");
+  }
+  if (!input.dashboardUnitTestsPassed || !input.dashboardRouteRenderingTestsPassed || !input.dashboardAuthGuardTestsPassed) {
+    requiredEvidence.push("dashboard unit/component, route rendering, and auth guard test output");
+  }
+  if (!input.dashboardRbacTenantIsolationTestsPassed || !input.dashboardMutationLifecycleTestsPassed || !input.dashboardProviderSafeStateTestsPassed) {
+    requiredEvidence.push("dashboard RBAC/tenant, mutation lifecycle, and provider-safe state test output");
+  }
+  if (!input.dashboardAccessibilityAxePassed || !input.dashboardKeyboardChecksPassed || !input.playwrightDashboardSuitePassed) {
+    requiredEvidence.push("axe, keyboard, and Playwright dashboard critical-flow evidence");
+  }
+  if (!input.ciArtifactsUploaded || !input.branchProtectionRequiresDashboardGate || !input.flakyDashboardPolicyDocumented || !input.secretSafeArtifactsCaptured) {
+    requiredEvidence.push("CI artifact, branch protection, flaky policy, and secret-safe artifact evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/testing typecheck",
+      "pnpm --filter @inkroute/testing test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/dashboard test",
+      "dashboard route rendering tests",
+      "dashboard auth/RBAC/tenant-isolation tests",
+      "dashboard booking mutation lifecycle tests",
+      "dashboard provider-safe state tests",
+      "dashboard axe accessibility checks",
+      "dashboard keyboard navigation checks",
+      "Playwright dashboard critical-flow suite",
+      "GitHub Actions dashboard test artifact upload",
+      "branch protection dashboard required-check proof",
+    ],
+    requiredControls: [
+      "Use real runnable dashboard test files instead of package-only coverage matrices.",
+      "Seed auth, tenant, RBAC, and dashboard data fixtures before route and mutation tests.",
+      "Cover route rendering, auth guard, tenant isolation, booking lifecycle mutations, provider-safe states, accessibility, and critical E2E flows.",
+      "Upload retained traces, screenshots, videos, coverage, and reports for failed dashboard tests.",
+      "Require dashboard test gates in CI branch protection before launch.",
+      "Redact secrets, tokens, raw PII, medical notes, payment data, provider tokens, and private file URLs from artifacts.",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}

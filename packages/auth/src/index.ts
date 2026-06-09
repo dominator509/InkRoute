@@ -1217,6 +1217,111 @@ export function buildDomainAuthorizationRouteEvidencePlan(
   };
 }
 
+export interface DashboardAuthGuardEvidenceInput {
+  packageScripts: Readonly<Record<string, string>>;
+  authTestsPassed: boolean;
+  authTypecheckPassed: boolean;
+  dashboardTypecheckPassed: boolean;
+  dashboardBuildPassed: boolean;
+  authProviderSessionsConfigured: boolean;
+  dashboardMiddlewareEnforcesGuard: boolean;
+  protectedLayoutEnforcesGuard: boolean;
+  dashboardApiHelpersEnforceGuard: boolean;
+  tenantMembershipDbLookupConfigured: boolean;
+  customRoleDbLookupConfigured: boolean;
+  unauthorizedStatesImplemented: boolean;
+  authAuditLogsPersisted: boolean;
+  browserLoginLogoutPassed: boolean;
+  browserTenantSwitchPassed: boolean;
+  browserCrossTenantDenialPassed: boolean;
+  noStoreCacheVerified: boolean;
+  ciEvidenceCaptured: boolean;
+  secretSafeArtifactsCaptured: boolean;
+}
+
+export interface DashboardAuthGuardEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredControls: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export function buildDashboardAuthGuardEvidencePlan(
+  input: DashboardAuthGuardEvidenceInput,
+): DashboardAuthGuardEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/auth package script is missing ${script}.`);
+  if (!input.authTestsPassed) blockers.push("@inkroute/auth tests must pass before dashboard auth guard evidence can close.");
+  if (!input.authTypecheckPassed) blockers.push("@inkroute/auth typecheck must pass before dashboard auth guard evidence can close.");
+  if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass with dashboard auth guard wiring.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with protected layout and middleware wiring.");
+  if (!input.authProviderSessionsConfigured) blockers.push("Real auth provider sessions must be configured for dashboard guard tests.");
+  if (!input.dashboardMiddlewareEnforcesGuard) blockers.push("Dashboard middleware must enforce auth and tenant guard decisions before route rendering.");
+  if (!input.protectedLayoutEnforcesGuard) blockers.push("Protected dashboard layout must enforce guard decisions before private data loading.");
+  if (!input.dashboardApiHelpersEnforceGuard) blockers.push("Dashboard API helpers must enforce guard decisions before private data reads or mutations.");
+  if (!input.tenantMembershipDbLookupConfigured) blockers.push("Tenant membership lookup must come from persisted database/provider-backed server state.");
+  if (!input.customRoleDbLookupConfigured) blockers.push("Custom role lookup must come from tenant-scoped database state.");
+  if (!input.unauthorizedStatesImplemented) blockers.push("Dashboard unauthorized, login redirect, tenant-switch, expired-session, and denied-permission states must be implemented.");
+  if (!input.authAuditLogsPersisted) blockers.push("Dashboard auth allow/deny/login/logout/tenant-switch decisions must persist redacted AuditLog rows.");
+  if (!input.browserLoginLogoutPassed) blockers.push("Browser login/logout evidence must pass for protected dashboard routes.");
+  if (!input.browserTenantSwitchPassed) blockers.push("Browser tenant-switch evidence must pass for authorized tenant changes.");
+  if (!input.browserCrossTenantDenialPassed) blockers.push("Browser cross-tenant denial evidence must prove private tenant data is not exposed.");
+  if (!input.noStoreCacheVerified) blockers.push("Protected dashboard responses must preserve no-store cache policy.");
+  if (!input.ciEvidenceCaptured) blockers.push("CI evidence for dashboard auth guard runtime must be captured.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Dashboard auth guard artifacts must be redacted and free of secrets, session tokens, raw PII, medical, and payment data.");
+
+  if (!input.authProviderSessionsConfigured || !input.tenantMembershipDbLookupConfigured || !input.customRoleDbLookupConfigured) {
+    requiredEvidence.push("provider-backed session plus TenantMember/CustomRole database lookup evidence");
+  }
+  if (!input.dashboardMiddlewareEnforcesGuard || !input.protectedLayoutEnforcesGuard || !input.dashboardApiHelpersEnforceGuard) {
+    requiredEvidence.push("dashboard middleware, protected layout, and API helper guard adoption evidence");
+  }
+  if (!input.unauthorizedStatesImplemented || !input.authAuditLogsPersisted || !input.noStoreCacheVerified) {
+    requiredEvidence.push("unauthorized state, redacted AuditLog, and no-store cache evidence");
+  }
+  if (!input.browserLoginLogoutPassed || !input.browserTenantSwitchPassed || !input.browserCrossTenantDenialPassed) {
+    requiredEvidence.push("browser login/logout, tenant-switch, and cross-tenant denial evidence");
+  }
+  if (!input.dashboardTypecheckPassed || !input.dashboardBuildPassed || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
+    requiredEvidence.push("dashboard typecheck/build, CI, and secret-safe artifact evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/auth typecheck",
+      "pnpm --filter @inkroute/auth test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/dashboard build",
+      "dashboard middleware auth guard tests",
+      "dashboard protected layout auth guard tests",
+      "dashboard API auth guard tests",
+      "browser dashboard login/logout smoke",
+      "browser dashboard tenant-switch smoke",
+      "browser dashboard cross-tenant denial smoke",
+      "auth AuditLog persistence tests",
+      "GitHub Actions dashboard auth guard evidence job",
+    ],
+    requiredControls: [
+      "Resolve provider-backed session, TenantMember, and CustomRole rows server-side before rendering protected dashboard data.",
+      "Apply middleware, protected layout, and API helper guards before private reads or mutations.",
+      "Redirect unauthenticated users to login and tenant mismatches to tenant switch without leaking private data.",
+      "Deny expired, revoked, cross-tenant, and insufficient-permission sessions with redacted audit rows.",
+      "Set no-store cache policy on protected dashboard responses.",
+      "Redact secrets, session tokens, client PII, medical notes, and payment data from evidence artifacts.",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
 export function buildProviderSessionStoreReadinessPlan(
   input: ProviderSessionStoreReadinessInput,
 ): ProviderSessionStoreReadinessPlan {

@@ -358,3 +358,99 @@ export function buildBotProofHeader() {
 export function botProofTtlSeconds() {
   return BOT_PROOF_TTL_SECONDS;
 }
+
+export interface BookingFlowRuntimeEvidenceInput {
+  packageScripts: Readonly<Record<string, string>>;
+  dependenciesInstalled: boolean;
+  prismaClientGenerated: boolean;
+  webTypecheckPassed: boolean;
+  webBuildPassed: boolean;
+  bookingRouteContractTestsPassed: boolean;
+  bookingPageBrowserSmokePassed: boolean;
+  confirmationPageBrowserSmokePassed: boolean;
+  nextRouteRuntimeSmokePassed: boolean;
+  localRuntimeFallbackVerified: boolean;
+  databaseRuntimeSmokePassed: boolean;
+  providerGatedBoundariesPreserved: boolean;
+  clientServerComponentBoundaryVerified: boolean;
+  ciArtifactsCaptured: boolean;
+  secretSafeArtifactsCaptured: boolean;
+}
+
+export interface BookingFlowRuntimeEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredControls: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export function buildBookingFlowRuntimeEvidencePlan(
+  input: BookingFlowRuntimeEvidenceInput,
+): BookingFlowRuntimeEvidencePlan {
+  const requiredScripts = ["typecheck", "build", "test"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/web package script is missing ${script}.`);
+  if (!input.dependenciesInstalled) blockers.push("Workspace dependencies must be installed with a committed lockfile before booking runtime evidence can close.");
+  if (!input.prismaClientGenerated) blockers.push("Generated Prisma Client must be available before web typecheck/build runtime evidence can close.");
+  if (!input.webTypecheckPassed) blockers.push("@inkroute/web typecheck must pass for booking route, booking page, and confirmation page.");
+  if (!input.webBuildPassed) blockers.push("@inkroute/web build must pass under Next with booking route and page runtime boundaries.");
+  if (!input.bookingRouteContractTestsPassed) blockers.push("Booking route contract tests must pass for DB/local workflow parity and tenant isolation.");
+  if (!input.bookingPageBrowserSmokePassed) blockers.push("Browser smoke must prove /booking loads, validates input, and submits without client/server component errors.");
+  if (!input.confirmationPageBrowserSmokePassed) blockers.push("Browser smoke must prove /booking/confirmation renders persisted or handoff workflow state.");
+  if (!input.nextRouteRuntimeSmokePassed) blockers.push("Next route runtime smoke must exercise the public booking API route under real request handling.");
+  if (!input.localRuntimeFallbackVerified) blockers.push("Local runtime fallback must be verified as explicit, tenant-scoped, and provider-gated.");
+  if (!input.databaseRuntimeSmokePassed) blockers.push("Database runtime smoke must prove tenant-scoped booking persistence with generated Prisma Client.");
+  if (!input.providerGatedBoundariesPreserved) blockers.push("Reference upload, deposit, notification, and calendar provider boundaries must remain explicit and fail-closed until configured.");
+  if (!input.clientServerComponentBoundaryVerified) blockers.push("Client/server component boundaries must be verified for booking page, confirmation page, and API route imports.");
+  if (!input.ciArtifactsCaptured) blockers.push("CI artifacts must capture booking route/runtime/browser smoke evidence.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Booking runtime artifacts must be redacted and free of secrets, raw medical notes, payment data, provider tokens, and private file URLs.");
+
+  if (!input.dependenciesInstalled || !input.prismaClientGenerated) {
+    requiredEvidence.push("dependency install and generated Prisma Client evidence");
+  }
+  if (!input.webTypecheckPassed || !input.webBuildPassed || !input.clientServerComponentBoundaryVerified) {
+    requiredEvidence.push("web typecheck/build and client/server boundary evidence");
+  }
+  if (!input.bookingRouteContractTestsPassed || !input.nextRouteRuntimeSmokePassed) {
+    requiredEvidence.push("booking API contract and Next route runtime smoke evidence");
+  }
+  if (!input.bookingPageBrowserSmokePassed || !input.confirmationPageBrowserSmokePassed) {
+    requiredEvidence.push("booking and confirmation browser smoke evidence");
+  }
+  if (!input.localRuntimeFallbackVerified || !input.databaseRuntimeSmokePassed || !input.providerGatedBoundariesPreserved) {
+    requiredEvidence.push("local fallback, database runtime, and provider-gated boundary evidence");
+  }
+  if (!input.ciArtifactsCaptured || !input.secretSafeArtifactsCaptured) {
+    requiredEvidence.push("CI artifact bundle with redaction/secret-safety proof");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm install",
+      "pnpm db:generate",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/web test -- booking-requests-contract",
+      "Playwright booking page smoke for /booking",
+      "Playwright booking confirmation smoke for /booking/confirmation",
+      "Next public booking API route runtime smoke",
+      "dev-DB booking transaction smoke",
+    ],
+    requiredControls: [
+      "Verify booking and confirmation pages in a real Next runtime, not only package helpers.",
+      "Exercise public booking API route request handling with DB and local-runtime scopes.",
+      "Preserve explicit provider-gated reference upload, deposit, notification, and calendar boundaries.",
+      "Keep local-runtime fallback tenant-scoped and visibly non-production.",
+      "Redact medical notes, payment data, provider tokens, private file URLs, and raw client PII from runtime artifacts.",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}

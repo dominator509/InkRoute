@@ -1,4 +1,4 @@
-import { hasPermission } from "@inkroute/auth";
+import { hasPermission, type TenantAccessContext } from "@inkroute/auth";
 import { inkrouteDemoTenant } from "@inkroute/config";
 import type { Permission, Role } from "@inkroute/types";
 import type { NextRequest } from "next/server";
@@ -51,6 +51,28 @@ export function resolveDashboardActor(request: NextRequest): DashboardActorConte
     actorUserId,
     role,
     source: "local-fallback",
+  };
+}
+
+export function getLocalDashboardActor(): DashboardActorContext {
+  if (isProductionEnv()) {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  return {
+    tenantId: inkrouteDemoTenant.id,
+    actorUserId: FALLBACK_ACTOR_ID,
+    role: "owner",
+    source: "local-fallback",
+  };
+}
+
+export function toTenantAccessContext(context: DashboardActorContext): TenantAccessContext {
+  return {
+    tenantId: context.tenantId,
+    userId: context.actorUserId,
+    role: context.role,
+    sessionId: `${context.source}:${context.actorUserId}:${context.tenantId}`,
   };
 }
 

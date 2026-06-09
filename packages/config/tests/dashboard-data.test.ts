@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDashboardDataRuntimeReadinessPlan,
+  buildDashboardRepositoryRouteEvidencePlan,
   buildTenantDashboardView,
   dashboardDataCollections,
   findMissingDashboardCollections,
@@ -129,5 +130,82 @@ describe("tenant dashboard data projections", () => {
     expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/dashboard build");
     expect(plan.requiredEvidence).toContain("tenant isolation and redaction test output for dashboard repositories/APIs");
     expect(plan.blockers).toContain("Dashboard route data dependencies must no longer read static demo arrays for production surfaces.");
+  });
+
+  it("blocks dashboard repository route evidence until loaders, routes, DB smoke, RBAC, redaction, CI, and safe artifacts exist", () => {
+    const plan = buildDashboardRepositoryRouteEvidencePlan({
+      packageScripts: { test: "vitest run" },
+      configTestsPassed: true,
+      configTypecheckPassed: false,
+      dashboardTypecheckPassed: false,
+      dashboardBuildPassed: false,
+      prismaLoadersImplemented: ["bookings", "clients"],
+      dashboardRoutesWired: ["bookings"],
+      staticDemoImportsRemoved: ["bookings", "clients", "appointments"],
+      seededDatabaseSmokePassed: false,
+      repositoryApiTestsPassed: false,
+      tenantIsolationTestsPassed: false,
+      rbacGuardTestsPassed: false,
+      redactionTestsPassed: false,
+      noStoreCacheVerified: false,
+      sensitiveReadAuditLogsPersisted: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.missingPrismaLoaders).toContain("payments");
+    expect(plan.missingRouteWiring).toContain("clients");
+    expect(plan.remainingStaticDemoImports).toContain("payments");
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "seeded database dashboard route smoke",
+      "dashboard repository/API tenant-isolation tests",
+      "dashboard repository/API RBAC and redaction tests",
+      "dashboard sensitive-read AuditLog persistence tests",
+    ]));
+    expect(plan.requiredControls).toContain("Apply RBAC guards before repository reads and dashboard serialization.");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "Prisma loader, route wiring, and static-demo import removal matrix for all dashboard collections",
+      "seeded database dashboard route smoke plus repository/API test output",
+      "tenant isolation, RBAC guard, and redaction test output",
+      "no-store cache and sensitive-read AuditLog evidence",
+      "dashboard typecheck/build, CI, and secret-safe artifact evidence",
+    ]));
+    expect(plan.blockers).toContain("Tenant-isolation tests must reject cross-tenant dashboard data reads.");
+    expect(plan.blockers).toContain("Dashboard data artifacts must be redacted and free of secrets, raw PII, medical notes, payment data, provider tokens, and private object keys.");
+  });
+
+  it("marks dashboard repository route evidence ready when loaders, routes, DB smoke, RBAC, redaction, CI, and artifacts align", () => {
+    const plan = buildDashboardRepositoryRouteEvidencePlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      configTestsPassed: true,
+      configTypecheckPassed: true,
+      dashboardTypecheckPassed: true,
+      dashboardBuildPassed: true,
+      prismaLoadersImplemented: dashboardDataCollections,
+      dashboardRoutesWired: dashboardDataCollections,
+      staticDemoImportsRemoved: dashboardDataCollections,
+      seededDatabaseSmokePassed: true,
+      repositoryApiTestsPassed: true,
+      tenantIsolationTestsPassed: true,
+      rbacGuardTestsPassed: true,
+      redactionTestsPassed: true,
+      noStoreCacheVerified: true,
+      sensitiveReadAuditLogsPersisted: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      missingPrismaLoaders: [],
+      missingRouteWiring: [],
+      remainingStaticDemoImports: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredControls).toContain("Use no-store caching for protected dashboard data responses.");
   });
 });

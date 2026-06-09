@@ -2,7 +2,7 @@ import { DashboardPageHeader } from "../../components/DashboardPageHeader";
 import { DisabledActionPanel } from "../../components/DisabledActionPanel";
 import { IntegrationBoundaryCard } from "../../components/IntegrationBoundaryCard";
 import { StatusPill } from "../../components/StatusPill";
-import { dashboardDeliveryLogDrafts, dashboardMessageThreadDrafts, dashboardProviderWebhookPreviews } from "../../lib/demo";
+import { dashboardRedactedDeliveryLogDrafts, dashboardRedactedMessageThreadDrafts, dashboardRedactedProviderWebhookPreviews } from "../../lib/demo";
 
 function toneForStatus(status: string) {
   if (status === "delivered" || status === "sent") return "success" as const;
@@ -25,7 +25,7 @@ export default function MessagesPage() {
           <p className="eyebrow">Thread drafts</p>
           <h2>Artist-client message previews</h2>
           <div className="stacked-list">
-            {dashboardMessageThreadDrafts.map((thread) => (
+            {dashboardRedactedMessageThreadDrafts.map((thread) => (
               <div className="stacked-item" key={thread.subject}>
                 <strong>{thread.subject}</strong>
                 <span>{thread.channel} · {thread.direction} · {thread.status}</span>
@@ -40,7 +40,7 @@ export default function MessagesPage() {
           <p className="eyebrow">Delivery logs</p>
           <h2>Redacted delivery record drafts</h2>
           <div className="stacked-list">
-            {dashboardDeliveryLogDrafts.map((log) => (
+            {dashboardRedactedDeliveryLogDrafts.map((log) => (
               <div className="stacked-item" key={log.idempotencyKey}>
                 <strong>{log.notificationType.replace(/_/g, " ")}</strong>
                 <span>{log.provider} · {log.channel} · {log.destinationHash}</span>
@@ -59,7 +59,7 @@ export default function MessagesPage() {
           <div className="table-header five">
             <span>Provider</span><span>Event</span><span>Status</span><span>Inbound</span><span>Notes</span>
           </div>
-          {dashboardProviderWebhookPreviews.map((event) => (
+          {dashboardRedactedProviderWebhookPreviews.map((event) => (
             <div className="table-row five" key={`${event.provider}-${event.eventType}-${event.normalizedStatus}`}>
               <span><strong>{event.provider}</strong><small>signature: {event.requiresSignatureVerification ? "required" : "receipt polling"}</small></span>
               <span>{event.eventType}</span>

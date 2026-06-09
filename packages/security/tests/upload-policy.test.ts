@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDashboardPrivacyRuntimeReadinessPlan,
+  buildDashboardPrivacyWorkflowEvidencePlan,
   buildPrivacyLifecyclePlan,
   buildPrivacyCaseWorkflowPlan,
   buildPrivacyRetentionDryRunEvidencePlan,
@@ -18,6 +19,7 @@ import {
   buildPrivateStorageAccessPlan,
   buildPrivateStorageRuntimeReadinessPlan,
   buildProviderStorageUploadReadinessPlan,
+  buildReferenceUploadProviderEvidencePlan,
   buildSecurityAppRuntimeVerificationPlan,
   buildSecurityAutomatedCoverageReadinessPlan,
   buildSecurityMiddlewareRuntimeReadinessPlan,
@@ -479,6 +481,85 @@ describe("security and privacy helpers", () => {
       "AuditLog persistence and sanitized log/error evidence for dashboard privacy actions",
     ]));
     expect(plan.blockers).toContain("Dashboard logs and error reports must be verified to redact PII, medical notes, payment identifiers, file keys, and message bodies.");
+  });
+
+  it("blocks dashboard privacy workflow evidence until routes, workflows, storage deletion, legal approval, logs, CI, and artifacts exist", () => {
+    const plan = buildDashboardPrivacyWorkflowEvidencePlan({
+      packageScripts: { test: "vitest run" },
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      dashboardTypecheckPassed: false,
+      dashboardBuildPassed: false,
+      routeProjectionSurfaces: ["client_profile", "booking_request"],
+      routeTestSurfaces: ["client_profile"],
+      persistedPrivacyRequestStoreConfigured: false,
+      exportWorkflowIntegrationPassed: false,
+      deleteAnonymizeWorkflowIntegrationPassed: false,
+      privateStorageDeletionIntegrationPassed: false,
+      auditLogPersistencePassed: false,
+      legalApprovalCaptured: false,
+      consentMedicalDepositSmsCopyApproved: false,
+      sanitizedLogEvidenceCaptured: false,
+      sanitizedErrorEvidenceCaptured: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.missingProjectionSurfaces).toEqual(["consent_form", "payment", "message", "file_asset"]);
+    expect(plan.missingRouteTestSurfaces).toContain("booking_request");
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "dashboard privacy route/API tests",
+      "persisted dashboard export workflow tests",
+      "persisted dashboard delete/anonymize workflow tests",
+      "private file deletion integration tests",
+      "dashboard sanitized log/error evidence sweep",
+    ]));
+    expect(plan.requiredControls).toContain("Apply privacy projections before serializing client, booking, consent, payment, message, and file surfaces.");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "dashboard privacy route projection and route-test matrix for client, booking, consent, payment, message, and file surfaces",
+      "persisted privacy request, export/delete/anonymize, and private storage deletion workflow evidence",
+      "redacted AuditLog, sanitized runtime log, and sanitized error-report evidence",
+      "attorney/product approval for privacy, consent, medical, deposit/payment, and SMS/message copy",
+      "dashboard typecheck/build, CI, and secret-safe artifact evidence",
+    ]));
+    expect(plan.blockers).toContain("Private storage deletion integration tests must cover consent signatures, reference files, documents, and message attachments.");
+    expect(plan.blockers).toContain("Dashboard privacy artifacts must be redacted and free of secrets, raw PII, medical notes, payment data, provider tokens, message bodies, and private file URLs.");
+  });
+
+  it("marks dashboard privacy workflow evidence ready when routes, workflows, storage, legal approval, logs, CI, and artifacts align", () => {
+    const surfaces = ["client_profile", "booking_request", "consent_form", "payment", "message", "file_asset"] as const;
+    const plan = buildDashboardPrivacyWorkflowEvidencePlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      securityTestsPassed: true,
+      securityTypecheckPassed: true,
+      dashboardTypecheckPassed: true,
+      dashboardBuildPassed: true,
+      routeProjectionSurfaces: surfaces,
+      routeTestSurfaces: surfaces,
+      persistedPrivacyRequestStoreConfigured: true,
+      exportWorkflowIntegrationPassed: true,
+      deleteAnonymizeWorkflowIntegrationPassed: true,
+      privateStorageDeletionIntegrationPassed: true,
+      auditLogPersistencePassed: true,
+      legalApprovalCaptured: true,
+      consentMedicalDepositSmsCopyApproved: true,
+      sanitizedLogEvidenceCaptured: true,
+      sanitizedErrorEvidenceCaptured: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      missingProjectionSurfaces: [],
+      missingRouteTestSurfaces: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredControls).toContain("Redact runtime logs and error reports before they leave the dashboard boundary.");
   });
 
   it("provides tenant isolation and rate-limit fixtures for future integration tests", () => {
@@ -1634,5 +1715,81 @@ describe("security and privacy helpers", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
+  });
+
+  it("blocks reference upload provider evidence until signed URLs, byte verification, scans, persistence, denials, CI, and safe artifacts exist", () => {
+    const plan = buildReferenceUploadProviderEvidencePlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      webUploadRouteTestsPassed: false,
+      webTypecheckPassed: false,
+      uploadIntentRouteUsesSignedPlan: true,
+      providerSignedUploadUrlIssued: false,
+      byteUploadVerified: false,
+      magicByteValidationPassed: false,
+      malwareScanConfigured: false,
+      quarantineFlowVerified: false,
+      privateBucketAclVerified: false,
+      fileAssetRowsPersisted: false,
+      bookingReferenceImageRowsPersisted: false,
+      auditLogRowsPersisted: false,
+      privateFetchDenied: false,
+      crossTenantFetchDenied: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "reference image provider-signed upload integration test",
+      "reference image magic-byte and malware scan integration test",
+      "FileAsset/BookingReferenceImage/AuditLog persistence integration test",
+      "private reference anonymous and cross-tenant fetch-denial tests",
+    ]));
+    expect(plan.requiredControls).toContain("Keep reference originals private; do not generate public derivatives for booking references.");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "secure upload intent route, provider-signed URL, and byte upload verification evidence",
+      "magic-byte validation, malware scan, and quarantine flow evidence",
+      "FileAsset, BookingReferenceImage, and AuditLog persistence evidence",
+      "private ACL, anonymous fetch denial, and cross-tenant denial evidence",
+      "web typecheck/route test, CI, and secret-safe artifact evidence",
+    ]));
+    expect(plan.blockers).toContain("Provider-signed upload URL must be issued for reference_private uploads.");
+    expect(plan.blockers).toContain("BookingReferenceImage rows must link reference files to booking requests.");
+    expect(plan.blockers).toContain("Reference upload artifacts must be redacted and free of provider secrets, private URLs, client PII, and raw image payloads.");
+  });
+
+  it("marks reference upload provider evidence ready when signed URLs, scans, persistence, denials, CI, and artifacts align", () => {
+    const plan = buildReferenceUploadProviderEvidencePlan({
+      packageScripts: ["test", "typecheck"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: true,
+      webUploadRouteTestsPassed: true,
+      webTypecheckPassed: true,
+      uploadIntentRouteUsesSignedPlan: true,
+      providerSignedUploadUrlIssued: true,
+      byteUploadVerified: true,
+      magicByteValidationPassed: true,
+      malwareScanConfigured: true,
+      quarantineFlowVerified: true,
+      privateBucketAclVerified: true,
+      fileAssetRowsPersisted: true,
+      bookingReferenceImageRowsPersisted: true,
+      auditLogRowsPersisted: true,
+      privateFetchDenied: true,
+      crossTenantFetchDenied: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredControls).toContain("Deny anonymous and cross-tenant reads for every private reference object.");
   });
 });

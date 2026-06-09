@@ -2,7 +2,7 @@ import { demoTravelStops } from "@inkroute/config";
 import { DashboardPageHeader } from "../../components/DashboardPageHeader";
 import { DisabledActionPanel } from "../../components/DisabledActionPanel";
 import { StatusPill } from "../../components/StatusPill";
-import { dashboardBookingRows, dashboardTravelPublishPlans } from "../../lib/demo";
+import { dashboardProjectedBookingRows, dashboardTravelPublishPlans } from "../../lib/demo";
 
 export default function TravelScheduleManagerPage() {
   return (
@@ -15,7 +15,7 @@ export default function TravelScheduleManagerPage() {
 
       <section className="grid three">
         {demoTravelStops.map((stop) => {
-          const matchingRequests = dashboardBookingRows.filter((booking) => booking.city.startsWith(stop.city));
+          const matchingRequests = dashboardProjectedBookingRows.filter((booking) => booking.city.startsWith(stop.city));
           const publishPlan = dashboardTravelPublishPlans.find((plan) => plan.travelStopId === stop.id);
           return (
             <article className="card travel-admin-card" key={stop.id}>

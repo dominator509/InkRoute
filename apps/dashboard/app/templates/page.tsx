@@ -6,7 +6,7 @@ import {
   dashboardNotificationAutomationSequence,
   dashboardNotificationPlans,
   dashboardProviderBoundaryMatrix,
-  dashboardProviderSendDrafts,
+  dashboardRedactedProviderSendDrafts,
   dashboardTemplates,
 } from "../../lib/demo";
 
@@ -80,7 +80,7 @@ export default function TemplatesPage() {
           <p className="eyebrow">Provider send drafts</p>
           <h2>Disabled send payload previews</h2>
           <div className="stacked-list">
-            {dashboardProviderSendDrafts.map((draft) => (
+            {dashboardRedactedProviderSendDrafts.map((draft) => (
               <div className="stacked-item" key={`${draft.provider}-${draft.channel}`}>
                 <strong>{draft.provider} · {draft.channel}</strong>
                 <span>{draft.toMasked} · env: {draft.credentialEnvVar}</span>

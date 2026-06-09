@@ -3,7 +3,7 @@ import { DashboardPageHeader } from "../../../components/DashboardPageHeader";
 import { DisabledActionPanel } from "../../../components/DisabledActionPanel";
 import { StatusPill } from "../../../components/StatusPill";
 import { Timeline } from "../../../components/Timeline";
-import { bookingStatusActionSummary, clientTimeline, dashboardBookingRows, dashboardPayments } from "../../../lib/demo";
+import { bookingStatusActionSummary, clientTimeline, dashboardProjectedBookingRows, dashboardProjectedPayments } from "../../../lib/demo";
 
 interface BookingDetailPageProps {
   params: Promise<{ bookingId: string }>;
@@ -14,18 +14,18 @@ function centsToUsd(cents: number) {
 }
 
 export function generateStaticParams() {
-  return dashboardBookingRows.map((booking) => ({ bookingId: booking.id }));
+  return dashboardProjectedBookingRows.map((booking) => ({ bookingId: booking.id }));
 }
 
 export default async function BookingDetailPage({ params }: BookingDetailPageProps) {
   const { bookingId } = await params;
-  const booking = dashboardBookingRows.find((row) => row.id === bookingId);
+  const booking = dashboardProjectedBookingRows.find((row) => row.id === bookingId);
 
   if (!booking) {
     throw new Error(`Booking ${bookingId} was not found in the Phase 5 static demo data.`);
   }
 
-  const payment = dashboardPayments.find((item) => item.bookingId === booking.id);
+  const payment = dashboardProjectedPayments.find((item) => item.bookingId === booking.id);
   const actions = getAvailableBookingActions(booking.status).map((action) => action.action.replace(/_/g, " "));
 
   return (

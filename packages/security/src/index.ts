@@ -218,6 +218,37 @@ export interface ProviderStorageUploadReadinessPlan {
   blockers: readonly string[];
 }
 
+export interface ReferenceUploadProviderEvidenceInput {
+  packageScripts: readonly string[];
+  securityTestsPassed: boolean;
+  securityTypecheckPassed: boolean;
+  webUploadRouteTestsPassed: boolean;
+  webTypecheckPassed: boolean;
+  uploadIntentRouteUsesSignedPlan: boolean;
+  providerSignedUploadUrlIssued: boolean;
+  byteUploadVerified: boolean;
+  magicByteValidationPassed: boolean;
+  malwareScanConfigured: boolean;
+  quarantineFlowVerified: boolean;
+  privateBucketAclVerified: boolean;
+  fileAssetRowsPersisted: boolean;
+  bookingReferenceImageRowsPersisted: boolean;
+  auditLogRowsPersisted: boolean;
+  privateFetchDenied: boolean;
+  crossTenantFetchDenied: boolean;
+  ciEvidenceCaptured: boolean;
+  secretSafeArtifactsCaptured: boolean;
+}
+
+export interface ReferenceUploadProviderEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredControls: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export type FileAssetPersistenceStatus = "ready" | "blocked";
 export type FileAssetAccessLevel = "public_derivative" | "tenant_member" | "client_private" | "system_only";
 
@@ -3125,6 +3156,123 @@ export function buildDashboardPrivacyRuntimeReadinessPlan(
   };
 }
 
+export interface DashboardPrivacyWorkflowEvidenceInput {
+  packageScripts: Readonly<Record<string, string>>;
+  securityTestsPassed: boolean;
+  securityTypecheckPassed: boolean;
+  dashboardTypecheckPassed: boolean;
+  dashboardBuildPassed: boolean;
+  routeProjectionSurfaces: readonly DashboardPrivacySurface[];
+  routeTestSurfaces: readonly DashboardPrivacySurface[];
+  persistedPrivacyRequestStoreConfigured: boolean;
+  exportWorkflowIntegrationPassed: boolean;
+  deleteAnonymizeWorkflowIntegrationPassed: boolean;
+  privateStorageDeletionIntegrationPassed: boolean;
+  auditLogPersistencePassed: boolean;
+  legalApprovalCaptured: boolean;
+  consentMedicalDepositSmsCopyApproved: boolean;
+  sanitizedLogEvidenceCaptured: boolean;
+  sanitizedErrorEvidenceCaptured: boolean;
+  ciEvidenceCaptured: boolean;
+  secretSafeArtifactsCaptured: boolean;
+}
+
+export interface DashboardPrivacyWorkflowEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  missingProjectionSurfaces: readonly DashboardPrivacySurface[];
+  missingRouteTestSurfaces: readonly DashboardPrivacySurface[];
+  requiredCommands: readonly string[];
+  requiredControls: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export function buildDashboardPrivacyWorkflowEvidencePlan(
+  input: DashboardPrivacyWorkflowEvidenceInput,
+): DashboardPrivacyWorkflowEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const requiredSurfaces: DashboardPrivacySurface[] = [
+    "client_profile",
+    "booking_request",
+    "consent_form",
+    "payment",
+    "message",
+    "file_asset",
+  ];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const missingProjectionSurfaces = requiredSurfaces.filter((surface) => !input.routeProjectionSurfaces.includes(surface));
+  const missingRouteTestSurfaces = requiredSurfaces.filter((surface) => !input.routeTestSurfaces.includes(surface));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/security package script is missing ${script}.`);
+  if (!input.securityTestsPassed) blockers.push("@inkroute/security dashboard privacy tests must pass before workflow evidence can close.");
+  if (!input.securityTypecheckPassed) blockers.push("@inkroute/security typecheck must pass before workflow evidence can close.");
+  if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass with privacy route projections wired.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with privacy route projections wired.");
+  if (missingProjectionSurfaces.length > 0) blockers.push(`Dashboard routes do not use privacy projection for surfaces: ${missingProjectionSurfaces.join(", ")}.`);
+  if (missingRouteTestSurfaces.length > 0) blockers.push(`Dashboard privacy route/API tests are missing for surfaces: ${missingRouteTestSurfaces.join(", ")}.`);
+  if (!input.persistedPrivacyRequestStoreConfigured) blockers.push("Persisted privacy request/case store must back dashboard export/delete workflows.");
+  if (!input.exportWorkflowIntegrationPassed) blockers.push("Dashboard export workflow integration tests must pass against persisted tenant data.");
+  if (!input.deleteAnonymizeWorkflowIntegrationPassed) blockers.push("Dashboard delete/anonymize workflow integration tests must pass against persisted tenant data.");
+  if (!input.privateStorageDeletionIntegrationPassed) blockers.push("Private storage deletion integration tests must cover consent signatures, reference files, documents, and message attachments.");
+  if (!input.auditLogPersistencePassed) blockers.push("Dashboard privacy route/workflow tests must persist redacted AuditLog rows.");
+  if (!input.legalApprovalCaptured) blockers.push("Attorney/product approval must be captured for dashboard privacy behavior.");
+  if (!input.consentMedicalDepositSmsCopyApproved) blockers.push("Consent, medical, deposit/payment, and SMS/message dashboard copy must be approved.");
+  if (!input.sanitizedLogEvidenceCaptured) blockers.push("Dashboard runtime logs must prove PII, medical notes, payment identifiers, file keys, and message bodies are redacted.");
+  if (!input.sanitizedErrorEvidenceCaptured) blockers.push("Dashboard runtime error reports must prove PII, medical notes, payment identifiers, file keys, and message bodies are redacted.");
+  if (!input.ciEvidenceCaptured) blockers.push("CI evidence for dashboard privacy workflow routes must be captured.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Dashboard privacy artifacts must be redacted and free of secrets, raw PII, medical notes, payment data, provider tokens, message bodies, and private file URLs.");
+
+  if (missingProjectionSurfaces.length > 0 || missingRouteTestSurfaces.length > 0) {
+    requiredEvidence.push("dashboard privacy route projection and route-test matrix for client, booking, consent, payment, message, and file surfaces");
+  }
+  if (!input.persistedPrivacyRequestStoreConfigured || !input.exportWorkflowIntegrationPassed || !input.deleteAnonymizeWorkflowIntegrationPassed || !input.privateStorageDeletionIntegrationPassed) {
+    requiredEvidence.push("persisted privacy request, export/delete/anonymize, and private storage deletion workflow evidence");
+  }
+  if (!input.auditLogPersistencePassed || !input.sanitizedLogEvidenceCaptured || !input.sanitizedErrorEvidenceCaptured) {
+    requiredEvidence.push("redacted AuditLog, sanitized runtime log, and sanitized error-report evidence");
+  }
+  if (!input.legalApprovalCaptured || !input.consentMedicalDepositSmsCopyApproved) {
+    requiredEvidence.push("attorney/product approval for privacy, consent, medical, deposit/payment, and SMS/message copy");
+  }
+  if (!input.dashboardTypecheckPassed || !input.dashboardBuildPassed || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
+    requiredEvidence.push("dashboard typecheck/build, CI, and secret-safe artifact evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    missingProjectionSurfaces,
+    missingRouteTestSurfaces,
+    requiredCommands: [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/dashboard build",
+      "dashboard privacy route/API tests",
+      "persisted dashboard export workflow tests",
+      "persisted dashboard delete/anonymize workflow tests",
+      "private file deletion integration tests",
+      "dashboard privacy AuditLog persistence tests",
+      "dashboard sanitized log/error evidence sweep",
+      "legal/product dashboard privacy approval review",
+      "GitHub Actions dashboard privacy evidence job",
+    ],
+    requiredControls: [
+      "Apply privacy projections before serializing client, booking, consent, payment, message, and file surfaces.",
+      "Persist privacy request/case status, export/delete/anonymize workflow output, tombstones, and redacted AuditLog rows.",
+      "Delete or tombstone private consent, reference, document, and message files through provider-backed storage workflows.",
+      "Redact runtime logs and error reports before they leave the dashboard boundary.",
+      "Require attorney/product approval for consent, medical, deposit/payment, and SMS/message dashboard copy.",
+      "Redact secrets, raw PII, medical notes, payment data, provider tokens, message bodies, and private file URLs from artifacts.",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
 export function buildSecurityHeaderPlan(extraConnectSources: string[] = []): SecurityHeaderDraft[] {
   if (extraConnectSources.length === 0) return securityHeaderDrafts;
   return securityHeaderDrafts.map((header) => {
@@ -3547,6 +3695,76 @@ export function buildProviderStorageUploadReadinessPlan(
       "malware scan and derivative worker integration tests",
       "private-original public-read denial test",
       "GitHub Actions storage/upload evidence job",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
+export function buildReferenceUploadProviderEvidencePlan(
+  input: ReferenceUploadProviderEvidenceInput,
+): ReferenceUploadProviderEvidencePlan {
+  const missingScripts = ["test", "typecheck"].filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/security package script is missing ${script}.`);
+  if (!input.securityTestsPassed) blockers.push("@inkroute/security upload policy tests must pass before reference upload provider evidence can close.");
+  if (!input.securityTypecheckPassed) blockers.push("@inkroute/security typecheck must pass before reference upload provider evidence can close.");
+  if (!input.webUploadRouteTestsPassed) blockers.push("Web secure-upload-intents route tests must pass.");
+  if (!input.webTypecheckPassed) blockers.push("@inkroute/web typecheck must pass with secure upload route wiring.");
+  if (!input.uploadIntentRouteUsesSignedPlan) blockers.push("Secure upload intent route must use signed upload intent plans for reference_private uploads.");
+  if (!input.providerSignedUploadUrlIssued) blockers.push("Provider-signed upload URL must be issued for reference_private uploads.");
+  if (!input.byteUploadVerified) blockers.push("Byte upload verification must prove the uploaded object matches declared size and upload intent.");
+  if (!input.magicByteValidationPassed) blockers.push("Magic-byte validation must verify uploaded file content before scan approval.");
+  if (!input.malwareScanConfigured) blockers.push("Malware scan provider must be configured for private reference images.");
+  if (!input.quarantineFlowVerified) blockers.push("Rejected or suspicious reference uploads must enter quarantine/failure flow.");
+  if (!input.privateBucketAclVerified) blockers.push("Private reference bucket/prefix ACL must deny public reads.");
+  if (!input.fileAssetRowsPersisted) blockers.push("FileAsset rows must persist reference upload metadata.");
+  if (!input.bookingReferenceImageRowsPersisted) blockers.push("BookingReferenceImage rows must link reference files to booking requests.");
+  if (!input.auditLogRowsPersisted) blockers.push("AuditLog rows must persist intent creation, upload verification, scan verdict, and denial events.");
+  if (!input.privateFetchDenied) blockers.push("Private reference fetch-denial tests must prove anonymous public reads fail.");
+  if (!input.crossTenantFetchDenied) blockers.push("Cross-tenant reference fetch-denial tests must pass.");
+  if (!input.ciEvidenceCaptured) blockers.push("CI evidence for reference upload provider flow must be captured.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Reference upload artifacts must be redacted and free of provider secrets, private URLs, client PII, and raw image payloads.");
+
+  if (!input.uploadIntentRouteUsesSignedPlan || !input.providerSignedUploadUrlIssued || !input.byteUploadVerified) {
+    requiredEvidence.push("secure upload intent route, provider-signed URL, and byte upload verification evidence");
+  }
+  if (!input.magicByteValidationPassed || !input.malwareScanConfigured || !input.quarantineFlowVerified) {
+    requiredEvidence.push("magic-byte validation, malware scan, and quarantine flow evidence");
+  }
+  if (!input.fileAssetRowsPersisted || !input.bookingReferenceImageRowsPersisted || !input.auditLogRowsPersisted) {
+    requiredEvidence.push("FileAsset, BookingReferenceImage, and AuditLog persistence evidence");
+  }
+  if (!input.privateBucketAclVerified || !input.privateFetchDenied || !input.crossTenantFetchDenied) {
+    requiredEvidence.push("private ACL, anonymous fetch denial, and cross-tenant denial evidence");
+  }
+  if (!input.webTypecheckPassed || !input.webUploadRouteTestsPassed || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
+    requiredEvidence.push("web typecheck/route test, CI, and secret-safe artifact evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts",
+      "reference image provider-signed upload integration test",
+      "reference image magic-byte and malware scan integration test",
+      "FileAsset/BookingReferenceImage/AuditLog persistence integration test",
+      "private reference anonymous and cross-tenant fetch-denial tests",
+      "GitHub Actions reference upload provider evidence job",
+    ],
+    requiredControls: [
+      "Issue short-lived provider upload URLs only from server-owned tenant-scoped object keys.",
+      "Verify uploaded bytes and magic bytes before scan approval or artist-visible state changes.",
+      "Persist FileAsset, BookingReferenceImage, and AuditLog records transactionally with scan verdicts.",
+      "Keep reference originals private; do not generate public derivatives for booking references.",
+      "Deny anonymous and cross-tenant reads for every private reference object.",
+      "Redact provider tokens, signed URLs, client PII, and raw image payloads from artifacts.",
     ],
     requiredEvidence,
     blockers,

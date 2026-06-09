@@ -3,16 +3,16 @@ import { MetricCard } from "../components/MetricCard";
 import { DashboardPageHeader } from "../components/DashboardPageHeader";
 import { IntegrationBoundaryCard } from "../components/IntegrationBoundaryCard";
 import { StatusPill } from "../components/StatusPill";
-import { dashboardBookingRows, dashboardPayments, dashboardPortfolio, dashboardReviewQueue } from "../lib/demo";
+import { dashboardProjectedBookingRows, dashboardProjectedPayments, dashboardProjectedPortfolio, dashboardReviewQueue } from "../lib/demo";
 
 function centsToUsd(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(cents / 100);
 }
 
 export default function DashboardHomePage() {
-  const pendingDeposits = dashboardPayments.reduce((sum, payment) => payment.status === "pending" ? sum + payment.amountCents : sum, 0);
-  const openRequests = dashboardBookingRows.filter((booking) => ["submitted", "needs_info", "accepted", "deposit_pending"].includes(booking.status)).length;
-  const portfolioAttributionCount = dashboardPortfolio.reduce((sum, item) => sum + item.attributionCount, 0);
+  const pendingDeposits = dashboardProjectedPayments.reduce((sum, payment) => payment.status === "pending" ? sum + payment.amountCents : sum, 0);
+  const openRequests = dashboardProjectedBookingRows.filter((booking) => ["submitted", "needs_info", "accepted", "deposit_pending"].includes(booking.status)).length;
+  const portfolioAttributionCount = dashboardProjectedPortfolio.reduce((sum, item) => sum + item.attributionCount, 0);
 
   return (
     <main>
@@ -38,7 +38,7 @@ export default function DashboardHomePage() {
             <a href="/bookings">Open inbox</a>
           </div>
           <div className="stack">
-            {dashboardBookingRows.slice(0, 3).map((booking) => (
+            {dashboardProjectedBookingRows.slice(0, 3).map((booking) => (
               <a className="list-row" href={`/bookings/${booking.id}`} key={booking.id}>
                 <div>
                   <strong>{booking.clientName}</strong>

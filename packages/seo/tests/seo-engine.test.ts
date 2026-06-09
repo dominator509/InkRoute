@@ -17,6 +17,7 @@ import {
   buildSearchConsoleOperationPlan,
   buildSearchConsoleRuntimeReadinessPlan,
   buildSeoAutomatedTestReadinessPlan,
+  buildSeoA11yPerformanceAuditEvidencePlan,
   buildSeoPublicationRuntimeReadinessPlan,
   buildSeoImagePipelinePlan,
   buildSeoImagePipelineRuntimeReadinessPlan,
@@ -1346,5 +1347,77 @@ describe("SEO engine helpers", () => {
     expect(plan.blockers).toContain("SEO preview route tests must pass.");
     expect(plan.blockers).toContain("Runtime/build evidence must be covered by GAP-076.");
     expect(plan.blockers).toContain("CI must run the SEO package and preview route test gate.");
+  });
+
+  it("blocks SEO accessibility and performance audit evidence until browser, schema, axe, Lighthouse, mobile, CI, and safe artifacts exist", () => {
+    const plan = buildSeoA11yPerformanceAuditEvidencePlan({
+      packageScripts: { test: "vitest run" },
+      seoTestsPassed: true,
+      seoTypecheckPassed: false,
+      webTypecheckPassed: false,
+      webBuildPassed: false,
+      browserCrawlPassed: false,
+      schemaValidatorPassed: false,
+      sitemapCanonicalChecksPassed: false,
+      axeAuditPassed: false,
+      lighthouseAuditPassed: false,
+      coreWebVitalsCaptured: false,
+      mobileVisualQaPassed: false,
+      headingFocusContrastIssuesFixed: false,
+      structuredDataSnapshotsCaptured: false,
+      ciArtifactsCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "browser crawl for public Phase 10 routes",
+      "schema validator for rendered JSON-LD",
+      "axe accessibility audit for public routes",
+      "Lighthouse/Core Web Vitals audit",
+      "mobile visual QA sweep",
+    ]));
+    expect(plan.requiredControls).toContain("Audit rendered routes, not only package-level metadata helpers.");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "web typecheck and production build evidence",
+      "browser crawl, sitemap/canonical, schema validator, and structured-data snapshot evidence",
+      "axe accessibility audit output plus heading/focus/contrast fix evidence",
+      "Lighthouse and Core Web Vitals evidence for launch-critical routes",
+      "mobile visual QA screenshots or transcript evidence",
+      "CI artifact bundle with redaction/secret-safety proof",
+    ]));
+    expect(plan.blockers).toContain("Browser crawl must cover public home, portfolio, booking, travel, FAQ, city, style, privacy, and legal routes.");
+    expect(plan.blockers).toContain("axe accessibility audit must pass for launch-critical public routes.");
+    expect(plan.blockers).toContain("SEO/accessibility/performance artifacts must be redacted and free of secrets, client-private data, raw medical notes, private file URLs, and provider tokens.");
+  });
+
+  it("marks SEO accessibility and performance audit evidence ready when rendered-route audits and artifacts align", () => {
+    const plan = buildSeoA11yPerformanceAuditEvidencePlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      seoTestsPassed: true,
+      seoTypecheckPassed: true,
+      webTypecheckPassed: true,
+      webBuildPassed: true,
+      browserCrawlPassed: true,
+      schemaValidatorPassed: true,
+      sitemapCanonicalChecksPassed: true,
+      axeAuditPassed: true,
+      lighthouseAuditPassed: true,
+      coreWebVitalsCaptured: true,
+      mobileVisualQaPassed: true,
+      headingFocusContrastIssuesFixed: true,
+      structuredDataSnapshotsCaptured: true,
+      ciArtifactsCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredControls).toContain("Validate JSON-LD, sitemap, canonical URLs, and internal links against browser-visible output.");
   });
 });

@@ -3,14 +3,14 @@ import { DisabledActionPanel } from "../../components/DisabledActionPanel";
 import { IntegrationBoundaryCard } from "../../components/IntegrationBoundaryCard";
 import { MetricCard } from "../../components/MetricCard";
 import { StatusPill } from "../../components/StatusPill";
-import { dashboardPayments, dashboardWebhookPreview } from "../../lib/demo";
+import { dashboardProjectedPayments, dashboardWebhookPreview } from "../../lib/demo";
 
 function centsToUsd(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
-const totalDepositExposure = dashboardPayments.reduce((sum, payment) => sum + payment.amountCents, 0);
-const highRiskCount = dashboardPayments.filter((payment) => payment.riskScore >= 70).length;
+const totalDepositExposure = dashboardProjectedPayments.reduce((sum, payment) => sum + payment.amountCents, 0);
+const highRiskCount = dashboardProjectedPayments.filter((payment) => payment.riskScore >= 70).length;
 
 export default function PaymentsPage() {
   return (
@@ -32,7 +32,7 @@ export default function PaymentsPage() {
         <div className="table-header five">
           <span>Client</span><span>Deposit</span><span>Risk</span><span>Lifecycle</span><span>Reconciliation keys</span>
         </div>
-        {dashboardPayments.map((payment) => (
+        {dashboardProjectedPayments.map((payment) => (
           <div className="table-row five" key={payment.id}>
             <span><strong>{payment.clientName}</strong><small>{payment.bookingId}</small></span>
             <span>{centsToUsd(payment.amountCents)}<small>Due {new Date(payment.dueAt).toLocaleDateString()}</small></span>

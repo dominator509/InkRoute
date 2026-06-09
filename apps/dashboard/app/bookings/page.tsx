@@ -1,7 +1,7 @@
 import { getAvailableBookingActions } from "@inkroute/booking";
 import { DashboardPageHeader } from "../../components/DashboardPageHeader";
 import { StatusPill } from "../../components/StatusPill";
-import { dashboardBookingRows } from "../../lib/demo";
+import { dashboardProjectedBookingRows } from "../../lib/demo";
 
 function statusTone(status: string) {
   if (status === "accepted" || status === "deposit_paid" || status === "scheduled") return "success" as const;
@@ -28,7 +28,7 @@ export default function BookingInboxPage() {
           <span>Status</span>
           <span>Next actions</span>
         </div>
-        {dashboardBookingRows.map((booking) => {
+        {dashboardProjectedBookingRows.map((booking) => {
           const actions = getAvailableBookingActions(booking.status).slice(0, 3);
           return (
             <a className="table-row six" href={`/bookings/${booking.id}`} key={booking.id}>

@@ -1,7 +1,7 @@
 import { DashboardPageHeader } from "../../../components/DashboardPageHeader";
 import { DisabledActionPanel } from "../../../components/DisabledActionPanel";
 import { Timeline } from "../../../components/Timeline";
-import { clientTimeline, dashboardBookingRows, dashboardClients, dashboardPayments } from "../../../lib/demo";
+import { clientTimeline, dashboardProjectedBookingRows, dashboardProjectedClients, dashboardProjectedPayments } from "../../../lib/demo";
 
 interface ClientDetailPageProps {
   params: Promise<{ clientId: string }>;
@@ -12,19 +12,19 @@ function centsToUsd(cents: number) {
 }
 
 export function generateStaticParams() {
-  return dashboardClients.map((client) => ({ clientId: client.id }));
+  return dashboardProjectedClients.map((client) => ({ clientId: client.id }));
 }
 
 export default async function ClientDetailPage({ params }: ClientDetailPageProps) {
   const { clientId } = await params;
-  const client = dashboardClients.find((row) => row.id === clientId);
+  const client = dashboardProjectedClients.find((row) => row.id === clientId);
 
   if (!client) {
     throw new Error(`Client ${clientId} was not found in the Phase 5 static demo data.`);
   }
 
-  const matchingBookings = dashboardBookingRows.filter((booking) => booking.clientName === client.preferredName);
-  const matchingPayments = dashboardPayments.filter((payment) => matchingBookings.some((booking) => booking.id === payment.bookingId));
+  const matchingBookings = dashboardProjectedBookingRows.filter((booking) => booking.clientName === client.preferredName);
+  const matchingPayments = dashboardProjectedPayments.filter((payment) => matchingBookings.some((booking) => booking.id === payment.bookingId));
 
   return (
     <main>

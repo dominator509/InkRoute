@@ -4,6 +4,7 @@ import {
   buildAppE2eRuntimeReadinessPlan,
   buildCiQualityGatePlan,
   buildCiCoverageReportingReadinessPlan,
+  buildDashboardTestExecutionEvidencePlan,
   buildDashboardTestingRuntimeReadinessPlan,
   buildDashboardTestRequirements,
   buildPhase9AppRuntimeBuildReadinessPlan,
@@ -83,6 +84,81 @@ describe("Phase 14 testing manifest", () => {
     expect(plan.requiredCommands).toContain("pnpm test:e2e --project=dashboard-chromium");
     expect(plan.requiredEvidence).toContain("seeded auth, tenant, and RBAC fixture evidence");
     expect(plan.blockers).toContain("Dashboard mutation tests need a provider-safe server-action/API harness.");
+  });
+
+  it("blocks dashboard test execution evidence until app tests, axe, Playwright, CI, branch protection, and safe artifacts exist", () => {
+    const plan = buildDashboardTestExecutionEvidencePlan({
+      packageScripts: { test: "vitest run" },
+      testingPackageTestsPassed: true,
+      testingPackageTypecheckPassed: false,
+      dashboardTypecheckPassed: false,
+      dashboardBuildPassed: false,
+      dashboardUnitTestsPassed: false,
+      dashboardRouteRenderingTestsPassed: false,
+      dashboardAuthGuardTestsPassed: false,
+      dashboardRbacTenantIsolationTestsPassed: false,
+      dashboardMutationLifecycleTestsPassed: false,
+      dashboardProviderSafeStateTestsPassed: false,
+      dashboardAccessibilityAxePassed: false,
+      dashboardKeyboardChecksPassed: false,
+      playwrightDashboardSuitePassed: false,
+      ciArtifactsUploaded: false,
+      branchProtectionRequiresDashboardGate: false,
+      flakyDashboardPolicyDocumented: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "pnpm --filter @inkroute/dashboard test",
+      "dashboard auth/RBAC/tenant-isolation tests",
+      "dashboard axe accessibility checks",
+      "Playwright dashboard critical-flow suite",
+      "branch protection dashboard required-check proof",
+    ]));
+    expect(plan.requiredControls).toContain("Use real runnable dashboard test files instead of package-only coverage matrices.");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "dashboard typecheck and build command evidence",
+      "dashboard unit/component, route rendering, and auth guard test output",
+      "dashboard RBAC/tenant, mutation lifecycle, and provider-safe state test output",
+      "axe, keyboard, and Playwright dashboard critical-flow evidence",
+      "CI artifact, branch protection, flaky policy, and secret-safe artifact evidence",
+    ]));
+    expect(plan.blockers).toContain("Dashboard axe accessibility checks must pass.");
+    expect(plan.blockers).toContain("Branch protection must require the dashboard test gate before merge.");
+    expect(plan.blockers).toContain("Dashboard test artifacts must be redacted and free of secrets, tokens, raw PII, medical notes, payment data, provider tokens, and private file URLs.");
+  });
+
+  it("marks dashboard test execution evidence ready when app tests, axe, Playwright, CI, branch protection, and artifacts align", () => {
+    const plan = buildDashboardTestExecutionEvidencePlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      testingPackageTestsPassed: true,
+      testingPackageTypecheckPassed: true,
+      dashboardTypecheckPassed: true,
+      dashboardBuildPassed: true,
+      dashboardUnitTestsPassed: true,
+      dashboardRouteRenderingTestsPassed: true,
+      dashboardAuthGuardTestsPassed: true,
+      dashboardRbacTenantIsolationTestsPassed: true,
+      dashboardMutationLifecycleTestsPassed: true,
+      dashboardProviderSafeStateTestsPassed: true,
+      dashboardAccessibilityAxePassed: true,
+      dashboardKeyboardChecksPassed: true,
+      playwrightDashboardSuitePassed: true,
+      ciArtifactsUploaded: true,
+      branchProtectionRequiresDashboardGate: true,
+      flakyDashboardPolicyDocumented: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredControls).toContain("Require dashboard test gates in CI branch protection before launch.");
   });
 
   it("summarizes testing runtime readiness across install, execution, coverage, artifacts, CI, and branch protection", () => {

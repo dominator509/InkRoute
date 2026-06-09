@@ -1,7 +1,7 @@
 import { DashboardPageHeader } from "../../components/DashboardPageHeader";
 import { DisabledActionPanel } from "../../components/DisabledActionPanel";
 import { StatusPill } from "../../components/StatusPill";
-import { dashboardPortfolio } from "../../lib/demo";
+import { dashboardProjectedPortfolio } from "../../lib/demo";
 
 export default function PortfolioManagerPage() {
   return (
@@ -16,7 +16,7 @@ export default function PortfolioManagerPage() {
         <div className="table-header six">
           <span>Piece</span><span>Styles</span><span>Placement</span><span>Freshness</span><span>Attribution</span><span>SEO</span>
         </div>
-        {dashboardPortfolio.map((item) => (
+        {dashboardProjectedPortfolio.map((item) => (
           <div className="table-row six" key={item.id}>
             <span><strong>{item.title}</strong><small>{item.city ?? "No city"}</small></span>
             <span>{item.styles.map((style) => style.replace(/_/g, " ")).join(", ")}</span>

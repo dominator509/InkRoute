@@ -12,6 +12,7 @@ import {
   type CalendarTimeBlock,
 } from "@inkroute/calendar";
 import {
+  buildTenantDashboardView,
   demoPortfolioItems,
   demoSeoCityPages,
   demoSeoStylePages,
@@ -19,6 +20,7 @@ import {
   demoTravelStops,
   inkrouteDemoArtist,
   inkrouteDemoTenant,
+  type DashboardDataCollection,
 } from "@inkroute/config";
 import {
   buildDeliveryLogDraft,
@@ -45,6 +47,7 @@ import {
   type RefundDecision,
   type NoShowDecision,
 } from "@inkroute/payments";
+import { redactRecord } from "@inkroute/security";
 import type {
   AppointmentStatus,
   AvailabilityWindow,
@@ -645,3 +648,72 @@ export const dashboardMessageThreadDrafts = [
     status: "draft",
   }),
 ];
+
+function redactDashboardRecord<TRecord extends object>(record: TRecord, overrides?: Partial<Record<keyof TRecord, unknown>>): TRecord {
+  return {
+    ...redactRecord(record as Record<string, unknown>),
+    ...overrides,
+  } as TRecord;
+}
+
+function projectDashboardDemoRows<TRecord extends { id: string }>(
+  collection: DashboardDataCollection,
+  records: readonly TRecord[],
+  redactedFields?: readonly string[],
+): TRecord[] {
+  return buildTenantDashboardView({
+    collection,
+    tenantId: inkrouteDemoTenant.id,
+    source: "demo-static",
+    records: records.map((record) => ({ ...record, tenantId: inkrouteDemoTenant.id })),
+    ...(redactedFields ? { redactedFields } : {}),
+  }).records as TRecord[];
+}
+
+export const dashboardProjectedBookingRows = projectDashboardDemoRows("bookings", dashboardBookingRows, [
+  "clientEmail",
+  "clientPhone",
+  "medicalNotes",
+]);
+
+export const dashboardProjectedClients = projectDashboardDemoRows("clients", dashboardClients, [
+  "email",
+  "phone",
+  "medicalNotes",
+  "privateNotes",
+]);
+
+export const dashboardProjectedPayments = projectDashboardDemoRows("payments", dashboardPayments, [
+  "checkoutClientReferenceId",
+  "checkoutIdempotencyKey",
+  "stripePaymentIntentId",
+  "providerSessionId",
+]);
+
+export const dashboardProjectedPortfolio = projectDashboardDemoRows("portfolio", dashboardPortfolio, [
+  "attributionKey",
+  "objectKey",
+]);
+
+export const dashboardRedactedProviderSendDrafts = dashboardProviderSendDrafts.map((draft) =>
+  redactDashboardRecord(draft, {
+    credentialEnvVar: "[redacted-provider-credential]",
+  } as Partial<Record<keyof typeof draft, unknown>>),
+);
+
+export const dashboardRedactedDeliveryLogDrafts = dashboardDeliveryLogDrafts.map((log, index) =>
+  redactDashboardRecord(log, {
+    idempotencyKey: `delivery-log-preview-${index + 1}`,
+  } as Partial<Record<keyof typeof log, unknown>>),
+);
+
+export const dashboardRedactedProviderWebhookPreviews = dashboardProviderWebhookPreviews.map((event) =>
+  redactDashboardRecord(event),
+);
+
+export const dashboardRedactedMessageThreadDrafts = dashboardMessageThreadDrafts.map((thread) =>
+  redactDashboardRecord(thread, {
+    bodyPreview: "[redacted-message-body]",
+    piiRedactionNote: "Message body redacted before dashboard rendering; use persisted tenant-scoped thread APIs for live reads.",
+  } as Partial<Record<keyof typeof thread, unknown>>),
+);

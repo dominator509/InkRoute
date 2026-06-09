@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   buildBookingPostSubmitPlan,
+  buildBookingContactRuntimeEvidencePlan,
+  buildBookingProviderHandoffRuntimeEvidencePlan,
   buildBookingProviderFailurePlan,
   buildDashboardMutationPlan,
+  buildDashboardMutationExecutionEvidencePlan,
   buildDashboardMutationRuntimeReadinessPlan,
   buildDomainEventAuditReadinessPlan,
   buildDomainEventAuditTransactionEvidencePlan,
@@ -367,6 +370,260 @@ describe("booking readiness", () => {
     expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/dashboard test -- dashboard-mutations");
     expect(plan.requiredEvidence).toContain("tenant isolation and RBAC denial test output for dashboard mutations");
     expect(plan.blockers).toContain("Disabled dashboard action placeholders must be replaced by gated actions before runtime readiness.");
+  });
+
+  it("blocks dashboard mutation execution evidence until routes, transactions, RBAC, rollback, UI states, CI, and artifacts exist", () => {
+    const plan = buildDashboardMutationExecutionEvidencePlan({
+      packageScripts: { test: "vitest run" },
+      bookingTestsPassed: true,
+      bookingTypecheckPassed: false,
+      dashboardTypecheckPassed: false,
+      dashboardBuildPassed: false,
+      serverActionsImplemented: ["accept", "decline"],
+      apiRoutesImplemented: ["accept"],
+      routeTestsPassed: ["accept"],
+      prismaTransactionsPassed: false,
+      idempotencyPersistencePassed: false,
+      auditLogPersistencePassed: false,
+      tenantIsolationTestsPassed: false,
+      rbacDenialTestsPassed: false,
+      providerRollbackTestsPassed: false,
+      disabledPlaceholdersRemoved: false,
+      uiFeedbackStatesPassed: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.missingServerActions).toContain("create_deposit_session");
+    expect(plan.missingApiRoutes).toContain("rollback_release");
+    expect(plan.missingRouteTests).toContain("update_settings");
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "dashboard mutation server-action/API route tests",
+      "dashboard mutation Prisma transaction tests",
+      "dashboard mutation tenant-isolation and RBAC tests",
+      "provider mutation rollback/retry tests",
+      "dashboard mutation UI feedback-state tests",
+    ]));
+    expect(plan.requiredControls).toContain("Use buildDashboardMutationPlan before every server action or API mutation side effect.");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "server action, API route, and route-test matrix for every dashboard mutation",
+      "Prisma transaction, idempotency, and AuditLog persistence evidence",
+      "tenant-isolation and RBAC-denial mutation test evidence",
+      "provider rollback/retry evidence for storage, Stripe, notification, calendar, release, and settings actions",
+      "gated mutation UI replacement plus loading/success/denial/failure/retry state evidence",
+      "dashboard typecheck/build, CI, and secret-safe artifact evidence",
+    ]));
+    expect(plan.blockers).toContain("Disabled dashboard placeholders must be replaced with gated mutation UI.");
+    expect(plan.blockers).toContain("Dashboard mutation artifacts must be redacted and free of secrets, provider tokens, raw PII, medical notes, payment data, and private file URLs.");
+  });
+
+  it("marks dashboard mutation execution evidence ready when routes, transactions, RBAC, rollback, UI states, CI, and artifacts align", () => {
+    const allActions = [
+      "accept",
+      "decline",
+      "request_changes",
+      "mark_deposit_paid",
+      "confirm_appointment",
+      "complete",
+      "create_reference_upload_intent",
+      "create_deposit_session",
+      "send_client_notification",
+      "create_calendar_hold",
+      "publish_travel_stop",
+      "publish_portfolio_item",
+      "toggle_feature_flag",
+      "rollback_release",
+      "update_settings",
+    ] as const;
+    const plan = buildDashboardMutationExecutionEvidencePlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      bookingTestsPassed: true,
+      bookingTypecheckPassed: true,
+      dashboardTypecheckPassed: true,
+      dashboardBuildPassed: true,
+      serverActionsImplemented: allActions,
+      apiRoutesImplemented: allActions,
+      routeTestsPassed: allActions,
+      prismaTransactionsPassed: true,
+      idempotencyPersistencePassed: true,
+      auditLogPersistencePassed: true,
+      tenantIsolationTestsPassed: true,
+      rbacDenialTestsPassed: true,
+      providerRollbackTestsPassed: true,
+      disabledPlaceholdersRemoved: true,
+      uiFeedbackStatesPassed: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      missingServerActions: [],
+      missingApiRoutes: [],
+      missingRouteTests: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredControls).toContain("Replace disabled placeholders with gated UI actions and explicit loading/success/denial/failure/retry states.");
+  });
+
+  it("blocks booking/contact runtime evidence until route, UI, persistence, provider, E2E, CI, and artifact proof exist", () => {
+    const plan = buildBookingContactRuntimeEvidencePlan({
+      packageScripts: { test: "vitest run" },
+      bookingTestsPassed: true,
+      bookingTypecheckPassed: false,
+      webTypecheckPassed: false,
+      webBuildPassed: false,
+      bookingRouteUsesPostSubmitPlan: false,
+      confirmationUiUsesWorkflowState: false,
+      contactFormPersistenceConfigured: false,
+      databasePersistenceIntegrationPassed: false,
+      tenantIsolationIntegrationPassed: false,
+      referenceUploadHandoffGated: true,
+      depositHandoffGated: false,
+      notificationHandoffGated: false,
+      calendarHandoffGated: false,
+      noLivePaymentBoundaryPreserved: false,
+      browserE2ePassed: false,
+      apiE2ePassed: false,
+      providerSandboxEvidenceCaptured: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "booking/contact API E2E tests",
+      "booking/contact browser E2E tests",
+      "provider sandbox handoff boundary tests",
+    ]));
+    expect(plan.requiredControls).toContain("Preserve no-live-payment behavior until Stripe sandbox credentials and reviewed deposit copy are configured.");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "public route, confirmation UI, and contact persistence wiring evidence",
+      "tenant-scoped booking/contact database integration evidence",
+      "provider-gated upload, deposit, notification, calendar, and no-live-payment boundary evidence",
+      "browser E2E, API E2E, and provider sandbox transcript evidence",
+      "web typecheck/build, CI, and secret-safe artifact evidence",
+    ]));
+    expect(plan.blockers).toContain("Contact form submissions must persist through a tenant-scoped pathway with audit metadata.");
+    expect(plan.blockers).toContain("Deposit handoff must preserve the no-live-payment boundary until Stripe test credentials and sandbox evidence exist.");
+    expect(plan.blockers).toContain("Booking/contact artifacts must be redacted and free of secrets, raw medical notes, payment data, provider tokens, and private file URLs.");
+  });
+
+  it("marks booking/contact runtime evidence ready when persistence, providers, E2E, CI, and artifacts align", () => {
+    const plan = buildBookingContactRuntimeEvidencePlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      bookingTestsPassed: true,
+      bookingTypecheckPassed: true,
+      webTypecheckPassed: true,
+      webBuildPassed: true,
+      bookingRouteUsesPostSubmitPlan: true,
+      confirmationUiUsesWorkflowState: true,
+      contactFormPersistenceConfigured: true,
+      databasePersistenceIntegrationPassed: true,
+      tenantIsolationIntegrationPassed: true,
+      referenceUploadHandoffGated: true,
+      depositHandoffGated: true,
+      notificationHandoffGated: true,
+      calendarHandoffGated: true,
+      noLivePaymentBoundaryPreserved: true,
+      browserE2ePassed: true,
+      apiE2ePassed: true,
+      providerSandboxEvidenceCaptured: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredControls).toContain("Persist booking/contact submissions before creating upload, deposit, notification, or calendar handoff work.");
+  });
+
+  it("blocks booking provider handoff evidence until accepted gates, workers, provider sandboxes, rollback, CI, and artifacts exist", () => {
+    const plan = buildBookingProviderHandoffRuntimeEvidencePlan({
+      packageScripts: { test: "vitest run" },
+      bookingTestsPassed: true,
+      bookingTypecheckPassed: false,
+      paymentsTestsPassed: false,
+      notificationsTestsPassed: false,
+      calendarTestsPassed: false,
+      acceptedBookingGateEnforced: false,
+      persistedWorkerQueueConfigured: false,
+      referenceUploadWorkerExecuted: false,
+      stripeDepositSessionSandboxPassed: false,
+      notificationQueueDeliverySandboxPassed: false,
+      calendarHoldSandboxPassed: false,
+      auditPayloadsPersisted: false,
+      retryPolicyVerified: false,
+      rollbackPathsVerified: false,
+      operatorReviewQueueConfigured: false,
+      providerIdempotencyConfigured: false,
+      providerSandboxEvidenceCaptured: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "Stripe CLI deposit session sandbox test",
+      "email/SMS/push notification sandbox delivery tests",
+      "Google Calendar tentative hold sandbox test",
+      "persisted provider worker execution tests",
+      "provider rollback/retry integration tests",
+    ]));
+    expect(plan.requiredControls).toContain("Create Stripe deposit sessions only after accepted booking state and policy approval.");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "accepted-booking gate, persisted worker queue, and provider idempotency evidence",
+      "reference upload, Stripe, notification, and calendar sandbox execution evidence",
+      "audit persistence, retry, rollback, and operator-review queue evidence",
+      "booking, payments, notifications, and calendar package test/typecheck evidence",
+      "provider sandbox, CI, and secret-safe artifact evidence",
+    ]));
+    expect(plan.blockers).toContain("Deposit and calendar handoffs must run only after an accepted booking state.");
+    expect(plan.blockers).toContain("Stripe deposit session sandbox test must pass without live-payment mode.");
+    expect(plan.blockers).toContain("Provider handoff artifacts must be redacted and free of secrets, provider tokens, payment data, private URLs, and raw client PII.");
+  });
+
+  it("marks booking provider handoff evidence ready when workers, sandboxes, rollback, CI, and artifacts align", () => {
+    const plan = buildBookingProviderHandoffRuntimeEvidencePlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      bookingTestsPassed: true,
+      bookingTypecheckPassed: true,
+      paymentsTestsPassed: true,
+      notificationsTestsPassed: true,
+      calendarTestsPassed: true,
+      acceptedBookingGateEnforced: true,
+      persistedWorkerQueueConfigured: true,
+      referenceUploadWorkerExecuted: true,
+      stripeDepositSessionSandboxPassed: true,
+      notificationQueueDeliverySandboxPassed: true,
+      calendarHoldSandboxPassed: true,
+      auditPayloadsPersisted: true,
+      retryPolicyVerified: true,
+      rollbackPathsVerified: true,
+      operatorReviewQueueConfigured: true,
+      providerIdempotencyConfigured: true,
+      providerSandboxEvidenceCaptured: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredControls).toContain("Persist audit payloads and idempotency keys before invoking external providers.");
   });
 
   it("summarizes domain event and audit readiness across booking, payment, transactions, idempotency, and rollback", () => {

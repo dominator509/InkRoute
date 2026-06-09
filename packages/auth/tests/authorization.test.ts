@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertPermission,
   buildAuthSessionTenantGuardRuntimeReadinessPlan,
+  buildDashboardAuthGuardEvidencePlan,
   buildDashboardLaunchEvidencePlan,
   buildDashboardReadinessPlan,
   buildDomainAuthorizationRouteEvidencePlan,
@@ -730,6 +731,83 @@ describe("auth authorization helpers", () => {
     });
     expect(plan.requiredCommands).toContain("CustomRole database loading route tests");
     expect(plan.requiredControls).toContain("Apply route guards before dashboard/API/server-action data loading or mutation side effects.");
+  });
+
+  it("blocks dashboard auth guard evidence until provider sessions, middleware, layouts, DB roles, browser smoke, CI, and safe artifacts exist", () => {
+    const plan = buildDashboardAuthGuardEvidencePlan({
+      packageScripts: { test: "vitest run" },
+      authTestsPassed: true,
+      authTypecheckPassed: false,
+      dashboardTypecheckPassed: false,
+      dashboardBuildPassed: false,
+      authProviderSessionsConfigured: false,
+      dashboardMiddlewareEnforcesGuard: false,
+      protectedLayoutEnforcesGuard: false,
+      dashboardApiHelpersEnforceGuard: false,
+      tenantMembershipDbLookupConfigured: false,
+      customRoleDbLookupConfigured: false,
+      unauthorizedStatesImplemented: false,
+      authAuditLogsPersisted: false,
+      browserLoginLogoutPassed: false,
+      browserTenantSwitchPassed: false,
+      browserCrossTenantDenialPassed: false,
+      noStoreCacheVerified: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
+      "dashboard middleware auth guard tests",
+      "dashboard protected layout auth guard tests",
+      "dashboard API auth guard tests",
+      "browser dashboard login/logout smoke",
+      "browser dashboard cross-tenant denial smoke",
+    ]));
+    expect(plan.requiredControls).toContain("Apply middleware, protected layout, and API helper guards before private reads or mutations.");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "provider-backed session plus TenantMember/CustomRole database lookup evidence",
+      "dashboard middleware, protected layout, and API helper guard adoption evidence",
+      "unauthorized state, redacted AuditLog, and no-store cache evidence",
+      "browser login/logout, tenant-switch, and cross-tenant denial evidence",
+      "dashboard typecheck/build, CI, and secret-safe artifact evidence",
+    ]));
+    expect(plan.blockers).toContain("Dashboard middleware must enforce auth and tenant guard decisions before route rendering.");
+    expect(plan.blockers).toContain("Browser cross-tenant denial evidence must prove private tenant data is not exposed.");
+    expect(plan.blockers).toContain("Dashboard auth guard artifacts must be redacted and free of secrets, session tokens, raw PII, medical, and payment data.");
+  });
+
+  it("marks dashboard auth guard evidence ready when provider sessions, guards, browser smoke, CI, and artifacts align", () => {
+    const plan = buildDashboardAuthGuardEvidencePlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      authTestsPassed: true,
+      authTypecheckPassed: true,
+      dashboardTypecheckPassed: true,
+      dashboardBuildPassed: true,
+      authProviderSessionsConfigured: true,
+      dashboardMiddlewareEnforcesGuard: true,
+      protectedLayoutEnforcesGuard: true,
+      dashboardApiHelpersEnforceGuard: true,
+      tenantMembershipDbLookupConfigured: true,
+      customRoleDbLookupConfigured: true,
+      unauthorizedStatesImplemented: true,
+      authAuditLogsPersisted: true,
+      browserLoginLogoutPassed: true,
+      browserTenantSwitchPassed: true,
+      browserCrossTenantDenialPassed: true,
+      noStoreCacheVerified: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredControls).toContain("Set no-store cache policy on protected dashboard responses.");
   });
 
   it("blocks domain authorization route evidence until DB roles, route guards, role matrices, audits, CSRF, revocation, CI, and safe artifacts exist", () => {
