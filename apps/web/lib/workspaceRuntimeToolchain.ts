@@ -14,6 +14,80 @@ export interface WorkspaceRuntimeToolchainMatrixEntry {
   readonly status: WorkspaceRuntimeToolchainStatus;
 }
 
+export interface WorkspaceRuntimeToolchainRunPersistenceContract {
+  readonly model: "WorkspaceRuntimeToolchainRun";
+  readonly tenantRelation: "workspaceRuntimeToolchainRuns";
+  readonly migration: "20260609032100_add_workspace_runtime_toolchain_runs";
+  readonly jsonFields: readonly [
+    "commandMatrix",
+    "generatedReportManifest",
+    "artifactManifest",
+    "productionBlockerManifest",
+  ];
+  readonly evidenceBooleans: readonly [
+    "toolchainAuditPassed",
+    "packageTypecheckPassed",
+    "packageTestsPassed",
+    "workspaceToolchainPassed",
+    "workspaceAllPassed",
+    "dependencyInstallEvidenceCaptured",
+    "webBuildEvidenceCaptured",
+    "dashboardBuildEvidenceCaptured",
+    "ciWorkspaceJobPassed",
+    "ciEvidenceCaptured",
+    "productionBlockersVisible",
+  ];
+  readonly artifactFields: readonly [
+    "packageTypecheckArtifactPath",
+    "packageTestArtifactPath",
+    "workspaceToolchainArtifactPath",
+    "workspaceAllArtifactPath",
+    "dependencyInstallArtifactPath",
+    "webBuildArtifactPath",
+    "dashboardBuildArtifactPath",
+    "ciWorkspaceJobArtifactPath",
+    "productionBlockerArtifactPath",
+    "ciRunUrl",
+  ];
+}
+
+export const workspaceRuntimeToolchainRunPersistenceContract: WorkspaceRuntimeToolchainRunPersistenceContract = {
+  model: "WorkspaceRuntimeToolchainRun",
+  tenantRelation: "workspaceRuntimeToolchainRuns",
+  migration: "20260609032100_add_workspace_runtime_toolchain_runs",
+  jsonFields: [
+    "commandMatrix",
+    "generatedReportManifest",
+    "artifactManifest",
+    "productionBlockerManifest",
+  ],
+  evidenceBooleans: [
+    "toolchainAuditPassed",
+    "packageTypecheckPassed",
+    "packageTestsPassed",
+    "workspaceToolchainPassed",
+    "workspaceAllPassed",
+    "dependencyInstallEvidenceCaptured",
+    "webBuildEvidenceCaptured",
+    "dashboardBuildEvidenceCaptured",
+    "ciWorkspaceJobPassed",
+    "ciEvidenceCaptured",
+    "productionBlockersVisible",
+  ],
+  artifactFields: [
+    "packageTypecheckArtifactPath",
+    "packageTestArtifactPath",
+    "workspaceToolchainArtifactPath",
+    "workspaceAllArtifactPath",
+    "dependencyInstallArtifactPath",
+    "webBuildArtifactPath",
+    "dashboardBuildArtifactPath",
+    "ciWorkspaceJobArtifactPath",
+    "productionBlockerArtifactPath",
+    "ciRunUrl",
+  ],
+};
+
 export const workspaceRuntimeToolchainCommands = [
   "pnpm --filter @inkroute/workspace typecheck",
   "pnpm --filter @inkroute/workspace test",

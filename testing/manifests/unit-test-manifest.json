@@ -2184,13 +2184,13 @@
       "file": "apps/web/tests/workspace-runtime-toolchain-static.test.ts",
       "priority": "medium",
       "verifies": [
-        "GAP-130 workspace runtime toolchain matrix covers @inkroute/workspace typecheck/test, workspace:toolchain, workspace:all, dependency install, web build, dashboard build, CI workspace job, generated reports, and production-blocker visibility",
+        "GAP-130 WorkspaceRuntimeToolchainRun Prisma model and app row contract plus workspace runtime toolchain matrix covers @inkroute/workspace typecheck/test, workspace:toolchain, workspace:all, dependency install, web build, dashboard build, CI workspace job, generated reports, and production-blocker visibility",
         "GAP-130 package scripts, toolchain contract, verifier, helper tests, CI labels, artifact paths, and tracker row remain wired before live runtime proof",
         "GAP-130 static readiness keeps generated reports present while preserving blockers for package commands, workspace commands, install/build, CI, and artifacts"
       ],
       "blockedBy": [
         "Static workspace runtime toolchain test execution pending",
-        "@inkroute/workspace typecheck/test and workspace:toolchain/all proof pending",
+        "Provider-backed WorkspaceRuntimeToolchainRun transaction plus @inkroute/workspace typecheck/test and workspace:toolchain/all proof pending",
         "pnpm install plus web/dashboard build evidence pending",
         "GitHub Actions workspace job and artifact proof pending"
       ]

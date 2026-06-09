@@ -7,6 +7,7 @@ import {
   workspaceRuntimeToolchainGeneratedReports,
   workspaceRuntimeToolchainMatrix,
   workspaceRuntimeToolchainReadiness,
+  workspaceRuntimeToolchainRunPersistenceContract,
 } from "../lib/workspaceRuntimeToolchain";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -18,6 +19,10 @@ describe("workspace runtime toolchain contract", () => {
   const toolchainContract = readRepoFile("docs/workspace/manifests/workspace-toolchain-readiness-contract.json");
   const toolchainVerifier = readRepoFile("scripts/workspace/verify-workspace-toolchain.mjs");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const workspaceRuntimeToolchainMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609032100_add_workspace_runtime_toolchain_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -46,6 +51,36 @@ describe("workspace runtime toolchain contract", () => {
     ]);
     expect(workspaceRuntimeToolchainArtifactPaths).toContain("coverage/workspace-runtime-toolchain.json");
     expect(workspaceRuntimeToolchainArtifactPaths).toContain("test-results/workspace-runtime-toolchain");
+  });
+
+  it("pins the WorkspaceRuntimeToolchainRun persistence model and migration", () => {
+    expect(workspaceRuntimeToolchainRunPersistenceContract.model).toBe("WorkspaceRuntimeToolchainRun");
+    expect(workspaceRuntimeToolchainRunPersistenceContract.tenantRelation).toBe("workspaceRuntimeToolchainRuns");
+    expect(workspaceRuntimeToolchainRunPersistenceContract.migration).toBe(
+      "20260609032100_add_workspace_runtime_toolchain_runs",
+    );
+    expect(workspaceRuntimeToolchainRunPersistenceContract.jsonFields).toEqual([
+      "commandMatrix",
+      "generatedReportManifest",
+      "artifactManifest",
+      "productionBlockerManifest",
+    ]);
+    expect(workspaceRuntimeToolchainRunPersistenceContract.evidenceBooleans).toContain("packageTypecheckPassed");
+    expect(workspaceRuntimeToolchainRunPersistenceContract.evidenceBooleans).toContain("workspaceAllPassed");
+    expect(workspaceRuntimeToolchainRunPersistenceContract.evidenceBooleans).toContain("productionBlockersVisible");
+    expect(workspaceRuntimeToolchainRunPersistenceContract.artifactFields).toContain("dependencyInstallArtifactPath");
+    expect(workspaceRuntimeToolchainRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(prismaSchema).toContain("workspaceRuntimeToolchainRuns WorkspaceRuntimeToolchainRun[]");
+    expect(prismaSchema).toContain("model WorkspaceRuntimeToolchainRun");
+    expect(prismaSchema).toContain("generatedReportManifest");
+    expect(prismaSchema).toContain("dashboardBuildEvidenceCaptured");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(workspaceRuntimeToolchainMigration).toContain('CREATE TABLE "WorkspaceRuntimeToolchainRun"');
+    expect(workspaceRuntimeToolchainMigration).toContain('"commandMatrix" JSONB NOT NULL');
+    expect(workspaceRuntimeToolchainMigration).toContain('"productionBlockersVisible" BOOLEAN NOT NULL DEFAULT false');
+    expect(workspaceRuntimeToolchainMigration).toContain(
+      'CREATE UNIQUE INDEX "WorkspaceRuntimeToolchainRun_tenantId_runId_key"',
+    );
   });
 
   it("keeps workspace package, scripts, contract, verifier, and helper tests wired", () => {
@@ -88,6 +123,8 @@ describe("workspace runtime toolchain contract", () => {
     expect(ciWorkflow).toContain("workspace-runtime-toolchain-static.test.ts");
     expect(ciWorkflow).toContain("workspace-runtime-toolchain-artifacts");
     expect(unitManifest).toContain("unit-web-workspace-runtime-toolchain-static");
+    expect(unitManifest).toContain("WorkspaceRuntimeToolchainRun Prisma model and app row contract");
+    expect(gapTracker).toContain("WorkspaceRuntimeToolchainRun");
     expect(gapTracker).toContain("apps/web/lib/workspaceRuntimeToolchain.ts");
     expect(gapTracker).toContain("live package typecheck/test, workspace commands, install/build, CI, and artifact proof remain open");
   });

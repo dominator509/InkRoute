@@ -394,6 +394,7 @@ model Tenant {
   prDiffEvidenceRuns PrDiffEvidenceRun[]
   semanticDocumentationRuns SemanticDocumentationRun[]
   requiredChecksRuns RequiredChecksRun[]
+  workspaceRuntimeToolchainRuns WorkspaceRuntimeToolchainRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2537,6 +2538,46 @@ model RequiredChecksRun {
   tenant                             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                          DateTime @default(now())
   updatedAt                          DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model WorkspaceRuntimeToolchainRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String?
+  status                              String
+  commandMatrix                       Json
+  generatedReportManifest             Json
+  artifactManifest                    Json
+  productionBlockerManifest           Json
+  toolchainAuditPassed                Boolean  @default(false)
+  packageTypecheckPassed              Boolean  @default(false)
+  packageTestsPassed                  Boolean  @default(false)
+  workspaceToolchainPassed            Boolean  @default(false)
+  workspaceAllPassed                  Boolean  @default(false)
+  dependencyInstallEvidenceCaptured   Boolean  @default(false)
+  webBuildEvidenceCaptured            Boolean  @default(false)
+  dashboardBuildEvidenceCaptured      Boolean  @default(false)
+  ciWorkspaceJobPassed                Boolean  @default(false)
+  ciEvidenceCaptured                  Boolean  @default(false)
+  productionBlockersVisible           Boolean  @default(false)
+  packageTypecheckArtifactPath        String?
+  packageTestArtifactPath             String?
+  workspaceToolchainArtifactPath      String?
+  workspaceAllArtifactPath            String?
+  dependencyInstallArtifactPath       String?
+  webBuildArtifactPath                String?
+  dashboardBuildArtifactPath          String?
+  ciWorkspaceJobArtifactPath          String?
+  productionBlockerArtifactPath       String?
+  ciRunUrl                            String?
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])
