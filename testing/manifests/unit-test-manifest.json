@@ -1526,6 +1526,23 @@
                                          "DB-backed release/feature-flag route integration proof pending",
                                          "Release-governance protected-environment orchestration proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-dashboard-cicd-deployment-automation-static",
+                       "file":  "apps/dashboard/tests/cicd-deployment-automation-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "GAP-089 release-governance workflow keeps preview/staging/production jobs environment-gated and disabled until protected environments/secrets exist",
+                                        "GAP-089 dashboard deployment readiness route stores ReleaseRecord CI-result metadata, provider gate matrix, and redacted artifact paths without provider mutation",
+                                        "GAP-089 CI retains Vercel, Prisma, EAS, Sentry, Search Console, ReleaseRecord result write, and live workflow dispatch artifact paths"
+                                    ],
+                       "blockedBy":  [
+                                         "Static CI/CD deployment automation test execution pending",
+                                         "Protected GitHub environments and secrets pending",
+                                         "Preview/staging/production deploy jobs still disabled",
+                                         "Live release-governance workflow dispatch proof pending",
+                                         "Provider deployment smoke evidence pending"
+                                     ]
                    }
                ]
 }

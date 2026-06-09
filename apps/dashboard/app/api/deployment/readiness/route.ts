@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import {
   buildDeploymentPlan,
   buildHandoffTasks,
@@ -8,6 +8,12 @@ import {
 import { deploymentReadinessMutationSchema, type DeploymentReadinessMutationInput } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../../dashboardAuth";
+import {
+  buildCicdDeploymentAutomationContract,
+  buildDeploymentProviderGateMatrix,
+  buildReleaseRecordCiResultMetadata,
+  cicdDeploymentAutomationArtifactPaths,
+} from "../../../../lib/cicdDeploymentAutomation";
 
 declare const process: { env: Record<string, string | undefined> };
 
@@ -32,6 +38,8 @@ type DeploymentGetPayload = {
   checklist: ReturnType<typeof buildProductionLaunchChecklist>;
   handoffTasks: ReturnType<typeof buildHandoffTasks>;
   gapIds: string[];
+  cicdAutomation?: ReturnType<typeof buildCicdDeploymentAutomationContract>;
+  providerGates?: ReturnType<typeof buildDeploymentProviderGateMatrix>;
   boundary: string;
 };
 
@@ -50,6 +58,10 @@ type DeploymentPostPayload = {
   auditId?: string;
   persistence: "database" | "local-fallback";
   gapIds: string[];
+  ciResult?: ReturnType<typeof buildReleaseRecordCiResultMetadata>;
+  cicdAutomation?: ReturnType<typeof buildCicdDeploymentAutomationContract>;
+  providerGates?: ReturnType<typeof buildDeploymentProviderGateMatrix>;
+  artifactPaths?: typeof cicdDeploymentAutomationArtifactPaths;
 };
 
 const deploymentGapIds = ["GAP-014", "GAP-015", "GAP-089", "GAP-114", "GAP-115"];
@@ -134,6 +146,8 @@ function buildPayload(actor: ReturnType<typeof resolveDashboardActor>, environme
     checklist: buildProductionLaunchChecklist(),
     handoffTasks: buildHandoffTasks(),
     gapIds: deploymentGapIds,
+    cicdAutomation: buildCicdDeploymentAutomationContract(),
+    providerGates: buildDeploymentProviderGateMatrix(),
     boundary:
       "Readiness route is now auth-guarded with tenant scope and audit-ready metadata, but deployment actions remain external to this API until CI/CD environments and provider credentials are provisioned.",
   };
@@ -165,6 +179,17 @@ function buildPostSuccessPayload(
     persistence: actor.source === "local-fallback" ? "local-fallback" : "database",
     ...(auditId ? { auditId } : {}),
     gapIds: deploymentGapIds,
+    ciResult: buildReleaseRecordCiResultMetadata({
+      workflowRunId: input.requestId,
+      workflowRunUrl: undefined,
+      releaseVersion: undefined,
+      releaseChannel: input.targetEnvironment,
+      commitSha: undefined,
+      status: policy.implemented ? "requested" : "blocked",
+    }),
+    cicdAutomation: buildCicdDeploymentAutomationContract(),
+    providerGates: buildDeploymentProviderGateMatrix(),
+    artifactPaths: cicdDeploymentAutomationArtifactPaths,
     ...(policy.implemented ? {} : {
       warning:
         "This response indicates blocked or staged workflow actions only; this API records request metadata for auditability but does not perform external provider calls.",
@@ -204,6 +229,9 @@ export async function GET(request: NextRequest) {
           productionBlocked: environment.productionBlocked,
           missingRequiredNames: environment.missingRequiredNames,
           redactedFields: ["DATABASE_URL", "DIRECT_URL", "AUTH_SECRET", "STRIPE_SECRET_KEY", "SENTRY_AUTH_TOKEN", "VERCEL_TOKEN"],
+          cicdAutomation: buildCicdDeploymentAutomationContract(),
+          providerGates: buildDeploymentProviderGateMatrix(),
+          artifactPaths: cicdDeploymentAutomationArtifactPaths,
         },
       },
       select: { id: true },
@@ -272,6 +300,17 @@ export async function POST(request: NextRequest) {
           blockerIds: input.blockerIds ?? [],
           source: actor.source,
           implemented: policy.implemented,
+          ciResult: buildReleaseRecordCiResultMetadata({
+            workflowRunId: input.requestId,
+            workflowRunUrl: undefined,
+            releaseVersion: undefined,
+            releaseChannel: input.targetEnvironment,
+            commitSha: undefined,
+            status: policy.implemented ? "requested" : "blocked",
+          }),
+          cicdAutomation: buildCicdDeploymentAutomationContract(),
+          providerGates: buildDeploymentProviderGateMatrix(),
+          artifactPaths: cicdDeploymentAutomationArtifactPaths,
         },
       },
     });
@@ -286,3 +325,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: { code: "DEPLOYMENT_READINESS_FAILED", message: "Could not persist deployment readiness request." } }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
 }
+
+
+

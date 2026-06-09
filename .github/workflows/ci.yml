@@ -363,6 +363,26 @@ jobs:
             coverage/release-db-backed-route-proof.json
             test-results/release-persistence-rbac
           if-no-files-found: warn
+      - name: Run Phase 12 CI/CD deployment automation contracts
+        run: pnpm --filter @inkroute/releases test && pnpm vitest run packages/releases/tests/release-governance-workflow.test.ts apps/dashboard/tests/deployment-readiness-route-static.test.ts apps/dashboard/tests/cicd-deployment-automation-static.test.ts
+
+      - name: Upload CI/CD deployment automation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cicd-deployment-automation-artifacts
+          path: |
+            coverage/cicd-deployment-automation.json
+            coverage/cicd-protected-environments-redacted.json
+            coverage/cicd-vercel-deploy-smoke.json
+            coverage/cicd-prisma-migrate-dry-run.json
+            coverage/cicd-eas-update-publish-redacted.json
+            coverage/cicd-sentry-artifact-upload-redacted.json
+            coverage/cicd-search-console-submission-redacted.json
+            coverage/cicd-release-record-result-write.json
+            coverage/cicd-live-workflow-dispatch-redacted.json
+            test-results/cicd-deployment-automation
+          if-no-files-found: warn
       - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
@@ -411,6 +431,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
