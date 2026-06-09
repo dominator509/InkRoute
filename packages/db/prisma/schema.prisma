@@ -363,6 +363,8 @@ model Tenant {
   signedUrlGrants  SignedUrlGrant[]
   privacyRequests  PrivacyRequest[]
   retentionTombstones RetentionTombstone[]
+  legalDocumentVersions LegalDocumentVersion[]
+  legalAcceptanceAudits LegalAcceptanceAudit[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -407,6 +409,7 @@ model User {
   auditLogs             AuditLog[]
   releases              ReleaseRecord[]
   privacyRequests       PrivacyRequest[]
+  legalAcceptanceAudits LegalAcceptanceAudit[]
 }
 
 model TenantMember {
@@ -1425,6 +1428,51 @@ model RetentionTombstone {
   @@index([tenantId, sourceRecordType, sourceRecordId])
   @@index([tenantId, category])
   @@index([tenantId, restoreReplayAfter])
+}
+
+model LegalDocumentVersion {
+  id                   String   @id @default(cuid())
+  tenantId             String
+  documentType         String
+  jurisdiction         String
+  version              String
+  reviewedCopyHash     String
+  reviewerName         String?
+  reviewerFirm         String?
+  approvedAt           DateTime?
+  effectiveAt          DateTime?
+  supersededAt         DateTime?
+  noindexUntilApproved Boolean  @default(true)
+  rollbackFromVersion  String?
+  evidenceObjectKey    String?
+  tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([tenantId, documentType, version])
+  @@index([tenantId, documentType, approvedAt])
+  @@index([tenantId, jurisdiction])
+}
+
+model LegalAcceptanceAudit {
+  id                     String   @id @default(cuid())
+  tenantId               String
+  legalDocumentVersionId String
+  acceptedByUserId       String?
+  subjectEmailHash       String?
+  acceptanceContext      String
+  acceptedVersion        String
+  ipHash                 String?
+  userAgentHash          String?
+  metadata               Json?
+  tenant                 Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  legalDocumentVersion   LegalDocumentVersion @relation(fields: [legalDocumentVersionId], references: [id], onDelete: Cascade)
+  acceptedByUser         User?    @relation(fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+  createdAt              DateTime @default(now())
+
+  @@index([tenantId, legalDocumentVersionId])
+  @@index([tenantId, acceptedVersion])
+  @@index([tenantId, createdAt])
 }
 
 model ErrorReport {

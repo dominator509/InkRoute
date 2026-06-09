@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildLegalVersionAcceptancePersistenceContract,
   legalDocumentRuntimeContract,
   legalReviewArtifactPaths,
   legalReviewCommands,
   legalReviewEvidencePreview,
+  legalVersionAcceptancePersistencePreview,
   paymentPolicyLegalRuntimeContract,
 } from "../lib/legalReviewEvidence";
 
@@ -31,6 +33,42 @@ describe("GAP-100 legal review evidence contract", () => {
     expect(legalReviewEvidencePreview.requiredTopics).toEqual(
       expect.arrayContaining(["privacy_policy", "terms_of_service", "tattoo_consent", "sms_opt_in_stop_help", "deposits_no_shows_refunds"]),
     );
+  });
+
+  it("pins durable legal document versions, acceptance audits, approval gates, and redacted audit writes", () => {
+    const schema = readWorkspaceFile("packages/db/prisma/schema.prisma");
+    const contract = buildLegalVersionAcceptancePersistenceContract({
+      document: {
+        tenantId: "tenant_demo",
+        documentType: "terms_of_service",
+        jurisdiction: "US-STATE-BY-STATE",
+        version: "legal-draft-2026-06",
+        reviewedCopyHash: "sha256:pending-attorney-review",
+        noindexUntilApproved: true,
+        rollbackFromVersion: "placeholder-2026-05",
+        evidenceObjectKey: "legal/tenant_demo/terms/redacted-review.json",
+      },
+      acceptance: {
+        tenantId: "tenant_demo",
+        legalDocumentVersionId: "legal_document_version_demo",
+        acceptedByUserId: "user_demo",
+        subjectEmailHash: "sha256:redacted",
+        acceptanceContext: "booking_request",
+        acceptedVersion: "legal-draft-2026-06",
+        ipHash: "sha256:redacted",
+        userAgentHash: "sha256:redacted",
+      },
+    });
+
+    expect(schema).toContain("model LegalDocumentVersion");
+    expect(schema).toContain("model LegalAcceptanceAudit");
+    expect(schema).toContain("noindexUntilApproved");
+    expect(schema).toContain("@@unique([tenantId, documentType, version])");
+    expect(contract.transactionWrites).toEqual(["LegalDocumentVersion", "LegalAcceptanceAudit", "AuditLog"]);
+    expect(contract.approvalGate).toBe("noindex_until_approved_at_and_reviewed_copy_hash");
+    expect(contract.redactedFields).toContain("subjectEmailHash");
+    expect(contract.tenantIsolationKey).toBe("tenantId");
+    expect(legalVersionAcceptancePersistencePreview.documentModelName).toBe("LegalDocumentVersion");
   });
 
   it("keeps public legal placeholders and legal handoff packet explicitly blocked before reviewed copy lands", () => {
@@ -78,6 +116,7 @@ describe("GAP-100 legal review evidence contract", () => {
     expect(legalReviewCommands).toContain("consent acceptance audit persistence tests");
     expect(legalReviewCommands).toContain("payment policy reviewed-copy E2E smoke");
     expect(legalReviewArtifactPaths).toContain("coverage/legal-payment-policy-review-redacted.json");
+    expect(manifest).toContain("LegalDocumentVersion and LegalAcceptanceAudit Prisma models and app row contracts are wired");
     expect(ci).toContain("Run Phase 13 legal review evidence contracts");
     expect(ci).toContain("apps/web/tests/legal-review-evidence-static.test.ts");
     expect(ci).toContain("legal-review-evidence-artifacts");

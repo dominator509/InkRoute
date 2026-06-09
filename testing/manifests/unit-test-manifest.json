@@ -1724,14 +1724,14 @@
       "file": "apps/web/tests/legal-review-evidence-static.test.ts",
       "priority": "critical",
       "verifies": [
-        "GAP-100 legal review evidence contract covers attorney approval metadata, jurisdiction policy versions, consent versions, noindex gates, reviewed public copy, acceptance audit persistence, dashboard acceptance UI, route smoke, rollback, and payment policy review evidence",
+        "GAP-100 legal review evidence contract covers attorney approval metadata, jurisdiction policy versions, consent versions, noindex gates, reviewed public copy, LegalDocumentVersion and LegalAcceptanceAudit Prisma models and app row contracts are wired, dashboard acceptance UI, route smoke, rollback, and payment policy review evidence",
         "GAP-100 public legal pages and legal packet remain placeholder/noindex/attorney-review blocked until reviewed copy and approvals exist",
         "GAP-100 CI retains legal packet, attorney approval, versioning, noindex, route smoke, acceptance audit, dashboard UI, payment policy, and rollback artifact paths without storing privileged material"
       ],
       "blockedBy": [
         "Static legal review evidence test execution pending",
         "Attorney approval metadata and reviewed-copy proof pending",
-        "Versioned consent/studio policy and acceptance audit persistence proof pending",
+        "Provider-backed LegalDocumentVersion and LegalAcceptanceAudit transaction execution proof pending",
         "Legal page route smoke and noindex removal proof pending",
         "Payment policy legal/tax review and rollback drill proof pending"
       ]
