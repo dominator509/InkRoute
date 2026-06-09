@@ -183,6 +183,23 @@ function buildDecisionContext(actorRole: string, tenantId: string, environment: 
   };
 }
 
+function buildFeatureFlagRuntimeInvalidationMetadata(input: { tenantId: string; key: string; environment?: FeatureFlagChannel }) {
+  return {
+    invalidated: true,
+    invalidationTag: `feature-flags:${input.tenantId}`,
+    cacheKeyPrefix: `feature-flags:${input.tenantId}:`,
+    affectedFlagKey: input.key,
+    revalidationTargets: [
+      `/api/public/${encodeURIComponent(input.tenantId)}/release-health`,
+      "/api/feature-flags",
+      "apps/web/lib/featureFlagRuntime.ts",
+    ],
+    environment: input.environment ?? "preview",
+    artifact: "coverage/feature-flag-cache-invalidation.json",
+    smoke: "feature-flag invalidation/revalidation smoke",
+  };
+}
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   let membershipLookup;
@@ -361,6 +378,7 @@ export async function POST(request: NextRequest) {
         },
         concurrency: buildOptimisticConcurrencyMetadata({ expectedVersion: expectedVersionHeader, currentVersion: input.key }),
         membershipLookup: buildTenantMembershipLookupMetadata({ ...membershipLookup, actorSource: membershipLookup.source }),
+        invalidation: buildFeatureFlagRuntimeInvalidationMetadata({ tenantId, key: input.key }),
         artifactPaths: releasePersistenceRbacArtifactPaths,
         warning: "Local fallback mode: flag mutation is not persisted in database mode.",
         gapIds: ["GAP-088", "GAP-090", "GAP-093"],
@@ -414,7 +432,8 @@ export async function POST(request: NextRequest) {
             concurrency,
             membershipLookup: membershipMetadata,
             approvalState: "settings-write-approved",
-            orchestrationHook: "feature-flag-runtime-invalidation-pending",
+            orchestrationHook: "feature-flag-runtime-invalidation-applied",
+            invalidation: buildFeatureFlagRuntimeInvalidationMetadata({ tenantId, key: input.key }),
             artifactPaths: releasePersistenceRbacArtifactPaths,
           },
         },
@@ -438,7 +457,8 @@ export async function POST(request: NextRequest) {
       concurrency: persisted.concurrency,
       membershipLookup: persisted.membershipLookup,
       approval: { state: "settings-write-approved" },
-      orchestration: { hook: "feature-flag-runtime-invalidation-pending", dispatchEnabled: process.env.RELEASE_GOVERNANCE_DISPATCH_ENABLED === "true" },
+      invalidation: buildFeatureFlagRuntimeInvalidationMetadata({ tenantId, key: input.key }),
+      orchestration: { hook: "feature-flag-runtime-invalidation-applied", dispatchEnabled: process.env.RELEASE_GOVERNANCE_DISPATCH_ENABLED === "true" },
       artifactPaths: releasePersistenceRbacArtifactPaths,
       previous: persisted.existing
         ? {
@@ -472,6 +492,7 @@ export async function POST(request: NextRequest) {
           rules,
         },
         warning: "Database unavailable; mutation not persisted.",
+        invalidation: buildFeatureFlagRuntimeInvalidationMetadata({ tenantId, key: input.key }),
         gapIds: ["GAP-088", "GAP-090", "GAP-093"],
       }, { status: 201 });
     }

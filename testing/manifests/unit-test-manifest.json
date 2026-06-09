@@ -1558,13 +1558,12 @@
       "verifies": [
         "GAP-090 cached server-side feature flag resolver produces stable tenant cache keys and rollout buckets",
         "GAP-090 provider-worker kill-switch gates are enforced before SMS/payments/mobile OTA/AI side effects and public payloads stay tenant-safe",
-        "GAP-090 release-health route exposes runtime flag cache, invalidation, rollout, provider gate, and artifact metadata without claiming live rollout proof"
+        "GAP-090 release-health route and dashboard write path expose runtime flag cache, invalidation/revalidation, rollout, provider gate, and artifact metadata without claiming live rollout proof"
       ],
       "blockedBy": [
         "Static feature flag runtime integration test execution pending",
         "Real auth-derived tenant/user/role context pending",
         "Provider-worker live kill-switch drill pending",
-        "Cache invalidation/revalidation runtime smoke pending",
         "Live rollout proof pending"
       ]
     },

@@ -15,6 +15,7 @@ import { defaultFeatureFlags } from "@inkroute/releases";
 
 const root = join(__dirname, "..", "..");
 const releaseHealthRoute = readFileSync(join(root, "apps/web/app/api/public/[tenantSlug]/release-health/route.ts"), "utf8");
+const dashboardFeatureFlagRoute = readFileSync(join(root, "apps/dashboard/app/api/feature-flags/route.ts"), "utf8");
 const workflow = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
 const tracker = readFileSync(join(root, "GAP_TRACKER.md"), "utf8");
 
@@ -51,6 +52,10 @@ describe("feature flag runtime integration contract", () => {
     expect(first.cache.cacheHit).toBe(false);
     expect(second.cache.cacheHit).toBe(true);
     expect(invalidation).toEqual({ tenantId: context.tenantId, invalidated: true, invalidationTag: `feature-flags:${context.tenantId}` });
+    expect(dashboardFeatureFlagRoute).toContain("buildFeatureFlagRuntimeInvalidationMetadata");
+    expect(dashboardFeatureFlagRoute).toContain("feature-flag-runtime-invalidation-applied");
+    expect(dashboardFeatureFlagRoute).toContain("coverage/feature-flag-cache-invalidation.json");
+    expect(dashboardFeatureFlagRoute).toContain("feature-flag invalidation/revalidation smoke");
   });
 
   it("threads runtime flags into public release-health payloads", () => {
