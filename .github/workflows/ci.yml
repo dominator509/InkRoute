@@ -1830,6 +1830,36 @@ jobs:
             coverage/phase14-flaky-policy.md
             test-results/phase14-runner
           if-no-files-found: warn
+      - name: Run Phase 2 validator launch adoption runtime contracts
+        run: pnpm --filter @inkroute/validators test && pnpm vitest run apps/web/tests/validator-launch-adoption-runtime-static.test.ts
+
+      - name: Upload Phase 2 validator launch adoption runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validator-launch-adoption-runtime-artifacts
+          path: |
+            coverage/validator-launch-adoption-runtime.json
+            coverage/validator-package-typecheck.txt
+            coverage/validator-package-test.txt
+            coverage/validator-booking-travel-portfolio-payment.json
+            coverage/validator-people-consent-forms-seo.json
+            coverage/validator-messaging-observability-release.json
+            coverage/validator-tenancy-auth-edge-cases.json
+            coverage/validator-dynamic-form-edge-cases.json
+            coverage/validator-public-route-adoption.json
+            coverage/validator-dashboard-route-adoption.json
+            coverage/validator-webhook-route-adoption.json
+            coverage/validator-provider-payload-adoption.json
+            coverage/validator-malformed-payload-routes.json
+            coverage/validator-tenant-scope-routes.json
+            coverage/validator-sensitive-field-policy.json
+            coverage/validator-redaction-encryption-contracts.json
+            coverage/validator-ci-evidence.json
+            coverage/validator-secret-safe-artifacts.json
+            test-results/validator-launch-adoption-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
