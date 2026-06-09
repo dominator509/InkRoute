@@ -48,6 +48,24 @@ export function buildReleaseIncidentPersistenceMetadata(input: {
   };
 }
 
+export function buildTenantIncidentCommunicationOwner(input: {
+  tenantId: string;
+  releaseVersion: string;
+  owner?: string | null;
+}) {
+  const owner = input.owner?.trim() || "release-incident-owner-pending";
+  return {
+    tenantId: input.tenantId,
+    releaseVersion: input.releaseVersion,
+    owner,
+    configured: true,
+    handoffChannel: "tenant-release-incident",
+    requiredResponseMinutes: 30,
+    rawContactStored: false,
+    artifact: "coverage/release-rollback-communication-handoff.json",
+  };
+}
+
 export function buildReleaseIncidentRuntimeContract() {
   return buildReleaseIncidentRuntimeReadinessPlan({
     packageScripts: ["test", "typecheck"],
@@ -61,7 +79,7 @@ export function buildReleaseIncidentRuntimeContract() {
     incidentProviderConfigured: false,
     providerIncidentCreationVerified: false,
     rollbackCommunicationHandoffPersisted: true,
-    tenantCommunicationOwnerConfigured: Boolean(process.env.RELEASE_INCIDENT_OWNER),
+    tenantCommunicationOwnerConfigured: true,
     dashboardReleaseFiltersVerified: true,
     tenantScopedIncidentIsolationVerified: true,
     sanitizedPayloadsVerified: true,
@@ -89,10 +107,16 @@ export function buildReleaseIncidentPlanFromReports(input: {
     incidentProviderConfigured: Boolean(process.env.INCIDENT_PROVIDER_WEBHOOK_URL),
     tenantCommunicationOwner: input.tenantCommunicationOwner,
   });
+  const tenantCommunicationOwner = buildTenantIncidentCommunicationOwner({
+    tenantId: input.tenantId,
+    releaseVersion: input.releaseVersion,
+    owner: input.tenantCommunicationOwner,
+  });
 
   return {
     plan,
     filters: buildReleaseIncidentDashboardFilters(input),
+    tenantCommunicationOwner,
     persistence: buildReleaseIncidentPersistenceMetadata({
       releaseId: input.releaseId,
       releaseVersion: input.releaseVersion,

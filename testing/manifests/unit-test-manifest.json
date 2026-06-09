@@ -1606,7 +1606,7 @@
       "file": "apps/dashboard/tests/release-incident-linkage-static.test.ts",
       "priority": "medium",
       "verifies": [
-        "GAP-093 dashboard release incident route persists tenant-scoped release/report linkage and rollback communication handoff metadata",
+        "GAP-093 dashboard release incident route persists tenant-scoped release/report linkage plus rollback communication and tenant owner handoff metadata",
         "GAP-093 release incident filters, tenant isolation, sanitized payloads, and artifact paths are wired without provider mutation",
         "GAP-093 live Sentry release/source-map evidence and incident provider creation remain explicitly gated"
       ],

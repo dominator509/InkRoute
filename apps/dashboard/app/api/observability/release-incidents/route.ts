@@ -120,6 +120,7 @@ export async function POST(request: NextRequest) {
             ...linkage.persistence,
             dashboardFilters: linkage.filters,
             incidentStatus: linkage.plan.incidentStatus,
+            tenantCommunicationOwner: linkage.tenantCommunicationOwner,
             rollbackCommunicationHandoffPersisted: true,
             tenantScopedIncidentIsolationVerified: true,
             sanitizedPayloadsVerified: true,

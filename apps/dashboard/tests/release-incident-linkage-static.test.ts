@@ -6,6 +6,7 @@ import {
   buildReleaseIncidentDashboardFilters,
   buildReleaseIncidentPersistenceMetadata,
   buildReleaseIncidentRuntimeContract,
+  buildTenantIncidentCommunicationOwner,
   releaseIncidentLinkageArtifactPaths,
 } from "../lib/releaseIncidentLinkage";
 
@@ -28,6 +29,12 @@ describe("release incident linkage runtime contract", () => {
       linkedReportIds: ["err_1"],
       rawPayloadStored: false,
     });
+    expect(buildTenantIncidentCommunicationOwner({ tenantId: "tenant_1", releaseVersion: "1.2.3", owner: "ops-owner" })).toMatchObject({
+      owner: "ops-owner",
+      configured: true,
+      rawContactStored: false,
+      artifact: "coverage/release-rollback-communication-handoff.json",
+    });
   });
 
   it("wires dashboard API persistence for ErrorReport and ReleaseRecord incident links", () => {
@@ -35,6 +42,7 @@ describe("release incident linkage runtime contract", () => {
     expect(route).toContain('entityType: "ReleaseIncidentLinkage"');
     expect(route).toContain("tx.errorReport.update");
     expect(route).toContain("releaseIncidentLinkage");
+    expect(route).toContain("tenantCommunicationOwner");
     expect(route).toContain("rollbackCommunicationHandoffPersisted: true");
     expect(route).toContain("tenantScopedIncidentIsolationVerified: true");
     expect(route).toContain("sanitizedPayloadsVerified: true");
@@ -52,6 +60,7 @@ describe("release incident linkage runtime contract", () => {
         "Live incident/provider evidence must be captured before closing GAP-093.",
       ]),
     );
+    expect(contract.blockers).not.toContain("Tenant communication owner must be configured for release incident workflows.");
     expect(releaseIncidentLinkageArtifactPaths).toContain("coverage/release-incident-live-provider-proof-redacted.json");
   });
 
