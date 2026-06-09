@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { demoPortfolioItems, demoSeoStylePages, publicFaqs } from "@inkroute/config";
 import { buildFaqSchema, buildPortfolioImageSchema } from "@inkroute/seo";
 import { CtaBand } from "../../../components/CtaBand";
 import { JsonLdScript } from "../../../components/JsonLdScript";
-import { PortfolioCard } from "../../../components/PortfolioCard";
+import { PortfolioCard } from "../../../components/PortfolioCard";`r`nimport { canonicalUrlForPath } from "../../../lib/canonicalRuntime";
 
 interface StylePageProps {
   params: Promise<{ styleSlug: string }>;
@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: StylePageProps): Promise<Meta
   return {
     title: page.title,
     description: page.metaDescription,
-    alternates: { canonical: page.canonicalPath },
+    alternates: { canonical: canonicalUrlForPath(page.canonicalPath) },
     openGraph: {
       title: page.title,
       description: page.metaDescription,
@@ -81,3 +81,4 @@ export default async function StyleLandingPage({ params }: StylePageProps) {
     </main>
   );
 }
+

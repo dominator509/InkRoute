@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { demoPortfolioItems, demoSeoCityPages, demoTravelStops, inkrouteDemoArtist, publicFaqs } from "@inkroute/config";
 import { buildFaqSchema, buildPortfolioImageSchema, buildTravelEventSchema } from "@inkroute/seo";
@@ -6,7 +6,7 @@ import { CtaBand } from "../../../components/CtaBand";
 import { JsonLdScript } from "../../../components/JsonLdScript";
 import { PortfolioCard } from "../../../components/PortfolioCard";
 import { TravelStopCard } from "../../../components/TravelStopCard";
-import { formatCityDateRange } from "../../../lib/format";
+import { formatCityDateRange } from "../../../lib/format";`r`nimport { canonicalUrlForPath } from "../../../lib/canonicalRuntime";
 
 interface CityPageProps {
   params: Promise<{ citySlug: string }>;
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
   return {
     title: page.title,
     description: page.metaDescription,
-    alternates: { canonical: page.canonicalPath },
+    alternates: { canonical: canonicalUrlForPath(page.canonicalPath) },
     openGraph: {
       title: page.title,
       description: page.metaDescription,
@@ -54,7 +54,7 @@ export default async function CityLandingPage({ params }: CityPageProps) {
       <section className="page-hero">
         <div className="container grid two align-center">
           <div>
-            <p className="eyebrow">City landing page · {page.city}, {page.region}</p>
+            <p className="eyebrow">City landing page Â· {page.city}, {page.region}</p>
             <h1>{page.title}</h1>
             <p>{page.heroSummary}</p>
             <div className="hero-actions">
@@ -99,3 +99,4 @@ export default async function CityLandingPage({ params }: CityPageProps) {
     </main>
   );
 }
+
