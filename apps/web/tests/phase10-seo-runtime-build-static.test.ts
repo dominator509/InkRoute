@@ -1,9 +1,11 @@
-﻿import { readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import {
   phase10SeoRuntimeArtifactPaths,
+  phase10SeoRuntimeBuildCommands,
   phase10SeoRuntimeBuildContract,
+  phase10SeoRuntimeBuildMatrix,
   phase10SeoRuntimeSurfaces,
 } from "../lib/phase10SeoRuntimeBuild";
 
@@ -43,6 +45,8 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
     expect(phase10SeoRuntimeArtifactPaths).toContain("coverage/phase10-sitemap-runtime.json");
     expect(phase10SeoRuntimeArtifactPaths).toContain("coverage/phase10-api-preview-runtime.json");
     expect(phase10SeoRuntimeArtifactPaths).toContain("coverage/phase10-canonical-runtime.json");
+    expect(phase10SeoRuntimeArtifactPaths).toContain("coverage/phase10-search-console-provider-execution-redacted.json");
+    expect(phase10SeoRuntimeArtifactPaths).toContain("coverage/phase10-seo-runtime-secret-safe-artifacts.json");
     expect(phase10SeoRuntimeArtifactPaths).toContain("test-results/phase10-seo-dashboard");
     expect(phase10SeoRuntimeBuildContract.status).toBe("blocked");
     expect(phase10SeoRuntimeBuildContract.requiredEvidence).toEqual(
@@ -55,6 +59,39 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
     );
   });
 
+  it("pins the Phase 10 SEO runtime/build command and artifact matrix", () => {
+    expect(phase10SeoRuntimeBuildCommands).toEqual([
+      "pnpm --filter @inkroute/testing test",
+      "pnpm --filter @inkroute/testing typecheck",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm vitest run apps/web/tests/phase10-seo-runtime-build-static.test.ts apps/web/tests/sitemap-route.test.ts apps/web/tests/canonical-domain-runtime-static.test.ts apps/web/tests/structured-data-crawl-qa-static.test.ts apps/dashboard/tests/seo-read-route-static.test.ts apps/dashboard/tests/seo-publication-route-static.test.ts apps/dashboard/tests/search-console-route-static.test.ts",
+      "pnpm playwright test apps/dashboard/tests/seo-browser-smoke.spec.ts",
+      "pnpm playwright test apps/dashboard/tests/seo-publish-flow.spec.ts",
+      "pnpm playwright test apps/web/tests/e2e/structured-data-crawl.spec.ts",
+      "pnpm playwright test apps/web/tests/e2e/sitemap-canonical-crawl.spec.ts",
+    ]);
+    expect(phase10SeoRuntimeBuildMatrix.map((entry) => entry.id)).toEqual([
+      "testing-package-test",
+      "testing-package-typecheck",
+      "web-build",
+      "dashboard-build",
+      "static-contracts",
+      "dashboard-browser-smoke",
+      "dashboard-publish-smoke",
+      "rendered-public-seo-crawl",
+      "rendered-sitemap-canonical-crawl",
+      "database-backed-seo-routes",
+      "sitemap-runtime",
+      "api-preview-runtime",
+      "canonical-runtime",
+      "search-console-status",
+      "search-console-provider-execution",
+      "ci-phase10-seo-runtime-gate",
+      "secret-safe-artifacts",
+    ]);
+  });
+
   it("requires the Phase 10 SEO app runtime/build gate in CI", () => {
     expect(ciWorkflow).toContain("Run Phase 10 SEO app runtime and build gate");
     expect(ciWorkflow).toContain("pnpm --filter @inkroute/testing test");
@@ -64,5 +101,7 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
     expect(ciWorkflow).toContain("apps/web/tests/canonical-domain-runtime-static.test.ts");
     expect(ciWorkflow).toContain("apps/dashboard/tests/search-console-route-static.test.ts");
     expect(ciWorkflow).toContain("phase10-seo-runtime-build-artifacts");
+    expect(ciWorkflow).toContain("coverage/phase10-seo-runtime-ci-evidence.json");
+    expect(ciWorkflow).toContain("coverage/phase10-seo-runtime-secret-safe-artifacts.json");
   });
 });

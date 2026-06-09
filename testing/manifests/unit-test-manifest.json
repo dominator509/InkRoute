@@ -1311,7 +1311,7 @@
       "verifies": [
         "GAP-076 Phase 10 SEO runtime/build matrix covers testing package, web/dashboard builds, sitemap/preview routes, dashboard browser/publish smokes, rendered crawls, database-backed SEO routes, runtime artifacts, canonical runtime evidence, and Search Console status",
         "GAP-076 CI requires the Phase 10 SEO app runtime/build gate before merge",
-        "GAP-076 artifact paths retain sitemap, API preview, canonical, rendered crawl, and dashboard smoke evidence without claiming unrun browser proof"
+        "GAP-076 phase10SeoRuntimeBuildMatrix wires exact commands, artifacts, provider proof, CI evidence, and secret-safe artifact boundaries without claiming unrun browser proof"
       ],
       "blockedBy": [
         "Static Phase 10 SEO runtime/build test execution pending",
@@ -1320,7 +1320,7 @@
         "Dashboard publish/edit/archive smoke pending",
         "Rendered public SEO crawl pending",
         "Rendered sitemap/canonical crawl pending",
-        "Runtime sitemap/API/canonical artifacts pending"
+        "Runtime sitemap/API/canonical artifacts, Search Console provider execution proof, CI evidence, and secret-safe artifact proof pending"
       ]
     },
     {

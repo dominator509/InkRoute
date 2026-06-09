@@ -2091,6 +2091,14 @@ jobs:
           name: phase10-seo-runtime-build-artifacts
           path: |
             coverage/phase10-seo-*.json
+            coverage/phase10-seo-runtime-secret-safe-artifacts.json
+            coverage/phase10-seo-runtime-ci-evidence.json
+            coverage/phase10-search-console-provider-execution-redacted.json
+            coverage/phase10-seo-static-contracts.json
+            coverage/phase10-seo-dashboard-build.json
+            coverage/phase10-seo-web-build.json
+            coverage/phase10-seo-testing-typecheck.txt
+            coverage/phase10-seo-testing-package.json
             coverage/phase10-dashboard-seo-*.json
             coverage/phase10-rendered-*.json
             coverage/phase10-sitemap-runtime.json
