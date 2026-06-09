@@ -1237,14 +1237,16 @@
       "verifies": [
         "GAP-072 tenant canonical domain policy resolves primary and allowed hosts",
         "GAP-072 web middleware enforces HTTPS/canonical-host redirects, redirect status codes, and noindex headers",
-        "GAP-072 city/style metadata uses tenant primary-host canonical URLs and sitemap/noindex decisions stay explicit"
+        "GAP-072 city/style metadata uses tenant primary-host canonical URLs and sitemap/noindex decisions stay explicit",
+        "GAP-072 canonical-domain runtime matrix is wired through apps/web/lib/canonicalDomainRuntimeEvidence.ts, CI artifacts, and tracker evidence"
       ],
       "blockedBy": [
         "Static canonical/domain runtime test execution pending",
         "Database-backed TenantDomain repository runtime proof pending",
         "Database-backed SeoRedirect execution proof pending",
         "Custom-domain deployment proof pending",
-        "Rendered sitemap/canonical/noindex crawl pending"
+        "Rendered sitemap/canonical/noindex crawl and duplicate-canonical runtime proof pending",
+        "CI artifact upload evidence and secret-safe artifact proof pending"
       ]
     },
     {

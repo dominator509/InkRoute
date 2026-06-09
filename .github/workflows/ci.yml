@@ -1981,6 +1981,31 @@ jobs:
             test-results/seo-publication-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 10 canonical/domain runtime contracts
+        run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/web/tests/canonical-domain-runtime-static.test.ts apps/web/tests/sitemap-route.test.ts
+
+      - name: Upload Phase 10 canonical/domain runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: canonical-domain-runtime-artifacts
+          path: |
+            coverage/canonical-domain-runtime.json
+            coverage/canonical-domain-seo-typecheck.txt
+            coverage/canonical-domain-seo-test.txt
+            coverage/canonical-domain-web-build.txt
+            coverage/canonical-domain-static-contract.json
+            coverage/canonical-domain-tenant-domain-repository.json
+            coverage/canonical-domain-seo-redirect-repository.json
+            coverage/canonical-domain-custom-domain-route.json
+            coverage/canonical-domain-duplicate-canonical-runtime.json
+            coverage/canonical-domain-sitemap-noindex-crawl.json
+            coverage/canonical-domain-deployment-domain-proof.json
+            coverage/canonical-domain-ci-evidence.json
+            coverage/canonical-domain-secret-safe-artifacts.json
+            test-results/canonical-domain-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 10 SEO publication contracts
         run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/dashboard/tests/seo-read-route-static.test.ts apps/dashboard/tests/seo-publication-route-static.test.ts apps/web/tests/sitemap-route.test.ts apps/web/tests/canonical-domain-runtime-static.test.ts apps/web/tests/structured-data-crawl-qa-static.test.ts
 
