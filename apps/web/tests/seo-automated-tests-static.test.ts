@@ -1,13 +1,17 @@
-﻿import { readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import {
   seoAutomatedArtifactPaths,
+  seoAutomatedGateCommands,
+  seoAutomatedGateMatrix,
   seoAutomatedSuites,
   seoAutomatedTestContract,
 } from "../lib/seoAutomatedTests";
 
 const ciWorkflow = readFileSync(".github/workflows/ci.yml", "utf8");
+const unitManifest = readFileSync("testing/manifests/unit-test-manifest.json", "utf8");
+const gapTracker = readFileSync("GAP_TRACKER.md", "utf8");
 
 describe("GAP-078 SEO automated test gate", () => {
   it("enumerates SEO package, preview route, adjacent runtime, crawl, provider, and image suites", () => {
@@ -48,6 +52,24 @@ describe("GAP-078 SEO automated test gate", () => {
     );
   });
 
+  it("pins the SEO automated gate command and artifact matrix", () => {
+    expect(seoAutomatedGateCommands).toEqual([
+      "pnpm --filter @inkroute/seo test",
+      "pnpm --filter @inkroute/seo typecheck",
+      "pnpm vitest run apps/web/tests/seo-automated-tests-static.test.ts apps/web/tests/sitemap-route.test.ts apps/web/tests/canonical-domain-runtime-static.test.ts apps/web/tests/structured-data-crawl-qa-static.test.ts apps/web/tests/phase10-seo-runtime-build-static.test.ts apps/dashboard/tests/search-console-route-static.test.ts apps/dashboard/tests/image-seo-pipeline-static.test.ts",
+    ]);
+    expect(seoAutomatedGateMatrix.map((entry) => entry.id)).toEqual([
+      "seo-package-tests",
+      "seo-package-typecheck",
+      "route-contracts",
+      "linked-gap073-crawl",
+      "linked-gap076-runtime-build",
+      "ci-seo-automated-gate",
+      "secret-safe-artifacts",
+    ]);
+    expect(seoAutomatedArtifactPaths).toContain("coverage/seo-automated-secret-safe-artifacts.json");
+  });
+
   it("requires the SEO automated gate in CI", () => {
     expect(ciWorkflow).toContain("Run Phase 10 SEO automated test gate");
     expect(ciWorkflow).toContain("pnpm --filter @inkroute/seo test");
@@ -56,5 +78,8 @@ describe("GAP-078 SEO automated test gate", () => {
     expect(ciWorkflow).toContain("apps/web/tests/sitemap-route.test.ts");
     expect(ciWorkflow).toContain("apps/dashboard/tests/image-seo-pipeline-static.test.ts");
     expect(ciWorkflow).toContain("seo-automated-test-artifacts");
+    expect(ciWorkflow).toContain("coverage/seo-automated-ci-evidence.json");
+    expect(unitManifest).toContain("seoAutomatedGateMatrix");
+    expect(gapTracker).toContain("GAP-078 is seo-automated-test-gate-matrix wired");
   });
 });

@@ -1348,13 +1348,14 @@
       "verifies": [
         "GAP-078 SEO automated suite matrix covers package tests/typecheck, sitemap, SEO preview, sitemap preview, canonical/domain, structured-data crawl, analytics, Search Console, image SEO, and Phase 10 runtime/build contracts",
         "GAP-078 CI runs the SEO automated test gate and links GAP-073/GAP-076 evidence contracts",
-        "GAP-078 artifact paths retain SEO automated, Phase 10 SEO, structured-data, image pipeline, and Search Console evidence without claiming unrun command proof"
+        "GAP-078 seoAutomatedGateMatrix wires exact package, route, linked runtime, CI, and secret-safe artifact boundaries without claiming unrun command proof"
       ],
       "blockedBy": [
         "Static SEO automated test gate execution pending",
         "SEO package test/typecheck execution pending",
         "Sitemap/SEO preview/sitemap preview route test execution pending",
-        "Adjacent GAP-073/GAP-076 runtime evidence execution pending"
+        "Adjacent GAP-073/GAP-076 runtime evidence execution pending",
+        "CI evidence and secret-safe artifact proof pending"
       ]
     },
     {

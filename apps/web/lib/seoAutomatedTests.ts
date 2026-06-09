@@ -1,4 +1,4 @@
-﻿import {
+import {
   buildSeoAutomatedTestReadinessPlan,
   type SeoAutomatedTestReadinessPlan,
 } from "@inkroute/seo";
@@ -21,6 +21,15 @@ export type SeoAutomatedSuite = {
   command: string;
   covers: string[];
 };
+
+export type SeoAutomatedGateStatus = "wired" | "execution-gated" | "linked-runtime-gated" | "ci-gated";
+
+export interface SeoAutomatedGateMatrixEntry {
+  readonly id: string;
+  readonly command: string;
+  readonly artifact: string;
+  readonly status: SeoAutomatedGateStatus;
+}
 
 export const seoAutomatedSuites: SeoAutomatedSuite[] = [
   {
@@ -80,13 +89,36 @@ export const seoAutomatedSuites: SeoAutomatedSuite[] = [
   },
 ];
 
+export const seoAutomatedGateCommands = [
+  "pnpm --filter @inkroute/seo test",
+  "pnpm --filter @inkroute/seo typecheck",
+  "pnpm vitest run apps/web/tests/seo-automated-tests-static.test.ts apps/web/tests/sitemap-route.test.ts apps/web/tests/canonical-domain-runtime-static.test.ts apps/web/tests/structured-data-crawl-qa-static.test.ts apps/web/tests/phase10-seo-runtime-build-static.test.ts apps/dashboard/tests/search-console-route-static.test.ts apps/dashboard/tests/image-seo-pipeline-static.test.ts",
+] as const;
+
 export const seoAutomatedArtifactPaths = [
   "coverage/seo-automated-test-gate.json",
+  "coverage/seo-automated-seo-package-test.txt",
+  "coverage/seo-automated-seo-package-typecheck.txt",
+  "coverage/seo-automated-route-contracts.json",
+  "coverage/seo-automated-linked-gap073-crawl.json",
+  "coverage/seo-automated-linked-gap076-runtime-build.json",
+  "coverage/seo-automated-ci-evidence.json",
+  "coverage/seo-automated-secret-safe-artifacts.json",
   "coverage/phase10-seo-*.json",
   "coverage/structured-data-crawl.json",
   "coverage/image-seo-pipeline-plan.json",
   "coverage/search-console-provider-route.json",
   "test-results/seo-automated",
+] as const;
+
+export const seoAutomatedGateMatrix: readonly SeoAutomatedGateMatrixEntry[] = [
+  { id: "seo-package-tests", command: "pnpm --filter @inkroute/seo test", artifact: "coverage/seo-automated-seo-package-test.txt", status: "execution-gated" },
+  { id: "seo-package-typecheck", command: "pnpm --filter @inkroute/seo typecheck", artifact: "coverage/seo-automated-seo-package-typecheck.txt", status: "execution-gated" },
+  { id: "route-contracts", command: "Phase 10 SEO route/static contract suite", artifact: "coverage/seo-automated-route-contracts.json", status: "execution-gated" },
+  { id: "linked-gap073-crawl", command: "GAP-073 structured-data crawl evidence", artifact: "coverage/seo-automated-linked-gap073-crawl.json", status: "linked-runtime-gated" },
+  { id: "linked-gap076-runtime-build", command: "GAP-076 Phase 10 runtime/build evidence", artifact: "coverage/seo-automated-linked-gap076-runtime-build.json", status: "linked-runtime-gated" },
+  { id: "ci-seo-automated-gate", command: "GitHub Actions SEO automated test gate", artifact: "coverage/seo-automated-ci-evidence.json", status: "ci-gated" },
+  { id: "secret-safe-artifacts", command: "redacted SEO automated artifact audit", artifact: "coverage/seo-automated-secret-safe-artifacts.json", status: "ci-gated" },
 ] as const;
 
 export function buildSeoAutomatedTestContract(): SeoAutomatedTestReadinessPlan {

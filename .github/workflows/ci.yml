@@ -2141,6 +2141,13 @@ jobs:
           name: seo-automated-test-artifacts
           path: |
             coverage/seo-automated-test-gate.json
+            coverage/seo-automated-secret-safe-artifacts.json
+            coverage/seo-automated-ci-evidence.json
+            coverage/seo-automated-linked-gap076-runtime-build.json
+            coverage/seo-automated-linked-gap073-crawl.json
+            coverage/seo-automated-route-contracts.json
+            coverage/seo-automated-seo-package-typecheck.txt
+            coverage/seo-automated-seo-package-test.txt
             coverage/phase10-seo-*.json
             coverage/structured-data-crawl.json
             coverage/image-seo-pipeline-plan.json
