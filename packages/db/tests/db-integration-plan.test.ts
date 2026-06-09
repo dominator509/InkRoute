@@ -19,11 +19,13 @@ describe("database integration test plan", () => {
     expect(packageJson.scripts["db:generate"]).toContain("prisma generate");
     expect(packageJson.scripts["db:migrate"]).toContain("prisma migrate dev");
     expect(packageJson.scripts["db:seed"]).toContain("tsx prisma/seed.ts");
+    expect(packageJson.scripts["db:verify-seed"]).toContain("verify-seed-readiness");
     expect(manifest.suites.find((suite) => suite.id === "db-prisma-schema-lifecycle")?.commands).toEqual(
       expect.arrayContaining([
         "pnpm --filter @inkroute/db db:validate",
         "pnpm --filter @inkroute/db db:generate",
         "pnpm --filter @inkroute/db db:migrate",
+        "pnpm db:verify-seed",
         "pnpm --filter @inkroute/db db:seed",
       ]),
     );
@@ -31,6 +33,11 @@ describe("database integration test plan", () => {
 
   it("pins tenant-scoped schema models and audit log prerequisites", () => {
     const schema = readWorkspaceFile("packages/db/prisma/schema.prisma");
+    const contract = JSON.parse(readWorkspaceFile("packages/db/prisma/tenant-isolation-contract.json")) as {
+      tenantOwnedModels: string[];
+      requiredHelpers: string[];
+    };
+    const helpers = readWorkspaceFile("packages/db/src/tenant-scope.ts");
 
     for (const model of [
       "Tenant",
@@ -48,6 +55,11 @@ describe("database integration test plan", () => {
       "AuditLog",
     ]) {
       expect(schema).toContain(`model ${model} `);
+      expect(contract.tenantOwnedModels).toContain(model);
+    }
+
+    for (const helper of contract.requiredHelpers) {
+      expect(helpers).toContain(helper);
     }
 
     expect(schema).toContain("@@unique([tenantId, userId])");
@@ -79,5 +91,7 @@ describe("database integration test plan", () => {
     }
 
     expect(seed).toContain("tenantId: tenant.id");
+    expect(seed).toContain("Demo consent text for development only");
+    expect(seed).toContain("Use fake data only");
   });
 });

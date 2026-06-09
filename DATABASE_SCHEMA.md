@@ -34,6 +34,8 @@ The schema now defines enums for tenant/user/member status, booking events, appo
 
 Every tenant-owned model added in Phase 2 includes `tenantId`. Application queries must still enforce tenant scope, because schema presence alone does not prevent an unsafe query.
 
+`@inkroute/db` now includes dependency-light tenant scope helpers and a model inventory contract in `packages/db/prisma/tenant-isolation-contract.json`. These helpers are not a substitute for live repository tests; they define the contract that future Prisma services must use before `GAP-022` can close.
+
 Required query shape:
 
 ```ts
@@ -79,6 +81,8 @@ A seed script now exists at `packages/db/prisma/seed.ts`. It creates a fake noma
 - Feature flag and release record.
 
 The seed file is **untested** because dependencies and Prisma Client generation are not available in this sandbox.
+
+Static seed readiness is tracked in `packages/db/prisma/seed-readiness.json` and verified with `pnpm db:verify-seed`. This verifies seed command wiring, fake/demo markers, expected model writes, legal placeholder language, and obvious production-provider pattern bans. It does not replace `pnpm db:generate`, `pnpm db:migrate`, or `pnpm db:seed` against a development database.
 
 ## Migration strategy
 

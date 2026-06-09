@@ -1,0 +1,19 @@
+{
+  "generatedAt": null,
+  "source": "GAP-125 branch protection and PR enforcement",
+  "status": "not-run",
+  "findings": [],
+  "requiredFilesChecked": [],
+  "codeownersPatternsChecked": [],
+  "templateTermsChecked": [],
+  "ciTermsChecked": [],
+  "externalSettingsStillRequired": [
+    "main branch protection",
+    "required status checks",
+    "required CODEOWNERS review",
+    "secret scanning",
+    "Dependabot or security alerts",
+    "merge queue or required linear history policy"
+  ],
+  "note": "Placeholder manifest committed so repository governance references are concrete; scripts/quality/verify-repository-governance.mjs overwrites this file during pnpm quality:governance."
+}

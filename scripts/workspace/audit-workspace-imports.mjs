@@ -60,9 +60,9 @@ function listProjectManifests() {
 function extractImportSpecifiers(sourceText) {
   const specifiers = new Set();
   const patterns = [
-    /(?:import|export)\s+(?:type\s+)?(?:[^"'`]*?\s+from\s+)?["'](@inkroute\/[^"']+)["']/g,
-    /import\(\s*["'](@inkroute\/[^"']+)["']\s*\)/g,
-    /require\(\s*["'](@inkroute\/[^"']+)["']\s*\)/g,
+    /(?:import|export)\s+(?:type\s+)?(?:[^"'`]*?\s+from\s+)?["']([^"']+)["']/g,
+    /import\(\s*["']([^"']+)["']\s*\)/g,
+    /require\(\s*["']([^"']+)["']\s*\)/g,
   ];
   for (const pattern of patterns) {
     for (const match of sourceText.matchAll(pattern)) {
@@ -76,6 +76,23 @@ function workspacePackageNameFromSpecifier(specifier) {
   const parts = specifier.split("/");
   if (parts[0] !== "@inkroute" || !parts[1]) return null;
   return `${parts[0]}/${parts[1]}`;
+}
+
+function externalPackageNameFromSpecifier(specifier) {
+  if (
+    specifier.startsWith(".") ||
+    specifier.startsWith("/") ||
+    specifier.startsWith("#") ||
+    specifier.startsWith("@inkroute/") ||
+    /^[a-z]+:/.test(specifier)
+  ) {
+    return null;
+  }
+  const parts = specifier.split("/");
+  if (specifier.startsWith("@")) {
+    return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : specifier;
+  }
+  return parts[0] ?? null;
 }
 
 function ownerForFile(projects, absolutePath) {
@@ -125,6 +142,8 @@ function readTsconfigPathAliases() {
 }
 
 const projects = listProjectManifests();
+const rootProject = projects.find((project) => project.kind === "root");
+const rootDevDependencies = new Set(Object.keys(rootProject?.devDependencies ?? {}));
 const workspacePackages = projects.map((project) => project.name).filter((name) => name.startsWith("@inkroute/"));
 const aliasRequiredWorkspacePackages = projects
   .filter((project) => project.kind === "package" && project.name.startsWith("@inkroute/"))
@@ -135,6 +154,7 @@ const tsconfigAliasSet = new Set(tsconfigAliases);
 const findings = [];
 const entrypointFindings = [];
 const importRecords = [];
+const externalImportRecords = [];
 
 for (const workspacePackage of aliasRequiredWorkspacePackages) {
   if (!tsconfigAliasSet.has(workspacePackage)) {
@@ -189,15 +209,24 @@ for (const file of sourceFiles) {
   const sourceText = readFileSync(file, "utf8");
   for (const importSpecifier of extractImportSpecifiers(sourceText)) {
     const importedPackageName = workspacePackageNameFromSpecifier(importSpecifier);
-    if (!importedPackageName) continue;
-    importRecords.push({ sourcePath, ownerPackageName: owner.name, importedPackageName, importSpecifier });
-    if (!workspacePackageSet.has(importedPackageName)) {
-      findings.push({ status: "fail", packageName: owner.name, sourcePath, message: `Imports missing workspace package ${importedPackageName}.` });
+    if (importedPackageName) {
+      importRecords.push({ sourcePath, ownerPackageName: owner.name, importedPackageName, importSpecifier });
+      if (!workspacePackageSet.has(importedPackageName)) {
+        findings.push({ status: "fail", packageName: owner.name, sourcePath, message: `Imports missing workspace package ${importedPackageName}.` });
+        continue;
+      }
+      if (importedPackageName !== owner.name && !declaredDependencies(owner).has(importedPackageName)) {
+        findings.push({ status: "fail", packageName: owner.name, sourcePath, message: `Uses ${importedPackageName} without declaring it in package.json.` });
+      }
       continue;
     }
-    if (importedPackageName === owner.name) continue;
-    if (!declaredDependencies(owner).has(importedPackageName)) {
-      findings.push({ status: "fail", packageName: owner.name, sourcePath, message: `Uses ${importedPackageName} without declaring it in package.json.` });
+
+    const externalPackageName = externalPackageNameFromSpecifier(importSpecifier);
+    if (externalPackageName) {
+      externalImportRecords.push({ sourcePath, ownerPackageName: owner.name, importedPackageName: externalPackageName, importSpecifier });
+      if (!declaredDependencies(owner).has(externalPackageName) && !rootDevDependencies.has(externalPackageName)) {
+        findings.push({ status: "fail", packageName: owner.name, sourcePath, message: `Uses external package ${externalPackageName} without declaring it in package.json.` });
+      }
     }
   }
 }
@@ -211,13 +240,14 @@ const report = {
   workspacePackages: workspacePackages.sort(),
   tsconfigAliases: tsconfigAliases.sort(),
   importRecords,
+  externalImportRecords,
   findings,
   entrypointFindings,
 };
 mkdirSync(dirname(outputPath), { recursive: true });
 writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`);
 console.log(`Workspace import audit status: ${report.status}`);
-console.log(`Projects: ${report.projectsChecked}; source files: ${report.sourceFilesChecked}; imports: ${report.importRecords.length}`);
+console.log(`Projects: ${report.projectsChecked}; source files: ${report.sourceFilesChecked}; workspace imports: ${report.importRecords.length}; external imports: ${report.externalImportRecords.length}`);
 console.log(`Entrypoint findings: ${report.entrypointFindings.length}`);
 console.log(`Report: ${toRepoPath(outputPath)}`);
 if (report.status === "fail") process.exitCode = 1;

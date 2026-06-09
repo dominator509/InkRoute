@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "source": "GAP-125 branch protection and PR enforcement",
+  "description": "Repository-owned governance controls that can be verified from source before external GitHub branch protection settings are applied.",
+  "requiredFiles": [
+    ".github/CODEOWNERS",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/ISSUE_TEMPLATE/gap_closure.md",
+    ".github/workflows/ci.yml",
+    ".github/workflows/release-governance.yml"
+  ],
+  "requiredCodeownersPatterns": [
+    "*",
+    "/.github/",
+    "/GAP_TRACKER.md",
+    "/docs/quality/",
+    "/docs/handoff/",
+    "/deployment/",
+    "/apps/web/app/api/",
+    "/apps/dashboard/app/api/",
+    "/packages/security/",
+    "/packages/db/",
+    "/packages/validators/"
+  ],
+  "pullRequestTemplateTerms": [
+    "pnpm quality:docs",
+    "pnpm quality:gaps",
+    "No secrets",
+    "Gap tracker impact",
+    "Security/privacy checklist"
+  ],
+  "issueTemplateTerms": [
+    "Evidence required",
+    "No secrets",
+    "gap-closure",
+    "verification-required"
+  ],
+  "ciRequiredTerms": [
+    "fetch-depth: 0",
+    "pnpm quality:all",
+    "pnpm quality:pr-gaps",
+    "pnpm handoff:verify-docs",
+    "pnpm deploy:verify-secrets",
+    "pnpm workspace:imports"
+  ],
+  "externalSettingsStillRequired": [
+    "main branch protection",
+    "required status checks",
+    "required CODEOWNERS review",
+    "secret scanning",
+    "Dependabot or security alerts",
+    "merge queue or required linear history policy"
+  ]
+}

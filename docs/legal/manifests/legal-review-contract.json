@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "source": "GAP-013 legal/compliance",
+  "description": "Required legal review items for InkRoute production launch. This contract is not legal advice.",
+  "requiredReviewItems": [
+    {
+      "id": "privacy-policy",
+      "title": "Privacy policy and privacy request workflow",
+      "requiredArtifacts": [
+        "apps/web/app/privacy/page.tsx",
+        "apps/web/app/api/public/[tenantSlug]/privacy-requests/route.ts",
+        "apps/dashboard/app/api/security/privacy-requests/route.ts"
+      ]
+    },
+    {
+      "id": "terms-of-service",
+      "title": "Terms of service and SaaS/customer terms",
+      "requiredArtifacts": [
+        "apps/web/app/terms/page.tsx"
+      ]
+    },
+    {
+      "id": "tattoo-consent",
+      "title": "Tattoo consent forms and consent signature retention",
+      "requiredArtifacts": [
+        "apps/web/app/consent-disclaimer/page.tsx",
+        "apps/dashboard/app/forms/page.tsx",
+        "packages/db/prisma/seed.ts"
+      ]
+    },
+    {
+      "id": "medical-acknowledgments",
+      "title": "Medical and safety acknowledgments",
+      "requiredArtifacts": [
+        "apps/web/app/booking/BookingFlowClient.tsx",
+        "apps/web/app/aftercare/page.tsx",
+        "packages/db/prisma/seed.ts"
+      ]
+    },
+    {
+      "id": "payments-refunds",
+      "title": "Deposit, cancellation, no-show, refund, tax, and payment language",
+      "requiredArtifacts": [
+        "apps/web/app/booking/deposit-preview/page.tsx",
+        "apps/dashboard/app/payments/page.tsx"
+      ]
+    },
+    {
+      "id": "sms-notifications",
+      "title": "SMS consent, STOP/HELP, notification, and quiet-hour language",
+      "requiredArtifacts": [
+        "apps/dashboard/app/templates/page.tsx",
+        "packages/notifications/src/index.ts"
+      ]
+    },
+    {
+      "id": "aftercare-copy",
+      "title": "Aftercare and medical-adjacent education copy",
+      "requiredArtifacts": [
+        "apps/web/app/aftercare/page.tsx"
+      ]
+    }
+  ],
+  "allowedStatuses": [
+    "missing",
+    "draft",
+    "submitted",
+    "approved",
+    "rejected",
+    "blocked"
+  ],
+  "productionReadyStatus": "approved"
+}

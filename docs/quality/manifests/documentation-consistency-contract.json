@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "source": "GAP-124 documentation audit quality",
+  "description": "Semantic documentation consistency rules that supplement Markdown link/path checks without claiming runtime provider readiness.",
+  "routeReference": {
+    "description": "Backticked API route references in Markdown must resolve to a Next.js route.ts handler in the web or dashboard app, unless explicitly listed as an external/provider URL.",
+    "apps": [
+      "apps/web/app",
+      "apps/dashboard/app"
+    ],
+    "ignoredPrefixes": [
+      "https://",
+      "http://",
+      "mailto:",
+      "tel:"
+    ],
+    "ignoredRouteFragments": [
+      "/api/auth/",
+      "/api/webhooks/"
+    ]
+  },
+  "providerReadinessLanguage": {
+    "description": "Provider documentation may describe contracts, placeholders, sandbox plans, or blocked work, but must not claim live readiness without evidence-oriented language.",
+    "providers": [
+      "Stripe",
+      "Resend",
+      "Twilio",
+      "Expo",
+      "Sentry",
+      "Google",
+      "Supabase",
+      "Vercel",
+      "Render",
+      "Neon"
+    ],
+    "claimTerms": [
+      "configured",
+      "connected",
+      "enabled",
+      "live",
+      "provisioned",
+      "production-ready",
+      "ready",
+      "verified"
+    ],
+    "allowedQualifiers": [
+      "blocked",
+      "contract",
+      "evidence",
+      "future",
+      "gated",
+      "manual",
+      "mock",
+      "not",
+      "placeholder",
+      "planned",
+      "requires",
+      "sandbox",
+      "stub",
+      "unverified"
+    ]
+  },
+  "legalReadinessLanguage": {
+    "description": "Legal/privacy/security documentation may include templates and workflows, but legal completion claims must remain evidence-gated until counsel review is recorded.",
+    "claimTerms": [
+      "approved",
+      "counsel-reviewed",
+      "final legal",
+      "legal-approved",
+      "legally complete"
+    ],
+    "allowedQualifiers": [
+      "blocked",
+      "evidence",
+      "future",
+      "gated",
+      "needs",
+      "not",
+      "pending",
+      "placeholder",
+      "requires",
+      "unverified"
+    ]
+  }
+}

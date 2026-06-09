@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "source": "GAP-018 seed/demo data",
+  "description": "Static readiness contract for running the Prisma seed script safely against a development database.",
+  "requiredRootScripts": [
+    "db:seed"
+  ],
+  "requiredPackageScripts": [
+    "db:seed",
+    "seed"
+  ],
+  "requiredSeedMarkers": [
+    "inkroute-demo",
+    "demo.inkroute.local",
+    "owner@inkroute.demo",
+    "client@inkroute.demo",
+    "Demo consent text for development only",
+    "Use fake data only",
+    "phase_2_seed_script_ran"
+  ],
+  "requiredModelWrites": [
+    "tenant",
+    "tenantDomain",
+    "user",
+    "tenantMember",
+    "artist",
+    "client",
+    "bookingRequest",
+    "appointment",
+    "deposit",
+    "payment",
+    "consentForm",
+    "consentSignature",
+    "medicalSafetyAcknowledgment",
+    "fileAsset",
+    "messageThread",
+    "notification",
+    "seoCityPage",
+    "seoStylePage",
+    "auditLog"
+  ],
+  "forbiddenProductionPatterns": [
+    "@gmail.com",
+    "@yahoo.com",
+    "@icloud.com",
+    "@outlook.com",
+    "sk_live_",
+    "pk_live_",
+    "https://api.stripe.com",
+    "supabase.co/storage",
+    "s3.amazonaws.com"
+  ],
+  "requiredExecutionEvidence": [
+    "pnpm db:generate",
+    "pnpm db:migrate",
+    "pnpm db:seed",
+    "seeded tenant slug",
+    "app/API smoke reading seeded data"
+  ]
+}

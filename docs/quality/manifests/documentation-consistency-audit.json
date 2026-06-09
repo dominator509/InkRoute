@@ -1,0 +1,10 @@
+{
+  "generatedAt": null,
+  "source": "GAP-124 documentation audit quality",
+  "status": "not-run",
+  "markdownFilesChecked": 0,
+  "routeReferencesChecked": 0,
+  "findings": [],
+  "routeReferences": [],
+  "note": "Placeholder manifest committed so documentation references are concrete; scripts/quality/verify-documentation-consistency.mjs overwrites this file during pnpm quality:docs."
+}

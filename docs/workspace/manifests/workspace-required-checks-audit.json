@@ -1,0 +1,13 @@
+{
+  "generatedAt": null,
+  "source": "GAP-133 required workspace checks",
+  "status": "not-run",
+  "findings": [],
+  "rootScriptsChecked": 0,
+  "workspaceAllTermsChecked": 0,
+  "ciTermsChecked": 0,
+  "prEnforcementTermsChecked": 0,
+  "requiredBranchProtectionChecks": [],
+  "externalSettingsStillRequired": [],
+  "note": "Placeholder manifest committed so workspace required-check references are concrete; scripts/workspace/verify-workspace-required-checks.mjs overwrites this file during pnpm workspace:required-checks."
+}

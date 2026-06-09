@@ -1,0 +1,11 @@
+{
+  "generatedAt": null,
+  "source": "GAP-129 required quality checks",
+  "status": "not-run",
+  "findings": [],
+  "packageScriptsChecked": [],
+  "workflowTermsChecked": [],
+  "requiredBranchProtectionChecks": [],
+  "requiredRepositorySettings": [],
+  "note": "Placeholder manifest committed so required-check references are concrete; scripts/quality/verify-required-checks.mjs overwrites this file during pnpm quality:required-checks."
+}

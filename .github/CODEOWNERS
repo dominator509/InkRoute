@@ -1,1 +1,15 @@
 ﻿* @dominator509
+
+# Governance and release controls
+/.github/ @dominator509
+/GAP_TRACKER.md @dominator509
+/docs/quality/ @dominator509
+/docs/handoff/ @dominator509
+/deployment/ @dominator509
+
+# Security-sensitive application and package surfaces
+/apps/web/app/api/ @dominator509
+/apps/dashboard/app/api/ @dominator509
+/packages/security/ @dominator509
+/packages/db/ @dominator509
+/packages/validators/ @dominator509

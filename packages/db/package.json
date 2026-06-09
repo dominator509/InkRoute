@@ -14,7 +14,8 @@
     "db:generate": "prisma generate --schema prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
     "db:studio": "prisma studio --schema prisma/schema.prisma",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "db:verify-seed": "node ../../scripts/db/verify-seed-readiness.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0"

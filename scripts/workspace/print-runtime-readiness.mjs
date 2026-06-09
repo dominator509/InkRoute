@@ -7,6 +7,7 @@ const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const outputPath = join(root, "docs/workspace/manifests/runtime-readiness.json");
 const importAuditPath = join(root, "docs/workspace/manifests/workspace-import-audit.json");
 const scriptAuditPath = join(root, "docs/workspace/manifests/package-script-audit.json");
+const runtimeEvidenceAuditPath = join(root, "docs/workspace/manifests/runtime-evidence-audit.json");
 const gapTrackerPath = join(root, "GAP_TRACKER.md");
 
 function toRepoPath(path) {
@@ -28,6 +29,7 @@ function isBlockingGap(row) {
 
 const importAudit = readJsonIfExists(importAuditPath);
 const scriptAudit = readJsonIfExists(scriptAuditPath);
+const runtimeEvidenceAudit = readJsonIfExists(runtimeEvidenceAuditPath);
 const gapRows = existsSync(gapTrackerPath) ? extractGapRows(readFileSync(gapTrackerPath, "utf8")) : [];
 const blockingGapCount = gapRows.filter(isBlockingGap).length;
 const checks = [
@@ -44,6 +46,13 @@ const checks = [
     status: scriptAudit?.status ?? "fail",
     evidence: scriptAudit ? `Package script audit exists with ${scriptAudit.findings.length} findings.` : "Package script audit manifest is missing.",
     gapIds: ["GAP-130", "GAP-132"],
+  },
+  {
+    id: "runtime-command-evidence",
+    title: "Runtime command evidence",
+    status: runtimeEvidenceAudit?.status ?? "fail",
+    evidence: runtimeEvidenceAudit ? `Runtime evidence audit exists with ${runtimeEvidenceAudit.missingRequiredEvidence.length} missing required evidence item(s).` : "Runtime evidence audit manifest is missing.",
+    gapIds: ["GAP-001", "GAP-012", "GAP-132"],
   },
   {
     id: "pnpm-lockfile",
@@ -78,6 +87,7 @@ const report = {
     "corepack enable",
     "pnpm install",
     "pnpm workspace:all",
+    "pnpm workspace:runtime-evidence",
     "pnpm handoff:all",
     "pnpm quality:all",
     "pnpm typecheck",

@@ -74,6 +74,8 @@ The following must be reviewed by a qualified attorney before production:
 
 This is tracked as `GAP-013`.
 
+Legal review evidence is tracked in `docs/legal/manifests/legal-review-evidence.json` and verified with `pnpm legal:verify-review`. This verifier is expected to fail until every required legal item is marked approved with a redacted evidence label. Do not paste privileged attorney communications, secrets, or client data into repository evidence.
+
 ## Backup/recovery plan
 
 Before launch:

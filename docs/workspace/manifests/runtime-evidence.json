@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "source": "GAP-132 runtime readiness evidence",
+  "records": [
+    {
+      "id": "dependency-install",
+      "status": "missing"
+    },
+    {
+      "id": "workspace-all",
+      "status": "missing"
+    },
+    {
+      "id": "handoff-all",
+      "status": "missing"
+    },
+    {
+      "id": "quality-all",
+      "status": "missing"
+    },
+    {
+      "id": "typecheck",
+      "status": "missing"
+    },
+    {
+      "id": "unit-tests",
+      "status": "missing"
+    },
+    {
+      "id": "web-build",
+      "status": "missing"
+    },
+    {
+      "id": "dashboard-build",
+      "status": "missing"
+    }
+  ],
+  "note": "Populate records with redacted pass/fail evidence labels only after commands actually run. Do not paste secrets, tokens, raw database URLs, or private client data."
+}

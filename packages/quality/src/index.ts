@@ -46,6 +46,75 @@ export interface SemanticDocumentationAuditSummary {
   readonly status: QualityGateStatus;
 }
 
+export interface DocumentationConsistencyContract {
+  readonly routeReference: {
+    readonly apps: readonly string[];
+    readonly ignoredPrefixes?: readonly string[];
+    readonly ignoredRouteFragments?: readonly string[];
+  };
+  readonly providerReadinessLanguage: {
+    readonly providers: readonly string[];
+    readonly claimTerms: readonly string[];
+    readonly allowedQualifiers: readonly string[];
+  };
+  readonly legalReadinessLanguage: {
+    readonly claimTerms: readonly string[];
+    readonly allowedQualifiers: readonly string[];
+  };
+}
+
+export interface DocumentationConsistencyFinding {
+  readonly status: QualityGateStatus;
+  readonly rule: "route-reference" | "provider-readiness-language" | "legal-readiness-language";
+  readonly sourcePath: string;
+  readonly reference?: string;
+  readonly line?: number;
+  readonly message: string;
+}
+
+export interface DocumentationConsistencyAuditSummary {
+  readonly totalDocuments: number;
+  readonly routeReferencesChecked: number;
+  readonly findings: readonly DocumentationConsistencyFinding[];
+  readonly status: QualityGateStatus;
+}
+
+export interface RepositoryGovernanceContract {
+  readonly requiredFiles: readonly string[];
+  readonly requiredCodeownersPatterns: readonly string[];
+  readonly pullRequestTemplateTerms: readonly string[];
+  readonly issueTemplateTerms: readonly string[];
+  readonly ciRequiredTerms: readonly string[];
+  readonly externalSettingsStillRequired: readonly string[];
+}
+
+export interface RepositoryGovernanceInput {
+  readonly existingPaths: ReadonlySet<string>;
+  readonly codeowners: string;
+  readonly pullRequestTemplate: string;
+  readonly gapClosureIssueTemplate: string;
+  readonly ciWorkflow: string;
+}
+
+export interface RepositoryGovernanceFinding {
+  readonly status: QualityGateStatus;
+  readonly rule: "required-file" | "codeowners-pattern" | "pr-template-term" | "issue-template-term" | "ci-required-term";
+  readonly path?: string;
+  readonly pattern?: string;
+  readonly term?: string;
+  readonly message: string;
+}
+
+export interface RepositoryGovernanceAuditSummary {
+  readonly findings: readonly RepositoryGovernanceFinding[];
+  readonly requiredFilesChecked: number;
+  readonly codeownersPatternsChecked: number;
+  readonly templateTermsChecked: number;
+  readonly ciTermsChecked: number;
+  readonly externalSettingsStillRequired: readonly string[];
+  readonly status: QualityGateStatus;
+}
+
 export interface GapEvidenceRecord {
   readonly gapId: string;
   readonly phase: string;
@@ -389,6 +458,177 @@ function hasUnsupportedProductionClaim(line: string): boolean {
   return !/\b(not|none|without|blocked|gated|requires?|until|before|placeholder|unverified|prematurely|not legal advice|not production[- ]ready)\b/i.test(line);
 }
 
+function normalizeRoutePath(routePath: string): string {
+  return routePath
+    .replace(/^['"]|['"]$/g, "")
+    .replace(/\?.*$/, "")
+    .replace(/#.*$/, "")
+    .replace(/\/$/, "");
+}
+
+function extractBacktickedRouteReferences(contents: string): readonly { raw: string; routePath: string }[] {
+  const references: { raw: string; routePath: string }[] = [];
+  const regex = /`((?:(?:GET|POST|PUT|PATCH|DELETE)\s+)?\/api\/[^`\s]+)`/g;
+  for (const match of contents.matchAll(regex)) {
+    const raw = match[1] ?? "";
+    references.push({ raw, routePath: normalizeRoutePath(raw.replace(/^(GET|POST|PUT|PATCH|DELETE)\s+/i, "")) });
+  }
+  return references;
+}
+
+function routeToSegmentPath(routePath: string): string {
+  return routePath
+    .replace(/^\//, "")
+    .split("/")
+    .map((segment) => {
+      if (segment.startsWith(":")) {
+        return `[${segment.slice(1)}]`;
+      }
+      if (segment === "*") {
+        return "[...slug]";
+      }
+      return segment;
+    })
+    .join("/");
+}
+
+function shouldIgnoreRoute(routePath: string, contract: DocumentationConsistencyContract): boolean {
+  return (
+    (contract.routeReference.ignoredPrefixes ?? []).some((prefix) => routePath.startsWith(prefix)) ||
+    (contract.routeReference.ignoredRouteFragments ?? []).some((fragment) => routePath.includes(fragment))
+  );
+}
+
+function routeReferenceExists(routePath: string, contract: DocumentationConsistencyContract, existingPaths: ReadonlySet<string>): boolean {
+  const segmentPath = routeToSegmentPath(routePath);
+  return contract.routeReference.apps.some((appRoot) => existingPaths.has(`${appRoot}/${segmentPath}/route.ts`));
+}
+
+function containsAnyTerm(line: string, terms: readonly string[]): boolean {
+  const lower = line.toLowerCase();
+  return terms.some((term) => lower.includes(term.toLowerCase()));
+}
+
+export function auditDocumentationConsistency(
+  documents: readonly MarkdownDocumentInput[],
+  existingPaths: ReadonlySet<string>,
+  contract: DocumentationConsistencyContract,
+): DocumentationConsistencyAuditSummary {
+  const findings: DocumentationConsistencyFinding[] = [];
+  let routeReferencesChecked = 0;
+
+  for (const document of documents) {
+    for (const reference of extractBacktickedRouteReferences(document.contents)) {
+      if (shouldIgnoreRoute(reference.routePath, contract)) {
+        continue;
+      }
+      routeReferencesChecked += 1;
+      if (!routeReferenceExists(reference.routePath, contract, existingPaths)) {
+        findings.push({
+          status: "fail",
+          rule: "route-reference",
+          sourcePath: document.path,
+          reference: reference.raw,
+          message: `Backticked API route reference does not resolve to a route.ts handler: ${reference.routePath}.`,
+        });
+      }
+    }
+
+    document.contents.split(/\r?\n/).forEach((line, index) => {
+      if (
+        containsAnyTerm(line, contract.providerReadinessLanguage.providers) &&
+        containsAnyTerm(line, contract.providerReadinessLanguage.claimTerms) &&
+        !containsAnyTerm(line, contract.providerReadinessLanguage.allowedQualifiers)
+      ) {
+        findings.push({
+          status: "fail",
+          rule: "provider-readiness-language",
+          sourcePath: document.path,
+          line: index + 1,
+          message: "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier.",
+        });
+      }
+
+      if (
+        containsAnyTerm(line, contract.legalReadinessLanguage.claimTerms) &&
+        !containsAnyTerm(line, contract.legalReadinessLanguage.allowedQualifiers)
+      ) {
+        findings.push({
+          status: "fail",
+          rule: "legal-readiness-language",
+          sourcePath: document.path,
+          line: index + 1,
+          message: "Legal readiness claim lacks pending/gated/evidence qualifier.",
+        });
+      }
+    });
+  }
+
+  const status = findings.some((finding) => finding.status === "fail") ? "fail" : findings.some((finding) => finding.status === "warn") ? "warn" : "pass";
+  return {
+    totalDocuments: documents.length,
+    routeReferencesChecked,
+    findings,
+    status,
+  };
+}
+
+function codeownersHasPattern(codeowners: string, pattern: string): boolean {
+  return codeowners.split(/\r?\n/).some((line) => line.trim().startsWith(pattern));
+}
+
+function textIncludesTerm(text: string, term: string): boolean {
+  return text.toLowerCase().includes(term.toLowerCase());
+}
+
+export function auditRepositoryGovernance(
+  contract: RepositoryGovernanceContract,
+  input: RepositoryGovernanceInput,
+): RepositoryGovernanceAuditSummary {
+  const findings: RepositoryGovernanceFinding[] = [];
+
+  for (const path of contract.requiredFiles) {
+    if (!input.existingPaths.has(path)) {
+      findings.push({ status: "fail", rule: "required-file", path, message: `Required governance file is missing: ${path}.` });
+    }
+  }
+
+  for (const pattern of contract.requiredCodeownersPatterns) {
+    if (!codeownersHasPattern(input.codeowners, pattern)) {
+      findings.push({ status: "fail", rule: "codeowners-pattern", pattern, message: `CODEOWNERS is missing required pattern: ${pattern}.` });
+    }
+  }
+
+  for (const term of contract.pullRequestTemplateTerms) {
+    if (!textIncludesTerm(input.pullRequestTemplate, term)) {
+      findings.push({ status: "fail", rule: "pr-template-term", term, message: `Pull request template is missing governance term: ${term}.` });
+    }
+  }
+
+  for (const term of contract.issueTemplateTerms) {
+    if (!textIncludesTerm(input.gapClosureIssueTemplate, term)) {
+      findings.push({ status: "fail", rule: "issue-template-term", term, message: `Gap closure issue template is missing governance term: ${term}.` });
+    }
+  }
+
+  for (const term of contract.ciRequiredTerms) {
+    if (!textIncludesTerm(input.ciWorkflow, term)) {
+      findings.push({ status: "fail", rule: "ci-required-term", term, message: `CI workflow is missing required governance gate: ${term}.` });
+    }
+  }
+
+  const status = findings.some((finding) => finding.status === "fail") ? "fail" : findings.some((finding) => finding.status === "warn") ? "warn" : "pass";
+  return {
+    findings,
+    requiredFilesChecked: contract.requiredFiles.length,
+    codeownersPatternsChecked: contract.requiredCodeownersPatterns.length,
+    templateTermsChecked: contract.pullRequestTemplateTerms.length + contract.issueTemplateTerms.length,
+    ciTermsChecked: contract.ciRequiredTerms.length,
+    externalSettingsStillRequired: contract.externalSettingsStillRequired,
+    status,
+  };
+}
+
 export function auditSemanticDocumentationClaims(documents: readonly MarkdownDocumentInput[], existingPaths: ReadonlySet<string>): SemanticDocumentationAuditSummary {
   const findings: SemanticDocumentationFinding[] = [];
   let referencedPathsChecked = 0;
@@ -422,13 +662,13 @@ export function auditSemanticDocumentationClaims(documents: readonly MarkdownDoc
 export const phase17QualityGates: readonly QualityGateDefinition[] = [
   {
     id: "quality-doc-links",
-    title: "Markdown link, path, and claim audit",
+    title: "Markdown link, path, and documentation consistency audit",
     priority: "high",
-    command: "node scripts/quality/audit-doc-links.mjs",
-    files: ["scripts/quality/audit-doc-links.mjs", "docs/quality/manifests/markdown-link-audit.json"],
+    command: "node scripts/quality/audit-doc-links.mjs && node scripts/quality/verify-documentation-consistency.mjs && node scripts/quality/verify-documentation-inventory.mjs",
+    files: ["scripts/quality/audit-doc-links.mjs", "scripts/quality/verify-documentation-consistency.mjs", "scripts/quality/verify-documentation-inventory.mjs", "docs/quality/manifests/markdown-link-audit.json", "docs/quality/manifests/documentation-consistency-audit.json", "docs/quality/manifests/documentation-inventory-audit.json"],
     blocksGapIds: ["GAP-124", "GAP-128"],
-    purpose: "Detect broken relative Markdown links, missing referenced repo paths, and unsupported production-ready claims before an agent relies on stale documentation.",
-    acceptanceEvidence: ["Audit command output", "Updated markdown-link-audit.json", "No missing relative targets or unsupported production claims"],
+    purpose: "Detect broken relative Markdown links, missing referenced repo paths, unsupported production-ready claims, unresolved API route references, stale provider/legal readiness claims, and stale app/package inventory references before an agent relies on stale documentation.",
+    acceptanceEvidence: ["Audit command output", "Updated markdown-link-audit.json", "Updated documentation-consistency-audit.json", "Updated documentation-inventory-audit.json", "No missing relative targets, unsupported production claims, unresolved API route references, unqualified provider/legal readiness claims, or stale app/package roots"],
   },
   {
     id: "quality-gap-evidence",
@@ -439,6 +679,66 @@ export const phase17QualityGates: readonly QualityGateDefinition[] = [
     blocksGapIds: ["GAP-122", "GAP-119"],
     purpose: "Prevent malformed or evidence-free gap changes from being treated as production progress.",
     acceptanceEvidence: ["Audit command output", "Updated gap-evidence-audit.json", "No fail findings before closing a production blocker"],
+  },
+  {
+    id: "repository-governance",
+    title: "Repository governance prerequisite audit",
+    priority: "critical",
+    command: "node scripts/quality/verify-repository-governance.mjs",
+    files: ["scripts/quality/verify-repository-governance.mjs", "docs/quality/manifests/repository-governance-audit.json", ".github/CODEOWNERS", ".github/PULL_REQUEST_TEMPLATE.md"],
+    blocksGapIds: ["GAP-125", "GAP-129", "GAP-133"],
+    purpose: "Verify source-controlled branch-protection prerequisites before claiming external GitHub repository settings are enforced.",
+    acceptanceEvidence: ["Audit command output", "Updated repository-governance-audit.json", "CODEOWNERS covers governance and sensitive surfaces", "CI includes quality, handoff, workspace, and secret-management gates"],
+  },
+  {
+    id: "required-quality-checks",
+    title: "Required quality checks contract audit",
+    priority: "critical",
+    command: "node scripts/quality/verify-required-checks.mjs",
+    files: ["scripts/quality/verify-required-checks.mjs", "docs/quality/manifests/required-checks-audit.json", ".github/workflows/ci.yml", "package.json"],
+    blocksGapIds: ["GAP-129", "GAP-111", "GAP-133"],
+    purpose: "Verify required package scripts, CI workflow terms, and branch-protection check names before external GitHub branch protection is claimed.",
+    acceptanceEvidence: ["Audit command output", "Updated required-checks-audit.json", "CI contains required quality, handoff, workspace, workspace enforcement, typecheck, lint, unit, and e2e gates", "External branch-protection check names documented"],
+  },
+  {
+    id: "workspace-required-checks",
+    title: "Workspace required checks contract audit",
+    priority: "critical",
+    command: "node scripts/workspace/verify-workspace-required-checks.mjs",
+    files: ["scripts/workspace/verify-workspace-required-checks.mjs", "docs/workspace/manifests/workspace-required-checks-audit.json", "docs/workspace/manifests/workspace-required-checks-contract.json", "package.json", ".github/workflows/ci.yml"],
+    blocksGapIds: ["GAP-133", "GAP-130", "GAP-132"],
+    purpose: "Verify workspace audit scripts are chained, visible in CI, and named for future branch protection before workspace enforcement is claimed.",
+    acceptanceEvidence: ["Audit command output", "Updated workspace-required-checks-audit.json", "workspace:all chains import/script/readiness/enforcement/toolchain checks", "CI includes workspace checks", "PR gap-diff and required-check enforcement terms are present"],
+  },
+  {
+    id: "workspace-toolchain-readiness",
+    title: "Workspace toolchain readiness audit",
+    priority: "high",
+    command: "node scripts/workspace/verify-workspace-toolchain.mjs",
+    files: ["scripts/workspace/verify-workspace-toolchain.mjs", "docs/workspace/manifests/workspace-toolchain-readiness-audit.json", "docs/workspace/manifests/workspace-toolchain-readiness-contract.json", "packages/workspace/src/index.ts", "packages/workspace/tests/workspace-audit.test.ts", "package.json", ".github/workflows/ci.yml"],
+    blocksGapIds: ["GAP-130", "GAP-132"],
+    purpose: "Verify the workspace helper package, scripts, generated report placeholders, root command chain, and CI wiring stay aligned before runtime readiness evidence is claimed.",
+    acceptanceEvidence: ["Audit command output", "Updated workspace-toolchain-readiness-audit.json", "Workspace helper package, scripts, manifests, root scripts, and CI terms are aligned", "Runtime/provider proof remains separately blocked until install/build/test evidence exists"],
+  },
+  {
+    id: "runtime-evidence",
+    title: "Runtime evidence audit",
+    priority: "critical",
+    command: "node scripts/workspace/verify-runtime-evidence.mjs",
+    files: ["scripts/workspace/verify-runtime-evidence.mjs", "docs/workspace/manifests/runtime-evidence-contract.json", "docs/workspace/manifests/runtime-evidence.json", "docs/workspace/manifests/runtime-evidence-audit.json", "scripts/workspace/print-runtime-readiness.mjs"],
+    blocksGapIds: ["GAP-132", "GAP-001", "GAP-012"],
+    purpose: "Keep install, workspace, handoff, quality, typecheck, unit, and app-build evidence explicit before runtime readiness is claimed.",
+    acceptanceEvidence: ["Audit command output", "Updated runtime-evidence-audit.json", "Required command evidence is marked passed only after real runs", "Missing evidence remains explicit and secret-safe"],
+  },
+  {
+    id: "legal-review",
+    title: "Legal review evidence audit",
+    priority: "critical",
+    command: "node scripts/legal/verify-legal-review.mjs",
+    files: ["scripts/legal/verify-legal-review.mjs", "docs/legal/LEGAL_REVIEW_PACKET.md", "docs/legal/manifests/legal-review-contract.json", "docs/legal/manifests/legal-review-evidence.json", "docs/legal/manifests/legal-review-audit.json"],
+    blocksGapIds: ["GAP-013", "GAP-120"],
+    purpose: "Keep attorney review requirements explicit and secret-safe before production legal readiness is claimed.",
+    acceptanceEvidence: ["Audit command output", "Updated legal-review-audit.json", "All required legal review items are approved with redacted evidence labels", "No privileged attorney communications, secrets, or client data appear in evidence"],
   },
   {
     id: "quality-gate-summary",

@@ -1,0 +1,9 @@
+{
+  "generatedAt": null,
+  "source": "GAP-132 runtime readiness evidence",
+  "status": "not-run",
+  "requirementsChecked": 0,
+  "missingRequiredEvidence": [],
+  "findings": [],
+  "note": "Placeholder manifest committed so runtime evidence references are concrete; scripts/workspace/verify-runtime-evidence.mjs overwrites this file during pnpm workspace:runtime-evidence."
+}

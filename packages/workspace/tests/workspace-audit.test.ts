@@ -2,9 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   auditPackageScripts,
   auditPackageEntrypoints,
+  auditRuntimeEvidence,
+  auditWorkspaceRequiredChecks,
+  auditWorkspaceToolchainReadiness,
   auditWorkspaceDependencies,
   classifyWorkspacePath,
+  extractImportSpecifiers,
   extractWorkspaceImportSpecifiers,
+  getExternalPackageNameFromSpecifier,
   getWorkspacePackageNameFromSpecifier,
   summarizeRuntimeReadiness,
 } from "../src/index";
@@ -29,14 +34,19 @@ describe("workspace audit helpers", () => {
     expect(classifyWorkspacePath("packages/db")).toBe("package");
     expect(getWorkspacePackageNameFromSpecifier("@inkroute/types/foo")).toBe("@inkroute/types");
     expect(getWorkspacePackageNameFromSpecifier("zod")).toBeNull();
+    expect(getExternalPackageNameFromSpecifier("@sentry/nextjs/server")).toBe("@sentry/nextjs");
+    expect(getExternalPackageNameFromSpecifier("zod/v4")).toBe("zod");
+    expect(getExternalPackageNameFromSpecifier("node:fs")).toBeNull();
   });
 
-  it("extracts static workspace import specifiers", () => {
+  it("extracts static import specifiers", () => {
     const source = [
       "import { x } from \"@inkroute/types\";",
+      "import { z } from \"zod\";",
       "const y = await import(\"@inkroute/config\");",
       "const z = require(\"@inkroute/workspace/testing\");",
     ].join("\n");
+    expect(extractImportSpecifiers(source)).toContain("zod");
     expect(extractWorkspaceImportSpecifiers(source)).toEqual([
       "@inkroute/config",
       "@inkroute/types",
@@ -57,6 +67,45 @@ describe("workspace audit helpers", () => {
       ],
       tsconfigPathAliases: ["@inkroute/example", "@inkroute/types"],
     });
+    expect(summary.status).toBe("pass");
+  });
+
+  it("flags undeclared external package imports", () => {
+    const summary = auditWorkspaceDependencies({
+      projects: [baseProject],
+      imports: [],
+      externalImports: [
+        {
+          sourcePath: "packages/example/src/index.ts",
+          ownerPackageName: "@inkroute/example",
+          importedPackageName: "zod",
+          importSpecifier: "zod/v4",
+        },
+      ],
+      tsconfigPathAliases: ["@inkroute/example"],
+      builtInPackages: new Set(["node:fs"]),
+    });
+
+    expect(summary.status).toBe("fail");
+    expect(summary.findings.some((finding) => finding.message.includes("Uses external package zod without declaring it"))).toBe(true);
+  });
+
+  it("allows shared root dev dependency tooling for external test imports", () => {
+    const summary = auditWorkspaceDependencies({
+      projects: [baseProject],
+      imports: [],
+      externalImports: [
+        {
+          sourcePath: "packages/example/tests/example.test.ts",
+          ownerPackageName: "@inkroute/example",
+          importedPackageName: "vitest",
+          importSpecifier: "vitest",
+        },
+      ],
+      tsconfigPathAliases: ["@inkroute/example"],
+      rootDevDependencies: new Set(["vitest"]),
+    });
+
     expect(summary.status).toBe("pass");
   });
 
@@ -162,5 +211,89 @@ describe("workspace audit helpers", () => {
     expect(withLockfile.level).toBe("needs-attention");
     expect(withLockfile.firstExternalCommands).toContain("pnpm workspace:all");
     expect(withLockfile.checks.some((check) => check.id === "production-blockers" && check.status === "fail")).toBe(true);
+  });
+
+  it("audits runtime evidence requirements", () => {
+    const requirements = [
+      { id: "install", command: "pnpm install", gapIds: ["GAP-001"], requiredForProduction: true },
+      { id: "typecheck", command: "pnpm typecheck", gapIds: ["GAP-132"], requiredForProduction: true },
+      { id: "storybook", command: "pnpm storybook", gapIds: ["GAP-016"], requiredForProduction: false },
+    ];
+    const audit = auditRuntimeEvidence(requirements, [
+      { id: "install", status: "passed", evidence: "local run 2026-06-08 passed" },
+      { id: "typecheck", status: "planned" },
+    ]);
+
+    expect(audit.status).toBe("fail");
+    expect(audit.requirementsChecked).toBe(3);
+    expect(audit.missingRequiredEvidence).toContain("typecheck");
+    expect(audit.findings.some((finding) => finding.id === "storybook" && finding.status === "warn")).toBe(true);
+  });
+
+  it("audits workspace required check wiring", () => {
+    const contract = {
+      requiredRootScripts: ["workspace:imports", "workspace:scripts", "workspace:readiness", "workspace:all"],
+      requiredWorkspaceAllChain: ["workspace:imports", "workspace:scripts", "workspace:readiness"],
+      requiredCiTerms: ["pnpm workspace:imports", "pnpm workspace:scripts", "pnpm workspace:readiness"],
+      requiredPrEnforcementTerms: ["pnpm quality:pr-gaps"],
+      requiredBranchProtectionChecks: ["CI / quality", "Verify Phase 18 workspace runtime readiness"],
+      externalSettingsStillRequired: ["branch protection"],
+    };
+
+    const passing = auditWorkspaceRequiredChecks(contract, {
+      rootScripts: {
+        "workspace:imports": "node scripts/workspace/audit-workspace-imports.mjs",
+        "workspace:scripts": "node scripts/workspace/audit-package-scripts.mjs",
+        "workspace:readiness": "node scripts/workspace/print-runtime-readiness.mjs",
+        "workspace:all": "pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness",
+        "quality:pr-gaps": "node scripts/quality/audit-gap-tracker-diff.mjs",
+      },
+      ciWorkflow: "run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness\nrun: pnpm quality:pr-gaps",
+    });
+    expect(passing.status).toBe("pass");
+    expect(passing.requiredBranchProtectionChecks).toContain("Verify Phase 18 workspace runtime readiness");
+
+    const failing = auditWorkspaceRequiredChecks(contract, {
+      rootScripts: { "workspace:all": "pnpm workspace:imports" },
+      ciWorkflow: "run: pnpm workspace:imports",
+    });
+    expect(failing.status).toBe("fail");
+    expect(failing.findings.some((finding) => finding.rule === "root-script")).toBe(true);
+    expect(failing.findings.some((finding) => finding.rule === "workspace-all-chain")).toBe(true);
+    expect(failing.findings.some((finding) => finding.rule === "pr-enforcement-term")).toBe(true);
+  });
+
+  it("audits workspace toolchain readiness", () => {
+    const contract = {
+      requiredFiles: ["packages/workspace/src/index.ts", "scripts/workspace/audit-workspace-imports.mjs"],
+      requiredRootScripts: ["workspace:imports", "workspace:toolchain", "workspace:all"],
+      requiredWorkspaceAllChain: ["workspace:imports", "workspace:toolchain"],
+      requiredWorkspacePackageScripts: ["typecheck", "test"],
+      requiredCiTerms: ["pnpm workspace:imports", "pnpm workspace:toolchain"],
+      requiredGeneratedReports: ["docs/workspace/manifests/workspace-import-audit.json"],
+    };
+    const passing = auditWorkspaceToolchainReadiness(contract, {
+      existingPaths: new Set(["packages/workspace/src/index.ts", "scripts/workspace/audit-workspace-imports.mjs", "docs/workspace/manifests/workspace-import-audit.json"]),
+      rootScripts: {
+        "workspace:imports": "node scripts/workspace/audit-workspace-imports.mjs",
+        "workspace:toolchain": "node scripts/workspace/verify-workspace-toolchain.mjs",
+        "workspace:all": "pnpm workspace:imports && pnpm workspace:toolchain",
+      },
+      workspacePackageScripts: { typecheck: "tsc --noEmit", test: "vitest run" },
+      ciWorkflow: "run: pnpm workspace:imports && pnpm workspace:toolchain",
+    });
+    expect(passing.status).toBe("pass");
+
+    const failing = auditWorkspaceToolchainReadiness(contract, {
+      existingPaths: new Set(["packages/workspace/src/index.ts"]),
+      rootScripts: { "workspace:all": "pnpm workspace:imports" },
+      workspacePackageScripts: { test: "vitest run" },
+      ciWorkflow: "run: pnpm workspace:imports",
+    });
+    expect(failing.status).toBe("fail");
+    expect(failing.findings.some((finding) => finding.rule === "required-file")).toBe(true);
+    expect(failing.findings.some((finding) => finding.rule === "root-script")).toBe(true);
+    expect(failing.findings.some((finding) => finding.rule === "workspace-package-script")).toBe(true);
+    expect(failing.findings.some((finding) => finding.rule === "ci-term")).toBe(true);
   });
 });
