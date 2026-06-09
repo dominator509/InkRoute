@@ -2,6 +2,7 @@ import { Text, View } from "react-native";
 import { MobileCard } from "../components/MobileCard";
 import { MobilePill } from "../components/MobilePill";
 import { MobileScreen } from "../components/MobileScreen";
+import { mobilePushContractPreview } from "../lib/mobilePush";
 import { mobileAutomationSequence, mobileNotificationPlans, notificationPreviews } from "../lib/mobileDemo";
 
 function planTone(status: string) {
@@ -17,6 +18,18 @@ export function NotificationsScreen() {
       title="Client and artist alerts"
       summary="Template previews, consent routing, and automation sequences are imported from @inkroute/notifications. Expo push, email, SMS, delivery logs, and opt-out controls are not wired."
     >
+      <MobileCard title="Push runtime contract" eyebrow="GAP-044" detail={mobilePushContractPreview.boundary}>
+        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+          <MobilePill label={mobilePushContractPreview.registration.shouldPersistToken ? "token registration planned" : "token blocked"} tone="good" />
+          <MobilePill label={mobilePushContractPreview.delivery.status === "ready" ? "delivery log planned" : "delivery blocked"} tone="good" />
+          <MobilePill label={mobilePushContractPreview.receipt.shouldMarkPushTokenInactive ? "invalid token suppression" : "receipt tracked"} tone="warn" />
+          <MobilePill label={`tap route ${mobilePushContractPreview.tap.routePath ?? "blocked"}`} tone={mobilePushContractPreview.tap.status === "ready" ? "good" : "danger"} />
+        </View>
+        <Text style={{ color: "#a8a29e", marginTop: 8 }}>
+          Token preview: {mobilePushContractPreview.registration.tokenMasked ?? "not registered"} · receipt: {mobilePushContractPreview.receipt.normalizedStatus}
+        </Text>
+      </MobileCard>
+
       {notificationPreviews.map((notification) => (
         <MobileCard key={notification.key} title={notification.key.replace(/_/g, " ")} detail={notification.body}>
           <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>

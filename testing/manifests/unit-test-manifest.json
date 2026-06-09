@@ -1,301 +1,918 @@
-{
-  "phase": "14",
-  "status": "scaffolded",
-  "command": "pnpm test:unit",
-  "suites": [
-    {
-      "id": "unit-booking-readiness",
-      "file": "packages/booking/tests/booking-readiness.test.ts",
-      "priority": "critical",
-      "verifies": ["Tattoo Readiness Score", "booking lifecycle transitions"],
-      "blockedBy": ["Vitest dependency installation", "workspace lockfile"]
-    },
-    {
-      "id": "unit-payment-policy",
-      "file": "packages/payments/tests/deposit-policy.test.ts",
-      "priority": "critical",
-      "verifies": ["deposit policy", "refund logic", "no-show logic", "checkout draft"],
-      "blockedBy": ["Vitest dependency installation", "Stripe live integration remains credential-gated"]
-    },
-    {
-      "id": "unit-calendar-availability",
-      "file": "packages/calendar/tests/availability-conflicts.test.ts",
-      "priority": "critical",
-      "verifies": ["availability slots", "buffer conflicts", "ICS feed draft"],
-      "blockedBy": ["Vitest dependency installation", "timezone/DST hardening pending"]
-    },
-    {
-      "id": "unit-notification-plans",
-      "file": "packages/notifications/tests/delivery-plan.test.ts",
-      "priority": "high",
-      "verifies": ["template rendering", "consent gates", "provider boundary status"],
-      "blockedBy": ["Vitest dependency installation", "providers remain credential-gated"]
-    },
-    {
-      "id": "unit-seo-engine",
-      "file": "packages/seo/tests/seo-engine.test.ts",
-      "priority": "high",
-      "verifies": ["metadata drafts", "sitemap planning", "internal links"],
-      "blockedBy": ["Vitest dependency installation", "rendered structured-data validation pending"]
-    },
-    {
-      "id": "unit-observability-redaction",
-      "file": "packages/observability/tests/redaction-report.test.ts",
-      "priority": "high",
-      "verifies": ["PII redaction", "severity classification", "agentic bug-fix workflow"],
-      "blockedBy": ["Vitest dependency installation", "Sentry SDK remains credential-gated"]
-    },
-    {
-      "id": "unit-release-governance",
-      "file": "packages/releases/tests/feature-flags.test.ts",
-      "priority": "high",
-      "verifies": ["feature flags", "migration gates", "OTA compatibility"],
-      "blockedBy": ["Vitest dependency installation", "real CI/CD execution pending"]
-    },
-    {
-      "id": "unit-security-policy",
-      "file": "packages/security/tests/upload-policy.test.ts",
-      "priority": "critical",
-      "verifies": ["upload policy", "recursive redaction", "rate-limit draft", "tenant fixtures"],
-      "blockedBy": ["Vitest dependency installation", "runtime security middleware pending"]
-    },
-    {
-      "id": "unit-secure-upload-route",
-      "file": "apps/web/tests/secure-upload-intents-route.test.ts",
-      "priority": "critical",
-      "verifies": ["secure upload intent route", "upload metadata rejection", "tenant-safe route errors", "private upload runtime evidence", "tenant-scoped object keys", "signed upload intent plan", "private storage ACL plan", "upload-intent rate limiting"],
-      "blockedBy": ["Route test execution pending", "storage provider integration remains credential-gated"]
-    },
-    {
-      "id": "unit-web-security-runtime-middleware",
-      "file": "apps/web/tests/security-runtime-middleware.test.ts",
-      "priority": "critical",
-      "verifies": ["web security middleware runtime", "security headers", "cookie-authenticated CSRF rejection", "valid CSRF pass-through"],
-      "blockedBy": ["Middleware runtime test execution pending", "browser header smoke test pending"]
-    },
-    {
-      "id": "unit-dashboard-security-runtime-middleware",
-      "file": "apps/web/tests/security-runtime-middleware.test.ts",
-      "priority": "critical",
-      "verifies": ["dashboard security middleware runtime", "dashboard security headers", "dashboard cookie-authenticated CSRF rejection", "valid CSRF pass-through"],
-      "blockedBy": ["Middleware runtime test execution pending", "browser header smoke test pending"]
-    },
-    {
-      "id": "unit-security-runtime-middleware-static",
-      "file": "apps/web/tests/security-runtime-middleware-static.test.ts",
-      "priority": "high",
-      "verifies": ["web security middleware wiring", "static asset matcher exclusions"],
-      "blockedBy": ["Static middleware wiring test execution pending"]
-    },
-    {
-      "id": "unit-dashboard-security-runtime-middleware-static",
-      "file": "apps/web/tests/dashboard-security-runtime-middleware-static.test.ts",
-      "priority": "high",
-      "verifies": ["dashboard security middleware wiring", "static asset matcher exclusions"],
-      "blockedBy": ["Static dashboard middleware wiring test execution pending"]
-    },
-    {
-      "id": "unit-dashboard-booking-state-route-static",
-      "file": "apps/dashboard/tests/booking-state-route-static.test.ts",
-      "priority": "critical",
-      "verifies": ["dashboard booking read routes", "dashboard booking state mutation route", "booking RBAC denial", "tenant mismatch denial", "booking transition planning", "booking projection redaction", "sensitive-read AuditLog persistence", "BookingStateEvent persistence", "AuditLog persistence"],
-      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded mutation smoke pending", "provider-backed dashboard auth pending"]
-    },
-    {
-      "id": "unit-dashboard-client-read-route-static",
-      "file": "apps/dashboard/tests/client-read-route-static.test.ts",
-      "priority": "critical",
-      "verifies": ["dashboard client read routes", "client RBAC denial", "tenant mismatch denial", "client projection redaction", "sensitive profile redaction", "sensitive-read AuditLog persistence", "no-store dashboard client reads"],
-      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded client read smoke pending", "provider-backed dashboard auth pending"]
-    },
-    {
-      "id": "unit-dashboard-payment-read-route-static",
-      "file": "apps/dashboard/tests/payment-read-route-static.test.ts",
-      "priority": "critical",
-      "verifies": ["dashboard payment read routes", "payment RBAC denial", "tenant mismatch denial", "payment provider id redaction", "payment metadata redaction", "AuditLog persistence", "PaymentAuditLog persistence", "no-store dashboard payment reads"],
-      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded payment read smoke pending", "Stripe provider write flows remain credential-gated"]
-    },
-    {
-      "id": "unit-dashboard-portfolio-read-route-static",
-      "file": "apps/dashboard/tests/portfolio-read-route-static.test.ts",
-      "priority": "critical",
-      "verifies": ["dashboard portfolio read routes", "portfolio RBAC denial", "tenant mismatch denial", "portfolio attribution redaction", "file object-key redaction", "private asset URL redaction", "AuditLog persistence", "no-store dashboard portfolio reads"],
-      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded portfolio read smoke pending", "storage provider write flows remain credential-gated"]
-    },
-    {
-      "id": "unit-dashboard-travel-read-route-static",
-      "file": "apps/dashboard/tests/travel-read-route-static.test.ts",
-      "priority": "high",
-      "verifies": ["dashboard travel read routes", "travel RBAC denial", "tenant mismatch denial", "internal travel note redaction", "guest spot URL redaction", "client-name redaction in travel context", "AuditLog persistence", "no-store dashboard travel reads"],
-      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded travel read smoke pending", "calendar provider write/sync flows remain credential-gated"]
-    },
-    {
-      "id": "unit-dashboard-message-read-route-static",
-      "file": "apps/dashboard/tests/message-read-route-static.test.ts",
-      "priority": "critical",
-      "verifies": ["dashboard message read routes", "message RBAC permission model", "message RBAC denial", "tenant mismatch denial", "message body redaction", "provider message id redaction", "client contact redaction", "AuditLog persistence", "no-store dashboard message reads"],
-      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded message read smoke pending", "provider send/inbound worker flows remain credential-gated"]
-    },
-    {
-      "id": "unit-dashboard-template-read-route-static",
-      "file": "apps/dashboard/tests/template-read-route-static.test.ts",
-      "priority": "critical",
-      "verifies": ["dashboard notification template read route", "notification RBAC permission model", "notification RBAC denial", "tenant mismatch denial", "coded template catalog reads", "notification queue summary reads", "delivery summary reads", "notification body redaction", "destination hash redaction", "provider message id redaction", "provider error redaction", "AuditLog persistence", "no-store dashboard template reads"],
-      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded notification read smoke pending", "provider send workers remain credential-gated", "template write APIs remain gated"]
-    },
-    {
-      "id": "unit-dashboard-seo-read-route-static",
-      "file": "apps/dashboard/tests/seo-read-route-static.test.ts",
-      "priority": "high",
-      "verifies": ["dashboard SEO read route", "SEO RBAC denial", "tenant mismatch denial", "city SEO read loader", "style SEO read loader", "redirect read loader", "public portfolio filtering", "AuditLog persistence", "no-store dashboard SEO reads"],
-      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded SEO read smoke pending", "Search Console and publish/revalidation flows remain credential-gated"]
-    },
-    {
-      "id": "unit-dashboard-review-read-route-static",
-      "file": "apps/dashboard/tests/review-read-route-static.test.ts",
-      "priority": "high",
-      "verifies": ["dashboard review read route", "review RBAC permission model", "review RBAC denial", "tenant mismatch denial", "Review read loader", "review body redaction", "private client/booking reference omission", "AuditLog persistence", "no-store dashboard review reads"],
-      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded review read smoke pending", "review publication/moderation write flows remain gated"]
-    },
-    {
-      "id": "unit-dashboard-settings-read-route-static",
-      "file": "apps/dashboard/tests/settings-read-route-static.test.ts",
-      "priority": "critical",
-      "verifies": ["dashboard settings read route", "settings RBAC denial", "tenant mismatch denial", "member email redaction", "domain verification token omission", "provider secret boundary", "AuditLog persistence", "no-store dashboard settings reads"],
-      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded settings read smoke pending", "settings mutation/provider-secret flows remain gated"]
-    },
-    {
-      "id": "unit-dashboard-calendar-read-route-static",
-      "file": "apps/dashboard/tests/calendar-read-route-static.test.ts",
-      "priority": "high",
-      "verifies": ["dashboard calendar read route", "calendar RBAC permission model", "calendar RBAC denial", "tenant mismatch denial", "provider token omission", "provider account redaction", "external event id redaction", "raw payload redaction", "availability internal note redaction", "AuditLog persistence", "no-store dashboard calendar reads"],
-      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded calendar read smoke pending", "Google Calendar OAuth/provider sync flows remain credential-gated"]
-    },
-    {
-      "id": "unit-dashboard-form-read-route-static",
-      "file": "apps/dashboard/tests/form-read-route-static.test.ts",
-      "priority": "critical",
-      "verifies": ["dashboard form read routes", "form RBAC permission model", "form RBAC denial", "tenant mismatch denial", "intake metadata reads", "consent metadata reads", "medical safety metadata reads", "raw answer redaction", "signature data redaction", "medical acknowledgment redaction", "AuditLog persistence", "no-store dashboard form reads"],
-      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded form read smoke pending", "form write/signature request flows remain gated", "attorney-reviewed copy remains required"]
-    },
-    {
-      "id": "unit-dashboard-error-report-route-static",
-      "file": "apps/dashboard/tests/error-report-route-static.test.ts",
-      "priority": "critical",
-      "verifies": ["dashboard error-report read route", "error RBAC denial", "tenant mismatch denial", "query validation", "metadata redaction", "AuditLog persistence", "no-store dashboard error-report reads"],
-      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded error-report read smoke pending", "Sentry/OpenTelemetry provider flows remain credential-gated"]
-    },
-    {
-      "id": "unit-dashboard-release-route-static",
-      "file": "apps/dashboard/tests/release-route-static.test.ts",
-      "priority": "high",
-      "verifies": ["dashboard release read route", "release RBAC denial", "tenant mismatch denial", "ReleaseRecord read loader", "AuditLog persistence", "no-store dashboard release reads", "release write validation boundary"],
-      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded release read/write smoke pending", "protected environment/provider deployment flows remain gated"]
-    },
-    {
-      "id": "unit-dashboard-feature-flag-route-static",
-      "file": "apps/dashboard/tests/feature-flag-route-static.test.ts",
-      "priority": "high",
-      "verifies": ["dashboard feature-flag read route", "feature-flag RBAC denial", "tenant mismatch denial", "FeatureFlag/default definition loader", "AuditLog persistence", "no-store dashboard feature-flag reads", "settings-write feature-flag mutation boundary", "provider credential enablement gate"],
-      "blockedBy": ["Static dashboard route contract execution pending", "database-backed seeded feature-flag read/write smoke pending", "provider-worker kill-switch enforcement remains gated"]
-    },
-    {
-      "id": "unit-public-privacy-route",
-      "file": "apps/web/tests/privacy-requests-public-route.test.ts",
-      "priority": "critical",
-      "verifies": ["public privacy request route", "tenant-safe errors", "privacy submission redaction", "privacy request rate limiting", "tenant-scoped persistence"],
-      "blockedBy": ["Route test execution pending", "database privacy workflow integration remains pending"]
-    },
-    {
-      "id": "unit-dashboard-privacy-route",
-      "file": "apps/web/tests/privacy-requests-dashboard-route.test.ts",
-      "priority": "critical",
-      "verifies": ["dashboard privacy request route", "dashboard privacy submission redaction", "dashboard mutation rate limiting", "tenant-scoped demo persistence", "cross-tenant denial", "role allowlist denial"],
-      "blockedBy": ["Route test execution pending", "authenticated dashboard DB workflow integration remains pending"]
-    },
-    {
-      "id": "unit-dashboard-trust-status-route",
-      "file": "apps/web/tests/dashboard-trust-status-route.test.ts",
-      "priority": "critical",
-      "verifies": ["dashboard trust status route", "tenant-scoped security posture", "cross-tenant denial", "role allowlist denial"],
-      "blockedBy": ["Route test execution pending", "authenticated dashboard DB workflow integration remains pending"]
-    },
-    {
-      "id": "unit-dashboard-trust-status-route-static",
-      "file": "apps/dashboard/tests/security-trust-route-static.test.ts",
-      "priority": "high",
-      "verifies": ["dashboard trust status static route contract", "tenant header guard", "role allowlist guard", "no-store trust responses", "security posture helper output", "production trust boundary copy"],
-      "blockedBy": ["Static dashboard route contract execution pending", "provider-backed auth integration remains pending"]
-    },
-    {
-      "id": "unit-dashboard-privacy-route-static",
-      "file": "apps/dashboard/tests/security-privacy-route-static.test.ts",
-      "priority": "critical",
-      "verifies": ["dashboard privacy request static route contract", "tenant header guard", "role allowlist guard", "no-store privacy responses", "privacy submission redaction", "dashboard mutation rate limiting", "privacy workflow boundary copy"],
-      "blockedBy": ["Static dashboard route contract execution pending", "PrivacyRequest DB persistence remains pending", "export/delete/anonymize workers remain pending"]
-    },
-    {
-      "id": "unit-dashboard-deployment-readiness-route",
-      "file": "apps/web/tests/dashboard-deployment-readiness-route.test.ts",
-      "priority": "high",
-      "verifies": ["dashboard deployment readiness route", "local fallback deployment evidence payload", "deployment RBAC denial", "rollback preflight boundary", "blocked production approval boundary"],
-      "blockedBy": ["Route test execution pending", "dashboard Next.js build/runtime smoke pending", "real CI/CD provider execution remains deployment-gated"]
-    },
-    {
-      "id": "unit-dashboard-deployment-readiness-route-static",
-      "file": "apps/dashboard/tests/deployment-readiness-route-static.test.ts",
-      "priority": "high",
-      "verifies": ["dashboard deployment readiness static route contract", "release RBAC denial", "tenant mismatch denial", "no-store readiness responses", "read AuditLog persistence", "secret-name-only redaction boundary", "provider-gated deployment mutations"],
-      "blockedBy": ["Static dashboard route contract execution pending", "database-backed readiness read smoke pending", "real CI/CD provider execution remains deployment-gated"]
-    },
-    {
-      "id": "unit-security-next-config",
-      "file": "apps/web/tests/security-next-config-static.test.ts",
-      "priority": "high",
-      "verifies": ["web security package transpilation", "dashboard security package transpilation"],
-      "blockedBy": ["Static config test execution pending", "Next.js app build execution pending"]
-    },
-    {
-      "id": "unit-provider-webhook-contracts",
-      "file": "apps/web/tests/provider-webhook-contracts.test.ts",
-      "priority": "critical",
-      "verifies": ["provider test plan coverage", "Stripe webhook signature and raw-body contract", "email webhook signature and idempotency boundary", "SMS webhook signature and STOP/replay boundary", "Sentry webhook signature and delivery idempotency contract"],
-      "blockedBy": ["Provider contract test execution pending", "live provider sandbox deliveries remain credential-gated"]
-    },
-    {
-      "id": "static-performance-budget-verifier",
-      "file": "testing/scripts/verify-performance-budgets.mjs",
-      "priority": "high",
-      "verifies": ["Core Web Vitals budgets", "route performance budgets", "API load targets", "database query plan targets", "image optimization targets"],
-      "blockedBy": ["Static performance budget verifier execution pending", "Lighthouse/load/EXPLAIN/image benchmark execution pending"]
-    },
-    {
-      "id": "unit-mobile-security-static",
-      "file": "apps/mobile/tests/mobile-security-static.test.ts",
-      "priority": "high",
-      "verifies": ["mobile security posture surface", "mobile tenant isolation preview", "mobile privacy/upload preview", "mobile production blocker copy"],
-      "blockedBy": ["Static mobile security test execution pending", "Expo runtime/device verification pending"]
-    },
-    {
-      "id": "unit-mobile-support",
-      "file": "packages/mobile/tests/mobile-support.test.ts",
-      "priority": "critical",
-      "verifies": ["mobile screen registry", "offline sync planning", "mobile API request planning", "mobile device QA checklist", "mobile QA manifest alignment"],
-      "blockedBy": ["Mobile support package test execution pending", "Expo runtime/device verification pending"]
-    },
-    {
-      "id": "unit-db-integration-plan",
-      "file": "packages/db/tests/db-integration-plan.test.ts",
-      "priority": "critical",
-      "verifies": ["Prisma lifecycle commands", "tenant-scoped schema prerequisites", "audit log schema prerequisites", "seed workflow coverage"],
-      "blockedBy": ["Static DB integration plan test execution pending", "live Postgres integration execution pending"]
-    },
-    {
-      "id": "unit-testing-manifest",
-      "file": "packages/testing/tests/testing-manifest.test.ts",
-      "priority": "medium",
-      "verifies": ["testing manifest", "QA checklist", "CI gates"],
-      "blockedBy": ["Vitest dependency installation"]
-    }
-  ]
+﻿{
+    "phase":  "14",
+    "status":  "scaffolded",
+    "command":  "pnpm test:unit",
+    "suites":  [
+                   {
+                       "id":  "unit-booking-readiness",
+                       "file":  "packages/booking/tests/booking-readiness.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "Tattoo Readiness Score",
+                                        "booking lifecycle transitions"
+                                    ],
+                       "blockedBy":  [
+                                         "Vitest dependency installation",
+                                         "workspace lockfile"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-payment-policy",
+                       "file":  "packages/payments/tests/deposit-policy.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "deposit policy",
+                                        "refund logic",
+                                        "no-show logic",
+                                        "checkout draft"
+                                    ],
+                       "blockedBy":  [
+                                         "Vitest dependency installation",
+                                         "Stripe live integration remains credential-gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-calendar-availability",
+                       "file":  "packages/calendar/tests/availability-conflicts.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "availability slots",
+                                        "buffer conflicts",
+                                        "ICS feed draft"
+                                    ],
+                       "blockedBy":  [
+                                         "Vitest dependency installation",
+                                         "timezone/DST hardening pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-notification-plans",
+                       "file":  "packages/notifications/tests/delivery-plan.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "template rendering",
+                                        "consent gates",
+                                        "provider boundary status"
+                                    ],
+                       "blockedBy":  [
+                                         "Vitest dependency installation",
+                                         "providers remain credential-gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-seo-engine",
+                       "file":  "packages/seo/tests/seo-engine.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "metadata drafts",
+                                        "sitemap planning",
+                                        "internal links"
+                                    ],
+                       "blockedBy":  [
+                                         "Vitest dependency installation",
+                                         "rendered structured-data validation pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-observability-redaction",
+                       "file":  "packages/observability/tests/redaction-report.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "PII redaction",
+                                        "severity classification",
+                                        "agentic bug-fix workflow"
+                                    ],
+                       "blockedBy":  [
+                                         "Vitest dependency installation",
+                                         "Sentry SDK remains credential-gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-release-governance",
+                       "file":  "packages/releases/tests/feature-flags.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "feature flags",
+                                        "migration gates",
+                                        "OTA compatibility"
+                                    ],
+                       "blockedBy":  [
+                                         "Vitest dependency installation",
+                                         "real CI/CD execution pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-security-policy",
+                       "file":  "packages/security/tests/upload-policy.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "upload policy",
+                                        "recursive redaction",
+                                        "rate-limit draft",
+                                        "tenant fixtures"
+                                    ],
+                       "blockedBy":  [
+                                         "Vitest dependency installation",
+                                         "runtime security middleware pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-secure-upload-route",
+                       "file":  "apps/web/tests/secure-upload-intents-route.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "secure upload intent route",
+                                        "upload metadata rejection",
+                                        "tenant-safe route errors",
+                                        "private upload runtime evidence",
+                                        "tenant-scoped object keys",
+                                        "signed upload intent plan",
+                                        "private storage ACL plan",
+                                        "upload-intent rate limiting"
+                                    ],
+                       "blockedBy":  [
+                                         "Route test execution pending",
+                                         "storage provider integration remains credential-gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-web-security-runtime-middleware",
+                       "file":  "apps/web/tests/security-runtime-middleware.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "web security middleware runtime",
+                                        "security headers",
+                                        "cookie-authenticated CSRF rejection",
+                                        "valid CSRF pass-through"
+                                    ],
+                       "blockedBy":  [
+                                         "Middleware runtime test execution pending",
+                                         "browser header smoke test pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-security-runtime-middleware",
+                       "file":  "apps/web/tests/security-runtime-middleware.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "dashboard security middleware runtime",
+                                        "dashboard security headers",
+                                        "dashboard cookie-authenticated CSRF rejection",
+                                        "valid CSRF pass-through"
+                                    ],
+                       "blockedBy":  [
+                                         "Middleware runtime test execution pending",
+                                         "browser header smoke test pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-security-runtime-middleware-static",
+                       "file":  "apps/web/tests/security-runtime-middleware-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "web security middleware wiring",
+                                        "static asset matcher exclusions"
+                                    ],
+                       "blockedBy":  [
+                                         "Static middleware wiring test execution pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-security-runtime-middleware-static",
+                       "file":  "apps/web/tests/dashboard-security-runtime-middleware-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "dashboard security middleware wiring",
+                                        "static asset matcher exclusions"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard middleware wiring test execution pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-booking-state-route-static",
+                       "file":  "apps/dashboard/tests/booking-state-route-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "dashboard booking read routes",
+                                        "dashboard booking state mutation route",
+                                        "booking RBAC denial",
+                                        "tenant mismatch denial",
+                                        "booking transition planning",
+                                        "booking projection redaction",
+                                        "sensitive-read AuditLog persistence",
+                                        "BookingStateEvent persistence",
+                                        "AuditLog persistence"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "database-backed seeded mutation smoke pending",
+                                         "provider-backed dashboard auth pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-client-read-route-static",
+                       "file":  "apps/dashboard/tests/client-read-route-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "dashboard client read routes",
+                                        "client RBAC denial",
+                                        "tenant mismatch denial",
+                                        "client projection redaction",
+                                        "sensitive profile redaction",
+                                        "sensitive-read AuditLog persistence",
+                                        "no-store dashboard client reads"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "database-backed seeded client read smoke pending",
+                                         "provider-backed dashboard auth pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-payment-read-route-static",
+                       "file":  "apps/dashboard/tests/payment-read-route-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "dashboard payment read routes",
+                                        "payment RBAC denial",
+                                        "tenant mismatch denial",
+                                        "payment provider id redaction",
+                                        "payment metadata redaction",
+                                        "AuditLog persistence",
+                                        "PaymentAuditLog persistence",
+                                        "no-store dashboard payment reads"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "database-backed seeded payment read smoke pending",
+                                         "Stripe provider write flows remain credential-gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-portfolio-read-route-static",
+                       "file":  "apps/dashboard/tests/portfolio-read-route-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "dashboard portfolio read routes",
+                                        "portfolio RBAC denial",
+                                        "tenant mismatch denial",
+                                        "portfolio attribution redaction",
+                                        "file object-key redaction",
+                                        "private asset URL redaction",
+                                        "AuditLog persistence",
+                                        "no-store dashboard portfolio reads"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "database-backed seeded portfolio read smoke pending",
+                                         "storage provider write flows remain credential-gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-travel-read-route-static",
+                       "file":  "apps/dashboard/tests/travel-read-route-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "dashboard travel read routes",
+                                        "travel RBAC denial",
+                                        "tenant mismatch denial",
+                                        "internal travel note redaction",
+                                        "guest spot URL redaction",
+                                        "client-name redaction in travel context",
+                                        "AuditLog persistence",
+                                        "no-store dashboard travel reads"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "database-backed seeded travel read smoke pending",
+                                         "calendar provider write/sync flows remain credential-gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-message-read-route-static",
+                       "file":  "apps/dashboard/tests/message-read-route-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "dashboard message read routes",
+                                        "message RBAC permission model",
+                                        "message RBAC denial",
+                                        "tenant mismatch denial",
+                                        "message body redaction",
+                                        "provider message id redaction",
+                                        "client contact redaction",
+                                        "AuditLog persistence",
+                                        "no-store dashboard message reads"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "database-backed seeded message read smoke pending",
+                                         "provider send/inbound worker flows remain credential-gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-template-read-route-static",
+                       "file":  "apps/dashboard/tests/template-read-route-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "dashboard notification template read route",
+                                        "notification RBAC permission model",
+                                        "notification RBAC denial",
+                                        "tenant mismatch denial",
+                                        "coded template catalog reads",
+                                        "notification queue summary reads",
+                                        "delivery summary reads",
+                                        "notification body redaction",
+                                        "destination hash redaction",
+                                        "provider message id redaction",
+                                        "provider error redaction",
+                                        "AuditLog persistence",
+                                        "no-store dashboard template reads"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "database-backed seeded notification read smoke pending",
+                                         "provider send workers remain credential-gated",
+                                         "template write APIs remain gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-seo-read-route-static",
+                       "file":  "apps/dashboard/tests/seo-read-route-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "dashboard SEO read route",
+                                        "SEO RBAC denial",
+                                        "tenant mismatch denial",
+                                        "city SEO read loader",
+                                        "style SEO read loader",
+                                        "redirect read loader",
+                                        "public portfolio filtering",
+                                        "AuditLog persistence",
+                                        "no-store dashboard SEO reads"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "database-backed seeded SEO read smoke pending",
+                                         "Search Console and publish/revalidation flows remain credential-gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-review-read-route-static",
+                       "file":  "apps/dashboard/tests/review-read-route-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "dashboard review read route",
+                                        "review RBAC permission model",
+                                        "review RBAC denial",
+                                        "tenant mismatch denial",
+                                        "Review read loader",
+                                        "review body redaction",
+                                        "private client/booking reference omission",
+                                        "AuditLog persistence",
+                                        "no-store dashboard review reads"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "database-backed seeded review read smoke pending",
+                                         "review publication/moderation write flows remain gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-settings-read-route-static",
+                       "file":  "apps/dashboard/tests/settings-read-route-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "dashboard settings read route",
+                                        "settings RBAC denial",
+                                        "tenant mismatch denial",
+                                        "member email redaction",
+                                        "domain verification token omission",
+                                        "provider secret boundary",
+                                        "AuditLog persistence",
+                                        "no-store dashboard settings reads"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "database-backed seeded settings read smoke pending",
+                                         "settings mutation/provider-secret flows remain gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-calendar-read-route-static",
+                       "file":  "apps/dashboard/tests/calendar-read-route-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "dashboard calendar read route",
+                                        "calendar RBAC permission model",
+                                        "calendar RBAC denial",
+                                        "tenant mismatch denial",
+                                        "provider token omission",
+                                        "provider account redaction",
+                                        "external event id redaction",
+                                        "raw payload redaction",
+                                        "availability internal note redaction",
+                                        "AuditLog persistence",
+                                        "no-store dashboard calendar reads"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "database-backed seeded calendar read smoke pending",
+                                         "Google Calendar OAuth/provider sync flows remain credential-gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-form-read-route-static",
+                       "file":  "apps/dashboard/tests/form-read-route-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "dashboard form read routes",
+                                        "form RBAC permission model",
+                                        "form RBAC denial",
+                                        "tenant mismatch denial",
+                                        "intake metadata reads",
+                                        "consent metadata reads",
+                                        "medical safety metadata reads",
+                                        "raw answer redaction",
+                                        "signature data redaction",
+                                        "medical acknowledgment redaction",
+                                        "AuditLog persistence",
+                                        "no-store dashboard form reads"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "database-backed seeded form read smoke pending",
+                                         "form write/signature request flows remain gated",
+                                         "attorney-reviewed copy remains required"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-error-report-route-static",
+                       "file":  "apps/dashboard/tests/error-report-route-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "dashboard error-report read route",
+                                        "error RBAC denial",
+                                        "tenant mismatch denial",
+                                        "query validation",
+                                        "metadata redaction",
+                                        "AuditLog persistence",
+                                        "no-store dashboard error-report reads"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "database-backed seeded error-report read smoke pending",
+                                         "Sentry/OpenTelemetry provider flows remain credential-gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-release-route-static",
+                       "file":  "apps/dashboard/tests/release-route-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "dashboard release read route",
+                                        "release RBAC denial",
+                                        "tenant mismatch denial",
+                                        "ReleaseRecord read loader",
+                                        "AuditLog persistence",
+                                        "no-store dashboard release reads",
+                                        "release write validation boundary"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "database-backed seeded release read/write smoke pending",
+                                         "protected environment/provider deployment flows remain gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-feature-flag-route-static",
+                       "file":  "apps/dashboard/tests/feature-flag-route-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "dashboard feature-flag read route",
+                                        "feature-flag RBAC denial",
+                                        "tenant mismatch denial",
+                                        "FeatureFlag/default definition loader",
+                                        "AuditLog persistence",
+                                        "no-store dashboard feature-flag reads",
+                                        "settings-write feature-flag mutation boundary",
+                                        "provider credential enablement gate"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "database-backed seeded feature-flag read/write smoke pending",
+                                         "provider-worker kill-switch enforcement remains gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-public-privacy-route",
+                       "file":  "apps/web/tests/privacy-requests-public-route.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "public privacy request route",
+                                        "tenant-safe errors",
+                                        "privacy submission redaction",
+                                        "privacy request rate limiting",
+                                        "tenant-scoped persistence"
+                                    ],
+                       "blockedBy":  [
+                                         "Route test execution pending",
+                                         "database privacy workflow integration remains pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-privacy-route",
+                       "file":  "apps/web/tests/privacy-requests-dashboard-route.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "dashboard privacy request route",
+                                        "dashboard privacy submission redaction",
+                                        "dashboard mutation rate limiting",
+                                        "tenant-scoped demo persistence",
+                                        "cross-tenant denial",
+                                        "role allowlist denial"
+                                    ],
+                       "blockedBy":  [
+                                         "Route test execution pending",
+                                         "authenticated dashboard DB workflow integration remains pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-trust-status-route",
+                       "file":  "apps/web/tests/dashboard-trust-status-route.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "dashboard trust status route",
+                                        "tenant-scoped security posture",
+                                        "cross-tenant denial",
+                                        "role allowlist denial"
+                                    ],
+                       "blockedBy":  [
+                                         "Route test execution pending",
+                                         "authenticated dashboard DB workflow integration remains pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-trust-status-route-static",
+                       "file":  "apps/dashboard/tests/security-trust-route-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "dashboard trust status static route contract",
+                                        "tenant header guard",
+                                        "role allowlist guard",
+                                        "no-store trust responses",
+                                        "security posture helper output",
+                                        "production trust boundary copy"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "provider-backed auth integration remains pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-privacy-route-static",
+                       "file":  "apps/dashboard/tests/security-privacy-route-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "dashboard privacy request static route contract",
+                                        "tenant header guard",
+                                        "role allowlist guard",
+                                        "no-store privacy responses",
+                                        "privacy submission redaction",
+                                        "dashboard mutation rate limiting",
+                                        "privacy workflow boundary copy"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "PrivacyRequest DB persistence remains pending",
+                                         "export/delete/anonymize workers remain pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-deployment-readiness-route",
+                       "file":  "apps/web/tests/dashboard-deployment-readiness-route.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "dashboard deployment readiness route",
+                                        "local fallback deployment evidence payload",
+                                        "deployment RBAC denial",
+                                        "rollback preflight boundary",
+                                        "blocked production approval boundary"
+                                    ],
+                       "blockedBy":  [
+                                         "Route test execution pending",
+                                         "dashboard Next.js build/runtime smoke pending",
+                                         "real CI/CD provider execution remains deployment-gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-deployment-readiness-route-static",
+                       "file":  "apps/dashboard/tests/deployment-readiness-route-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "dashboard deployment readiness static route contract",
+                                        "release RBAC denial",
+                                        "tenant mismatch denial",
+                                        "no-store readiness responses",
+                                        "read AuditLog persistence",
+                                        "secret-name-only redaction boundary",
+                                        "provider-gated deployment mutations"
+                                    ],
+                       "blockedBy":  [
+                                         "Static dashboard route contract execution pending",
+                                         "database-backed readiness read smoke pending",
+                                         "real CI/CD provider execution remains deployment-gated"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-security-next-config",
+                       "file":  "apps/web/tests/security-next-config-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "web security package transpilation",
+                                        "dashboard security package transpilation"
+                                    ],
+                       "blockedBy":  [
+                                         "Static config test execution pending",
+                                         "Next.js app build execution pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-provider-webhook-contracts",
+                       "file":  "apps/web/tests/provider-webhook-contracts.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "provider test plan coverage",
+                                        "Stripe webhook signature and raw-body contract",
+                                        "email webhook signature and idempotency boundary",
+                                        "SMS webhook signature and STOP/replay boundary",
+                                        "Sentry webhook signature and delivery idempotency contract"
+                                    ],
+                       "blockedBy":  [
+                                         "Provider contract test execution pending",
+                                         "live provider sandbox deliveries remain credential-gated"
+                                     ]
+                   },
+                   {
+                       "id":  "static-performance-budget-verifier",
+                       "file":  "testing/scripts/verify-performance-budgets.mjs",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "Core Web Vitals budgets",
+                                        "route performance budgets",
+                                        "API load targets",
+                                        "database query plan targets",
+                                        "image optimization targets"
+                                    ],
+                       "blockedBy":  [
+                                         "Static performance budget verifier execution pending",
+                                         "Lighthouse/load/EXPLAIN/image benchmark execution pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-mobile-security-static",
+                       "file":  "apps/mobile/tests/mobile-security-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "mobile security posture surface",
+                                        "mobile tenant isolation preview",
+                                        "mobile privacy/upload preview",
+                                        "mobile production blocker copy"
+                                    ],
+                       "blockedBy":  [
+                                         "Static mobile security test execution pending",
+                                         "Expo runtime/device verification pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-mobile-support",
+                       "file":  "packages/mobile/tests/mobile-support.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "mobile screen registry",
+                                        "offline sync planning",
+                                        "mobile API request planning",
+                                        "mobile device QA checklist",
+                                        "mobile QA manifest alignment"
+                                    ],
+                       "blockedBy":  [
+                                         "Mobile support package test execution pending",
+                                         "Expo runtime/device verification pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-db-integration-plan",
+                       "file":  "packages/db/tests/db-integration-plan.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "Prisma lifecycle commands",
+                                        "tenant-scoped schema prerequisites",
+                                        "audit log schema prerequisites",
+                                        "seed workflow coverage"
+                                    ],
+                       "blockedBy":  [
+                                         "Static DB integration plan test execution pending",
+                                         "live Postgres integration execution pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-testing-manifest",
+                       "file":  "packages/testing/tests/testing-manifest.test.ts",
+                       "priority":  "medium",
+                       "verifies":  [
+                                        "testing manifest",
+                                        "QA checklist",
+                                        "CI gates"
+                                    ],
+                       "blockedBy":  [
+                                         "Vitest dependency installation"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-mobile-api-client-static",
+                       "file":  "apps/mobile/tests/mobile-api-client-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "mobile typed API client wiring",
+                                        "mobile auth tenant request-id headers",
+                                        "mobile response envelope validation",
+                                        "mobile safe error redaction",
+                                        "mobile screen API sync contract"
+                                    ],
+                       "blockedBy":  [
+                                         "Static mobile API client test execution pending",
+                                         "Provider auth and seeded API smoke pending",
+                                         "Expo runtime/device sync evidence pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-mobile-offline-sync-static",
+                       "file":  "apps/mobile/tests/offline-sync-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "mobile offline sync adapter boundary",
+                                        "encrypted-store gating",
+                                        "offline idempotent replay wiring",
+                                        "offline audit redaction",
+                                        "offline screen sync contract"
+                                    ],
+                       "blockedBy":  [
+                                         "Static offline sync test execution pending",
+                                         "Encrypted device storage proof pending",
+                                         "Airplane-mode reconnect smoke pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-mobile-push-static",
+                       "file":  "apps/mobile/tests/mobile-push-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "mobile Expo push registration contract",
+                                        "mobile push opt-out gates",
+                                        "mobile push delivery persistence adapter",
+                                        "mobile receipt invalid-token suppression",
+                                        "mobile safe tap routing screen contract"
+                                    ],
+                       "blockedBy":  [
+                                         "Static mobile push test execution pending",
+                                         "Expo credentials and device push smoke pending",
+                                         "Foreground/background/tap routing runtime evidence pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-mobile-crash-static",
+                       "file":  "apps/mobile/tests/mobile-crash-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "mobile sanitized crash draft wiring",
+                                        "mobile Sentry Expo configuration gates",
+                                        "mobile fallback crash reporter",
+                                        "mobile offline crash buffering",
+                                        "mobile system screen crash contract"
+                                    ],
+                       "blockedBy":  [
+                                         "Static mobile crash test execution pending",
+                                         "Sentry credentials and source-map/debug-symbol proof pending",
+                                         "Forced simulator/device crash evidence pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-mobile-updates-static",
+                       "file":  "apps/mobile/tests/mobile-updates-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "mobile OTA update app contract",
+                                        "EAS readiness gate wiring",
+                                        "mobile update adoption redaction",
+                                        "mobile rollback audit contract",
+                                        "mobile system screen OTA contract"
+                                    ],
+                       "blockedBy":  [
+                                         "Static mobile update test execution pending",
+                                         "Real EAS project/native build/device receipt pending",
+                                         "Rollback republish proof pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-mobile-qa-static",
+                       "file":  "apps/mobile/tests/mobile-qa-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "mobile screen render contract coverage",
+                                        "mobile QA runtime evidence gates",
+                                        "mobile runtime contract QA slots",
+                                        "secret-safe mobile QA artifact policy",
+                                        "App.tsx screen switch coverage"
+                                    ],
+                       "blockedBy":  [
+                                         "Static mobile QA test execution pending",
+                                         "Simulator/device/artifact evidence pending",
+                                         "Mobile CI hooks pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-mobile-auth-static",
+                       "file":  "apps/mobile/tests/mobile-auth-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "mobile secure session adapter contract",
+                                        "mobile biometric gate wiring",
+                                        "mobile session refresh/logout clearing",
+                                        "mobile auth audit redaction",
+                                        "Auth screen session gate contract"
+                                    ],
+                       "blockedBy":  [
+                                         "Static mobile auth test execution pending",
+                                         "Provider login/logout and SecureStore device proof pending",
+                                         "Biometric simulator/device evidence pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-stripe-checkout-static",
+                       "file":  "apps/web/tests/stripe-checkout-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "Stripe Checkout route adapter contract",
+                                        "Checkout idempotency before provider call",
+                                        "Checkout provider session persistence adapter",
+                                        "Payment audit log adapter",
+                                        "safe browser checkout response"
+                                    ],
+                       "blockedBy":  [
+                                         "Static Stripe Checkout test execution pending",
+                                         "Stripe SDK/secret/API version configuration pending",
+                                         "Stripe test-mode provider transcript pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-stripe-webhook-static",
+                       "file":  "apps/web/tests/stripe-webhook-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "Stripe webhook reconciliation contract",
+                                        "Stripe webhook replay store seam",
+                                        "Stripe webhook audit persistence seam",
+                                        "Stripe webhook transaction adapter seam",
+                                        "Stripe webhook runtime readiness surfacing"
+                                    ],
+                       "blockedBy":  [
+                                         "Static Stripe webhook test execution pending",
+                                         "Stripe SDK constructEvent proof pending",
+                                         "DB reconciliation and Stripe CLI replay evidence pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-payment-persistence-static",
+                       "file":  "apps/dashboard/tests/payment-persistence-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "payment lifecycle repository contract",
+                                        "payment lifecycle action coverage",
+                                        "payment tenant scope and idempotency controls",
+                                        "payment audit log mutation controls",
+                                        "dashboard payment persistence readiness surfacing"
+                                    ],
+                       "blockedBy":  [
+                                         "Static payment persistence test execution pending",
+                                         "Prisma transaction implementation pending",
+                                         "Seeded Postgres integration evidence pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-dashboard-payment-operations-static",
+                       "file":  "apps/dashboard/tests/payment-operations-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-052 dashboard payment operation actions cover refunds, no-shows, disputes, receipts, and exports",
+                                        "GAP-052 payment operations require tenant authorization, idempotency, transactions, audit logs, and provider redaction",
+                                        "GAP-052 runtime readiness remains blocked on Stripe, receipt delivery, tax review, auth tests, and dashboard E2E evidence"
+                                    ],
+                       "blockedBy":  [
+                                         "Stripe test-mode refund transcript",
+                                         "Receipt delivery provider smoke test",
+                                         "Tax/accounting reviewer approval",
+                                         "Dashboard cross-tenant denial and E2E artifacts"
+                                     ]
+                   }
+               ]
 }

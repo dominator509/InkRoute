@@ -13,6 +13,7 @@ import { PortfolioUploadScreen } from "./src/screens/PortfolioUploadScreen";
 import { SystemStatusScreen } from "./src/screens/SystemStatusScreen";
 import { TravelUpdateScreen } from "./src/screens/TravelUpdateScreen";
 import { ScreenTabs } from "./src/components/ScreenTabs";
+import { mobileQaExecutionPreview } from "./src/lib/mobileQa";
 
 function renderScreen(activeScreen: MobileScreenId) {
   switch (activeScreen) {
@@ -51,6 +52,9 @@ export default function App() {
           <Text style={{ color: "#fafaf9", fontSize: 34, fontWeight: "900" }}>InkRoute Artist</Text>
           <Text style={{ color: "#a8a29e", lineHeight: 22 }}>
             Expo Phase 6 scaffold for artist mobility. Current screen: {screen.label}. Status: {screen.phase6Status}.
+          </Text>
+          <Text style={{ color: "#a8a29e", lineHeight: 22 }}>
+            QA contract: {mobileQaExecutionPreview.screens.length} screens mapped · {mobileQaExecutionPreview.blockingItemIds.length} device/runtime checks still gated.
           </Text>
         </View>
         <View style={{ backgroundColor: "#0c0a09", paddingVertical: 4 }}>

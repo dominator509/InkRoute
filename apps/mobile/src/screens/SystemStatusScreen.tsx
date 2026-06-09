@@ -3,6 +3,8 @@ import { BoundaryCard } from "../components/BoundaryCard";
 import { MobileCard } from "../components/MobileCard";
 import { MobilePill } from "../components/MobilePill";
 import { MobileScreen } from "../components/MobileScreen";
+import { mobileCrashCapturePreview } from "../lib/mobileCrash";
+import { mobileUpdateRuntimePreview } from "../lib/mobileUpdates";
 import {
   mobileBoundaries,
   mobileCrashAlertRoute,
@@ -53,6 +55,19 @@ export function SystemStatusScreen() {
             <MobilePill label={gate.status} tone={gate.status === "pass" ? "good" : "warn"} />
           </View>
         ))}
+      </MobileCard>
+
+      <MobileCard title="OTA runtime contract" eyebrow="GAP-047" detail={mobileUpdateRuntimePreview.boundary}>
+        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+          <MobilePill label={mobileUpdateRuntimePreview.updatePlan.compatibility} tone={mobileUpdateRuntimePreview.updatePlan.compatibility === "safe" ? "good" : "warn"} />
+          <MobilePill label={mobileUpdateRuntimePreview.readiness.status} tone="warn" />
+          <MobilePill label="device receipt pending" tone="danger" />
+          <MobilePill label="rollback republish pending" tone="danger" />
+        </View>
+        <Text style={{ color: "#d6d3d1", marginTop: 8 }}>{mobileUpdateRuntimePreview.updatePlan.commandPreview}</Text>
+        <Text style={{ color: "#a8a29e", marginTop: 6 }}>
+          Adoption: {mobileUpdateRuntimePreview.adoptionEvent.updateId} · audit action: {mobileUpdateRuntimePreview.rollbackAudit.action}
+        </Text>
       </MobileCard>
 
       <MobileCard title="Release health checks" eyebrow="Runtime-gated">
@@ -113,6 +128,17 @@ export function SystemStatusScreen() {
         <Text style={{ color: "#d6d3d1" }}>Fingerprint: {mobileCrashReportDraft.fingerprint}</Text>
         <Text style={{ color: "#d6d3d1" }}>Redaction: {mobileCrashReportDraft.redactionLevel}</Text>
         <MobilePill label={`${mobileCrashReportDraft.severity} · ${mobileCrashAlertRoute.channel}`} tone={mobileCrashReportDraft.alertRecommended ? "warn" : "neutral"} />
+      </MobileCard>
+
+      <MobileCard title="Crash capture contract" eyebrow="GAP-046" detail={mobileCrashCapturePreview.boundary}>
+        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+          <MobilePill label={mobileCrashCapturePreview.readiness.status} tone="warn" />
+          <MobilePill label="fallback reporter wired" tone="good" />
+          <MobilePill label={`${mobileCrashCapturePreview.sentryPlan.requiredPackages.join(", ")} gated`} tone="warn" />
+          <MobilePill label="forced crash proof pending" tone="danger" />
+        </View>
+        <Text style={{ color: "#d6d3d1", marginTop: 8 }}>{mobileCrashCapturePreview.report.redactedMessage}</Text>
+        <Text style={{ color: "#a8a29e", marginTop: 6 }}>Redaction: {mobileCrashCapturePreview.report.redactionLevel} · fingerprint: {mobileCrashCapturePreview.report.fingerprint}</Text>
       </MobileCard>
 
       <MobileCard title="Sentry / Expo checklist" eyebrow="Credential-gated">

@@ -2,6 +2,7 @@ import { Text, View } from "react-native";
 import { MobileCard } from "../components/MobileCard";
 import { MobilePill } from "../components/MobilePill";
 import { MobileScreen } from "../components/MobileScreen";
+import { offlineSyncPreview } from "../lib/offlineSync";
 import { offlineQueueItems, offlineQueueSummary } from "../lib/mobileDemo";
 
 export function OfflineNotesScreen() {
@@ -18,6 +19,15 @@ export function OfflineNotesScreen() {
           <MobilePill label={`${offlineQueueSummary.failed} failed`} tone={offlineQueueSummary.failed > 0 ? "danger" : "good"} />
           <MobilePill label={`${offlineQueueSummary.sensitive} sensitive`} tone="danger" />
         </View>
+      </MobileCard>
+      <MobileCard title="Sync worker contract" eyebrow="GAP-045" detail={offlineSyncPreview.boundary}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <MobilePill label={offlineSyncPreview.adapter} tone="warn" />
+          <MobilePill label="idempotent replay wired" tone="good" />
+          <MobilePill label="encrypted device storage gated" tone="danger" />
+          <MobilePill label="reconnect smoke pending" tone="warn" />
+        </View>
+        <Text style={{ color: "#a8a29e", marginTop: 8 }}>Example key: {offlineSyncPreview.idempotencyExample}</Text>
       </MobileCard>
       {offlineQueueItems.map((item) => (
         <MobileCard key={item.id} title={item.label} eyebrow={item.kind}>

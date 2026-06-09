@@ -1,6 +1,7 @@
 import { buildStripeCheckoutSessionDraft, calculateDepositPolicy } from "@inkroute/payments";
 import { createDepositSession } from "@inkroute/payments";
 import { checkRateLimit, getBookingRequest, getClientIp, persistDepositSession, resolveTenant } from "../../../../../lib/localRuntimeState";
+import { buildStripeCheckoutRouteContract } from "../../../../../lib/stripeCheckout";
 import { NextResponse, type NextRequest } from "next/server";
 
 interface DepositSessionPreviewBody {
@@ -141,6 +142,19 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     description: `Deposit preview for ${existingBooking.request.style} tattoo request`,
     policyVersion: policy.policyVersion,
   });
+  const checkoutContract = buildStripeCheckoutRouteContract({
+    tenantId: resolvedTenant.tenantId,
+    bookingRequestId,
+    amountCents: policy.depositAmountCents,
+    currency: policy.currency,
+    successUrl,
+    cancelUrl,
+    ...(clientEmail ? { clientEmail } : {}),
+    ...(clientName ? { clientName } : {}),
+    artistDisplayName: existingBooking.request.clientName,
+    description: `Deposit preview for ${existingBooking.request.style} tattoo request`,
+    policyVersion: policy.policyVersion,
+  });
 
   const storedSession = persistDepositSession(tenantSlug, bookingRequestId, policy.depositAmountCents, policy.currency);
 
@@ -151,6 +165,18 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
         policy,
         sessionDraft,
         session,
+        checkoutContract: {
+          status: checkoutContract.readiness.status,
+          canCallStripe: checkoutContract.readiness.canCallStripe,
+          safeBrowserResponse: checkoutContract.safeBrowserResponse,
+          runtimeReadiness: {
+            status: checkoutContract.runtimeReadiness.status,
+            requiredCommands: checkoutContract.runtimeReadiness.requiredCommands,
+            requiredEvidence: checkoutContract.runtimeReadiness.requiredEvidence,
+            blockerCount: checkoutContract.runtimeReadiness.blockers.length,
+          },
+          boundary: checkoutContract.boundary,
+        },
         storedSession,
         productionBoundary: {
           gapIds: ["GAP-004", "GAP-049", "GAP-050"],

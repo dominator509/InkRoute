@@ -2,6 +2,7 @@ import { inkrouteDemoTenant } from "@inkroute/config";
 import { interpretStripeWebhook, verifyStripeWebhookSignature } from "@inkroute/payments";
 import { NextResponse, type NextRequest } from "next/server";
 import { persistWebhookEvent } from "../../../../lib/localRuntimeState";
+import { buildStripeWebhookRouteContract } from "../../../../lib/stripeWebhook";
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" ? (value as Record<string, unknown>) : undefined;
@@ -87,6 +88,12 @@ export async function POST(request: NextRequest) {
 
   const payload = JSON.parse(rawBody) as Record<string, unknown>;
   const interpretation = interpretStripeWebhook(parsedEventType);
+  const eventId = typeof payload.id === "string" && payload.id.trim().length > 0 ? payload.id : `local-${parsedEventType}-${rawBody.length}`;
+  const webhookContract = buildStripeWebhookRouteContract({
+    payload,
+    eventType: parsedEventType,
+    eventId,
+  });
   const tenantSlug = getTenantSlugFromPayload(payload);
   const storedWebhook = persistWebhookEvent(tenantSlug, {
     source: "stripe",
@@ -103,6 +110,27 @@ export async function POST(request: NextRequest) {
         tenantSlug,
         storedWebhook,
         interpretation,
+        webhookContract: {
+          reconciliation: {
+            eventId: webhookContract.reconciliation.eventId,
+            action: webhookContract.reconciliation.action,
+            targetStatus: webhookContract.reconciliation.targetStatus,
+            idempotencyKey: webhookContract.reconciliation.idempotencyKey,
+            shouldPersistAuditLog: webhookContract.reconciliation.shouldPersistAuditLog,
+            shouldReconcile: webhookContract.reconciliation.shouldReconcile,
+            blockers: webhookContract.reconciliation.blockers,
+          },
+          runtimeReadiness: {
+            status: webhookContract.runtimeReadiness.status,
+            missingSupportedEvents: webhookContract.runtimeReadiness.missingSupportedEvents,
+            requiredCommands: webhookContract.runtimeReadiness.requiredCommands,
+            requiredEvidence: webhookContract.runtimeReadiness.requiredEvidence,
+            blockerCount: webhookContract.runtimeReadiness.blockers.length,
+          },
+          shouldPersistReplay: webhookContract.shouldPersistReplay,
+          shouldRunTransaction: webhookContract.shouldRunTransaction,
+          boundary: webhookContract.boundary,
+        },
         receivedSignatureHeader: "present",
         rawBodyBytes: rawBody.length,
         localRuntime: {
