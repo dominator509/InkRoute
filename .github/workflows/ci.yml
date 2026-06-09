@@ -259,6 +259,37 @@ jobs:
 
       - name: Verify Phase 16 handoff manifests
         run: pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next && pnpm handoff:verify-ledger && pnpm handoff:verify-tooling && pnpm handoff:verify-task-sync
+      - name: Run Phase 11 observability launch runtime contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/observability-launch-runtime-static.test.ts
+
+      - name: Upload Phase 11 observability launch runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: observability-launch-runtime-artifacts
+          path: |
+            coverage/observability-launch-runtime.json
+            coverage/observability-typecheck.txt
+            coverage/observability-test.txt
+            coverage/observability-web-build.txt
+            coverage/observability-dashboard-build.txt
+            coverage/observability-mobile-typecheck.txt
+            coverage/observability-sentry-sdk.json
+            coverage/observability-otel-pipeline.json
+            coverage/observability-structured-logging.json
+            coverage/observability-source-maps-debug-symbols.json
+            coverage/observability-forced-captures.json
+            coverage/observability-error-report-persistence.json
+            coverage/observability-dashboard-triage.json
+            coverage/observability-provider-webhook.json
+            coverage/observability-alert-routing.json
+            coverage/observability-release-linkage.json
+            coverage/observability-redaction-review.json
+            coverage/observability-ci-evidence.json
+            coverage/observability-secret-safe-artifacts.json
+            test-results/observability-launch-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 18 workspace runtime toolchain contracts
         run: pnpm --filter @inkroute/workspace test && pnpm vitest run apps/web/tests/workspace-runtime-toolchain-static.test.ts
 
