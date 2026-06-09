@@ -1,4 +1,4 @@
-import { DashboardPageHeader } from "../../components/DashboardPageHeader";
+﻿import { DashboardPageHeader } from "../../components/DashboardPageHeader";
 import { DisabledActionPanel } from "../../components/DisabledActionPanel";
 import { IntegrationBoundaryCard } from "../../components/IntegrationBoundaryCard";
 import { MetricCard } from "../../components/MetricCard";
@@ -50,7 +50,7 @@ export default function SeoManagerPage() {
               <div className="list-row" key={brief.slug}>
                 <div>
                   <strong>{brief.h1}</strong>
-                  <span>{brief.primaryKeyword} · {brief.schemaTypes.join(", ")}</span>
+                  <span>{brief.primaryKeyword} Â· {brief.schemaTypes.join(", ")}</span>
                 </div>
                 <StatusPill label={`${brief.recommendedSections.length} sections`} tone="info" />
               </div>
@@ -64,7 +64,7 @@ export default function SeoManagerPage() {
               <div className="list-row" key={brief.slug}>
                 <div>
                   <strong>{brief.h1}</strong>
-                  <span>{brief.secondaryKeywords.slice(0, 2).join(" · ")}</span>
+                  <span>{brief.secondaryKeywords.slice(0, 2).join(" Â· ")}</span>
                 </div>
                 <StatusPill label={`${brief.analyticsEvents.length} events`} tone="success" />
               </div>
@@ -81,7 +81,7 @@ export default function SeoManagerPage() {
               <div className="list-row" key={`${link.fromPath}-${link.toPath}-${link.anchorText}`}>
                 <div>
                   <strong>{link.anchorText}</strong>
-                  <span>{link.fromPath} → {link.toPath}</span>
+                  <span>{link.fromPath} â†’ {link.toPath}</span>
                 </div>
                 <StatusPill label={link.priority} tone={link.priority === "high" ? "success" : "info"} />
               </div>
@@ -137,9 +137,10 @@ export default function SeoManagerPage() {
 
       <DisabledActionPanel
         title="SEO publishing actions"
-        description="SEO reads now have authenticated tenant-scoped dashboard APIs with AuditLog rows. Publishing actions remain disabled until content mutations, Search Console credentials, sitemap submission, revalidation workers, and build/runtime verification are complete."
+        description="SEO reads now have authenticated tenant-scoped dashboard APIs with AuditLog rows. Publishing actions remain disabled until content mutations, Search Console credentials, /api/seo/search-console status, sitemap submission, revalidation workers, and build/runtime verification are complete."
         actions={["Create city page", "Create style page", "Preview JSON-LD", "Publish and revalidate", "Submit sitemap"]}
       />
     </main>
   );
 }
+
