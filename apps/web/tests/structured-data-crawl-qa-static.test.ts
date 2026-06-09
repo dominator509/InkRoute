@@ -1,15 +1,22 @@
-﻿import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
 
 import {
   extractJsonLdScriptsFromHtml,
   structuredDataCrawlArtifactPaths,
   structuredDataCrawlInventory,
   structuredDataCrawlQaContract,
+  structuredDataCrawlRuntimeMatrix,
   structuredDataCrawlerCommands,
   structuredDataRouteCoverageSummary,
   supportedRichResultSchemaTypes,
   unsupportedSchemaReviewRequiredTypes,
 } from "../lib/structuredDataCrawlQa";
+
+const ciWorkflow = readFileSync(join(process.cwd(), ".github/workflows/ci.yml"), "utf8");
+const unitManifest = readFileSync(join(process.cwd(), "testing/manifests/unit-test-manifest.json"), "utf8");
+const gapTracker = readFileSync(join(process.cwd(), "GAP_TRACKER.md"), "utf8");
 
 describe("GAP-073 structured-data crawl QA contract", () => {
   it("defines rendered public route inventory across JSON-LD, canonical, sitemap, robots, and noindex surfaces", () => {
@@ -53,5 +60,39 @@ describe("GAP-073 structured-data crawl QA contract", () => {
     expect(summary.crawlRouteCount).toBeGreaterThanOrEqual(10);
     expect(summary.noindexRoutes).toContain("/booking/deposit-preview");
     expect(summary.artifactPaths).toContain("test-results/structured-data-crawl");
+  });
+
+  it("pins the rendered crawl runtime matrix and closeout proof boundaries", () => {
+    expect(structuredDataCrawlRuntimeMatrix.map((entry) => entry.id)).toEqual([
+      "web-build",
+      "rendered-browser-crawl",
+      "jsonld-extraction",
+      "rich-results-compatible-validation",
+      "unsupported-schema-review",
+      "production-content-decision",
+      "sitemap-canonical-robots-noindex",
+      "closeout-evidence",
+      "ci-structured-data-job",
+      "secret-safe-artifacts",
+    ]);
+    expect(structuredDataCrawlArtifactPaths).toContain("coverage/structured-data-jsonld-extraction.json");
+    expect(structuredDataCrawlArtifactPaths).toContain("coverage/structured-data-production-content-decision.json");
+    expect(structuredDataCrawlArtifactPaths).toContain("coverage/structured-data-secret-safe-artifacts.json");
+    expect(structuredDataCrawlQaContract.requiredEvidence).toEqual(
+      expect.arrayContaining([
+        "Google Rich Results-compatible validation and unsupported-schema review evidence",
+        "production/demo content, sitemap, canonical, robots, and noindex crawl evidence",
+        "crawl artifact capture and closeout attachment evidence",
+      ]),
+    );
+  });
+
+  it("keeps CI, manifest, and tracker evidence tied to GAP-073", () => {
+    expect(ciWorkflow).toContain("Run Phase 10 structured-data crawl runtime contracts");
+    expect(ciWorkflow).toContain("structured-data-crawl-qa-static.test.ts");
+    expect(ciWorkflow).toContain("structured-data-crawl-artifacts");
+    expect(unitManifest).toContain("unit-web-structured-data-crawl-qa-static");
+    expect(unitManifest).toContain("structuredDataCrawlRuntimeMatrix");
+    expect(gapTracker).toContain("GAP-073 is structured-data-crawl-runtime-matrix wired");
   });
 });

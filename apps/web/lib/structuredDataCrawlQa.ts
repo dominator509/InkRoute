@@ -1,4 +1,4 @@
-﻿import {
+import {
   buildStructuredDataCrawlQaReadinessPlan,
   type StructuredDataCrawlQaReadinessPlan,
 } from "@inkroute/seo";
@@ -6,6 +6,15 @@ import { allPublicSeoRoutes } from "./seoEngine";
 import { canonicalUrlForPath } from "./canonicalRuntime";
 
 export type StructuredDataCrawlRouteKind = "jsonld" | "canonical" | "sitemap" | "robots" | "noindex";
+
+export type StructuredDataCrawlRuntimeStatus = "wired" | "crawler-gated" | "validator-gated" | "review-gated" | "closeout-gated" | "ci-gated";
+
+export interface StructuredDataCrawlRuntimeMatrixEntry {
+  readonly id: string;
+  readonly command: string;
+  readonly artifact: string;
+  readonly status: StructuredDataCrawlRuntimeStatus;
+}
 
 export type StructuredDataCrawlRoute = {
   path: string;
@@ -95,11 +104,29 @@ export const structuredDataCrawlerCommands = [
 
 export const structuredDataCrawlArtifactPaths = [
   "coverage/structured-data-crawl.json",
+  "coverage/structured-data-web-build.txt",
+  "coverage/structured-data-jsonld-extraction.json",
   "coverage/rich-results-compatible-report.json",
   "coverage/sitemap-canonical-noindex-crawl.json",
   "coverage/unsupported-schema-review.json",
+  "coverage/structured-data-production-content-decision.json",
+  "coverage/structured-data-ci-evidence.json",
+  "coverage/structured-data-secret-safe-artifacts.json",
   "coverage/structured-data-closeout.md",
   "test-results/structured-data-crawl",
+] as const;
+
+export const structuredDataCrawlRuntimeMatrix: readonly StructuredDataCrawlRuntimeMatrixEntry[] = [
+  { id: "web-build", command: "pnpm --filter @inkroute/web build", artifact: "coverage/structured-data-web-build.txt", status: "wired" },
+  { id: "rendered-browser-crawl", command: "pnpm playwright test apps/web/tests/e2e/structured-data-crawl.spec.ts", artifact: "coverage/structured-data-crawl.json", status: "crawler-gated" },
+  { id: "jsonld-extraction", command: "extract rendered JSON-LD from public route inventory", artifact: "coverage/structured-data-jsonld-extraction.json", status: "wired" },
+  { id: "rich-results-compatible-validation", command: "node scripts/seo/validate-rich-results-compatible.mjs coverage/structured-data-crawl.json", artifact: "coverage/rich-results-compatible-report.json", status: "validator-gated" },
+  { id: "unsupported-schema-review", command: "review unsupported schema warnings", artifact: "coverage/unsupported-schema-review.json", status: "review-gated" },
+  { id: "production-content-decision", command: "document or replace demo schema content", artifact: "coverage/structured-data-production-content-decision.json", status: "review-gated" },
+  { id: "sitemap-canonical-robots-noindex", command: "node scripts/seo/verify-sitemap-canonical-noindex.mjs coverage/structured-data-crawl.json", artifact: "coverage/sitemap-canonical-noindex-crawl.json", status: "crawler-gated" },
+  { id: "closeout-evidence", command: "attach structured-data crawl closeout", artifact: "coverage/structured-data-closeout.md", status: "closeout-gated" },
+  { id: "ci-structured-data-job", command: "GitHub Actions structured-data crawl job", artifact: "coverage/structured-data-ci-evidence.json", status: "ci-gated" },
+  { id: "secret-safe-artifacts", command: "redacted structured-data artifact audit", artifact: "coverage/structured-data-secret-safe-artifacts.json", status: "ci-gated" },
 ] as const;
 
 export const supportedRichResultSchemaTypes = ["FAQPage", "ImageObject", "Event"] as const;

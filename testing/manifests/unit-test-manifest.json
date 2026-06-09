@@ -1255,16 +1255,15 @@
       "priority": "high",
       "verifies": [
         "GAP-073 rendered public route inventory covers JSON-LD, canonical, sitemap, robots, and noindex crawl targets",
-        "GAP-073 crawler contract extracts rendered JSON-LD and separates Rich Results-compatible schema checks from unsupported-schema review",
-        "GAP-073 CI retains crawl, Rich Results-compatible, sitemap/canonical/noindex, unsupported-schema review, and closeout artifacts without claiming unrun browser proof"
+        "GAP-073 crawler contract extracts rendered JSON-LD and separates Rich Results-compatible schemas from unsupported-schema review",
+        "GAP-073 structuredDataCrawlRuntimeMatrix wires browser crawl, validation, unsupported-schema review, production-content decision, closeout, CI, and secret-safe artifacts"
       ],
       "blockedBy": [
         "Static structured-data crawl QA test execution pending",
-        "Rendered browser crawler execution pending",
-        "Google Rich Results-compatible report pending",
-        "Unsupported-schema review pending",
-        "Rendered sitemap/canonical/robots/noindex crawl pending",
-        "Structured-data closeout artifact pending"
+        "Rendered browser crawl and JSON-LD extraction artifacts pending",
+        "Google Rich Results-compatible validation and unsupported-schema review pending",
+        "Production/demo schema content decision pending",
+        "Sitemap/canonical/robots/noindex crawl, closeout evidence, CI artifact upload evidence, and secret-safe artifact proof pending"
       ]
     },
     {

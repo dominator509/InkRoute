@@ -2009,6 +2009,9 @@ jobs:
       - name: Run Phase 10 SEO publication contracts
         run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/dashboard/tests/seo-read-route-static.test.ts apps/dashboard/tests/seo-publication-route-static.test.ts apps/web/tests/sitemap-route.test.ts apps/web/tests/canonical-domain-runtime-static.test.ts apps/web/tests/structured-data-crawl-qa-static.test.ts
 
+      - name: Run Phase 10 structured-data crawl runtime contracts
+        run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/web/tests/structured-data-crawl-qa-static.test.ts apps/web/tests/sitemap-route.test.ts apps/web/tests/canonical-domain-runtime-static.test.ts
+
       - name: Upload structured data crawl artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -2017,6 +2020,11 @@ jobs:
           path: |
             coverage/structured-data-crawl.json
             coverage/rich-results-compatible-report.json
+            coverage/structured-data-secret-safe-artifacts.json
+            coverage/structured-data-ci-evidence.json
+            coverage/structured-data-production-content-decision.json
+            coverage/structured-data-jsonld-extraction.json
+            coverage/structured-data-web-build.txt
             coverage/sitemap-canonical-noindex-crawl.json
             coverage/unsupported-schema-review.json
             coverage/structured-data-closeout.md
