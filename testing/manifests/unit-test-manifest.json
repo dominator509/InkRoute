@@ -2152,14 +2152,14 @@
       "file": "apps/web/tests/required-checks-runtime-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-129 required checks runtime matrix covers package scripts, CI workflow terms, branch-protection check names, repository settings, required-check audit, quality:all chaining, branch-protection evidence, failing quality PR merge block proof, and CODEOWNERS review activity",
+        "GAP-129 RequiredChecksRun Prisma model and app row contract plus required checks runtime matrix covers package scripts, CI workflow terms, branch-protection check names, repository settings, required-check audit, quality:all chaining, branch-protection evidence, failing quality PR merge block proof, and CODEOWNERS review activity",
         "GAP-129 local package and workflow wiring remains complete while GitHub branch protection and repository settings remain explicit blockers",
         "GAP-129 CI labels, artifact paths, unit manifest, and tracker row stay wired without claiming required checks are enforced externally"
       ],
       "blockedBy": [
         "Static required checks runtime test execution pending",
         "pnpm quality:required-checks and quality:all execution proof pending",
-        "GitHub branch protection required-check and repository-settings evidence pending",
+        "Provider-backed RequiredChecksRun transaction plus GitHub branch protection required-check and repository-settings evidence pending",
         "Failing quality PR merge-block and CODEOWNERS review proof pending"
       ]
     },

@@ -393,6 +393,7 @@ model Tenant {
   qualityGateRuns QualityGateRun[]
   prDiffEvidenceRuns PrDiffEvidenceRun[]
   semanticDocumentationRuns SemanticDocumentationRun[]
+  requiredChecksRuns RequiredChecksRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2498,6 +2499,44 @@ model SemanticDocumentationRun {
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())
   updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model RequiredChecksRun {
+  id                                 String   @id @default(cuid())
+  tenantId                           String
+  runId                              String
+  commitSha                          String?
+  status                             String
+  packageScriptMatrix                Json
+  ciWorkflowTermMatrix               Json
+  branchProtectionCheckMatrix        Json
+  repositorySettingsMatrix           Json
+  artifactManifest                   Json
+  requiredChecksAuditPassed          Boolean  @default(false)
+  qualityAllChainsRequiredChecks     Boolean  @default(false)
+  branchProtectionEvidenceCaptured   Boolean  @default(false)
+  failingQualityPrBlocked            Boolean  @default(false)
+  codeownersReviewActive             Boolean  @default(false)
+  requiredPackageScriptsPresent      Boolean  @default(false)
+  ciWorkflowTermsPresent             Boolean  @default(false)
+  branchProtectionChecksConfigured   Boolean  @default(false)
+  repositorySettingsConfigured       Boolean  @default(false)
+  ciQualityJobPassed                 Boolean  @default(false)
+  redactedSettingsEvidenceCaptured   Boolean  @default(false)
+  requiredChecksAuditArtifactPath    String?
+  qualityAllArtifactPath             String?
+  branchProtectionArtifactPath       String?
+  failingQualityPrArtifactPath       String?
+  codeownersReviewArtifactPath       String?
+  repositorySettingsArtifactPath     String?
+  ciRunUrl                           String?
+  tenant                             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                          DateTime @default(now())
+  updatedAt                          DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

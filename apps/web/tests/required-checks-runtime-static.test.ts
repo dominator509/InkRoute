@@ -9,6 +9,7 @@ import {
   requiredChecksRuntimeCommands,
   requiredChecksRuntimeMatrix,
   requiredChecksRuntimeReadiness,
+  requiredChecksRunPersistenceContract,
   requiredChecksWorkflowTerms,
 } from "../lib/requiredChecksRuntime";
 
@@ -20,6 +21,10 @@ describe("required checks runtime contract", () => {
   const requiredChecksContract = readRepoFile("docs/quality/manifests/required-checks-contract.json");
   const requiredChecksVerifier = readRepoFile("scripts/quality/verify-required-checks.mjs");
   const qualityTests = readRepoFile("packages/quality/tests/quality-gates.test.ts");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const requiredChecksMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609032000_add_required_checks_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -54,6 +59,33 @@ describe("required checks runtime contract", () => {
     ]);
     expect(requiredChecksRuntimeArtifactPaths).toContain("coverage/required-checks-runtime.json");
     expect(requiredChecksRuntimeArtifactPaths).toContain("test-results/required-checks-runtime");
+  });
+
+  it("pins the RequiredChecksRun persistence model and migration", () => {
+    expect(requiredChecksRunPersistenceContract.model).toBe("RequiredChecksRun");
+    expect(requiredChecksRunPersistenceContract.tenantRelation).toBe("requiredChecksRuns");
+    expect(requiredChecksRunPersistenceContract.migration).toBe("20260609032000_add_required_checks_runs");
+    expect(requiredChecksRunPersistenceContract.jsonFields).toEqual([
+      "packageScriptMatrix",
+      "ciWorkflowTermMatrix",
+      "branchProtectionCheckMatrix",
+      "repositorySettingsMatrix",
+      "artifactManifest",
+    ]);
+    expect(requiredChecksRunPersistenceContract.evidenceBooleans).toContain("requiredChecksAuditPassed");
+    expect(requiredChecksRunPersistenceContract.evidenceBooleans).toContain("qualityAllChainsRequiredChecks");
+    expect(requiredChecksRunPersistenceContract.evidenceBooleans).toContain("redactedSettingsEvidenceCaptured");
+    expect(requiredChecksRunPersistenceContract.artifactFields).toContain("branchProtectionArtifactPath");
+    expect(requiredChecksRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(prismaSchema).toContain("requiredChecksRuns RequiredChecksRun[]");
+    expect(prismaSchema).toContain("model RequiredChecksRun");
+    expect(prismaSchema).toContain("packageScriptMatrix");
+    expect(prismaSchema).toContain("branchProtectionChecksConfigured");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(requiredChecksMigration).toContain('CREATE TABLE "RequiredChecksRun"');
+    expect(requiredChecksMigration).toContain('"packageScriptMatrix" JSONB NOT NULL');
+    expect(requiredChecksMigration).toContain('"redactedSettingsEvidenceCaptured" BOOLEAN NOT NULL DEFAULT false');
+    expect(requiredChecksMigration).toContain('CREATE UNIQUE INDEX "RequiredChecksRun_tenantId_runId_key"');
   });
 
   it("keeps local required-check source contracts wired", () => {
@@ -91,6 +123,8 @@ describe("required checks runtime contract", () => {
     expect(ciWorkflow).toContain("required-checks-runtime-static.test.ts");
     expect(ciWorkflow).toContain("required-checks-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-required-checks-runtime-static");
+    expect(unitManifest).toContain("RequiredChecksRun Prisma model and app row contract");
+    expect(gapTracker).toContain("RequiredChecksRun");
     expect(gapTracker).toContain("apps/web/lib/requiredChecksRuntime.ts");
     expect(gapTracker).toContain("live branch-protection required-check, repository-settings, failing-PR merge-block, and CODEOWNERS review proof remain open");
   });

@@ -13,6 +13,76 @@ export interface RequiredChecksRuntimeMatrixEntry {
   readonly status: RequiredChecksRuntimeStatus;
 }
 
+export interface RequiredChecksRunPersistenceContract {
+  readonly model: "RequiredChecksRun";
+  readonly tenantRelation: "requiredChecksRuns";
+  readonly migration: "20260609032000_add_required_checks_runs";
+  readonly jsonFields: readonly [
+    "packageScriptMatrix",
+    "ciWorkflowTermMatrix",
+    "branchProtectionCheckMatrix",
+    "repositorySettingsMatrix",
+    "artifactManifest",
+  ];
+  readonly evidenceBooleans: readonly [
+    "requiredChecksAuditPassed",
+    "qualityAllChainsRequiredChecks",
+    "branchProtectionEvidenceCaptured",
+    "failingQualityPrBlocked",
+    "codeownersReviewActive",
+    "requiredPackageScriptsPresent",
+    "ciWorkflowTermsPresent",
+    "branchProtectionChecksConfigured",
+    "repositorySettingsConfigured",
+    "ciQualityJobPassed",
+    "redactedSettingsEvidenceCaptured",
+  ];
+  readonly artifactFields: readonly [
+    "requiredChecksAuditArtifactPath",
+    "qualityAllArtifactPath",
+    "branchProtectionArtifactPath",
+    "failingQualityPrArtifactPath",
+    "codeownersReviewArtifactPath",
+    "repositorySettingsArtifactPath",
+    "ciRunUrl",
+  ];
+}
+
+export const requiredChecksRunPersistenceContract: RequiredChecksRunPersistenceContract = {
+  model: "RequiredChecksRun",
+  tenantRelation: "requiredChecksRuns",
+  migration: "20260609032000_add_required_checks_runs",
+  jsonFields: [
+    "packageScriptMatrix",
+    "ciWorkflowTermMatrix",
+    "branchProtectionCheckMatrix",
+    "repositorySettingsMatrix",
+    "artifactManifest",
+  ],
+  evidenceBooleans: [
+    "requiredChecksAuditPassed",
+    "qualityAllChainsRequiredChecks",
+    "branchProtectionEvidenceCaptured",
+    "failingQualityPrBlocked",
+    "codeownersReviewActive",
+    "requiredPackageScriptsPresent",
+    "ciWorkflowTermsPresent",
+    "branchProtectionChecksConfigured",
+    "repositorySettingsConfigured",
+    "ciQualityJobPassed",
+    "redactedSettingsEvidenceCaptured",
+  ],
+  artifactFields: [
+    "requiredChecksAuditArtifactPath",
+    "qualityAllArtifactPath",
+    "branchProtectionArtifactPath",
+    "failingQualityPrArtifactPath",
+    "codeownersReviewArtifactPath",
+    "repositorySettingsArtifactPath",
+    "ciRunUrl",
+  ],
+};
+
 export const requiredChecksPackageScripts = [
   "quality:required-checks",
   "quality:all",
