@@ -401,6 +401,7 @@ model Tenant {
   dependencyInstallRuns DependencyInstallRun[]
   prismaLifecycleRuns PrismaLifecycleRun[]
   providerSessionRuns ProviderSessionRun[]
+  liveStripePaymentsRuns LiveStripePaymentsRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2845,6 +2846,60 @@ model ProviderSessionRun {
   auditLogArtifactPath                    String?
   tenantIsolationSmokeArtifactPath        String?
   mobileRevocationSmokeArtifactPath       String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model LiveStripePaymentsRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  commandMatrix                           Json
+  readinessAreaManifest                   Json
+  artifactManifest                        Json
+  stripeConfigurationManifest             Json
+  lifecycleEvidenceManifest               Json
+  paymentsPackageTypecheckPassed          Boolean  @default(false)
+  paymentsPackageTestsPassed              Boolean  @default(false)
+  paymentRoutesTestsPassed                Boolean  @default(false)
+  stripeSdkInstalled                      Boolean  @default(false)
+  stripeSecretConfigured                  Boolean  @default(false)
+  stripeWebhookSecretConfigured           Boolean  @default(false)
+  stripeApiVersionPinned                  Boolean  @default(false)
+  checkoutProviderCallImplemented         Boolean  @default(false)
+  paymentIntentLifecycleHandled           Boolean  @default(false)
+  providerIdempotencyStoreBackedByDb      Boolean  @default(false)
+  checkoutSessionPersisted                Boolean  @default(false)
+  webhookRawBodyVerificationConfigured    Boolean  @default(false)
+  webhookReplayProtectionPersisted        Boolean  @default(false)
+  dbReconciliationTransactional           Boolean  @default(false)
+  refundExecutionImplemented              Boolean  @default(false)
+  disputeWorkflowImplemented              Boolean  @default(false)
+  stripeCliLifecycleVerified              Boolean  @default(false)
+  bookingToPaidE2eVerified                Boolean  @default(false)
+  crossTenantPaymentIsolationVerified     Boolean  @default(false)
+  ciPaymentEvidenceCaptured               Boolean  @default(false)
+  secretSafeArtifactsCaptured             Boolean  @default(false)
+  paymentsTypecheckArtifactPath           String?
+  paymentsTestArtifactPath                String?
+  paymentRoutesTestArtifactPath           String?
+  stripeSdkConfigArtifactPath             String?
+  checkoutProviderCallArtifactPath        String?
+  webhookLifecycleArtifactPath            String?
+  dbReconciliationArtifactPath            String?
+  refundDisputeArtifactPath               String?
+  stripeCliLifecycleArtifactPath          String?
+  bookingToPaidE2eArtifactPath            String?
+  ciPaymentEvidenceArtifactPath           String?
+  secretSafeArtifactsPath                 String?
   ciRunUrl                                String?
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())

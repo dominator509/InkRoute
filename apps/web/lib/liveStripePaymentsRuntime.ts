@@ -15,6 +15,108 @@ export interface LiveStripePaymentsRuntimeMatrixEntry {
   readonly status: LiveStripePaymentsRuntimeStatus;
 }
 
+export interface LiveStripePaymentsRunPersistenceContract {
+  readonly model: "LiveStripePaymentsRun";
+  readonly tenantRelation: "liveStripePaymentsRuns";
+  readonly migration: "20260609032800_add_live_stripe_payments_runs";
+  readonly jsonFields: readonly [
+    "commandMatrix",
+    "readinessAreaManifest",
+    "artifactManifest",
+    "stripeConfigurationManifest",
+    "lifecycleEvidenceManifest",
+  ];
+  readonly evidenceBooleans: readonly [
+    "paymentsPackageTypecheckPassed",
+    "paymentsPackageTestsPassed",
+    "paymentRoutesTestsPassed",
+    "stripeSdkInstalled",
+    "stripeSecretConfigured",
+    "stripeWebhookSecretConfigured",
+    "stripeApiVersionPinned",
+    "checkoutProviderCallImplemented",
+    "paymentIntentLifecycleHandled",
+    "providerIdempotencyStoreBackedByDb",
+    "checkoutSessionPersisted",
+    "webhookRawBodyVerificationConfigured",
+    "webhookReplayProtectionPersisted",
+    "dbReconciliationTransactional",
+    "refundExecutionImplemented",
+    "disputeWorkflowImplemented",
+    "stripeCliLifecycleVerified",
+    "bookingToPaidE2eVerified",
+    "crossTenantPaymentIsolationVerified",
+    "ciPaymentEvidenceCaptured",
+    "secretSafeArtifactsCaptured",
+  ];
+  readonly artifactFields: readonly [
+    "paymentsTypecheckArtifactPath",
+    "paymentsTestArtifactPath",
+    "paymentRoutesTestArtifactPath",
+    "stripeSdkConfigArtifactPath",
+    "checkoutProviderCallArtifactPath",
+    "webhookLifecycleArtifactPath",
+    "dbReconciliationArtifactPath",
+    "refundDisputeArtifactPath",
+    "stripeCliLifecycleArtifactPath",
+    "bookingToPaidE2eArtifactPath",
+    "ciPaymentEvidenceArtifactPath",
+    "secretSafeArtifactsPath",
+    "ciRunUrl",
+  ];
+}
+
+export const liveStripePaymentsRunPersistenceContract: LiveStripePaymentsRunPersistenceContract = {
+  model: "LiveStripePaymentsRun",
+  tenantRelation: "liveStripePaymentsRuns",
+  migration: "20260609032800_add_live_stripe_payments_runs",
+  jsonFields: [
+    "commandMatrix",
+    "readinessAreaManifest",
+    "artifactManifest",
+    "stripeConfigurationManifest",
+    "lifecycleEvidenceManifest",
+  ],
+  evidenceBooleans: [
+    "paymentsPackageTypecheckPassed",
+    "paymentsPackageTestsPassed",
+    "paymentRoutesTestsPassed",
+    "stripeSdkInstalled",
+    "stripeSecretConfigured",
+    "stripeWebhookSecretConfigured",
+    "stripeApiVersionPinned",
+    "checkoutProviderCallImplemented",
+    "paymentIntentLifecycleHandled",
+    "providerIdempotencyStoreBackedByDb",
+    "checkoutSessionPersisted",
+    "webhookRawBodyVerificationConfigured",
+    "webhookReplayProtectionPersisted",
+    "dbReconciliationTransactional",
+    "refundExecutionImplemented",
+    "disputeWorkflowImplemented",
+    "stripeCliLifecycleVerified",
+    "bookingToPaidE2eVerified",
+    "crossTenantPaymentIsolationVerified",
+    "ciPaymentEvidenceCaptured",
+    "secretSafeArtifactsCaptured",
+  ],
+  artifactFields: [
+    "paymentsTypecheckArtifactPath",
+    "paymentsTestArtifactPath",
+    "paymentRoutesTestArtifactPath",
+    "stripeSdkConfigArtifactPath",
+    "checkoutProviderCallArtifactPath",
+    "webhookLifecycleArtifactPath",
+    "dbReconciliationArtifactPath",
+    "refundDisputeArtifactPath",
+    "stripeCliLifecycleArtifactPath",
+    "bookingToPaidE2eArtifactPath",
+    "ciPaymentEvidenceArtifactPath",
+    "secretSafeArtifactsPath",
+    "ciRunUrl",
+  ],
+};
+
 export const liveStripePaymentsRuntimeCommands = [
   "pnpm --filter @inkroute/payments typecheck",
   "pnpm --filter @inkroute/payments test",

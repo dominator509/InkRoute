@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   liveStripePaymentsArtifactPaths,
   liveStripePaymentsReadinessAreas,
+  liveStripePaymentsRunPersistenceContract,
   liveStripePaymentsRuntimeCommands,
   liveStripePaymentsRuntimeMatrix,
   liveStripePaymentsRuntimeReadiness,
@@ -19,6 +20,10 @@ describe("live Stripe payments runtime contract", () => {
   const stripeWebhookRoute = readRepoFile("apps/web/app/api/webhooks/stripe/route.ts");
   const dashboardPaymentReadTest = readRepoFile("apps/dashboard/tests/payment-read-route-static.test.ts");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const liveStripePaymentsMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609032800_add_live_stripe_payments_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -49,6 +54,33 @@ describe("live Stripe payments runtime contract", () => {
     ]);
     expect(liveStripePaymentsArtifactPaths).toContain("coverage/live-stripe-payments-runtime.json");
     expect(liveStripePaymentsArtifactPaths).toContain("test-results/live-stripe-payments-runtime");
+  });
+
+  it("pins the LiveStripePaymentsRun persistence model and migration", () => {
+    expect(liveStripePaymentsRunPersistenceContract.model).toBe("LiveStripePaymentsRun");
+    expect(liveStripePaymentsRunPersistenceContract.tenantRelation).toBe("liveStripePaymentsRuns");
+    expect(liveStripePaymentsRunPersistenceContract.migration).toBe("20260609032800_add_live_stripe_payments_runs");
+    expect(liveStripePaymentsRunPersistenceContract.jsonFields).toEqual([
+      "commandMatrix",
+      "readinessAreaManifest",
+      "artifactManifest",
+      "stripeConfigurationManifest",
+      "lifecycleEvidenceManifest",
+    ]);
+    expect(liveStripePaymentsRunPersistenceContract.evidenceBooleans).toContain("stripeSdkInstalled");
+    expect(liveStripePaymentsRunPersistenceContract.evidenceBooleans).toContain("webhookReplayProtectionPersisted");
+    expect(liveStripePaymentsRunPersistenceContract.evidenceBooleans).toContain("secretSafeArtifactsCaptured");
+    expect(liveStripePaymentsRunPersistenceContract.artifactFields).toContain("bookingToPaidE2eArtifactPath");
+    expect(liveStripePaymentsRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(prismaSchema).toContain("liveStripePaymentsRuns LiveStripePaymentsRun[]");
+    expect(prismaSchema).toContain("model LiveStripePaymentsRun");
+    expect(prismaSchema).toContain("stripeConfigurationManifest");
+    expect(prismaSchema).toContain("providerIdempotencyStoreBackedByDb");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(liveStripePaymentsMigration).toContain('CREATE TABLE "LiveStripePaymentsRun"');
+    expect(liveStripePaymentsMigration).toContain('"stripeConfigurationManifest" JSONB NOT NULL');
+    expect(liveStripePaymentsMigration).toContain('"secretSafeArtifactsCaptured" BOOLEAN NOT NULL DEFAULT false');
+    expect(liveStripePaymentsMigration).toContain('CREATE UNIQUE INDEX "LiveStripePaymentsRun_tenantId_runId_key"');
   });
 
   it("keeps package scripts, helper tests, route tests, webhook verification, and read redaction wired", () => {
@@ -85,6 +117,8 @@ describe("live Stripe payments runtime contract", () => {
     expect(ciWorkflow).toContain("live-stripe-payments-runtime-static.test.ts");
     expect(ciWorkflow).toContain("live-stripe-payments-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-live-stripe-payments-runtime-static");
+    expect(unitManifest).toContain("LiveStripePaymentsRun Prisma model and app row contract");
+    expect(gapTracker).toContain("LiveStripePaymentsRun");
     expect(gapTracker).toContain("apps/web/lib/liveStripePaymentsRuntime.ts");
     expect(gapTracker).toContain("live Stripe SDK/secret/API configuration, real Checkout writes, provider idempotency persistence, lifecycle reconciliation, refunds/disputes, Stripe CLI, booking-to-paid E2E, CI evidence, and secret-safe artifacts remain open");
   });
