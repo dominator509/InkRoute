@@ -13,6 +13,55 @@ export interface PerformanceLoadRuntimeMatrixEntry {
   readonly status: PerformanceLoadRuntimeStatus;
 }
 
+export interface PerformanceLoadRunPersistenceInput {
+  tenantId: string;
+  runId: string;
+  commitSha?: string;
+  status: "blocked" | "running" | "passed" | "failed" | "database_gated";
+  runtimeMatrix: readonly PerformanceLoadRuntimeMatrixEntry[];
+  artifactManifest: readonly string[];
+  performanceBudgetVerifierPassed: boolean;
+  lighthouseCiPassed: boolean;
+  coreWebVitalsWithinBudget: boolean;
+  publicRouteBudgetsPassed: boolean;
+  dashboardRouteBudgetsPassed: boolean;
+  bookingLoadTestPassed: boolean;
+  webhookBurstTestPassed: boolean;
+  uploadIntentLoadTestPassed: boolean;
+  dbExplainPlansPassed: boolean;
+  imageOptimizationBenchmarksPassed: boolean;
+  regressionThresholdsConfigured: boolean;
+  performanceArtifactsRetained: boolean;
+  ciPerformanceJobPassed: boolean;
+  regressionsTriagedAndFixed: boolean;
+  triageArtifactPath?: string;
+  ciRunUrl?: string;
+}
+
+export interface PerformanceLoadRunPersistenceContract {
+  modelName: "PerformanceLoadRun";
+  row: PerformanceLoadRunPersistenceInput;
+  transactionWrites: readonly ["PerformanceLoadRun", "AuditLog"];
+  requiredPerformanceFlags: readonly [
+    "performanceBudgetVerifierPassed",
+    "lighthouseCiPassed",
+    "coreWebVitalsWithinBudget",
+    "publicRouteBudgetsPassed",
+    "dashboardRouteBudgetsPassed",
+    "bookingLoadTestPassed",
+    "webhookBurstTestPassed",
+    "uploadIntentLoadTestPassed",
+    "dbExplainPlansPassed",
+    "imageOptimizationBenchmarksPassed",
+    "regressionThresholdsConfigured",
+    "performanceArtifactsRetained",
+    "ciPerformanceJobPassed",
+    "regressionsTriagedAndFixed",
+  ];
+  artifactFields: readonly ["runtimeMatrix", "artifactManifest", "triageArtifactPath"];
+  tenantIsolationKey: "tenantId";
+}
+
 export const performanceLoadRuntimeArtifactPaths = [
   "coverage/performance-load-runtime.json",
   "coverage/performance-budget-verification.json",
@@ -85,6 +134,34 @@ export const performanceLoadRuntimeMatrix: readonly PerformanceLoadRuntimeMatrix
   }
 ];
 
+export function buildPerformanceLoadRunPersistenceContract(
+  input: PerformanceLoadRunPersistenceInput,
+): PerformanceLoadRunPersistenceContract {
+  return {
+    modelName: "PerformanceLoadRun",
+    row: input,
+    transactionWrites: ["PerformanceLoadRun", "AuditLog"],
+    requiredPerformanceFlags: [
+      "performanceBudgetVerifierPassed",
+      "lighthouseCiPassed",
+      "coreWebVitalsWithinBudget",
+      "publicRouteBudgetsPassed",
+      "dashboardRouteBudgetsPassed",
+      "bookingLoadTestPassed",
+      "webhookBurstTestPassed",
+      "uploadIntentLoadTestPassed",
+      "dbExplainPlansPassed",
+      "imageOptimizationBenchmarksPassed",
+      "regressionThresholdsConfigured",
+      "performanceArtifactsRetained",
+      "ciPerformanceJobPassed",
+      "regressionsTriagedAndFixed",
+    ],
+    artifactFields: ["runtimeMatrix", "artifactManifest", "triageArtifactPath"],
+    tenantIsolationKey: "tenantId",
+  };
+}
+
 export const performanceLoadRuntimeReadiness = buildPerformanceLoadRuntimeReadinessPlan({
   rootScripts: ["test:performance:budgets"],
   performanceBudgetVerifierPassed: true,
@@ -101,4 +178,27 @@ export const performanceLoadRuntimeReadiness = buildPerformanceLoadRuntimeReadin
   performanceArtifactsRetained: true,
   ciPerformanceJobPassed: false,
   regressionsTriagedAndFixed: false
+});
+
+export const performanceLoadRunPersistencePreview = buildPerformanceLoadRunPersistenceContract({
+  tenantId: "tenant_demo",
+  runId: "performance-load-demo",
+  status: "database_gated",
+  runtimeMatrix: performanceLoadRuntimeMatrix,
+  artifactManifest: performanceLoadRuntimeArtifactPaths,
+  performanceBudgetVerifierPassed: true,
+  lighthouseCiPassed: false,
+  coreWebVitalsWithinBudget: false,
+  publicRouteBudgetsPassed: false,
+  dashboardRouteBudgetsPassed: false,
+  bookingLoadTestPassed: false,
+  webhookBurstTestPassed: false,
+  uploadIntentLoadTestPassed: false,
+  dbExplainPlansPassed: false,
+  imageOptimizationBenchmarksPassed: false,
+  regressionThresholdsConfigured: true,
+  performanceArtifactsRetained: true,
+  ciPerformanceJobPassed: false,
+  regressionsTriagedAndFixed: false,
+  triageArtifactPath: "coverage/performance-regression-triage.md",
 });

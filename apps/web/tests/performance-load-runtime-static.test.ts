@@ -2,6 +2,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildPerformanceLoadRunPersistenceContract,
+  performanceLoadRunPersistencePreview,
   performanceLoadRuntimeArtifactPaths,
   performanceLoadRuntimeCommands,
   performanceLoadRuntimeMatrix,
@@ -103,6 +105,44 @@ describe("GAP-112 performance and load runtime wiring", () => {
     );
   });
 
+  it("pins durable PerformanceLoadRun rows, benchmark flags, retained artifacts, CI, and regression triage evidence", () => {
+    const schema = read("packages/db/prisma/schema.prisma");
+    const contract = buildPerformanceLoadRunPersistenceContract({
+      tenantId: "tenant_demo",
+      runId: "performance-load-demo",
+      commitSha: "abc1234",
+      status: "database_gated",
+      runtimeMatrix: performanceLoadRuntimeMatrix,
+      artifactManifest: performanceLoadRuntimeArtifactPaths,
+      performanceBudgetVerifierPassed: true,
+      lighthouseCiPassed: false,
+      coreWebVitalsWithinBudget: false,
+      publicRouteBudgetsPassed: false,
+      dashboardRouteBudgetsPassed: false,
+      bookingLoadTestPassed: false,
+      webhookBurstTestPassed: false,
+      uploadIntentLoadTestPassed: false,
+      dbExplainPlansPassed: false,
+      imageOptimizationBenchmarksPassed: false,
+      regressionThresholdsConfigured: true,
+      performanceArtifactsRetained: true,
+      ciPerformanceJobPassed: false,
+      regressionsTriagedAndFixed: false,
+      triageArtifactPath: "coverage/performance-regression-triage.md",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/redacted"
+    });
+
+    expect(schema).toContain("model PerformanceLoadRun");
+    expect(schema).toContain("coreWebVitalsWithinBudget");
+    expect(schema).toContain("dbExplainPlansPassed");
+    expect(schema).toContain("@@unique([tenantId, runId])");
+    expect(contract.transactionWrites).toEqual(["PerformanceLoadRun", "AuditLog"]);
+    expect(contract.requiredPerformanceFlags).toContain("uploadIntentLoadTestPassed");
+    expect(contract.artifactFields).toContain("triageArtifactPath");
+    expect(contract.tenantIsolationKey).toBe("tenantId");
+    expect(performanceLoadRunPersistencePreview.modelName).toBe("PerformanceLoadRun");
+  });
+
   it("keeps CI, manifest registration, and tracker status aligned", () => {
     expect(ciWorkflow).toContain("Run Phase 14 performance load runtime contracts");
     expect(ciWorkflow).toContain("apps/web/tests/performance-load-runtime-static.test.ts");
@@ -110,6 +150,7 @@ describe("GAP-112 performance and load runtime wiring", () => {
     expect(ciWorkflow).toContain("coverage/performance-load-runtime.json");
     expect(ciWorkflow).toContain("test-results/performance-load-runtime");
     expect(unitManifest).toContain("unit-web-performance-load-runtime-static");
+    expect(unitManifest).toContain("PerformanceLoadRun Prisma model and app row contract are wired");
     expect(gapTracker).toContain("apps/web/lib/performanceLoadRuntime.ts");
     expect(gapTracker).toContain("live Lighthouse/load/database benchmark proof remains open");
   });

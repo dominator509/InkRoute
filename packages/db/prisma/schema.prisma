@@ -376,6 +376,7 @@ model Tenant {
   accessibilityVisualRuns AccessibilityVisualRun[]
   providerContractRuns ProviderContractRun[]
   ciCoverageRuns CiCoverageRun[]
+  performanceLoadRuns PerformanceLoadRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -1824,6 +1825,39 @@ model CiCoverageRun {
   ciRunPassed                     Boolean  @default(false)
   branchProtectionRequiresCi      Boolean  @default(false)
   branchProtectionArtifactPath    String?
+  ciRunUrl                        String?
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model PerformanceLoadRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String?
+  status                          String
+  runtimeMatrix                   Json
+  artifactManifest                Json
+  performanceBudgetVerifierPassed Boolean  @default(false)
+  lighthouseCiPassed              Boolean  @default(false)
+  coreWebVitalsWithinBudget       Boolean  @default(false)
+  publicRouteBudgetsPassed        Boolean  @default(false)
+  dashboardRouteBudgetsPassed     Boolean  @default(false)
+  bookingLoadTestPassed           Boolean  @default(false)
+  webhookBurstTestPassed          Boolean  @default(false)
+  uploadIntentLoadTestPassed      Boolean  @default(false)
+  dbExplainPlansPassed            Boolean  @default(false)
+  imageOptimizationBenchmarksPassed Boolean @default(false)
+  regressionThresholdsConfigured  Boolean  @default(false)
+  performanceArtifactsRetained    Boolean  @default(false)
+  ciPerformanceJobPassed          Boolean  @default(false)
+  regressionsTriagedAndFixed      Boolean  @default(false)
+  triageArtifactPath              String?
   ciRunUrl                        String?
   tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                       DateTime @default(now())
