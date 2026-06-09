@@ -293,6 +293,36 @@ jobs:
 
       - name: Verify Phase 16 handoff manifests
         run: pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next && pnpm handoff:verify-ledger && pnpm handoff:verify-tooling && pnpm handoff:verify-task-sync
+      - name: Run Phase 11 mobile crash runtime contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/mobile/tests/mobile-crash-runtime-static.test.ts apps/mobile/tests/mobile-crash-static.test.ts
+
+      - name: Upload Phase 11 mobile crash runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-crash-runtime-artifacts
+          path: |
+            coverage/mobile-crash-runtime.json
+            coverage/mobile-crash-observability-typecheck.txt
+            coverage/mobile-crash-observability-test.txt
+            coverage/mobile-crash-app-typecheck.txt
+            coverage/mobile-crash-sentry-expo-config-redacted.json
+            coverage/mobile-crash-fallback-reporter.json
+            coverage/mobile-crash-release-eas-tags.json
+            coverage/mobile-crash-before-send-redaction.json
+            coverage/mobile-crash-pii-redaction-tests.json
+            coverage/mobile-crash-source-map-upload-redacted.json
+            coverage/mobile-crash-debug-symbol-upload-redacted.json
+            coverage/mobile-crash-simulator-forced-redacted.json
+            coverage/mobile-crash-device-forced-redacted.json
+            coverage/mobile-crash-error-report-persistence.json
+            coverage/mobile-crash-dashboard-triage.json
+            coverage/mobile-crash-offline-buffering.json
+            coverage/mobile-crash-no-pii-provider-payload.json
+            coverage/mobile-crash-secret-safe-artifacts.json
+            test-results/mobile-crash-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 11 observability launch runtime contracts
         run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/observability-launch-runtime-static.test.ts
 

@@ -2877,7 +2877,8 @@
         "Token persistence, opt-out persistence, delivery/receipt worker, and invalid-token suppression proof pending",
         "Foreground/background/tap device smoke, mobile typecheck, CI evidence, and secret-safe artifact proof pending"
       ]
-    }    ,{
+    }
+    ,{
       "id": "unit-mobile-offline-sync-runtime-static",
       "file": "apps/mobile/tests/offline-sync-runtime-static.test.ts",
       "priority": "critical",
@@ -2891,6 +2892,21 @@
         "Expo SecureStore/encrypted SQLite adapter and at-rest encryption proof pending",
         "Runtime reconnect worker, retry backoff, idempotency persistence, and audit persistence proof pending",
         "Server conflict tests, device restart smoke, airplane-mode reconnect smoke, mobile typecheck/tests, CI evidence, and secret-safe artifact proof pending"
+      ]
+    }    ,{
+      "id": "unit-mobile-crash-runtime-static",
+      "file": "apps/mobile/tests/mobile-crash-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-046 mobile crash runtime matrix covers observability typecheck/tests, mobile typecheck, Sentry Expo credentials, fallback reporter, release/EAS tags, beforeSend redaction, source-map upload, debug-symbol upload, forced simulator/device crash captures, sanitized ErrorReport persistence, dashboard triage sync, offline buffering, no-PII provider payload proof, CI evidence, and secret-safe artifacts",
+        "GAP-046 mobile app crash contract remains wired for redaction-first report drafts, Sentry mobile-expo gating, fallback sanitized persistence, offline buffering, external high-risk payload blocking, and System Status screen surfacing",
+        "GAP-046 readiness keeps live Sentry DSN, source maps/debug symbols, forced simulator/device proof, sanitized ErrorReport persistence, dashboard triage sync, offline buffering, mobile commands, CI, and provider no-PII artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static mobile crash runtime test execution pending",
+        "Sentry Expo DSN/org/project/auth token and source-map/debug-symbol proof pending",
+        "Forced simulator/device crash capture and sanitized ErrorReport/dashboard persistence proof pending",
+        "Offline buffering, no-PII provider payload, mobile typecheck, CI evidence, and secret-safe artifact proof pending"
       ]
     }  ]
 }
