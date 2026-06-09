@@ -1950,6 +1950,37 @@ jobs:
 
 
 
+      - name: Run Phase 10 SEO publication runtime contracts
+        run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/dashboard/tests/seo-publication-runtime-static.test.ts apps/dashboard/tests/seo-publication-route-static.test.ts apps/dashboard/tests/seo-read-route-static.test.ts
+
+      - name: Upload Phase 10 SEO publication runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-publication-runtime-artifacts
+          path: |
+            coverage/seo-publication-runtime.json
+            coverage/seo-publication-seo-typecheck.txt
+            coverage/seo-publication-seo-test.txt
+            coverage/seo-publication-dashboard-build.txt
+            coverage/seo-publication-static-contract.json
+            coverage/seo-publication-city-prisma.json
+            coverage/seo-publication-style-prisma.json
+            coverage/seo-publication-redirect-prisma.json
+            coverage/seo-publication-tenant-isolation.json
+            coverage/seo-publication-rbac-denial.json
+            coverage/seo-publication-idempotency-store.json
+            coverage/seo-publication-revalidation-job.json
+            coverage/seo-publication-faq-review-image-associations.json
+            coverage/seo-publication-audit-log.json
+            coverage/seo-publication-dashboard-publish-flow-redacted.json
+            coverage/seo-publication-dashboard-edit-flow-redacted.json
+            coverage/seo-publication-dashboard-archive-flow-redacted.json
+            coverage/seo-publication-ci-evidence.json
+            coverage/seo-publication-secret-safe-artifacts.json
+            test-results/seo-publication-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 10 SEO publication contracts
         run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/dashboard/tests/seo-read-route-static.test.ts apps/dashboard/tests/seo-publication-route-static.test.ts apps/web/tests/sitemap-route.test.ts apps/web/tests/canonical-domain-runtime-static.test.ts apps/web/tests/structured-data-crawl-qa-static.test.ts
 

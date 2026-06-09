@@ -2701,8 +2701,8 @@
         "Generated Prisma Client and dev-DB transaction smoke proof pending",
         "Provider worker execution, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-web-reference-upload-provider-runtime-static",
       "file": "apps/web/tests/reference-upload-provider-runtime-static.test.ts",
       "priority": "critical",
@@ -2717,8 +2717,8 @@
         "Magic-byte validation, malware scan, quarantine, FileAsset/BookingReferenceImage/AuditLog persistence, and private ACL proof pending",
         "Anonymous/cross-tenant fetch denial, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-web-booking-provider-handoff-runtime-static",
       "file": "apps/web/tests/booking-provider-handoff-runtime-static.test.ts",
       "priority": "critical",
@@ -2733,8 +2733,8 @@
         "Persisted worker, audit payload, retry/rollback, operator-review, and idempotency proof pending",
         "CI evidence and secret-safe provider artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-dashboard-auth-guard-runtime-static",
       "file": "apps/dashboard/tests/dashboard-auth-guard-runtime-static.test.ts",
       "priority": "critical",
@@ -2749,8 +2749,8 @@
         "Browser login/logout, tenant-switch, cross-tenant denial, no-store, and AuditLog proof pending",
         "Dashboard typecheck/build, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-dashboard-data-layer-runtime-static",
       "file": "apps/dashboard/tests/dashboard-data-layer-runtime-static.test.ts",
       "priority": "critical",
@@ -2765,8 +2765,8 @@
         "Repository/API tenant-isolation, RBAC, redaction, and sensitive-read AuditLog proof pending",
         "Dashboard typecheck/build, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-dashboard-mutation-runtime-static",
       "file": "apps/dashboard/tests/dashboard-mutation-runtime-static.test.ts",
       "priority": "critical",
@@ -2781,8 +2781,8 @@
         "Idempotency, tenant-isolation/RBAC, provider rollback/retry, and UI feedback-state proof pending",
         "Dashboard typecheck/build, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-dashboard-build-runtime-static",
       "file": "apps/dashboard/tests/dashboard-build-runtime-static.test.ts",
       "priority": "high",
@@ -2797,8 +2797,8 @@
         "Dashboard typecheck/build/test and browser route smoke proof pending",
         "CI evidence and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-dashboard-privacy-runtime-static",
       "file": "apps/dashboard/tests/dashboard-privacy-runtime-static.test.ts",
       "priority": "critical",
@@ -2813,8 +2813,8 @@
         "Private file deletion, AuditLog, sanitized log/error, and legal/product approval proof pending",
         "Dashboard typecheck/build, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-dashboard-test-runtime-static",
       "file": "apps/dashboard/tests/dashboard-test-runtime-static.test.ts",
       "priority": "high",
@@ -2829,8 +2829,8 @@
         "axe, keyboard, and Playwright dashboard critical-flow proof pending",
         "CI artifacts, branch protection, flaky policy, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-mobile-auth-runtime-static",
       "file": "apps/mobile/tests/mobile-auth-runtime-static.test.ts",
       "priority": "critical",
@@ -2845,8 +2845,8 @@
         "Expo SecureStore plaintext-denial, biometric device, logout/revocation clearing, and cross-tenant denial proof pending",
         "Audit persistence, mobile typecheck/tests, device smoke, CI, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-mobile-api-runtime-static",
       "file": "apps/mobile/tests/mobile-api-runtime-static.test.ts",
       "priority": "critical",
@@ -2861,8 +2861,8 @@
         "Screen data replacement, expired-auth denial, cross-tenant denial, and offline replay proof pending",
         "Mobile typecheck/tests, device smoke, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-mobile-push-runtime-static",
       "file": "apps/mobile/tests/mobile-push-runtime-static.test.ts",
       "priority": "high",
@@ -2877,8 +2877,8 @@
         "Token persistence, opt-out persistence, delivery/receipt worker, and invalid-token suppression proof pending",
         "Foreground/background/tap device smoke, mobile typecheck, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-mobile-offline-sync-runtime-static",
       "file": "apps/mobile/tests/offline-sync-runtime-static.test.ts",
       "priority": "critical",
@@ -2893,8 +2893,8 @@
         "Runtime reconnect worker, retry backoff, idempotency persistence, and audit persistence proof pending",
         "Server conflict tests, device restart smoke, airplane-mode reconnect smoke, mobile typecheck/tests, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-mobile-crash-runtime-static",
       "file": "apps/mobile/tests/mobile-crash-runtime-static.test.ts",
       "priority": "high",
@@ -2909,8 +2909,8 @@
         "Forced simulator/device crash capture and sanitized ErrorReport/dashboard persistence proof pending",
         "Offline buffering, no-PII provider payload, mobile typecheck, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-mobile-updates-runtime-static",
       "file": "apps/mobile/tests/mobile-updates-runtime-static.test.ts",
       "priority": "high",
@@ -2925,8 +2925,8 @@
         "Preview/prod native build, OTA publish, device receipt, and rollback republish proof pending",
         "Adoption monitoring, release-health monitoring, mobile typecheck, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-mobile-qa-runtime-static",
       "file": "apps/mobile/tests/mobile-qa-runtime-static.test.ts",
       "priority": "high",
@@ -2941,8 +2941,8 @@
         "Physical-device auth/API/offline/push/crash/OTA/accessibility QA proof pending",
         "CI hooks, retained artifact links by checklist id, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-stripe-checkout-runtime-static",
       "file": "apps/web/tests/stripe-checkout-runtime-static.test.ts",
       "priority": "critical",
@@ -2957,8 +2957,8 @@
         "Signed-token invalid/expired tests, tenant-scoped idempotency/persistence transaction, and PaymentAuditLog proof pending",
         "Webhook reconciliation, web typecheck/payment route tests, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-stripe-webhook-runtime-static",
       "file": "apps/web/tests/stripe-webhook-runtime-static.test.ts",
       "priority": "critical",
@@ -2973,8 +2973,8 @@
         "Persistent replay protection, provider object fetch, tenant transaction, and DB reconciliation proof pending",
         "Amount/currency mismatch tests, Stripe CLI replay, web typecheck/payment route tests, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-payment-persistence-runtime-static",
       "file": "apps/dashboard/tests/payment-persistence-runtime-static.test.ts",
       "priority": "critical",
@@ -2989,8 +2989,8 @@
         "PaymentAuditLog/BookingStateEvent, cross-tenant denial, replay idempotency, and seeded Postgres proof pending",
         "Dashboard repository route/action tests, command evidence, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-payment-operations-runtime-static",
       "file": "apps/dashboard/tests/payment-operations-runtime-static.test.ts",
       "priority": "high",
@@ -3005,8 +3005,8 @@
         "Receipt delivery, accounting export, tax/accounting review, and tenant authorization tests pending",
         "Dashboard E2E artifacts, dashboard typecheck/tests, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-payment-automation-runtime-static",
       "file": "apps/web/tests/payment-automation-runtime-static.test.ts",
       "priority": "high",
@@ -3021,8 +3021,8 @@
         "Seeded DB reconciliation, cross-tenant, and replay idempotency proof pending",
         "Playwright/dashboard E2E artifacts, CI artifact upload evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-signed-ics-feed-runtime-static",
       "file": "apps/web/tests/signed-ics-feed-runtime-static.test.ts",
       "priority": "high",
@@ -3037,8 +3037,8 @@
         "Revocation dashboard UI, access-log persistence, and web typecheck proof pending",
         "Apple/Google/Outlook import smoke artifacts, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-availability-persistence-runtime-static",
       "file": "apps/dashboard/tests/availability-persistence-runtime-static.test.ts",
       "priority": "critical",
@@ -3053,8 +3053,8 @@
         "Persisted conflict detection, overlapping DB rejection, concurrent hold, and cross-tenant tests pending",
         "Dashboard/API repository tests, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-google-calendar-sync-runtime-static",
       "file": "apps/dashboard/tests/google-calendar-sync-runtime-static.test.ts",
       "priority": "critical",
@@ -3069,8 +3069,8 @@
         "FreeBusy/event/full-sync/incremental-sync/invalid-token/push smoke artifacts pending",
         "Tenant isolation, Google test-calendar artifacts, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-timezone-recurrence-qa-runtime-static",
       "file": "apps/dashboard/tests/timezone-recurrence-qa-runtime-static.test.ts",
       "priority": "high",
@@ -3085,8 +3085,8 @@
         "DST, recurrence expansion, all-day travel, cross-city, Google, and ICS render proof pending",
         "Seeded persistence-boundary tests, CI evidence, and secret-safe artifact proof pending"
       ]
-    }
-    ,{
+    },
+    {
       "id": "unit-calendar-automation-runtime-static",
       "file": "apps/web/tests/calendar-automation-runtime-static.test.ts",
       "priority": "high",
@@ -3101,5 +3101,21 @@
         "Google provider, timezone matrix, and Playwright dashboard/public travel artifacts pending",
         "CI artifact upload evidence and secret-safe artifact proof pending"
       ]
-    }  ]
+    },
+    {
+      "id": "unit-dashboard-seo-publication-runtime-static",
+      "file": "apps/dashboard/tests/seo-publication-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-071 SEO publication runtime matrix is wired to package helpers, dashboard mutation/read routes, CI artifacts, and tracker evidence",
+        "SEO publication runtime keeps Prisma integration, tenant isolation, idempotency, revalidation, FAQ/review/image association, dashboard flow, CI evidence, and secret-safe artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static SEO publication runtime test execution pending",
+        "Seeded SEO Prisma integration and tenant isolation tests pending",
+        "Dedicated idempotency, revalidation, and FAQ/review/image association persistence tests pending",
+        "Dashboard publish/edit/archive browser flow, CI artifact upload evidence, and secret-safe artifact proof pending"
+      ]
+    }
+  ]
 }
