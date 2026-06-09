@@ -13,6 +13,55 @@ export interface DeploymentToolingRuntimeMatrixEntry {
   readonly status: DeploymentToolingRuntimeStatus;
 }
 
+export interface DeploymentToolingRunPersistenceInput {
+  tenantId: string;
+  runId: string;
+  commitSha?: string;
+  status: "blocked" | "running" | "passed" | "failed" | "dashboard_gated";
+  runtimeMatrix: readonly DeploymentToolingRuntimeMatrixEntry[];
+  artifactManifest: readonly string[];
+  frozenInstallPassed: boolean;
+  deploymentPackageTypecheckPassed: boolean;
+  deploymentPackageTestsPassed: boolean;
+  routeContractTestsPassed: boolean;
+  deployCheckEnvPassed: boolean;
+  deployChecklistPassed: boolean;
+  deployGapsPassed: boolean;
+  dashboardBuildPassed: boolean;
+  dashboardPageSmokePassed: boolean;
+  dashboardReadinessApiSmokePassed: boolean;
+  rollbackPreflightVerified: boolean;
+  productionApprovalBoundaryVerified: boolean;
+  ciDeploymentReportsCaptured: boolean;
+  blockerOwnersDocumented: boolean;
+  blockerOwnerArtifactPath?: string;
+  ciRunUrl?: string;
+}
+
+export interface DeploymentToolingRunPersistenceContract {
+  modelName: "DeploymentToolingRun";
+  row: DeploymentToolingRunPersistenceInput;
+  transactionWrites: readonly ["DeploymentToolingRun", "AuditLog"];
+  requiredDeploymentFlags: readonly [
+    "frozenInstallPassed",
+    "deploymentPackageTypecheckPassed",
+    "deploymentPackageTestsPassed",
+    "routeContractTestsPassed",
+    "deployCheckEnvPassed",
+    "deployChecklistPassed",
+    "deployGapsPassed",
+    "dashboardBuildPassed",
+    "dashboardPageSmokePassed",
+    "dashboardReadinessApiSmokePassed",
+    "rollbackPreflightVerified",
+    "productionApprovalBoundaryVerified",
+    "ciDeploymentReportsCaptured",
+    "blockerOwnersDocumented",
+  ];
+  artifactFields: readonly ["runtimeMatrix", "artifactManifest", "blockerOwnerArtifactPath"];
+  tenantIsolationKey: "tenantId";
+}
+
 export const deploymentToolingRuntimeArtifactPaths = [
   "coverage/deployment-tooling-runtime.json",
   "coverage/deployment-install.log",
@@ -83,6 +132,34 @@ export const deploymentToolingRuntimeMatrix: readonly DeploymentToolingRuntimeMa
   }
 ];
 
+export function buildDeploymentToolingRunPersistenceContract(
+  input: DeploymentToolingRunPersistenceInput,
+): DeploymentToolingRunPersistenceContract {
+  return {
+    modelName: "DeploymentToolingRun",
+    row: input,
+    transactionWrites: ["DeploymentToolingRun", "AuditLog"],
+    requiredDeploymentFlags: [
+      "frozenInstallPassed",
+      "deploymentPackageTypecheckPassed",
+      "deploymentPackageTestsPassed",
+      "routeContractTestsPassed",
+      "deployCheckEnvPassed",
+      "deployChecklistPassed",
+      "deployGapsPassed",
+      "dashboardBuildPassed",
+      "dashboardPageSmokePassed",
+      "dashboardReadinessApiSmokePassed",
+      "rollbackPreflightVerified",
+      "productionApprovalBoundaryVerified",
+      "ciDeploymentReportsCaptured",
+      "blockerOwnersDocumented",
+    ],
+    artifactFields: ["runtimeMatrix", "artifactManifest", "blockerOwnerArtifactPath"],
+    tenantIsolationKey: "tenantId",
+  };
+}
+
 export const deploymentToolingRuntimeReadiness = buildDeploymentToolingRuntimeVerificationPlan({
   packageScripts: {
     typecheck: "tsc --noEmit",
@@ -104,4 +181,27 @@ export const deploymentToolingRuntimeReadiness = buildDeploymentToolingRuntimeVe
   productionApprovalBoundaryVerified: true,
   ciDeploymentReportsCaptured: false,
   blockersDocumented: true
+});
+
+export const deploymentToolingRunPersistencePreview = buildDeploymentToolingRunPersistenceContract({
+  tenantId: "tenant_demo",
+  runId: "deployment-tooling-demo",
+  status: "dashboard_gated",
+  runtimeMatrix: deploymentToolingRuntimeMatrix,
+  artifactManifest: deploymentToolingRuntimeArtifactPaths,
+  frozenInstallPassed: false,
+  deploymentPackageTypecheckPassed: false,
+  deploymentPackageTestsPassed: false,
+  routeContractTestsPassed: false,
+  deployCheckEnvPassed: false,
+  deployChecklistPassed: false,
+  deployGapsPassed: false,
+  dashboardBuildPassed: false,
+  dashboardPageSmokePassed: false,
+  dashboardReadinessApiSmokePassed: false,
+  rollbackPreflightVerified: false,
+  productionApprovalBoundaryVerified: true,
+  ciDeploymentReportsCaptured: false,
+  blockerOwnersDocumented: true,
+  blockerOwnerArtifactPath: "coverage/deployment-blocker-owner-list.json",
 });

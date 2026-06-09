@@ -377,6 +377,7 @@ model Tenant {
   providerContractRuns ProviderContractRun[]
   ciCoverageRuns CiCoverageRun[]
   performanceLoadRuns PerformanceLoadRun[]
+  deploymentToolingRuns DeploymentToolingRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -1862,6 +1863,39 @@ model PerformanceLoadRun {
   tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                       DateTime @default(now())
   updatedAt                       DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model DeploymentToolingRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String?
+  status                              String
+  runtimeMatrix                       Json
+  artifactManifest                    Json
+  frozenInstallPassed                 Boolean  @default(false)
+  deploymentPackageTypecheckPassed    Boolean  @default(false)
+  deploymentPackageTestsPassed        Boolean  @default(false)
+  routeContractTestsPassed            Boolean  @default(false)
+  deployCheckEnvPassed                Boolean  @default(false)
+  deployChecklistPassed               Boolean  @default(false)
+  deployGapsPassed                    Boolean  @default(false)
+  dashboardBuildPassed                Boolean  @default(false)
+  dashboardPageSmokePassed            Boolean  @default(false)
+  dashboardReadinessApiSmokePassed    Boolean  @default(false)
+  rollbackPreflightVerified           Boolean  @default(false)
+  productionApprovalBoundaryVerified  Boolean  @default(false)
+  ciDeploymentReportsCaptured         Boolean  @default(false)
+  blockerOwnersDocumented             Boolean  @default(false)
+  blockerOwnerArtifactPath            String?
+  ciRunUrl                            String?
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

@@ -2,6 +2,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildDeploymentToolingRunPersistenceContract,
+  deploymentToolingRunPersistencePreview,
   deploymentToolingRuntimeArtifactPaths,
   deploymentToolingRuntimeCommands,
   deploymentToolingRuntimeMatrix,
@@ -104,6 +106,44 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     );
   });
 
+  it("pins durable DeploymentToolingRun rows, deployment script flags, dashboard smoke, rollback, approval, CI, and blocker owner evidence", () => {
+    const schema = read("packages/db/prisma/schema.prisma");
+    const contract = buildDeploymentToolingRunPersistenceContract({
+      tenantId: "tenant_demo",
+      runId: "deployment-tooling-demo",
+      commitSha: "abc1234",
+      status: "dashboard_gated",
+      runtimeMatrix: deploymentToolingRuntimeMatrix,
+      artifactManifest: deploymentToolingRuntimeArtifactPaths,
+      frozenInstallPassed: false,
+      deploymentPackageTypecheckPassed: false,
+      deploymentPackageTestsPassed: false,
+      routeContractTestsPassed: false,
+      deployCheckEnvPassed: false,
+      deployChecklistPassed: false,
+      deployGapsPassed: false,
+      dashboardBuildPassed: false,
+      dashboardPageSmokePassed: false,
+      dashboardReadinessApiSmokePassed: false,
+      rollbackPreflightVerified: false,
+      productionApprovalBoundaryVerified: true,
+      ciDeploymentReportsCaptured: false,
+      blockerOwnersDocumented: true,
+      blockerOwnerArtifactPath: "coverage/deployment-blocker-owner-list.json",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/redacted"
+    });
+
+    expect(schema).toContain("model DeploymentToolingRun");
+    expect(schema).toContain("deployCheckEnvPassed");
+    expect(schema).toContain("productionApprovalBoundaryVerified");
+    expect(schema).toContain("@@unique([tenantId, runId])");
+    expect(contract.transactionWrites).toEqual(["DeploymentToolingRun", "AuditLog"]);
+    expect(contract.requiredDeploymentFlags).toContain("rollbackPreflightVerified");
+    expect(contract.artifactFields).toContain("blockerOwnerArtifactPath");
+    expect(contract.tenantIsolationKey).toBe("tenantId");
+    expect(deploymentToolingRunPersistencePreview.modelName).toBe("DeploymentToolingRun");
+  });
+
   it("keeps CI, manifest registration, and tracker status aligned", () => {
     expect(ciWorkflow).toContain("Run Phase 15 deployment tooling runtime contracts");
     expect(ciWorkflow).toContain("apps/web/tests/deployment-tooling-runtime-static.test.ts");
@@ -111,6 +151,7 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     expect(ciWorkflow).toContain("coverage/deployment-tooling-runtime.json");
     expect(ciWorkflow).toContain("test-results/deployment-tooling-runtime");
     expect(unitManifest).toContain("unit-web-deployment-tooling-runtime-static");
+    expect(unitManifest).toContain("DeploymentToolingRun Prisma model and app row contract are wired");
     expect(gapTracker).toContain("apps/web/lib/deploymentToolingRuntime.ts");
     expect(gapTracker).toContain("live deployment tooling execution proof remains open");
   });
