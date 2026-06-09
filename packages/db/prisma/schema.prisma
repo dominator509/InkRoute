@@ -365,6 +365,7 @@ model Tenant {
   retentionTombstones RetentionTombstone[]
   legalDocumentVersions LegalDocumentVersion[]
   legalAcceptanceAudits LegalAcceptanceAudit[]
+  abuseEvents     AbuseEvent[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -410,6 +411,7 @@ model User {
   releases              ReleaseRecord[]
   privacyRequests       PrivacyRequest[]
   legalAcceptanceAudits LegalAcceptanceAudit[]
+  abuseEvents           AbuseEvent[]
 }
 
 model TenantMember {
@@ -1473,6 +1475,36 @@ model LegalAcceptanceAudit {
   @@index([tenantId, legalDocumentVersionId])
   @@index([tenantId, acceptedVersion])
   @@index([tenantId, createdAt])
+}
+
+model AbuseEvent {
+  id                     String   @id @default(cuid())
+  tenantId               String
+  actorUserId            String?
+  routeFamily            String
+  routePattern           String
+  abuseKeyHash           String
+  ipHash                 String?
+  userAgentHash          String?
+  action                 String
+  reason                 String
+  limiterProvider        String?
+  limiterDecision        String
+  observedRequests       Int?
+  windowSeconds          Int?
+  botChallengeRequired   Boolean  @default(false)
+  providerSignatureValid Boolean?
+  alertDispatchedAt      DateTime?
+  failClosed             Boolean  @default(false)
+  redactedMetadata       Json?
+  tenant                 Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actor                  User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  createdAt              DateTime @default(now())
+
+  @@index([tenantId, routeFamily, createdAt])
+  @@index([tenantId, abuseKeyHash])
+  @@index([tenantId, action])
+  @@index([tenantId, failClosed])
 }
 
 model ErrorReport {

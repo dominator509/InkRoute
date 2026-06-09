@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  abuseEventPersistencePreview,
   abuseControlArtifactPaths,
   abuseControlCommands,
   abuseControlKnownRateLimitRules,
   abuseControlRuntimePreview,
   abuseControlRuntimeReadiness,
+  buildAbuseEventPersistenceContract,
   buildAbuseControlRuntimeContract,
 } from "../lib/abuseControlRuntime";
 
@@ -76,6 +78,39 @@ describe("GAP-101 abuse control runtime contract", () => {
     expect(invalidWebhook.signals).toContain("provider_signature_missing");
   });
 
+  it("pins durable privacy-safe AbuseEvent rows, hashed actor keys, redaction, and fail-closed persistence", () => {
+    const schema = readWorkspaceFile("packages/db/prisma/schema.prisma");
+    const contract = buildAbuseEventPersistenceContract({
+      tenantId: "tenant_demo",
+      actorUserId: "user_demo",
+      routeFamily: "dashboard-mutation",
+      routePattern: "/api/security/privacy-requests",
+      abuseKeyHash: "sha256:tenant-route-user-redacted",
+      ipHash: "sha256:redacted",
+      userAgentHash: "sha256:redacted",
+      action: "fail_closed",
+      reason: "Limiter provider failed closed before handler execution.",
+      limiterProvider: "upstash",
+      limiterDecision: "failed_closed",
+      observedRequests: 1,
+      windowSeconds: 60,
+      botChallengeRequired: false,
+      alertDispatchedAt: "2026-06-09T00:40:00.000Z",
+      failClosed: true,
+    });
+
+    expect(schema).toContain("model AbuseEvent");
+    expect(schema).toContain("abuseKeyHash");
+    expect(schema).toContain("redactedMetadata");
+    expect(schema).toContain("@@index([tenantId, routeFamily, createdAt])");
+    expect(contract.transactionWrites).toEqual(["AbuseEvent", "AuditLog"]);
+    expect(contract.hashedFields).toContain("ipHash");
+    expect(contract.redactedFields).toContain("providerSignature");
+    expect(contract.failClosedGate).toBe("persist_before_reject_on_limiter_error");
+    expect(contract.tenantIsolationKey).toBe("tenantId");
+    expect(abuseEventPersistencePreview.modelName).toBe("AbuseEvent");
+  });
+
   it("pins existing route-local abuse controls until distributed middleware/provider proof exists", () => {
     const bookingRoute = readWorkspaceFile("apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts");
     const privacyRoute = readWorkspaceFile("apps/web/app/api/public/[tenantSlug]/privacy-requests/route.ts");
@@ -114,6 +149,7 @@ describe("GAP-101 abuse control runtime contract", () => {
     expect(abuseControlCommands).toContain("node scripts/security/verify-abuse-rate-limits.mjs");
     expect(abuseControlCommands).toContain("provider webhook signature bypass/rejection test");
     expect(abuseControlArtifactPaths).toContain("coverage/abuse-event-redaction.json");
+    expect(manifest).toContain("AbuseEvent Prisma model and app row contract are wired");
     expect(ci).toContain("Run Phase 13 abuse control runtime contracts");
     expect(ci).toContain("apps/web/tests/abuse-control-runtime-static.test.ts");
     expect(ci).toContain("abuse-control-runtime-artifacts");

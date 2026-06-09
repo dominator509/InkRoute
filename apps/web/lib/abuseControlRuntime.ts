@@ -26,6 +26,36 @@ export const abuseControlRouteFamilies = [
   "dashboard-mutation",
 ] as const;
 
+export interface AbuseEventPersistenceInput {
+  tenantId: string;
+  actorUserId?: string;
+  routeFamily: (typeof abuseControlRouteFamilies)[number];
+  routePattern: string;
+  abuseKeyHash: string;
+  ipHash?: string;
+  userAgentHash?: string;
+  action: "allow" | "throttle" | "challenge" | "reject" | "bypass" | "fail_closed";
+  reason: string;
+  limiterProvider?: "redis" | "upstash" | "edge" | "local";
+  limiterDecision: "allowed" | "limited" | "challenged" | "bypassed" | "failed_closed";
+  observedRequests?: number;
+  windowSeconds?: number;
+  botChallengeRequired: boolean;
+  providerSignatureValid?: boolean;
+  alertDispatchedAt?: string;
+  failClosed: boolean;
+}
+
+export interface AbuseEventPersistenceContract {
+  modelName: "AbuseEvent";
+  row: AbuseEventPersistenceInput;
+  transactionWrites: readonly ["AbuseEvent", "AuditLog"];
+  hashedFields: readonly ["abuseKeyHash", "ipHash", "userAgentHash"];
+  redactedFields: readonly ["rawIp", "userAgent", "payload", "providerSignature", "messageBody", "token"];
+  tenantIsolationKey: "tenantId";
+  failClosedGate: "persist_before_reject_on_limiter_error";
+}
+
 export const abuseControlArtifactPaths = [
   "coverage/abuse-control-runtime.json",
   "coverage/abuse-rate-limit-distributed.json",
@@ -47,6 +77,18 @@ export const abuseControlCommands = [
   "bot challenge route integration test",
   "provider webhook signature bypass/rejection test",
 ] as const;
+
+export function buildAbuseEventPersistenceContract(input: AbuseEventPersistenceInput): AbuseEventPersistenceContract {
+  return {
+    modelName: "AbuseEvent",
+    row: input,
+    transactionWrites: ["AbuseEvent", "AuditLog"],
+    hashedFields: ["abuseKeyHash", "ipHash", "userAgentHash"],
+    redactedFields: ["rawIp", "userAgent", "payload", "providerSignature", "messageBody", "token"],
+    tenantIsolationKey: "tenantId",
+    failClosedGate: "persist_before_reject_on_limiter_error",
+  };
+}
 
 export function buildAbuseControlRuntimeContract(input: {
   ruleId: string;
@@ -126,3 +168,20 @@ export const abuseControlKnownRateLimitRules = rateLimitRules.map((rule) => ({
   keyStrategy: rule.keyStrategy,
   gapIds: rule.gapIds,
 }));
+
+export const abuseEventPersistencePreview = buildAbuseEventPersistenceContract({
+  tenantId: "tenant_demo",
+  routeFamily: "public-booking-submit",
+  routePattern: "/api/public/:tenantSlug/booking-requests",
+  abuseKeyHash: "sha256:tenant-route-ip-redacted",
+  ipHash: "sha256:redacted",
+  userAgentHash: "sha256:redacted",
+  action: "challenge",
+  reason: "Suspicious request velocity and bot proof missing.",
+  limiterProvider: "redis",
+  limiterDecision: "challenged",
+  observedRequests: 12,
+  windowSeconds: 3600,
+  botChallengeRequired: true,
+  failClosed: false,
+});
