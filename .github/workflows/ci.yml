@@ -1364,6 +1364,40 @@ jobs:
             coverage/retention-destructive-rollback.md
             test-results/retention-enforcement
           if-no-files-found: warn
+      - name: Run Phase 12 release launch control runtime contracts
+        run: pnpm --filter @inkroute/releases test && pnpm vitest run apps/web/tests/release-launch-control-runtime-static.test.ts
+
+      - name: Upload Phase 12 release launch control runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-launch-control-runtime-artifacts
+          path: |
+            coverage/release-launch-control-runtime.json
+            coverage/release-package-typecheck.txt
+            coverage/release-package-test.txt
+            coverage/release-record-persistence-redacted.json
+            coverage/release-feature-flag-persistence-redacted.json
+            coverage/release-rbac-tenant-scope-redacted.json
+            coverage/release-optimistic-concurrency.json
+            coverage/release-audit-rows-redacted.json
+            coverage/release-protected-environments-redacted.json
+            coverage/release-signed-provenance-redacted.json
+            coverage/release-ci-required-checks-redacted.json
+            coverage/release-preview-deploy-redacted.json
+            coverage/release-production-approval-dry-run-redacted.json
+            coverage/release-migration-gate-dry-run-redacted.json
+            coverage/release-incident-linked-rollback-redacted.json
+            coverage/release-eas-update-governance-redacted.json
+            coverage/release-rollout-controls-redacted.json
+            coverage/release-kill-switch-drill-redacted.json
+            coverage/release-health-envelope.json
+            coverage/release-provider-route-tests-redacted.json
+            coverage/release-ci-artifacts-redacted.json
+            coverage/release-secret-safe-artifacts.json
+            test-results/release-launch-control-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 13 legal review evidence contracts
         run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/legal-review-evidence-static.test.ts
 
