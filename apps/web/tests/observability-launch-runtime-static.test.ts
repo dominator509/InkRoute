@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   observabilityLaunchArtifactPaths,
+  observabilityLaunchRunPersistenceContract,
   observabilityLaunchRuntimeCommands,
   observabilityLaunchRuntimeControls,
   observabilityLaunchRuntimeMatrix,
@@ -21,6 +22,10 @@ describe("observability launch runtime contract", () => {
   const dashboardGlobalError = readRepoFile("apps/dashboard/app/global-error.tsx");
   const mobileStatusScreen = readRepoFile("apps/mobile/src/screens/SystemStatusScreen.tsx");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const observabilityLaunchMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609033500_add_observability_launch_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -54,6 +59,34 @@ describe("observability launch runtime contract", () => {
     ]);
     expect(observabilityLaunchArtifactPaths).toContain("coverage/observability-launch-runtime.json");
     expect(observabilityLaunchArtifactPaths).toContain("test-results/observability-launch-runtime");
+  });
+
+  it("pins the ObservabilityLaunchRun persistence model and migration", () => {
+    expect(observabilityLaunchRunPersistenceContract.model).toBe("ObservabilityLaunchRun");
+    expect(observabilityLaunchRunPersistenceContract.tenantRelation).toBe("observabilityLaunchRuns");
+    expect(observabilityLaunchRunPersistenceContract.migration).toBe("20260609033500_add_observability_launch_runs");
+    expect(observabilityLaunchRunPersistenceContract.jsonFields).toEqual([
+      "commandMatrix",
+      "controlManifest",
+      "artifactManifest",
+      "sdkConfigurationManifest",
+      "captureEvidenceManifest",
+      "alertReleaseManifest",
+    ]);
+    expect(observabilityLaunchRunPersistenceContract.evidenceBooleans).toContain("sentryWebSdkConfigured");
+    expect(observabilityLaunchRunPersistenceContract.evidenceBooleans).toContain("forcedWebhookCaptureVerified");
+    expect(observabilityLaunchRunPersistenceContract.evidenceBooleans).toContain("secretSafeArtifactsCaptured");
+    expect(observabilityLaunchRunPersistenceContract.artifactFields).toContain("sourceMapsDebugSymbolsArtifactPath");
+    expect(observabilityLaunchRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(prismaSchema).toContain("observabilityLaunchRuns ObservabilityLaunchRun[]");
+    expect(prismaSchema).toContain("model ObservabilityLaunchRun");
+    expect(prismaSchema).toContain("sdkConfigurationManifest");
+    expect(prismaSchema).toContain("releaseIncidentLinkageVerified");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(observabilityLaunchMigration).toContain('CREATE TABLE "ObservabilityLaunchRun"');
+    expect(observabilityLaunchMigration).toContain('"captureEvidenceManifest" JSONB NOT NULL');
+    expect(observabilityLaunchMigration).toContain('"secretSafeArtifactsCaptured" BOOLEAN NOT NULL DEFAULT false');
+    expect(observabilityLaunchMigration).toContain('CREATE UNIQUE INDEX "ObservabilityLaunchRun_tenantId_runId_key"');
   });
 
   it("keeps helper, package scripts, dashboard triage, and crash surfaces wired", () => {
@@ -97,6 +130,8 @@ describe("observability launch runtime contract", () => {
     expect(ciWorkflow).toContain("observability-launch-runtime-static.test.ts");
     expect(ciWorkflow).toContain("observability-launch-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-observability-launch-runtime-static");
+    expect(unitManifest).toContain("ObservabilityLaunchRun Prisma model and app row contract");
+    expect(gapTracker).toContain("ObservabilityLaunchRun");
     expect(gapTracker).toContain("apps/web/lib/observabilityLaunchRuntime.ts");
     expect(gapTracker).toContain("live Sentry/OTel/mobile crash SDK wiring, source-map/debug-symbol upload, forced capture evidence, provider webhook replay verification, alert routing, release linkage, CI evidence, and secret-safe artifacts remain open");
   });

@@ -2440,13 +2440,13 @@
       "file": "apps/web/tests/observability-launch-runtime-static.test.ts",
       "priority": "medium",
       "verifies": [
-        "GAP-011 observability launch runtime matrix covers observability typecheck/tests, web/dashboard/mobile build gates, Sentry web/dashboard/mobile SDKs, OpenTelemetry exporter, structured logging, source maps, mobile debug symbols, forced capture smokes, ErrorReport persistence, dashboard triage, provider webhook replay, alert routing, release linkage, redaction, CI evidence, and secret-safe artifacts",
+        "GAP-011 ObservabilityLaunchRun Prisma model and app row contract plus observability launch runtime matrix covers observability typecheck/tests, web/dashboard/mobile build gates, Sentry web/dashboard/mobile SDKs, OpenTelemetry exporter, structured logging, source maps, mobile debug symbols, forced capture smokes, ErrorReport persistence, dashboard triage, provider webhook replay, alert routing, release linkage, redaction, CI evidence, and secret-safe artifacts",
         "GAP-011 package helper, redaction tests, dashboard error-report triage route, global error surfaces, CI labels, artifact paths, and tracker row remain wired without claiming live provider observability readiness",
         "GAP-011 readiness keeps SDK, telemetry, capture, persistence, webhook, alerting, release-linkage, CI, and secret-safe artifact evidence explicit blockers"
       ],
       "blockedBy": [
         "Static observability launch runtime test execution pending",
-        "Observability typecheck/tests and web/dashboard/mobile build evidence pending",
+        "Provider-backed ObservabilityLaunchRun transaction plus observability typecheck/tests and web/dashboard/mobile build evidence pending",
         "Sentry SDK, OpenTelemetry, structured logging, source-map/debug-symbol, forced capture, provider webhook replay, alert routing, and release-linkage proof pending",
         "Redaction/no-PII, CI evidence, and secret-safe artifact proof pending"
       ]

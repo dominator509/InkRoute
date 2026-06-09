@@ -408,6 +408,7 @@ model Tenant {
   mobileLaunchRuns MobileLaunchRun[]
   calendarLaunchRuns CalendarLaunchRun[]
   notificationLaunchRuns NotificationLaunchRun[]
+  observabilityLaunchRuns ObservabilityLaunchRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3256,6 +3257,71 @@ model NotificationLaunchRun {
   tenant                                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                             DateTime @default(now())
   updatedAt                             DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model ObservabilityLaunchRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  commandMatrix                           Json
+  controlManifest                         Json
+  artifactManifest                        Json
+  sdkConfigurationManifest                Json
+  captureEvidenceManifest                 Json
+  alertReleaseManifest                    Json
+  observabilityTypecheckPassed            Boolean  @default(false)
+  observabilityTestsPassed                Boolean  @default(false)
+  webBuildPassed                          Boolean  @default(false)
+  dashboardBuildPassed                    Boolean  @default(false)
+  mobileTypecheckPassed                   Boolean  @default(false)
+  sentryWebSdkConfigured                  Boolean  @default(false)
+  sentryDashboardSdkConfigured            Boolean  @default(false)
+  sentryMobileSdkConfigured               Boolean  @default(false)
+  openTelemetryExporterConfigured         Boolean  @default(false)
+  structuredLoggingConfigured             Boolean  @default(false)
+  sourceMapsUploaded                      Boolean  @default(false)
+  mobileDebugSymbolsUploaded              Boolean  @default(false)
+  forcedWebCaptureVerified                Boolean  @default(false)
+  forcedDashboardCaptureVerified          Boolean  @default(false)
+  forcedApiCaptureVerified                Boolean  @default(false)
+  forcedWebhookCaptureVerified            Boolean  @default(false)
+  forcedMobileCrashVerified               Boolean  @default(false)
+  errorReportPersistenceConfigured        Boolean  @default(false)
+  dashboardTenantTriageReadsVerified      Boolean  @default(false)
+  sentryWebhookSignatureReplayVerified    Boolean  @default(false)
+  alertRoutingVerified                    Boolean  @default(false)
+  releaseIncidentLinkageVerified          Boolean  @default(false)
+  redactionNoPiiVerified                  Boolean  @default(false)
+  ciEvidenceCaptured                      Boolean  @default(false)
+  secretSafeArtifactsCaptured             Boolean  @default(false)
+  observabilityTypecheckArtifactPath      String?
+  observabilityTestArtifactPath           String?
+  webBuildArtifactPath                    String?
+  dashboardBuildArtifactPath              String?
+  mobileTypecheckArtifactPath             String?
+  sentrySdkArtifactPath                   String?
+  otelPipelineArtifactPath                String?
+  structuredLoggingArtifactPath           String?
+  sourceMapsDebugSymbolsArtifactPath      String?
+  forcedCapturesArtifactPath              String?
+  errorReportPersistenceArtifactPath      String?
+  dashboardTriageArtifactPath             String?
+  providerWebhookArtifactPath             String?
+  alertRoutingArtifactPath                String?
+  releaseLinkageArtifactPath              String?
+  redactionReviewArtifactPath             String?
+  ciEvidenceArtifactPath                  String?
+  secretSafeArtifactsPath                 String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])
