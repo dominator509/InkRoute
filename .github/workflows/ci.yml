@@ -1500,6 +1500,38 @@ jobs:
             test-results/signed-ics-feed-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 8 availability persistence runtime contracts
+        run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/dashboard/tests/availability-persistence-runtime-static.test.ts apps/dashboard/tests/availability-persistence-static.test.ts
+
+      - name: Upload Phase 8 availability persistence runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: availability-persistence-runtime-artifacts
+          path: |
+            coverage/availability-persistence-runtime.json
+            coverage/availability-persistence-calendar-typecheck.txt
+            coverage/availability-persistence-calendar-test.txt
+            coverage/availability-persistence-prisma-validate.txt
+            coverage/availability-persistence-schema-models.json
+            coverage/availability-persistence-repository-contract.json
+            coverage/availability-persistence-tenant-scope.json
+            coverage/availability-persistence-window-transaction.json
+            coverage/availability-persistence-slot-hold-transaction.json
+            coverage/availability-persistence-appointment-confirmation.json
+            coverage/availability-persistence-hold-release.json
+            coverage/availability-persistence-audit-log.json
+            coverage/availability-persistence-idempotency.json
+            coverage/availability-persistence-conflict-rows.json
+            coverage/availability-persistence-concurrent-hold.json
+            coverage/availability-persistence-overlap-rejection.json
+            coverage/availability-persistence-cross-tenant-denial.json
+            coverage/availability-persistence-seeded-postgres.json
+            coverage/availability-persistence-dashboard-api-repository.json
+            coverage/availability-persistence-secret-safe-artifacts.json
+            test-results/availability-persistence-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 8 calendar lifecycle contracts
         run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/web/tests/ics-feed-route.test.ts apps/web/tests/availability-preview-route.test.ts apps/web/tests/signed-ics-feed-static.test.ts apps/web/tests/calendar-automation-static.test.ts apps/dashboard/tests/availability-persistence-static.test.ts apps/dashboard/tests/google-calendar-sync-static.test.ts apps/dashboard/tests/timezone-recurrence-qa-static.test.ts apps/dashboard/tests/travel-publish-static.test.ts
       - name: Upload Vitest coverage artifacts

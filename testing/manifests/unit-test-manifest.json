@@ -3021,7 +3021,8 @@
         "Seeded DB reconciliation, cross-tenant, and replay idempotency proof pending",
         "Playwright/dashboard E2E artifacts, CI artifact upload evidence, and secret-safe artifact proof pending"
       ]
-    }    ,{
+    }
+    ,{
       "id": "unit-signed-ics-feed-runtime-static",
       "file": "apps/web/tests/signed-ics-feed-runtime-static.test.ts",
       "priority": "high",
@@ -3035,6 +3036,21 @@
         "Durable token table/repository and revoked-token route rejection tests pending",
         "Revocation dashboard UI, access-log persistence, and web typecheck proof pending",
         "Apple/Google/Outlook import smoke artifacts, CI evidence, and secret-safe artifact proof pending"
+      ]
+    }    ,{
+      "id": "unit-availability-persistence-runtime-static",
+      "file": "apps/dashboard/tests/availability-persistence-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-056 availability persistence runtime matrix covers calendar typecheck/tests, Prisma validation, schema models, repository contract, tenant scope, window transactions, slot hold transactions, appointment confirmation, hold release, CalendarAuditLog, idempotency, persisted conflict rows, concurrent hold protection, overlap rejection, cross-tenant denial, seeded Postgres tests, dashboard/API repository tests, CI evidence, and secret-safe artifacts",
+        "GAP-056 dashboard availability persistence contract remains wired for AvailabilityRepository, conflict lookup, concurrent hold lookup, idempotency claims, transactional writes, hold API boundary, dashboard calendar read route, and static route coverage",
+        "GAP-056 readiness keeps durable Prisma repository execution, seeded Postgres lifecycle tests, overlapping DB rejection tests, race-condition tests, cross-tenant mutation tests, command evidence, CI, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static availability persistence runtime test execution pending",
+        "Prisma transaction implementation and seeded Postgres lifecycle proof pending",
+        "Persisted conflict detection, overlapping DB rejection, concurrent hold, and cross-tenant tests pending",
+        "Dashboard/API repository tests, CI evidence, and secret-safe artifact proof pending"
       ]
     }  ]
 }
