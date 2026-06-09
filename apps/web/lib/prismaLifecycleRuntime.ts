@@ -13,6 +13,88 @@ export interface PrismaLifecycleRuntimeMatrixEntry {
   readonly status: PrismaLifecycleRuntimeStatus;
 }
 
+export interface PrismaLifecycleRunPersistenceContract {
+  readonly model: "PrismaLifecycleRun";
+  readonly tenantRelation: "prismaLifecycleRuns";
+  readonly migration: "20260609032600_add_prisma_lifecycle_runs";
+  readonly jsonFields: readonly [
+    "commandMatrix",
+    "packageScriptManifest",
+    "artifactManifest",
+    "sqlReviewManifest",
+    "driftCheckManifest",
+  ];
+  readonly evidenceBooleans: readonly [
+    "postgresProvisioned",
+    "databaseUrlConfigured",
+    "directUrlConfigured",
+    "prismaValidatePassed",
+    "prismaGeneratePassed",
+    "migrationGenerated",
+    "migrationSqlReviewed",
+    "migrationAppliedToDevDb",
+    "seedReadinessVerified",
+    "seedScriptPassed",
+    "destructiveProductionUrlGuarded",
+    "migrationDriftChecked",
+    "commandEvidenceCaptured",
+    "ciEvidenceCaptured",
+  ];
+  readonly artifactFields: readonly [
+    "validateArtifactPath",
+    "generateArtifactPath",
+    "migrateArtifactPath",
+    "seedReadinessArtifactPath",
+    "seedArtifactPath",
+    "sqlReviewArtifactPath",
+    "driftCheckArtifactPath",
+    "productionUrlGuardArtifactPath",
+    "ciDbLifecycleArtifactPath",
+    "ciRunUrl",
+  ];
+}
+
+export const prismaLifecycleRunPersistenceContract: PrismaLifecycleRunPersistenceContract = {
+  model: "PrismaLifecycleRun",
+  tenantRelation: "prismaLifecycleRuns",
+  migration: "20260609032600_add_prisma_lifecycle_runs",
+  jsonFields: [
+    "commandMatrix",
+    "packageScriptManifest",
+    "artifactManifest",
+    "sqlReviewManifest",
+    "driftCheckManifest",
+  ],
+  evidenceBooleans: [
+    "postgresProvisioned",
+    "databaseUrlConfigured",
+    "directUrlConfigured",
+    "prismaValidatePassed",
+    "prismaGeneratePassed",
+    "migrationGenerated",
+    "migrationSqlReviewed",
+    "migrationAppliedToDevDb",
+    "seedReadinessVerified",
+    "seedScriptPassed",
+    "destructiveProductionUrlGuarded",
+    "migrationDriftChecked",
+    "commandEvidenceCaptured",
+    "ciEvidenceCaptured",
+  ],
+  artifactFields: [
+    "validateArtifactPath",
+    "generateArtifactPath",
+    "migrateArtifactPath",
+    "seedReadinessArtifactPath",
+    "seedArtifactPath",
+    "sqlReviewArtifactPath",
+    "driftCheckArtifactPath",
+    "productionUrlGuardArtifactPath",
+    "ciDbLifecycleArtifactPath",
+    "ciRunUrl",
+  ],
+};
+
 export const prismaLifecycleCommands = [
   "pnpm --filter @inkroute/db db:validate",
   "pnpm --filter @inkroute/db db:generate",

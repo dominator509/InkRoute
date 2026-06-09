@@ -6,6 +6,7 @@ import {
   prismaLifecycleCommands,
   prismaLifecyclePackageScripts,
   prismaLifecycleReadiness,
+  prismaLifecycleRunPersistenceContract,
   prismaLifecycleRuntimeMatrix,
 } from "../lib/prismaLifecycleRuntime";
 
@@ -18,6 +19,9 @@ describe("Prisma lifecycle runtime contract", () => {
   const integrationReadiness = readRepoFile("packages/db/src/integration-readiness.ts");
   const dbTests = readRepoFile("packages/db/tests/db-integration-plan.test.ts");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
+  const prismaLifecycleMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609032600_add_prisma_lifecycle_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -54,6 +58,33 @@ describe("Prisma lifecycle runtime contract", () => {
     expect(prismaLifecycleArtifactPaths).toContain("test-results/prisma-lifecycle-runtime");
   });
 
+  it("pins the PrismaLifecycleRun persistence model and migration", () => {
+    expect(prismaLifecycleRunPersistenceContract.model).toBe("PrismaLifecycleRun");
+    expect(prismaLifecycleRunPersistenceContract.tenantRelation).toBe("prismaLifecycleRuns");
+    expect(prismaLifecycleRunPersistenceContract.migration).toBe("20260609032600_add_prisma_lifecycle_runs");
+    expect(prismaLifecycleRunPersistenceContract.jsonFields).toEqual([
+      "commandMatrix",
+      "packageScriptManifest",
+      "artifactManifest",
+      "sqlReviewManifest",
+      "driftCheckManifest",
+    ]);
+    expect(prismaLifecycleRunPersistenceContract.evidenceBooleans).toContain("postgresProvisioned");
+    expect(prismaLifecycleRunPersistenceContract.evidenceBooleans).toContain("migrationSqlReviewed");
+    expect(prismaLifecycleRunPersistenceContract.evidenceBooleans).toContain("destructiveProductionUrlGuarded");
+    expect(prismaLifecycleRunPersistenceContract.artifactFields).toContain("driftCheckArtifactPath");
+    expect(prismaLifecycleRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(schema).toContain("prismaLifecycleRuns PrismaLifecycleRun[]");
+    expect(schema).toContain("model PrismaLifecycleRun");
+    expect(schema).toContain("sqlReviewManifest");
+    expect(schema).toContain("migrationDriftChecked");
+    expect(schema).toContain("@@unique([tenantId, runId])");
+    expect(prismaLifecycleMigration).toContain('CREATE TABLE "PrismaLifecycleRun"');
+    expect(prismaLifecycleMigration).toContain('"sqlReviewManifest" JSONB NOT NULL');
+    expect(prismaLifecycleMigration).toContain('"migrationDriftChecked" BOOLEAN NOT NULL DEFAULT false');
+    expect(prismaLifecycleMigration).toContain('CREATE UNIQUE INDEX "PrismaLifecycleRun_tenantId_runId_key"');
+  });
+
   it("keeps Prisma schema, seed, package scripts, helper, and tests wired", () => {
     for (const scriptName of prismaLifecyclePackageScripts) {
       expect(dbPackageJson).toContain(`"${scriptName}"`);
@@ -88,6 +119,8 @@ describe("Prisma lifecycle runtime contract", () => {
     expect(ciWorkflow).toContain("prisma-lifecycle-runtime-static.test.ts");
     expect(ciWorkflow).toContain("prisma-lifecycle-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-prisma-lifecycle-runtime-static");
+    expect(unitManifest).toContain("PrismaLifecycleRun Prisma model and app row contract");
+    expect(gapTracker).toContain("PrismaLifecycleRun");
     expect(gapTracker).toContain("apps/web/lib/prismaLifecycleRuntime.ts");
     expect(gapTracker).toContain("live non-production Postgres provisioning, Prisma validate/generate/migrate, SQL review, seed, drift, command evidence, and CI evidence remain open");
   });

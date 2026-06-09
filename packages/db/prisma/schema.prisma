@@ -399,6 +399,7 @@ model Tenant {
   runtimeEvidenceRuns RuntimeEvidenceRun[]
   workspaceRequiredChecksRuns WorkspaceRequiredChecksRun[]
   dependencyInstallRuns DependencyInstallRun[]
+  prismaLifecycleRuns PrismaLifecycleRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2753,6 +2754,50 @@ model DependencyInstallRun {
   tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                       DateTime @default(now())
   updatedAt                       DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model PrismaLifecycleRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String?
+  status                              String
+  commandMatrix                       Json
+  packageScriptManifest               Json
+  artifactManifest                    Json
+  sqlReviewManifest                   Json
+  driftCheckManifest                  Json
+  postgresProvisioned                 Boolean  @default(false)
+  databaseUrlConfigured               Boolean  @default(false)
+  directUrlConfigured                 Boolean  @default(false)
+  prismaValidatePassed                Boolean  @default(false)
+  prismaGeneratePassed                Boolean  @default(false)
+  migrationGenerated                  Boolean  @default(false)
+  migrationSqlReviewed                Boolean  @default(false)
+  migrationAppliedToDevDb             Boolean  @default(false)
+  seedReadinessVerified               Boolean  @default(false)
+  seedScriptPassed                    Boolean  @default(false)
+  destructiveProductionUrlGuarded     Boolean  @default(false)
+  migrationDriftChecked               Boolean  @default(false)
+  commandEvidenceCaptured             Boolean  @default(false)
+  ciEvidenceCaptured                  Boolean  @default(false)
+  validateArtifactPath                String?
+  generateArtifactPath                String?
+  migrateArtifactPath                 String?
+  seedReadinessArtifactPath           String?
+  seedArtifactPath                    String?
+  sqlReviewArtifactPath               String?
+  driftCheckArtifactPath              String?
+  productionUrlGuardArtifactPath      String?
+  ciDbLifecycleArtifactPath           String?
+  ciRunUrl                            String?
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])
