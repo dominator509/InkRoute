@@ -2867,9 +2867,9 @@
       "file": "apps/mobile/tests/mobile-push-runtime-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-044 mobile push runtime matrix covers notifications typecheck/tests, mobile typecheck, Expo project/access token/APNs/FCM credentials, tenant/user/device token persistence, opt-out persistence, delivery worker/logs, receipt worker, invalid-token suppression, safe tap routing, iOS/Android foreground/background/tap QA, CI evidence, and secret-safe artifacts",
-        "GAP-044 mobile app push contracts remain wired for registration, opt-out gates, delivery persistence adapter, receipt idempotency, invalid-token suppression, safe tap routing, and notification screen surfacing",
-        "GAP-044 readiness keeps Expo credentials, real token persistence, receipt worker execution, invalid-token suppression persistence, foreground/background/tap device QA, and redacted artifact proof explicit until evidence exists"
+        "GAP-063 mobile push runtime matrix covers notifications typecheck/tests, mobile typecheck, Expo project/access token/APNs/FCM credentials, tenant/user/device token persistence, opt-out persistence, NotificationDelivery/ProviderEvent/NotificationInteraction/audit persistence, delivery worker/logs, receipt worker, invalid-token suppression, safe tap routing, iOS/Android foreground/background/tap QA, CI evidence, and secret-safe artifacts",
+        "GAP-063 mobile app push contracts remain wired for registration, opt-out gates, delivery persistence adapter, receipt idempotency, ProviderEvent reconciliation, invalid-token suppression, NotificationInteraction tap persistence, audit logging, safe tap routing, and notification screen surfacing",
+        "GAP-063 readiness keeps Expo credentials, durable token/provider-event/delivery/interaction/audit persistence, receipt worker execution, invalid-token suppression persistence, foreground/background/tap device QA, and redacted artifact proof explicit until evidence exists"
       ],
       "blockedBy": [
         "Static mobile push runtime test execution pending",

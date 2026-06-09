@@ -2921,6 +2921,9 @@ jobs:
               coverage/mobile-push-opt-out-persistence.json
               coverage/mobile-push-delivery-worker.json
               coverage/mobile-push-delivery-log-persistence.json
+              coverage/mobile-push-provider-event-persistence.json
+              coverage/mobile-push-notification-interaction.json
+              coverage/mobile-push-audit-log.json
               coverage/mobile-push-receipt-worker.json
               coverage/mobile-push-invalid-token-suppression.json
               coverage/mobile-push-tap-routing.json

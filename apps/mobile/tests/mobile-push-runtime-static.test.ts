@@ -25,7 +25,7 @@ describe("mobile push runtime contract", () => {
   const unitManifest = readWorkspaceFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readWorkspaceFile("GAP_TRACKER.md");
 
-  it("pins GAP-044 commands, matrix rows, and artifacts", () => {
+  it("pins GAP-063 commands, matrix rows, and artifacts", () => {
     expect(mobilePushRuntimeCommands).toEqual([
       "pnpm --filter @inkroute/notifications typecheck",
       "pnpm --filter @inkroute/notifications test",
@@ -42,6 +42,9 @@ describe("mobile push runtime contract", () => {
       "expo-project-credentials",
       "token-optout-persistence",
       "delivery-worker-log",
+      "provider-event-persistence",
+      "notification-interaction-persistence",
+      "audit-log-persistence",
       "receipt-worker-invalid-token",
       "safe-tap-routing",
       "ios-device-qa",
@@ -49,6 +52,9 @@ describe("mobile push runtime contract", () => {
       "ci-secret-safe-evidence",
     ]);
     expect(mobilePushArtifactPaths).toContain("coverage/mobile-push-runtime.json");
+    expect(mobilePushArtifactPaths).toContain("coverage/mobile-push-provider-event-persistence.json");
+    expect(mobilePushArtifactPaths).toContain("coverage/mobile-push-notification-interaction.json");
+    expect(mobilePushArtifactPaths).toContain("coverage/mobile-push-audit-log.json");
     expect(mobilePushArtifactPaths).toContain("test-results/mobile-push-runtime");
   });
 
@@ -74,6 +80,7 @@ describe("mobile push runtime contract", () => {
     expect(mobilePushRuntimeReadiness.requiredEvidence).toEqual(expect.arrayContaining([
       "Expo project, secret, APNs, and FCM configuration evidence",
       "tenant/user/device push token and opt-out persistence evidence",
+      "Expo ProviderEvent, NotificationDelivery, NotificationInteraction, and audit persistence evidence",
       "Expo delivery worker, receipt polling, and invalid-token suppression evidence",
       "foreground/background/tap-navigation iOS and Android device QA evidence",
     ]));
@@ -88,7 +95,7 @@ describe("mobile push runtime contract", () => {
     expect(ciWorkflow).toContain("mobile-push-runtime-artifacts");
     expect(unitManifest).toContain("unit-mobile-push-runtime-static");
     expect(gapTracker).toContain("apps/mobile/src/lib/mobilePushRuntime.ts");
-    expect(gapTracker).toContain("GAP-044 is mobile-push-runtime-matrix wired");
+    expect(gapTracker).toContain("GAP-063 is mobile-push-runtime-matrix wired");
     expect(mobilePushArtifactPaths).toContain("coverage/mobile-push-secret-safe-artifacts.json");
   });
 });
