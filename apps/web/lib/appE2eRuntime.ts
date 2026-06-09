@@ -13,6 +13,56 @@ export interface AppE2eRuntimeMatrixEntry {
   readonly status: AppE2eRuntimeStatus;
 }
 
+export interface AppE2eRuntimeRunPersistenceInput {
+  tenantId: string;
+  runId: string;
+  commitSha?: string;
+  status: "blocked" | "running" | "passed" | "failed" | "ci_gated";
+  runtimeMatrix: readonly AppE2eRuntimeMatrixEntry[];
+  specFiles: readonly string[];
+  artifactManifest: readonly string[];
+  webBuildPassed: boolean;
+  dashboardBuildPassed: boolean;
+  webRuntimeStarted: boolean;
+  dashboardRuntimeStarted: boolean;
+  chromiumInstalled: boolean;
+  publicSpecsPassed: boolean;
+  dashboardSpecsPassed: boolean;
+  e2eManifestVerified: boolean;
+  tracesRetained: boolean;
+  screenshotsRetained: boolean;
+  videosRetained: boolean;
+  ciE2ePassed: boolean;
+  flakyRetriesConfigured: boolean;
+  hardenedFailuresCommitted: boolean;
+  failureHardeningArtifactPath?: string;
+  ciRunUrl?: string;
+}
+
+export interface AppE2eRuntimeRunPersistenceContract {
+  modelName: "AppE2eRuntimeRun";
+  row: AppE2eRuntimeRunPersistenceInput;
+  transactionWrites: readonly ["AppE2eRuntimeRun", "AuditLog"];
+  requiredRuntimeFlags: readonly [
+    "webBuildPassed",
+    "dashboardBuildPassed",
+    "webRuntimeStarted",
+    "dashboardRuntimeStarted",
+    "chromiumInstalled",
+    "publicSpecsPassed",
+    "dashboardSpecsPassed",
+    "e2eManifestVerified",
+    "tracesRetained",
+    "screenshotsRetained",
+    "videosRetained",
+    "ciE2ePassed",
+    "flakyRetriesConfigured",
+    "hardenedFailuresCommitted",
+  ];
+  artifactFields: readonly ["runtimeMatrix", "specFiles", "artifactManifest", "failureHardeningArtifactPath"];
+  tenantIsolationKey: "tenantId";
+}
+
 export const appE2eRuntimeArtifactPaths = [
   "coverage/app-e2e-runtime.json",
   "coverage/app-e2e-web-build.log",
@@ -109,6 +159,34 @@ export const appE2eRuntimeMatrix: readonly AppE2eRuntimeMatrixEntry[] = [
   }
 ];
 
+export function buildAppE2eRuntimeRunPersistenceContract(
+  input: AppE2eRuntimeRunPersistenceInput,
+): AppE2eRuntimeRunPersistenceContract {
+  return {
+    modelName: "AppE2eRuntimeRun",
+    row: input,
+    transactionWrites: ["AppE2eRuntimeRun", "AuditLog"],
+    requiredRuntimeFlags: [
+      "webBuildPassed",
+      "dashboardBuildPassed",
+      "webRuntimeStarted",
+      "dashboardRuntimeStarted",
+      "chromiumInstalled",
+      "publicSpecsPassed",
+      "dashboardSpecsPassed",
+      "e2eManifestVerified",
+      "tracesRetained",
+      "screenshotsRetained",
+      "videosRetained",
+      "ciE2ePassed",
+      "flakyRetriesConfigured",
+      "hardenedFailuresCommitted",
+    ],
+    artifactFields: ["runtimeMatrix", "specFiles", "artifactManifest", "failureHardeningArtifactPath"],
+    tenantIsolationKey: "tenantId",
+  };
+}
+
 export const appE2eRuntimeReadiness = buildAppE2eRuntimeReadinessPlan({
   rootScripts: ["test:e2e"],
   webBuildPassed: false,
@@ -129,4 +207,28 @@ export const appE2eRuntimeReadiness = buildAppE2eRuntimeReadinessPlan({
   flakyRetriesConfigured: true,
   hardenedFailuresCommitted: false,
   ciE2eJobPassed: false
+});
+
+export const appE2eRuntimeRunPersistencePreview = buildAppE2eRuntimeRunPersistenceContract({
+  tenantId: "tenant_demo",
+  runId: "app-e2e-runtime-demo",
+  status: "ci_gated",
+  runtimeMatrix: appE2eRuntimeMatrix,
+  specFiles: appE2eRuntimeSpecFiles,
+  artifactManifest: appE2eRuntimeArtifactPaths,
+  webBuildPassed: false,
+  dashboardBuildPassed: false,
+  webRuntimeStarted: false,
+  dashboardRuntimeStarted: false,
+  chromiumInstalled: false,
+  publicSpecsPassed: false,
+  dashboardSpecsPassed: false,
+  e2eManifestVerified: false,
+  tracesRetained: true,
+  screenshotsRetained: true,
+  videosRetained: true,
+  ciE2ePassed: false,
+  flakyRetriesConfigured: true,
+  hardenedFailuresCommitted: false,
+  failureHardeningArtifactPath: "coverage/app-e2e-runtime.json",
 });

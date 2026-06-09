@@ -6,7 +6,9 @@ import {
   appE2eRuntimeCommands,
   appE2eRuntimeMatrix,
   appE2eRuntimeReadiness,
-  appE2eRuntimeSpecFiles
+  appE2eRuntimeRunPersistencePreview,
+  appE2eRuntimeSpecFiles,
+  buildAppE2eRuntimeRunPersistenceContract
 } from "../lib/appE2eRuntime";
 
 const root = process.cwd();
@@ -111,6 +113,45 @@ describe("GAP-106 app E2E runtime wiring", () => {
     );
   });
 
+  it("pins durable AppE2eRuntimeRun rows, specs, retained media, CI evidence, and hardening commits", () => {
+    const schema = read("packages/db/prisma/schema.prisma");
+    const contract = buildAppE2eRuntimeRunPersistenceContract({
+      tenantId: "tenant_demo",
+      runId: "app-e2e-runtime-demo",
+      commitSha: "abc1234",
+      status: "ci_gated",
+      runtimeMatrix: appE2eRuntimeMatrix,
+      specFiles: appE2eRuntimeSpecFiles,
+      artifactManifest: appE2eRuntimeArtifactPaths,
+      webBuildPassed: false,
+      dashboardBuildPassed: false,
+      webRuntimeStarted: false,
+      dashboardRuntimeStarted: false,
+      chromiumInstalled: false,
+      publicSpecsPassed: false,
+      dashboardSpecsPassed: false,
+      e2eManifestVerified: false,
+      tracesRetained: true,
+      screenshotsRetained: true,
+      videosRetained: true,
+      ciE2ePassed: false,
+      flakyRetriesConfigured: true,
+      hardenedFailuresCommitted: false,
+      failureHardeningArtifactPath: "coverage/app-e2e-runtime.json",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/redacted"
+    });
+
+    expect(schema).toContain("model AppE2eRuntimeRun");
+    expect(schema).toContain("runtimeMatrix");
+    expect(schema).toContain("hardenedFailuresCommitted");
+    expect(schema).toContain("@@unique([tenantId, runId])");
+    expect(contract.transactionWrites).toEqual(["AppE2eRuntimeRun", "AuditLog"]);
+    expect(contract.requiredRuntimeFlags).toContain("chromiumInstalled");
+    expect(contract.artifactFields).toContain("failureHardeningArtifactPath");
+    expect(contract.tenantIsolationKey).toBe("tenantId");
+    expect(appE2eRuntimeRunPersistencePreview.modelName).toBe("AppE2eRuntimeRun");
+  });
+
   it("keeps CI, manifest registration, and tracker status aligned", () => {
     expect(ciWorkflow).toContain("Run Phase 14 app E2E runtime contracts");
     expect(ciWorkflow).toContain("apps/web/tests/app-e2e-runtime-static.test.ts");
@@ -118,6 +159,7 @@ describe("GAP-106 app E2E runtime wiring", () => {
     expect(ciWorkflow).toContain("coverage/app-e2e-runtime.json");
     expect(ciWorkflow).toContain("test-results/app-e2e-runtime");
     expect(unitManifest).toContain("unit-web-app-e2e-runtime-static");
+    expect(unitManifest).toContain("AppE2eRuntimeRun Prisma model and app row contract are wired");
     expect(gapTracker).toContain("apps/web/lib/appE2eRuntime.ts");
     expect(gapTracker).toContain("live Playwright runtime execution proof remains open");
   });
