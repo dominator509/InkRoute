@@ -680,6 +680,31 @@ jobs:
             coverage/security-mobile-device-smoke.json
             test-results/security-app-runtime
           if-no-files-found: warn
+      - name: Run Phase 14 accessibility visual runtime contracts
+        run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/accessibility-visual-runtime-static.test.ts
+
+      - name: Upload Phase 14 accessibility visual runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-visual-runtime-artifacts
+          path: |
+            coverage/accessibility-visual-runtime.json
+            coverage/accessibility-web-a11y-results.json
+            coverage/accessibility-dashboard-a11y-results.json
+            coverage/accessibility-web-axe-report.json
+            coverage/accessibility-dashboard-axe-report.json
+            coverage/accessibility-lighthouse-budgets.json
+            coverage/accessibility-contrast-audit.json
+            coverage/accessibility-responsive-layout.json
+            coverage/accessibility-screen-reader-notes.md
+            coverage/accessibility-mobile-qa.json
+            coverage/visual-baselines
+            coverage/visual-diffs
+            coverage/accessibility-visual-regression-triage.md
+            coverage/accessibility-visual-ci-run-redacted.json
+            test-results/accessibility-visual-runtime
+          if-no-files-found: warn
       - name: Run Phase 14 mobile testing execution contracts
         run: pnpm --filter @inkroute/mobile-support test && pnpm vitest run packages/mobile/tests/mobile-testing-execution-static.test.ts
 
@@ -832,6 +857,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 

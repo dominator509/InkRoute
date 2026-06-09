@@ -1866,6 +1866,23 @@
                                          "Biometric/API/offline/push/crash/EAS OTA/accessibility QA proof pending",
                                          "Retained artifacts and CI/mobile check proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-accessibility-visual-runtime-static",
+                       "file":  "apps/web/tests/accessibility-visual-runtime-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-109 accessibility/visual runtime matrix covers public and dashboard Playwright @a11y specs, axe reports, Lighthouse budgets, contrast audits, responsive checks, manual screen-reader pass, mobile accessibility QA, visual baselines/diffs, retained artifacts, CI output, and regression triage",
+                                        "GAP-109 accessibility checklist, E2E manifest, manifest verifier, and runtime readiness blockers stay aligned before live a11y/visual proof",
+                                        "GAP-109 CI retains accessibility visual runtime contract and artifact paths without claiming live a11y, Lighthouse, visual, or manual QA execution has passed"
+                                    ],
+                       "blockedBy":  [
+                                         "Static accessibility visual runtime test execution pending",
+                                         "Web/dashboard Playwright @a11y and axe report proof pending",
+                                         "Lighthouse, contrast, and responsive audit proof pending",
+                                         "Manual screen-reader, mobile accessibility, visual baseline, and visual diff proof pending",
+                                         "CI accessibility/visual output and regression triage proof pending"
+                                     ]
                    }
                ]
 }
