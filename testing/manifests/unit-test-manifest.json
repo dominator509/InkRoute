@@ -1899,6 +1899,22 @@
                                          "Stripe, Google Calendar, storage, email, SMS, push, Sentry, auth, and rate-limit sandbox proof pending",
                                          "Redacted provider artifact and CI provider-contract proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-ci-coverage-reporting-static",
+                       "file":  "apps/web/tests/ci-coverage-reporting-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-111 CI coverage/reporting matrix covers frozen install, typecheck, unit coverage, Playwright E2E, Vitest thresholds/reporters, Playwright HTML/JSON/JUnit reports, traces, screenshots, videos, test summaries, artifact retention, branch protection evidence, flaky policy, and failed-test debug artifacts",
+                                        "GAP-111 package scripts, Vitest workspace, Playwright config, static checker, CI workflow, and readiness blockers stay aligned before live CI proof",
+                                        "GAP-111 CI retains coverage/reporting contract and artifact paths without claiming passing CI or branch protection proof has been captured"
+                                    ],
+                       "blockedBy":  [
+                                         "Static CI coverage reporting test execution pending",
+                                         "Passing GitHub Actions CI run proof pending",
+                                         "Branch protection required-check proof pending",
+                                         "Flaky quarantine documentation and failed-debug artifact proof pending"
+                                     ]
                    }
                ]
 }

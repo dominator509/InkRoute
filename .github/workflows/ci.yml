@@ -680,6 +680,44 @@ jobs:
             coverage/security-mobile-device-smoke.json
             test-results/security-app-runtime
           if-no-files-found: warn
+      - name: Run Phase 14 CI coverage reporting contracts
+        run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/ci-coverage-reporting-static.test.ts
+
+      - name: Publish Phase 14 CI coverage reporting summary
+        if: always()
+        run: |
+          mkdir -p coverage
+          cat > coverage/ci-test-summary.md <<'EOF'
+          # Phase 14 CI coverage reporting
+          - Frozen install, typecheck, unit coverage, and Playwright E2E are wired in CI.
+          - Vitest coverage and Playwright HTML/JSON/JUnit artifacts are uploaded when present.
+          - Passing CI, branch protection, flaky quarantine, and failed-debug artifact proof remain external evidence gates.
+          EOF
+          cat coverage/ci-test-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Phase 14 CI coverage reporting artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-coverage-reporting-artifacts
+          path: |
+            coverage/ci-coverage-reporting.json
+            coverage/unit
+            coverage/unit/coverage-final.json
+            coverage/unit/lcov.info
+            coverage/playwright-report
+            coverage/playwright-results.json
+            coverage/playwright-junit.xml
+            coverage/playwright-traces
+            coverage/playwright-screenshots
+            coverage/playwright-videos
+            coverage/ci-test-summary.md
+            coverage/ci-artifact-retention.json
+            coverage/ci-branch-protection-redacted.json
+            coverage/ci-flaky-policy.md
+            coverage/ci-failed-test-debug-artifacts.json
+            test-results/ci-coverage-reporting
+          if-no-files-found: warn
       - name: Run Phase 14 provider contract runtime contracts
         run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/provider-contract-runtime-static.test.ts
 
@@ -886,6 +924,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
