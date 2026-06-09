@@ -1848,6 +1848,37 @@ jobs:
             test-results/provider-webhook-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 9 preference center runtime contracts
+        run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/web/tests/preference-center-runtime-static.test.ts apps/web/tests/preference-center-static.test.ts
+
+      - name: Upload Phase 9 preference center runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preference-center-runtime-artifacts
+          path: |
+            coverage/preference-center-runtime.json
+            coverage/preference-center-notifications-typecheck.txt
+            coverage/preference-center-notifications-test.txt
+            coverage/preference-center-static-contract.json
+            coverage/preference-center-route-api.json
+            coverage/preference-center-dashboard-settings.json
+            coverage/preference-center-token-crypto.json
+            coverage/preference-center-token-hash-persistence.json
+            coverage/preference-center-token-expiry-forgery-reuse.json
+            coverage/preference-center-client-preference-persistence.json
+            coverage/preference-center-suppression-persistence.json
+            coverage/preference-center-tenant-settings-persistence.json
+            coverage/preference-center-audit-log-persistence.json
+            coverage/preference-center-idempotency-key.json
+            coverage/preference-center-list-unsubscribe-provider.json
+            coverage/preference-center-legal-copy-approval.json
+            coverage/preference-center-pre-send-suppression.json
+            coverage/preference-center-ci-evidence.json
+            coverage/preference-center-secret-safe-artifacts.json
+            test-results/preference-center-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 9 notification and messaging lifecycle contracts
         run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/email-provider-static.test.ts apps/web/tests/sms-provider-static.test.ts apps/web/tests/preference-center-static.test.ts apps/web/tests/notification-automation-static.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/notification-persistence-static.test.ts apps/dashboard/tests/notification-scheduler-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
 
