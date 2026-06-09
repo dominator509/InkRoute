@@ -404,6 +404,7 @@ model Tenant {
   liveStripePaymentsRuns LiveStripePaymentsRun[]
   providerStorageUploadRuns ProviderStorageUploadRun[]
   publicWebLaunchRuns PublicWebLaunchRun[]
+  dashboardLaunchRuns DashboardLaunchRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3024,6 +3025,58 @@ model PublicWebLaunchRun {
   tenant                                   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                                DateTime @default(now())
   updatedAt                                DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model DashboardLaunchRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  commandMatrix                           Json
+  controlManifest                         Json
+  artifactManifest                        Json
+  tenantApiManifest                       Json
+  launchStateManifest                     Json
+  dashboardTypecheckPassed                Boolean  @default(false)
+  dashboardBuildPassed                    Boolean  @default(false)
+  dashboardUnitTestsPassed                Boolean  @default(false)
+  dashboardPlaywrightSmokePassed          Boolean  @default(false)
+  seededTenantDataAvailable               Boolean  @default(false)
+  providerBackedAuthConfigured            Boolean  @default(false)
+  tenantScopedApisImplemented             Boolean  @default(false)
+  prismaRepositoriesImplemented           Boolean  @default(false)
+  realMutationsEnabled                    Boolean  @default(false)
+  mutationAuditLogsPersisted              Boolean  @default(false)
+  providerActionsImplemented              Boolean  @default(false)
+  rbacDenialTestsPassed                   Boolean  @default(false)
+  crossTenantDenialTestsPassed            Boolean  @default(false)
+  fieldRedactionVerified                  Boolean  @default(false)
+  loadingEmptyErrorStatesVerified         Boolean  @default(false)
+  ciEvidenceCaptured                      Boolean  @default(false)
+  dashboardArtifactsSecretSafe            Boolean  @default(false)
+  dashboardTypecheckArtifactPath          String?
+  dashboardBuildArtifactPath              String?
+  dashboardTestArtifactPath               String?
+  playwrightSmokeArtifactPath             String?
+  seededTenantDataArtifactPath            String?
+  providerAuthSmokeArtifactPath           String?
+  tenantScopedApisArtifactPath            String?
+  prismaRepositoriesArtifactPath          String?
+  mutationAuditLogArtifactPath            String?
+  rbacCrossTenantDenialArtifactPath       String?
+  fieldRedactionArtifactPath              String?
+  launchStatesArtifactPath                String?
+  ciEvidenceArtifactPath                  String?
+  secretSafeArtifactsPath                 String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

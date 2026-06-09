@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   dashboardLaunchArtifactPaths,
+  dashboardLaunchRunPersistenceContract,
   dashboardLaunchRuntimeCommands,
   dashboardLaunchRuntimeControls,
   dashboardLaunchRuntimeMatrix,
@@ -19,6 +20,10 @@ describe("dashboard launch runtime contract", () => {
   const bookingStateRoute = readRepoFile("apps/dashboard/app/api/bookings/[bookingId]/state/route.ts");
   const paymentReadTest = readRepoFile("apps/dashboard/tests/payment-read-route-static.test.ts");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const dashboardLaunchMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609033100_add_dashboard_launch_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -51,6 +56,33 @@ describe("dashboard launch runtime contract", () => {
     ]);
     expect(dashboardLaunchArtifactPaths).toContain("coverage/dashboard-launch-runtime.json");
     expect(dashboardLaunchArtifactPaths).toContain("test-results/dashboard-launch-runtime");
+  });
+
+  it("pins the DashboardLaunchRun persistence model and migration", () => {
+    expect(dashboardLaunchRunPersistenceContract.model).toBe("DashboardLaunchRun");
+    expect(dashboardLaunchRunPersistenceContract.tenantRelation).toBe("dashboardLaunchRuns");
+    expect(dashboardLaunchRunPersistenceContract.migration).toBe("20260609033100_add_dashboard_launch_runs");
+    expect(dashboardLaunchRunPersistenceContract.jsonFields).toEqual([
+      "commandMatrix",
+      "controlManifest",
+      "artifactManifest",
+      "tenantApiManifest",
+      "launchStateManifest",
+    ]);
+    expect(dashboardLaunchRunPersistenceContract.evidenceBooleans).toContain("dashboardBuildPassed");
+    expect(dashboardLaunchRunPersistenceContract.evidenceBooleans).toContain("mutationAuditLogsPersisted");
+    expect(dashboardLaunchRunPersistenceContract.evidenceBooleans).toContain("dashboardArtifactsSecretSafe");
+    expect(dashboardLaunchRunPersistenceContract.artifactFields).toContain("rbacCrossTenantDenialArtifactPath");
+    expect(dashboardLaunchRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(prismaSchema).toContain("dashboardLaunchRuns DashboardLaunchRun[]");
+    expect(prismaSchema).toContain("model DashboardLaunchRun");
+    expect(prismaSchema).toContain("tenantApiManifest");
+    expect(prismaSchema).toContain("mutationAuditLogsPersisted");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(dashboardLaunchMigration).toContain('CREATE TABLE "DashboardLaunchRun"');
+    expect(dashboardLaunchMigration).toContain('"tenantApiManifest" JSONB NOT NULL');
+    expect(dashboardLaunchMigration).toContain('"dashboardArtifactsSecretSafe" BOOLEAN NOT NULL DEFAULT false');
+    expect(dashboardLaunchMigration).toContain('CREATE UNIQUE INDEX "DashboardLaunchRun_tenantId_runId_key"');
   });
 
   it("keeps dashboard scripts, launch helper, middleware, mutation route, and redaction tests wired", () => {
@@ -90,6 +122,8 @@ describe("dashboard launch runtime contract", () => {
     expect(ciWorkflow).toContain("dashboard-launch-runtime-static.test.ts");
     expect(ciWorkflow).toContain("dashboard-launch-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-dashboard-launch-runtime-static");
+    expect(unitManifest).toContain("DashboardLaunchRun Prisma model and app row contract");
+    expect(gapTracker).toContain("DashboardLaunchRun");
     expect(gapTracker).toContain("apps/web/lib/dashboardLaunchRuntime.ts");
     expect(gapTracker).toContain("live dashboard typecheck/build/test, Playwright, seeded tenant data, provider auth, Prisma repositories, real mutations, provider actions, RBAC/cross-tenant denial, field redaction, launch states, CI evidence, and secret-safe artifacts remain open");
   });

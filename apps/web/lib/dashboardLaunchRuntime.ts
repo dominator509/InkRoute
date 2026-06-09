@@ -15,6 +15,104 @@ export interface DashboardLaunchRuntimeMatrixEntry {
   readonly status: DashboardLaunchRuntimeStatus;
 }
 
+export interface DashboardLaunchRunPersistenceContract {
+  readonly model: "DashboardLaunchRun";
+  readonly tenantRelation: "dashboardLaunchRuns";
+  readonly migration: "20260609033100_add_dashboard_launch_runs";
+  readonly jsonFields: readonly [
+    "commandMatrix",
+    "controlManifest",
+    "artifactManifest",
+    "tenantApiManifest",
+    "launchStateManifest",
+  ];
+  readonly evidenceBooleans: readonly [
+    "dashboardTypecheckPassed",
+    "dashboardBuildPassed",
+    "dashboardUnitTestsPassed",
+    "dashboardPlaywrightSmokePassed",
+    "seededTenantDataAvailable",
+    "providerBackedAuthConfigured",
+    "tenantScopedApisImplemented",
+    "prismaRepositoriesImplemented",
+    "realMutationsEnabled",
+    "mutationAuditLogsPersisted",
+    "providerActionsImplemented",
+    "rbacDenialTestsPassed",
+    "crossTenantDenialTestsPassed",
+    "fieldRedactionVerified",
+    "loadingEmptyErrorStatesVerified",
+    "ciEvidenceCaptured",
+    "dashboardArtifactsSecretSafe",
+  ];
+  readonly artifactFields: readonly [
+    "dashboardTypecheckArtifactPath",
+    "dashboardBuildArtifactPath",
+    "dashboardTestArtifactPath",
+    "playwrightSmokeArtifactPath",
+    "seededTenantDataArtifactPath",
+    "providerAuthSmokeArtifactPath",
+    "tenantScopedApisArtifactPath",
+    "prismaRepositoriesArtifactPath",
+    "mutationAuditLogArtifactPath",
+    "rbacCrossTenantDenialArtifactPath",
+    "fieldRedactionArtifactPath",
+    "launchStatesArtifactPath",
+    "ciEvidenceArtifactPath",
+    "secretSafeArtifactsPath",
+    "ciRunUrl",
+  ];
+}
+
+export const dashboardLaunchRunPersistenceContract: DashboardLaunchRunPersistenceContract = {
+  model: "DashboardLaunchRun",
+  tenantRelation: "dashboardLaunchRuns",
+  migration: "20260609033100_add_dashboard_launch_runs",
+  jsonFields: [
+    "commandMatrix",
+    "controlManifest",
+    "artifactManifest",
+    "tenantApiManifest",
+    "launchStateManifest",
+  ],
+  evidenceBooleans: [
+    "dashboardTypecheckPassed",
+    "dashboardBuildPassed",
+    "dashboardUnitTestsPassed",
+    "dashboardPlaywrightSmokePassed",
+    "seededTenantDataAvailable",
+    "providerBackedAuthConfigured",
+    "tenantScopedApisImplemented",
+    "prismaRepositoriesImplemented",
+    "realMutationsEnabled",
+    "mutationAuditLogsPersisted",
+    "providerActionsImplemented",
+    "rbacDenialTestsPassed",
+    "crossTenantDenialTestsPassed",
+    "fieldRedactionVerified",
+    "loadingEmptyErrorStatesVerified",
+    "ciEvidenceCaptured",
+    "dashboardArtifactsSecretSafe",
+  ],
+  artifactFields: [
+    "dashboardTypecheckArtifactPath",
+    "dashboardBuildArtifactPath",
+    "dashboardTestArtifactPath",
+    "playwrightSmokeArtifactPath",
+    "seededTenantDataArtifactPath",
+    "providerAuthSmokeArtifactPath",
+    "tenantScopedApisArtifactPath",
+    "prismaRepositoriesArtifactPath",
+    "mutationAuditLogArtifactPath",
+    "rbacCrossTenantDenialArtifactPath",
+    "fieldRedactionArtifactPath",
+    "launchStatesArtifactPath",
+    "ciEvidenceArtifactPath",
+    "secretSafeArtifactsPath",
+    "ciRunUrl",
+  ],
+};
+
 export const dashboardLaunchRuntimeCommands = [
   "pnpm --filter @inkroute/dashboard typecheck",
   "pnpm --filter @inkroute/dashboard build",
