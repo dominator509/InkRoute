@@ -219,6 +219,24 @@ jobs:
             coverage/sentry-provider-no-pii-proof-redacted.json
             test-results/sentry-sdk
           if-no-files-found: warn
+
+      - name: Run Phase 11 error-report ingest hardening contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/error-report-ingest-hardening-static.test.ts apps/web/tests/observability-routes.test.ts apps/dashboard/tests/error-report-route-static.test.ts
+
+      - name: Upload error-report ingest hardening artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-report-ingest-hardening-artifacts
+          path: |
+            coverage/error-report-ingest-hardening.json
+            coverage/error-report-bot-protection.json
+            coverage/error-report-distributed-rate-limit.json
+            coverage/error-report-request-correlation.json
+            coverage/error-report-provider-forwarding-redacted.json
+            coverage/error-report-postgres-tenant-isolation.json
+            test-results/error-report-ingest
+          if-no-files-found: warn
       - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
@@ -267,6 +285,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 

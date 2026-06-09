@@ -1,4 +1,11 @@
-import { buildPublicErrorReportPreview } from "../../../../../lib/errorReporting";
+﻿import { buildPublicErrorReportPreview } from "../../../../../lib/errorReporting";
+import {
+  buildAbuseMonitoringDecision,
+  buildProviderForwardingDecision,
+  buildRequestCorrelation,
+  enforceErrorReportBotProtection,
+  errorReportIngestHardeningContract,
+} from "../../../../../lib/errorReportIngestHardening";
 import { errorReportInputSchema } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
 import { NextResponse, type NextRequest } from "next/server";
@@ -44,6 +51,15 @@ async function resolveTenantScope(tenantSlug: string): Promise<TenantResolution 
 
 export async function POST(request: NextRequest, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;
+  const correlation = buildRequestCorrelation(request.headers);
+  const botProtection = enforceErrorReportBotProtection(request.headers);
+  if (!botProtection.allowed) {
+    return NextResponse.json(
+      { ok: false, error: { code: "BOT_PROTECTION_FAILED", message: botProtection.reason }, requestId: correlation.requestId, traceparent: correlation.traceparent },
+      { status: 403, headers: { "x-request-id": correlation.requestId, "traceparent": correlation.traceparent } },
+    );
+  }
+
   let body: unknown;
 
   try {
@@ -104,6 +120,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   };
 
   const preview = buildPublicErrorReportPreview(reportInput);
+  const providerForwarding = buildProviderForwardingDecision({ report: preview.report, requestId: correlation.requestId });
   const localPayload = {
     message: parsed.data.message,
     route: reportInput.route,
@@ -115,6 +132,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
 
   if (resolvedTenant.source === "local-fallback") {
     const persisted = persistErrorReport(tenantSlug, localPayload);
+    const abuseMonitoring = buildAbuseMonitoringDecision({
+      tenantId: resolvedTenant.tenantId,
+      requestId: correlation.requestId,
+      rateLimitRemaining: rateLimit.remaining,
+      botStatus: botProtection.status,
+    });
     return NextResponse.json(
       {
         ok: true,
@@ -133,15 +156,28 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           localBoundary: {
             tenantId: resolvedTenant.tenantId,
             rateLimitRule: "fallback-error-report",
+            requestId: correlation.requestId,
+            traceparent: correlation.traceparent,
+            botProtection,
+            abuseMonitoring,
+            providerForwarding,
+            hardening: errorReportIngestHardeningContract,
           },
         },
       },
-      { status: 201 },
+      { status: 201, headers: { "x-request-id": correlation.requestId, "traceparent": correlation.traceparent } },
     );
   }
 
   try {
     const report = preview.report;
+    const abuseMonitoring = buildAbuseMonitoringDecision({
+      tenantId: resolvedTenant.tenantId,
+      requestId: correlation.requestId,
+      rateLimitRemaining: rateLimit.remaining,
+      botStatus: botProtection.status,
+    });
+
     const persisted = await prisma.$transaction(async (tx) => {
       const persistedReport = await tx.errorReport.create({
         data: {
@@ -164,6 +200,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           entityType: "ErrorReport",
           entityId: persistedReport.id,
           metadata: toJsonValue({
+            requestId: correlation.requestId,
+            traceparent: correlation.traceparent,
+            botProtectionStatus: botProtection.status,
+            providerForwarding,
             source: report.source,
             severity: report.severity,
             route: report.route ?? "unknown",
@@ -196,6 +236,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             redactionLevel: preview.report.redactionLevel,
             alertRoute: preview.alertRoute,
             auditId: persisted.audit.id,
+            requestId: correlation.requestId,
+            traceparent: correlation.traceparent,
+            botProtection,
+            abuseMonitoring,
+            providerForwarding,
+            hardening: errorReportIngestHardeningContract,
           },
           requiredNextWork: [
             "Forward sanitized events to Sentry only after provider DSNs, source maps, sampling, and sampling-restart policy are configured.",
@@ -204,7 +250,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           ],
         },
       },
-      { status: 201 },
+      { status: 201, headers: { "x-request-id": correlation.requestId, "traceparent": correlation.traceparent } },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
@@ -225,7 +271,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             },
           },
         },
-        { status: 201 },
+        { status: 201, headers: { "x-request-id": correlation.requestId, "traceparent": correlation.traceparent } },
       );
     }
 
@@ -235,3 +281,4 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     );
   }
 }
+

@@ -1391,6 +1391,23 @@
                                          "Live web/dashboard/mobile synthetic capture pending",
                                          "Provider no-PII proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-error-report-ingest-hardening-static",
+                       "file":  "apps/web/tests/error-report-ingest-hardening-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "GAP-081 public error-report ingest propagates request IDs and trace context through persistence/audit/provider-forwarding metadata",
+                                        "GAP-081 bot protection, honeypot blocking, abuse monitoring, and provider forwarding credential gates are wired before provider submission",
+                                        "GAP-081 dashboard triage remains tenant/RBAC scoped with no-store redacted metadata while live Postgres/distributed-rate-limit proof remains explicit"
+                                    ],
+                       "blockedBy":  [
+                                         "Static error-report ingest hardening test execution pending",
+                                         "Durable distributed rate-limit provider pending",
+                                         "Live Postgres tenant-isolation proof pending",
+                                         "No-PII persistence proof pending",
+                                         "Provider forwarding replay smoke pending"
+                                     ]
                    }
                ]
 }
