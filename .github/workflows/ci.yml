@@ -550,6 +550,34 @@ jobs:
             test-results/mobile-launch-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 8 calendar launch runtime contracts
+        run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/web/tests/calendar-launch-runtime-static.test.ts
+
+      - name: Upload Phase 8 calendar launch runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calendar-launch-runtime-artifacts
+          path: |
+            coverage/calendar-launch-runtime.json
+            coverage/calendar-typecheck.txt
+            coverage/calendar-test.txt
+            coverage/calendar-postgres-availability.json
+            coverage/calendar-concurrent-hold-race.json
+            coverage/calendar-tenant-isolation.json
+            coverage/calendar-google-oauth-redacted.json
+            coverage/calendar-google-freebusy-sync.json
+            coverage/calendar-google-push-incremental.json
+            coverage/calendar-signed-ics-token-route.json
+            coverage/calendar-ics-client-imports.json
+            coverage/calendar-timezone-provider-matrix.json
+            coverage/calendar-travel-publish-cache.json
+            coverage/calendar-dashboard-public-smoke.json
+            coverage/calendar-ci-evidence.json
+            coverage/calendar-secret-safe-artifacts.json
+            test-results/calendar-launch-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 18 workspace runtime readiness
         run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness && pnpm workspace:required-checks && pnpm workspace:toolchain
       - name: Run Phase 17 quality gate runtime contracts
