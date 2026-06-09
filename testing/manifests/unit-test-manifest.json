@@ -1300,6 +1300,25 @@
                                          "Dedicated idempotency store pending",
                                          "Approved fixture/provider tests pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-phase10-seo-runtime-build-static",
+                       "file":  "apps/web/tests/phase10-seo-runtime-build-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-076 Phase 10 SEO runtime/build matrix covers testing package, web/dashboard builds, sitemap/preview routes, dashboard browser/publish smokes, rendered crawls, database-backed SEO routes, runtime artifacts, canonical runtime evidence, and Search Console status",
+                                        "GAP-076 CI requires the Phase 10 SEO app runtime/build gate before merge",
+                                        "GAP-076 artifact paths retain sitemap, API preview, canonical, rendered crawl, and dashboard smoke evidence without claiming unrun browser proof"
+                                    ],
+                       "blockedBy":  [
+                                         "Static Phase 10 SEO runtime/build test execution pending",
+                                         "Web and dashboard build output pending",
+                                         "Dashboard SEO browser smoke pending",
+                                         "Dashboard publish/edit/archive smoke pending",
+                                         "Rendered public SEO crawl pending",
+                                         "Rendered sitemap/canonical crawl pending",
+                                         "Runtime sitemap/API/canonical artifacts pending"
+                                     ]
                    }
                ]
 }
