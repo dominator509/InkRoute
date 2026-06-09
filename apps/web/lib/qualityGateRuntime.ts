@@ -13,6 +13,32 @@ export interface QualityGateRuntimeMatrixEntry {
   readonly status: QualityGateRuntimeStatus;
 }
 
+export interface QualityGateRunPersistenceContract {
+  readonly prismaModel: "QualityGateRun";
+  readonly tenantRelation: "qualityGateRuns";
+  readonly uniqueKey: readonly ["tenantId", "runId"];
+  readonly jsonFields: readonly ["commandMatrix", "generatedManifestMatrix", "artifactManifest"];
+  readonly requiredBooleanProofs: readonly [
+    "packageTypecheckPassed",
+    "packageTestsPassed",
+    "qualityDocsPassed",
+    "qualityGapsPassed",
+    "qualityPrGapFixturesPassed",
+    "qualityGovernancePassed",
+    "qualityRequiredChecksPassed",
+    "qualityGatesSummaryPassed",
+    "qualityAllPassed",
+    "ciQualityJobPassed",
+    "ciArtifactsCaptured"
+  ];
+  readonly artifactFields: readonly [
+    "packageTypecheckArtifactPath",
+    "packageTestArtifactPath",
+    "qualityAllArtifactPath",
+    "qualityCiJobArtifactPath"
+  ];
+}
+
 export const qualityGateRootScripts = [
   "quality:docs",
   "quality:gaps",
@@ -131,6 +157,32 @@ export const qualityGateRuntimeMatrix = [
     status: "artifact-gated",
   },
 ] as const satisfies readonly QualityGateRuntimeMatrixEntry[];
+
+export const qualityGateRunPersistenceContract: QualityGateRunPersistenceContract = {
+  prismaModel: "QualityGateRun",
+  tenantRelation: "qualityGateRuns",
+  uniqueKey: ["tenantId", "runId"],
+  jsonFields: ["commandMatrix", "generatedManifestMatrix", "artifactManifest"],
+  requiredBooleanProofs: [
+    "packageTypecheckPassed",
+    "packageTestsPassed",
+    "qualityDocsPassed",
+    "qualityGapsPassed",
+    "qualityPrGapFixturesPassed",
+    "qualityGovernancePassed",
+    "qualityRequiredChecksPassed",
+    "qualityGatesSummaryPassed",
+    "qualityAllPassed",
+    "ciQualityJobPassed",
+    "ciArtifactsCaptured",
+  ],
+  artifactFields: [
+    "packageTypecheckArtifactPath",
+    "packageTestArtifactPath",
+    "qualityAllArtifactPath",
+    "qualityCiJobArtifactPath",
+  ],
+};
 
 export const qualityGateRuntimeReadiness = buildQualityGateRuntimeReadinessPlan({
   rootScripts: {

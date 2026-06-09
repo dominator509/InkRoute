@@ -8,6 +8,7 @@ import {
   qualityGateRuntimeCommands,
   qualityGateRuntimeMatrix,
   qualityGateRuntimeReadiness,
+  qualityGateRunPersistenceContract,
 } from "../lib/qualityGateRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -20,6 +21,8 @@ describe("quality gate runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const prismaMigration = readRepoFile("packages/db/prisma/migrations/20260609029000_add_quality_gate_runs/migration.sql");
 
   it("pins Phase 17 quality commands, root scripts, manifests, matrix rows, and artifacts", () => {
     expect(qualityGateRuntimeCommands).toEqual([
@@ -95,5 +98,37 @@ describe("quality gate runtime contract", () => {
     expect(unitManifest).toContain("unit-web-quality-gate-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/qualityGateRuntime.ts");
     expect(gapTracker).toContain("live package typecheck/test, quality:all, CI quality job, and artifact proof remain open");
+  });
+
+  it("pins durable QualityGateRun persistence for runtime quality evidence", () => {
+    expect(qualityGateRunPersistenceContract.prismaModel).toBe("QualityGateRun");
+    expect(qualityGateRunPersistenceContract.tenantRelation).toBe("qualityGateRuns");
+    expect(qualityGateRunPersistenceContract.uniqueKey).toEqual(["tenantId", "runId"]);
+    expect(qualityGateRunPersistenceContract.jsonFields).toEqual([
+      "commandMatrix",
+      "generatedManifestMatrix",
+      "artifactManifest",
+    ]);
+    expect(qualityGateRunPersistenceContract.requiredBooleanProofs).toEqual(
+      expect.arrayContaining([
+        "packageTypecheckPassed",
+        "packageTestsPassed",
+        "qualityAllPassed",
+        "qualityPrGapFixturesPassed",
+        "qualityRequiredChecksPassed",
+        "ciQualityJobPassed",
+        "ciArtifactsCaptured",
+      ]),
+    );
+    expect(qualityGateRunPersistenceContract.artifactFields).toContain("qualityCiJobArtifactPath");
+    expect(prismaSchema).toContain("qualityGateRuns QualityGateRun[]");
+    expect(prismaSchema).toContain("model QualityGateRun");
+    expect(prismaSchema).toContain("generatedManifestMatrix                 Json");
+    expect(prismaSchema).toContain("qualityAllPassed                        Boolean  @default(false)");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(prismaMigration).toContain('CREATE TABLE "QualityGateRun"');
+    expect(prismaMigration).toContain('"qualityCiJobArtifactPath" TEXT');
+    expect(unitManifest).toContain("QualityGateRun Prisma model and app row contract");
+    expect(gapTracker).toContain("packages/db/prisma/migrations/20260609029000_add_quality_gate_runs/migration.sql");
   });
 });

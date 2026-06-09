@@ -390,6 +390,7 @@ model Tenant {
   prGapEvidenceEnforcementRuns PrGapEvidenceEnforcementRun[]
   documentationAuditRuns DocumentationAuditRun[]
   repositoryGovernanceRuns RepositoryGovernanceRun[]
+  qualityGateRuns QualityGateRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2372,6 +2373,48 @@ model RepositoryGovernanceRun {
   securitySettingsArtifactPath            String?
   mergeRulesArtifactPath                  String?
   enforcementTestPrArtifactPath           String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model QualityGateRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  commandMatrix                           Json
+  generatedManifestMatrix                 Json
+  artifactManifest                        Json
+  packageTypecheckPassed                  Boolean  @default(false)
+  packageTestsPassed                      Boolean  @default(false)
+  qualityDocsPassed                       Boolean  @default(false)
+  qualityGapsPassed                       Boolean  @default(false)
+  qualityPrGapFixturesPassed              Boolean  @default(false)
+  qualityGovernancePassed                 Boolean  @default(false)
+  qualityRequiredChecksPassed             Boolean  @default(false)
+  qualityGatesSummaryPassed               Boolean  @default(false)
+  qualityAllPassed                        Boolean  @default(false)
+  markdownLinkManifestGenerated           Boolean  @default(false)
+  documentationConsistencyManifestGenerated Boolean @default(false)
+  documentationInventoryManifestGenerated Boolean  @default(false)
+  gapEvidenceManifestGenerated            Boolean  @default(false)
+  prGapFixtureManifestGenerated           Boolean  @default(false)
+  repositoryGovernanceManifestGenerated   Boolean  @default(false)
+  requiredChecksManifestGenerated         Boolean  @default(false)
+  qualityGatesManifestGenerated           Boolean  @default(false)
+  ciQualityJobPassed                      Boolean  @default(false)
+  ciArtifactsCaptured                     Boolean  @default(false)
+  packageTypecheckArtifactPath            String?
+  packageTestArtifactPath                 String?
+  qualityAllArtifactPath                  String?
+  qualityCiJobArtifactPath                String?
   ciRunUrl                                String?
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())
