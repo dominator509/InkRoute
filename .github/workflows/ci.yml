@@ -326,6 +326,28 @@ jobs:
             test-results/workspace-required-checks-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 18 static dependency audit runtime contracts
+        run: pnpm --filter @inkroute/workspace test && pnpm vitest run apps/web/tests/static-dependency-audit-runtime-static.test.ts
+
+      - name: Upload Phase 18 static dependency audit runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-dependency-audit-runtime-artifacts
+          path: |
+            coverage/static-dependency-audit-runtime.json
+            coverage/static-dependency-audit-output.txt
+            coverage/static-dependency-workspace-package-test.txt
+            coverage/static-dependency-workspace-package-typecheck.txt
+            coverage/static-dependency-install-output.txt
+            coverage/static-dependency-typecheck-output.txt
+            coverage/static-dependency-web-build-output.txt
+            coverage/static-dependency-dashboard-build-output.txt
+            coverage/static-dependency-ci-job.json
+            coverage/static-dependency-peer-version-review.json
+            test-results/static-dependency-audit-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 18 workspace runtime readiness
         run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness && pnpm workspace:required-checks && pnpm workspace:toolchain
       - name: Run Phase 17 quality gate runtime contracts

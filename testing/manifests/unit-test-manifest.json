@@ -2221,6 +2221,22 @@
         "GitHub branch protection and CI quality evidence pending",
         "Failing workspace-audit PR, failing PR gap-diff merge-block, and redacted log proof pending"
       ]
+    },
+    {
+      "id": "unit-web-static-dependency-audit-runtime-static",
+      "file": "apps/web/tests/static-dependency-audit-runtime-static.test.ts",
+      "priority": "medium",
+      "verifies": [
+        "GAP-131 static dependency audit runtime matrix covers workspace dependency declarations, source imports, tsconfig aliases, package entrypoints, manifest main/types/export targets, bare third-party imports, shared root devDependency test tooling, runtime resolution boundaries, peer/version review, CI evidence, and artifact capture",
+        "GAP-131 preserves the locally verified import-audit result while keeping package tests/typecheck, install, app builds, CI, and peer/version proof explicit blockers",
+        "GAP-131 script, manifest, protocol, package tests, CI labels, artifact paths, and tracker row remain wired without claiming runtime bundling or lockfile resolution proof"
+      ],
+      "blockedBy": [
+        "Static dependency audit runtime test execution pending",
+        "@inkroute/workspace package test/typecheck proof pending",
+        "pnpm install, workspace typecheck, web build, and dashboard build proof pending",
+        "CI evidence plus peer/version compatibility review pending"
+      ]
     }
   ]
 }
