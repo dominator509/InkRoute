@@ -22,6 +22,28 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Verify Phase 14 testing manifests
         run: pnpm test:phase14:static && pnpm test:manifest
+      - name: Run Phase 15 provider environment runtime contracts
+        run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/provider-environment-runtime-static.test.ts
+
+      - name: Upload Phase 15 provider environment runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-environment-runtime-artifacts
+          path: |
+            coverage/provider-environment-runtime.json
+            coverage/provider-environment-verifier.json
+            coverage/provider-web-dashboard-smoke-redacted.json
+            coverage/provider-database-migration-dry-run-redacted.json
+            coverage/provider-storage-private-acl-redacted.json
+            coverage/provider-mobile-eas-preview-redacted.json
+            coverage/provider-sentry-release-smoke-redacted.json
+            coverage/provider-github-environment-protection-redacted.json
+            coverage/provider-secret-store-destinations-redacted.json
+            coverage/provider-redacted-handoff-labels.json
+            coverage/provider-environment-ci-run-redacted.json
+            test-results/provider-environment-runtime
+          if-no-files-found: warn
       - name: Run Phase 15 deployment tooling runtime contracts
         run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/deployment-tooling-runtime-static.test.ts apps/web/tests/dashboard-deployment-readiness-route.test.ts apps/dashboard/tests/deployment-readiness-route-static.test.ts
 
@@ -975,6 +997,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
