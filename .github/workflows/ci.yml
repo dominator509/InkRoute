@@ -473,6 +473,30 @@ jobs:
             test-results/legal-review-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 7 payment policy legal runtime contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/payment-policy-legal-runtime-static.test.ts
+
+      - name: Upload Phase 7 payment policy legal runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payment-policy-legal-runtime-artifacts
+          path: |
+            coverage/payment-policy-legal-runtime.json
+            coverage/payment-policy-security-typecheck.txt
+            coverage/payment-policy-security-test.txt
+            coverage/payment-policy-web-typecheck.txt
+            coverage/payment-policy-dashboard-typecheck.txt
+            coverage/payment-policy-attorney-approval-redacted.json
+            coverage/payment-policy-tax-approval-redacted.json
+            coverage/payment-policy-approved-copy-diff.json
+            coverage/payment-policy-acceptance-audit.json
+            coverage/payment-policy-versioning.json
+            coverage/payment-policy-e2e-approved-language.json
+            coverage/payment-policy-rollback-plan.json
+            test-results/payment-policy-legal-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 17 quality gates
         run: pnpm quality:all
       - name: Verify PR GAP tracker diff evidence

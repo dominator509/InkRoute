@@ -2253,6 +2253,22 @@
         "Redacted legal evidence labels and legal:verify-review pass pending",
         "Placeholder replacement and CI legal evidence pending"
       ]
+    },
+    {
+      "id": "unit-web-payment-policy-legal-runtime-static",
+      "file": "apps/web/tests/payment-policy-legal-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-053 payment policy legal runtime matrix covers security/web/dashboard typechecks, security tests, attorney approval, tax/accounting approval, reviewed deposit/cancellation/no-show/refund/SMS/receipt/tax copy, Terms/Privacy/Consent/studio policy updates, acceptance audit, policy versioning, E2E approved-language proof, and rollback planning",
+        "GAP-053 security helper, tests, payment surfaces, CI labels, artifact paths, and tracker row remain wired without claiming legal/tax approval exists",
+        "GAP-053 readiness keeps approval, reviewed copy, acceptance/versioning, E2E, and rollback blockers explicit before payments launch"
+      ],
+      "blockedBy": [
+        "Static payment policy legal runtime test execution pending",
+        "Attorney and tax/accounting approval pending",
+        "Reviewed production payment policy copy pending",
+        "Acceptance audit, policy versioning, E2E approved-language proof, and rollback plan pending"
+      ]
     }
   ]
 }
