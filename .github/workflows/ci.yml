@@ -203,6 +203,22 @@ jobs:
             test-results/observability/dashboard
             test-results/observability/mobile
           if-no-files-found: warn
+
+      - name: Run Phase 11 Sentry SDK implementation contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/sentry-sdk-runtime-static.test.ts apps/mobile/tests/mobile-crash-static.test.ts
+
+      - name: Upload Sentry SDK implementation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentry-sdk-implementation-artifacts
+          path: |
+            coverage/sentry-sdk-*.json
+            coverage/sentry-source-map-upload-redacted.json
+            coverage/sentry-debug-symbol-upload-redacted.json
+            coverage/sentry-provider-no-pii-proof-redacted.json
+            test-results/sentry-sdk
+          if-no-files-found: warn
       - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
@@ -251,6 +267,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 

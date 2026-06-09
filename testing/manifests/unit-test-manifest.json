@@ -1373,6 +1373,24 @@
                                          "Live Sentry/provider runtime proof pending",
                                          "No-PII closeout evidence pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-sentry-sdk-runtime-static",
+                       "file":  "apps/web/tests/sentry-sdk-runtime-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "GAP-080 web/dashboard/mobile Sentry config and instrumentation files are present and call observability SDK configuration planners",
+                                        "GAP-080 beforeSend redaction and tenant-safe tags use redactSensitiveText and redactMetadata before provider submission",
+                                        "GAP-080 CI retains Sentry SDK/source-map/debug-symbol/provider no-PII artifact paths without claiming live provider proof"
+                                    ],
+                       "blockedBy":  [
+                                         "Static Sentry SDK runtime test execution pending",
+                                         "Install @sentry/nextjs and @sentry/react-native pending",
+                                         "Sentry DSN/auth/org/project secret configuration pending",
+                                         "Source-map and debug-symbol upload pending",
+                                         "Live web/dashboard/mobile synthetic capture pending",
+                                         "Provider no-PII proof pending"
+                                     ]
                    }
                ]
 }
