@@ -189,6 +189,40 @@ jobs:
             coverage/deployment-blocker-owner-list.json
             test-results/deployment-tooling-runtime
           if-no-files-found: warn
+      - name: Run Phase 15 deployment launch evidence runtime contracts
+        run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/deployment-launch-evidence-runtime-static.test.ts
+
+      - name: Upload Phase 15 deployment launch evidence runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-launch-evidence-runtime-artifacts
+          path: |
+            coverage/deployment-launch-evidence-runtime.json
+            coverage/deployment-launch-package-typecheck.txt
+            coverage/deployment-launch-package-test.txt
+            coverage/deployment-provider-envs-redacted.json
+            coverage/deployment-secrets-redacted.json
+            coverage/deployment-vercel-projects-redacted.json
+            coverage/deployment-preview-smoke-redacted.json
+            coverage/deployment-production-dry-run-redacted.json
+            coverage/deployment-github-environment-approval-redacted.json
+            coverage/deployment-strict-env-check-redacted.json
+            coverage/deployment-database-migration-dry-run-redacted.json
+            coverage/deployment-backup-restore-drill-redacted.json
+            coverage/deployment-storage-provider-redacted.json
+            coverage/deployment-eas-project-redacted.json
+            coverage/deployment-eas-preview-build-redacted.json
+            coverage/deployment-native-credentials-redacted.json
+            coverage/deployment-ota-rollback-redacted.json
+            coverage/deployment-ci-gate-redacted.json
+            coverage/deployment-sentry-release-upload-redacted.json
+            coverage/deployment-rollback-drill-redacted.json
+            coverage/deployment-launch-evidence-packet-redacted.json
+            coverage/deployment-provider-artifact-safety.json
+            test-results/deployment-launch-evidence-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 15 deployment manifests
         run: pnpm deploy:check-env && pnpm deploy:verify-provider-envs && pnpm deploy:verify-secrets && pnpm deploy:verify-mobile && pnpm deploy:verify-database-ops && pnpm deploy:verify-launch-evidence && pnpm deploy:verify-ops && pnpm deploy:checklist && pnpm deploy:gaps
       - name: Run Phase 16 agent execution ledger runtime contracts
