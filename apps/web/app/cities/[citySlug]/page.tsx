@@ -6,7 +6,8 @@ import { CtaBand } from "../../../components/CtaBand";
 import { JsonLdScript } from "../../../components/JsonLdScript";
 import { PortfolioCard } from "../../../components/PortfolioCard";
 import { TravelStopCard } from "../../../components/TravelStopCard";
-import { formatCityDateRange } from "../../../lib/format";`r`nimport { canonicalUrlForPath } from "../../../lib/canonicalRuntime";
+import { formatCityDateRange } from "../../../lib/format";
+import { canonicalUrlForPath } from "../../../lib/canonicalRuntime";
 
 interface CityPageProps {
   params: Promise<{ citySlug: string }>;
@@ -99,4 +100,5 @@ export default async function CityLandingPage({ params }: CityPageProps) {
     </main>
   );
 }
+
 

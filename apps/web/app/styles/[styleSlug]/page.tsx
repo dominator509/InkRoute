@@ -4,7 +4,8 @@ import { demoPortfolioItems, demoSeoStylePages, publicFaqs } from "@inkroute/con
 import { buildFaqSchema, buildPortfolioImageSchema } from "@inkroute/seo";
 import { CtaBand } from "../../../components/CtaBand";
 import { JsonLdScript } from "../../../components/JsonLdScript";
-import { PortfolioCard } from "../../../components/PortfolioCard";`r`nimport { canonicalUrlForPath } from "../../../lib/canonicalRuntime";
+import { PortfolioCard } from "../../../components/PortfolioCard";
+import { canonicalUrlForPath } from "../../../lib/canonicalRuntime";
 
 interface StylePageProps {
   params: Promise<{ styleSlug: string }>;
@@ -81,4 +82,5 @@ export default async function StyleLandingPage({ params }: StylePageProps) {
     </main>
   );
 }
+
 

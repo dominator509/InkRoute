@@ -1,5 +1,6 @@
 ﻿import { NextResponse, type NextRequest } from "next/server";
-import { buildSecurityRuntimeEnforcementPlan } from "@inkroute/security";`r`nimport { evaluatePublicCanonicalRequest } from "./lib/canonicalRuntime";
+import { buildSecurityRuntimeEnforcementPlan } from "@inkroute/security";
+import { evaluatePublicCanonicalRequest } from "./lib/canonicalRuntime";
 
 type RuntimeEnvironment = "development" | "preview" | "production";
 
@@ -38,7 +39,20 @@ function csrfTokenIsValid(request: NextRequest): { present: boolean; valid: bool
   };
 }
 
-function applyCanonicalHeaders(response: NextResponse, request: NextRequest): NextResponse {`r`n  const canonical = evaluatePublicCanonicalRequest({`r`n    host: request.headers.get("host") ?? request.nextUrl.host,`r`n    path: request.nextUrl.pathname,`r`n    protocol: requestUsesHttps(request) ? "https" : "http",`r`n    method: request.method,`r`n  });`r`n  response.headers.set("X-InkRoute-Canonical-Host", canonical.policy.canonicalHost);`r`n  response.headers.set("X-InkRoute-Canonical-Url", canonical.policy.canonicalUrl);`r`n  if (canonical.shouldNoindex) response.headers.set("X-Robots-Tag", "noindex, nofollow");`r`n  return response;`r`n}`r`n`r`nfunction applySecurityHeaders(response: NextResponse, request: NextRequest): NextResponse {
+function applyCanonicalHeaders(response: NextResponse, request: NextRequest): NextResponse {
+  const canonical = evaluatePublicCanonicalRequest({
+    host: request.headers.get("host") ?? request.nextUrl.host,
+    path: request.nextUrl.pathname,
+    protocol: requestUsesHttps(request) ? "https" : "http",
+    method: request.method,
+  });
+  response.headers.set("X-InkRoute-Canonical-Host", canonical.policy.canonicalHost);
+  response.headers.set("X-InkRoute-Canonical-Url", canonical.policy.canonicalUrl);
+  if (canonical.shouldNoindex) response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return response;
+}
+
+function applySecurityHeaders(response: NextResponse, request: NextRequest): NextResponse {
   const csrf = csrfTokenIsValid(request);
   const plan = buildSecurityRuntimeEnforcementPlan({
     environment: runtimeEnvironment(),
@@ -57,9 +71,21 @@ function applyCanonicalHeaders(response: NextResponse, request: NextRequest): Ne
   }
   response.headers.set("X-InkRoute-Security-Runtime", plan.status);
 
-  return applyCanonicalHeaders(response, request);`r`n}
+  return applyCanonicalHeaders(response, request);
+}
 
-export function middleware(request: NextRequest) {`r`n  const canonical = evaluatePublicCanonicalRequest({`r`n    host: request.headers.get("host") ?? request.nextUrl.host,`r`n    path: request.nextUrl.pathname,`r`n    protocol: requestUsesHttps(request) ? "https" : "http",`r`n    method: request.method,`r`n  });`r`n`r`n  if (canonical.shouldRedirect) {`r`n    const destination = new URL(canonical.destinationPath, `https://${canonical.policy.canonicalHost}`);`r`n    return applySecurityHeaders(NextResponse.redirect(destination, canonical.statusCode), request);`r`n  }
+export function middleware(request: NextRequest) {
+  const canonical = evaluatePublicCanonicalRequest({
+    host: request.headers.get("host") ?? request.nextUrl.host,
+    path: request.nextUrl.pathname,
+    protocol: requestUsesHttps(request) ? "https" : "http",
+    method: request.method,
+  });
+
+  if (canonical.shouldRedirect) {
+    const destination = new URL(canonical.destinationPath, `https://${canonical.policy.canonicalHost}`);
+    return applySecurityHeaders(NextResponse.redirect(destination, canonical.statusCode), request);
+  }
   const csrf = csrfTokenIsValid(request);
   const cookieAuthenticatedMutation = mutatingMethods.has(request.method) && hasSessionCookie(request);
 
@@ -85,4 +111,5 @@ export function middleware(request: NextRequest) {`r`n  const canonical = evalua
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)"],
 };
+
 
