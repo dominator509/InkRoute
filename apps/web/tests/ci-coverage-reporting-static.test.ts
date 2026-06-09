@@ -2,6 +2,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildCiCoverageRunPersistenceContract,
+  ciCoverageRunPersistencePreview,
   ciCoverageReportingArtifactPaths,
   ciCoverageReportingCommands,
   ciCoverageReportingMatrix,
@@ -113,8 +115,47 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
     );
   });
 
+  it("pins durable CiCoverageRun rows, coverage/report flags, branch protection, flaky policy, debug artifacts, and CI evidence", () => {
+    const schema = read("packages/db/prisma/schema.prisma");
+    const contract = buildCiCoverageRunPersistenceContract({
+      tenantId: "tenant_demo",
+      runId: "ci-coverage-demo",
+      commitSha: "abc1234",
+      status: "repository_gated",
+      reportingMatrix: ciCoverageReportingMatrix,
+      artifactManifest: ciCoverageReportingArtifactPaths,
+      frozenInstallPassed: false,
+      typecheckPassed: false,
+      unitCoveragePassed: false,
+      unitCoverageThresholdsPassed: true,
+      e2ePassed: false,
+      vitestReportsUploaded: true,
+      playwrightReportsUploaded: true,
+      tracesScreenshotsVideosRetained: true,
+      testSummaryPublished: true,
+      artifactRetentionVerified: true,
+      failedDebugArtifactsVerified: false,
+      flakyPolicyDocumented: false,
+      ciRunPassed: false,
+      branchProtectionRequiresCi: false,
+      branchProtectionArtifactPath: "coverage/ci-branch-protection-redacted.json",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/redacted"
+    });
+
+    expect(schema).toContain("model CiCoverageRun");
+    expect(schema).toContain("unitCoverageThresholdsPassed");
+    expect(schema).toContain("branchProtectionRequiresCi");
+    expect(schema).toContain("@@unique([tenantId, runId])");
+    expect(contract.transactionWrites).toEqual(["CiCoverageRun", "AuditLog"]);
+    expect(contract.requiredCiFlags).toContain("failedDebugArtifactsVerified");
+    expect(contract.artifactFields).toContain("branchProtectionArtifactPath");
+    expect(contract.tenantIsolationKey).toBe("tenantId");
+    expect(ciCoverageRunPersistencePreview.modelName).toBe("CiCoverageRun");
+  });
+
   it("keeps manifest registration and tracker status aligned", () => {
     expect(unitManifest).toContain("unit-web-ci-coverage-reporting-static");
+    expect(unitManifest).toContain("CiCoverageRun Prisma model and app row contract are wired");
     expect(gapTracker).toContain("apps/web/lib/ciCoverageReporting.ts");
     expect(gapTracker).toContain("live passing CI and branch-protection proof remain open");
   });

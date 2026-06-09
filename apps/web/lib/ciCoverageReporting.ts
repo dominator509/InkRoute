@@ -12,6 +12,55 @@ export interface CiCoverageReportingMatrixEntry {
   readonly status: CiCoverageReportingStatus;
 }
 
+export interface CiCoverageRunPersistenceInput {
+  tenantId: string;
+  runId: string;
+  commitSha?: string;
+  status: "blocked" | "running" | "passed" | "failed" | "repository_gated";
+  reportingMatrix: readonly CiCoverageReportingMatrixEntry[];
+  artifactManifest: readonly string[];
+  frozenInstallPassed: boolean;
+  typecheckPassed: boolean;
+  unitCoveragePassed: boolean;
+  unitCoverageThresholdsPassed: boolean;
+  e2ePassed: boolean;
+  vitestReportsUploaded: boolean;
+  playwrightReportsUploaded: boolean;
+  tracesScreenshotsVideosRetained: boolean;
+  testSummaryPublished: boolean;
+  artifactRetentionVerified: boolean;
+  failedDebugArtifactsVerified: boolean;
+  flakyPolicyDocumented: boolean;
+  ciRunPassed: boolean;
+  branchProtectionRequiresCi: boolean;
+  branchProtectionArtifactPath?: string;
+  ciRunUrl?: string;
+}
+
+export interface CiCoverageRunPersistenceContract {
+  modelName: "CiCoverageRun";
+  row: CiCoverageRunPersistenceInput;
+  transactionWrites: readonly ["CiCoverageRun", "AuditLog"];
+  requiredCiFlags: readonly [
+    "frozenInstallPassed",
+    "typecheckPassed",
+    "unitCoveragePassed",
+    "unitCoverageThresholdsPassed",
+    "e2ePassed",
+    "vitestReportsUploaded",
+    "playwrightReportsUploaded",
+    "tracesScreenshotsVideosRetained",
+    "testSummaryPublished",
+    "artifactRetentionVerified",
+    "failedDebugArtifactsVerified",
+    "flakyPolicyDocumented",
+    "ciRunPassed",
+    "branchProtectionRequiresCi",
+  ];
+  artifactFields: readonly ["reportingMatrix", "artifactManifest", "branchProtectionArtifactPath"];
+  tenantIsolationKey: "tenantId";
+}
+
 export const ciCoverageReportingArtifactPaths = [
   "coverage/ci-coverage-reporting.json",
   "coverage/unit",
@@ -86,6 +135,34 @@ export const ciCoverageReportingMatrix: readonly CiCoverageReportingMatrixEntry[
   }
 ];
 
+export function buildCiCoverageRunPersistenceContract(
+  input: CiCoverageRunPersistenceInput,
+): CiCoverageRunPersistenceContract {
+  return {
+    modelName: "CiCoverageRun",
+    row: input,
+    transactionWrites: ["CiCoverageRun", "AuditLog"],
+    requiredCiFlags: [
+      "frozenInstallPassed",
+      "typecheckPassed",
+      "unitCoveragePassed",
+      "unitCoverageThresholdsPassed",
+      "e2ePassed",
+      "vitestReportsUploaded",
+      "playwrightReportsUploaded",
+      "tracesScreenshotsVideosRetained",
+      "testSummaryPublished",
+      "artifactRetentionVerified",
+      "failedDebugArtifactsVerified",
+      "flakyPolicyDocumented",
+      "ciRunPassed",
+      "branchProtectionRequiresCi",
+    ],
+    artifactFields: ["reportingMatrix", "artifactManifest", "branchProtectionArtifactPath"],
+    tenantIsolationKey: "tenantId",
+  };
+}
+
 export const ciCoverageReportingReadiness = buildCiCoverageReportingReadinessPlan({
   rootScripts: ["test:unit:coverage", "test:e2e", "typecheck"],
   ciWorkflowRunsInstall: true,
@@ -104,4 +181,27 @@ export const ciCoverageReportingReadiness = buildCiCoverageReportingReadinessPla
   testReportSummaryPublished: true,
   artifactRetentionConfigured: true,
   failureDebugArtifactsVerified: false
+});
+
+export const ciCoverageRunPersistencePreview = buildCiCoverageRunPersistenceContract({
+  tenantId: "tenant_demo",
+  runId: "ci-coverage-demo",
+  status: "repository_gated",
+  reportingMatrix: ciCoverageReportingMatrix,
+  artifactManifest: ciCoverageReportingArtifactPaths,
+  frozenInstallPassed: false,
+  typecheckPassed: false,
+  unitCoveragePassed: false,
+  unitCoverageThresholdsPassed: true,
+  e2ePassed: false,
+  vitestReportsUploaded: true,
+  playwrightReportsUploaded: true,
+  tracesScreenshotsVideosRetained: true,
+  testSummaryPublished: true,
+  artifactRetentionVerified: true,
+  failedDebugArtifactsVerified: false,
+  flakyPolicyDocumented: false,
+  ciRunPassed: false,
+  branchProtectionRequiresCi: false,
+  branchProtectionArtifactPath: "coverage/ci-branch-protection-redacted.json",
 });

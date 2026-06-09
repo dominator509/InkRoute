@@ -375,6 +375,7 @@ model Tenant {
   mobileTestingRuns MobileTestingRun[]
   accessibilityVisualRuns AccessibilityVisualRun[]
   providerContractRuns ProviderContractRun[]
+  ciCoverageRuns CiCoverageRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -1790,6 +1791,39 @@ model ProviderContractRun {
   rateLimitStorePassed            Boolean  @default(false)
   redactedArtifactsRetained       Boolean  @default(false)
   ciProviderContractPassed        Boolean  @default(false)
+  ciRunUrl                        String?
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model CiCoverageRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String?
+  status                          String
+  reportingMatrix                 Json
+  artifactManifest                Json
+  frozenInstallPassed             Boolean  @default(false)
+  typecheckPassed                 Boolean  @default(false)
+  unitCoveragePassed              Boolean  @default(false)
+  unitCoverageThresholdsPassed    Boolean  @default(false)
+  e2ePassed                       Boolean  @default(false)
+  vitestReportsUploaded           Boolean  @default(false)
+  playwrightReportsUploaded       Boolean  @default(false)
+  tracesScreenshotsVideosRetained Boolean  @default(false)
+  testSummaryPublished            Boolean  @default(false)
+  artifactRetentionVerified       Boolean  @default(false)
+  failedDebugArtifactsVerified    Boolean  @default(false)
+  flakyPolicyDocumented           Boolean  @default(false)
+  ciRunPassed                     Boolean  @default(false)
+  branchProtectionRequiresCi      Boolean  @default(false)
+  branchProtectionArtifactPath    String?
   ciRunUrl                        String?
   tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                       DateTime @default(now())
