@@ -1690,13 +1690,13 @@
       "file": "apps/web/tests/privacy-request-workflow-static.test.ts",
       "priority": "critical",
       "verifies": [
-        "GAP-098 privacy request workflow contract covers identity proofing, tenant relationship proofing, requester mismatch denial, case persistence, export/delete/anonymize workers, storage workflows, legal holds, notifications, status transitions, and AuditLog actions",
+        "GAP-098 privacy request workflow contract covers identity proofing, tenant relationship proofing, requester mismatch denial, PrivacyRequest Prisma model and app row contract are wired, export/delete/anonymize workers, storage workflows, legal holds, notifications, status transitions, and AuditLog actions",
         "GAP-098 public and dashboard privacy intake routes remain tenant-scoped, redacted, no-store, and rate-limited while production worker proof stays explicit",
         "GAP-098 CI retains Postgres, storage, third-party redaction, legal hold, notification, audit, cross-tenant, and worker artifact paths without exposing secrets"
       ],
       "blockedBy": [
         "Static privacy request workflow test execution pending",
-        "PrivacyRequest Postgres persistence proof pending",
+        "Provider-backed PrivacyRequest transaction execution proof pending",
         "Export/delete/anonymize/rectify worker proof pending",
         "Object-storage privacy export/delete proof pending",
         "Legal hold, notification, audit, and cross-tenant integration proof pending"

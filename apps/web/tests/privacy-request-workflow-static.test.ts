@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildPrivacyRequestPersistenceContract,
   buildPrivacyRequestWorkflowContract,
+  privacyRequestPersistencePreview,
   privacyWorkflowArtifactPaths,
   privacyWorkflowCommands,
   privacyWorkflowPreview,
@@ -34,6 +36,37 @@ describe("GAP-098 privacy request workflow contract", () => {
       expect.arrayContaining(["identity-verification", "privacy-export", "privacy-delete-or-anonymize", "privacy-notification", "audit-log"]),
     );
     expect(privacyWorkflowPreview.auditEvents).toContain("privacy.case_closed");
+  });
+
+  it("pins durable PrivacyRequest rows, status transitions, tenant isolation, and redacted audit writes", () => {
+    const schema = readWorkspaceFile("packages/db/prisma/schema.prisma");
+    const contract = buildPrivacyRequestPersistenceContract({
+      tenantId: "tenant_demo",
+      requesterUserId: "user_demo",
+      clientId: "client_demo",
+      requestType: "deletion",
+      status: "legal_hold",
+      requesterEmail: "client@example.test",
+      requesterName: "Redacted Client",
+      identityProofStatus: "verified",
+      tenantRelationshipStatus: "verified",
+      dueAt: "2026-07-09T00:00:00.000Z",
+      legalHold: true,
+      legalHoldReason: "payment_and_consent_retention",
+      deletionTombstoneObjectKey: "privacy/tenant_demo/case_demo/tombstone.json",
+    });
+
+    expect(schema).toContain("model PrivacyRequest");
+    expect(schema).toContain("identityProofStatus");
+    expect(schema).toContain("tenantRelationshipStatus");
+    expect(schema).toContain("exportArtifactObjectKey");
+    expect(schema).toContain("@@index([tenantId, dueAt])");
+    expect(contract.transactionWrites).toEqual(["PrivacyRequest", "AuditLog"]);
+    expect(contract.statusTransitions).toContain("legal_hold");
+    expect(contract.auditActions).toContain("privacy.worker.executed");
+    expect(contract.redactedFields).toContain("requesterEmail");
+    expect(contract.tenantIsolationKey).toBe("tenantId");
+    expect(privacyRequestPersistencePreview.modelName).toBe("PrivacyRequest");
   });
 
   it("keeps public and dashboard intake routes wired to tenant-scoped redacted submissions", () => {
@@ -94,6 +127,7 @@ describe("GAP-098 privacy request workflow contract", () => {
     expect(privacyWorkflowCommands).toContain("object-storage privacy export/delete integration test");
     expect(privacyWorkflowCommands).toContain("cross-tenant privacy requester mismatch denial test");
     expect(privacyWorkflowArtifactPaths).toContain("coverage/privacy-audit-log-persistence.json");
+    expect(manifest).toContain("PrivacyRequest Prisma model and app row contract are wired");
     expect(ci).toContain("Run Phase 13 privacy request workflow contracts");
     expect(ci).toContain("apps/web/tests/privacy-request-workflow-static.test.ts");
     expect(ci).toContain("privacy-request-workflow-artifacts");

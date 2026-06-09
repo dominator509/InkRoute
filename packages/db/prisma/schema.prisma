@@ -361,6 +361,7 @@ model Tenant {
   seoRedirects     SeoRedirect[]
   auditLogs        AuditLog[]
   signedUrlGrants  SignedUrlGrant[]
+  privacyRequests  PrivacyRequest[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -404,6 +405,7 @@ model User {
   notifications         Notification[]
   auditLogs             AuditLog[]
   releases              ReleaseRecord[]
+  privacyRequests       PrivacyRequest[]
 }
 
 model TenantMember {
@@ -525,6 +527,7 @@ model Client {
   sentMessages   Message[]
   notifications  Notification[]
   reviews        Review[]
+  privacyRequests PrivacyRequest[]
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
@@ -1358,6 +1361,41 @@ model AuditLog {
 
   @@index([tenantId, createdAt])
   @@index([tenantId, entityType, entityId])
+}
+
+model PrivacyRequest {
+  id                         String    @id @default(cuid())
+  tenantId                   String
+  requesterUserId            String?
+  clientId                   String?
+  requestType                String
+  status                     String    @default("intake_received")
+  requesterEmail             String
+  requesterName              String?
+  identityProofStatus        String    @default("pending")
+  tenantRelationshipStatus   String    @default("pending")
+  requesterMismatchDeniedAt  DateTime?
+  dueAt                      DateTime
+  legalHold                  Boolean   @default(false)
+  legalHoldReason            String?
+  exportArtifactObjectKey    String?
+  deletionTombstoneObjectKey String?
+  workerCursor               String?
+  fulfillmentMetadata        Json?
+  statusHistory              Json?
+  redactedSubmission         Json?
+  closedAt                   DateTime?
+  tenant                     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requesterUser              User?     @relation(fields: [requesterUserId], references: [id], onDelete: SetNull)
+  client                     Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, requestType])
+  @@index([tenantId, requesterEmail])
+  @@index([tenantId, dueAt])
+  @@index([tenantId, legalHold])
 }
 
 model ErrorReport {

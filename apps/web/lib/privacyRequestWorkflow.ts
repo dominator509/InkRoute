@@ -32,6 +32,39 @@ export interface PrivacyWorkflowCaseInput {
   legalReviewApproved: boolean;
 }
 
+export interface PrivacyRequestPersistenceInput {
+  tenantId: string;
+  requesterUserId?: string;
+  clientId?: string;
+  requestType: PrivacyRequestType;
+  status: "intake_received" | "identity_pending" | "processing" | "legal_hold" | "completed" | "denied";
+  requesterEmail: string;
+  requesterName?: string;
+  identityProofStatus: "pending" | "verified" | "failed";
+  tenantRelationshipStatus: "pending" | "verified" | "mismatch_denied";
+  dueAt: string;
+  legalHold: boolean;
+  legalHoldReason?: string;
+  exportArtifactObjectKey?: string;
+  deletionTombstoneObjectKey?: string;
+}
+
+export interface PrivacyRequestPersistenceContract {
+  modelName: "PrivacyRequest";
+  row: PrivacyRequestPersistenceInput;
+  transactionWrites: readonly ["PrivacyRequest", "AuditLog"];
+  statusTransitions: readonly ["intake_received", "identity_pending", "processing", "legal_hold", "completed", "denied"];
+  auditActions: readonly [
+    "privacy.request.created",
+    "privacy.identity.verified",
+    "privacy.worker.executed",
+    "privacy.legal_hold.applied",
+    "privacy.case_closed",
+  ];
+  redactedFields: readonly ["requesterEmail", "redactedSubmission", "exportArtifactObjectKey"];
+  tenantIsolationKey: "tenantId";
+}
+
 export const privacyWorkflowArtifactPaths = [
   "coverage/privacy-request-workflow-plan.json",
   "coverage/privacy-identity-proof-redacted.json",
@@ -57,6 +90,24 @@ export const privacyWorkflowCommands = [
   "privacy notification and AuditLog persistence test",
   "cross-tenant privacy requester mismatch denial test",
 ] as const;
+
+export function buildPrivacyRequestPersistenceContract(input: PrivacyRequestPersistenceInput): PrivacyRequestPersistenceContract {
+  return {
+    modelName: "PrivacyRequest",
+    row: input,
+    transactionWrites: ["PrivacyRequest", "AuditLog"],
+    statusTransitions: ["intake_received", "identity_pending", "processing", "legal_hold", "completed", "denied"],
+    auditActions: [
+      "privacy.request.created",
+      "privacy.identity.verified",
+      "privacy.worker.executed",
+      "privacy.legal_hold.applied",
+      "privacy.case_closed",
+    ],
+    redactedFields: ["requesterEmail", "redactedSubmission", "exportArtifactObjectKey"],
+    tenantIsolationKey: "tenantId",
+  };
+}
 
 export function buildPrivacyRequestWorkflowContract(input: PrivacyWorkflowCaseInput) {
   const workflow = buildPrivacyCaseWorkflowPlan(input);
@@ -120,4 +171,18 @@ export const privacyWorkflowPreview = buildPrivacyRequestWorkflowContract({
   notificationProviderConfigured: false,
   auditLogConfigured: false,
   legalReviewApproved: false,
+});
+
+export const privacyRequestPersistencePreview = buildPrivacyRequestPersistenceContract({
+  tenantId: "tenant_demo",
+  requesterUserId: "user_demo",
+  clientId: "client_demo",
+  requestType: "export",
+  status: "intake_received",
+  requesterEmail: "client@example.test",
+  requesterName: "Redacted Client",
+  identityProofStatus: "pending",
+  tenantRelationshipStatus: "pending",
+  dueAt: "2026-07-09T00:00:00.000Z",
+  legalHold: false,
 });
