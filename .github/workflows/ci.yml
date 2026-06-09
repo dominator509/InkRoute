@@ -929,6 +929,33 @@ jobs:
             coverage/mobile-auth-secret-safe-artifacts.json
             test-results/mobile-auth-runtime
           if-no-files-found: warn
+      - name: Run Phase 6 mobile API sync runtime contracts
+        run: pnpm --filter @inkroute/mobile-support test && pnpm vitest run apps/mobile/tests/mobile-api-runtime-static.test.ts apps/mobile/tests/mobile-api-client-static.test.ts
+
+      - name: Upload Phase 6 mobile API sync runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-api-runtime-artifacts
+          path: |
+            coverage/mobile-api-runtime.json
+            coverage/mobile-api-support-typecheck.txt
+            coverage/mobile-api-support-test.txt
+            coverage/mobile-api-app-typecheck.txt
+            coverage/mobile-api-app-test.txt
+            coverage/mobile-api-client-contract.json
+            coverage/mobile-api-provider-token-exchange-redacted.json
+            coverage/mobile-api-screen-domain-matrix.json
+            coverage/mobile-api-static-data-replacement.json
+            coverage/mobile-api-seeded-smoke.json
+            coverage/mobile-api-expired-auth-denial.json
+            coverage/mobile-api-cross-tenant-denial.json
+            coverage/mobile-api-offline-idempotency.json
+            coverage/mobile-api-offline-replay.json
+            coverage/mobile-api-ios-android-smoke-redacted.json
+            coverage/mobile-api-secret-safe-artifacts.json
+            test-results/mobile-api-runtime
+          if-no-files-found: warn
 
       - name: Run Phase 6 mobile launch runtime contracts
         run: pnpm --filter @inkroute/mobile-support test && pnpm vitest run apps/web/tests/mobile-launch-runtime-static.test.ts

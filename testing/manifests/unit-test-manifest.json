@@ -2845,5 +2845,21 @@
         "Expo SecureStore plaintext-denial, biometric device, logout/revocation clearing, and cross-tenant denial proof pending",
         "Audit persistence, mobile typecheck/tests, device smoke, CI, and secret-safe artifact proof pending"
       ]
+    }
+    ,{
+      "id": "unit-mobile-api-runtime-static",
+      "file": "apps/mobile/tests/mobile-api-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-043 mobile API sync runtime matrix covers mobile-support typecheck/tests, mobile app typecheck/tests, typed API client contract, provider token exchange, screen-domain API wiring, static data replacement, seeded API smoke, expired-auth denial, cross-tenant denial, offline idempotency/replay, iOS/Android smoke, CI evidence, and secret-safe artifacts",
+        "GAP-043 typed Expo API client continues to attach auth/tenant/request-id/idempotency headers, block unsafe/offline mutations, validate response envelopes, redact errors, and surface sync coverage in Home and booking screens",
+        "GAP-043 readiness keeps provider auth, seeded API smoke, screen data replacement, expired/cross-tenant denial, offline replay, mobile commands, device smoke, CI, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static mobile API runtime test execution pending",
+        "Provider login/token exchange and seeded API smoke proof pending",
+        "Screen data replacement, expired-auth denial, cross-tenant denial, and offline replay proof pending",
+        "Mobile typecheck/tests, device smoke, CI evidence, and secret-safe artifact proof pending"
+      ]
     }  ]
 }
