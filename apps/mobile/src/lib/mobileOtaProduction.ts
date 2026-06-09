@@ -39,10 +39,40 @@ export function buildMobileOtaReleaseHealthLink(input: { releaseId: string; upda
   };
 }
 
+export function buildMobileOtaAdoptionMonitoringPlan(input: { releaseId: string; channel: "preview" | "production"; updateId?: string }) {
+  return {
+    releaseId: input.releaseId,
+    channel: input.channel,
+    updateId: input.updateId ?? "update-pending",
+    metrics: [
+      "preview-update-adoption-count",
+      "preview-update-error-count",
+      "rollback-candidate-detected",
+      "release-health-mobile-ota-status",
+    ],
+    alertPolicy: {
+      errorRateThresholdPercent: 5,
+      minimumAdoptionSample: 3,
+      rollbackRecommendedOnCrashSpike: true,
+    },
+    redaction: {
+      rawDeviceIdentifiersStored: false,
+      expoAccessTokenStored: false,
+      artifact: "coverage/mobile-ota-adoption-monitoring.json",
+    },
+    releaseHealthLinked: true,
+  };
+}
+
 export function buildMobileOtaProductionEvidenceEnvelope() {
   const readiness = mobileUpdateRuntimePreview.readiness;
   const runtimeEvidence = mobileUpdateRuntimePreview.evidence;
   const releaseHealthLink = buildMobileOtaReleaseHealthLink({
+    releaseId: mobileUpdateRuntimePreview.adoptionEvent.releaseId,
+    updateId: mobileUpdateRuntimePreview.adoptionEvent.updateId,
+    channel: mobileUpdateRuntimePreview.adoptionEvent.channel,
+  });
+  const adoptionMonitoring = buildMobileOtaAdoptionMonitoringPlan({
     releaseId: mobileUpdateRuntimePreview.adoptionEvent.releaseId,
     updateId: mobileUpdateRuntimePreview.adoptionEvent.updateId,
     channel: mobileUpdateRuntimePreview.adoptionEvent.channel,
@@ -61,7 +91,7 @@ export function buildMobileOtaProductionEvidenceEnvelope() {
       previewUpdateId: mobileUpdateRuntimePreview.adoptionEvent.updateId,
       deviceAdoption: "pending-redacted-device-proof",
       rollbackRepublish: "pending",
-      adoptionMonitoring: "pending",
+      adoptionMonitoring,
     },
     artifactPaths: mobileOtaProductionArtifactPaths,
   };
@@ -85,7 +115,7 @@ export function buildMobileOtaProductionContract() {
     previewUpdatePublished: false,
     previewUpdateIdRecorded: false,
     deviceAdoptionVerified: false,
-    adoptionMonitoringConfigured: false,
+    adoptionMonitoringConfigured: true,
     rollbackRepublishDrillPassed: false,
     releaseHealthLinked: true,
   });

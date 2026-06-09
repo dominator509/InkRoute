@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import {
   buildMobileOtaProductionContract,
   buildMobileOtaProductionEvidenceEnvelope,
+  buildMobileOtaAdoptionMonitoringPlan,
   buildMobileOtaReleaseHealthLink,
   mobileOtaProductionArtifactPaths,
   mobileOtaProductionCommands,
@@ -42,6 +43,17 @@ describe("mobile OTA production enablement contract", () => {
 
     expect(envelope.releaseHealthLink.linkedToReleaseHealth).toBe(true);
     expect(envelope.productionProof.deviceAdoption).toBe("pending-redacted-device-proof");
+    expect(envelope.productionProof.adoptionMonitoring).toMatchObject({
+      releaseHealthLinked: true,
+      redaction: {
+        rawDeviceIdentifiersStored: false,
+        expoAccessTokenStored: false,
+        artifact: "coverage/mobile-ota-adoption-monitoring.json",
+      },
+    });
+    expect(buildMobileOtaAdoptionMonitoringPlan({ releaseId: "release_1", updateId: "update_1", channel: "preview" }).metrics).toEqual(
+      expect.arrayContaining(["preview-update-adoption-count", "preview-update-error-count", "release-health-mobile-ota-status"]),
+    );
     expect(link).toMatchObject({ publicPayloadSafe: true, rawDeviceIdentifiersStored: false });
     expect(JSON.stringify(envelope)).not.toContain("EXPO_TOKEN");
   });
@@ -58,6 +70,7 @@ describe("mobile OTA production enablement contract", () => {
         "Rollback republish drill must restore the previous compatible update.",
       ]),
     );
+    expect(contract.blockers).not.toContain("Update adoption/error monitoring must be configured.");
     expect(mobileOtaProductionArtifactPaths).toContain("coverage/mobile-ota-rollback-republish-redacted.json");
   });
 

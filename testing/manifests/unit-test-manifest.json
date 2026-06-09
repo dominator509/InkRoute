@@ -1573,7 +1573,7 @@
       "priority": "high",
       "verifies": [
         "GAP-091 mobile OTA production helper tracks exact EAS preview/prod build, preview update, update list, and rollback republish commands",
-        "GAP-091 production evidence envelope links EAS update state to release-health without raw device identifiers or Expo secrets",
+        "GAP-091 production evidence envelope links EAS update state and adoption/error monitoring to release-health without raw device identifiers or Expo secrets",
         "GAP-091 CI retains Expo metadata, native build, update id, device adoption, adoption monitoring, rollback, and release-health artifacts without claiming live EAS proof"
       ],
       "blockedBy": [
