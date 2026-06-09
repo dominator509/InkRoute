@@ -1622,6 +1622,38 @@ jobs:
             test-results/calendar-automation-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 8 travel publish runtime contracts
+        run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/dashboard/tests/travel-publish-runtime-static.test.ts apps/dashboard/tests/travel-publish-static.test.ts
+
+      - name: Upload Phase 8 travel publish runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: travel-publish-runtime-artifacts
+          path: |
+            coverage/travel-publish-runtime.json
+            coverage/travel-publish-calendar-typecheck.txt
+            coverage/travel-publish-calendar-test.txt
+            coverage/travel-publish-dashboard-typecheck.txt
+            coverage/travel-publish-web-typecheck.txt
+            coverage/travel-publish-static-contract.json
+            coverage/travel-publish-repository-integration.json
+            coverage/travel-publish-public-data-api.json
+            coverage/travel-publish-cache-revalidation.json
+            coverage/travel-publish-waitlist-matching.json
+            coverage/travel-publish-notification-provider-redacted.json
+            coverage/travel-publish-mobile-sync.json
+            coverage/travel-publish-dashboard-sync.json
+            coverage/travel-publish-web-sync.json
+            coverage/travel-publish-audit-log.json
+            coverage/travel-publish-rollback.json
+            coverage/travel-publish-tenant-isolation.json
+            coverage/travel-publish-dashboard-public-e2e-redacted.json
+            coverage/travel-publish-ci-evidence.json
+            coverage/travel-publish-secret-safe-artifacts.json
+            test-results/travel-publish-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 8 calendar lifecycle contracts
         run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/web/tests/ics-feed-route.test.ts apps/web/tests/availability-preview-route.test.ts apps/web/tests/signed-ics-feed-static.test.ts apps/web/tests/calendar-automation-static.test.ts apps/dashboard/tests/availability-persistence-static.test.ts apps/dashboard/tests/google-calendar-sync-static.test.ts apps/dashboard/tests/timezone-recurrence-qa-static.test.ts apps/dashboard/tests/travel-publish-static.test.ts
       - name: Upload Vitest coverage artifacts
