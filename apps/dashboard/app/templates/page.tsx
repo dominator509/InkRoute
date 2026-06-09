@@ -1,12 +1,10 @@
-import { DashboardPageHeader } from "../../components/DashboardPageHeader";
+﻿import { DashboardPageHeader } from "../../components/DashboardPageHeader";
 import { DisabledActionPanel } from "../../components/DisabledActionPanel";
 import { IntegrationBoundaryCard } from "../../components/IntegrationBoundaryCard";
 import { StatusPill } from "../../components/StatusPill";
-import {
-  dashboardNotificationAutomationSequence,
+import { dashboardNotificationSchedulerContract } from "../../lib/notificationScheduler";`nimport {`n  dashboardNotificationAutomationSequence,
   dashboardNotificationPlans,
-  dashboardProviderBoundaryMatrix,
-  dashboardRedactedProviderSendDrafts,
+  dashboardProviderBoundaryMatrix,`n  dashboardRedactedProviderSendDrafts,
   dashboardTemplates,
 } from "../../lib/demo";
 
@@ -66,7 +64,7 @@ export default function TemplatesPage() {
             {dashboardNotificationAutomationSequence.slice(0, 10).map((step) => (
               <div className="stacked-item" key={step.id}>
                 <strong>{step.templateKey.replace(/_/g, " ")}</strong>
-                <span>{step.trigger} · offset {step.scheduledOffsetMinutes} min · {step.recommendedChannels.join(", ")}</span>
+                <span>{step.trigger} Â· offset {step.scheduledOffsetMinutes} min Â· {step.recommendedChannels.join(", ")}</span>
                 <StatusPill label={step.status} tone={toneForStatus(step.status)} />
                 <small>{step.reason}</small>
               </div>
@@ -82,8 +80,8 @@ export default function TemplatesPage() {
           <div className="stacked-list">
             {dashboardRedactedProviderSendDrafts.map((draft) => (
               <div className="stacked-item" key={`${draft.provider}-${draft.channel}`}>
-                <strong>{draft.provider} · {draft.channel}</strong>
-                <span>{draft.toMasked} · env: {draft.credentialEnvVar}</span>
+                <strong>{draft.provider} Â· {draft.channel}</strong>
+                <span>{draft.toMasked} Â· env: {draft.credentialEnvVar}</span>
                 <small>{draft.disabledReason}</small>
               </div>
             ))}
@@ -95,10 +93,46 @@ export default function TemplatesPage() {
           <div className="stacked-list">
             {dashboardProviderBoundaryMatrix.map((boundary) => (
               <div className="stacked-item" key={`${boundary.provider}-${boundary.channel}`}>
-                <strong>{boundary.provider} · {boundary.channel}</strong>
+                <strong>{boundary.provider} Â· {boundary.channel}</strong>
                 <span>{boundary.credentialEnvVars.join(", ")}</span>
                 <small>{boundary.productionRequirement}</small>
                 <code>{boundary.gapId}</code>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="dashboard-grid two">
+        <div className="card">
+          <p className="eyebrow">Queue scheduler contract</p>
+          <h2>Database-backed worker plans</h2>
+          <div className="stacked-list">
+            <div className="stacked-item">
+              <strong>Schedule sequence</strong>
+              <span>{dashboardNotificationSchedulerContract.schedulePlan.scheduledJobs.length} jobs planned through NotificationJob writes</span>
+              <StatusPill label={dashboardNotificationSchedulerContract.schedulePlan.status} tone={toneForStatus(dashboardNotificationSchedulerContract.schedulePlan.status)} />
+            </div>
+            <div className="stacked-item">
+              <strong>Process due job</strong>
+              <span>{dashboardNotificationSchedulerContract.processPlan.writes.map((write) => write.model).join(", ")}</span>
+              <StatusPill label={dashboardNotificationSchedulerContract.processPlan.status} tone={toneForStatus(dashboardNotificationSchedulerContract.processPlan.status)} />
+            </div>
+            <div className="stacked-item">
+              <strong>Retry and dead letter</strong>
+              <span>{dashboardNotificationSchedulerContract.retryPlan.retryDelaySeconds ?? 0}s retry delay; dead-letter writes require durable repository</span>
+              <StatusPill label={dashboardNotificationSchedulerContract.deadLetterPlan.status} tone={toneForStatus(dashboardNotificationSchedulerContract.deadLetterPlan.status)} />
+            </div>
+          </div>
+        </div>
+        <div className="card">
+          <p className="eyebrow">Scheduler readiness gates</p>
+          <h2>Worker promotion blockers</h2>
+          <div className="stacked-list">
+            {dashboardNotificationSchedulerContract.runtimeReadiness.blockers.slice(0, 6).map((blocker) => (
+              <div className="stacked-item" key={blocker}>
+                <strong>{blocker}</strong>
+                <small>GAP-065</small>
               </div>
             ))}
           </div>
@@ -120,3 +154,4 @@ export default function TemplatesPage() {
     </main>
   );
 }
+

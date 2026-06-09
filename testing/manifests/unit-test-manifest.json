@@ -1104,6 +1104,22 @@
                                          "Delivery status transition integration tests pending",
                                          "Seeded Postgres tenant isolation tests pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-dashboard-notification-scheduler-static",
+                       "file":  "apps/dashboard/tests/notification-scheduler-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-065 scheduler contract covers schedule, process, retry, cancel, and dead-letter plans using package scheduler helpers",
+                                        "GAP-065 dashboard scheduler API requires RBAC, tenant scope, no-store, action parsing, idempotency/write planning, and repository seams",
+                                        "GAP-065 templates page surfaces queue scheduler plans and worker readiness blockers"
+                                    ],
+                       "blockedBy":  [
+                                         "Static notification scheduler test execution pending",
+                                         "Durable NotificationJob/DeadLetterJob/NotificationWorkerAuditLog/IdempotencyKey models pending",
+                                         "Queue backend selection and worker process deployment pending",
+                                         "Postgres due-job concurrency, cancellation, retry, and dead-letter integration tests pending"
+                                     ]
                    }
                ]
 }
