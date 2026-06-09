@@ -1532,6 +1532,39 @@ jobs:
             test-results/availability-persistence-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 8 Google Calendar sync runtime contracts
+        run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/dashboard/tests/google-calendar-sync-runtime-static.test.ts apps/dashboard/tests/google-calendar-sync-static.test.ts
+
+      - name: Upload Phase 8 Google Calendar sync runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: google-calendar-sync-runtime-artifacts
+          path: |
+            coverage/google-calendar-sync-runtime.json
+            coverage/google-calendar-sync-calendar-typecheck.txt
+            coverage/google-calendar-sync-calendar-test.txt
+            coverage/google-calendar-sync-sdk-client-redacted.json
+            coverage/google-calendar-sync-oauth-app-redacted.json
+            coverage/google-calendar-sync-oauth-callback-redacted.json
+            coverage/google-calendar-sync-scopes.json
+            coverage/google-calendar-sync-encrypted-token-repository.json
+            coverage/google-calendar-sync-provider-worker.json
+            coverage/google-calendar-sync-freebusy-smoke-redacted.json
+            coverage/google-calendar-sync-event-crud-smoke-redacted.json
+            coverage/google-calendar-sync-full-incremental-sync.json
+            coverage/google-calendar-sync-invalid-token-recovery.json
+            coverage/google-calendar-sync-push-renewal.json
+            coverage/google-calendar-sync-push-webhook.json
+            coverage/google-calendar-sync-retry-backoff.json
+            coverage/google-calendar-sync-idempotency.json
+            coverage/google-calendar-sync-audit-log.json
+            coverage/google-calendar-sync-tenant-isolation.json
+            coverage/google-calendar-sync-test-calendar-artifacts-redacted.json
+            coverage/google-calendar-sync-secret-safe-artifacts.json
+            test-results/google-calendar-sync-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 8 calendar lifecycle contracts
         run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/web/tests/ics-feed-route.test.ts apps/web/tests/availability-preview-route.test.ts apps/web/tests/signed-ics-feed-static.test.ts apps/web/tests/calendar-automation-static.test.ts apps/dashboard/tests/availability-persistence-static.test.ts apps/dashboard/tests/google-calendar-sync-static.test.ts apps/dashboard/tests/timezone-recurrence-qa-static.test.ts apps/dashboard/tests/travel-publish-static.test.ts
       - name: Upload Vitest coverage artifacts

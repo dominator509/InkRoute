@@ -3037,7 +3037,8 @@
         "Revocation dashboard UI, access-log persistence, and web typecheck proof pending",
         "Apple/Google/Outlook import smoke artifacts, CI evidence, and secret-safe artifact proof pending"
       ]
-    }    ,{
+    }
+    ,{
       "id": "unit-availability-persistence-runtime-static",
       "file": "apps/dashboard/tests/availability-persistence-runtime-static.test.ts",
       "priority": "critical",
@@ -3051,6 +3052,21 @@
         "Prisma transaction implementation and seeded Postgres lifecycle proof pending",
         "Persisted conflict detection, overlapping DB rejection, concurrent hold, and cross-tenant tests pending",
         "Dashboard/API repository tests, CI evidence, and secret-safe artifact proof pending"
+      ]
+    }    ,{
+      "id": "unit-google-calendar-sync-runtime-static",
+      "file": "apps/dashboard/tests/google-calendar-sync-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-057 Google Calendar sync runtime matrix covers calendar typecheck/tests, Google SDK/client setup, OAuth app/callback/scopes, encrypted token repository, provider worker, FreeBusy smoke, event CRUD smoke, full/incremental sync, invalid-token recovery, push renewal/webhook, retry/backoff, idempotency, CalendarAuditLog persistence, tenant isolation, Google test-calendar artifacts, CI evidence, and secret-safe artifacts",
+        "GAP-057 dashboard Google sync contract remains wired for OAuth, FreeBusy, event upsert/delete, incremental sync, full resync, push renewal, encrypted connection lookup, idempotency, redacted provider results, transactional writes, retry/backoff, CalendarAuditLog controls, and provider-worker-required API boundary",
+        "GAP-057 readiness keeps Google SDK/client dependency, live OAuth app/callback smoke, encrypted token persistence execution, provider worker execution, push webhook handler, provider smokes, tenant isolation tests, Google test-calendar artifacts, CI, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static Google Calendar sync runtime test execution pending",
+        "Google SDK/client, OAuth app/callback, and encrypted token persistence proof pending",
+        "FreeBusy/event/full-sync/incremental-sync/invalid-token/push smoke artifacts pending",
+        "Tenant isolation, Google test-calendar artifacts, CI evidence, and secret-safe artifact proof pending"
       ]
     }  ]
 }
