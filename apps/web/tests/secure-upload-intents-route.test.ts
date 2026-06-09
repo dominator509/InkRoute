@@ -122,6 +122,22 @@ describe("public secure upload intent route", () => {
       "Tenant-scoped FileAsset store must be configured before upload metadata can persist.",
       "FileAsset cannot be exposed or finalized before upload scan approval.",
     ]));
+    expect(body.data.referenceUploadProviderEvidencePlan).toMatchObject({
+      status: "blocked",
+      missingScripts: [],
+    });
+    expect(body.data.referenceUploadProviderEvidencePlan.requiredControls).toContain("Issue short-lived provider upload URLs only from server-owned tenant-scoped object keys.");
+    expect(body.data.referenceUploadProviderEvidencePlan.requiredEvidence).toEqual(expect.arrayContaining([
+      "secure upload intent route, provider-signed URL, and byte upload verification evidence",
+      "magic-byte validation, malware scan, and quarantine flow evidence",
+      "FileAsset, BookingReferenceImage, and AuditLog persistence evidence",
+      "private ACL, anonymous fetch denial, and cross-tenant denial evidence",
+    ]));
+    expect(body.data.referenceUploadProviderEvidencePlan.blockers).toEqual(expect.arrayContaining([
+      "Byte upload verification must prove the uploaded object matches declared size and upload intent.",
+      "Magic-byte validation must verify uploaded file content before scan approval.",
+      "Cross-tenant reference fetch-denial tests must pass.",
+    ]));
     expect(body.data.localRuntime.gapIds).toEqual(expect.arrayContaining(["GAP-096", "GAP-097"]));
     expect(body.data.nextWork).toEqual(expect.arrayContaining([
       "Scan and strip metadata from media before status transitions.",

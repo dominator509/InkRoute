@@ -1,4 +1,4 @@
-﻿name: CI
+name: CI
 
 on:
   pull_request:
@@ -1690,6 +1690,34 @@ jobs:
             test-results/booking-flow-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 4 reference upload provider runtime contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/reference-upload-provider-runtime-static.test.ts apps/web/tests/secure-upload-intents-route.test.ts
+
+      - name: Upload Phase 4 reference upload provider runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reference-upload-provider-runtime-artifacts
+          path: |
+            coverage/reference-upload-provider-runtime.json
+            coverage/reference-upload-security-typecheck.txt
+            coverage/reference-upload-security-test.txt
+            coverage/reference-upload-web-typecheck.txt
+            coverage/reference-upload-route-test.txt
+            coverage/reference-upload-provider-signed-url-redacted.json
+            coverage/reference-upload-byte-verification.json
+            coverage/reference-upload-magic-byte-validation.json
+            coverage/reference-upload-malware-scan-quarantine.json
+            coverage/reference-upload-fileasset-persistence.json
+            coverage/reference-upload-booking-reference-image-persistence.json
+            coverage/reference-upload-auditlog-persistence.json
+            coverage/reference-upload-private-acl.json
+            coverage/reference-upload-private-fetch-denial.json
+            coverage/reference-upload-cross-tenant-denial.json
+            coverage/reference-upload-ci-evidence.json
+            coverage/reference-upload-secret-safe-artifacts.json
+            test-results/reference-upload-provider-runtime
+          if-no-files-found: warn
       - name: Run Phase 10 SEO accessibility performance audit contracts
         run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/web/tests/seo-a11y-performance-audit-runtime-static.test.ts
 

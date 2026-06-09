@@ -1,5 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { buildFileAssetPersistencePlan, buildPrivateStorageAccessPlan, buildSignedUploadIntentPlan, validateUploadDraft, type UploadAssetKind } from "@inkroute/security";
+import {
+  buildFileAssetPersistencePlan,
+  buildPrivateStorageAccessPlan,
+  buildReferenceUploadProviderEvidencePlan,
+  buildSignedUploadIntentPlan,
+  validateUploadDraft,
+  type UploadAssetKind,
+} from "@inkroute/security";
 import { checkRateLimit, getClientIp, persistUploadIntent, resolveTenant } from "../../../../../lib/localRuntimeState";
 
 const uploadKinds: UploadAssetKind[] = ["portfolio_public", "reference_private", "consent_signature", "healed_follow_up", "document_private"];
@@ -110,6 +117,29 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     auditLogConfigured: false,
     fileAssetStoreConfigured: false,
   });
+  const referenceUploadProviderEvidencePlan = input.kind === "reference_private"
+    ? buildReferenceUploadProviderEvidencePlan({
+      packageScripts: ["typecheck", "test"],
+      securityTestsPassed: false,
+      securityTypecheckPassed: false,
+      webUploadRouteTestsPassed: false,
+      webTypecheckPassed: false,
+      uploadIntentRouteUsesSignedPlan: signedIntentPlan.accepted && signedIntentPlan.status === "provider_gated",
+      providerSignedUploadUrlIssued: Boolean(draft.signedUploadUrl),
+      byteUploadVerified: false,
+      magicByteValidationPassed: false,
+      malwareScanConfigured: false,
+      quarantineFlowVerified: false,
+      privateBucketAclVerified: privateStoragePlan.bucketAcl === "private" && privateStoragePlan.publicReadAllowed === false,
+      fileAssetRowsPersisted: false,
+      bookingReferenceImageRowsPersisted: false,
+      auditLogRowsPersisted: false,
+      privateFetchDenied: false,
+      crossTenantFetchDenied: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    })
+    : null;
 
   return NextResponse.json(
     {
@@ -122,6 +152,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
         signedIntentPlan,
         privateStoragePlan,
         fileAssetPersistencePlan,
+        referenceUploadProviderEvidencePlan,
         nextWork: [
           "Persist FileAsset record and link to booking/message context.",
           "Use provider-signed upload URL and verify multipart boundaries.",

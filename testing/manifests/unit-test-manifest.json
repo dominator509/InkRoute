@@ -2702,5 +2702,20 @@
         "Provider worker execution, CI evidence, and secret-safe artifact proof pending"
       ]
     }
-  ]
+    ,{
+      "id": "unit-web-reference-upload-provider-runtime-static",
+      "file": "apps/web/tests/reference-upload-provider-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-033 reference upload provider runtime matrix covers security typecheck/tests, web typecheck, secure-upload route tests, signed intent route wiring, provider-signed URLs, byte verification, magic-byte checks, malware scan/quarantine, FileAsset/BookingReferenceImage/AuditLog persistence, private ACLs, anonymous/cross-tenant fetch denial, CI evidence, and secret-safe artifacts",
+        "GAP-033 secure-upload-intents route returns buildReferenceUploadProviderEvidencePlan output alongside signed intent, private storage, and persistence plans for reference_private uploads",
+        "GAP-033 readiness keeps provider storage, scan, persistence, denial, CI, and redacted artifact proof explicit until live provider evidence exists"
+      ],
+      "blockedBy": [
+        "Static reference upload provider runtime test execution pending",
+        "Provider-signed upload URL and byte verification integration proof pending",
+        "Magic-byte validation, malware scan, quarantine, FileAsset/BookingReferenceImage/AuditLog persistence, and private ACL proof pending",
+        "Anonymous/cross-tenant fetch denial, CI evidence, and secret-safe artifact proof pending"
+      ]
+    }  ]
 }
