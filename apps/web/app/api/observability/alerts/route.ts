@@ -1,4 +1,4 @@
-﻿import { prisma } from "@inkroute/db";
+import { prisma } from "@inkroute/db";
 import {
   buildAlertEscalationPlan,
   buildAlertRuntimeDeliveryReadinessPlan,
@@ -10,14 +10,69 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 
+export type AlertEscalationRuntimeStatus =
+  | "wired"
+  | "credential-gated"
+  | "worker-gated"
+  | "schedule-gated"
+  | "provider-gated"
+  | "callback-gated"
+  | "ci-gated";
+
+export interface AlertEscalationRuntimeMatrixEntry {
+  readonly id: string;
+  readonly command: string;
+  readonly artifact: string;
+  readonly status: AlertEscalationRuntimeStatus;
+}
+
+export const alertEscalationRuntimeCommands = [
+  "pnpm --filter @inkroute/observability typecheck",
+  "pnpm --filter @inkroute/observability test",
+  "pnpm vitest run apps/web/tests/alert-escalation-runtime-static.test.ts",
+  "durable AlertDelivery worker executor smoke",
+  "Slack/email/pager credential-gated delivery tests",
+  "on-call schedule and quiet-hours routing tests",
+  "provider acknowledgement callback persistence tests",
+  "live synthetic critical/high provider proof",
+] as const;
+
 export const alertEscalationArtifactPaths = [
   "coverage/alert-escalation-runtime.json",
+  "coverage/alert-observability-typecheck.txt",
+  "coverage/alert-observability-test.txt",
+  "coverage/alert-route-static-contract.json",
   "coverage/alert-worker-retry-dead-letter.json",
+  "coverage/alert-worker-executor.json",
+  "coverage/alert-provider-credentials-redacted.json",
+  "coverage/alert-on-call-schedule.json",
+  "coverage/alert-quiet-hours-routing.json",
   "coverage/alert-acknowledgement-state.json",
+  "coverage/alert-provider-callbacks-redacted.json",
   "coverage/alert-sanitized-payload-redacted.json",
   "coverage/alert-live-critical-pager-redacted.json",
   "coverage/alert-live-high-slack-redacted.json",
+  "coverage/alert-ci-evidence.json",
+  "coverage/alert-secret-safe-artifacts.json",
   "test-results/observability-alerts",
+] as const;
+
+export const alertEscalationRuntimeMatrix: readonly AlertEscalationRuntimeMatrixEntry[] = [
+  { id: "observability-typecheck", command: "pnpm --filter @inkroute/observability typecheck", artifact: "coverage/alert-observability-typecheck.txt", status: "wired" },
+  { id: "observability-tests", command: "pnpm --filter @inkroute/observability test", artifact: "coverage/alert-observability-test.txt", status: "wired" },
+  { id: "route-static-contract", command: "pnpm vitest run apps/web/tests/alert-escalation-runtime-static.test.ts", artifact: "coverage/alert-route-static-contract.json", status: "wired" },
+  { id: "worker-retry-dead-letter", command: "durable AlertDelivery worker retry/dead-letter tests", artifact: "coverage/alert-worker-retry-dead-letter.json", status: "worker-gated" },
+  { id: "worker-executor", command: "durable AlertDelivery worker executor smoke", artifact: "coverage/alert-worker-executor.json", status: "worker-gated" },
+  { id: "provider-credentials", command: "Slack/email/pager credential-gated delivery tests", artifact: "coverage/alert-provider-credentials-redacted.json", status: "credential-gated" },
+  { id: "on-call-schedule", command: "on-call schedule routing tests", artifact: "coverage/alert-on-call-schedule.json", status: "schedule-gated" },
+  { id: "quiet-hours-routing", command: "quiet-hours routing tests", artifact: "coverage/alert-quiet-hours-routing.json", status: "schedule-gated" },
+  { id: "acknowledgement-state", command: "alert acknowledgement state persistence tests", artifact: "coverage/alert-acknowledgement-state.json", status: "callback-gated" },
+  { id: "provider-callbacks", command: "provider acknowledgement callback persistence tests", artifact: "coverage/alert-provider-callbacks-redacted.json", status: "callback-gated" },
+  { id: "sanitized-payload", command: "redacted alert payload audit", artifact: "coverage/alert-sanitized-payload-redacted.json", status: "wired" },
+  { id: "live-critical-pager", command: "live synthetic critical pager proof", artifact: "coverage/alert-live-critical-pager-redacted.json", status: "provider-gated" },
+  { id: "live-high-slack", command: "live synthetic high Slack proof", artifact: "coverage/alert-live-high-slack-redacted.json", status: "provider-gated" },
+  { id: "ci-alert-escalation-gate", command: "GitHub Actions alert escalation runtime gate", artifact: "coverage/alert-ci-evidence.json", status: "ci-gated" },
+  { id: "secret-safe-artifacts", command: "redacted alert artifact audit", artifact: "coverage/alert-secret-safe-artifacts.json", status: "ci-gated" },
 ] as const;
 
 function authorizeAlertWorker(request: NextRequest): boolean {

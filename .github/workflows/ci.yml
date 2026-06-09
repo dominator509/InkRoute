@@ -2259,6 +2259,16 @@ jobs:
           name: alert-escalation-runtime-artifacts
           path: |
             coverage/alert-escalation-runtime.json
+            coverage/alert-secret-safe-artifacts.json
+            coverage/alert-ci-evidence.json
+            coverage/alert-provider-callbacks-redacted.json
+            coverage/alert-quiet-hours-routing.json
+            coverage/alert-on-call-schedule.json
+            coverage/alert-provider-credentials-redacted.json
+            coverage/alert-worker-executor.json
+            coverage/alert-route-static-contract.json
+            coverage/alert-observability-test.txt
+            coverage/alert-observability-typecheck.txt
             coverage/alert-worker-retry-dead-letter.json
             coverage/alert-acknowledgement-state.json
             coverage/alert-sanitized-payload-redacted.json

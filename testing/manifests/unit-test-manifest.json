@@ -1436,14 +1436,15 @@
       "verifies": [
         "GAP-083 alert enqueue route requires ALERT_WORKER_TOKEN before accepting internal delivery work",
         "GAP-083 alert escalation builds sanitized payloads, suppresses high-risk external delivery, and records AlertDelivery AuditLog metadata",
-        "GAP-083 retry/backoff, dead-letter, acknowledgement, provider credential, and live provider artifact gates remain explicit"
+        "GAP-083 alertEscalationRuntimeMatrix wires worker executor, provider credentials, on-call/quiet-hours routing, callbacks, live proof, CI, and secret-safe artifacts"
       ],
       "blockedBy": [
         "Static alert escalation runtime test execution pending",
-        "Slack/email/pager provider credentials pending",
-        "Durable worker executor integration pending",
-        "Live synthetic critical pager proof pending",
-        "Live synthetic high Slack proof pending"
+        "Slack/email/pager credentials pending",
+        "Durable AlertDelivery worker executor pending",
+        "On-call schedule and quiet-hours provider pending",
+        "Provider acknowledgement callback persistence pending",
+        "Live synthetic critical/high provider proof, CI evidence, and secret-safe artifact proof pending"
       ]
     },
     {
