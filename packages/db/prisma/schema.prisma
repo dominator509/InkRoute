@@ -386,6 +386,7 @@ model Tenant {
   launchOperationsRuns LaunchOperationsRun[]
   agentExecutionLedgerRuns AgentExecutionLedgerRun[]
   handoffToolingRuns HandoffToolingRun[]
+  agentTaskTrackingRuns AgentTaskTrackingRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2210,6 +2211,44 @@ model HandoffToolingRun {
   handoffScriptArtifactPath               String?
   toolingVerifierArtifactPath             String?
   handoffAllArtifactPath                  String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model AgentTaskTrackingRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  queueTaskMatrix                         Json
+  plannedIssueMatrix                      Json
+  trackingLinkMatrix                      Json
+  artifactManifest                        Json
+  verifierPassed                          Boolean  @default(false)
+  queueIssueParityVerified                Boolean  @default(false)
+  defaultLabelsApplied                    Boolean  @default(false)
+  targetPriorityLabelsApplied             Boolean  @default(false)
+  gapIdsLinked                            Boolean  @default(false)
+  acceptanceEvidenceFieldsLinked          Boolean  @default(false)
+  githubIssuesCreated                     Boolean  @default(false)
+  githubProjectItemsLinked                Boolean  @default(false)
+  redactedTrackingUrlsRecorded            Boolean  @default(false)
+  handoffDocsLinked                       Boolean  @default(false)
+  gapTrackerLinked                        Boolean  @default(false)
+  statusUpdatesTraceable                  Boolean  @default(false)
+  ciTaskTrackingArtifactsCaptured         Boolean  @default(false)
+  issueCreateArtifactPath                 String?
+  projectSyncArtifactPath                 String?
+  docLinksArtifactPath                    String?
+  gapLinksArtifactPath                    String?
+  statusTraceabilityArtifactPath          String?
   ciRunUrl                                String?
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())

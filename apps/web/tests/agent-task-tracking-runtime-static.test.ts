@@ -7,6 +7,7 @@ import {
   agentTaskTrackingRuntimeCommands,
   agentTaskTrackingRuntimeMatrix,
   agentTaskTrackingRuntimeReadiness,
+  agentTaskTrackingRunPersistenceContract,
   agentTaskTrackingTargets,
   agentTaskTrackingTaskIds,
 } from "../lib/agentTaskTrackingRuntime";
@@ -21,6 +22,8 @@ describe("agent task tracking runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const prismaMigration = readRepoFile("packages/db/prisma/migrations/20260609025000_add_agent_task_tracking_runs/migration.sql");
 
   it("pins queued task ids, target roles, labels, commands, matrix rows, and artifacts", () => {
     expect(agentTaskTrackingTaskIds).toEqual([
@@ -110,5 +113,40 @@ describe("agent task tracking runtime contract", () => {
     expect(unitManifest).toContain("unit-web-agent-task-tracking-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/agentTaskTrackingRuntime.ts");
     expect(gapTracker).toContain("live GitHub issue/project creation and traceable status-update proof remain open");
+  });
+
+  it("pins durable AgentTaskTrackingRun persistence for GitHub issue/project traceability proof", () => {
+    expect(agentTaskTrackingRunPersistenceContract.prismaModel).toBe("AgentTaskTrackingRun");
+    expect(agentTaskTrackingRunPersistenceContract.tenantRelation).toBe("agentTaskTrackingRuns");
+    expect(agentTaskTrackingRunPersistenceContract.uniqueKey).toEqual(["tenantId", "runId"]);
+    expect(agentTaskTrackingRunPersistenceContract.jsonFields).toEqual([
+      "queueTaskMatrix",
+      "plannedIssueMatrix",
+      "trackingLinkMatrix",
+      "artifactManifest",
+    ]);
+    expect(agentTaskTrackingRunPersistenceContract.requiredBooleanProofs).toEqual(
+      expect.arrayContaining([
+        "queueIssueParityVerified",
+        "defaultLabelsApplied",
+        "targetPriorityLabelsApplied",
+        "gapIdsLinked",
+        "acceptanceEvidenceFieldsLinked",
+        "githubIssuesCreated",
+        "githubProjectItemsLinked",
+        "gapTrackerLinked",
+        "statusUpdatesTraceable",
+      ]),
+    );
+    expect(agentTaskTrackingRunPersistenceContract.redactedArtifactFields).toContain("projectSyncArtifactPath");
+    expect(prismaSchema).toContain("agentTaskTrackingRuns AgentTaskTrackingRun[]");
+    expect(prismaSchema).toContain("model AgentTaskTrackingRun");
+    expect(prismaSchema).toContain("plannedIssueMatrix                      Json");
+    expect(prismaSchema).toContain("statusUpdatesTraceable                  Boolean  @default(false)");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(prismaMigration).toContain('CREATE TABLE "AgentTaskTrackingRun"');
+    expect(prismaMigration).toContain('"statusTraceabilityArtifactPath" TEXT');
+    expect(unitManifest).toContain("AgentTaskTrackingRun Prisma model and app row contract");
+    expect(gapTracker).toContain("packages/db/prisma/migrations/20260609025000_add_agent_task_tracking_runs/migration.sql");
   });
 });

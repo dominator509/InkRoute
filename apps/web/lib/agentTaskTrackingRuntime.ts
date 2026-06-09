@@ -14,6 +14,35 @@ export interface AgentTaskTrackingRuntimeMatrixEntry {
   readonly status: AgentTaskTrackingRuntimeStatus;
 }
 
+export interface AgentTaskTrackingRunPersistenceContract {
+  readonly prismaModel: "AgentTaskTrackingRun";
+  readonly tenantRelation: "agentTaskTrackingRuns";
+  readonly uniqueKey: readonly ["tenantId", "runId"];
+  readonly jsonFields: readonly ["queueTaskMatrix", "plannedIssueMatrix", "trackingLinkMatrix", "artifactManifest"];
+  readonly requiredBooleanProofs: readonly [
+    "verifierPassed",
+    "queueIssueParityVerified",
+    "defaultLabelsApplied",
+    "targetPriorityLabelsApplied",
+    "gapIdsLinked",
+    "acceptanceEvidenceFieldsLinked",
+    "githubIssuesCreated",
+    "githubProjectItemsLinked",
+    "redactedTrackingUrlsRecorded",
+    "handoffDocsLinked",
+    "gapTrackerLinked",
+    "statusUpdatesTraceable",
+    "ciTaskTrackingArtifactsCaptured"
+  ];
+  readonly redactedArtifactFields: readonly [
+    "issueCreateArtifactPath",
+    "projectSyncArtifactPath",
+    "docLinksArtifactPath",
+    "gapLinksArtifactPath",
+    "statusTraceabilityArtifactPath"
+  ];
+}
+
 export const agentTaskTrackingTaskIds = [
   "codex-workspace-runtime-readiness-001",
   "codex-runtime-verification-001",
@@ -114,6 +143,35 @@ export const agentTaskTrackingRuntimeMatrix = [
     status: "traceability-gated",
   },
 ] as const satisfies readonly AgentTaskTrackingRuntimeMatrixEntry[];
+
+export const agentTaskTrackingRunPersistenceContract: AgentTaskTrackingRunPersistenceContract = {
+  prismaModel: "AgentTaskTrackingRun",
+  tenantRelation: "agentTaskTrackingRuns",
+  uniqueKey: ["tenantId", "runId"],
+  jsonFields: ["queueTaskMatrix", "plannedIssueMatrix", "trackingLinkMatrix", "artifactManifest"],
+  requiredBooleanProofs: [
+    "verifierPassed",
+    "queueIssueParityVerified",
+    "defaultLabelsApplied",
+    "targetPriorityLabelsApplied",
+    "gapIdsLinked",
+    "acceptanceEvidenceFieldsLinked",
+    "githubIssuesCreated",
+    "githubProjectItemsLinked",
+    "redactedTrackingUrlsRecorded",
+    "handoffDocsLinked",
+    "gapTrackerLinked",
+    "statusUpdatesTraceable",
+    "ciTaskTrackingArtifactsCaptured",
+  ],
+  redactedArtifactFields: [
+    "issueCreateArtifactPath",
+    "projectSyncArtifactPath",
+    "docLinksArtifactPath",
+    "gapLinksArtifactPath",
+    "statusTraceabilityArtifactPath",
+  ],
+};
 
 const queueTasks = agentTaskTrackingTaskIds.map((id, index) => ({
   id,

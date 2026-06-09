@@ -2088,14 +2088,14 @@
       "file": "apps/web/tests/agent-task-tracking-runtime-static.test.ts",
       "priority": "medium",
       "verifies": [
-        "GAP-123 agent task tracking runtime matrix covers queue task parity, planned issue labels, target/priority labels, gap IDs, acceptance evidence fields, GitHub issue creation, Project item sync, docs links, gap tracker links, and status traceability",
+        "GAP-123 agent task tracking runtime matrix covers queue task parity, planned issue labels, target/priority labels, gap IDs, acceptance evidence fields, GitHub issue creation, Project item sync, docs links, gap tracker links, AgentTaskTrackingRun Prisma model and app row contract, and status traceability",
         "GAP-123 queue, tracking manifest, verifier, package helper tests, CI labels, and artifact paths remain wired before live GitHub sync proof",
         "GAP-123 static readiness keeps local planning complete while preserving blockers for issue/project creation and traceable status updates"
       ],
       "blockedBy": [
         "Static agent task tracking runtime test execution pending",
         "pnpm handoff:verify-task-sync execution proof pending",
-        "GitHub issues and project items for every queued task pending",
+        "Provider-backed AgentTaskTrackingRun transaction plus GitHub issues and project items for every queued task pending",
         "Handoff docs, GAP_TRACKER links, and status traceability evidence pending"
       ]
     },
