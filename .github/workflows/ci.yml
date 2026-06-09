@@ -2213,6 +2213,13 @@ jobs:
           name: error-report-ingest-hardening-artifacts
           path: |
             coverage/error-report-ingest-hardening.json
+            coverage/error-report-secret-safe-artifacts.json
+            coverage/error-report-ci-evidence.json
+            coverage/error-report-redacted-persistence-no-pii.json
+            coverage/error-report-provider-replay-no-pii-redacted.json
+            coverage/error-report-route-static-contracts.json
+            coverage/error-report-observability-test.txt
+            coverage/error-report-observability-typecheck.txt
             coverage/error-report-bot-protection.json
             coverage/error-report-distributed-rate-limit.json
             coverage/error-report-request-correlation.json

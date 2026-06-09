@@ -1,4 +1,4 @@
-﻿import { readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -9,11 +9,16 @@ import {
   enforceErrorReportBotProtection,
   errorReportBotHeaders,
   errorReportIngestArtifactPaths,
+  errorReportIngestHardeningCommands,
   errorReportIngestHardeningContract,
+  errorReportIngestHardeningMatrix,
 } from "../lib/errorReportIngestHardening";
 
 const routeSource = readFileSync(join(process.cwd(), "apps/web/app/api/public/[tenantSlug]/error-reports/route.ts"), "utf8");
 const dashboardRouteSource = readFileSync(join(process.cwd(), "apps/dashboard/app/api/error-reports/route.ts"), "utf8");
+const ciWorkflow = readFileSync(join(process.cwd(), ".github/workflows/ci.yml"), "utf8");
+const unitManifest = readFileSync(join(process.cwd(), "testing/manifests/unit-test-manifest.json"), "utf8");
+const gapTracker = readFileSync(join(process.cwd(), "GAP_TRACKER.md"), "utf8");
 
 describe("GAP-081 error-report ingest hardening", () => {
   it("propagates request IDs and trace context through public ingest", () => {
@@ -52,6 +57,32 @@ describe("GAP-081 error-report ingest hardening", () => {
     expect(dashboardRouteSource).toContain('"Cache-Control": "no-store"');
   });
 
+  it("pins the error-report ingest hardening command and artifact matrix", () => {
+    expect(errorReportIngestHardeningCommands).toEqual([
+      "pnpm --filter @inkroute/observability typecheck",
+      "pnpm --filter @inkroute/observability test",
+      "pnpm vitest run apps/web/tests/error-report-ingest-hardening-static.test.ts apps/web/tests/observability-routes.test.ts apps/dashboard/tests/error-report-route-static.test.ts",
+      "distributed error-report rate-limit provider integration tests",
+      "live Postgres ErrorReport tenant-isolation fixtures",
+      "provider forwarding replay/no-PII smoke",
+      "redacted persistence no-PII artifact audit",
+    ]);
+    expect(errorReportIngestHardeningMatrix.map((entry) => entry.id)).toEqual([
+      "observability-typecheck",
+      "observability-tests",
+      "route-static-contracts",
+      "bot-protection",
+      "request-correlation",
+      "distributed-rate-limit",
+      "postgres-tenant-isolation",
+      "provider-forwarding",
+      "provider-replay-no-pii",
+      "redacted-persistence-no-pii",
+      "ci-error-report-ingest-gate",
+      "secret-safe-artifacts",
+    ]);
+  });
+
   it("tracks remaining live Postgres, distributed rate limit, and no-PII proof blockers", () => {
     expect(errorReportIngestHardeningContract.status).toBe("blocked");
     expect(errorReportIngestHardeningContract.requiredEvidence).toEqual(
@@ -62,6 +93,17 @@ describe("GAP-081 error-report ingest hardening", () => {
       ]),
     );
     expect(errorReportIngestArtifactPaths).toContain("coverage/error-report-postgres-tenant-isolation.json");
+    expect(errorReportIngestArtifactPaths).toContain("coverage/error-report-provider-replay-no-pii-redacted.json");
+    expect(errorReportIngestArtifactPaths).toContain("coverage/error-report-secret-safe-artifacts.json");
     expect(errorReportIngestArtifactPaths).toContain("test-results/error-report-ingest");
+  });
+
+  it("keeps CI, manifest, and tracker evidence tied to GAP-081", () => {
+    expect(ciWorkflow).toContain("Run Phase 11 error-report ingest hardening contracts");
+    expect(ciWorkflow).toContain("error-report-ingest-hardening-static.test.ts");
+    expect(ciWorkflow).toContain("error-report-ingest-hardening-artifacts");
+    expect(ciWorkflow).toContain("coverage/error-report-ci-evidence.json");
+    expect(unitManifest).toContain("errorReportIngestHardeningMatrix");
+    expect(gapTracker).toContain("GAP-081 is error-report-ingest-hardening-matrix wired");
   });
 });

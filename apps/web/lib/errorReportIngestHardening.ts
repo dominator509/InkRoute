@@ -1,13 +1,60 @@
-﻿import { buildErrorReportIngestHardeningPlan, redactMetadata, type ObservabilityReportDraft } from "@inkroute/observability";
+import { buildErrorReportIngestHardeningPlan, redactMetadata, type ObservabilityReportDraft } from "@inkroute/observability";
+
+export type ErrorReportIngestHardeningStatus =
+  | "wired"
+  | "rate-limit-gated"
+  | "database-gated"
+  | "provider-gated"
+  | "privacy-gated"
+  | "ci-gated";
+
+export interface ErrorReportIngestHardeningMatrixEntry {
+  readonly id: string;
+  readonly command: string;
+  readonly artifact: string;
+  readonly status: ErrorReportIngestHardeningStatus;
+}
+
+export const errorReportIngestHardeningCommands = [
+  "pnpm --filter @inkroute/observability typecheck",
+  "pnpm --filter @inkroute/observability test",
+  "pnpm vitest run apps/web/tests/error-report-ingest-hardening-static.test.ts apps/web/tests/observability-routes.test.ts apps/dashboard/tests/error-report-route-static.test.ts",
+  "distributed error-report rate-limit provider integration tests",
+  "live Postgres ErrorReport tenant-isolation fixtures",
+  "provider forwarding replay/no-PII smoke",
+  "redacted persistence no-PII artifact audit",
+] as const;
 
 export const errorReportIngestArtifactPaths = [
   "coverage/error-report-ingest-hardening.json",
+  "coverage/error-report-observability-typecheck.txt",
+  "coverage/error-report-observability-test.txt",
+  "coverage/error-report-route-static-contracts.json",
   "coverage/error-report-bot-protection.json",
   "coverage/error-report-distributed-rate-limit.json",
   "coverage/error-report-request-correlation.json",
   "coverage/error-report-provider-forwarding-redacted.json",
+  "coverage/error-report-provider-replay-no-pii-redacted.json",
   "coverage/error-report-postgres-tenant-isolation.json",
+  "coverage/error-report-redacted-persistence-no-pii.json",
+  "coverage/error-report-ci-evidence.json",
+  "coverage/error-report-secret-safe-artifacts.json",
   "test-results/error-report-ingest",
+] as const;
+
+export const errorReportIngestHardeningMatrix: readonly ErrorReportIngestHardeningMatrixEntry[] = [
+  { id: "observability-typecheck", command: "pnpm --filter @inkroute/observability typecheck", artifact: "coverage/error-report-observability-typecheck.txt", status: "wired" },
+  { id: "observability-tests", command: "pnpm --filter @inkroute/observability test", artifact: "coverage/error-report-observability-test.txt", status: "wired" },
+  { id: "route-static-contracts", command: "error-report ingest/dashboard route static contracts", artifact: "coverage/error-report-route-static-contracts.json", status: "wired" },
+  { id: "bot-protection", command: "public error-report ingest bot-protection smoke", artifact: "coverage/error-report-bot-protection.json", status: "wired" },
+  { id: "request-correlation", command: "request ID and traceparent propagation smoke", artifact: "coverage/error-report-request-correlation.json", status: "wired" },
+  { id: "distributed-rate-limit", command: "distributed error-report rate-limit provider integration tests", artifact: "coverage/error-report-distributed-rate-limit.json", status: "rate-limit-gated" },
+  { id: "postgres-tenant-isolation", command: "live Postgres ErrorReport tenant-isolation fixtures", artifact: "coverage/error-report-postgres-tenant-isolation.json", status: "database-gated" },
+  { id: "provider-forwarding", command: "provider forwarding credential/redaction smoke", artifact: "coverage/error-report-provider-forwarding-redacted.json", status: "provider-gated" },
+  { id: "provider-replay-no-pii", command: "provider forwarding replay/no-PII smoke", artifact: "coverage/error-report-provider-replay-no-pii-redacted.json", status: "provider-gated" },
+  { id: "redacted-persistence-no-pii", command: "redacted persistence no-PII artifact audit", artifact: "coverage/error-report-redacted-persistence-no-pii.json", status: "privacy-gated" },
+  { id: "ci-error-report-ingest-gate", command: "GitHub Actions error-report ingest hardening gate", artifact: "coverage/error-report-ci-evidence.json", status: "ci-gated" },
+  { id: "secret-safe-artifacts", command: "redacted error-report artifact audit", artifact: "coverage/error-report-secret-safe-artifacts.json", status: "ci-gated" },
 ] as const;
 
 export const errorReportBotHeaders = {
