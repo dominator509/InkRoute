@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   calendarLaunchArtifactPaths,
   calendarLaunchReadinessAreas,
+  calendarLaunchRunPersistenceContract,
   calendarLaunchRuntimeCommands,
   calendarLaunchRuntimeMatrix,
   calendarLaunchRuntimeReadiness,
@@ -19,6 +20,10 @@ describe("calendar launch runtime contract", () => {
   const dashboardCalendarTest = readRepoFile("apps/dashboard/tests/calendar-read-route-static.test.ts");
   const publicTravelIcsRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/calendar/[artistSlug]/travel.ics/route.ts");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const calendarLaunchMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609033300_add_calendar_launch_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -55,6 +60,34 @@ describe("calendar launch runtime contract", () => {
     expect(calendarLaunchArtifactPaths).toContain("test-results/calendar-launch-runtime");
   });
 
+  it("pins the CalendarLaunchRun persistence model and migration", () => {
+    expect(calendarLaunchRunPersistenceContract.model).toBe("CalendarLaunchRun");
+    expect(calendarLaunchRunPersistenceContract.tenantRelation).toBe("calendarLaunchRuns");
+    expect(calendarLaunchRunPersistenceContract.migration).toBe("20260609033300_add_calendar_launch_runs");
+    expect(calendarLaunchRunPersistenceContract.jsonFields).toEqual([
+      "commandMatrix",
+      "readinessAreaManifest",
+      "artifactManifest",
+      "googleSyncManifest",
+      "signedIcsManifest",
+      "timezoneQaManifest",
+    ]);
+    expect(calendarLaunchRunPersistenceContract.evidenceBooleans).toContain("concurrentHoldRaceTestsPassed");
+    expect(calendarLaunchRunPersistenceContract.evidenceBooleans).toContain("googleEncryptedTokensConfigured");
+    expect(calendarLaunchRunPersistenceContract.evidenceBooleans).toContain("calendarArtifactsSecretSafe");
+    expect(calendarLaunchRunPersistenceContract.artifactFields).toContain("signedIcsTokenRouteArtifactPath");
+    expect(calendarLaunchRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(prismaSchema).toContain("calendarLaunchRuns CalendarLaunchRun[]");
+    expect(prismaSchema).toContain("model CalendarLaunchRun");
+    expect(prismaSchema).toContain("googleSyncManifest");
+    expect(prismaSchema).toContain("googlePushOrIncrementalSyncVerified");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(calendarLaunchMigration).toContain('CREATE TABLE "CalendarLaunchRun"');
+    expect(calendarLaunchMigration).toContain('"signedIcsManifest" JSONB NOT NULL');
+    expect(calendarLaunchMigration).toContain('"calendarArtifactsSecretSafe" BOOLEAN NOT NULL DEFAULT false');
+    expect(calendarLaunchMigration).toContain('CREATE UNIQUE INDEX "CalendarLaunchRun_tenantId_runId_key"');
+  });
+
   it("keeps calendar package scripts, launch helper, read route redaction, and ICS route wired", () => {
     expect(calendarPackageJson).toContain('"typecheck"');
     expect(calendarPackageJson).toContain('"test"');
@@ -84,6 +117,8 @@ describe("calendar launch runtime contract", () => {
     expect(ciWorkflow).toContain("calendar-launch-runtime-static.test.ts");
     expect(ciWorkflow).toContain("calendar-launch-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-calendar-launch-runtime-static");
+    expect(unitManifest).toContain("CalendarLaunchRun Prisma model and app row contract");
+    expect(gapTracker).toContain("CalendarLaunchRun");
     expect(gapTracker).toContain("apps/web/lib/calendarLaunchRuntime.ts");
     expect(gapTracker).toContain("live calendar typecheck/tests, Postgres mutation integration, concurrent hold race rejection, tenant isolation, Google OAuth/sync, signed ICS runtime/import, timezone/provider QA, travel publish/cache, smoke tests, CI evidence, and secret-safe artifacts remain open");
   });

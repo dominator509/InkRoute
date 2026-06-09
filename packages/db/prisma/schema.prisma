@@ -406,6 +406,7 @@ model Tenant {
   publicWebLaunchRuns PublicWebLaunchRun[]
   dashboardLaunchRuns DashboardLaunchRun[]
   mobileLaunchRuns MobileLaunchRun[]
+  calendarLaunchRuns CalendarLaunchRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3137,6 +3138,66 @@ model MobileLaunchRun {
   tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                           DateTime @default(now())
   updatedAt                           DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model CalendarLaunchRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  commandMatrix                           Json
+  readinessAreaManifest                   Json
+  artifactManifest                        Json
+  googleSyncManifest                      Json
+  signedIcsManifest                       Json
+  timezoneQaManifest                      Json
+  calendarTypecheckPassed                 Boolean  @default(false)
+  calendarTestsPassed                     Boolean  @default(false)
+  availabilityRepositoriesImplemented     Boolean  @default(false)
+  availabilityPostgresIntegrationPassed   Boolean  @default(false)
+  concurrentHoldRaceTestsPassed           Boolean  @default(false)
+  tenantIsolationTestsPassed              Boolean  @default(false)
+  googleOauthConfigured                   Boolean  @default(false)
+  googleEncryptedTokensConfigured         Boolean  @default(false)
+  googleWorkerEnabled                     Boolean  @default(false)
+  googleFreebusySmokePassed               Boolean  @default(false)
+  googleEventSyncSmokePassed              Boolean  @default(false)
+  googlePushOrIncrementalSyncVerified     Boolean  @default(false)
+  signedIcsTokenPersistenceConfigured     Boolean  @default(false)
+  signedIcsAccessSmokePassed              Boolean  @default(false)
+  signedIcsClientImportSmokePassed        Boolean  @default(false)
+  timezoneDstQaPassed                     Boolean  @default(false)
+  providerRenderMatrixPassed              Boolean  @default(false)
+  travelPublishPersistencePassed          Boolean  @default(false)
+  cacheRevalidationVerified               Boolean  @default(false)
+  dashboardCalendarSmokePassed            Boolean  @default(false)
+  publicTravelSmokePassed                 Boolean  @default(false)
+  ciEvidenceCaptured                      Boolean  @default(false)
+  calendarArtifactsSecretSafe             Boolean  @default(false)
+  calendarTypecheckArtifactPath           String?
+  calendarTestArtifactPath                String?
+  postgresAvailabilityArtifactPath        String?
+  concurrentHoldRaceArtifactPath          String?
+  tenantIsolationArtifactPath             String?
+  googleOauthArtifactPath                 String?
+  googleFreebusySyncArtifactPath          String?
+  googlePushIncrementalArtifactPath       String?
+  signedIcsTokenRouteArtifactPath         String?
+  icsClientImportsArtifactPath            String?
+  timezoneProviderMatrixArtifactPath      String?
+  travelPublishCacheArtifactPath          String?
+  dashboardPublicSmokeArtifactPath        String?
+  ciEvidenceArtifactPath                  String?
+  secretSafeArtifactsPath                 String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])
