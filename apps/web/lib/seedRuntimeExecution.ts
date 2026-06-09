@@ -15,6 +15,45 @@ export interface SeedRuntimeExecutionMatrixEntry {
   readonly status: SeedRuntimeExecutionStatus;
 }
 
+
+export interface SeedRuntimeExecutionRunPersistenceContract {
+  readonly prismaModel: "SeedRuntimeExecutionRun";
+  readonly tenantRelation: "seedRuntimeExecutionRuns";
+  readonly migration: "20260609034100_add_seed_runtime_execution_runs";
+  readonly storesRunId: true;
+  readonly storesCommitSha: true;
+  readonly storesReadinessStatus: true;
+  readonly storesCommandMatrix: true;
+  readonly storesArtifactManifest: true;
+  readonly storesDatabaseProvisioningEvidence: true;
+  readonly storesPrismaLifecycleEvidence: true;
+  readonly storesSeedCommandEvidence: true;
+  readonly storesSeededDomainQueryEvidence: true;
+  readonly storesAppSmokeEvidence: true;
+  readonly storesCommandTranscriptEvidence: true;
+  readonly storesCiCleanCheckoutEvidence: true;
+  readonly storesSecretSafeArtifacts: true;
+}
+
+export const seedRuntimeExecutionRunPersistenceContract = {
+  prismaModel: "SeedRuntimeExecutionRun",
+  tenantRelation: "seedRuntimeExecutionRuns",
+  migration: "20260609034100_add_seed_runtime_execution_runs",
+  storesRunId: true,
+  storesCommitSha: true,
+  storesReadinessStatus: true,
+  storesCommandMatrix: true,
+  storesArtifactManifest: true,
+  storesDatabaseProvisioningEvidence: true,
+  storesPrismaLifecycleEvidence: true,
+  storesSeedCommandEvidence: true,
+  storesSeededDomainQueryEvidence: true,
+  storesAppSmokeEvidence: true,
+  storesCommandTranscriptEvidence: true,
+  storesCiCleanCheckoutEvidence: true,
+  storesSecretSafeArtifacts: true,
+} as const satisfies SeedRuntimeExecutionRunPersistenceContract;
+
 export const seedRuntimeExecutionCommands = [
   "pnpm db:verify-seed",
   "pnpm --filter @inkroute/db db:validate",

@@ -1849,7 +1849,7 @@
       ],
       "blockedBy": [
         "Static DB integration runtime test execution pending",
-        "Non-production Postgres provisioning and DATABASE_URL proof pending",
+        "Provider-backed SeedRuntimeExecutionRun transaction plus non-production Postgres provisioning and DATABASE_URL proof pending",
         "Prisma validate/generate/migrate/seed/verify command proof pending",
         "Tenant isolation, workflow persistence, and audit-log integration proof pending",
         "Provider-backed DbIntegrationRun transaction plus destructive reset guard, rollback documentation, command transcript, and CI DB artifact proof pending"
@@ -2520,13 +2520,13 @@
       "file": "apps/web/tests/seed-runtime-execution-static.test.ts",
       "priority": "medium",
       "verifies": [
-        "GAP-018 seed runtime execution matrix covers seed readiness verification, fake-data/legal-placeholder proof, production-provider bans, non-production Postgres provisioning, DATABASE_URL, Prisma validate/generate/migrate, db:seed, seeded tenant/member/workflow/payment/file/message/SEO/release/flag/audit queries, web/API smoke, dashboard smoke, command transcript, and CI or clean-checkout evidence",
+        "GAP-018 SeedRuntimeExecutionRun Prisma model and app row contract plus seed runtime execution matrix covers seed readiness verification, fake-data/legal-placeholder proof, production-provider bans, non-production Postgres provisioning, DATABASE_URL, Prisma validate/generate/migrate, db:seed, seeded tenant/member/workflow/payment/file/message/SEO/release/flag/audit queries, web/API smoke, dashboard smoke, command transcript, and CI or clean-checkout evidence",
         "GAP-018 seed script, seed-readiness manifest, verifier, docs, package helper/tests, CI labels, artifact paths, and tracker row remain wired without claiming live seed execution evidence exists",
         "GAP-018 readiness keeps database provisioning, Prisma lifecycle, seed command, query smoke, app smoke, command transcript, and CI evidence explicit blockers"
       ],
       "blockedBy": [
         "Static seed runtime execution test execution pending",
-        "Non-production Postgres provisioning and DATABASE_URL proof pending",
+        "Provider-backed SeedRuntimeExecutionRun transaction plus non-production Postgres provisioning and DATABASE_URL proof pending",
         "Prisma generate/migrate, seed command, seeded-domain queries, and audit-log proof pending",
         "Web/API and dashboard seeded-data smoke, command transcript, and CI or clean-checkout proof pending"
       ]

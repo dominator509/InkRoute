@@ -6,6 +6,7 @@ import {
   seedRuntimeExecutionCommands,
   seedRuntimeExecutionMatrix,
   seedRuntimeExecutionReadiness,
+  seedRuntimeExecutionRunPersistenceContract,
 } from "../lib/seedRuntimeExecution";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -22,6 +23,8 @@ describe("seed runtime execution contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const seedRuntimeExecutionRunMigration = readRepoFile("packages/db/prisma/migrations/20260609034100_add_seed_runtime_execution_runs/migration.sql");
 
   it("pins seed runtime commands, matrix rows, and artifact paths", () => {
     expect(seedRuntimeExecutionCommands).toEqual([
@@ -99,13 +102,45 @@ describe("seed runtime execution contract", () => {
     );
   });
 
+  it("pins the SeedRuntimeExecutionRun persistence model and migration", () => {
+    expect(seedRuntimeExecutionRunPersistenceContract).toEqual({
+      prismaModel: "SeedRuntimeExecutionRun",
+      tenantRelation: "seedRuntimeExecutionRuns",
+      migration: "20260609034100_add_seed_runtime_execution_runs",
+      storesRunId: true,
+      storesCommitSha: true,
+      storesReadinessStatus: true,
+      storesCommandMatrix: true,
+      storesArtifactManifest: true,
+      storesDatabaseProvisioningEvidence: true,
+      storesPrismaLifecycleEvidence: true,
+      storesSeedCommandEvidence: true,
+      storesSeededDomainQueryEvidence: true,
+      storesAppSmokeEvidence: true,
+      storesCommandTranscriptEvidence: true,
+      storesCiCleanCheckoutEvidence: true,
+      storesSecretSafeArtifacts: true,
+    });
+    expect(prismaSchema).toContain("model SeedRuntimeExecutionRun");
+    expect(prismaSchema).toContain("seedRuntimeExecutionRuns SeedRuntimeExecutionRun[]");
+    expect(prismaSchema).toContain("databaseProvisioningEvidenceCaptured");
+    expect(prismaSchema).toContain("seededDomainQueryEvidenceCaptured");
+    expect(prismaSchema).toContain("secretSafeArtifactsCaptured");
+    expect(seedRuntimeExecutionRunMigration).toContain('CREATE TABLE "SeedRuntimeExecutionRun"');
+    expect(seedRuntimeExecutionRunMigration).toContain('"commandMatrix" JSONB NOT NULL');
+    expect(seedRuntimeExecutionRunMigration).toContain('"artifactManifest" JSONB NOT NULL');
+    expect(seedRuntimeExecutionRunMigration).toContain('"SeedRuntimeExecutionRun_tenantId_runId_key"');
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming live seed execution readiness", () => {
     expect(ciWorkflow).toContain("Run Phase 2 seed runtime execution contracts");
     expect(ciWorkflow).toContain("seed-runtime-execution-static.test.ts");
     expect(ciWorkflow).toContain("seed-runtime-execution-artifacts");
     expect(ciWorkflow).toContain("coverage/seed-runtime-execution.json");
     expect(unitManifest).toContain("unit-web-seed-runtime-execution-static");
+    expect(unitManifest).toContain("SeedRuntimeExecutionRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/seedRuntimeExecution.ts");
+    expect(gapTracker).toContain("SeedRuntimeExecutionRun Prisma model and app row contract");
     expect(gapTracker).toContain("live non-production Postgres provisioning, DATABASE_URL, Prisma generate/migrate, seed command, seeded-domain queries, web/API and dashboard smokes, command transcript, and CI or clean-checkout evidence remain open");
   });
 });

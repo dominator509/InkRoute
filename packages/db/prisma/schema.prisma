@@ -414,6 +414,7 @@ model Tenant {
   deploymentLaunchEvidenceRuns DeploymentLaunchEvidenceRun[]
   releaseLaunchControlRuns ReleaseLaunchControlRun[]
   uiPackageAdoptionRuns UiPackageAdoptionRun[]
+  seedRuntimeExecutionRuns SeedRuntimeExecutionRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3507,6 +3508,33 @@ model UiPackageAdoptionRun {
   createdAt                       DateTime @default(now())
   updatedAt                       DateTime @updatedAt
   tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model SeedRuntimeExecutionRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String
+  status                              String
+  commandMatrix                       Json
+  artifactManifest                    Json
+  databaseProvisioningEvidenceCaptured Boolean @default(false)
+  prismaLifecycleEvidenceCaptured     Boolean  @default(false)
+  seedCommandEvidenceCaptured         Boolean  @default(false)
+  seededDomainQueryEvidenceCaptured   Boolean  @default(false)
+  appSmokeEvidenceCaptured            Boolean  @default(false)
+  commandTranscriptEvidenceCaptured   Boolean  @default(false)
+  ciCleanCheckoutEvidenceCaptured     Boolean  @default(false)
+  secretSafeArtifactsCaptured         Boolean  @default(false)
+  seededTenantSlug                    String?
+  commandTranscriptPath               String?
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])
