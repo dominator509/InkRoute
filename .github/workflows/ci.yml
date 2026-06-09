@@ -281,6 +281,30 @@ jobs:
             test-results/workspace-runtime-toolchain
           if-no-files-found: warn
 
+      - name: Run Phase 18 runtime evidence matrix contracts
+        run: pnpm --filter @inkroute/workspace test && pnpm vitest run apps/web/tests/runtime-evidence-matrix-static.test.ts
+
+      - name: Upload Phase 18 runtime evidence matrix artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-evidence-matrix-artifacts
+          path: |
+            coverage/runtime-evidence-matrix.json
+            coverage/runtime-evidence-install-output.txt
+            coverage/runtime-evidence-workspace-output.txt
+            coverage/runtime-evidence-workspace-all-output.txt
+            coverage/runtime-evidence-handoff-all-output.txt
+            coverage/runtime-evidence-quality-all-output.txt
+            coverage/runtime-evidence-typecheck-output.txt
+            coverage/runtime-evidence-unit-output.txt
+            coverage/runtime-evidence-web-build-output.txt
+            coverage/runtime-evidence-dashboard-build-output.txt
+            coverage/runtime-evidence-ci-job.json
+            coverage/runtime-evidence-production-blockers.json
+            test-results/runtime-evidence-matrix
+          if-no-files-found: warn
+
       - name: Verify Phase 18 workspace runtime readiness
         run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness && pnpm workspace:required-checks && pnpm workspace:toolchain
       - name: Run Phase 17 quality gate runtime contracts

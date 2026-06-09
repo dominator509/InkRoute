@@ -2189,6 +2189,22 @@
         "pnpm install plus web/dashboard build evidence pending",
         "GitHub Actions workspace job and artifact proof pending"
       ]
+    },
+    {
+      "id": "unit-web-runtime-evidence-matrix-static",
+      "file": "apps/web/tests/runtime-evidence-matrix-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-132 runtime evidence matrix covers install, workspace runtime evidence, workspace:all, handoff:all, quality:all, typecheck, unit tests, web build, dashboard build, CI evidence, redacted evidence labels, and production-blocker visibility",
+        "GAP-132 runtime evidence manifests, verifier, package helper tests, CI labels, artifact paths, and tracker row remain wired while real command evidence remains missing",
+        "GAP-132 readiness keeps every required runtime command blocked until a passed redacted evidence record is captured"
+      ],
+      "blockedBy": [
+        "Static runtime evidence matrix test execution pending",
+        "pnpm install, workspace, handoff, quality, typecheck, unit, and build evidence pending",
+        "GitHub Actions runtime readiness evidence pending",
+        "runtime-evidence.json passed redacted evidence labels pending"
+      ]
     }
   ]
 }
