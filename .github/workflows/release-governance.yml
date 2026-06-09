@@ -64,7 +64,7 @@ jobs:
       - name: ReleaseRecord CI result write contract
         run: |
           echo "ReleaseRecord CI result write is gated behind dashboard deployment readiness API and DATABASE_URL."
-          echo "Store workflow_run_id, workflow_run_url, release_version, release_channel, commit_sha, status, and redacted artifact paths after live dispatch."
+          echo "Store ciWorkflowRunId, ciWorkflowRunUrl, ciStatus, ciCompletedAt, release_version, release_channel, commit_sha, and redacted artifact paths after live dispatch."
 
   deployment-gated-preview:
     name: Deployment-gated preview release

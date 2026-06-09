@@ -1359,6 +1359,10 @@ model ReleaseRecord {
   version         String
   channel         ReleaseChannel
   commitSha       String?
+  ciWorkflowRunId  String?
+  ciWorkflowRunUrl String?
+  ciStatus        String?
+  ciCompletedAt   DateTime?
   notes           String
   migrationVersion String?
   mobileRuntimeVersion String?
@@ -1368,6 +1372,7 @@ model ReleaseRecord {
 
   @@index([tenantId, channel, createdAt])
   @@index([version, channel])
+  @@index([ciWorkflowRunId])
 }
 
 model FeatureFlag {

@@ -45,6 +45,28 @@ export function buildReleaseRecordCiResultMetadata(input: {
   };
 }
 
+export function buildReleaseRecordCiResultWritePlan(input: {
+  releaseRecordId?: string | null;
+  workflowRunId?: string | null;
+  workflowRunUrl?: string | null;
+  status: "requested" | "blocked" | "dry_run" | "succeeded" | "failed";
+}) {
+  return {
+    targetModel: "ReleaseRecord" as const,
+    releaseRecordId: input.releaseRecordId ?? null,
+    updateFields: {
+      ciWorkflowRunId: input.workflowRunId ?? null,
+      ciWorkflowRunUrl: input.workflowRunUrl ?? null,
+      ciStatus: input.status,
+      ciCompletedAt: input.status === "succeeded" || input.status === "failed" ? "workflow-completion-timestamp" : null,
+    },
+    auditAction: "release_record:ci_result:update" as const,
+    idempotencyKey: input.workflowRunId ? `release-ci-result:${input.workflowRunId}` : null,
+    rawSecretsStored: false,
+    artifact: "coverage/cicd-release-record-result-write.json",
+  };
+}
+
 export function buildDeploymentProviderGateMatrix() {
   return [
     { id: "protected-github-environments", provider: "github", required: ["preview", "staging", "production"], enabled: false },

@@ -12,6 +12,7 @@ import {
   buildCicdDeploymentAutomationContract,
   buildDeploymentProviderGateMatrix,
   buildReleaseRecordCiResultMetadata,
+  buildReleaseRecordCiResultWritePlan,
   cicdDeploymentAutomationArtifactPaths,
 } from "../../../../lib/cicdDeploymentAutomation";
 
@@ -59,6 +60,7 @@ type DeploymentPostPayload = {
   persistence: "database" | "local-fallback";
   gapIds: string[];
   ciResult?: ReturnType<typeof buildReleaseRecordCiResultMetadata>;
+  ciResultWritePlan?: ReturnType<typeof buildReleaseRecordCiResultWritePlan>;
   cicdAutomation?: ReturnType<typeof buildCicdDeploymentAutomationContract>;
   providerGates?: ReturnType<typeof buildDeploymentProviderGateMatrix>;
   artifactPaths?: typeof cicdDeploymentAutomationArtifactPaths;
@@ -187,6 +189,11 @@ function buildPostSuccessPayload(
       commitSha: undefined,
       status: policy.implemented ? "requested" : "blocked",
     }),
+    ciResultWritePlan: buildReleaseRecordCiResultWritePlan({
+      workflowRunId: input.requestId,
+      workflowRunUrl: undefined,
+      status: policy.implemented ? "requested" : "blocked",
+    }),
     cicdAutomation: buildCicdDeploymentAutomationContract(),
     providerGates: buildDeploymentProviderGateMatrix(),
     artifactPaths: cicdDeploymentAutomationArtifactPaths,
@@ -306,6 +313,11 @@ export async function POST(request: NextRequest) {
             releaseVersion: undefined,
             releaseChannel: input.targetEnvironment,
             commitSha: undefined,
+            status: policy.implemented ? "requested" : "blocked",
+          }),
+          ciResultWritePlan: buildReleaseRecordCiResultWritePlan({
+            workflowRunId: input.requestId,
+            workflowRunUrl: undefined,
             status: policy.implemented ? "requested" : "blocked",
           }),
           cicdAutomation: buildCicdDeploymentAutomationContract(),
