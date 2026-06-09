@@ -2317,6 +2317,22 @@
         "Persisted session store, membership/role lookup, revocation, cookies/mobile token security, and audit logs pending",
         "Provider-backed tests, tenant-isolation smoke tests, and command evidence pending"
       ]
+    },
+    {
+      "id": "unit-web-live-stripe-payments-runtime-static",
+      "file": "apps/web/tests/live-stripe-payments-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-004 live Stripe payments runtime matrix covers payments package typecheck/test, payment route tests, Stripe SDK/secret/webhook/API-version configuration, real Checkout creation, PaymentIntent lifecycle, DB-backed idempotency, transactional persistence, raw-body webhook verification, replay protection, reconciliation, refunds, disputes, Stripe CLI lifecycle, booking-to-paid E2E, cross-tenant isolation, CI evidence, and secret-safe artifacts",
+        "GAP-004 package helper/tests, route tests, webhook signature verification, dashboard read redaction tests, CI labels, artifact paths, and tracker row remain wired without claiming live Stripe writes are ready",
+        "GAP-004 readiness keeps live provider writes, lifecycle reconciliation, refund/dispute workflows, E2E, CI, and secret-safe artifact evidence explicit blockers"
+      ],
+      "blockedBy": [
+        "Static live Stripe payments runtime test execution pending",
+        "Stripe SDK/secret/webhook/API-version configuration pending",
+        "Real Checkout, provider idempotency persistence, lifecycle reconciliation, refunds, disputes, and tenant isolation pending",
+        "Stripe CLI, booking-to-paid E2E, CI payment evidence, and secret-safe artifacts pending"
+      ]
     }
   ]
 }

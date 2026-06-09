@@ -416,6 +416,31 @@ jobs:
             test-results/provider-session-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 7 live Stripe payments runtime contracts
+        run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/live-stripe-payments-runtime-static.test.ts
+
+      - name: Upload Phase 7 live Stripe payments runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-stripe-payments-runtime-artifacts
+          path: |
+            coverage/live-stripe-payments-runtime.json
+            coverage/live-stripe-payments-typecheck.txt
+            coverage/live-stripe-payments-test.txt
+            coverage/live-stripe-payment-routes-test.txt
+            coverage/live-stripe-sdk-config-redacted.json
+            coverage/live-stripe-checkout-provider-call.json
+            coverage/live-stripe-webhook-lifecycle.json
+            coverage/live-stripe-db-reconciliation.json
+            coverage/live-stripe-refund-dispute-workflows.json
+            coverage/live-stripe-cli-lifecycle.json
+            coverage/live-stripe-booking-to-paid-e2e.json
+            coverage/live-stripe-ci-payment-evidence.json
+            coverage/live-stripe-secret-safe-artifacts.json
+            test-results/live-stripe-payments-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 18 workspace runtime readiness
         run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness && pnpm workspace:required-checks && pnpm workspace:toolchain
       - name: Run Phase 17 quality gate runtime contracts
