@@ -26,6 +26,47 @@ export interface SeoA11yPerformanceAuditMatrixEntry {
   readonly status: SeoA11yPerformanceAuditStatus;
 }
 
+
+export interface SeoA11yPerformanceAuditRunPersistenceContract {
+  readonly prismaModel: "SeoA11yPerformanceAuditRun";
+  readonly tenantRelation: "seoA11yPerformanceAuditRuns";
+  readonly migration: "20260609035200_add_seo_a11y_performance_audit_runs";
+  readonly storesRunId: true;
+  readonly storesCommitSha: true;
+  readonly storesReadinessStatus: true;
+  readonly storesCommandMatrix: true;
+  readonly storesArtifactManifest: true;
+  readonly storesRenderedCrawlEvidence: true;
+  readonly storesSchemaValidatorEvidence: true;
+  readonly storesSitemapCanonicalEvidence: true;
+  readonly storesAxeEvidence: true;
+  readonly storesLighthouseCwvEvidence: true;
+  readonly storesMobileVisualQaEvidence: true;
+  readonly storesAccessibilityFixEvidence: true;
+  readonly storesCiEvidence: true;
+  readonly storesSecretSafeArtifacts: true;
+}
+
+export const seoA11yPerformanceAuditRunPersistenceContract = {
+  prismaModel: "SeoA11yPerformanceAuditRun",
+  tenantRelation: "seoA11yPerformanceAuditRuns",
+  migration: "20260609035200_add_seo_a11y_performance_audit_runs",
+  storesRunId: true,
+  storesCommitSha: true,
+  storesReadinessStatus: true,
+  storesCommandMatrix: true,
+  storesArtifactManifest: true,
+  storesRenderedCrawlEvidence: true,
+  storesSchemaValidatorEvidence: true,
+  storesSitemapCanonicalEvidence: true,
+  storesAxeEvidence: true,
+  storesLighthouseCwvEvidence: true,
+  storesMobileVisualQaEvidence: true,
+  storesAccessibilityFixEvidence: true,
+  storesCiEvidence: true,
+  storesSecretSafeArtifacts: true,
+} as const satisfies SeoA11yPerformanceAuditRunPersistenceContract;
+
 export const seoA11yPerformanceAuditCommands = [
   "pnpm --filter @inkroute/seo typecheck",
   "pnpm --filter @inkroute/seo test",

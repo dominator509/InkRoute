@@ -7,6 +7,7 @@ import {
   seoA11yPerformanceAuditMatrix,
   seoA11yPerformanceAuditReadiness,
   seoAuditRouteTargets,
+  seoA11yPerformanceAuditRunPersistenceContract,
 } from "../lib/seoA11yPerformanceAuditRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -21,6 +22,8 @@ describe("SEO accessibility performance audit runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const auditRunMigration = readRepoFile("packages/db/prisma/migrations/20260609035200_add_seo_a11y_performance_audit_runs/migration.sql");
 
   it("pins SEO/a11y/performance commands, route targets, matrix rows, and artifact paths", () => {
     expect(seoA11yPerformanceAuditCommands).toEqual([
@@ -99,13 +102,46 @@ describe("SEO accessibility performance audit runtime contract", () => {
     expect(seoA11yPerformanceAuditReadiness.blockers).toContain("SEO/accessibility/performance artifacts must be redacted and free of secrets, client-private data, raw medical notes, private file URLs, and provider tokens.");
   });
 
+  it("pins the SeoA11yPerformanceAuditRun persistence model and migration", () => {
+    expect(seoA11yPerformanceAuditRunPersistenceContract).toEqual({
+      prismaModel: "SeoA11yPerformanceAuditRun",
+      tenantRelation: "seoA11yPerformanceAuditRuns",
+      migration: "20260609035200_add_seo_a11y_performance_audit_runs",
+      storesRunId: true,
+      storesCommitSha: true,
+      storesReadinessStatus: true,
+      storesCommandMatrix: true,
+      storesArtifactManifest: true,
+      storesRenderedCrawlEvidence: true,
+      storesSchemaValidatorEvidence: true,
+      storesSitemapCanonicalEvidence: true,
+      storesAxeEvidence: true,
+      storesLighthouseCwvEvidence: true,
+      storesMobileVisualQaEvidence: true,
+      storesAccessibilityFixEvidence: true,
+      storesCiEvidence: true,
+      storesSecretSafeArtifacts: true,
+    });
+    expect(prismaSchema).toContain("model SeoA11yPerformanceAuditRun");
+    expect(prismaSchema).toContain("seoA11yPerformanceAuditRuns SeoA11yPerformanceAuditRun[]");
+    expect(prismaSchema).toContain("renderedCrawlEvidenceCaptured");
+    expect(prismaSchema).toContain("lighthouseCwvEvidenceCaptured");
+    expect(prismaSchema).toContain("secretSafeArtifactsCaptured");
+    expect(auditRunMigration).toContain('CREATE TABLE "SeoA11yPerformanceAuditRun"');
+    expect(auditRunMigration).toContain('"commandMatrix" JSONB NOT NULL');
+    expect(auditRunMigration).toContain('"artifactManifest" JSONB NOT NULL');
+    expect(auditRunMigration).toContain('"SeoA11yPerformanceAuditRun_tenantId_runId_key"');
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming rendered audit execution", () => {
     expect(ciWorkflow).toContain("Run Phase 10 SEO accessibility performance audit contracts");
     expect(ciWorkflow).toContain("seo-a11y-performance-audit-runtime-static.test.ts");
     expect(ciWorkflow).toContain("seo-a11y-performance-audit-artifacts");
     expect(ciWorkflow).toContain("coverage/seo-a11y-performance-runtime.json");
     expect(unitManifest).toContain("unit-web-seo-a11y-performance-audit-runtime-static");
+    expect(unitManifest).toContain("SeoA11yPerformanceAuditRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/seoA11yPerformanceAuditRuntime.ts");
+    expect(gapTracker).toContain("SeoA11yPerformanceAuditRun Prisma model and app row contract");
     expect(gapTracker).toContain("live rendered browser crawl, schema validator, sitemap/canonical browser checks, axe, Lighthouse/Core Web Vitals, mobile visual QA, heading/focus/contrast fixes, CI evidence, and secret-safe artifact review remain open");
   });
 });

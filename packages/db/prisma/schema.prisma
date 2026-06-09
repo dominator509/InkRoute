@@ -425,6 +425,7 @@ model Tenant {
   webBuildRuntimeRuns WebBuildRuntimeRun[]
   portfolioImagePerformanceRuns PortfolioImagePerformanceRun[]
   bookingContactRuns BookingContactRun[]
+  seoA11yPerformanceAuditRuns SeoA11yPerformanceAuditRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3819,6 +3820,34 @@ model BookingContactRun {
   createdAt                             DateTime @default(now())
   updatedAt                             DateTime @updatedAt
   tenant                                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model SeoA11yPerformanceAuditRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String
+  status                                  String
+  commandMatrix                           Json
+  artifactManifest                        Json
+  renderedCrawlEvidenceCaptured           Boolean  @default(false)
+  schemaValidatorEvidenceCaptured         Boolean  @default(false)
+  sitemapCanonicalEvidenceCaptured        Boolean  @default(false)
+  axeEvidenceCaptured                     Boolean  @default(false)
+  lighthouseCwvEvidenceCaptured           Boolean  @default(false)
+  mobileVisualQaEvidenceCaptured          Boolean  @default(false)
+  accessibilityFixEvidenceCaptured        Boolean  @default(false)
+  ciEvidenceCaptured                      Boolean  @default(false)
+  secretSafeArtifactsCaptured             Boolean  @default(false)
+  crawlReportPath                         String?
+  lighthouseReportPath                    String?
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])
