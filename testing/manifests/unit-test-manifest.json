@@ -1120,6 +1120,24 @@
                                          "Queue backend selection and worker process deployment pending",
                                          "Postgres due-job concurrency, cancellation, retry, and dead-letter integration tests pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-provider-webhook-contracts",
+                       "file":  "apps/web/tests/provider-webhook-contracts.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "GAP-066 cross-provider webhook readiness covers email, SMS, and Expo receipt reconciliation gates",
+                                        "GAP-066 provider webhook repository seam covers ProviderEvent idempotency, exactly-once delivery updates, suppression, inbound routing, invalid push-token suppression, audit, and failed-webhook alerting",
+                                        "GAP-066 email and SMS webhook routes surface the shared cross-provider boundary and required repository methods"
+                                    ],
+                       "blockedBy":  [
+                                         "Static provider webhook contract test execution pending",
+                                         "Cryptographic Resend/Svix and Twilio verification implementation pending",
+                                         "Durable ProviderEvent/Idempotency/Suppression/Inbound/PushToken repositories pending",
+                                         "Exactly-once concurrent callback integration tests pending",
+                                         "Provider sandbox and invalid-signature evidence pending",
+                                         "Failed-webhook alerting integration pending"
+                                     ]
                    }
                ]
 }

@@ -3,6 +3,7 @@ import { inkrouteDemoTenant } from "@inkroute/config";
 import { NextResponse, type NextRequest } from "next/server";
 import { persistWebhookEvent } from "../../../../lib/localRuntimeState";
 import { buildSmsProviderReconciliation, buildSmsWebhookReadinessFromPayload, smsProviderContract } from "../../../../lib/smsProvider";
+import { buildProviderWebhookRouteBoundary, providerWebhookContract } from "../../../../lib/providerWebhookReconciliation";
 
 function getTenantSlugFromPayload(payload: Record<string, unknown>): string {
   const candidateSlug = typeof payload.tenantSlug === "string" ? payload.tenantSlug : undefined;
@@ -70,6 +71,15 @@ export async function POST(request: NextRequest) {
     ...(providerMessageId ? { providerMessageId } : {}),
     ...(inboundBody ? { inboundBody } : {}),
   });
+  const providerWebhookBoundary = buildProviderWebhookRouteBoundary({
+    source: "sms",
+    tenantId: tenantSlug,
+    eventId,
+    eventType,
+    rawBodyBytes: rawBody.length,
+    signatureHeaderPresent: true,
+    reconciliation,
+  });
   const interpretation = interpretSmsWebhook(eventType, inboundBody);
   const storedWebhook = persistWebhookEvent(tenantSlug, {
     source: "sms",
@@ -88,6 +98,8 @@ export async function POST(request: NextRequest) {
         interpretation,
         readiness,
         reconciliation,
+        providerWebhookBoundary,
+        crossProviderReadiness: providerWebhookContract.runtimeReadiness,
         inboundBodyProvided: typeof inboundBody === "string",
         rawBodyBytes: rawBody.length,
         localRuntime: {
@@ -108,6 +120,7 @@ export async function POST(request: NextRequest) {
           helpWebhookReadiness: smsProviderContract.helpWebhookReadiness,
           requiredWrites: readiness.requiredWrites,
           requiredControls: readiness.requiredControls,
+          crossProviderRequiredMethods: providerWebhookContract.requiredRepositoryMethods,
         },
       },
     },

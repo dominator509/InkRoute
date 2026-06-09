@@ -1,8 +1,9 @@
-import { interpretEmailWebhook } from "@inkroute/notifications";
+﻿import { interpretEmailWebhook } from "@inkroute/notifications";
 import { inkrouteDemoTenant } from "@inkroute/config";
 import { NextResponse, type NextRequest } from "next/server";
 import { persistWebhookEvent } from "../../../../lib/localRuntimeState";
 import { buildEmailProviderReconciliation, buildEmailWebhookReadinessFromPayload, emailProviderContract } from "../../../../lib/emailProvider";
+import { buildProviderWebhookRouteBoundary, providerWebhookContract } from "../../../../lib/providerWebhookReconciliation";
 
 function getTenantSlugFromPayload(payload: Record<string, unknown>): string {
   const candidateSlug = typeof payload.tenantSlug === "string" ? payload.tenantSlug : undefined;
@@ -51,6 +52,15 @@ export async function POST(request: NextRequest) {
     eventType,
     providerMessageId,
   });
+  const providerWebhookBoundary = buildProviderWebhookRouteBoundary({
+    source: "email",
+    tenantId: tenantSlug,
+    eventId,
+    eventType,
+    rawBodyBytes: rawBody.length,
+    signatureHeaderPresent: true,
+    reconciliation,
+  });
   const storedWebhook = persistWebhookEvent(tenantSlug, {
     source: "email",
     eventType,
@@ -68,6 +78,8 @@ export async function POST(request: NextRequest) {
         interpretation: interpretEmailWebhook(eventType),
         readiness,
         reconciliation,
+        providerWebhookBoundary,
+        crossProviderReadiness: providerWebhookContract.runtimeReadiness,
         rawBodyBytes: rawBody.length,
         localRuntime: {
           status: "received-in-local-runtime",
@@ -85,6 +97,7 @@ export async function POST(request: NextRequest) {
           sendPlan: emailProviderContract.sendPlan,
           requiredWrites: readiness.requiredWrites,
           requiredControls: readiness.requiredControls,
+          crossProviderRequiredMethods: providerWebhookContract.requiredRepositoryMethods,
         },
       },
     },
