@@ -1721,6 +1721,41 @@ jobs:
             test-results/email-provider-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 9 SMS provider runtime contracts
+        run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/web/tests/sms-provider-runtime-static.test.ts apps/web/tests/sms-provider-static.test.ts
+
+      - name: Upload Phase 9 SMS provider runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sms-provider-runtime-artifacts
+          path: |
+            coverage/sms-provider-runtime.json
+            coverage/sms-provider-notifications-typecheck.txt
+            coverage/sms-provider-notifications-test.txt
+            coverage/sms-provider-static-contract.json
+            coverage/sms-provider-twilio-sdk.json
+            coverage/sms-provider-messaging-service-redacted.json
+            coverage/sms-provider-consent-copy-approval.json
+            coverage/sms-provider-consent-proof.json
+            coverage/sms-provider-quiet-hours.json
+            coverage/sms-provider-raw-body-signature.json
+            coverage/sms-provider-request-url-validation.json
+            coverage/sms-provider-delivery-persistence.json
+            coverage/sms-provider-provider-event-persistence.json
+            coverage/sms-provider-suppression-persistence.json
+            coverage/sms-provider-inbound-thread-persistence.json
+            coverage/sms-provider-sandbox-sent-redacted.json
+            coverage/sms-provider-sandbox-delivered-redacted.json
+            coverage/sms-provider-sandbox-failed-redacted.json
+            coverage/sms-provider-stop-suppression.json
+            coverage/sms-provider-help-inbound-thread.json
+            coverage/sms-provider-invalid-signature-route.json
+            coverage/sms-provider-ci-evidence.json
+            coverage/sms-provider-secret-safe-artifacts.json
+            test-results/sms-provider-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 9 notification and messaging lifecycle contracts
         run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/email-provider-static.test.ts apps/web/tests/sms-provider-static.test.ts apps/web/tests/preference-center-static.test.ts apps/web/tests/notification-automation-static.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/notification-persistence-static.test.ts apps/dashboard/tests/notification-scheduler-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
 
