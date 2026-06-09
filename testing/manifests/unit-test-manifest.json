@@ -2893,7 +2893,8 @@
         "Runtime reconnect worker, retry backoff, idempotency persistence, and audit persistence proof pending",
         "Server conflict tests, device restart smoke, airplane-mode reconnect smoke, mobile typecheck/tests, CI evidence, and secret-safe artifact proof pending"
       ]
-    }    ,{
+    }
+    ,{
       "id": "unit-mobile-crash-runtime-static",
       "file": "apps/mobile/tests/mobile-crash-runtime-static.test.ts",
       "priority": "high",
@@ -2907,6 +2908,21 @@
         "Sentry Expo DSN/org/project/auth token and source-map/debug-symbol proof pending",
         "Forced simulator/device crash capture and sanitized ErrorReport/dashboard persistence proof pending",
         "Offline buffering, no-PII provider payload, mobile typecheck, CI evidence, and secret-safe artifact proof pending"
+      ]
+    }    ,{
+      "id": "unit-mobile-updates-runtime-static",
+      "file": "apps/mobile/tests/mobile-updates-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-047 mobile OTA runtime matrix covers releases typecheck/tests, mobile typecheck, app config project metadata, eas.json channels, credentials, preview/production native builds, preview OTA publish, device receipt, rollback republish, compatibility checks, adoption monitoring, release-health monitoring, CI evidence, and secret-safe artifacts",
+        "GAP-047 mobile app update contract remains wired for compatibility classification, EAS readiness gates, runtime evidence gates, redacted adoption events, rollback audit payloads, and System Status screen surfacing",
+        "GAP-047 readiness keeps real EAS project id/update URL, credentials, preview/prod builds, OTA publish, device receipt, rollback drill, adoption monitoring, release-health monitoring, mobile commands, CI, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static mobile OTA runtime test execution pending",
+        "Real EAS project id/update URL, credentials, app config, and eas.json channel proof pending",
+        "Preview/prod native build, OTA publish, device receipt, and rollback republish proof pending",
+        "Adoption monitoring, release-health monitoring, mobile typecheck, CI evidence, and secret-safe artifact proof pending"
       ]
     }  ]
 }

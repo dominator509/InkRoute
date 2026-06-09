@@ -1016,6 +1016,34 @@ jobs:
             test-results/mobile-offline-sync-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 6 mobile OTA updates runtime contracts
+        run: pnpm --filter @inkroute/releases test && pnpm vitest run apps/mobile/tests/mobile-updates-runtime-static.test.ts apps/mobile/tests/mobile-updates-static.test.ts
+
+      - name: Upload Phase 6 mobile OTA updates runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-updates-runtime-artifacts
+          path: |
+            coverage/mobile-updates-runtime.json
+            coverage/mobile-updates-releases-typecheck.txt
+            coverage/mobile-updates-releases-test.txt
+            coverage/mobile-updates-app-typecheck.txt
+            coverage/mobile-updates-app-config-project.json
+            coverage/mobile-updates-eas-json-channels.json
+            coverage/mobile-updates-credentials-redacted.json
+            coverage/mobile-updates-preview-native-build-redacted.json
+            coverage/mobile-updates-production-native-build-redacted.json
+            coverage/mobile-updates-preview-ota-publish-redacted.json
+            coverage/mobile-updates-device-receipt-redacted.json
+            coverage/mobile-updates-rollback-republish-redacted.json
+            coverage/mobile-updates-compatibility-check.json
+            coverage/mobile-updates-adoption-monitoring.json
+            coverage/mobile-updates-release-health-monitoring.json
+            coverage/mobile-updates-secret-safe-artifacts.json
+            test-results/mobile-updates-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 6 mobile launch runtime contracts
         run: pnpm --filter @inkroute/mobile-support test && pnpm vitest run apps/web/tests/mobile-launch-runtime-static.test.ts
 
