@@ -391,6 +391,7 @@ model Tenant {
   documentationAuditRuns DocumentationAuditRun[]
   repositoryGovernanceRuns RepositoryGovernanceRun[]
   qualityGateRuns QualityGateRun[]
+  prDiffEvidenceRuns PrDiffEvidenceRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2415,6 +2416,44 @@ model QualityGateRun {
   packageTestArtifactPath                 String?
   qualityAllArtifactPath                  String?
   qualityCiJobArtifactPath                String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model PrDiffEvidenceRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  diffAuditMatrix                         Json
+  fixtureMatrix                           Json
+  evidenceRuleMatrix                      Json
+  artifactManifest                        Json
+  diffAuditScriptPresent                  Boolean  @default(false)
+  prContextDetectionImplemented           Boolean  @default(false)
+  missingPrContextSkipsSafely             Boolean  @default(false)
+  gapRowParserCoversTrackerColumns        Boolean  @default(false)
+  closureRequiresStatusEvidence           Boolean  @default(false)
+  closureRequiresVerificationEvidence     Boolean  @default(false)
+  blockerDowngradeRequiresEvidence        Boolean  @default(false)
+  unrelatedGapChangesIgnored              Boolean  @default(false)
+  shallowCheckoutFallbackImplemented      Boolean  @default(false)
+  positiveFixturePassed                   Boolean  @default(false)
+  negativeFixtureFailed                   Boolean  @default(false)
+  ciPullRequestStepWired                  Boolean  @default(false)
+  secretSafeLogsVerified                  Boolean  @default(false)
+  noPrContextArtifactPath                 String?
+  mergeFallbackArtifactPath               String?
+  positiveFixtureArtifactPath             String?
+  negativeFixtureArtifactPath             String?
+  secretSafeLogReviewArtifactPath         String?
   ciRunUrl                                String?
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())

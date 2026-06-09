@@ -16,6 +16,7 @@ import {
   extractMarkdownLinks,
   parseGapEvidenceRecords,
   phase17QualityGates,
+  prDiffEvidenceRunPersistenceContract,
   prGapEvidenceEnforcementRunPersistenceContract,
   summarizeQualityGates,
 } from "../src/index";
@@ -615,6 +616,45 @@ describe("quality gates", () => {
 
     expect(plan.status).toBe("ready");
     expect(plan.blockers).toEqual([]);
+  });
+
+  it("pins durable PrDiffEvidenceRun persistence for PR row-diff enforcement proof", () => {
+    const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+    const prismaMigration = readRepoFile(
+      "packages/db/prisma/migrations/20260609030000_add_pr_diff_evidence_runs/migration.sql",
+    );
+    const gapTracker = readRepoFile("GAP_TRACKER.md");
+
+    expect(prDiffEvidenceRunPersistenceContract.prismaModel).toBe("PrDiffEvidenceRun");
+    expect(prDiffEvidenceRunPersistenceContract.tenantRelation).toBe("prDiffEvidenceRuns");
+    expect(prDiffEvidenceRunPersistenceContract.uniqueKey).toEqual(["tenantId", "runId"]);
+    expect(prDiffEvidenceRunPersistenceContract.jsonFields).toEqual([
+      "diffAuditMatrix",
+      "fixtureMatrix",
+      "evidenceRuleMatrix",
+      "artifactManifest",
+    ]);
+    expect(prDiffEvidenceRunPersistenceContract.requiredBooleanProofs).toEqual(
+      expect.arrayContaining([
+        "missingPrContextSkipsSafely",
+        "closureRequiresStatusEvidence",
+        "closureRequiresVerificationEvidence",
+        "blockerDowngradeRequiresEvidence",
+        "shallowCheckoutFallbackImplemented",
+        "positiveFixturePassed",
+        "negativeFixtureFailed",
+        "secretSafeLogsVerified",
+      ]),
+    );
+    expect(prDiffEvidenceRunPersistenceContract.redactedArtifactFields).toContain("mergeFallbackArtifactPath");
+    expect(prismaSchema).toContain("prDiffEvidenceRuns PrDiffEvidenceRun[]");
+    expect(prismaSchema).toContain("model PrDiffEvidenceRun");
+    expect(prismaSchema).toContain("evidenceRuleMatrix                      Json");
+    expect(prismaSchema).toContain("blockerDowngradeRequiresEvidence        Boolean  @default(false)");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(prismaMigration).toContain('CREATE TABLE "PrDiffEvidenceRun"');
+    expect(prismaMigration).toContain('"negativeFixtureArtifactPath" TEXT');
+    expect(gapTracker).toContain("packages/db/prisma/migrations/20260609030000_add_pr_diff_evidence_runs/migration.sql");
   });
 
   it("blocks semantic documentation readiness when static checks fail or runtime/provider/legal proof is conflated", () => {

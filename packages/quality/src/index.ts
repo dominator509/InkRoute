@@ -1371,6 +1371,64 @@ export interface PrDiffEvidenceRuntimeReadinessPlan {
   readonly blockers: readonly string[];
 }
 
+export interface PrDiffEvidenceRunPersistenceContract {
+  readonly prismaModel: "PrDiffEvidenceRun";
+  readonly tenantRelation: "prDiffEvidenceRuns";
+  readonly uniqueKey: readonly ["tenantId", "runId"];
+  readonly jsonFields: readonly ["diffAuditMatrix", "fixtureMatrix", "evidenceRuleMatrix", "artifactManifest"];
+  readonly requiredBooleanProofs: readonly [
+    "diffAuditScriptPresent",
+    "prContextDetectionImplemented",
+    "missingPrContextSkipsSafely",
+    "gapRowParserCoversTrackerColumns",
+    "closureRequiresStatusEvidence",
+    "closureRequiresVerificationEvidence",
+    "blockerDowngradeRequiresEvidence",
+    "unrelatedGapChangesIgnored",
+    "shallowCheckoutFallbackImplemented",
+    "positiveFixturePassed",
+    "negativeFixtureFailed",
+    "ciPullRequestStepWired",
+    "secretSafeLogsVerified"
+  ];
+  readonly redactedArtifactFields: readonly [
+    "noPrContextArtifactPath",
+    "mergeFallbackArtifactPath",
+    "positiveFixtureArtifactPath",
+    "negativeFixtureArtifactPath",
+    "secretSafeLogReviewArtifactPath"
+  ];
+}
+
+export const prDiffEvidenceRunPersistenceContract: PrDiffEvidenceRunPersistenceContract = {
+  prismaModel: "PrDiffEvidenceRun",
+  tenantRelation: "prDiffEvidenceRuns",
+  uniqueKey: ["tenantId", "runId"],
+  jsonFields: ["diffAuditMatrix", "fixtureMatrix", "evidenceRuleMatrix", "artifactManifest"],
+  requiredBooleanProofs: [
+    "diffAuditScriptPresent",
+    "prContextDetectionImplemented",
+    "missingPrContextSkipsSafely",
+    "gapRowParserCoversTrackerColumns",
+    "closureRequiresStatusEvidence",
+    "closureRequiresVerificationEvidence",
+    "blockerDowngradeRequiresEvidence",
+    "unrelatedGapChangesIgnored",
+    "shallowCheckoutFallbackImplemented",
+    "positiveFixturePassed",
+    "negativeFixtureFailed",
+    "ciPullRequestStepWired",
+    "secretSafeLogsVerified",
+  ],
+  redactedArtifactFields: [
+    "noPrContextArtifactPath",
+    "mergeFallbackArtifactPath",
+    "positiveFixtureArtifactPath",
+    "negativeFixtureArtifactPath",
+    "secretSafeLogReviewArtifactPath",
+  ],
+};
+
 export function buildPrDiffEvidenceRuntimeReadinessPlan(
   input: PrDiffEvidenceRuntimeReadinessInput,
 ): PrDiffEvidenceRuntimeReadinessPlan {
