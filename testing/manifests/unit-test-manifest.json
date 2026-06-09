@@ -1353,6 +1353,26 @@
                                          "Sitemap/SEO preview/sitemap preview route test execution pending",
                                          "Adjacent GAP-073/GAP-076 runtime evidence execution pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-observability-runtime-verification-static",
+                       "file":  "apps/web/tests/observability-runtime-verification-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-079 forced-error matrix covers web global-error, dashboard global-error, public API ingest, Sentry webhook, dashboard triage, mobile status, sanitized logs, local persistence, provider proof, and closeout artifacts",
+                                        "GAP-079 synthetic payloads and artifacts are redacted-only and do not use live PII/payment/token data",
+                                        "GAP-079 CI runs observability package, route, dashboard route, and runtime verification static contracts"
+                                    ],
+                       "blockedBy":  [
+                                         "Static observability runtime verification test execution pending",
+                                         "Browser forced-error screenshots pending",
+                                         "Mobile simulator/device forced-error screenshots pending",
+                                         "Sanitized forced-error log capture pending",
+                                         "Local fallback persistence runtime proof pending",
+                                         "Dashboard triage runtime proof pending",
+                                         "Live Sentry/provider runtime proof pending",
+                                         "No-PII closeout evidence pending"
+                                     ]
                    }
                ]
 }
