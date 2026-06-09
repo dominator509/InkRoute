@@ -641,3 +641,92 @@ export function auditWorkspaceToolchainReadiness(
     generatedReportsChecked: contract.requiredGeneratedReports.length,
   };
 }
+
+export interface WorkspaceRuntimeToolchainReadinessInput {
+  readonly toolchainAuditStatus: WorkspaceAuditStatus;
+  readonly packageTypecheckPassed: boolean;
+  readonly packageTestsPassed: boolean;
+  readonly workspaceToolchainPassed: boolean;
+  readonly workspaceAllPassed: boolean;
+  readonly generatedReports: readonly string[];
+  readonly requiredGeneratedReports: readonly string[];
+  readonly ciWorkspaceJobPassed: boolean;
+  readonly ciEvidenceCaptured: boolean;
+  readonly dependencyInstallEvidenceCaptured: boolean;
+  readonly appBuildEvidenceCaptured: boolean;
+  readonly productionBlockersVisible: boolean;
+}
+
+export interface WorkspaceRuntimeToolchainReadinessPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingGeneratedReports: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
+}
+
+export function buildWorkspaceRuntimeToolchainReadinessPlan(
+  input: WorkspaceRuntimeToolchainReadinessInput,
+): WorkspaceRuntimeToolchainReadinessPlan {
+  const generatedReportSet = new Set(input.generatedReports);
+  const missingGeneratedReports = input.requiredGeneratedReports.filter((report) => !generatedReportSet.has(report));
+  const blockers: string[] = [];
+
+  if (input.toolchainAuditStatus !== "pass") {
+    blockers.push("Workspace toolchain audit must pass before runtime readiness can be claimed.");
+  }
+  if (!input.packageTypecheckPassed) {
+    blockers.push("@inkroute/workspace typecheck must pass.");
+  }
+  if (!input.packageTestsPassed) {
+    blockers.push("@inkroute/workspace tests must pass.");
+  }
+  if (!input.workspaceToolchainPassed) {
+    blockers.push("pnpm workspace:toolchain must pass.");
+  }
+  if (!input.workspaceAllPassed) {
+    blockers.push("pnpm workspace:all must pass.");
+  }
+  if (missingGeneratedReports.length > 0) {
+    blockers.push("Workspace generated reports must be present for imports, scripts, runtime evidence, runtime readiness, required checks, and toolchain readiness.");
+  }
+  if (!input.ciWorkspaceJobPassed) {
+    blockers.push("GitHub Actions Phase 18 workspace runtime readiness job must pass.");
+  }
+  if (!input.ciEvidenceCaptured) {
+    blockers.push("CI evidence for workspace runtime readiness must be captured.");
+  }
+  if (!input.dependencyInstallEvidenceCaptured) {
+    blockers.push("Dependency install evidence must be captured before runtime readiness is more than static pre-install signal.");
+  }
+  if (!input.appBuildEvidenceCaptured) {
+    blockers.push("Web and dashboard app build evidence must be captured before runtime readiness can support launch readiness.");
+  }
+  if (!input.productionBlockersVisible) {
+    blockers.push("Runtime readiness reports must keep production blockers visible.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingGeneratedReports,
+    requiredCommands: [
+      "pnpm --filter @inkroute/workspace typecheck",
+      "pnpm --filter @inkroute/workspace test",
+      "pnpm workspace:toolchain",
+      "pnpm workspace:all",
+      "pnpm install",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "GitHub Actions Phase 18 workspace runtime readiness job",
+    ],
+    requiredEvidence: [
+      "@inkroute/workspace package typecheck and test output.",
+      "workspace:toolchain and workspace:all output.",
+      "Generated workspace import, package-script, runtime-evidence, runtime-readiness, required-checks, and toolchain-readiness reports.",
+      "Dependency install evidence and CI workspace job evidence.",
+      "Web/dashboard build evidence before launch readiness claims.",
+      "Runtime readiness report showing production blockers remain visible.",
+    ],
+    blockers,
+  };
+}

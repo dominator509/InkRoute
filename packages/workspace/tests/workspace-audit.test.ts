@@ -6,6 +6,7 @@ import {
   auditWorkspaceRequiredChecks,
   auditWorkspaceToolchainReadiness,
   auditWorkspaceDependencies,
+  buildWorkspaceRuntimeToolchainReadinessPlan,
   classifyWorkspacePath,
   extractImportSpecifiers,
   extractWorkspaceImportSpecifiers,
@@ -295,5 +296,66 @@ describe("workspace audit helpers", () => {
     expect(failing.findings.some((finding) => finding.rule === "root-script")).toBe(true);
     expect(failing.findings.some((finding) => finding.rule === "workspace-package-script")).toBe(true);
     expect(failing.findings.some((finding) => finding.rule === "ci-term")).toBe(true);
+  });
+
+  it("blocks workspace runtime toolchain readiness until package, workspace, reports, CI, install, builds, and blockers are proven", () => {
+    const plan = buildWorkspaceRuntimeToolchainReadinessPlan({
+      toolchainAuditStatus: "warn",
+      packageTypecheckPassed: false,
+      packageTestsPassed: true,
+      workspaceToolchainPassed: false,
+      workspaceAllPassed: false,
+      generatedReports: ["docs/workspace/manifests/workspace-import-audit.json"],
+      requiredGeneratedReports: [
+        "docs/workspace/manifests/workspace-import-audit.json",
+        "docs/workspace/manifests/package-script-audit.json",
+        "docs/workspace/manifests/runtime-evidence-audit.json",
+      ],
+      ciWorkspaceJobPassed: false,
+      ciEvidenceCaptured: false,
+      dependencyInstallEvidenceCaptured: false,
+      appBuildEvidenceCaptured: false,
+      productionBlockersVisible: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingGeneratedReports).toEqual([
+      "docs/workspace/manifests/package-script-audit.json",
+      "docs/workspace/manifests/runtime-evidence-audit.json",
+    ]);
+    expect(plan.requiredCommands).toContain("pnpm workspace:all");
+    expect(plan.requiredEvidence).toContain("Runtime readiness report showing production blockers remain visible.");
+    expect(plan.blockers).toContain("@inkroute/workspace typecheck must pass.");
+    expect(plan.blockers).toContain("Dependency install evidence must be captured before runtime readiness is more than static pre-install signal.");
+    expect(plan.blockers).toContain("Runtime readiness reports must keep production blockers visible.");
+  });
+
+  it("marks workspace runtime toolchain readiness ready when package, workspace, reports, CI, install, builds, and blockers are proven", () => {
+    const reports = [
+      "docs/workspace/manifests/workspace-import-audit.json",
+      "docs/workspace/manifests/package-script-audit.json",
+      "docs/workspace/manifests/runtime-evidence-audit.json",
+      "docs/workspace/manifests/runtime-readiness.json",
+      "docs/workspace/manifests/workspace-required-checks-audit.json",
+      "docs/workspace/manifests/workspace-toolchain-readiness-audit.json",
+    ];
+    const plan = buildWorkspaceRuntimeToolchainReadinessPlan({
+      toolchainAuditStatus: "pass",
+      packageTypecheckPassed: true,
+      packageTestsPassed: true,
+      workspaceToolchainPassed: true,
+      workspaceAllPassed: true,
+      generatedReports: reports,
+      requiredGeneratedReports: reports,
+      ciWorkspaceJobPassed: true,
+      ciEvidenceCaptured: true,
+      dependencyInstallEvidenceCaptured: true,
+      appBuildEvidenceCaptured: true,
+      productionBlockersVisible: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.missingGeneratedReports).toEqual([]);
+    expect(plan.blockers).toEqual([]);
   });
 });

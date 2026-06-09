@@ -334,3 +334,477 @@ export function renderAgentPrompt(task: AgentExecutionTask): string {
     ...task.acceptanceEvidence.map((evidence) => `- ${evidence}`),
   ].join("\n");
 }
+
+export type AgentExecutionStatus = "not_executed" | "in_progress_redacted" | "completed_redacted" | "blocked_redacted";
+export type AgentExecutionSecretSafety = "no_evidence_recorded" | "redacted_review_pending" | "secret_safe_redacted";
+
+export interface AgentExecutionLedgerEntry {
+  readonly taskId: string;
+  readonly status: AgentExecutionStatus;
+  readonly assignedAgent: AgentTarget;
+  readonly commandsRun: readonly string[];
+  readonly filesChanged: readonly string[];
+  readonly evidenceArtifacts: readonly string[];
+  readonly remainingGaps: readonly string[];
+  readonly secretSafety: AgentExecutionSecretSafety;
+}
+
+export interface AgentExecutionLedgerReadinessInput {
+  readonly queueTasks: readonly AgentExecutionTask[];
+  readonly executions: readonly AgentExecutionLedgerEntry[];
+  readonly verifierPassed: boolean;
+  readonly handoffAuditPassed: boolean;
+  readonly gapTrackerUpdated: boolean;
+  readonly externalAgentResultsImported: boolean;
+}
+
+export interface AgentExecutionLedgerReadinessPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingExecutionTaskIds: readonly string[];
+  readonly unknownExecutionTaskIds: readonly string[];
+  readonly duplicateExecutionTaskIds: readonly string[];
+  readonly incompleteExecutionTaskIds: readonly string[];
+  readonly unsafeEvidenceFields: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
+}
+
+const unsafeAgentExecutionEvidencePatterns = [
+  /postgres(?:ql)?:\/\/[^"<>\s]+/i,
+  /sk_live_[A-Za-z0-9]+/,
+  /sk_test_[A-Za-z0-9]+/,
+  /gh[pousr]_[A-Za-z0-9_]{20,}/,
+  /vercel_[A-Za-z0-9_]{20,}/i,
+  /-----BEGIN (?:RSA |EC |OPENSSH |)PRIVATE KEY-----/,
+  /\b\d{3}-\d{2}-\d{4}\b/,
+];
+
+function containsUnsafeAgentExecutionEvidence(value: string): boolean {
+  return unsafeAgentExecutionEvidencePatterns.some((pattern) => pattern.test(value));
+}
+
+export function buildAgentExecutionLedgerReadinessPlan(
+  input: AgentExecutionLedgerReadinessInput,
+): AgentExecutionLedgerReadinessPlan {
+  const queueTaskIds = new Set(input.queueTasks.map((task) => task.id));
+  const seenExecutionIds = new Set<string>();
+  const duplicateExecutionTaskIds: string[] = [];
+  const executionsByTaskId = new Map<string, AgentExecutionLedgerEntry>();
+
+  for (const execution of input.executions) {
+    if (seenExecutionIds.has(execution.taskId)) {
+      duplicateExecutionTaskIds.push(execution.taskId);
+    }
+    seenExecutionIds.add(execution.taskId);
+    executionsByTaskId.set(execution.taskId, execution);
+  }
+
+  const missingExecutionTaskIds = input.queueTasks
+    .filter((task) => !executionsByTaskId.has(task.id))
+    .map((task) => task.id);
+  const unknownExecutionTaskIds = input.executions
+    .filter((execution) => !queueTaskIds.has(execution.taskId))
+    .map((execution) => execution.taskId);
+  const incompleteExecutionTaskIds: string[] = [];
+  const unsafeEvidenceFields: string[] = [];
+
+  for (const task of input.queueTasks) {
+    const execution = executionsByTaskId.get(task.id);
+    if (!execution) continue;
+
+    if (execution.assignedAgent !== task.target) {
+      incompleteExecutionTaskIds.push(`${task.id}:assignedAgent`);
+    }
+    if (execution.status !== "completed_redacted") {
+      incompleteExecutionTaskIds.push(task.id);
+    }
+    if (execution.status === "completed_redacted" && execution.commandsRun.length === 0) {
+      incompleteExecutionTaskIds.push(`${task.id}:commandsRun`);
+    }
+    if (execution.status === "completed_redacted" && execution.evidenceArtifacts.length === 0) {
+      incompleteExecutionTaskIds.push(`${task.id}:evidenceArtifacts`);
+    }
+    if (execution.status === "completed_redacted" && execution.secretSafety !== "secret_safe_redacted") {
+      incompleteExecutionTaskIds.push(`${task.id}:secretSafety`);
+    }
+    for (const gapId of task.gapIds) {
+      if (execution.status !== "completed_redacted" && !execution.remainingGaps.includes(gapId)) {
+        incompleteExecutionTaskIds.push(`${task.id}:${gapId}`);
+      }
+    }
+
+    const evidenceValues = [
+      execution.taskId,
+      execution.assignedAgent,
+      ...execution.commandsRun,
+      ...execution.filesChanged,
+      ...execution.evidenceArtifacts,
+      ...execution.remainingGaps,
+      execution.secretSafety,
+    ];
+    evidenceValues.forEach((value, index) => {
+      if (containsUnsafeAgentExecutionEvidence(value)) {
+        unsafeEvidenceFields.push(`${task.id}:${index}`);
+      }
+    });
+  }
+
+  const blockers: string[] = [];
+  if (missingExecutionTaskIds.length > 0) {
+    blockers.push("Every Phase 16 queue task must have an execution ledger entry.");
+  }
+  if (unknownExecutionTaskIds.length > 0) {
+    blockers.push("Execution ledger must not contain tasks outside the Phase 16 queue.");
+  }
+  if (duplicateExecutionTaskIds.length > 0) {
+    blockers.push("Execution ledger task ids must be unique.");
+  }
+  if (incompleteExecutionTaskIds.length > 0) {
+    blockers.push("Every handoff execution must be completed_redacted with commands, evidence artifacts, matching agent, and secret-safe review.");
+  }
+  if (unsafeEvidenceFields.length > 0) {
+    blockers.push("Agent execution ledger must not contain secrets, database URLs, private keys, PII, or payment payloads.");
+  }
+  if (!input.verifierPassed) {
+    blockers.push("pnpm handoff:verify-ledger must pass.");
+  }
+  if (!input.handoffAuditPassed) {
+    blockers.push("Handoff audit scripts must pass after importing execution results.");
+  }
+  if (!input.gapTrackerUpdated) {
+    blockers.push("GAP_TRACKER.md must be updated with exact execution evidence and remaining blockers.");
+  }
+  if (!input.externalAgentResultsImported) {
+    blockers.push("External Codex/Jules/Claude/local execution results must be imported into the redacted ledger.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingExecutionTaskIds,
+    unknownExecutionTaskIds,
+    duplicateExecutionTaskIds,
+    incompleteExecutionTaskIds,
+    unsafeEvidenceFields,
+    requiredCommands: [
+      "pnpm handoff:verify-ledger",
+      "pnpm handoff:audit",
+      "pnpm handoff:verify-docs",
+      "pnpm handoff:next",
+      "agent task command plans from docs/handoff/manifests/agent-execution-queue.json",
+    ],
+    requiredEvidence: [
+      "Completed redacted ledger entry for every Phase 16 queue task.",
+      "Commands run, changed files, evidence artifacts, remaining gaps, and risks for each agent execution.",
+      "Secret-safe review status for every completed execution.",
+      "Updated GAP_TRACKER rows with exact evidence and unresolved blockers.",
+      "Handoff audit output and imported external agent result labels.",
+    ],
+    blockers,
+  };
+}
+
+export interface HandoffToolingRuntimeReadinessInput {
+  readonly requiredRootScripts: readonly string[];
+  readonly rootScripts: Readonly<Record<string, string>>;
+  readonly requiredReports: readonly string[];
+  readonly existingReports: readonly string[];
+  readonly requiredScriptFiles: readonly string[];
+  readonly existingScriptFiles: readonly string[];
+  readonly requiredDocs: readonly string[];
+  readonly existingDocs: readonly string[];
+  readonly requiredCiEvidence: readonly string[];
+  readonly ciWorkflowText: string;
+  readonly handoffPackageScripts: Readonly<Record<string, string>>;
+  readonly queueTaskCount: number;
+  readonly ledgerExecutionCount: number;
+  readonly dependenciesInstalled: boolean;
+  readonly packageTypecheckPassed: boolean;
+  readonly packageTestsPassed: boolean;
+  readonly handoffScriptsExecuted: boolean;
+  readonly verifierPassed: boolean;
+  readonly ciRunCaptured: boolean;
+  readonly reportArtifactsCaptured: boolean;
+}
+
+export interface HandoffToolingRuntimeReadinessPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingRootScripts: readonly string[];
+  readonly missingReports: readonly string[];
+  readonly missingScriptFiles: readonly string[];
+  readonly missingDocs: readonly string[];
+  readonly missingCiEvidence: readonly string[];
+  readonly missingPackageScripts: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
+}
+
+export function buildHandoffToolingRuntimeReadinessPlan(
+  input: HandoffToolingRuntimeReadinessInput,
+): HandoffToolingRuntimeReadinessPlan {
+  const existingReports = new Set(input.existingReports);
+  const existingScriptFiles = new Set(input.existingScriptFiles);
+  const existingDocs = new Set(input.existingDocs);
+  const missingRootScripts = input.requiredRootScripts.filter((script) => !input.rootScripts[script]);
+  const missingReports = input.requiredReports.filter((report) => !existingReports.has(report));
+  const missingScriptFiles = input.requiredScriptFiles.filter((file) => !existingScriptFiles.has(file));
+  const missingDocs = input.requiredDocs.filter((doc) => !existingDocs.has(doc));
+  const missingCiEvidence = input.requiredCiEvidence.filter((needle) => !input.ciWorkflowText.includes(needle));
+  const missingPackageScripts = ["typecheck", "test"].filter((script) => !input.handoffPackageScripts[script]);
+  const blockers: string[] = [];
+
+  if (missingRootScripts.length > 0) {
+    blockers.push("Root handoff scripts must be wired in package.json.");
+  }
+  if (!String(input.rootScripts["handoff:all"] ?? "").includes("handoff:verify-tooling")) {
+    blockers.push("handoff:all must include handoff:verify-tooling.");
+  }
+  if (missingReports.length > 0) {
+    blockers.push("Handoff reports/manifests must exist for docs audit, gap audit, execution queue, and execution ledger.");
+  }
+  if (missingScriptFiles.length > 0) {
+    blockers.push("Handoff verifier and reporting scripts must exist.");
+  }
+  if (missingDocs.length > 0) {
+    blockers.push("Handoff docs and agent handoff files must exist.");
+  }
+  if (missingCiEvidence.length > 0) {
+    blockers.push("CI workflow must run and name the Phase 16 handoff tooling checks.");
+  }
+  if (missingPackageScripts.length > 0) {
+    blockers.push("@inkroute/handoff package must expose typecheck and test scripts.");
+  }
+  if (input.queueTaskCount <= 0) {
+    blockers.push("Agent execution queue must contain tasks.");
+  }
+  if (input.ledgerExecutionCount !== input.queueTaskCount) {
+    blockers.push("Agent execution ledger must contain one execution entry per queue task.");
+  }
+  if (!input.dependenciesInstalled) {
+    blockers.push("Workspace dependencies must install before handoff tooling verification is meaningful.");
+  }
+  if (!input.packageTypecheckPassed) {
+    blockers.push("@inkroute/handoff typecheck must pass.");
+  }
+  if (!input.packageTestsPassed) {
+    blockers.push("@inkroute/handoff tests must pass.");
+  }
+  if (!input.handoffScriptsExecuted) {
+    blockers.push("Handoff verify-docs, audit, next, verify-ledger, verify-tooling, and all scripts must execute.");
+  }
+  if (!input.verifierPassed) {
+    blockers.push("pnpm handoff:verify-tooling must pass.");
+  }
+  if (!input.ciRunCaptured) {
+    blockers.push("GitHub Actions CI run must capture Phase 16 handoff tooling evidence.");
+  }
+  if (!input.reportArtifactsCaptured) {
+    blockers.push("Handoff report artifacts must be captured or explicitly documented as unavailable.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingRootScripts,
+    missingReports,
+    missingScriptFiles,
+    missingDocs,
+    missingCiEvidence,
+    missingPackageScripts,
+    requiredCommands: [
+      "pnpm install",
+      "pnpm --filter @inkroute/handoff typecheck",
+      "pnpm --filter @inkroute/handoff test",
+      "pnpm handoff:verify-docs",
+      "pnpm handoff:audit",
+      "pnpm handoff:next",
+      "pnpm handoff:verify-ledger",
+      "pnpm handoff:verify-tooling",
+      "pnpm handoff:all",
+    ],
+    requiredEvidence: [
+      "Dependency install output and @inkroute/handoff typecheck/test output.",
+      "Handoff docs audit, gap audit, next-task queue, ledger verification, tooling verification, and aggregate handoff output.",
+      "Existing handoff docs, scripts, manifests, queue, and ledger artifacts.",
+      "CI workflow evidence naming Phase 16 handoff manifest/tooling checks.",
+      "Report artifacts or explicit documented blocker if CI artifact capture is unavailable.",
+    ],
+    blockers,
+  };
+}
+
+export type AgentTaskTrackingStatus = "not_created" | "created_redacted" | "linked_redacted" | "closed_redacted";
+
+export interface AgentTaskTrackingIssue {
+  readonly taskId: string;
+  readonly status: AgentTaskTrackingStatus;
+  readonly issueTitle: string;
+  readonly assigneeRole: AgentTarget;
+  readonly labels: readonly string[];
+  readonly gapIds: readonly string[];
+  readonly issueUrl: string;
+  readonly projectItemUrl: string;
+  readonly acceptanceEvidenceFields: readonly string[];
+}
+
+export interface AgentTaskTrackingReadinessInput {
+  readonly queueTasks: readonly AgentExecutionTask[];
+  readonly plannedIssues: readonly AgentTaskTrackingIssue[];
+  readonly defaultLabels: readonly string[];
+  readonly verifierPassed: boolean;
+  readonly githubIssuesCreated: boolean;
+  readonly githubProjectItemsLinked: boolean;
+  readonly handoffDocsLinked: boolean;
+  readonly gapTrackerLinked: boolean;
+  readonly statusUpdatesTraceable: boolean;
+}
+
+export interface AgentTaskTrackingReadinessPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingIssueTaskIds: readonly string[];
+  readonly unknownIssueTaskIds: readonly string[];
+  readonly incompleteIssueTaskIds: readonly string[];
+  readonly unsafeTrackingFields: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
+}
+
+const unsafeAgentTaskTrackingPatterns = [
+  /postgres(?:ql)?:\/\/[^"<>\s]+/i,
+  /sk_live_[A-Za-z0-9]+/,
+  /sk_test_[A-Za-z0-9]+/,
+  /gh[pousr]_[A-Za-z0-9_]{20,}/,
+  /-----BEGIN (?:RSA |EC |OPENSSH |)PRIVATE KEY-----/,
+  /\b\d{3}-\d{2}-\d{4}\b/,
+];
+
+function containsUnsafeAgentTaskTrackingField(value: string): boolean {
+  return unsafeAgentTaskTrackingPatterns.some((pattern) => pattern.test(value));
+}
+
+export function buildAgentTaskTrackingReadinessPlan(
+  input: AgentTaskTrackingReadinessInput,
+): AgentTaskTrackingReadinessPlan {
+  const queueTaskIds = new Set(input.queueTasks.map((task) => task.id));
+  const issueByTaskId = new Map(input.plannedIssues.map((issue) => [issue.taskId, issue]));
+  const missingIssueTaskIds = input.queueTasks.filter((task) => !issueByTaskId.has(task.id)).map((task) => task.id);
+  const unknownIssueTaskIds = input.plannedIssues.filter((issue) => !queueTaskIds.has(issue.taskId)).map((issue) => issue.taskId);
+  const incompleteIssueTaskIds: string[] = [];
+  const unsafeTrackingFields: string[] = [];
+
+  for (const task of input.queueTasks) {
+    const issue = issueByTaskId.get(task.id);
+    if (!issue) continue;
+
+    if (issue.assigneeRole !== task.target) {
+      incompleteIssueTaskIds.push(`${task.id}:assigneeRole`);
+    }
+    if (!issue.issueTitle.includes(task.title)) {
+      incompleteIssueTaskIds.push(`${task.id}:issueTitle`);
+    }
+    for (const gapId of task.gapIds) {
+      if (!issue.gapIds.includes(gapId)) {
+        incompleteIssueTaskIds.push(`${task.id}:${gapId}`);
+      }
+    }
+    for (const label of input.defaultLabels) {
+      if (!issue.labels.includes(label)) {
+        incompleteIssueTaskIds.push(`${task.id}:label:${label}`);
+      }
+    }
+    if (!issue.labels.some((label) => label.startsWith("priority:"))) {
+      incompleteIssueTaskIds.push(`${task.id}:priorityLabel`);
+    }
+    if (!issue.labels.some((label) => label.startsWith("target:"))) {
+      incompleteIssueTaskIds.push(`${task.id}:targetLabel`);
+    }
+    if (issue.acceptanceEvidenceFields.length < 4) {
+      incompleteIssueTaskIds.push(`${task.id}:acceptanceEvidenceFields`);
+    }
+    if (issue.status === "not_created" && (issue.issueUrl || issue.projectItemUrl)) {
+      incompleteIssueTaskIds.push(`${task.id}:prematureUrl`);
+    }
+    if (issue.status !== "not_created" && !issue.issueUrl) {
+      incompleteIssueTaskIds.push(`${task.id}:issueUrl`);
+    }
+    if ((issue.status === "linked_redacted" || issue.status === "closed_redacted") && !issue.projectItemUrl) {
+      incompleteIssueTaskIds.push(`${task.id}:projectItemUrl`);
+    }
+
+    const values = [
+      issue.taskId,
+      issue.issueTitle,
+      issue.assigneeRole,
+      ...issue.labels,
+      ...issue.gapIds,
+      issue.issueUrl,
+      issue.projectItemUrl,
+      ...issue.acceptanceEvidenceFields,
+    ];
+    values.forEach((value, index) => {
+      if (containsUnsafeAgentTaskTrackingField(value)) {
+        unsafeTrackingFields.push(`${task.id}:${index}`);
+      }
+    });
+  }
+
+  const blockers: string[] = [];
+  if (missingIssueTaskIds.length > 0) {
+    blockers.push("Every queued agent task must have a planned GitHub issue/project tracking item.");
+  }
+  if (unknownIssueTaskIds.length > 0) {
+    blockers.push("Agent task tracking sync must not include issues for tasks outside the queue.");
+  }
+  if (input.plannedIssues.length !== input.queueTasks.length) {
+    blockers.push("Planned issue count must match agent execution queue task count.");
+  }
+  if (incompleteIssueTaskIds.length > 0) {
+    blockers.push("Planned issues must match queue task title, target, gap IDs, labels, URL state, and acceptance evidence fields.");
+  }
+  if (unsafeTrackingFields.length > 0) {
+    blockers.push("Agent task tracking sync must not contain private project URLs, secrets, database URLs, PII, medical notes, or payment payloads.");
+  }
+  if (!input.verifierPassed) {
+    blockers.push("pnpm handoff:verify-task-sync must pass.");
+  }
+  if (!input.githubIssuesCreated) {
+    blockers.push("GitHub issues must be created for every queued agent task.");
+  }
+  if (!input.githubProjectItemsLinked) {
+    blockers.push("GitHub Project items must be linked or explicitly documented as unavailable for every task.");
+  }
+  if (!input.handoffDocsLinked) {
+    blockers.push("Handoff docs must link to the redacted issue/project tracking labels.");
+  }
+  if (!input.gapTrackerLinked) {
+    blockers.push("GAP_TRACKER.md must reference the task tracking evidence where relevant.");
+  }
+  if (!input.statusUpdatesTraceable) {
+    blockers.push("Task status updates must be traceable between queue, issues/projects, ledger, and gap tracker.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingIssueTaskIds,
+    unknownIssueTaskIds,
+    incompleteIssueTaskIds,
+    unsafeTrackingFields,
+    requiredCommands: [
+      "pnpm handoff:verify-task-sync",
+      "gh issue create or GitHub issue automation",
+      "GitHub Project item sync",
+      "pnpm handoff:verify-ledger",
+      "pnpm handoff:audit",
+    ],
+    requiredEvidence: [
+      "One redacted issue label or URL for every queued agent task.",
+      "Project item labels or documented blocker for every tracked task.",
+      "Labels for agent-task, gap-tracked, verification-required, target, and priority.",
+      "Gap IDs and acceptance evidence fields on every issue.",
+      "Handoff docs and GAP_TRACKER.md links to tracking evidence.",
+      "Traceable status updates from issue/project state into the execution ledger.",
+    ],
+    blockers,
+  };
+}

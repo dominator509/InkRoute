@@ -956,3 +956,1062 @@ export function buildDeploymentToolingRuntimeVerificationPlan(
     blockers,
   };
 }
+
+export type ProviderEnvironmentEvidenceStatus = "not_provisioned" | "provisioned_redacted" | "verified_redacted";
+export type ProviderEnvironmentName = "preview" | "staging" | "production";
+export type ProviderEnvironmentSurface = "web" | "dashboard" | "database" | "storage" | "mobile" | "observability" | "ci_cd";
+
+export interface ProviderEnvironmentSurfaceEvidence {
+  readonly surface: ProviderEnvironmentSurface;
+  readonly provider: string;
+  readonly status: ProviderEnvironmentEvidenceStatus;
+  readonly secretStore: string;
+  readonly requiredEvidence: readonly string[];
+}
+
+export interface ProviderEnvironmentEvidence {
+  readonly name: ProviderEnvironmentName;
+  readonly requiredBeforeProduction: boolean;
+  readonly surfaces: readonly ProviderEnvironmentSurfaceEvidence[];
+}
+
+export interface ProviderEnvironmentRuntimeReadinessInput {
+  readonly environments: readonly ProviderEnvironmentEvidence[];
+  readonly verifierPassed: boolean;
+  readonly providerSmokeChecksPassed: boolean;
+  readonly githubEnvironmentProtectionsConfigured: boolean;
+  readonly secretStoreDestinationsConfigured: boolean;
+  readonly redactedEvidenceLabelsRecorded: boolean;
+}
+
+export interface ProviderEnvironmentRuntimeReadinessPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingEnvironmentSurfacePairs: readonly string[];
+  readonly unverifiedEnvironmentSurfacePairs: readonly string[];
+  readonly unsafeEvidenceFields: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
+}
+
+const requiredProviderEnvironmentNames: readonly ProviderEnvironmentName[] = ["preview", "staging", "production"];
+const requiredProviderEnvironmentSurfaces: readonly ProviderEnvironmentSurface[] = [
+  "web",
+  "dashboard",
+  "database",
+  "storage",
+  "mobile",
+  "observability",
+  "ci_cd",
+];
+
+const unsafeProviderEvidencePatterns = [
+  /sk_live_[A-Za-z0-9]+/,
+  /sk_test_[A-Za-z0-9]+/,
+  /postgres(?:ql)?:\/\/[^"<>\s]+/i,
+  /ghp_[A-Za-z0-9_]+/,
+  /vercel_[A-Za-z0-9_]+/,
+  /SENTRY_AUTH_TOKEN\s*[:=]\s*["']?[A-Za-z0-9_-]+/i,
+];
+
+function containsUnsafeProviderEvidence(value: string): boolean {
+  return unsafeProviderEvidencePatterns.some((pattern) => pattern.test(value));
+}
+
+export function buildProviderEnvironmentRuntimeReadinessPlan(
+  input: ProviderEnvironmentRuntimeReadinessInput,
+): ProviderEnvironmentRuntimeReadinessPlan {
+  const environmentByName = new Map(input.environments.map((environment) => [environment.name, environment]));
+  const missingEnvironmentSurfacePairs: string[] = [];
+  const unverifiedEnvironmentSurfacePairs: string[] = [];
+  const unsafeEvidenceFields: string[] = [];
+
+  for (const environmentName of requiredProviderEnvironmentNames) {
+    const environment = environmentByName.get(environmentName);
+    if (!environment) {
+      for (const surface of requiredProviderEnvironmentSurfaces) {
+        missingEnvironmentSurfacePairs.push(`${environmentName}/${surface}`);
+      }
+      continue;
+    }
+
+    const surfaceByName = new Map(environment.surfaces.map((surface) => [surface.surface, surface]));
+    for (const surfaceName of requiredProviderEnvironmentSurfaces) {
+      const surface = surfaceByName.get(surfaceName);
+      if (!surface) {
+        missingEnvironmentSurfacePairs.push(`${environmentName}/${surfaceName}`);
+        continue;
+      }
+
+      if (surface.status !== "verified_redacted") {
+        unverifiedEnvironmentSurfacePairs.push(`${environmentName}/${surfaceName}`);
+      }
+      if (!surface.provider.trim()) {
+        unverifiedEnvironmentSurfacePairs.push(`${environmentName}/${surfaceName}:provider`);
+      }
+      if (!surface.secretStore.trim()) {
+        unverifiedEnvironmentSurfacePairs.push(`${environmentName}/${surfaceName}:secretStore`);
+      }
+      if (surface.requiredEvidence.length < 2) {
+        unverifiedEnvironmentSurfacePairs.push(`${environmentName}/${surfaceName}:requiredEvidence`);
+      }
+
+      const evidenceValues = [surface.provider, surface.secretStore, ...surface.requiredEvidence];
+      evidenceValues.forEach((value, index) => {
+        if (containsUnsafeProviderEvidence(value)) {
+          unsafeEvidenceFields.push(`${environmentName}/${surfaceName}:${index}`);
+        }
+      });
+    }
+  }
+
+  const blockers: string[] = [];
+  if (missingEnvironmentSurfacePairs.length > 0) {
+    blockers.push("Provider evidence manifest must cover preview, staging, and production for every required surface.");
+  }
+  if (unverifiedEnvironmentSurfacePairs.length > 0) {
+    blockers.push("Every provider environment surface must be provisioned and recorded as verified_redacted before launch.");
+  }
+  if (unsafeEvidenceFields.length > 0) {
+    blockers.push("Provider environment evidence must not include raw secrets, project ids, tokens, or connection strings.");
+  }
+  if (!input.verifierPassed) {
+    blockers.push("pnpm deploy:verify-provider-envs must pass.");
+  }
+  if (!input.providerSmokeChecksPassed) {
+    blockers.push("Provider smoke checks must pass for web, dashboard, database, storage, mobile, observability, and CI/CD.");
+  }
+  if (!input.githubEnvironmentProtectionsConfigured) {
+    blockers.push("GitHub preview, staging, and production environment protections must be configured.");
+  }
+  if (!input.secretStoreDestinationsConfigured) {
+    blockers.push("Provider secret-store destinations must be configured without committing secret values.");
+  }
+  if (!input.redactedEvidenceLabelsRecorded) {
+    blockers.push("Redacted provider evidence labels must be recorded for handoff without exposing identifiers.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingEnvironmentSurfacePairs,
+    unverifiedEnvironmentSurfacePairs,
+    unsafeEvidenceFields,
+    requiredCommands: [
+      "pnpm deploy:verify-provider-envs",
+      "pnpm deploy:check-env:strict",
+      "provider web/dashboard route smoke",
+      "provider database migration dry-run",
+      "provider storage private ACL smoke",
+      "eas build --profile preview",
+      "sentry release/source-map smoke",
+      "github environment protection audit",
+    ],
+    requiredEvidence: [
+      "Redacted preview, staging, and production web/dashboard URL labels with smoke output.",
+      "Managed Postgres branch/project label, migration dry-run log, and backup/restore proof.",
+      "Private storage bucket ACL proof and signed upload/download smoke evidence.",
+      "EAS project/channel labels, preview build artifact, and device QA proof.",
+      "Sentry project label, sample issue label, and source-map upload artifact.",
+      "GitHub Actions environment protection, required checks, secret-store destination, and artifact-retention proof.",
+    ],
+    blockers,
+  };
+}
+
+export type SecretManagementAuditStatus = "not_configured" | "configured_redacted" | "rotated_redacted" | "incident_rotated_redacted";
+
+export interface SecretManagementAuditItem {
+  readonly name: string;
+  readonly group: string;
+  readonly requiredForProduction: boolean;
+  readonly destinations: readonly string[];
+  readonly rotationCadenceDays: number;
+  readonly status: SecretManagementAuditStatus;
+  readonly requiredEvidence: readonly string[];
+}
+
+export interface SecretManagementRotationPolicy {
+  readonly defaultCadenceDays: number;
+  readonly incidentRotationHours: number;
+  readonly requiresDualControlForProduction: boolean;
+  readonly requiresMaskedCiLogProof: boolean;
+  readonly requiresProviderAuditLogReference: boolean;
+}
+
+export interface SecretManagementRuntimeReadinessInput {
+  readonly requiredProductionSecretNames: readonly string[];
+  readonly auditItems: readonly SecretManagementAuditItem[];
+  readonly rotationPolicy: SecretManagementRotationPolicy;
+  readonly verifierPassed: boolean;
+  readonly strictEnvironmentCheckPassed: boolean;
+  readonly providerSecretStoresConfigured: boolean;
+  readonly maskedCiLogsCaptured: boolean;
+  readonly providerAuditLogsCaptured: boolean;
+  readonly committedSecretScanPassed: boolean;
+  readonly incidentRotationProcessDocumented: boolean;
+}
+
+export interface SecretManagementRuntimeReadinessPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingProductionSecrets: readonly string[];
+  readonly unconfiguredProductionSecrets: readonly string[];
+  readonly unsafeEvidenceFields: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
+}
+
+const unsafeSecretManagementEvidencePatterns = [
+  /sk_live_[A-Za-z0-9]+/,
+  /sk_test_[A-Za-z0-9]+/,
+  /rk_live_[A-Za-z0-9]+/,
+  /postgres(?:ql)?:\/\/(?!USER:PASSWORD@HOST)[^"<>\s]+/i,
+  /gh[pousr]_[A-Za-z0-9_]{20,}/,
+  /vercel_[A-Za-z0-9_]{20,}/i,
+  /xox[baprs]-[A-Za-z0-9-]+/,
+  /-----BEGIN (?:RSA |EC |OPENSSH |)PRIVATE KEY-----/,
+];
+
+function containsUnsafeSecretManagementEvidence(value: string): boolean {
+  return unsafeSecretManagementEvidencePatterns.some((pattern) => pattern.test(value));
+}
+
+export function buildSecretManagementRuntimeReadinessPlan(
+  input: SecretManagementRuntimeReadinessInput,
+): SecretManagementRuntimeReadinessPlan {
+  const auditByName = new Map(input.auditItems.map((item) => [item.name, item]));
+  const missingProductionSecrets = input.requiredProductionSecretNames.filter((name) => !auditByName.has(name));
+  const unconfiguredProductionSecrets: string[] = [];
+  const unsafeEvidenceFields: string[] = [];
+
+  for (const name of input.requiredProductionSecretNames) {
+    const item = auditByName.get(name);
+    if (!item) continue;
+
+    if (item.status === "not_configured") {
+      unconfiguredProductionSecrets.push(name);
+    }
+    if (item.destinations.length === 0) {
+      unconfiguredProductionSecrets.push(`${name}:destinations`);
+    }
+    if (item.requiredEvidence.length < 2) {
+      unconfiguredProductionSecrets.push(`${name}:requiredEvidence`);
+    }
+    if (!Number.isFinite(item.rotationCadenceDays) || item.rotationCadenceDays <= 0 || item.rotationCadenceDays > 365) {
+      unconfiguredProductionSecrets.push(`${name}:rotationCadenceDays`);
+    }
+
+    const evidenceValues = [item.name, item.group, ...item.destinations, ...item.requiredEvidence];
+    evidenceValues.forEach((value, index) => {
+      if (containsUnsafeSecretManagementEvidence(value)) {
+        unsafeEvidenceFields.push(`${name}:${index}`);
+      }
+    });
+  }
+
+  const blockers: string[] = [];
+  if (missingProductionSecrets.length > 0) {
+    blockers.push("Every production secret from the environment contract must be represented in the secret-management audit.");
+  }
+  if (unconfiguredProductionSecrets.length > 0) {
+    blockers.push("Production secrets must be configured or rotated with redacted evidence, destinations, and valid rotation cadence.");
+  }
+  if (unsafeEvidenceFields.length > 0) {
+    blockers.push("Secret-management evidence must not contain raw secret values, tokens, connection strings, or private keys.");
+  }
+  if (!input.rotationPolicy.requiresDualControlForProduction) {
+    blockers.push("Production secret rotation must require dual control.");
+  }
+  if (!input.rotationPolicy.requiresMaskedCiLogProof) {
+    blockers.push("Secret rotation policy must require masked CI log proof.");
+  }
+  if (!input.rotationPolicy.requiresProviderAuditLogReference) {
+    blockers.push("Secret rotation policy must require provider audit-log references.");
+  }
+  if (!Number.isFinite(input.rotationPolicy.defaultCadenceDays) || input.rotationPolicy.defaultCadenceDays <= 0 || input.rotationPolicy.defaultCadenceDays > 365) {
+    blockers.push("Default secret rotation cadence must be between 1 and 365 days.");
+  }
+  if (!Number.isFinite(input.rotationPolicy.incidentRotationHours) || input.rotationPolicy.incidentRotationHours <= 0 || input.rotationPolicy.incidentRotationHours > 24) {
+    blockers.push("Incident secret rotation target must be between 1 and 24 hours.");
+  }
+  if (!input.verifierPassed) {
+    blockers.push("pnpm deploy:verify-secrets must pass.");
+  }
+  if (!input.strictEnvironmentCheckPassed) {
+    blockers.push("pnpm deploy:check-env:strict must pass against a real secret-backed environment.");
+  }
+  if (!input.providerSecretStoresConfigured) {
+    blockers.push("Provider secret stores must be configured without committing secret material.");
+  }
+  if (!input.maskedCiLogsCaptured) {
+    blockers.push("CI logs must prove secret values are masked.");
+  }
+  if (!input.providerAuditLogsCaptured) {
+    blockers.push("Provider audit logs must prove secret creation/rotation events.");
+  }
+  if (!input.committedSecretScanPassed) {
+    blockers.push("Committed-secret scanning must pass for env examples and deployment manifests.");
+  }
+  if (!input.incidentRotationProcessDocumented) {
+    blockers.push("Incident secret rotation process must be documented with owners.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingProductionSecrets,
+    unconfiguredProductionSecrets,
+    unsafeEvidenceFields,
+    requiredCommands: [
+      "pnpm deploy:verify-secrets",
+      "pnpm deploy:check-env:strict",
+      "committed secret scan",
+      "provider secret-store audit",
+      "masked CI log review",
+      "incident rotation tabletop",
+    ],
+    requiredEvidence: [
+      "Secret-management audit manifest with configured_redacted or rotated_redacted status for every production secret.",
+      "Strict environment check output from a real secret-backed preview/staging/production environment.",
+      "Provider secret-store destination labels and audit-log references without secret values.",
+      "Masked CI log artifacts proving secrets are not printed.",
+      "Rotation cadence, dual-control review, and incident rotation owner evidence.",
+      "Committed-secret scan output for .env.example, deployment manifests, and CI workflows.",
+    ],
+    blockers,
+  };
+}
+
+export type MobileDeploymentProfileStatus = "not_built" | "configured_redacted" | "built_redacted" | "verified_redacted";
+export type MobileDeploymentQaStatus = "not_run" | "configured_redacted" | "built_redacted" | "verified_redacted";
+export type MobileDeploymentPlatform = "ios" | "android";
+export type MobileDeploymentProfileName = "development" | "preview" | "production";
+export type MobileDeploymentQaId = "device-qa" | "push-token" | "crash-capture" | "ota-rollback" | "store-readiness";
+
+export interface MobileDeploymentPlatformEvidence {
+  readonly platform: MobileDeploymentPlatform;
+  readonly status: MobileDeploymentProfileStatus;
+  readonly evidenceRequired: readonly string[];
+}
+
+export interface MobileDeploymentProfileEvidence {
+  readonly profile: MobileDeploymentProfileName;
+  readonly distribution: "internal" | "store";
+  readonly channel: string;
+  readonly required: boolean;
+  readonly status: MobileDeploymentProfileStatus;
+  readonly evidenceRequired?: readonly string[];
+  readonly platforms?: readonly MobileDeploymentPlatformEvidence[];
+}
+
+export interface MobileDeploymentQaEvidence {
+  readonly id: MobileDeploymentQaId;
+  readonly status: MobileDeploymentQaStatus;
+  readonly requiredEvidence: readonly string[];
+}
+
+export interface MobileRuntimePolicyEvidence {
+  readonly expoRuntimeVersionPolicy: string;
+  readonly requiresStoreBuildWhen: readonly string[];
+  readonly otaAllowedWhen: readonly string[];
+}
+
+export interface MobileDeploymentRuntimeReadinessInput {
+  readonly buildProfiles: readonly MobileDeploymentProfileEvidence[];
+  readonly qaEvidence: readonly MobileDeploymentQaEvidence[];
+  readonly runtimePolicy: MobileRuntimePolicyEvidence;
+  readonly appRuntimeVersionPolicy: string;
+  readonly easChannelsConfigured: boolean;
+  readonly nativeCredentialsConfigured: boolean;
+  readonly pushCredentialsConfigured: boolean;
+  readonly sentryMobileConfigured: boolean;
+  readonly verifierPassed: boolean;
+  readonly redactedBuildArtifactsRecorded: boolean;
+  readonly storeReadinessReviewed: boolean;
+}
+
+export interface MobileDeploymentRuntimeReadinessPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingProfiles: readonly string[];
+  readonly incompleteProfiles: readonly string[];
+  readonly missingQaEvidence: readonly string[];
+  readonly incompleteQaEvidence: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
+}
+
+const requiredMobileProfiles: readonly MobileDeploymentProfileName[] = ["development", "preview", "production"];
+const requiredMobileQaEvidence: readonly MobileDeploymentQaId[] = ["device-qa", "push-token", "crash-capture", "ota-rollback", "store-readiness"];
+const requiredMobileRuntimeStoreBuildReasons = ["native dependencies change", "permissions change", "runtime version changes", "app config changes affect native capabilities"];
+const requiredMobileOtaConditions = ["preview binary is installed", "runtime versions match", "no native capability or permission changed", "rollback update has been rehearsed on preview channel"];
+
+export function buildMobileDeploymentRuntimeReadinessPlan(
+  input: MobileDeploymentRuntimeReadinessInput,
+): MobileDeploymentRuntimeReadinessPlan {
+  const profilesByName = new Map(input.buildProfiles.map((profile) => [profile.profile, profile]));
+  const qaById = new Map(input.qaEvidence.map((item) => [item.id, item]));
+  const missingProfiles = requiredMobileProfiles.filter((profile) => !profilesByName.has(profile));
+  const incompleteProfiles: string[] = [];
+  const missingQaEvidence = requiredMobileQaEvidence.filter((id) => !qaById.has(id));
+  const incompleteQaEvidence: string[] = [];
+
+  for (const profileName of requiredMobileProfiles) {
+    const profile = profilesByName.get(profileName);
+    if (!profile) continue;
+
+    if (profile.status !== "verified_redacted" && profile.status !== "built_redacted") {
+      incompleteProfiles.push(profileName);
+    }
+    const profileEvidenceCount = profile.evidenceRequired?.length ?? 0;
+    const platforms = profile.platforms ?? [];
+    if (profileEvidenceCount < 2 && platforms.length === 0) {
+      incompleteProfiles.push(`${profileName}:evidenceRequired`);
+    }
+    if ((profileName === "preview" || profileName === "production") && platforms.length < 2) {
+      incompleteProfiles.push(`${profileName}:platforms`);
+    }
+    for (const platform of platforms) {
+      if (platform.status !== "verified_redacted" && platform.status !== "built_redacted") {
+        incompleteProfiles.push(`${profileName}/${platform.platform}`);
+      }
+      if (platform.evidenceRequired.length < 2) {
+        incompleteProfiles.push(`${profileName}/${platform.platform}:evidenceRequired`);
+      }
+    }
+  }
+
+  for (const qaId of requiredMobileQaEvidence) {
+    const item = qaById.get(qaId);
+    if (!item) continue;
+    if (item.status !== "verified_redacted") {
+      incompleteQaEvidence.push(qaId);
+    }
+    if (item.requiredEvidence.length < 2) {
+      incompleteQaEvidence.push(`${qaId}:requiredEvidence`);
+    }
+  }
+
+  const missingStoreBuildReasons = requiredMobileRuntimeStoreBuildReasons.filter(
+    (reason) => !input.runtimePolicy.requiresStoreBuildWhen.includes(reason),
+  );
+  const missingOtaConditions = requiredMobileOtaConditions.filter(
+    (condition) => !input.runtimePolicy.otaAllowedWhen.includes(condition),
+  );
+  const blockers: string[] = [];
+
+  if (missingProfiles.length > 0) {
+    blockers.push("Mobile deployment evidence must include development, preview, and production EAS profiles.");
+  }
+  if (incompleteProfiles.length > 0) {
+    blockers.push("Mobile development, preview, and production profiles must have redacted build evidence for required platforms.");
+  }
+  if (missingQaEvidence.length > 0) {
+    blockers.push("Mobile deployment evidence must include device QA, push token, crash capture, OTA rollback, and store-readiness items.");
+  }
+  if (incompleteQaEvidence.length > 0) {
+    blockers.push("Mobile QA, push, crash, OTA rollback, and store-readiness evidence must be verified_redacted.");
+  }
+  if (input.runtimePolicy.expoRuntimeVersionPolicy !== input.appRuntimeVersionPolicy) {
+    blockers.push("Mobile app runtimeVersion policy must match deployment runtime policy.");
+  }
+  if (missingStoreBuildReasons.length > 0) {
+    blockers.push("Mobile runtime policy must require store builds for native dependency, permission, runtime, and native app-config changes.");
+  }
+  if (missingOtaConditions.length > 0) {
+    blockers.push("Mobile OTA policy must require preview binary, matching runtime, no native capability change, and rehearsed rollback.");
+  }
+  if (!input.easChannelsConfigured) {
+    blockers.push("EAS development, preview, and production channels must be configured.");
+  }
+  if (!input.nativeCredentialsConfigured) {
+    blockers.push("iOS and Android native signing credentials must be configured outside the repo.");
+  }
+  if (!input.pushCredentialsConfigured) {
+    blockers.push("Mobile push credentials and token registration proof must be configured.");
+  }
+  if (!input.sentryMobileConfigured) {
+    blockers.push("Sentry mobile project, source maps, and crash capture proof must be configured.");
+  }
+  if (!input.verifierPassed) {
+    blockers.push("pnpm deploy:verify-mobile must pass.");
+  }
+  if (!input.redactedBuildArtifactsRecorded) {
+    blockers.push("Redacted EAS build artifact labels must be recorded for handoff.");
+  }
+  if (!input.storeReadinessReviewed) {
+    blockers.push("App Store and Google Play readiness must be reviewed before production mobile launch.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingProfiles,
+    incompleteProfiles,
+    missingQaEvidence,
+    incompleteQaEvidence,
+    requiredCommands: [
+      "pnpm deploy:verify-mobile",
+      "eas build --profile development",
+      "eas build --profile preview --platform all",
+      "eas build --profile production --platform all",
+      "eas update --channel preview",
+      "mobile device QA checklist",
+      "mobile push token smoke",
+      "mobile synthetic crash capture",
+      "OTA rollback rehearsal",
+    ],
+    requiredEvidence: [
+      "Development, preview, and production EAS build artifact labels for iOS and Android where required.",
+      "Device QA checklist covering auth, booking triage, offline notes, travel updates, and reconnect behavior.",
+      "Push token registration and receipt proof.",
+      "Sentry mobile crash capture, source-map, and redaction proof.",
+      "Runtime policy decision showing when store builds are required versus OTA updates allowed.",
+      "OTA publish and rollback rehearsal evidence on preview channel.",
+      "App Store Connect and Google Play credential/readiness review labels.",
+    ],
+    blockers,
+  };
+}
+
+export type DatabaseOperationEvidenceStatus = "not_run" | "configured_redacted" | "passed_redacted" | "blocked_redacted";
+export type DatabaseOperationCheckId =
+  | "staging-branch-provisioned"
+  | "migration-dry-run"
+  | "destructive-change-scan"
+  | "staging-migration-apply"
+  | "seed-policy"
+  | "backup-restore-drill"
+  | "tenant-isolation-smoke"
+  | "branch-promotion";
+
+export interface DatabaseOperationCheckEvidence {
+  readonly id: DatabaseOperationCheckId;
+  readonly status: DatabaseOperationEvidenceStatus;
+  readonly requiredBeforeProduction: boolean;
+  readonly evidenceRequired: readonly string[];
+  readonly blockedSqlPatterns?: readonly string[];
+}
+
+export interface DatabaseOperationsRuntimeReadinessInput {
+  readonly providerStatus: "not_provisioned" | "configured_redacted" | "verified_redacted";
+  readonly requiredCommands: readonly string[];
+  readonly dbPackageScripts: Readonly<Record<string, string>>;
+  readonly operationChecks: readonly DatabaseOperationCheckEvidence[];
+  readonly verifierPassed: boolean;
+  readonly prismaGeneratePassed: boolean;
+  readonly prismaValidatePassed: boolean;
+  readonly migrationDryRunPassed: boolean;
+  readonly stagingMigrationApplied: boolean;
+  readonly backupRestoreDrillPassed: boolean;
+  readonly tenantIsolationSmokePassed: boolean;
+  readonly branchPromotionApproved: boolean;
+  readonly productionDataSafetyReviewed: boolean;
+}
+
+export interface DatabaseOperationsRuntimeReadinessPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingCommands: readonly string[];
+  readonly missingScripts: readonly string[];
+  readonly missingChecks: readonly string[];
+  readonly incompleteChecks: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
+}
+
+const requiredDatabaseOperationCommands = [
+  "pnpm db:generate",
+  "pnpm --filter @inkroute/db db:validate",
+  "pnpm db:migrate",
+  "pnpm db:seed",
+] as const;
+const requiredDatabaseOperationScripts: Readonly<Record<string, string>> = {
+  "db:validate": "prisma validate",
+  "db:generate": "prisma generate",
+  "db:migrate": "prisma migrate dev",
+  "db:seed": "tsx prisma/seed.ts",
+};
+const requiredDatabaseOperationCheckIds: readonly DatabaseOperationCheckId[] = [
+  "staging-branch-provisioned",
+  "migration-dry-run",
+  "destructive-change-scan",
+  "staging-migration-apply",
+  "seed-policy",
+  "backup-restore-drill",
+  "tenant-isolation-smoke",
+  "branch-promotion",
+];
+const requiredDatabaseBlockedSqlPatterns = ["DROP TABLE", "DROP COLUMN", "ALTER TABLE DROP", "TRUNCATE"] as const;
+
+export function buildDatabaseOperationsRuntimeReadinessPlan(
+  input: DatabaseOperationsRuntimeReadinessInput,
+): DatabaseOperationsRuntimeReadinessPlan {
+  const missingCommands = requiredDatabaseOperationCommands.filter((command) => !input.requiredCommands.includes(command));
+  const missingScripts = Object.entries(requiredDatabaseOperationScripts)
+    .filter(([script, expectedFragment]) => !String(input.dbPackageScripts[script] ?? "").includes(expectedFragment))
+    .map(([script]) => script);
+  const checkById = new Map(input.operationChecks.map((check) => [check.id, check]));
+  const missingChecks = requiredDatabaseOperationCheckIds.filter((checkId) => !checkById.has(checkId));
+  const incompleteChecks: string[] = [];
+
+  for (const checkId of requiredDatabaseOperationCheckIds) {
+    const check = checkById.get(checkId);
+    if (!check) continue;
+    if (check.requiredBeforeProduction !== true) {
+      incompleteChecks.push(`${checkId}:requiredBeforeProduction`);
+    }
+    if (check.status !== "passed_redacted") {
+      incompleteChecks.push(checkId);
+    }
+    if (check.evidenceRequired.length < 2) {
+      incompleteChecks.push(`${checkId}:evidenceRequired`);
+    }
+  }
+
+  const destructiveScan = checkById.get("destructive-change-scan");
+  for (const pattern of requiredDatabaseBlockedSqlPatterns) {
+    if (!destructiveScan?.blockedSqlPatterns?.includes(pattern)) {
+      incompleteChecks.push(`destructive-change-scan:${pattern}`);
+    }
+  }
+
+  const blockers: string[] = [];
+  if (input.providerStatus !== "verified_redacted") {
+    blockers.push("Database provider branch/project must be provisioned and verified with redacted evidence.");
+  }
+  if (missingCommands.length > 0) {
+    blockers.push("Database operations contract must list generate, validate, migrate, and seed commands.");
+  }
+  if (missingScripts.length > 0) {
+    blockers.push("@inkroute/db package scripts must expose Prisma validate, generate, migrate, and seed commands.");
+  }
+  if (missingChecks.length > 0) {
+    blockers.push("Database operations evidence must include every required operation check.");
+  }
+  if (incompleteChecks.length > 0) {
+    blockers.push("Database operation checks must pass with redacted evidence before production.");
+  }
+  if (!input.verifierPassed) {
+    blockers.push("pnpm deploy:verify-database-ops must pass.");
+  }
+  if (!input.prismaGeneratePassed || !input.prismaValidatePassed) {
+    blockers.push("Prisma generate and validate commands must pass.");
+  }
+  if (!input.migrationDryRunPassed) {
+    blockers.push("Migration dry-run and generated SQL review must pass before staging apply.");
+  }
+  if (!input.stagingMigrationApplied) {
+    blockers.push("Staging migration apply must pass against a production-like branch.");
+  }
+  if (!input.backupRestoreDrillPassed) {
+    blockers.push("Backup/restore drill must pass with RTO/RPO evidence.");
+  }
+  if (!input.tenantIsolationSmokePassed) {
+    blockers.push("Tenant-isolation smoke must pass after migration and seed.");
+  }
+  if (!input.branchPromotionApproved) {
+    blockers.push("Branch promotion must have approval and rollback evidence.");
+  }
+  if (!input.productionDataSafetyReviewed) {
+    blockers.push("Production data safety, seed policy, and destructive SQL gates must be reviewed.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingCommands,
+    missingScripts,
+    missingChecks,
+    incompleteChecks,
+    requiredCommands: [
+      "pnpm deploy:verify-database-ops",
+      "pnpm db:generate",
+      "pnpm --filter @inkroute/db db:validate",
+      "pnpm db:migrate",
+      "pnpm db:seed",
+      "database destructive SQL scan",
+      "database backup/restore drill",
+      "database tenant-isolation smoke",
+      "database branch promotion approval",
+    ],
+    requiredEvidence: [
+      "Redacted staging database branch/provider label and secret-store reference.",
+      "Prisma validate, generate, migration dry-run, and generated SQL review output.",
+      "Destructive SQL scan output covering DROP TABLE, DROP COLUMN, ALTER TABLE DROP, and TRUNCATE.",
+      "Staging migration apply log, migration id, seed output, and app compatibility smoke.",
+      "Backup snapshot, restore drill log, and RTO/RPO note.",
+      "Tenant-isolation smoke output and tenant-scoped query audit label.",
+      "Branch promotion approval, production branch label, and rollback branch/restore evidence.",
+    ],
+    blockers,
+  };
+}
+
+export type ProductionLaunchEvidenceStatus = "missing" | "partial_redacted" | "verified_redacted" | "blocked_redacted";
+export type ProductionLaunchApprovalStatus = "blocked" | "approved_redacted";
+export type ProductionLaunchEvidenceBundleId =
+  | "ci-build-test"
+  | "database-ops"
+  | "provider-and-secret-readiness"
+  | "security-privacy-trust"
+  | "accessibility-seo-performance"
+  | "mobile-release"
+  | "legal-approval"
+  | "rollback-and-operations";
+
+export interface ProductionLaunchEvidenceBundle {
+  readonly id: ProductionLaunchEvidenceBundleId;
+  readonly area: string;
+  readonly status: ProductionLaunchEvidenceStatus;
+  readonly requiredEvidence: readonly string[];
+  readonly sourceArtifacts: readonly string[];
+  readonly gapIds: readonly string[];
+}
+
+export interface ProductionLaunchEvidenceRuntimeReadinessInput {
+  readonly approvalStatus: ProductionLaunchApprovalStatus;
+  readonly requiredBundles: readonly ProductionLaunchEvidenceBundle[];
+  readonly productionChecklistBlockerCount: number;
+  readonly verifierPassed: boolean;
+  readonly ciBuildTestEvidenceVerified: boolean;
+  readonly providerEvidenceVerified: boolean;
+  readonly legalApprovalVerified: boolean;
+  readonly rollbackEvidenceVerified: boolean;
+  readonly explicitProductionApprovalCaptured: boolean;
+}
+
+export interface ProductionLaunchEvidenceRuntimeReadinessPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingBundles: readonly string[];
+  readonly incompleteBundles: readonly string[];
+  readonly unsafeEvidenceFields: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
+}
+
+const requiredProductionLaunchBundleIds: readonly ProductionLaunchEvidenceBundleId[] = [
+  "ci-build-test",
+  "database-ops",
+  "provider-and-secret-readiness",
+  "security-privacy-trust",
+  "accessibility-seo-performance",
+  "mobile-release",
+  "legal-approval",
+  "rollback-and-operations",
+];
+
+const unsafeProductionLaunchEvidencePatterns = [
+  /postgres(?:ql)?:\/\/[^"<>\s]+/i,
+  /sk_live_[A-Za-z0-9]+/,
+  /sk_test_[A-Za-z0-9]+/,
+  /gh[pousr]_[A-Za-z0-9_]{20,}/,
+  /-----BEGIN (?:RSA |EC |OPENSSH |)PRIVATE KEY-----/,
+  /\b\d{3}-\d{2}-\d{4}\b/,
+];
+
+function containsUnsafeProductionLaunchEvidence(value: string): boolean {
+  return unsafeProductionLaunchEvidencePatterns.some((pattern) => pattern.test(value));
+}
+
+export function buildProductionLaunchEvidenceRuntimeReadinessPlan(
+  input: ProductionLaunchEvidenceRuntimeReadinessInput,
+): ProductionLaunchEvidenceRuntimeReadinessPlan {
+  const bundleById = new Map(input.requiredBundles.map((bundle) => [bundle.id, bundle]));
+  const missingBundles = requiredProductionLaunchBundleIds.filter((bundleId) => !bundleById.has(bundleId));
+  const incompleteBundles: string[] = [];
+  const unsafeEvidenceFields: string[] = [];
+
+  for (const bundleId of requiredProductionLaunchBundleIds) {
+    const bundle = bundleById.get(bundleId);
+    if (!bundle) continue;
+
+    if (bundle.status !== "verified_redacted") {
+      incompleteBundles.push(bundleId);
+    }
+    if (bundle.requiredEvidence.length < 3) {
+      incompleteBundles.push(`${bundleId}:requiredEvidence`);
+    }
+    if (bundle.sourceArtifacts.length < 1) {
+      incompleteBundles.push(`${bundleId}:sourceArtifacts`);
+    }
+    if (bundle.gapIds.length < 1) {
+      incompleteBundles.push(`${bundleId}:gapIds`);
+    }
+
+    const evidenceValues = [bundle.area, ...bundle.requiredEvidence, ...bundle.sourceArtifacts, ...bundle.gapIds];
+    evidenceValues.forEach((value, index) => {
+      if (containsUnsafeProductionLaunchEvidence(value)) {
+        unsafeEvidenceFields.push(`${bundleId}:${index}`);
+      }
+    });
+  }
+
+  const allBundlesVerified = missingBundles.length === 0 && incompleteBundles.length === 0 && unsafeEvidenceFields.length === 0;
+  const blockers: string[] = [];
+  if (missingBundles.length > 0) {
+    blockers.push("Production launch evidence must include all required launch bundles.");
+  }
+  if (incompleteBundles.length > 0) {
+    blockers.push("Every production launch evidence bundle must be verified_redacted with required evidence, source artifacts, and gap ids.");
+  }
+  if (unsafeEvidenceFields.length > 0) {
+    blockers.push("Production launch evidence must not contain secrets, private keys, database URLs, PII, or payment payloads.");
+  }
+  if (input.approvalStatus !== "blocked" && !allBundlesVerified) {
+    blockers.push("Production launch approval must remain blocked until every evidence bundle is verified.");
+  }
+  if (input.productionChecklistBlockerCount < 8) {
+    blockers.push("Production launch checklist must retain all production-blocking launch categories.");
+  }
+  if (!input.verifierPassed) {
+    blockers.push("pnpm deploy:verify-launch-evidence must pass.");
+  }
+  if (!input.ciBuildTestEvidenceVerified) {
+    blockers.push("CI, build, test, and smoke evidence must be verified.");
+  }
+  if (!input.providerEvidenceVerified) {
+    blockers.push("Provider, secret, database, mobile, and sandbox evidence must be verified.");
+  }
+  if (!input.legalApprovalVerified) {
+    blockers.push("Legal approval evidence must be verified before production approval.");
+  }
+  if (!input.rollbackEvidenceVerified) {
+    blockers.push("Rollback and operations evidence must be verified before production approval.");
+  }
+  if (allBundlesVerified && input.approvalStatus !== "approved_redacted") {
+    blockers.push("Explicit production approval must be captured after all evidence bundles are verified.");
+  }
+  if (!input.explicitProductionApprovalCaptured) {
+    blockers.push("Explicit production approval record must be captured as a redacted label.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingBundles,
+    incompleteBundles,
+    unsafeEvidenceFields,
+    requiredCommands: [
+      "pnpm deploy:verify-launch-evidence",
+      "pnpm quality:all",
+      "pnpm test:unit",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm deploy:verify-database-ops",
+      "pnpm deploy:verify-provider-envs",
+      "pnpm deploy:verify-secrets",
+      "pnpm deploy:verify-mobile",
+      "production rollback drill",
+    ],
+    requiredEvidence: [
+      "CI install, typecheck, lint, unit, E2E/smoke, web build, and dashboard build artifacts.",
+      "Database migration, seed, backup/restore, tenant-isolation, provider, and secret evidence.",
+      "Security/privacy, accessibility, SEO, performance, and provider sandbox evidence.",
+      "Mobile build, device QA, push, crash, OTA rollback, and store-readiness evidence.",
+      "Legal approval labels for privacy, terms, consent, SMS, deposit, refund, and medical copy.",
+      "Rollback drill evidence for web, dashboard, mobile OTA, database restore, and incident owner coverage.",
+      "Explicit redacted production approval record after every bundle is verified.",
+    ],
+    blockers,
+  };
+}
+
+export type LaunchOperationEvidenceStatus = "not_configured" | "not_run" | "configured_redacted" | "passed_redacted" | "blocked_redacted";
+export type LaunchOperationCheckId =
+  | "on-call-coverage"
+  | "alert-routing"
+  | "support-escalation"
+  | "privacy-request-drill"
+  | "incident-drill"
+  | "rollback-drill"
+  | "production-monitoring"
+  | "communications-templates";
+
+export interface LaunchOperationsOwnerModel {
+  readonly incidentCommander: string;
+  readonly privacyOwner: string;
+  readonly supportOwner: string;
+  readonly releaseOwner: string;
+  readonly securityOwner: string;
+  readonly requiresNamedPrimaryAndBackup: boolean;
+}
+
+export interface LaunchOperationCheckEvidence {
+  readonly id: LaunchOperationCheckId;
+  readonly area: string;
+  readonly status: LaunchOperationEvidenceStatus;
+  readonly requiredBeforeProduction: boolean;
+  readonly sla: string;
+  readonly requiredEvidence: readonly string[];
+}
+
+export interface LaunchOperationsRuntimeReadinessInput {
+  readonly approvalStatus: "blocked" | "approved_redacted";
+  readonly ownerModel: LaunchOperationsOwnerModel;
+  readonly operationChecks: readonly LaunchOperationCheckEvidence[];
+  readonly verifierPassed: boolean;
+  readonly alertTestPassed: boolean;
+  readonly incidentDrillPassed: boolean;
+  readonly rollbackDrillPassed: boolean;
+  readonly privacyRequestDrillPassed: boolean;
+  readonly supportEscalationDrillPassed: boolean;
+  readonly monitoringDashboardVerified: boolean;
+  readonly communicationsTemplatesApproved: boolean;
+}
+
+export interface LaunchOperationsRuntimeReadinessPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingChecks: readonly string[];
+  readonly incompleteChecks: readonly string[];
+  readonly unassignedOwnerFields: readonly string[];
+  readonly unsafeEvidenceFields: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
+}
+
+const requiredLaunchOperationCheckIds: readonly LaunchOperationCheckId[] = [
+  "on-call-coverage",
+  "alert-routing",
+  "support-escalation",
+  "privacy-request-drill",
+  "incident-drill",
+  "rollback-drill",
+  "production-monitoring",
+  "communications-templates",
+];
+const launchOperationsOwnerFields = [
+  "incidentCommander",
+  "privacyOwner",
+  "supportOwner",
+  "releaseOwner",
+  "securityOwner",
+] as const;
+const unsafeLaunchOperationsEvidencePatterns = [
+  /https:\/\/hooks\.slack\.com\/services\//i,
+  /xox[baprs]-[A-Za-z0-9-]+/,
+  /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i,
+  /\b\d{3}[-.) ]?\d{3}[-. ]?\d{4}\b/,
+  /\b\d{3}-\d{2}-\d{4}\b/,
+];
+
+function containsUnsafeLaunchOperationsEvidence(value: string): boolean {
+  return unsafeLaunchOperationsEvidencePatterns.some((pattern) => pattern.test(value));
+}
+
+export function buildLaunchOperationsRuntimeReadinessPlan(
+  input: LaunchOperationsRuntimeReadinessInput,
+): LaunchOperationsRuntimeReadinessPlan {
+  const checkById = new Map(input.operationChecks.map((check) => [check.id, check]));
+  const missingChecks = requiredLaunchOperationCheckIds.filter((id) => !checkById.has(id));
+  const incompleteChecks: string[] = [];
+  const unsafeEvidenceFields: string[] = [];
+  const unassignedOwnerFields = launchOperationsOwnerFields.filter((field) => {
+    const value = input.ownerModel[field].trim().toLowerCase();
+    return value.length === 0 || value === "unassigned";
+  });
+
+  for (const checkId of requiredLaunchOperationCheckIds) {
+    const check = checkById.get(checkId);
+    if (!check) continue;
+
+    if (check.requiredBeforeProduction !== true) {
+      incompleteChecks.push(`${checkId}:requiredBeforeProduction`);
+    }
+    if (check.status !== "configured_redacted" && check.status !== "passed_redacted") {
+      incompleteChecks.push(checkId);
+    }
+    if (check.sla.trim().length < 12) {
+      incompleteChecks.push(`${checkId}:sla`);
+    }
+    if (check.requiredEvidence.length < 2) {
+      incompleteChecks.push(`${checkId}:requiredEvidence`);
+    }
+
+    const evidenceValues = [check.area, check.sla, ...check.requiredEvidence];
+    evidenceValues.forEach((value, index) => {
+      if (containsUnsafeLaunchOperationsEvidence(value)) {
+        unsafeEvidenceFields.push(`${checkId}:${index}`);
+      }
+    });
+  }
+
+  const ownerValues = launchOperationsOwnerFields.map((field) => input.ownerModel[field]);
+  ownerValues.forEach((value, index) => {
+    if (containsUnsafeLaunchOperationsEvidence(value)) {
+      unsafeEvidenceFields.push(`ownerModel:${index}`);
+    }
+  });
+
+  const allChecksReady = missingChecks.length === 0 && incompleteChecks.length === 0 && unsafeEvidenceFields.length === 0 && unassignedOwnerFields.length === 0;
+  const blockers: string[] = [];
+  if (missingChecks.length > 0) {
+    blockers.push("Launch operations evidence must include every required operations check.");
+  }
+  if (incompleteChecks.length > 0) {
+    blockers.push("Launch operations checks must be configured or passed with redacted evidence, SLAs, and production-required flags.");
+  }
+  if (unassignedOwnerFields.length > 0 || !input.ownerModel.requiresNamedPrimaryAndBackup) {
+    blockers.push("Launch operations must have named primary and backup ownership for incident, privacy, support, release, and security.");
+  }
+  if (unsafeEvidenceFields.length > 0) {
+    blockers.push("Launch operations evidence must not contain private contact details, alert webhooks, PII, medical notes, or raw support transcripts.");
+  }
+  if (input.approvalStatus !== "blocked" && !allChecksReady) {
+    blockers.push("Launch operations approval must remain blocked until all checks and owners are ready.");
+  }
+  if (!input.verifierPassed) {
+    blockers.push("pnpm deploy:verify-ops must pass.");
+  }
+  if (!input.alertTestPassed) {
+    blockers.push("Alert routing test must prove critical alerts reach the on-call owner.");
+  }
+  if (!input.incidentDrillPassed) {
+    blockers.push("Incident drill must prove severity classification, communications, and postmortem workflow.");
+  }
+  if (!input.rollbackDrillPassed) {
+    blockers.push("Rollback drill must cover web, dashboard, mobile OTA, and database restore or forward-fix.");
+  }
+  if (!input.privacyRequestDrillPassed) {
+    blockers.push("Privacy export/delete drill must prove identity verification, audit log, and SLA handling.");
+  }
+  if (!input.supportEscalationDrillPassed) {
+    blockers.push("Support escalation drill must prove acknowledgement SLA and privacy-safe escalation template.");
+  }
+  if (!input.monitoringDashboardVerified) {
+    blockers.push("Production monitoring dashboard, uptime, Sentry, and release-health evidence must be verified.");
+  }
+  if (!input.communicationsTemplatesApproved) {
+    blockers.push("Incident, maintenance, and privacy response templates must be approved before launch.");
+  }
+  if (allChecksReady && input.approvalStatus !== "approved_redacted") {
+    blockers.push("Launch operations approval must be captured after all operations checks are ready.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingChecks,
+    incompleteChecks,
+    unassignedOwnerFields,
+    unsafeEvidenceFields,
+    requiredCommands: [
+      "pnpm deploy:verify-ops",
+      "alert routing test",
+      "incident drill",
+      "rollback drill",
+      "privacy export/delete drill",
+      "support escalation drill",
+      "production monitoring dashboard review",
+      "communications template approval",
+    ],
+    requiredEvidence: [
+      "Named primary and backup owners for incident, privacy, support, release, and security operations.",
+      "Alert routing test proving critical alerts reach the on-call owner within SLA.",
+      "Incident drill notes with severity classification, tenant-safe communications, and postmortem template.",
+      "Rollback drill labels for web, dashboard, mobile OTA, and database restore or forward-fix.",
+      "Privacy request export/delete drill with identity verification and audit log labels.",
+      "Support escalation transcript label with privacy-safe redaction and acknowledgement SLA.",
+      "Production monitoring dashboard, uptime check, Sentry alert, and release-health proof.",
+      "Approved incident, maintenance, and privacy communications templates.",
+    ],
+    blockers,
+  };
+}
