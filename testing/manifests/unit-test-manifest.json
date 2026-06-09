@@ -1441,6 +1441,23 @@
                                          "Live synthetic critical pager proof pending",
                                          "Live synthetic high Slack proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-opentelemetry-runtime-static",
+                       "file":  "apps/web/tests/opentelemetry-runtime-static.test.ts",
+                       "priority":  "medium",
+                       "verifies":  [
+                                        "GAP-084 web middleware propagates x-request-id and W3C traceparent headers",
+                                        "GAP-084 structured telemetry records use redacted path-only metadata without raw URLs/query strings",
+                                        "GAP-084 OTLP exporter, high-risk suppression, ErrorReport correlation, no-PII proof, and live backend artifact gates remain explicit"
+                                    ],
+                       "blockedBy":  [
+                                         "Static OpenTelemetry runtime test execution pending",
+                                         "OpenTelemetry SDK/exporter package installation pending",
+                                         "Dashboard middleware instrumentation pending",
+                                         "Worker runtime instrumentation pending",
+                                         "Live OTLP trace/log backend ingestion proof pending"
+                                     ]
                    }
                ]
 }

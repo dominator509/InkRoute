@@ -271,6 +271,23 @@ jobs:
             coverage/alert-live-high-slack-redacted.json
             test-results/observability-alerts
           if-no-files-found: warn
+      - name: Run Phase 11 OpenTelemetry runtime contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/opentelemetry-runtime-static.test.ts
+
+      - name: Upload OpenTelemetry runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opentelemetry-runtime-artifacts
+          path: |
+            coverage/opentelemetry-runtime-middleware.json
+            coverage/opentelemetry-request-trace-propagation.json
+            coverage/opentelemetry-structured-log-redacted.json
+            coverage/opentelemetry-errorreport-correlation.json
+            coverage/opentelemetry-high-risk-export-suppression.json
+            coverage/opentelemetry-live-backend-proof-redacted.json
+            test-results/opentelemetry-runtime
+          if-no-files-found: warn
       - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
@@ -319,6 +336,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 

@@ -2,6 +2,7 @@
 import { buildSecurityRuntimeEnforcementPlan } from "@inkroute/security";
 import { evaluatePublicCanonicalRequest } from "./lib/canonicalRuntime";
 import { attributionCookiesForUrl, seoAttributionCookieMaxAgeSeconds } from "./lib/seoAnalyticsAttribution";
+import { applyTelemetryHeaders } from "./lib/telemetryRuntime";
 
 type RuntimeEnvironment = "development" | "preview" | "production";
 
@@ -85,7 +86,7 @@ function applySecurityHeaders(response: NextResponse, request: NextRequest): Nex
   }
   response.headers.set("X-InkRoute-Security-Runtime", plan.status);
 
-  return applyAttributionCookies(applyCanonicalHeaders(response, request), request);
+  return applyTelemetryHeaders(applyAttributionCookies(applyCanonicalHeaders(response, request), request), request);
 }
 
 export function middleware(request: NextRequest) {
@@ -125,6 +126,8 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)"],
 };
+
+
 
 
 
