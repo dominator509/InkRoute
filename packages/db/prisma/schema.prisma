@@ -367,6 +367,7 @@ model Tenant {
   legalAcceptanceAudits LegalAcceptanceAudit[]
   abuseEvents     AbuseEvent[]
   securityMiddlewareEvidence SecurityMiddlewareEvidence[]
+  securityCoverageRuns SecurityCoverageRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -1531,6 +1532,30 @@ model SecurityMiddlewareEvidence {
 
   @@index([tenantId, surface, environment])
   @@index([tenantId, routePattern])
+  @@index([tenantId, createdAt])
+}
+
+model SecurityCoverageRun {
+  id                    String   @id @default(cuid())
+  tenantId              String
+  runId                 String
+  commitSha             String?
+  status                String
+  suiteMatrix           Json
+  providerGatedSuites   Json?
+  artifactManifest      Json
+  failureFixturesPath   String?
+  dbIsolationCovered    Boolean  @default(false)
+  storageNegativeCovered Boolean @default(false)
+  privacyWorkflowCovered Boolean @default(false)
+  roleBoundaryCovered   Boolean  @default(false)
+  ciRunUrl              String?
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
   @@index([tenantId, createdAt])
 }
 

@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildSecurityCoverageRunPersistenceContract,
   securityAutomatedCoverageArtifactPaths,
   securityAutomatedCoverageCommands,
   securityAutomatedCoverageReadiness,
   securityAutomatedCoverageSuites,
+  securityCoverageRunPersistencePreview,
 } from "../lib/securityAutomatedCoverage";
 
 function readWorkspaceFile(path: string) {
@@ -73,6 +75,35 @@ describe("GAP-103 security automated coverage contract", () => {
     );
   });
 
+  it("pins durable SecurityCoverageRun rows, provider-gated suites, artifact manifests, and failure fixtures", () => {
+    const schema = readWorkspaceFile("packages/db/prisma/schema.prisma");
+    const contract = buildSecurityCoverageRunPersistenceContract({
+      tenantId: "tenant_demo",
+      runId: "security-run-demo",
+      commitSha: "abc1234",
+      status: "provider_gated",
+      suiteMatrix: securityAutomatedCoverageSuites,
+      providerGatedSuites: ["security-db-tenant-isolation", "security-storage-provider-negative"],
+      artifactManifest: securityAutomatedCoverageArtifactPaths,
+      failureFixturesPath: "coverage/security-failure-mode-fixtures.md",
+      dbIsolationCovered: false,
+      storageNegativeCovered: false,
+      privacyWorkflowCovered: false,
+      roleBoundaryCovered: false,
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/redacted",
+    });
+
+    expect(schema).toContain("model SecurityCoverageRun");
+    expect(schema).toContain("suiteMatrix");
+    expect(schema).toContain("artifactManifest");
+    expect(schema).toContain("@@unique([tenantId, runId])");
+    expect(contract.transactionWrites).toEqual(["SecurityCoverageRun", "AuditLog"]);
+    expect(contract.requiredCoverageFlags).toContain("storageNegativeCovered");
+    expect(contract.artifactFields).toContain("failureFixturesPath");
+    expect(contract.tenantIsolationKey).toBe("tenantId");
+    expect(securityCoverageRunPersistencePreview.modelName).toBe("SecurityCoverageRun");
+  });
+
   it("pins CI, manifest, checklist, and tracker references for GAP-103", () => {
     const ci = readWorkspaceFile(".github/workflows/ci.yml");
     const manifest = readWorkspaceFile("testing/manifests/unit-test-manifest.json");
@@ -83,6 +114,7 @@ describe("GAP-103 security automated coverage contract", () => {
     expect(ci).toContain("apps/web/tests/security-automated-coverage-static.test.ts");
     expect(ci).toContain("security-automated-coverage-artifacts");
     expect(manifest).toContain("unit-web-security-automated-coverage-static");
+    expect(manifest).toContain("SecurityCoverageRun Prisma model and app row contract are wired");
     expect(checklist).toContain("security");
     expect(tracker).toContain("apps/web/lib/securityAutomatedCoverage.ts");
     expect(tracker).toContain("live execution/provider security proof remains open");

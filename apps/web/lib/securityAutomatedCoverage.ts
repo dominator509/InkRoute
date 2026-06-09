@@ -19,6 +19,31 @@ export interface SecurityCoverageSuiteTarget {
   status: "wired" | "provider-gated" | "execution-gated";
 }
 
+export interface SecurityCoverageRunPersistenceInput {
+  tenantId: string;
+  runId: string;
+  commitSha?: string;
+  status: "blocked" | "running" | "passed" | "failed" | "provider_gated";
+  suiteMatrix: readonly SecurityCoverageSuiteTarget[];
+  providerGatedSuites: readonly string[];
+  artifactManifest: readonly string[];
+  failureFixturesPath?: string;
+  dbIsolationCovered: boolean;
+  storageNegativeCovered: boolean;
+  privacyWorkflowCovered: boolean;
+  roleBoundaryCovered: boolean;
+  ciRunUrl?: string;
+}
+
+export interface SecurityCoverageRunPersistenceContract {
+  modelName: "SecurityCoverageRun";
+  row: SecurityCoverageRunPersistenceInput;
+  transactionWrites: readonly ["SecurityCoverageRun", "AuditLog"];
+  requiredCoverageFlags: readonly ["dbIsolationCovered", "storageNegativeCovered", "privacyWorkflowCovered", "roleBoundaryCovered"];
+  artifactFields: readonly ["suiteMatrix", "providerGatedSuites", "artifactManifest", "failureFixturesPath"];
+  tenantIsolationKey: "tenantId";
+}
+
 export const securityAutomatedCoverageArtifactPaths = [
   "coverage/security-automated-coverage.json",
   "coverage/security-package-tests.json",
@@ -104,6 +129,19 @@ export const securityAutomatedCoverageSuites: readonly SecurityCoverageSuiteTarg
 
 export const securityAutomatedCoverageCommands = securityAutomatedCoverageSuites.map((suite) => suite.command);
 
+export function buildSecurityCoverageRunPersistenceContract(
+  input: SecurityCoverageRunPersistenceInput,
+): SecurityCoverageRunPersistenceContract {
+  return {
+    modelName: "SecurityCoverageRun",
+    row: input,
+    transactionWrites: ["SecurityCoverageRun", "AuditLog"],
+    requiredCoverageFlags: ["dbIsolationCovered", "storageNegativeCovered", "privacyWorkflowCovered", "roleBoundaryCovered"],
+    artifactFields: ["suiteMatrix", "providerGatedSuites", "artifactManifest", "failureFixturesPath"],
+    tenantIsolationKey: "tenantId",
+  };
+}
+
 export const securityAutomatedCoverageReadiness = buildSecurityAutomatedCoverageReadinessPlan({
   packageScripts: ["test", "typecheck"],
   securityPackageTestsPassed: false,
@@ -122,4 +160,18 @@ export const securityAutomatedCoverageReadiness = buildSecurityAutomatedCoverage
   authenticatedRoleBoundaryTestsPassed: false,
   coverageArtifactsCollected: true,
   failureModeFixturesDocumented: false,
+});
+
+export const securityCoverageRunPersistencePreview = buildSecurityCoverageRunPersistenceContract({
+  tenantId: "tenant_demo",
+  runId: "security-run-demo",
+  status: "provider_gated",
+  suiteMatrix: securityAutomatedCoverageSuites,
+  providerGatedSuites: securityAutomatedCoverageSuites.filter((suite) => suite.status === "provider-gated").map((suite) => suite.id),
+  artifactManifest: securityAutomatedCoverageArtifactPaths,
+  failureFixturesPath: "coverage/security-failure-mode-fixtures.md",
+  dbIsolationCovered: false,
+  storageNegativeCovered: false,
+  privacyWorkflowCovered: false,
+  roleBoundaryCovered: false,
 });

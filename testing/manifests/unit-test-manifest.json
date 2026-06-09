@@ -1775,7 +1775,7 @@
       "file": "apps/web/tests/security-automated-coverage-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-103 security automated coverage matrix covers package, route Vitest, middleware runtime, middleware static, web/dashboard Playwright, DB tenant-isolation, storage/provider negative, privacy workflow, and authenticated role-boundary suites",
+        "GAP-103 security automated coverage matrix covers package, route Vitest, middleware runtime, middleware static, web/dashboard Playwright, DB tenant-isolation, storage/provider negative, privacy workflow, authenticated role-boundary suites, and SecurityCoverageRun Prisma model/app row contract are wired",
         "GAP-103 existing Phase 13 route/runtime/static/E2E security specs remain pinned to the automated coverage evidence set",
         "GAP-103 CI retains security package, route, middleware, Playwright, DB, storage/provider, privacy workflow, role-boundary, coverage, and failure-fixture artifact paths"
       ],
@@ -1784,7 +1784,7 @@
         "Web/dashboard Playwright security execution pending",
         "DB-backed tenant-isolation security proof pending",
         "Storage/provider negative security proof pending",
-        "Privacy workflow, role-boundary, coverage artifact, and failure-fixture proof pending"
+        "Provider-backed SecurityCoverageRun transaction, privacy workflow, role-boundary, coverage artifact, and failure-fixture proof pending"
       ]
     },
     {
