@@ -1408,6 +1408,22 @@
                                          "No-PII persistence proof pending",
                                          "Provider forwarding replay smoke pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-provider-webhook-reconciliation-static",
+                       "file":  "apps/web/tests/provider-webhook-reconciliation-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-082 Sentry webhook reconciliation keeps deterministic idempotency keys, signature verification, and timing-safe comparison",
+                                        "GAP-082 route resolves tenant/error ownership hints, mutates ErrorReport status transactionally, and writes sanitized provider-delivery AuditLog metadata",
+                                        "GAP-082 provider payload summaries are redacted-only while dedicated unique delivery constraints and live Sentry replay proof remain tracked"
+                                    ],
+                       "blockedBy":  [
+                                         "Static provider webhook reconciliation test execution pending",
+                                         "Dedicated ProviderWebhookDelivery unique constraint pending",
+                                         "Live Sentry webhook replay proof pending",
+                                         "Provider status-update integration test pending"
+                                     ]
                    }
                ]
 }

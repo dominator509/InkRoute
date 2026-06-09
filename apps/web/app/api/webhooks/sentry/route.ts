@@ -1,6 +1,15 @@
-import { buildObservabilityReportDraft, buildAgenticBugFixWorkflow, buildGithubIssueDraft } from "@inkroute/observability";
+﻿import { buildObservabilityReportDraft, buildAgenticBugFixWorkflow, buildGithubIssueDraft } from "@inkroute/observability";
+import { prisma } from "@inkroute/db";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  buildProviderDeliveryId,
+  mapSentryActionToErrorStatus,
+  providerIssueOwnershipLookup,
+  providerWebhookReconciliationArtifactPaths,
+  providerWebhookReconciliationContract,
+  sanitizeProviderWebhookPayload,
+} from "../../../../lib/providerWebhookReconciliation";
 
 function verifySentrySignature(rawBody: string, signature: string, secret: string): boolean {
   const expected = createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
@@ -15,17 +24,13 @@ function verifySentrySignature(rawBody: string, signature: string, secret: strin
   return timingSafeEqual(expectedBuffer, actualBuffer);
 }
 
-function buildProviderDeliveryId(event: Record<string, unknown>, data: Record<string, unknown>): string {
-  const providerId = data.id ?? data.issueId ?? event.id ?? event.installationId ?? event.action ?? "unknown";
-  const action = typeof event.action === "string" ? event.action : "unknown";
-  return `sentry:${action}:${String(providerId)}`;
-}
-
-function mapSentryActionToErrorStatus(action: string): "open" | "triaged" | "resolved" | "ignored" {
-  if (["resolved", "closed"].includes(action)) return "resolved";
-  if (["ignored", "archived"].includes(action)) return "ignored";
-  if (["assigned", "regressed"].includes(action)) return "triaged";
-  return "open";
+function isDatabaseUnavailable(error: unknown): boolean {
+  if (!process.env.DATABASE_URL) return true;
+  if (!(error instanceof Error)) return false;
+  const code = (error as { code?: string }).code;
+  if (typeof code === "string" && ["P1000", "P1001", "P1002", "P1003", "P1008"].includes(code)) return true;
+  const message = error.message.toLowerCase();
+  return message.includes("connect") && message.includes("database");
 }
 
 export async function POST(request: NextRequest) {
@@ -78,6 +83,11 @@ export async function POST(request: NextRequest) {
   const data = typeof event.data === "object" && event.data !== null ? (event.data as Record<string, unknown>) : event;
   const issueTitle = typeof data.title === "string" ? data.title : typeof event.title === "string" ? event.title : "Sentry webhook event preview";
   const culprit = typeof data.culprit === "string" ? data.culprit : undefined;
+  const action = typeof event.action === "string" ? event.action : "unknown";
+  const providerDeliveryId = buildProviderDeliveryId(event, data);
+  const targetErrorStatus = mapSentryActionToErrorStatus(action);
+  const ownership = providerIssueOwnershipLookup(data);
+  const sanitizedProviderPayload = sanitizeProviderWebhookPayload(event, data);
 
   const report = buildObservabilityReportDraft({
     source: "webhook",
@@ -88,33 +98,92 @@ export async function POST(request: NextRequest) {
     release: typeof data.release === "string" ? data.release : "sentry-webhook-preview",
     metadata: {
       provider: "sentry",
-      eventType: typeof event.action === "string" ? event.action : "unknown",
-      providerDeliveryId: buildProviderDeliveryId(event, data),
+      eventType: action,
+      providerDeliveryId,
       rawPayloadShape: Object.keys(event).slice(0, 12),
+      sanitizedProviderPayload,
     },
     tags: { phase: "11", provider: "sentry" },
   });
-  const action = typeof event.action === "string" ? event.action : "unknown";
+
+  let persistence = "audit-log-seam";
+  let auditId: string | null = null;
+  let errorReportId: string | null = null;
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const matchedReport = ownership.stackHash
+        ? await tx.errorReport.findFirst({
+            where: { ...(ownership.tenantId ? { tenantId: ownership.tenantId } : {}), stackHash: ownership.stackHash },
+            select: { id: true, tenantId: true, status: true },
+          })
+        : null;
+
+      const updatedReport = matchedReport
+        ? await tx.errorReport.update({
+            where: { id: matchedReport.id },
+            data: { status: targetErrorStatus, ...(targetErrorStatus === "resolved" ? { resolvedAt: new Date() } : {}) },
+            select: { id: true, tenantId: true, status: true },
+          })
+        : null;
+
+      const audit = await tx.auditLog.create({
+        data: {
+          tenantId: updatedReport?.tenantId ?? ownership.tenantId ?? null,
+          action: "observability:sentry_webhook.reconcile",
+          entityType: "ProviderWebhookDelivery",
+          entityId: providerDeliveryId,
+          metadata: {
+            provider: "sentry",
+            providerDeliveryId,
+            idempotencyKey: providerDeliveryId,
+            replayProtection: "audit-log-idempotency-seam",
+            action,
+            targetErrorStatus,
+            matchedErrorReportId: updatedReport?.id ?? null,
+            ownership,
+            sanitizedProviderPayload,
+            rawPayloadStored: false,
+            requiredFutureConstraint: "dedicated unique ProviderWebhookDelivery(provider, providerDeliveryId)",
+          },
+        },
+        select: { id: true },
+      });
+
+      return { auditId: audit.id, errorReportId: updatedReport?.id ?? null };
+    });
+    auditId = result.auditId;
+    errorReportId = result.errorReportId;
+    persistence = errorReportId ? "error-report-status-updated" : "delivery-audit-persisted";
+  } catch (error) {
+    if (!isDatabaseUnavailable(error)) throw error;
+    persistence = "local-preview-database-unavailable";
+  }
 
   return NextResponse.json(
     {
       ok: true,
       data: {
         receivedSignatureHeader: "present",
-        providerDeliveryId: buildProviderDeliveryId(event, data),
-        idempotencyKey: buildProviderDeliveryId(event, data),
+        providerDeliveryId,
+        idempotencyKey: providerDeliveryId,
         reconciliation: {
           provider: "sentry",
           action,
-          targetErrorStatus: mapSentryActionToErrorStatus(action),
-          persistence: "not-yet-wired",
+          targetErrorStatus,
+          persistence,
+          auditId,
+          errorReportId,
+          ownership,
         },
         report,
         workflow: buildAgenticBugFixWorkflow(report),
         issueDraft: buildGithubIssueDraft(report),
+        providerWebhookReconciliation: providerWebhookReconciliationContract,
+        artifactPaths: providerWebhookReconciliationArtifactPaths,
         requiredNextWork: [
-          "Persist webhook deliveries idempotently and connect them to ErrorReport rows.",
-          "Map provider issue status transitions to tenant-scoped ErrorReport status updates.",
+          "Add a dedicated ProviderWebhookDelivery table with unique provider delivery id constraints for stronger replay protection.",
+          "Run live Sentry webhook replay tests against a verified provider delivery.",
           "Create sanitized GitHub issues only after human-approved repo integration is configured.",
         ],
       },
