@@ -2861,5 +2861,21 @@
         "Screen data replacement, expired-auth denial, cross-tenant denial, and offline replay proof pending",
         "Mobile typecheck/tests, device smoke, CI evidence, and secret-safe artifact proof pending"
       ]
+    }
+    ,{
+      "id": "unit-mobile-push-runtime-static",
+      "file": "apps/mobile/tests/mobile-push-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-044 mobile push runtime matrix covers notifications typecheck/tests, mobile typecheck, Expo project/access token/APNs/FCM credentials, tenant/user/device token persistence, opt-out persistence, delivery worker/logs, receipt worker, invalid-token suppression, safe tap routing, iOS/Android foreground/background/tap QA, CI evidence, and secret-safe artifacts",
+        "GAP-044 mobile app push contracts remain wired for registration, opt-out gates, delivery persistence adapter, receipt idempotency, invalid-token suppression, safe tap routing, and notification screen surfacing",
+        "GAP-044 readiness keeps Expo credentials, real token persistence, receipt worker execution, invalid-token suppression persistence, foreground/background/tap device QA, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static mobile push runtime test execution pending",
+        "Expo project/access token/APNs/FCM credential proof pending",
+        "Token persistence, opt-out persistence, delivery/receipt worker, and invalid-token suppression proof pending",
+        "Foreground/background/tap device smoke, mobile typecheck, CI evidence, and secret-safe artifact proof pending"
+      ]
     }  ]
 }
