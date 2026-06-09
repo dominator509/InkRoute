@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { buildBookingPostSubmitPlan, calculateTattooReadinessScore, emptyBookingDraft, type BookingDraft } from "@inkroute/booking";
+import {
+  buildBookingPostSubmitPlan,
+  buildBookingProviderHandoffRuntimeEvidencePlan,
+  calculateTattooReadinessScore,
+  emptyBookingDraft,
+  type BookingDraft,
+} from "@inkroute/booking";
 import { bookingRequestInputSchema, type BookingRequestInput } from "@inkroute/validators";
 import {
   evaluateEncryptionPolicy,
@@ -808,6 +814,28 @@ function buildResponseBase(
         bookingRequestId: bookingRequestId ?? "pending",
         submittedAt: new Date().toISOString(),
         draft: buildBookingDraftFromInput(input),
+      }),
+      providerHandoffRuntimeEvidencePlan: buildBookingProviderHandoffRuntimeEvidencePlan({
+        packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+        bookingTestsPassed: false,
+        bookingTypecheckPassed: false,
+        paymentsTestsPassed: false,
+        notificationsTestsPassed: false,
+        calendarTestsPassed: false,
+        acceptedBookingGateEnforced: true,
+        persistedWorkerQueueConfigured: true,
+        referenceUploadWorkerExecuted: shouldCollectReferenceUpload(input),
+        stripeDepositSessionSandboxPassed: false,
+        notificationQueueDeliverySandboxPassed: false,
+        calendarHoldSandboxPassed: false,
+        auditPayloadsPersisted: false,
+        retryPolicyVerified: false,
+        rollbackPathsVerified: false,
+        operatorReviewQueueConfigured: false,
+        providerIdempotencyConfigured: false,
+        providerSandboxEvidenceCaptured: false,
+        ciEvidenceCaptured: false,
+        secretSafeArtifactsCaptured: false,
       }),
       queueContract: {
         ...postPersistWorkflows,

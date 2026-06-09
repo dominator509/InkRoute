@@ -132,6 +132,18 @@ describe("booking request queue/consumer contracts", () => {
     expect(otherTenant).toHaveLength(0);
   });
 
+  it("keeps booking provider handoff runtime evidence attached to post-persist workflow contracts", async () => {
+    const routeSource = await import("node:fs").then((fs) =>
+      fs.readFileSync("apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts", "utf8"),
+    );
+
+    expect(routeSource).toContain("buildBookingProviderHandoffRuntimeEvidencePlan");
+    expect(routeSource).toContain("providerHandoffRuntimeEvidencePlan");
+    expect(routeSource).toContain("acceptedBookingGateEnforced: true");
+    expect(routeSource).toContain("persistedWorkerQueueConfigured: true");
+    expect(routeSource).toContain("providerIdempotencyConfigured: false");
+  });
+
   it("blocks booking flow runtime evidence until install, Prisma, Next build, browser smoke, DB smoke, and safe artifacts exist", () => {
     const plan = buildBookingFlowRuntimeEvidencePlan({
       packageScripts: { typecheck: "tsc --noEmit", test: "playwright test" },

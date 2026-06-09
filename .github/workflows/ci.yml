@@ -1718,6 +1718,34 @@ jobs:
             coverage/reference-upload-secret-safe-artifacts.json
             test-results/reference-upload-provider-runtime
           if-no-files-found: warn
+      - name: Run Phase 4 booking provider handoff runtime contracts
+        run: pnpm --filter @inkroute/booking test && pnpm vitest run apps/web/tests/booking-provider-handoff-runtime-static.test.ts apps/web/tests/booking-requests-contract.test.ts
+
+      - name: Upload Phase 4 booking provider handoff runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking-provider-handoff-runtime-artifacts
+          path: |
+            coverage/booking-provider-handoff-runtime.json
+            coverage/booking-provider-handoff-booking-typecheck.txt
+            coverage/booking-provider-handoff-booking-test.txt
+            coverage/booking-provider-handoff-payments-test.txt
+            coverage/booking-provider-handoff-notifications-test.txt
+            coverage/booking-provider-handoff-calendar-test.txt
+            coverage/booking-provider-handoff-route-plan.json
+            coverage/booking-provider-handoff-worker-queue.json
+            coverage/booking-provider-handoff-reference-upload-worker.json
+            coverage/booking-provider-handoff-stripe-sandbox-redacted.json
+            coverage/booking-provider-handoff-notification-sandbox-redacted.json
+            coverage/booking-provider-handoff-calendar-sandbox-redacted.json
+            coverage/booking-provider-handoff-audit-payloads.json
+            coverage/booking-provider-handoff-retry-rollback.json
+            coverage/booking-provider-handoff-idempotency.json
+            coverage/booking-provider-handoff-ci-evidence.json
+            coverage/booking-provider-handoff-secret-safe-artifacts.json
+            test-results/booking-provider-handoff-runtime
+          if-no-files-found: warn
       - name: Run Phase 10 SEO accessibility performance audit contracts
         run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/web/tests/seo-a11y-performance-audit-runtime-static.test.ts
 

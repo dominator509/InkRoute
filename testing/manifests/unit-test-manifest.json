@@ -2717,5 +2717,21 @@
         "Magic-byte validation, malware scan, quarantine, FileAsset/BookingReferenceImage/AuditLog persistence, and private ACL proof pending",
         "Anonymous/cross-tenant fetch denial, CI evidence, and secret-safe artifact proof pending"
       ]
+    }
+    ,{
+      "id": "unit-web-booking-provider-handoff-runtime-static",
+      "file": "apps/web/tests/booking-provider-handoff-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-034 booking provider handoff runtime matrix covers booking typecheck/tests, payments/notifications/calendar tests, accepted-booking gate, persisted worker queue, reference upload worker execution, Stripe deposit sandbox, notification sandbox, calendar hold sandbox, audit payloads, retry/rollback, operator review, idempotency, CI evidence, and secret-safe artifacts",
+        "GAP-034 booking route returns providerHandoffRuntimeEvidencePlan alongside post-submit workflow plans and tenant-scoped consumer execution",
+        "GAP-034 readiness keeps live provider sandbox, durable worker, rollback/idempotency, CI, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static booking provider handoff runtime test execution pending",
+        "Stripe, notification, calendar, and reference upload sandbox execution proof pending",
+        "Persisted worker, audit payload, retry/rollback, operator-review, and idempotency proof pending",
+        "CI evidence and secret-safe provider artifact proof pending"
+      ]
     }  ]
 }
