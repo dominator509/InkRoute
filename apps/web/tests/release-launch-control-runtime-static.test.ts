@@ -6,6 +6,7 @@ import {
   releaseLaunchControlRuntimeCommands,
   releaseLaunchControlRuntimeMatrix,
   releaseLaunchControlRuntimeReadiness,
+  releaseLaunchControlRunPersistenceContract,
 } from "../lib/releaseLaunchControlRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -24,6 +25,8 @@ describe("release launch control runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const releaseLaunchControlRunMigration = readRepoFile("packages/db/prisma/migrations/20260609033900_add_release_launch_control_runs/migration.sql");
 
   it("pins release launch commands, matrix rows, and redacted artifact paths", () => {
     expect(releaseLaunchControlRuntimeCommands).toEqual([
@@ -94,13 +97,44 @@ describe("release launch control runtime contract", () => {
     );
   });
 
+  it("pins the ReleaseLaunchControlRun persistence model and migration", () => {
+    expect(releaseLaunchControlRunPersistenceContract).toEqual({
+      prismaModel: "ReleaseLaunchControlRun",
+      tenantRelation: "releaseLaunchControlRuns",
+      migration: "20260609033900_add_release_launch_control_runs",
+      storesRunId: true,
+      storesCommitSha: true,
+      storesReadinessStatus: true,
+      storesCommandMatrix: true,
+      storesArtifactManifest: true,
+      storesPersistenceEvidence: true,
+      storesGovernanceEvidence: true,
+      storesMigrationGateEvidence: true,
+      storesRollbackEvidence: true,
+      storesMobileGovernanceEvidence: true,
+      storesCiArtifactEvidence: true,
+      storesSecretSafeArtifacts: true,
+    });
+    expect(prismaSchema).toContain("model ReleaseLaunchControlRun");
+    expect(prismaSchema).toContain("releaseLaunchControlRuns ReleaseLaunchControlRun[]");
+    expect(prismaSchema).toContain("persistenceEvidenceCaptured");
+    expect(prismaSchema).toContain("mobileGovernanceEvidenceCaptured");
+    expect(prismaSchema).toContain("secretSafeArtifactsCaptured");
+    expect(releaseLaunchControlRunMigration).toContain('CREATE TABLE "ReleaseLaunchControlRun"');
+    expect(releaseLaunchControlRunMigration).toContain('"commandMatrix" JSONB NOT NULL');
+    expect(releaseLaunchControlRunMigration).toContain('"artifactManifest" JSONB NOT NULL');
+    expect(releaseLaunchControlRunMigration).toContain('"ReleaseLaunchControlRun_tenantId_runId_key"');
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming release launch control readiness", () => {
     expect(ciWorkflow).toContain("Run Phase 12 release launch control runtime contracts");
     expect(ciWorkflow).toContain("release-launch-control-runtime-static.test.ts");
     expect(ciWorkflow).toContain("release-launch-control-runtime-artifacts");
     expect(ciWorkflow).toContain("coverage/release-launch-control-runtime.json");
     expect(unitManifest).toContain("unit-web-release-launch-control-runtime-static");
+    expect(unitManifest).toContain("ReleaseLaunchControlRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/releaseLaunchControlRuntime.ts");
+    expect(gapTracker).toContain("ReleaseLaunchControlRun Prisma model and app row contract");
     expect(gapTracker).toContain("live ReleaseRecord/FeatureFlag provider-backed persistence, protected environments, signed jobs, CI required checks, preview/prod approval dry runs, migration gates, incident-linked rollback, EAS governance, rollout controls, kill-switch drills, provider route tests, CI artifacts, and secret-safe evidence remain open");
   });
 });

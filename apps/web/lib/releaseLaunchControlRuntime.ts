@@ -16,6 +16,43 @@ export interface ReleaseLaunchControlRuntimeMatrixEntry {
   readonly status: ReleaseLaunchControlRuntimeStatus;
 }
 
+
+export interface ReleaseLaunchControlRunPersistenceContract {
+  readonly prismaModel: "ReleaseLaunchControlRun";
+  readonly tenantRelation: "releaseLaunchControlRuns";
+  readonly migration: "20260609033900_add_release_launch_control_runs";
+  readonly storesRunId: true;
+  readonly storesCommitSha: true;
+  readonly storesReadinessStatus: true;
+  readonly storesCommandMatrix: true;
+  readonly storesArtifactManifest: true;
+  readonly storesPersistenceEvidence: true;
+  readonly storesGovernanceEvidence: true;
+  readonly storesMigrationGateEvidence: true;
+  readonly storesRollbackEvidence: true;
+  readonly storesMobileGovernanceEvidence: true;
+  readonly storesCiArtifactEvidence: true;
+  readonly storesSecretSafeArtifacts: true;
+}
+
+export const releaseLaunchControlRunPersistenceContract = {
+  prismaModel: "ReleaseLaunchControlRun",
+  tenantRelation: "releaseLaunchControlRuns",
+  migration: "20260609033900_add_release_launch_control_runs",
+  storesRunId: true,
+  storesCommitSha: true,
+  storesReadinessStatus: true,
+  storesCommandMatrix: true,
+  storesArtifactManifest: true,
+  storesPersistenceEvidence: true,
+  storesGovernanceEvidence: true,
+  storesMigrationGateEvidence: true,
+  storesRollbackEvidence: true,
+  storesMobileGovernanceEvidence: true,
+  storesCiArtifactEvidence: true,
+  storesSecretSafeArtifacts: true,
+} as const satisfies ReleaseLaunchControlRunPersistenceContract;
+
 export const releaseLaunchControlRuntimeCommands = [
   "pnpm --filter @inkroute/releases typecheck",
   "pnpm --filter @inkroute/releases test",

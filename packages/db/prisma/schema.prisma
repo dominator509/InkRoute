@@ -412,6 +412,7 @@ model Tenant {
   testingLaunchExecutionRuns TestingLaunchExecutionRun[]
   legalReviewRuns LegalReviewRun[]
   deploymentLaunchEvidenceRuns DeploymentLaunchEvidenceRun[]
+  releaseLaunchControlRuns ReleaseLaunchControlRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3449,6 +3450,32 @@ model DeploymentLaunchEvidenceRun {
   secretSafeArtifactsCaptured     Boolean  @default(false)
   evidencePacketPath              String?
   providerArtifactSafetyPath      String?
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model ReleaseLaunchControlRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String
+  status                          String
+  commandMatrix                   Json
+  artifactManifest                Json
+  persistenceEvidenceCaptured     Boolean  @default(false)
+  governanceEvidenceCaptured      Boolean  @default(false)
+  migrationGateEvidenceCaptured   Boolean  @default(false)
+  rollbackEvidenceCaptured        Boolean  @default(false)
+  mobileGovernanceEvidenceCaptured Boolean @default(false)
+  ciArtifactEvidenceCaptured      Boolean  @default(false)
+  secretSafeArtifactsCaptured     Boolean  @default(false)
+  releaseHealthEnvelopePath       String?
+  rollbackDrillArtifactPath       String?
   createdAt                       DateTime @default(now())
   updatedAt                       DateTime @updatedAt
   tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)

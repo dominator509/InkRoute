@@ -2488,13 +2488,13 @@
       "file": "apps/web/tests/release-launch-control-runtime-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-015 release launch control runtime matrix covers release package typecheck/tests, provider-backed release/feature-flag routes, release-governance workflow execution, protected environment approval dry run, signed deployment provenance, migration gate dry run, incident-linked rollback, EAS update governance, feature-flag kill-switch drill, release-health smoke, CI artifacts, and secret-safe evidence",
+        "GAP-015 ReleaseLaunchControlRun Prisma model and app row contract plus release launch control runtime matrix covers release package typecheck/tests, provider-backed release/feature-flag routes, release-governance workflow execution, protected environment approval dry run, signed deployment provenance, migration gate dry run, incident-linked rollback, EAS update governance, feature-flag kill-switch drill, release-health smoke, CI artifacts, and secret-safe evidence",
         "GAP-015 release helper/tests, dashboard release and feature-flag routes, public release-health route, release-governance workflow, CI labels, artifact paths, and tracker row remain wired without claiming live release automation readiness",
         "GAP-015 readiness keeps persistence, RBAC, concurrency, audit, protected environments, signed jobs, CI, preview/prod dry runs, migrations, rollback, EAS, rollout, kill switch, provider routes, and secret-safe artifacts explicit blockers"
       ],
       "blockedBy": [
         "Static release launch control runtime test execution pending",
-        "Release package typecheck/test and provider-backed route proof pending",
+        "Provider-backed ReleaseLaunchControlRun transaction plus Release package typecheck/test and provider-backed route proof pending",
         "Protected environments, signed deployment provenance, CI checks, preview/prod approval dry runs, migration gate, and rollback proof pending",
         "EAS governance, rollout controls, kill-switch drills, release-health smoke, CI artifacts, and secret-safe artifact proof pending"
       ]
