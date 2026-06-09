@@ -6,7 +6,8 @@ import {
   secretManagementRuntimeArtifactPaths,
   secretManagementRuntimeCommands,
   secretManagementRuntimeMatrix,
-  secretManagementRuntimeReadiness
+  secretManagementRuntimeReadiness,
+  secretManagementRunPersistenceContract
 } from "../lib/secretManagementRuntime";
 
 const root = process.cwd();
@@ -19,6 +20,8 @@ const deploymentTests = read("packages/deployment/tests/deployment-readiness.tes
 const ciWorkflow = read(".github/workflows/ci.yml");
 const unitManifest = read("testing/manifests/unit-test-manifest.json");
 const gapTracker = read("GAP_TRACKER.md");
+const prismaSchema = read("packages/db/prisma/schema.prisma");
+const prismaMigration = read("packages/db/prisma/migrations/20260609018000_add_secret_management_runs/migration.sql");
 
 describe("GAP-115 secret management runtime wiring", () => {
   it("pins production secret names, commands, matrix entries, and redacted artifact paths", () => {
@@ -108,5 +111,44 @@ describe("GAP-115 secret management runtime wiring", () => {
     expect(unitManifest).toContain("unit-web-secret-management-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/secretManagementRuntime.ts");
     expect(gapTracker).toContain("live secret-store configuration proof remains open");
+  });
+
+  it("pins durable SecretManagementRun persistence without storing secret values", () => {
+    expect(secretManagementRunPersistenceContract.prismaModel).toBe("SecretManagementRun");
+    expect(secretManagementRunPersistenceContract.tenantRelation).toBe("secretManagementRuns");
+    expect(secretManagementRunPersistenceContract.uniqueKey).toEqual(["tenantId", "runId"]);
+    expect(secretManagementRunPersistenceContract.jsonFields).toEqual([
+      "productionSecretInventory",
+      "auditManifest",
+      "artifactManifest"
+    ]);
+    expect(secretManagementRunPersistenceContract.requiredBooleanProofs).toEqual(
+      expect.arrayContaining([
+        "providerSecretStoresConfigured",
+        "maskedCiLogsCaptured",
+        "providerAuditLogsCaptured",
+        "dualControlPolicyDocumented",
+        "committedSecretScanPassed",
+        "ciSecretManagementArtifactsCaptured"
+      ])
+    );
+    expect(secretManagementRunPersistenceContract.redactedArtifactFields).toEqual(
+      expect.arrayContaining([
+        "redactedProviderStoreArtifactPath",
+        "maskedCiLogArtifactPath",
+        "providerAuditLogArtifactPath",
+        "committedSecretScanArtifactPath"
+      ])
+    );
+    expect(prismaSchema).toContain("secretManagementRuns SecretManagementRun[]");
+    expect(prismaSchema).toContain("model SecretManagementRun");
+    expect(prismaSchema).toContain("productionSecretInventory               Json");
+    expect(prismaSchema).toContain("providerSecretStoresConfigured          Boolean  @default(false)");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(prismaMigration).toContain('CREATE TABLE "SecretManagementRun"');
+    expect(prismaMigration).toContain('"redactedProviderStoreArtifactPath" TEXT');
+    expect(prismaMigration).not.toContain("secretValue");
+    expect(unitManifest).toContain("SecretManagementRun Prisma model and app row contract");
+    expect(gapTracker).toContain("packages/db/prisma/migrations/20260609018000_add_secret_management_runs/migration.sql");
   });
 });

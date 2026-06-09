@@ -379,6 +379,7 @@ model Tenant {
   performanceLoadRuns PerformanceLoadRun[]
   deploymentToolingRuns DeploymentToolingRun[]
   providerEnvironmentRuns ProviderEnvironmentRun[]
+  secretManagementRuns SecretManagementRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -1927,6 +1928,40 @@ model ProviderEnvironmentRun {
   redactedEvidenceLabelsRecorded          Boolean  @default(false)
   ciProviderEnvironmentArtifactsCaptured  Boolean  @default(false)
   redactedHandoffArtifactPath             String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model SecretManagementRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  productionSecretInventory               Json
+  auditManifest                           Json
+  artifactManifest                        Json
+  verifierPassed                          Boolean  @default(false)
+  strictEnvCheckPassed                    Boolean  @default(false)
+  providerSecretStoresConfigured          Boolean  @default(false)
+  maskedCiLogsCaptured                    Boolean  @default(false)
+  providerAuditLogsCaptured               Boolean  @default(false)
+  rotationCadenceDocumented               Boolean  @default(false)
+  dualControlPolicyDocumented             Boolean  @default(false)
+  incidentRotationTabletopDocumented      Boolean  @default(false)
+  committedSecretScanPassed               Boolean  @default(false)
+  ciSecretManagementArtifactsCaptured     Boolean  @default(false)
+  redactedProviderStoreArtifactPath        String?
+  maskedCiLogArtifactPath                 String?
+  providerAuditLogArtifactPath            String?
+  incidentRotationTabletopArtifactPath     String?
+  committedSecretScanArtifactPath          String?
   ciRunUrl                                String?
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())

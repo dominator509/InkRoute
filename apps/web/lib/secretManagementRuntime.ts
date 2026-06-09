@@ -14,6 +14,32 @@ export interface SecretManagementRuntimeMatrixEntry {
   readonly status: SecretManagementRuntimeStatus;
 }
 
+export interface SecretManagementRunPersistenceContract {
+  readonly prismaModel: "SecretManagementRun";
+  readonly tenantRelation: "secretManagementRuns";
+  readonly uniqueKey: readonly ["tenantId", "runId"];
+  readonly jsonFields: readonly ["productionSecretInventory", "auditManifest", "artifactManifest"];
+  readonly requiredBooleanProofs: readonly [
+    "verifierPassed",
+    "strictEnvCheckPassed",
+    "providerSecretStoresConfigured",
+    "maskedCiLogsCaptured",
+    "providerAuditLogsCaptured",
+    "rotationCadenceDocumented",
+    "dualControlPolicyDocumented",
+    "incidentRotationTabletopDocumented",
+    "committedSecretScanPassed",
+    "ciSecretManagementArtifactsCaptured"
+  ];
+  readonly redactedArtifactFields: readonly [
+    "redactedProviderStoreArtifactPath",
+    "maskedCiLogArtifactPath",
+    "providerAuditLogArtifactPath",
+    "incidentRotationTabletopArtifactPath",
+    "committedSecretScanArtifactPath"
+  ];
+}
+
 export const secretManagementRequiredProductionSecretNames = [
   "DATABASE_URL",
   "DIRECT_URL",
@@ -97,6 +123,32 @@ export const secretManagementRuntimeMatrix: readonly SecretManagementRuntimeMatr
     status: "ci-gated"
   }
 ];
+
+export const secretManagementRunPersistenceContract: SecretManagementRunPersistenceContract = {
+  prismaModel: "SecretManagementRun",
+  tenantRelation: "secretManagementRuns",
+  uniqueKey: ["tenantId", "runId"],
+  jsonFields: ["productionSecretInventory", "auditManifest", "artifactManifest"],
+  requiredBooleanProofs: [
+    "verifierPassed",
+    "strictEnvCheckPassed",
+    "providerSecretStoresConfigured",
+    "maskedCiLogsCaptured",
+    "providerAuditLogsCaptured",
+    "rotationCadenceDocumented",
+    "dualControlPolicyDocumented",
+    "incidentRotationTabletopDocumented",
+    "committedSecretScanPassed",
+    "ciSecretManagementArtifactsCaptured"
+  ],
+  redactedArtifactFields: [
+    "redactedProviderStoreArtifactPath",
+    "maskedCiLogArtifactPath",
+    "providerAuditLogArtifactPath",
+    "incidentRotationTabletopArtifactPath",
+    "committedSecretScanArtifactPath"
+  ]
+};
 
 export const secretManagementRuntimeReadiness = buildSecretManagementRuntimeReadinessPlan({
   requiredProductionSecretNames: secretManagementRequiredProductionSecretNames,

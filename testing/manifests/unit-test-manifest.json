@@ -1975,13 +1975,13 @@
       "file": "apps/web/tests/secret-management-runtime-static.test.ts",
       "priority": "critical",
       "verifies": [
-        "GAP-115 secret management runtime matrix covers production secret coverage, redacted audit status, strict env checks, provider secret stores, masked CI logs, provider audit logs, rotation cadence, dual-control, incident rotation, committed-secret scanning, and CI artifacts",
+        "GAP-115 secret management runtime matrix covers production secret coverage, redacted audit status, strict env checks, provider secret stores, masked CI logs, provider audit logs, rotation cadence, dual-control, incident rotation, committed-secret scanning, SecretManagementRun Prisma model and app row contract, and CI artifacts",
         "GAP-115 secret audit manifest, environment contract, verifier script, strict env checker, and deployment readiness blockers stay aligned before live secret-store proof",
         "GAP-115 CI retains secret management runtime contract and redacted artifact paths without committing or printing secret values"
       ],
       "blockedBy": [
         "Static secret management runtime test execution pending",
-        "Provider secret-store configuration proof pending",
+        "Provider-backed SecretManagementRun transaction plus provider secret-store configuration proof pending",
         "Strict env check against real secret-backed environment proof pending",
         "Masked CI/provider audit log proof pending",
         "Committed-secret scan and incident rotation tabletop proof pending"
