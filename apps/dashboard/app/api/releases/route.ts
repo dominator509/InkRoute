@@ -1,8 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { createReleaseCandidate, createRollbackPlan, demoReleaseCandidate, buildReleaseHealthChecks } from "@inkroute/releases";
 import { releaseCreateInputSchema } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
+import {
+  buildOptimisticConcurrencyMetadata,
+  buildReleaseWorkflowOrchestrationMetadata,
+  buildTenantMembershipLookupMetadata,
+  releasePersistenceRbacArtifactPaths,
+  resolveReleaseApprovalState,
+} from "../../../lib/releaseControlPlane";
 
 type PersistedReleaseSummary = {
   id: string;
@@ -193,6 +200,9 @@ export async function POST(request: NextRequest) {
   }
 
   const input = parsed.data;
+  const rawInput = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const expectedVersionHeader = request.headers.get("x-release-expected-version");
+  const requestedApprovalState = typeof rawInput.approvalState === "string" ? rawInput.approvalState : request.headers.get("x-release-approval-state");
   const tenantId = input.tenantId ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
     return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot write release records for a different tenant." } }, { status: 403 });
@@ -221,9 +231,28 @@ export async function POST(request: NextRequest) {
     createdAt: new Date().toISOString(),
   });
 
+  const approvalState = resolveReleaseApprovalState({
+    channel: input.channel,
+    requestedState: requestedApprovalState,
+    productionBlocked: releaseCandidate.productionBlocked,
+    actorRole: actor.role,
+  });
+  const membershipLookup = buildTenantMembershipLookupMetadata({ actorSource: actor.source, actorRole: actor.role, tenantId });
+
   if (actor.source === "local-fallback") {
     return NextResponse.json(
-      { ok: true, source: actor.source, tenantId: actor.tenantId, persistence: "local-fallback", release: releaseCandidate, boundary: "Local fallback mode." },
+      {
+        ok: true,
+        source: actor.source,
+        tenantId: actor.tenantId,
+        persistence: "local-fallback",
+        release: releaseCandidate,
+        approval: { state: approvalState, membershipLookup },
+        concurrency: buildOptimisticConcurrencyMetadata({ expectedVersion: expectedVersionHeader, currentVersion: input.version }),
+        orchestration: buildReleaseWorkflowOrchestrationMetadata({ approvalState, channel: input.channel }),
+        artifactPaths: releasePersistenceRbacArtifactPaths,
+        boundary: "Local fallback mode.",
+      },
       { status: 201 },
     );
   }
@@ -231,6 +260,14 @@ export async function POST(request: NextRequest) {
   try {
     const persistedChannel = normalizeDbChannel(input.channel);
     const persisted = await prisma.$transaction(async (tx) => {
+      const existingVersion = await tx.releaseRecord.findFirst({
+        where: { tenantId, version: input.version },
+        select: { id: true, version: true },
+      });
+      const concurrency = buildOptimisticConcurrencyMetadata({ expectedVersion: expectedVersionHeader, currentVersion: existingVersion?.version ?? null, recordId: existingVersion?.id ?? null });
+      if (concurrency.conflict) {
+        throw Object.assign(new Error("RELEASE_CONCURRENCY_CONFLICT"), { code: "RELEASE_CONCURRENCY_CONFLICT", concurrency });
+      }
       const created = await tx.releaseRecord.create({
     data: {
       tenantId,
@@ -254,10 +291,15 @@ export async function POST(request: NextRequest) {
             version: input.version,
             channel: input.channel,
             source: "dashboard-api",
+            approvalState,
+            membershipLookup,
+            concurrency,
+            orchestration: buildReleaseWorkflowOrchestrationMetadata({ approvalState, channel: input.channel, recordId: created.id }),
+            artifactPaths: releasePersistenceRbacArtifactPaths,
           },
         },
       });
-      return { created, audit };
+      return { created, audit, concurrency };
     });
 
     const warning = input.channel === "staging" ? `Staging channel writes are persisted as ${STAGING_PERSISTENCE_CHANNEL} in ReleaseRecord until a native staging enum exists.` : undefined;
@@ -273,6 +315,10 @@ export async function POST(request: NextRequest) {
         persistedAt: persisted.created.createdAt.toISOString(),
       },
       auditId: persisted.audit.id,
+      approval: { state: approvalState, membershipLookup },
+      concurrency: persisted.concurrency,
+      orchestration: buildReleaseWorkflowOrchestrationMetadata({ approvalState, channel: input.channel, recordId: persisted.created.id }),
+      artifactPaths: releasePersistenceRbacArtifactPaths,
       rollback: createRollbackPlan(releaseCandidate, "0.11.0-phase11"),
       healthChecks: buildReleaseHealthChecks(releaseCandidate),
       ...(warning ? { warning } : {}),
@@ -286,6 +332,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "RELEASE_CONCURRENCY_CONFLICT") {
+      return NextResponse.json(
+        { ok: false, error: { code: "RELEASE_CONCURRENCY_CONFLICT", message: "Release candidate changed before approval/orchestration." }, concurrency: (error as { concurrency?: unknown }).concurrency },
+        { status: 409 },
+      );
+    }
+
     if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "P2002") {
       return NextResponse.json(
         { ok: false, error: { code: "RELEASE_UNIQUENESS_CONFLICT", message: "A release with that version already exists for this tenant." } },
@@ -296,3 +349,4 @@ export async function POST(request: NextRequest) {
     throw error;
   }
 }
+

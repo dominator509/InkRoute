@@ -1,8 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { defaultFeatureFlags, evaluateFeatureFlags, type FeatureFlagDefinition } from "@inkroute/releases";
 import { featureFlagPatchInputSchema } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
+import {
+  buildOptimisticConcurrencyMetadata,
+  buildTenantMembershipLookupMetadata,
+  releasePersistenceRbacArtifactPaths,
+} from "../../../lib/releaseControlPlane";
 
 type FeatureFlagChannel = "development" | "preview" | "staging" | "production" | "mobile-preview" | "mobile-production";
 type DbFeatureScope = "global" | "tenant" | "user";
@@ -319,6 +324,7 @@ export async function POST(request: NextRequest) {
   }
 
   const input = parsed.data;
+  const expectedVersionHeader = request.headers.get("x-feature-flag-expected-version");
   const tenantId = input.tenantId ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
     return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot update feature flags for a different tenant." } }, { status: 403 });
@@ -349,6 +355,9 @@ export async function POST(request: NextRequest) {
           description: input.description,
           rules: persistedRules,
         },
+        concurrency: buildOptimisticConcurrencyMetadata({ expectedVersion: expectedVersionHeader, currentVersion: input.key }),
+        membershipLookup: buildTenantMembershipLookupMetadata({ actorSource: actor.source, actorRole: actor.role, tenantId }),
+        artifactPaths: releasePersistenceRbacArtifactPaths,
         warning: "Local fallback mode: flag mutation is not persisted in database mode.",
         gapIds: ["GAP-088", "GAP-090", "GAP-093"],
       },
@@ -362,6 +371,11 @@ export async function POST(request: NextRequest) {
         where: { tenantId_key: { tenantId, key: input.key } },
         select: { id: true, scope: true, enabled: true, description: true },
       });
+      const concurrency = buildOptimisticConcurrencyMetadata({ expectedVersion: expectedVersionHeader, currentVersion: existing?.id ?? null, recordId: existing?.id ?? null });
+      if (concurrency.conflict) {
+        throw Object.assign(new Error("FEATURE_FLAG_CONCURRENCY_CONFLICT"), { code: "FEATURE_FLAG_CONCURRENCY_CONFLICT", concurrency });
+      }
+      const membershipLookup = buildTenantMembershipLookupMetadata({ actorSource: actor.source, actorRole: actor.role, tenantId });
       const featureFlag = await tx.featureFlag.upsert({
         where: { tenantId_key: { tenantId, key: input.key } },
         update: {
@@ -393,10 +407,15 @@ export async function POST(request: NextRequest) {
             source: "dashboard-api",
             previousEnabled: existing?.enabled ?? null,
             previousScope: existing?.scope ?? null,
+            concurrency,
+            membershipLookup,
+            approvalState: "settings-write-approved",
+            orchestrationHook: "feature-flag-runtime-invalidation-pending",
+            artifactPaths: releasePersistenceRbacArtifactPaths,
           },
         },
       });
-      return { featureFlag, audit, existing };
+      return { featureFlag, audit, existing, concurrency, membershipLookup };
     });
 
     return NextResponse.json({
@@ -412,6 +431,11 @@ export async function POST(request: NextRequest) {
         rules: persisted.featureFlag.rules ?? rules,
       },
       auditId: persisted.audit.id,
+      concurrency: persisted.concurrency,
+      membershipLookup: persisted.membershipLookup,
+      approval: { state: "settings-write-approved" },
+      orchestration: { hook: "feature-flag-runtime-invalidation-pending", dispatchEnabled: process.env.RELEASE_GOVERNANCE_DISPATCH_ENABLED === "true" },
+      artifactPaths: releasePersistenceRbacArtifactPaths,
       previous: persisted.existing
         ? {
             key: input.key,
@@ -423,6 +447,13 @@ export async function POST(request: NextRequest) {
       boundary: "Feature-flag writes now persist with RBAC and audit metadata.",
     }, { status: 201 });
   } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "FEATURE_FLAG_CONCURRENCY_CONFLICT") {
+      return NextResponse.json(
+        { ok: false, error: { code: "FEATURE_FLAG_CONCURRENCY_CONFLICT", message: "Feature flag changed before approval/orchestration." }, concurrency: (error as { concurrency?: unknown }).concurrency },
+        { status: 409 },
+      );
+    }
+
     if (isDatabaseUnavailable(error)) {
       return NextResponse.json({
         ok: true,
@@ -444,3 +475,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: { code: "FEATURE_FLAG_MUTATION_FAILED", message: "Feature flag could not be persisted." } }, { status: 500 });
   }
 }
+

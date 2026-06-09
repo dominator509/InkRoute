@@ -1509,6 +1509,23 @@
                                          "Release-governance GitHub Actions dry-run logs pending",
                                          "CI artifact attachment pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-dashboard-release-persistence-rbac-static",
+                       "file":  "apps/dashboard/tests/release-persistence-rbac-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "GAP-088 release writes expose approval state, optimistic concurrency, tenant membership metadata, and release-governance orchestration hooks",
+                                        "GAP-088 feature-flag writes expose expected-version conflict handling, previous-state audit metadata, approval state, and invalidation orchestration hooks",
+                                        "GAP-088 CI retains approval, concurrency, membership lookup, rendered workflow, orchestration, and DB-backed route proof artifacts without claiming live runtime proof"
+                                    ],
+                       "blockedBy":  [
+                                         "Static release persistence RBAC test execution pending",
+                                         "Server-side TenantMember lookup replacement pending",
+                                         "Rendered dashboard release workflow smoke pending",
+                                         "DB-backed release/feature-flag route integration proof pending",
+                                         "Release-governance protected-environment orchestration proof pending"
+                                     ]
                    }
                ]
 }
