@@ -2248,13 +2248,13 @@
       "file": "apps/web/tests/legal-review-runtime-static.test.ts",
       "priority": "critical",
       "verifies": [
-        "GAP-013 legal review runtime matrix covers privacy, terms, consent, medical acknowledgments, payments/refunds, SMS/notifications, aftercare, legal audit, quality gates, qualified counsel review, redacted evidence labels, placeholder replacement, privileged-advice exclusion, CI evidence, and production launch blocking",
+        "GAP-013 LegalReviewRun Prisma model and app row contract plus legal review runtime matrix covers privacy, terms, consent, medical acknowledgments, payments/refunds, SMS/notifications, aftercare, legal audit, quality gates, qualified counsel review, redacted evidence labels, placeholder replacement, privileged-advice exclusion, CI evidence, and production launch blocking",
         "GAP-013 legal packet, review contract, evidence manifest, verifier, package helper tests, CI labels, artifact paths, and tracker row remain wired without claiming attorney approval exists",
         "GAP-013 readiness keeps every approval item blocked until qualified counsel approval and redacted evidence labels are recorded"
       ],
       "blockedBy": [
         "Static legal review runtime test execution pending",
-        "Qualified counsel approval pending",
+        "Provider-backed LegalReviewRun transaction plus qualified counsel approval pending",
         "Redacted legal evidence labels and legal:verify-review pass pending",
         "Placeholder replacement and CI legal evidence pending"
       ]

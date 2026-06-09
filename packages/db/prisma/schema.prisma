@@ -410,6 +410,7 @@ model Tenant {
   notificationLaunchRuns NotificationLaunchRun[]
   observabilityLaunchRuns ObservabilityLaunchRun[]
   testingLaunchExecutionRuns TestingLaunchExecutionRun[]
+  legalReviewRuns LegalReviewRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3387,6 +3388,43 @@ model TestingLaunchExecutionRun {
   tenant                             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                          DateTime @default(now())
   updatedAt                          DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model LegalReviewRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  requiredReviewItemManifest              Json
+  approvedReviewItemManifest              Json
+  artifactManifest                        Json
+  redactedEvidenceLabelManifest           Json
+  launchBlockerManifest                   Json
+  legalReviewAuditPassed                  Boolean  @default(false)
+  redactedEvidenceLabelsPresent           Boolean  @default(false)
+  privilegedAdviceExcluded                Boolean  @default(false)
+  placeholderCopyReplacedAfterApproval    Boolean  @default(false)
+  legalVerifyCommandPassed                Boolean  @default(false)
+  ciQualityGateIncludesLegalReview        Boolean  @default(false)
+  ciLegalEvidenceCaptured                 Boolean  @default(false)
+  productionLaunchBlockedUntilApproval    Boolean  @default(false)
+  qualifiedCounselApprovalCaptured        Boolean  @default(false)
+  legalReviewAuditArtifactPath            String?
+  qualityGatesArtifactPath                String?
+  qualityAllArtifactPath                  String?
+  ciQualityJobArtifactPath                String?
+  counselApprovalRedactedArtifactPath     String?
+  placeholderReplacementArtifactPath      String?
+  privilegedAdviceExclusionArtifactPath   String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

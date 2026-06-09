@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   legalReviewRequiredArtifactPaths,
   legalReviewRequiredItemIds,
+  legalReviewRunPersistenceContract,
   legalReviewRuntimeArtifactPaths,
   legalReviewRuntimeCommands,
   legalReviewRuntimeMatrix,
@@ -20,6 +21,10 @@ describe("legal review runtime contract", () => {
   const legalVerifier = readRepoFile("scripts/legal/verify-legal-review.mjs");
   const qualityTests = readRepoFile("packages/quality/tests/quality-gates.test.ts");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const legalReviewMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609033700_add_legal_review_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -53,6 +58,33 @@ describe("legal review runtime contract", () => {
     ]);
     expect(legalReviewRuntimeArtifactPaths).toContain("coverage/legal-review-runtime.json");
     expect(legalReviewRuntimeArtifactPaths).toContain("test-results/legal-review-runtime");
+  });
+
+  it("pins the LegalReviewRun persistence model and migration", () => {
+    expect(legalReviewRunPersistenceContract.model).toBe("LegalReviewRun");
+    expect(legalReviewRunPersistenceContract.tenantRelation).toBe("legalReviewRuns");
+    expect(legalReviewRunPersistenceContract.migration).toBe("20260609033700_add_legal_review_runs");
+    expect(legalReviewRunPersistenceContract.jsonFields).toEqual([
+      "requiredReviewItemManifest",
+      "approvedReviewItemManifest",
+      "artifactManifest",
+      "redactedEvidenceLabelManifest",
+      "launchBlockerManifest",
+    ]);
+    expect(legalReviewRunPersistenceContract.evidenceBooleans).toContain("qualifiedCounselApprovalCaptured");
+    expect(legalReviewRunPersistenceContract.evidenceBooleans).toContain("privilegedAdviceExcluded");
+    expect(legalReviewRunPersistenceContract.evidenceBooleans).toContain("productionLaunchBlockedUntilApproval");
+    expect(legalReviewRunPersistenceContract.artifactFields).toContain("counselApprovalRedactedArtifactPath");
+    expect(legalReviewRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(prismaSchema).toContain("legalReviewRuns LegalReviewRun[]");
+    expect(prismaSchema).toContain("model LegalReviewRun");
+    expect(prismaSchema).toContain("redactedEvidenceLabelManifest");
+    expect(prismaSchema).toContain("qualifiedCounselApprovalCaptured");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(legalReviewMigration).toContain('CREATE TABLE "LegalReviewRun"');
+    expect(legalReviewMigration).toContain('"launchBlockerManifest" JSONB NOT NULL');
+    expect(legalReviewMigration).toContain('"qualifiedCounselApprovalCaptured" BOOLEAN NOT NULL DEFAULT false');
+    expect(legalReviewMigration).toContain('CREATE UNIQUE INDEX "LegalReviewRun_tenantId_runId_key"');
   });
 
   it("keeps legal packet, manifests, verifier, package helper tests, and scripts wired", () => {
@@ -89,6 +121,8 @@ describe("legal review runtime contract", () => {
     expect(ciWorkflow).toContain("legal-review-runtime-static.test.ts");
     expect(ciWorkflow).toContain("legal-review-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-legal-review-runtime-static");
+    expect(unitManifest).toContain("LegalReviewRun Prisma model and app row contract");
+    expect(gapTracker).toContain("LegalReviewRun");
     expect(gapTracker).toContain("apps/web/lib/legalReviewRuntime.ts");
     expect(gapTracker).toContain("live qualified-counsel approval, redacted approval evidence, placeholder replacement, legal audit pass, and CI legal evidence remain open");
   });

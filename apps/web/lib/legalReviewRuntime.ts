@@ -13,6 +13,74 @@ export interface LegalReviewRuntimeMatrixEntry {
   readonly status: LegalReviewRuntimeStatus;
 }
 
+export interface LegalReviewRunPersistenceContract {
+  readonly model: "LegalReviewRun";
+  readonly tenantRelation: "legalReviewRuns";
+  readonly migration: "20260609033700_add_legal_review_runs";
+  readonly jsonFields: readonly [
+    "requiredReviewItemManifest",
+    "approvedReviewItemManifest",
+    "artifactManifest",
+    "redactedEvidenceLabelManifest",
+    "launchBlockerManifest",
+  ];
+  readonly evidenceBooleans: readonly [
+    "legalReviewAuditPassed",
+    "redactedEvidenceLabelsPresent",
+    "privilegedAdviceExcluded",
+    "placeholderCopyReplacedAfterApproval",
+    "legalVerifyCommandPassed",
+    "ciQualityGateIncludesLegalReview",
+    "ciLegalEvidenceCaptured",
+    "productionLaunchBlockedUntilApproval",
+    "qualifiedCounselApprovalCaptured",
+  ];
+  readonly artifactFields: readonly [
+    "legalReviewAuditArtifactPath",
+    "qualityGatesArtifactPath",
+    "qualityAllArtifactPath",
+    "ciQualityJobArtifactPath",
+    "counselApprovalRedactedArtifactPath",
+    "placeholderReplacementArtifactPath",
+    "privilegedAdviceExclusionArtifactPath",
+    "ciRunUrl",
+  ];
+}
+
+export const legalReviewRunPersistenceContract: LegalReviewRunPersistenceContract = {
+  model: "LegalReviewRun",
+  tenantRelation: "legalReviewRuns",
+  migration: "20260609033700_add_legal_review_runs",
+  jsonFields: [
+    "requiredReviewItemManifest",
+    "approvedReviewItemManifest",
+    "artifactManifest",
+    "redactedEvidenceLabelManifest",
+    "launchBlockerManifest",
+  ],
+  evidenceBooleans: [
+    "legalReviewAuditPassed",
+    "redactedEvidenceLabelsPresent",
+    "privilegedAdviceExcluded",
+    "placeholderCopyReplacedAfterApproval",
+    "legalVerifyCommandPassed",
+    "ciQualityGateIncludesLegalReview",
+    "ciLegalEvidenceCaptured",
+    "productionLaunchBlockedUntilApproval",
+    "qualifiedCounselApprovalCaptured",
+  ],
+  artifactFields: [
+    "legalReviewAuditArtifactPath",
+    "qualityGatesArtifactPath",
+    "qualityAllArtifactPath",
+    "ciQualityJobArtifactPath",
+    "counselApprovalRedactedArtifactPath",
+    "placeholderReplacementArtifactPath",
+    "privilegedAdviceExclusionArtifactPath",
+    "ciRunUrl",
+  ],
+};
+
 export const legalReviewRequiredItemIds = [
   "privacy",
   "terms",
