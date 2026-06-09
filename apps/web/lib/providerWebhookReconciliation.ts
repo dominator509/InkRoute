@@ -1,4 +1,11 @@
-﻿import { buildProviderWebhookReconciliationPlan } from "@inkroute/observability";
+﻿import { buildProviderWebhookReconciliationPlan as buildObservabilityProviderWebhookReconciliationPlan } from "@inkroute/observability";
+import {
+  buildProviderWebhookRuntimeReadinessPlan,
+  type ProviderEventReconciliationPlan,
+  type ProviderWebhookRuntimeReadinessPlan,
+} from "@inkroute/notifications";
+import { emailProviderContract } from "./emailProvider";
+import { smsProviderContract } from "./smsProvider";
 
 export type ProviderWebhookErrorStatus = "open" | "triaged" | "in_progress" | "resolved" | "ignored";
 
@@ -138,7 +145,7 @@ export function buildSentryReconciliationPlan(input: {
 }
 
 export function buildProviderWebhookReconciliationContract() {
-  return buildProviderWebhookReconciliationPlan({
+  return buildObservabilityProviderWebhookReconciliationPlan({
     packageScripts: ["test", "typecheck"],
     routeTestsPassed: false,
     webTypecheckPassed: false,
@@ -157,3 +164,146 @@ export function buildProviderWebhookReconciliationContract() {
 }
 
 export const providerWebhookReconciliationContract = buildProviderWebhookReconciliationContract();
+
+
+export interface ProviderWebhookPersistenceRepository {
+  claimProviderEvent(input: { tenantId: string; idempotencyKey: string; provider: string; eventId: string }): Promise<"claimed" | "duplicate">;
+  persistProviderEvent(input: { tenantId: string; reconciliation: ProviderEventReconciliationPlan; redactedPayload: Record<string, unknown> }): Promise<void>;
+  updateDeliveryLogExactlyOnce(input: { tenantId: string; reconciliation: ProviderEventReconciliationPlan }): Promise<void>;
+  persistSuppression(input: { tenantId: string; reconciliation: ProviderEventReconciliationPlan }): Promise<void>;
+  persistInboundRouting(input: { tenantId: string; reconciliation: ProviderEventReconciliationPlan }): Promise<void>;
+  suppressInvalidPushToken(input: { tenantId: string; reconciliation: ProviderEventReconciliationPlan }): Promise<void>;
+  persistWebhookAudit(input: { tenantId: string; reconciliation: ProviderEventReconciliationPlan; redactedPayload: Record<string, unknown> }): Promise<void>;
+  alertFailedWebhook(input: { tenantId: string | null; reason: string; redactedPayload: Record<string, unknown> }): Promise<void>;
+}
+
+export interface ProviderWebhookContract {
+  runtimeReadiness: ProviderWebhookRuntimeReadinessPlan;
+  requiredRepositoryMethods: readonly (keyof ProviderWebhookPersistenceRepository)[];
+  emailWebhookReadiness: typeof emailProviderContract.webhookReadiness;
+  smsStopWebhookReadiness: typeof smsProviderContract.stopWebhookReadiness;
+  smsHelpWebhookReadiness: typeof smsProviderContract.helpWebhookReadiness;
+}
+
+export interface ProviderWebhookRouteBoundaryInput {
+  source: "email" | "sms" | "push";
+  tenantId?: string;
+  eventId: string;
+  eventType: string;
+  rawBodyBytes: number;
+  signatureHeaderPresent: boolean;
+  reconciliation: ProviderEventReconciliationPlan;
+}
+
+export function redactedWebhookPayloadSummary(input: ProviderWebhookRouteBoundaryInput): Record<string, unknown> {
+  return {
+    source: input.source,
+    tenantId: input.tenantId ?? "[tenant-unresolved]",
+    eventId: input.eventId,
+    eventType: input.eventType,
+    rawBodyBytes: input.rawBodyBytes,
+    signatureHeaderPresent: input.signatureHeaderPresent,
+    omittedFields: ["rawBody", "destination", "messageBody", "providerPayload", "signature", "token"],
+  };
+}
+
+export function buildProviderWebhookRouteBoundary(input: ProviderWebhookRouteBoundaryInput) {
+  return {
+    source: input.source,
+    status: input.tenantId ? "planned" as const : "blocked" as const,
+    tenantId: input.tenantId ?? null,
+    reconciliation: input.reconciliation,
+    redactedWebhookPayloadSummary: redactedWebhookPayloadSummary(input),
+    requiredWrites: [
+      "ProviderEvent",
+      "NotificationDelivery",
+      "SuppressionListEntry",
+      "MessageThread",
+      "PushToken",
+      "WebhookAuditLog",
+      "FailedWebhookAlert",
+    ] as const,
+    requiredControls: [
+      "Verify provider signature against the raw request body before side effects.",
+      "Claim ProviderEvent idempotency before delivery, suppression, inbound, or push-token mutations.",
+      "Apply exactly-once delivery updates under replay and concurrent callbacks.",
+      "Persist suppression, inbound routing, invalid push-token, audit, and failed-webhook alert outcomes in tenant scope.",
+      "Redact provider payloads, destinations, message bodies, private URLs, signatures, and tokens from logs and previews.",
+    ] as const,
+  };
+}
+
+export function buildProviderWebhookContract(): ProviderWebhookContract {
+  return {
+    runtimeReadiness: buildProviderWebhookRuntimeReadinessPlan({
+      packageScripts: ["test", "typecheck"],
+      notificationTestsPassed: false,
+      notificationTypecheckPassed: false,
+      webRouteTestsPassed: false,
+      emailSignatureVerificationImplemented: false,
+      smsSignatureVerificationImplemented: false,
+      pushReceiptTrustedSourceVerified: false,
+      rawBodyPreservedForVerification: true,
+      webhookSecretsConfigured: false,
+      replayProtectionPersistenceAvailable: false,
+      providerEventPersistenceAvailable: false,
+      deliveryLogPersistenceAvailable: false,
+      exactlyOnceDeliveryUpdatesEnforced: false,
+      suppressionPersistenceAvailable: false,
+      inboundRoutingPersistenceAvailable: false,
+      invalidPushTokenPersistenceAvailable: false,
+      tenantResolutionEnforced: true,
+      payloadRedactionEnforced: true,
+      failedWebhookAlertingConfigured: false,
+      providerSandboxWebhookTestsPassed: false,
+      routeInvalidSignatureTestsPassed: false,
+    }),
+    requiredRepositoryMethods: [
+      "claimProviderEvent",
+      "persistProviderEvent",
+      "updateDeliveryLogExactlyOnce",
+      "persistSuppression",
+      "persistInboundRouting",
+      "suppressInvalidPushToken",
+      "persistWebhookAudit",
+      "alertFailedWebhook",
+    ],
+    emailWebhookReadiness: emailProviderContract.webhookReadiness,
+    smsStopWebhookReadiness: smsProviderContract.stopWebhookReadiness,
+    smsHelpWebhookReadiness: smsProviderContract.helpWebhookReadiness,
+  };
+}
+
+export async function executeProviderWebhookReconciliation(
+  repository: ProviderWebhookPersistenceRepository,
+  input: {
+    tenantId?: string;
+    reconciliation: ProviderEventReconciliationPlan;
+    redactedPayload: Record<string, unknown>;
+  },
+): Promise<{ status: "processed" | "duplicate" | "blocked"; reconciliation: ProviderEventReconciliationPlan }> {
+  const tenantId = input.tenantId;
+  if (!tenantId) {
+    await repository.alertFailedWebhook({ tenantId: null, reason: "tenant_unresolved", redactedPayload: input.redactedPayload });
+    return { status: "blocked", reconciliation: input.reconciliation };
+  }
+
+  const claim = await repository.claimProviderEvent({
+    tenantId,
+    idempotencyKey: input.reconciliation.idempotencyKey,
+    provider: input.reconciliation.provider,
+    eventId: input.reconciliation.eventId,
+  });
+  if (claim === "duplicate") return { status: "duplicate", reconciliation: input.reconciliation };
+
+  await repository.persistProviderEvent({ tenantId, reconciliation: input.reconciliation, redactedPayload: input.redactedPayload });
+  if (input.reconciliation.shouldUpdateDeliveryLog) await repository.updateDeliveryLogExactlyOnce({ tenantId, reconciliation: input.reconciliation });
+  if (input.reconciliation.shouldSuppressDestination) await repository.persistSuppression({ tenantId, reconciliation: input.reconciliation });
+  if (input.reconciliation.shouldCreateInboundThread) await repository.persistInboundRouting({ tenantId, reconciliation: input.reconciliation });
+  if (input.reconciliation.shouldMarkPushTokenInactive) await repository.suppressInvalidPushToken({ tenantId, reconciliation: input.reconciliation });
+  await repository.persistWebhookAudit({ tenantId, reconciliation: input.reconciliation, redactedPayload: input.redactedPayload });
+
+  return { status: "processed", reconciliation: input.reconciliation };
+}
+
+export const providerWebhookContract = buildProviderWebhookContract();

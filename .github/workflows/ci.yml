@@ -1818,6 +1818,36 @@ jobs:
             test-results/notification-scheduler-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 9 provider webhook runtime contracts
+        run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/web/tests/provider-webhook-runtime-static.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/provider-webhook-routes.test.ts
+
+      - name: Upload Phase 9 provider webhook runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-webhook-runtime-artifacts
+          path: |
+            coverage/provider-webhook-runtime.json
+            coverage/provider-webhook-notifications-typecheck.txt
+            coverage/provider-webhook-notifications-test.txt
+            coverage/provider-webhook-route-tests.json
+            coverage/provider-webhook-contract-tests.json
+            coverage/provider-webhook-email-signature.json
+            coverage/provider-webhook-sms-signature.json
+            coverage/provider-webhook-push-receipt-source.json
+            coverage/provider-webhook-provider-event-persistence.json
+            coverage/provider-webhook-exactly-once-delivery.json
+            coverage/provider-webhook-suppression-persistence.json
+            coverage/provider-webhook-inbound-routing.json
+            coverage/provider-webhook-invalid-push-token.json
+            coverage/provider-webhook-failed-alerting.json
+            coverage/provider-webhook-sandbox-replay.json
+            coverage/provider-webhook-concurrent-callbacks.json
+            coverage/provider-webhook-ci-evidence.json
+            coverage/provider-webhook-secret-safe-artifacts.json
+            test-results/provider-webhook-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 9 notification and messaging lifecycle contracts
         run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/email-provider-static.test.ts apps/web/tests/sms-provider-static.test.ts apps/web/tests/preference-center-static.test.ts apps/web/tests/notification-automation-static.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/notification-persistence-static.test.ts apps/dashboard/tests/notification-scheduler-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
 
