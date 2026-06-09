@@ -1673,7 +1673,7 @@
       "file": "apps/web/tests/private-storage-signed-url-static.test.ts",
       "priority": "critical",
       "verifies": [
-        "GAP-097 private storage signed URL contract covers provider bucket resolution, server-owned object keys, tenant scope, scan-approved downloads, SignedUrlGrant persistence, revocation checks, and AuditLog actions",
+        "GAP-097 private storage signed URL contract covers provider bucket resolution, server-owned object keys, tenant scope, scan-approved downloads, SignedUrlGrant Prisma model and app row contract are wired, revocation checks, and AuditLog actions",
         "GAP-097 revoked, expired, unscanned, unsafe private-original, and approved public-derivative cases remain enforced through package access rules",
         "GAP-097 CI retains provider env, private ACL denial, signed upload/download, revocation, grant persistence, and public derivative artifact paths without exposing secrets"
       ],
@@ -1681,7 +1681,7 @@
         "Static private storage signed URL test execution pending",
         "S3/Supabase provider signing proof pending",
         "Private bucket ACL denial proof pending",
-        "SignedUrlGrant revocation persistence proof pending",
+        "Provider-backed SignedUrlGrant transaction execution proof pending",
         "Approved derivative public/private original denial integration proof pending"
       ]
     },

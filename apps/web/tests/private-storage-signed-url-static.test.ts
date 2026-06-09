@@ -3,9 +3,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   buildPrivateStorageSignedUrlContract,
+  buildPrivateStorageSignedUrlGrantPersistenceContract,
   privateStorageProviderEnvNames,
   privateStorageSignedUrlArtifactPaths,
   privateStorageSignedUrlCommands,
+  privateStorageSignedUrlGrantPersistencePreview,
   privateStorageSignedUrlPreview,
   privateStorageSignedUrlRuntimeContract,
 } from "../lib/privateStorageSignedUrls";
@@ -27,6 +29,33 @@ describe("GAP-097 private storage signed URL contract", () => {
     expect(source).toContain("write-private-storage-audit-log");
     expect(privateStorageSignedUrlPreview.plan.status).toBe("provider_gated");
     expect(privateStorageSignedUrlPreview.requiredWrites).toEqual(["FileAsset", "AuditLog", "SignedUrlGrant"]);
+  });
+
+  it("pins durable SignedUrlGrant persistence rows, revocation lookup, and redacted audit actions", () => {
+    const schema = readWorkspaceFile("packages/db/prisma/schema.prisma");
+    const contract = buildPrivateStorageSignedUrlGrantPersistenceContract({
+      tenantId: "tenant_demo",
+      fileAssetId: "fileasset_demo",
+      issuedByUserId: "user_demo",
+      recipientUserId: "client_demo",
+      operation: "download",
+      scope: "download",
+      bucket: "inkroute-private",
+      objectKey: "private/tenant_demo/reference/fileasset_demo.jpg",
+      signedUrlHash: "sha256:redacted",
+      expiresAt: "2026-06-09T00:15:00.000Z",
+      revokedAt: "2026-06-09T00:05:00.000Z",
+      revokeReason: "manual_revocation",
+    });
+
+    expect(schema).toContain("model SignedUrlGrant");
+    expect(schema).toContain("signedUrlHash");
+    expect(schema).toContain("@@index([tenantId, objectKey])");
+    expect(contract.transactionWrites).toEqual(["FileAsset", "SignedUrlGrant", "AuditLog"]);
+    expect(contract.auditActions).toContain("private_storage.signed_url.revoked");
+    expect(contract.redactedFields).toContain("signedUrlHash");
+    expect(contract.revocationCheck).toBe("tenant_id_file_asset_object_key_revoked_at");
+    expect(privateStorageSignedUrlGrantPersistencePreview.modelName).toBe("SignedUrlGrant");
   });
 
   it("rejects revoked, expired, unscanned, and unsafe derivative access while preserving public derivative separation", () => {
@@ -112,6 +141,7 @@ describe("GAP-097 private storage signed URL contract", () => {
     expect(privateStorageSignedUrlCommands).toContain("S3/Supabase private bucket ACL denial test");
     expect(privateStorageSignedUrlCommands).toContain("SignedUrlGrant expiry and revocation persistence test");
     expect(privateStorageSignedUrlArtifactPaths).toContain("coverage/private-storage-fileasset-grant-persistence.json");
+    expect(manifest).toContain("SignedUrlGrant Prisma model and app row contract are wired");
     expect(ci).toContain("Run Phase 13 private storage signed URL contracts");
     expect(ci).toContain("apps/web/tests/private-storage-signed-url-static.test.ts");
     expect(ci).toContain("private-storage-signed-url-artifacts");

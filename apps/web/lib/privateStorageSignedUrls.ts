@@ -35,6 +35,30 @@ export interface PrivateStorageSignedUrlInput {
   publicDerivativeObjectKey?: string;
 }
 
+export interface PrivateStorageSignedUrlGrantPersistenceInput {
+  tenantId: string;
+  fileAssetId: string;
+  issuedByUserId: string;
+  recipientUserId?: string;
+  operation: StorageAccessOperation;
+  scope: "upload" | "download" | "public_derivative";
+  bucket: string;
+  objectKey: string;
+  signedUrlHash?: string;
+  expiresAt: string;
+  revokedAt?: string;
+  revokeReason?: string;
+}
+
+export interface PrivateStorageSignedUrlGrantPersistenceContract {
+  modelName: "SignedUrlGrant";
+  row: PrivateStorageSignedUrlGrantPersistenceInput;
+  transactionWrites: readonly ["FileAsset", "SignedUrlGrant", "AuditLog"];
+  auditActions: readonly ["private_storage.signed_url.created", "private_storage.signed_url.revoked"];
+  redactedFields: readonly ["signedUrl", "signedUrlHash"];
+  revocationCheck: "tenant_id_file_asset_object_key_revoked_at";
+}
+
 export const privateStorageProviderEnvNames = [
   "S3_ENDPOINT",
   "S3_REGION",
@@ -66,6 +90,19 @@ export const privateStorageSignedUrlCommands = [
   "SignedUrlGrant expiry and revocation persistence test",
   "approved derivative public-read integration test",
 ] as const;
+
+export function buildPrivateStorageSignedUrlGrantPersistenceContract(
+  input: PrivateStorageSignedUrlGrantPersistenceInput,
+): PrivateStorageSignedUrlGrantPersistenceContract {
+  return {
+    modelName: "SignedUrlGrant",
+    row: input,
+    transactionWrites: ["FileAsset", "SignedUrlGrant", "AuditLog"],
+    auditActions: ["private_storage.signed_url.created", "private_storage.signed_url.revoked"],
+    redactedFields: ["signedUrl", "signedUrlHash"],
+    revocationCheck: "tenant_id_file_asset_object_key_revoked_at",
+  };
+}
 
 export function buildPrivateStorageSignedUrlContract(input: Omit<Parameters<typeof buildPrivateStorageAccessPlan>[0], "requestedByUserId"> & { requestedByUserId: string }) {
   const plan = buildPrivateStorageAccessPlan(input);
@@ -127,4 +164,17 @@ export const privateStorageSignedUrlPreview = buildPrivateStorageSignedUrlContra
   now: "2026-06-09T00:00:00.000Z",
   scanApproved: false,
   providerConfigured: false,
+});
+
+export const privateStorageSignedUrlGrantPersistencePreview = buildPrivateStorageSignedUrlGrantPersistenceContract({
+  tenantId: "tenant_demo",
+  fileAssetId: "fileasset_demo",
+  issuedByUserId: "user_demo",
+  recipientUserId: "client_demo",
+  operation: "download",
+  scope: "download",
+  bucket: "inkroute-private",
+  objectKey: "private/tenant_demo/reference/fileasset_demo.jpg",
+  signedUrlHash: "sha256:redacted",
+  expiresAt: "2026-06-09T00:15:00.000Z",
 });

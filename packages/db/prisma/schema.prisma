@@ -360,6 +360,7 @@ model Tenant {
   seoStylePages    SeoStylePage[]
   seoRedirects     SeoRedirect[]
   auditLogs        AuditLog[]
+  signedUrlGrants  SignedUrlGrant[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -1104,12 +1105,40 @@ model FileAsset {
   portfolioImages  PortfolioImage[]
   referenceImages  ReferenceImage[]
   consentSignatures ConsentSignature[]
+  signedUrlGrants  SignedUrlGrant[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
   @@unique([bucket, objectKey])
   @@index([tenantId, kind])
   @@index([tenantId, visibility])
+}
+
+model SignedUrlGrant {
+  id              String    @id @default(cuid())
+  tenantId        String
+  fileAssetId     String
+  issuedByUserId  String
+  recipientUserId String?
+  operation       String
+  scope           String
+  bucket          String
+  objectKey       String
+  signedUrlHash   String?
+  expiresAt       DateTime
+  usedAt          DateTime?
+  revokedAt       DateTime?
+  revokeReason    String?
+  metadata        Json?
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fileAsset       FileAsset @relation(fields: [fileAssetId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId, fileAssetId])
+  @@index([tenantId, objectKey])
+  @@index([tenantId, expiresAt])
+  @@index([tenantId, revokedAt])
 }
 
 model ReferenceImage {
