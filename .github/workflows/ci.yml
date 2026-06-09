@@ -22,6 +22,29 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Verify Phase 14 testing manifests
         run: pnpm test:phase14:static && pnpm test:manifest
+      - name: Run Phase 15 launch operations runtime contracts
+        run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/launch-operations-runtime-static.test.ts
+
+      - name: Upload Phase 15 launch operations runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: launch-operations-runtime-artifacts
+          path: |
+            coverage/launch-operations-runtime.json
+            coverage/launch-operations-verifier.json
+            coverage/launch-operations-owner-coverage-redacted.json
+            coverage/launch-operations-alert-routing-redacted.json
+            coverage/launch-operations-support-escalation-redacted.json
+            coverage/launch-operations-privacy-request-drill-redacted.json
+            coverage/launch-operations-incident-drill-redacted.json
+            coverage/launch-operations-rollback-drill-redacted.json
+            coverage/launch-operations-monitoring-dashboard-redacted.json
+            coverage/launch-operations-communications-templates-redacted.json
+            coverage/launch-operations-approval-redacted.json
+            coverage/launch-operations-ci-run-redacted.json
+            test-results/launch-operations-runtime
+          if-no-files-found: warn
       - name: Run Phase 15 production launch evidence runtime contracts
         run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/production-launch-evidence-runtime-static.test.ts
 
@@ -1093,6 +1116,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
