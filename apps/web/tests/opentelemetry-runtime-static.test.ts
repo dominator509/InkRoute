@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -7,6 +7,7 @@ const telemetrySource = readFileSync(join(root, "apps/web/lib/telemetryRuntime.t
 const middlewareSource = readFileSync(join(root, "apps/web/middleware.ts"), "utf8");
 const workflowSource = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
 const trackerSource = readFileSync(join(root, "GAP_TRACKER.md"), "utf8");
+const unitManifest = readFileSync(join(root, "testing/manifests/unit-test-manifest.json"), "utf8");
 
 describe("OpenTelemetry runtime middleware contract", () => {
   it("propagates request IDs and W3C traceparent headers", () => {
@@ -35,12 +36,32 @@ describe("OpenTelemetry runtime middleware contract", () => {
     expect(telemetrySource).toContain("liveLogBackendIngestionVerified: false");
   });
 
+  it("pins the OpenTelemetry runtime command and artifact matrix", () => {
+    expect(telemetrySource).toContain("telemetryRuntimeCommands");
+    expect(telemetrySource).toContain("telemetryRuntimeMatrix");
+    for (const id of [
+      "sdk-exporter-install",
+      "dashboard-middleware",
+      "worker-runtime",
+      "service-metadata-sampling",
+      "live-backend-proof",
+      "no-pii-artifact-audit",
+      "ci-opentelemetry-runtime",
+      "secret-safe-artifacts",
+    ]) {
+      expect(telemetrySource).toContain(`id: "${id}"`);
+    }
+  });
+
   it("tracks high-risk export suppression, ErrorReport correlation, and artifact evidence", () => {
     expect(telemetrySource).toContain("highRiskExportSuppressionVerified: true");
     expect(telemetrySource).toContain("errorReportTraceCorrelationConfigured: true");
     expect(telemetrySource).toContain("coverage/opentelemetry-runtime-middleware.json");
     expect(telemetrySource).toContain("coverage/opentelemetry-high-risk-export-suppression.json");
     expect(telemetrySource).toContain("coverage/opentelemetry-live-backend-proof-redacted.json");
+    expect(telemetrySource).toContain("coverage/opentelemetry-sdk-exporter-install.json");
+    expect(telemetrySource).toContain("coverage/opentelemetry-no-pii-artifact-audit.json");
+    expect(telemetrySource).toContain("coverage/opentelemetry-ci-evidence.json");
   });
 
   it("is wired into CI and the tracker without claiming live OTLP ingestion", () => {
@@ -48,6 +69,9 @@ describe("OpenTelemetry runtime middleware contract", () => {
     expect(workflowSource).toContain("apps/web/tests/opentelemetry-runtime-static.test.ts");
     expect(trackerSource).toContain("GAP-084");
     expect(trackerSource).toContain("apps/web/lib/telemetryRuntime.ts");
+    expect(workflowSource).toContain("coverage/opentelemetry-ci-evidence.json");
+    expect(unitManifest).toContain("telemetryRuntimeMatrix");
+    expect(trackerSource).toContain("GAP-084 is opentelemetry-runtime-matrix wired");
     expect(trackerSource).toContain("live OTLP backend proof remains open");
   });
 });

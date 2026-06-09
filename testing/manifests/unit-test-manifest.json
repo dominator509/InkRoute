@@ -1454,14 +1454,15 @@
       "verifies": [
         "GAP-084 web middleware propagates x-request-id and W3C traceparent headers",
         "GAP-084 structured telemetry records use redacted path-only metadata without raw URLs/query strings",
-        "GAP-084 OTLP exporter, high-risk suppression, ErrorReport correlation, no-PII proof, and live backend artifact gates remain explicit"
+        "GAP-084 telemetryRuntimeMatrix wires SDK/exporter installation, dashboard/worker middleware, ErrorReport correlation, high-risk suppression, live OTLP proof, no-PII audit, CI, and secret-safe artifacts"
       ],
       "blockedBy": [
         "Static OpenTelemetry runtime test execution pending",
         "OpenTelemetry SDK/exporter package installation pending",
-        "Dashboard middleware instrumentation pending",
-        "Worker runtime instrumentation pending",
-        "Live OTLP trace/log backend ingestion proof pending"
+        "Dashboard and worker middleware instrumentation pending",
+        "Service metadata and sampling policy proof pending",
+        "Live OTLP trace/log backend ingestion proof pending",
+        "No-PII telemetry artifact audit, CI evidence, and secret-safe artifact proof pending"
       ]
     },
     {

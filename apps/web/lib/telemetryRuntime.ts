@@ -1,4 +1,4 @@
-﻿import {
+import {
   buildOpenTelemetryRuntimeReadinessPlan,
   buildTelemetryPipelinePlan,
   redactMetadata,
@@ -6,14 +6,70 @@
 } from "@inkroute/observability";
 import type { NextRequest, NextResponse } from "next/server";
 
+export type OpenTelemetryRuntimeStatus =
+  | "wired"
+  | "package-gated"
+  | "instrumentation-gated"
+  | "exporter-gated"
+  | "privacy-gated"
+  | "backend-gated"
+  | "ci-gated";
+
+export interface OpenTelemetryRuntimeMatrixEntry {
+  readonly id: string;
+  readonly command: string;
+  readonly artifact: string;
+  readonly status: OpenTelemetryRuntimeStatus;
+}
+
+export const telemetryRuntimeCommands = [
+  "pnpm --filter @inkroute/observability typecheck",
+  "pnpm --filter @inkroute/observability test",
+  "pnpm vitest run apps/web/tests/opentelemetry-runtime-static.test.ts",
+  "OpenTelemetry SDK/exporter package installation proof",
+  "dashboard and worker telemetry middleware smoke",
+  "ErrorReport trace correlation smoke",
+  "blocked_high_risk_payload telemetry suppression smoke",
+  "live OTLP trace/log backend ingestion proof",
+] as const;
+
 export const telemetryRuntimeArtifactPaths = [
+  "coverage/opentelemetry-observability-typecheck.txt",
+  "coverage/opentelemetry-observability-test.txt",
+  "coverage/opentelemetry-runtime-static-contract.json",
   "coverage/opentelemetry-runtime-middleware.json",
   "coverage/opentelemetry-request-trace-propagation.json",
   "coverage/opentelemetry-structured-log-redacted.json",
   "coverage/opentelemetry-errorreport-correlation.json",
+  "coverage/opentelemetry-sdk-exporter-install.json",
+  "coverage/opentelemetry-dashboard-middleware.json",
+  "coverage/opentelemetry-worker-runtime.json",
+  "coverage/opentelemetry-service-metadata-sampling.json",
   "coverage/opentelemetry-high-risk-export-suppression.json",
   "coverage/opentelemetry-live-backend-proof-redacted.json",
+  "coverage/opentelemetry-no-pii-artifact-audit.json",
+  "coverage/opentelemetry-ci-evidence.json",
+  "coverage/opentelemetry-secret-safe-artifacts.json",
   "test-results/opentelemetry-runtime",
+] as const;
+
+export const telemetryRuntimeMatrix: readonly OpenTelemetryRuntimeMatrixEntry[] = [
+  { id: "observability-typecheck", command: "pnpm --filter @inkroute/observability typecheck", artifact: "coverage/opentelemetry-observability-typecheck.txt", status: "wired" },
+  { id: "observability-tests", command: "pnpm --filter @inkroute/observability test", artifact: "coverage/opentelemetry-observability-test.txt", status: "wired" },
+  { id: "static-contract", command: "pnpm vitest run apps/web/tests/opentelemetry-runtime-static.test.ts", artifact: "coverage/opentelemetry-runtime-static-contract.json", status: "wired" },
+  { id: "web-middleware", command: "web middleware propagation smoke", artifact: "coverage/opentelemetry-runtime-middleware.json", status: "wired" },
+  { id: "request-trace-propagation", command: "request ID and traceparent propagation smoke", artifact: "coverage/opentelemetry-request-trace-propagation.json", status: "wired" },
+  { id: "structured-log-redaction", command: "privacy-safe structured log audit", artifact: "coverage/opentelemetry-structured-log-redacted.json", status: "wired" },
+  { id: "errorreport-correlation", command: "ErrorReport trace correlation smoke", artifact: "coverage/opentelemetry-errorreport-correlation.json", status: "instrumentation-gated" },
+  { id: "sdk-exporter-install", command: "OpenTelemetry SDK/exporter package installation proof", artifact: "coverage/opentelemetry-sdk-exporter-install.json", status: "package-gated" },
+  { id: "dashboard-middleware", command: "dashboard telemetry middleware smoke", artifact: "coverage/opentelemetry-dashboard-middleware.json", status: "instrumentation-gated" },
+  { id: "worker-runtime", command: "worker telemetry runtime smoke", artifact: "coverage/opentelemetry-worker-runtime.json", status: "instrumentation-gated" },
+  { id: "service-metadata-sampling", command: "service metadata and sampling policy proof", artifact: "coverage/opentelemetry-service-metadata-sampling.json", status: "exporter-gated" },
+  { id: "high-risk-suppression", command: "blocked_high_risk_payload telemetry suppression smoke", artifact: "coverage/opentelemetry-high-risk-export-suppression.json", status: "privacy-gated" },
+  { id: "live-backend-proof", command: "live OTLP trace/log backend ingestion proof", artifact: "coverage/opentelemetry-live-backend-proof-redacted.json", status: "backend-gated" },
+  { id: "no-pii-artifact-audit", command: "OpenTelemetry no-PII artifact audit", artifact: "coverage/opentelemetry-no-pii-artifact-audit.json", status: "privacy-gated" },
+  { id: "ci-opentelemetry-runtime", command: "GitHub Actions OpenTelemetry runtime gate", artifact: "coverage/opentelemetry-ci-evidence.json", status: "ci-gated" },
+  { id: "secret-safe-artifacts", command: "redacted OpenTelemetry artifact audit", artifact: "coverage/opentelemetry-secret-safe-artifacts.json", status: "ci-gated" },
 ] as const;
 
 function runtimeEnvironment(): RuntimeEnvironment {

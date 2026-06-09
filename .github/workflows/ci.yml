@@ -2286,6 +2286,16 @@ jobs:
           name: opentelemetry-runtime-artifacts
           path: |
             coverage/opentelemetry-runtime-middleware.json
+            coverage/opentelemetry-secret-safe-artifacts.json
+            coverage/opentelemetry-ci-evidence.json
+            coverage/opentelemetry-no-pii-artifact-audit.json
+            coverage/opentelemetry-service-metadata-sampling.json
+            coverage/opentelemetry-worker-runtime.json
+            coverage/opentelemetry-dashboard-middleware.json
+            coverage/opentelemetry-sdk-exporter-install.json
+            coverage/opentelemetry-runtime-static-contract.json
+            coverage/opentelemetry-observability-test.txt
+            coverage/opentelemetry-observability-typecheck.txt
             coverage/opentelemetry-request-trace-propagation.json
             coverage/opentelemetry-structured-log-redacted.json
             coverage/opentelemetry-errorreport-correlation.json
