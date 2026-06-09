@@ -2573,6 +2573,22 @@
         "Dashboard/API/server-action route-guard adoption, role matrix, custom-role, and cross-tenant denial proof pending",
         "Field redaction, AuditLog persistence, CSRF binding, session revocation, CI, and secret-safe artifact proof pending"
       ]
+    },
+    {
+      "id": "unit-web-domain-event-audit-runtime-static",
+      "file": "apps/web/tests/domain-event-audit-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-024 domain event/audit runtime matrix covers booking/payment typecheck/tests, Prisma transaction services, tenant-scoped repositories, booking/payment atomicity, BookingStateEvent persistence, AuditLog persistence, PaymentAuditLog persistence, idempotency persistence, idempotency replay original-result behavior, provider rollback integration, invalid-transition denial, cross-tenant denial, database evidence, CI evidence, and secret-safe artifacts",
+        "GAP-024 booking transition helpers, payment lifecycle write plans, DB event/audit models, CI labels, artifact paths, and tracker row remain wired without claiming live transaction proof exists",
+        "GAP-024 readiness keeps transaction service, repository, atomicity, persistence, idempotency, rollback, denial, database, CI, and secret-safe artifact evidence explicit blockers"
+      ],
+      "blockedBy": [
+        "Static domain event/audit runtime test execution pending",
+        "Booking/payment typecheck/test and Prisma transaction service proof pending",
+        "Tenant-scoped repository, atomic state/event/audit persistence, idempotency, and replay proof pending",
+        "Provider rollback, invalid/cross-tenant denial, database evidence, CI evidence, and secret-safe artifact proof pending"
+      ]
     }
   ]
 }

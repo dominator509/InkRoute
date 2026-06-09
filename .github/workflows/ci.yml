@@ -466,6 +466,38 @@ jobs:
             test-results/dependency-install-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 2 domain event audit runtime contracts
+        run: pnpm --filter @inkroute/booking test && pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/domain-event-audit-runtime-static.test.ts
+
+      - name: Upload Phase 2 domain event audit runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: domain-event-audit-runtime-artifacts
+          path: |
+            coverage/domain-event-audit-runtime.json
+            coverage/domain-event-booking-typecheck.txt
+            coverage/domain-event-booking-test.txt
+            coverage/domain-event-payments-typecheck.txt
+            coverage/domain-event-payments-test.txt
+            coverage/domain-event-prisma-transactions-redacted.json
+            coverage/domain-event-tenant-repositories.json
+            coverage/domain-event-booking-atomicity.json
+            coverage/domain-event-payment-atomicity.json
+            coverage/domain-event-booking-state-events.json
+            coverage/domain-event-audit-logs-redacted.json
+            coverage/domain-event-payment-audit-logs-redacted.json
+            coverage/domain-event-idempotency-persistence.json
+            coverage/domain-event-idempotency-replay.json
+            coverage/domain-event-provider-rollback.json
+            coverage/domain-event-invalid-transition-denial.json
+            coverage/domain-event-cross-tenant-denial.json
+            coverage/domain-event-database-evidence-redacted.json
+            coverage/domain-event-ci-evidence.json
+            coverage/domain-event-secret-safe-artifacts.json
+            test-results/domain-event-audit-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 2 domain authorization runtime contracts
         run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/domain-authorization-runtime-static.test.ts
 
