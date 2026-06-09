@@ -947,6 +947,23 @@
                                          "Revocation dashboard UI pending",
                                          "Apple/Google/Outlook import smoke artifacts pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-dashboard-availability-persistence-static",
+                       "file":  "apps/dashboard/tests/availability-persistence-static.test.ts",
+                       "priority":  "critical",
+                       "verifies":  [
+                                        "GAP-056 dashboard availability persistence covers window, hold, appointment, and release mutation actions",
+                                        "GAP-056 availability mutations require tenant scope, idempotency, transaction writes, concurrent hold protection, and CalendarAuditLog controls",
+                                        "GAP-056 dashboard hold API routes through the availability persistence plan and blocks without durable repository execution",
+                                        "GAP-056 readiness remains blocked on DB rejection, tenant isolation, seeded Postgres, and command evidence"
+                                    ],
+                       "blockedBy":  [
+                                         "Static availability persistence test execution pending",
+                                         "Durable Prisma repository implementation pending",
+                                         "Seeded Postgres lifecycle integration tests pending",
+                                         "Concurrent slot hold race-condition tests pending"
+                                     ]
                    }
                ]
 }
