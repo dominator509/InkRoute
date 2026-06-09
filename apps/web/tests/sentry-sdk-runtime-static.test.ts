@@ -1,8 +1,15 @@
-﻿import { readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { sanitizeSentryEvent, webSentryImplementationPlan, webSentryRuntimeConfig } from "../lib/sentryRuntime";
+import {
+  sanitizeSentryEvent,
+  sentrySdkImplementationArtifactPaths,
+  sentrySdkImplementationCommands,
+  sentrySdkImplementationMatrix,
+  webSentryImplementationPlan,
+  webSentryRuntimeConfig,
+} from "../lib/sentryRuntime";
 
 const webInstrumentation = readFileSync(join(process.cwd(), "apps/web/instrumentation.ts"), "utf8");
 const webServerConfig = readFileSync(join(process.cwd(), "apps/web/sentry.server.config.ts"), "utf8");
@@ -12,6 +19,8 @@ const dashboardServerConfig = readFileSync(join(process.cwd(), "apps/dashboard/s
 const dashboardClientConfig = readFileSync(join(process.cwd(), "apps/dashboard/instrumentation-client.ts"), "utf8");
 const mobileRuntime = readFileSync(join(process.cwd(), "apps/mobile/src/lib/sentryRuntime.ts"), "utf8");
 const ciWorkflow = readFileSync(join(process.cwd(), ".github/workflows/ci.yml"), "utf8");
+const unitManifest = readFileSync(join(process.cwd(), "testing/manifests/unit-test-manifest.json"), "utf8");
+const gapTracker = readFileSync(join(process.cwd(), "GAP_TRACKER.md"), "utf8");
 
 describe("GAP-080 Sentry SDK runtime implementation", () => {
   it("wires web, dashboard, and mobile Sentry configuration files without leaking credentials", () => {
@@ -51,10 +60,45 @@ describe("GAP-080 Sentry SDK runtime implementation", () => {
     );
   });
 
+  it("pins the Sentry SDK implementation command and artifact matrix", () => {
+    expect(sentrySdkImplementationCommands).toEqual([
+      "pnpm --filter @inkroute/observability typecheck",
+      "pnpm --filter @inkroute/observability test",
+      "pnpm vitest run apps/web/tests/sentry-sdk-runtime-static.test.ts apps/mobile/tests/mobile-crash-static.test.ts",
+      "install @sentry/nextjs and @sentry/react-native",
+      "configure Sentry DSN/auth/org/project secrets",
+      "upload web/dashboard source maps and Expo source maps",
+      "upload React Native debug symbols",
+      "live synthetic Sentry captures with no-PII provider payload proof",
+    ]);
+    expect(sentrySdkImplementationMatrix.map((entry) => entry.id)).toEqual([
+      "observability-typecheck",
+      "observability-tests",
+      "static-contracts",
+      "web-nextjs-package",
+      "dashboard-nextjs-package",
+      "mobile-react-native-package",
+      "secret-backed-config",
+      "web-dashboard-source-maps",
+      "expo-source-maps",
+      "react-native-debug-symbols",
+      "live-web-capture",
+      "live-dashboard-capture",
+      "live-mobile-capture",
+      "provider-no-pii-proof",
+      "ci-sentry-sdk-gate",
+    ]);
+    expect(sentrySdkImplementationArtifactPaths).toContain("coverage/sentry-expo-source-map-upload-redacted.json");
+    expect(sentrySdkImplementationArtifactPaths).toContain("coverage/sentry-sdk-ci-evidence.json");
+  });
+
   it("requires Sentry SDK implementation contracts in CI", () => {
     expect(ciWorkflow).toContain("Run Phase 11 Sentry SDK implementation contracts");
     expect(ciWorkflow).toContain("pnpm --filter @inkroute/observability test");
     expect(ciWorkflow).toContain("apps/web/tests/sentry-sdk-runtime-static.test.ts");
     expect(ciWorkflow).toContain("sentry-sdk-implementation-artifacts");
+    expect(ciWorkflow).toContain("coverage/sentry-sdk-ci-evidence.json");
+    expect(unitManifest).toContain("sentrySdkImplementationMatrix");
+    expect(gapTracker).toContain("GAP-080 is sentry-sdk-implementation-matrix wired");
   });
 });

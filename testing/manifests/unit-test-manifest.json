@@ -1383,15 +1383,15 @@
       "verifies": [
         "GAP-080 web/dashboard/mobile Sentry config and instrumentation files are present and call observability SDK configuration planners",
         "GAP-080 beforeSend redaction and tenant-safe tags use redactSensitiveText and redactMetadata before provider submission",
-        "GAP-080 CI retains Sentry SDK/source-map/debug-symbol/provider no-PII artifact paths without claiming live provider proof"
+        "GAP-080 sentrySdkImplementationMatrix wires package installation, credential gates, source maps, Expo source maps, debug symbols, live captures, provider no-PII proof, and CI artifacts"
       ],
       "blockedBy": [
         "Static Sentry SDK runtime test execution pending",
         "Install @sentry/nextjs and @sentry/react-native pending",
         "Sentry DSN/auth/org/project secret configuration pending",
-        "Source-map and debug-symbol upload pending",
-        "Live web/dashboard/mobile synthetic capture pending",
-        "Provider no-PII proof pending"
+        "Web/dashboard source-map, Expo source-map, and React Native debug-symbol upload pending",
+        "Live web/dashboard/mobile synthetic provider captures pending",
+        "Provider no-PII payload proof and CI evidence pending"
       ]
     },
     {

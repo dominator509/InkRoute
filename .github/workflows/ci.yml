@@ -2186,6 +2186,18 @@ jobs:
           name: sentry-sdk-implementation-artifacts
           path: |
             coverage/sentry-sdk-*.json
+            coverage/sentry-sdk-ci-evidence.json
+            coverage/sentry-live-mobile-capture-redacted.json
+            coverage/sentry-live-dashboard-capture-redacted.json
+            coverage/sentry-live-web-capture-redacted.json
+            coverage/sentry-expo-source-map-upload-redacted.json
+            coverage/sentry-sdk-env-secrets-redacted.json
+            coverage/sentry-sdk-mobile-react-native-package.json
+            coverage/sentry-sdk-dashboard-nextjs-package.json
+            coverage/sentry-sdk-web-nextjs-package.json
+            coverage/sentry-sdk-static-contract.json
+            coverage/sentry-sdk-observability-test.txt
+            coverage/sentry-sdk-observability-typecheck.txt
             coverage/sentry-source-map-upload-redacted.json
             coverage/sentry-debug-symbol-upload-redacted.json
             coverage/sentry-provider-no-pii-proof-redacted.json
