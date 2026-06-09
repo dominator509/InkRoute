@@ -1,7 +1,8 @@
-import { prisma } from "@inkroute/db";
+﻿import { prisma } from "@inkroute/db";
 import { demoReleaseCandidate, createReleaseCandidate, createRollbackPlan, defaultFeatureFlags, evaluateFeatureFlags, buildReleaseHealthChecks, type FeatureFlagDefinition } from "@inkroute/releases";
 import { inkrouteDemoTenant } from "@inkroute/config";
 import { NextResponse } from "next/server";
+import { resolveCachedFeatureFlagSnapshot } from "../../../../../lib/featureFlagRuntime";
 
 type TenantResolution = { tenantId: string; source: "database" | "local-fallback" };
 
@@ -157,6 +158,7 @@ export async function GET(_request: Request, context: { params: Promise<{ tenant
       environment: "production" as const,
       stableIdentifier: `${tenantResolution.tenantId}:public`,
     };
+    const runtimeFeatureFlags = resolveCachedFeatureFlagSnapshot(definitions, productionDecisionContext);
     const release = releaseRecords[0] ? mapDbReleaseToCandidate(releaseRecords[0]) : demoReleaseCandidate;
     const rollback = createRollbackPlan(release, "0.11.0-phase11");
     const healthChecks = buildReleaseHealthChecks(release);
@@ -172,7 +174,15 @@ export async function GET(_request: Request, context: { params: Promise<{ tenant
       publicFeatureSnapshot: evaluateFeatureFlags(definitions, previewDecisionContext).filter((flag) =>
         ["nomad_mode.enabled", "booking.deposit_required", "ai_assistants.enabled"].includes(flag.key),
       ),
-      decisions: evaluateFeatureFlags(definitions, productionDecisionContext).slice(0, 25),
+      decisions: runtimeFeatureFlags.decisions.slice(0, 25),
+      runtimeFeatureFlags: {
+        providerRuntimeGates: runtimeFeatureFlags.providerRuntimeGates,
+        providerWorkerKillSwitches: runtimeFeatureFlags.providerWorkerKillSwitches,
+        cache: runtimeFeatureFlags.cache,
+        rollout: runtimeFeatureFlags.rollout,
+        tenantSafePublicPayload: runtimeFeatureFlags.tenantSafePublicPayload,
+        artifactPaths: runtimeFeatureFlags.artifactPaths,
+      },
       releaseRecords: releaseRecords.map((entry) => ({
         id: entry.id,
         version: entry.version,
@@ -208,3 +218,4 @@ export async function GET(_request: Request, context: { params: Promise<{ tenant
     });
   }
 }
+
