@@ -482,6 +482,41 @@ export interface CalendarAutomatedTestReadinessPlan {
   blockers: readonly string[];
 }
 
+export interface CalendarLaunchEvidenceInput {
+  packageScripts: Readonly<Record<string, string>>;
+  calendarTypecheckPassed: boolean;
+  calendarTestsPassed: boolean;
+  availabilityRepositoriesImplemented: boolean;
+  availabilityPostgresIntegrationPassed: boolean;
+  concurrentHoldRaceTestsPassed: boolean;
+  tenantIsolationTestsPassed: boolean;
+  googleOauthConfigured: boolean;
+  googleEncryptedTokensConfigured: boolean;
+  googleWorkerEnabled: boolean;
+  googleFreebusySmokePassed: boolean;
+  googleEventSyncSmokePassed: boolean;
+  googlePushOrIncrementalSyncVerified: boolean;
+  signedIcsTokenPersistenceConfigured: boolean;
+  signedIcsAccessSmokePassed: boolean;
+  signedIcsClientImportSmokePassed: boolean;
+  timezoneDstQaPassed: boolean;
+  providerRenderMatrixPassed: boolean;
+  travelPublishPersistencePassed: boolean;
+  cacheRevalidationVerified: boolean;
+  dashboardCalendarSmokePassed: boolean;
+  publicTravelSmokePassed: boolean;
+  ciEvidenceCaptured: boolean;
+  calendarArtifactsSecretSafe: boolean;
+}
+
+export interface CalendarLaunchEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export interface SignedIcsFeedRuntimeReadinessInput {
   packageScripts: Readonly<Record<string, string>>;
   calendarTestsPassed: boolean;
@@ -1418,6 +1453,79 @@ export function buildSignedIcsFeedDraft(input: { tenantSlug: string; artistSlug:
     tokenStorage: "not_implemented",
     visibility: "tenant_signed_feed",
     gapIds: ["GAP-009", "GAP-055"],
+  };
+}
+
+export function buildCalendarLaunchEvidencePlan(input: CalendarLaunchEvidenceInput): CalendarLaunchEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/calendar package script is missing ${script}.`);
+  if (!input.calendarTypecheckPassed) blockers.push("@inkroute/calendar typecheck must pass.");
+  if (!input.calendarTestsPassed) blockers.push("@inkroute/calendar tests must pass.");
+  if (!input.availabilityRepositoriesImplemented) blockers.push("Tenant-scoped availability/calendar repositories must be implemented.");
+  if (!input.availabilityPostgresIntegrationPassed) blockers.push("Postgres availability integration tests must pass.");
+  if (!input.concurrentHoldRaceTestsPassed) blockers.push("Concurrent slot hold race-condition tests must pass.");
+  if (!input.tenantIsolationTestsPassed) blockers.push("Calendar tenant-isolation tests must pass.");
+  if (!input.googleOauthConfigured) blockers.push("Google OAuth client, redirect URI, and scopes must be configured.");
+  if (!input.googleEncryptedTokensConfigured) blockers.push("Google refresh tokens must be encrypted and persisted.");
+  if (!input.googleWorkerEnabled) blockers.push("Google Calendar provider sync worker must be enabled.");
+  if (!input.googleFreebusySmokePassed) blockers.push("Google FreeBusy test-calendar smoke must pass.");
+  if (!input.googleEventSyncSmokePassed) blockers.push("Google event create/update/delete sync smoke must pass.");
+  if (!input.googlePushOrIncrementalSyncVerified) blockers.push("Google push channel or incremental sync recovery must be verified.");
+  if (!input.signedIcsTokenPersistenceConfigured) blockers.push("Signed ICS token hash, expiry, rotation, and revocation persistence must be configured.");
+  if (!input.signedIcsAccessSmokePassed) blockers.push("Signed ICS access route smoke tests must pass.");
+  if (!input.signedIcsClientImportSmokePassed) blockers.push("Apple/Google/Outlook signed ICS import smoke tests must pass.");
+  if (!input.timezoneDstQaPassed) blockers.push("Timezone/DST/recurrence QA must pass.");
+  if (!input.providerRenderMatrixPassed) blockers.push("Internal, Google, and ICS provider render matrix must pass.");
+  if (!input.travelPublishPersistencePassed) blockers.push("Travel publish persistence and rollback tests must pass.");
+  if (!input.cacheRevalidationVerified) blockers.push("Calendar/travel cache revalidation must be verified after committed mutations.");
+  if (!input.dashboardCalendarSmokePassed) blockers.push("Dashboard calendar/travel smoke tests must pass.");
+  if (!input.publicTravelSmokePassed) blockers.push("Public travel/calendar smoke tests must pass.");
+  if (!input.ciEvidenceCaptured) blockers.push("CI calendar evidence must be captured.");
+  if (!input.calendarArtifactsSecretSafe) blockers.push("Calendar artifacts must be redacted and free of provider tokens, client data, or private calendar details.");
+
+  if (!input.calendarTypecheckPassed || !input.calendarTestsPassed) {
+    requiredEvidence.push("calendar package typecheck and unit/helper test output");
+  }
+  if (!input.availabilityRepositoriesImplemented || !input.availabilityPostgresIntegrationPassed || !input.concurrentHoldRaceTestsPassed || !input.tenantIsolationTestsPassed) {
+    requiredEvidence.push("tenant-scoped availability repository, Postgres integration, race-condition, and tenant-isolation evidence");
+  }
+  if (!input.googleOauthConfigured || !input.googleEncryptedTokensConfigured || !input.googleWorkerEnabled || !input.googleFreebusySmokePassed || !input.googleEventSyncSmokePassed || !input.googlePushOrIncrementalSyncVerified) {
+    requiredEvidence.push("Google OAuth, encrypted token, worker, FreeBusy, event sync, and push/incremental recovery evidence");
+  }
+  if (!input.signedIcsTokenPersistenceConfigured || !input.signedIcsAccessSmokePassed || !input.signedIcsClientImportSmokePassed) {
+    requiredEvidence.push("signed ICS token persistence, route access, and client import smoke evidence");
+  }
+  if (!input.timezoneDstQaPassed || !input.providerRenderMatrixPassed) {
+    requiredEvidence.push("timezone/DST/recurrence and provider render matrix QA evidence");
+  }
+  if (!input.travelPublishPersistencePassed || !input.cacheRevalidationVerified || !input.dashboardCalendarSmokePassed || !input.publicTravelSmokePassed) {
+    requiredEvidence.push("travel publish persistence, cache revalidation, dashboard smoke, and public travel smoke evidence");
+  }
+  if (!input.ciEvidenceCaptured || !input.calendarArtifactsSecretSafe) {
+    requiredEvidence.push("CI calendar job and secret-safe artifact evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "availability Postgres integration tests",
+      "concurrent slot hold race-condition tests",
+      "Google Calendar OAuth/freebusy/event-sync smoke tests",
+      "signed ICS token DB and route tests",
+      "Apple/Google/Outlook ICS import smoke tests",
+      "timezone DST and provider render matrix QA",
+      "dashboard/public travel calendar smoke tests",
+      "GitHub Actions calendar launch evidence job",
+    ],
+    requiredEvidence,
+    blockers,
   };
 }
 

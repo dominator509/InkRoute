@@ -24,6 +24,37 @@ export interface DbIntegrationRuntimeReadinessPlan {
   blockers: readonly string[];
 }
 
+export interface PrismaSchemaLifecycleReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  schemaModelsCount: number;
+  schemaEnumsCount: number;
+  minimumExpectedModels: number;
+  minimumExpectedEnums: number;
+  postgresProvisioned: boolean;
+  databaseUrlConfigured: boolean;
+  directUrlConfigured: boolean;
+  prismaValidatePassed: boolean;
+  prismaGeneratePassed: boolean;
+  migrationGenerated: boolean;
+  migrationSqlReviewed: boolean;
+  migrationAppliedToDevDb: boolean;
+  seedScriptPassed: boolean;
+  seedReadinessVerified: boolean;
+  destructiveProductionUrlGuarded: boolean;
+  migrationDriftChecked: boolean;
+  commandEvidenceCaptured: boolean;
+  ciEvidenceCaptured: boolean;
+}
+
+export interface PrismaSchemaLifecycleReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  schemaCoverageStatus: "pass" | "blocked";
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export function buildDbIntegrationRuntimeReadinessPlan(
   input: DbIntegrationRuntimeReadinessInput,
 ): DbIntegrationRuntimeReadinessPlan {
@@ -73,6 +104,62 @@ export function buildDbIntegrationRuntimeReadinessPlan(
       "pnpm --filter @inkroute/db test -- db-integration",
     ],
     requiredEvidence,
+    blockers,
+  };
+}
+
+export function buildPrismaSchemaLifecycleReadinessPlan(
+  input: PrismaSchemaLifecycleReadinessInput,
+): PrismaSchemaLifecycleReadinessPlan {
+  const requiredScripts = ["db:validate", "db:generate", "db:migrate", "db:seed", "db:verify-seed"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+
+  const schemaCoverageStatus =
+    input.schemaModelsCount >= input.minimumExpectedModels && input.schemaEnumsCount >= input.minimumExpectedEnums ? "pass" : "blocked";
+
+  for (const script of missingScripts) blockers.push(`@inkroute/db package script is missing ${script}.`);
+  if (schemaCoverageStatus !== "pass") {
+    blockers.push("Prisma schema must retain the expected Phase 2 model and enum coverage before migration evidence can close.");
+  }
+  if (!input.postgresProvisioned) blockers.push("A non-production Postgres database must be provisioned.");
+  if (!input.databaseUrlConfigured) blockers.push("DATABASE_URL must target a non-production Postgres database.");
+  if (!input.directUrlConfigured) blockers.push("DIRECT_URL must be configured for Prisma migrations when required by the provider.");
+  if (!input.prismaValidatePassed) blockers.push("Prisma schema validation must pass.");
+  if (!input.prismaGeneratePassed) blockers.push("Prisma Client generation must pass.");
+  if (!input.migrationGenerated) blockers.push("A Prisma migration must be generated from the current schema.");
+  if (!input.migrationSqlReviewed) blockers.push("Generated migration SQL must be reviewed before applying to shared environments.");
+  if (!input.migrationAppliedToDevDb) blockers.push("Generated migration must apply cleanly to a non-production development database.");
+  if (!input.seedScriptPassed) blockers.push("Prisma seed script must execute against the migrated development database.");
+  if (!input.seedReadinessVerified) blockers.push("Seed readiness verifier must pass before seed execution is trusted.");
+  if (!input.destructiveProductionUrlGuarded) blockers.push("Destructive migrate/reset commands must be guarded from production URLs.");
+  if (!input.migrationDriftChecked) blockers.push("Migration drift must be checked after applying migrations.");
+  if (!input.commandEvidenceCaptured) blockers.push("Command evidence for validate, generate, migrate, review, seed, and drift checks must be captured.");
+  if (!input.ciEvidenceCaptured) blockers.push("CI or clean-checkout evidence for the Prisma lifecycle must be captured.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    schemaCoverageStatus,
+    requiredCommands: [
+      "pnpm --filter @inkroute/db db:validate",
+      "pnpm --filter @inkroute/db db:generate",
+      "pnpm --filter @inkroute/db db:migrate",
+      "pnpm db:verify-seed",
+      "pnpm --filter @inkroute/db db:seed",
+      "Prisma migration SQL review",
+      "Prisma migration drift check",
+      "GitHub Actions DB lifecycle evidence job",
+    ],
+    requiredEvidence: [
+      "Phase 2 schema model/enum coverage remains intact.",
+      "Non-production Postgres provisioning plus DATABASE_URL and DIRECT_URL configuration proof.",
+      "Prisma validate/generate/migrate command output.",
+      "Generated migration SQL review notes and drift-check output.",
+      "Seed readiness and seed execution output using fake/demo data only.",
+      "Production URL destructive-command guard proof.",
+      "CI or clean-checkout Prisma lifecycle evidence.",
+    ],
     blockers,
   };
 }

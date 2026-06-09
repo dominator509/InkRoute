@@ -596,6 +596,37 @@ export interface PublicWebReadinessPlan {
   blockers: readonly string[];
 }
 
+export interface PublicWebLaunchEvidenceInput {
+  packageScripts: Readonly<Record<string, string>>;
+  webTypecheckPassed: boolean;
+  webBuildPassed: boolean;
+  webRouteSmokePassed: boolean;
+  webPlaywrightDesktopPassed: boolean;
+  webPlaywrightMobilePassed: boolean;
+  accessibilityAuditPassed: boolean;
+  lighthousePerformancePassed: boolean;
+  apiRoutesUseTenantScopedPersistence: boolean;
+  providerBackedRoutesVerified: boolean;
+  localRuntimeFallbackDisabledForProduction: boolean;
+  realPortfolioDerivativesConfigured: boolean;
+  placeholderAssetsRemovedOrDocumented: boolean;
+  sitemapRuntimeVerified: boolean;
+  robotsRuntimeVerified: boolean;
+  jsonLdRuntimeVerified: boolean;
+  canonicalRuntimeVerified: boolean;
+  privacyAndLegalRoutesReviewed: boolean;
+  ciEvidenceCaptured: boolean;
+  launchArtifactsSecretSafe: boolean;
+}
+
+export interface PublicWebLaunchEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export function normalizePath(path: string): string {
   const trimmed = path.trim();
   if (trimmed === "") return "/";
@@ -1873,6 +1904,73 @@ export function buildSeoAutomatedTestReadinessPlan(input: SeoAutomatedTestReadin
     ],
     requiredEvidence,
     requiredSuites,
+    blockers,
+  };
+}
+
+export function buildPublicWebLaunchEvidencePlan(
+  input: PublicWebLaunchEvidenceInput,
+): PublicWebLaunchEvidencePlan {
+  const requiredScripts = ["typecheck", "build", "test"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/web package script is missing ${script}.`);
+  if (!input.webTypecheckPassed) blockers.push("@inkroute/web typecheck must pass.");
+  if (!input.webBuildPassed) blockers.push("@inkroute/web build must pass.");
+  if (!input.webRouteSmokePassed) blockers.push("Public route smoke tests must pass for pages, APIs, metadata, and webhooks.");
+  if (!input.webPlaywrightDesktopPassed) blockers.push("Desktop public web Playwright smoke tests must pass.");
+  if (!input.webPlaywrightMobilePassed) blockers.push("Mobile viewport public web Playwright smoke tests must pass.");
+  if (!input.accessibilityAuditPassed) blockers.push("Public web accessibility audit must pass.");
+  if (!input.lighthousePerformancePassed) blockers.push("Lighthouse/performance audit must pass for launch-critical public routes.");
+  if (!input.apiRoutesUseTenantScopedPersistence) blockers.push("Public API routes must use tenant-scoped persistence instead of local runtime state in production.");
+  if (!input.providerBackedRoutesVerified) blockers.push("Provider-backed public routes must be verified against their configured providers.");
+  if (!input.localRuntimeFallbackDisabledForProduction) blockers.push("Local runtime fallback must be disabled or fail-closed for production.");
+  if (!input.realPortfolioDerivativesConfigured) blockers.push("Real scanned portfolio derivatives must be configured for public media surfaces.");
+  if (!input.placeholderAssetsRemovedOrDocumented) blockers.push("Placeholder/demo public assets must be removed or explicitly documented as non-launch blockers.");
+  if (!input.sitemapRuntimeVerified) blockers.push("Runtime sitemap output must be verified.");
+  if (!input.robotsRuntimeVerified) blockers.push("Runtime robots.txt output must be verified.");
+  if (!input.jsonLdRuntimeVerified) blockers.push("Rendered JSON-LD output must be verified.");
+  if (!input.canonicalRuntimeVerified) blockers.push("Runtime canonical URL output must be verified.");
+  if (!input.privacyAndLegalRoutesReviewed) blockers.push("Public privacy, terms, consent, and aftercare routes must match the legal review boundary.");
+  if (!input.ciEvidenceCaptured) blockers.push("CI evidence for public web launch gates must be captured.");
+  if (!input.launchArtifactsSecretSafe) blockers.push("Public web launch artifacts must be redacted and free of secrets or client-private data.");
+
+  if (!input.webTypecheckPassed || !input.webBuildPassed || !input.webRouteSmokePassed) {
+    requiredEvidence.push("web typecheck, build, and route smoke output");
+  }
+  if (!input.webPlaywrightDesktopPassed || !input.webPlaywrightMobilePassed || !input.accessibilityAuditPassed || !input.lighthousePerformancePassed) {
+    requiredEvidence.push("desktop/mobile Playwright, accessibility, and Lighthouse/performance evidence");
+  }
+  if (!input.apiRoutesUseTenantScopedPersistence || !input.providerBackedRoutesVerified || !input.localRuntimeFallbackDisabledForProduction) {
+    requiredEvidence.push("tenant-scoped persistence, provider-backed route, and production local-runtime fallback evidence");
+  }
+  if (!input.realPortfolioDerivativesConfigured || !input.placeholderAssetsRemovedOrDocumented) {
+    requiredEvidence.push("real scanned media derivative evidence and placeholder asset disposition");
+  }
+  if (!input.sitemapRuntimeVerified || !input.robotsRuntimeVerified || !input.jsonLdRuntimeVerified || !input.canonicalRuntimeVerified) {
+    requiredEvidence.push("runtime sitemap, robots, rendered JSON-LD, and canonical validation evidence");
+  }
+  if (!input.privacyAndLegalRoutesReviewed || !input.ciEvidenceCaptured || !input.launchArtifactsSecretSafe) {
+    requiredEvidence.push("legal-route review, CI, and secret-safe launch artifact evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/web test",
+      "pnpm test:e2e --project=web-chromium",
+      "pnpm test:e2e --project=web-mobile",
+      "axe accessibility audit for public routes",
+      "Lighthouse performance audit for public launch routes",
+      "runtime sitemap/robots/JSON-LD/canonical validation",
+      "GitHub Actions public web launch evidence job",
+    ],
+    requiredEvidence,
     blockers,
   };
 }

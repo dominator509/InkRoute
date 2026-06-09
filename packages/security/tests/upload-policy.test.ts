@@ -16,6 +16,7 @@ import {
   buildSignedUploadIntentPlan,
   buildPrivateStorageAccessPlan,
   buildPrivateStorageRuntimeReadinessPlan,
+  buildProviderStorageUploadReadinessPlan,
   buildSecurityAppRuntimeVerificationPlan,
   buildSecurityAutomatedCoverageReadinessPlan,
   buildSecurityMiddlewareRuntimeReadinessPlan,
@@ -1475,5 +1476,89 @@ describe("security and privacy helpers", () => {
     expect(plan.blockers).toContain("Attorney approval must be recorded for payment, cancellation, no-show, refund, SMS, receipt, and liability language.");
     expect(plan.blockers).toContain("Tax/accounting approval must be recorded for receipt and accounting export language.");
     expect(plan.blockers).toContain("Demo/planning placeholders must be removed from payment-facing flows before launch.");
+  });
+
+  it("blocks provider storage upload readiness until buckets, signed URLs, scans, derivatives, persistence, CI, and artifacts are proven", () => {
+    const plan = buildProviderStorageUploadReadinessPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      webUploadRouteTestsPassed: true,
+      webTypecheckPassed: false,
+      storageProviderSelected: false,
+      storageProviderConfigured: false,
+      storageSecretsConfigured: false,
+      privateBucketAclVerified: false,
+      derivativeBucketPolicyVerified: false,
+      signedUploadUrlsProviderBacked: false,
+      signedDownloadUrlsProviderBacked: false,
+      serverOwnedObjectKeysEnforced: true,
+      fileAssetPersistenceTransactional: false,
+      auditLogPersistenceConfigured: false,
+      linkTablePersistenceConfigured: false,
+      signedUrlGrantPersistenceConfigured: false,
+      malwareScanProviderConfigured: false,
+      scanVerdictPersistenceConfigured: false,
+      metadataStrippingWorkerConfigured: false,
+      publicDerivativeGenerationConfigured: false,
+      privateOriginalPublicReadDenied: false,
+      approvedDerivativePublicReadVerified: false,
+      tenantScopedProviderIntegrationTestsPassed: false,
+      privacyRetentionEnforced: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toContain("object storage provider upload/download integration tests");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "storage provider selection plus redacted provider configuration evidence",
+      "private bucket ACL and derivative-publication policy proof",
+      "provider-backed signed upload/download URL evidence with persisted grant expiry and revocation",
+      "transactional FileAsset, AuditLog, and related link-row persistence evidence",
+      "malware scan, MIME verification, metadata stripping, and derivative generation evidence",
+      "tenant-isolated provider integration, retention, CI, and secret-safe artifact evidence",
+    ]));
+    expect(plan.blockers).toContain("Supabase Storage, S3, or equivalent object storage provider must be selected.");
+    expect(plan.blockers).toContain("Provider integration tests must prove private originals cannot be publicly fetched.");
+    expect(plan.blockers).toContain("Storage artifacts must be redacted and free of provider secrets or client-private files.");
+  });
+
+  it("marks provider storage upload readiness ready when provider, scans, persistence, derivatives, tests, CI, and artifacts align", () => {
+    const plan = buildProviderStorageUploadReadinessPlan({
+      packageScripts: ["test", "typecheck"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: true,
+      webUploadRouteTestsPassed: true,
+      webTypecheckPassed: true,
+      storageProviderSelected: true,
+      storageProviderConfigured: true,
+      storageSecretsConfigured: true,
+      privateBucketAclVerified: true,
+      derivativeBucketPolicyVerified: true,
+      signedUploadUrlsProviderBacked: true,
+      signedDownloadUrlsProviderBacked: true,
+      serverOwnedObjectKeysEnforced: true,
+      fileAssetPersistenceTransactional: true,
+      auditLogPersistenceConfigured: true,
+      linkTablePersistenceConfigured: true,
+      signedUrlGrantPersistenceConfigured: true,
+      malwareScanProviderConfigured: true,
+      scanVerdictPersistenceConfigured: true,
+      metadataStrippingWorkerConfigured: true,
+      publicDerivativeGenerationConfigured: true,
+      privateOriginalPublicReadDenied: true,
+      approvedDerivativePublicReadVerified: true,
+      tenantScopedProviderIntegrationTestsPassed: true,
+      privacyRetentionEnforced: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.missingScripts).toEqual([]);
+    expect(plan.requiredEvidence).toEqual([]);
+    expect(plan.blockers).toEqual([]);
   });
 });

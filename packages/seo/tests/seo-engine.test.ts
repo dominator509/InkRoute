@@ -10,6 +10,7 @@ import {
   buildInternalLinkPlan,
   buildMetadataDraft,
   buildPublicWebReadinessPlan,
+  buildPublicWebLaunchEvidencePlan,
   buildArtistPersonSchema,
   buildPortfolioImageSchema,
   buildTravelEventSchema,
@@ -476,6 +477,83 @@ describe("SEO engine helpers", () => {
       "Provider-backed public routes still use local runtime or static provider boundaries.",
       "Public portfolio/media surfaces still depend on placeholder or demo assets.",
     ]));
+  });
+
+  it("blocks public web launch evidence until build, smoke, accessibility, performance, persistence, media, SEO runtime, CI, and artifacts are proven", () => {
+    const plan = buildPublicWebLaunchEvidencePlan({
+      packageScripts: {
+        typecheck: "tsc --noEmit",
+        build: "next build",
+      },
+      webTypecheckPassed: true,
+      webBuildPassed: false,
+      webRouteSmokePassed: false,
+      webPlaywrightDesktopPassed: false,
+      webPlaywrightMobilePassed: false,
+      accessibilityAuditPassed: false,
+      lighthousePerformancePassed: false,
+      apiRoutesUseTenantScopedPersistence: false,
+      providerBackedRoutesVerified: false,
+      localRuntimeFallbackDisabledForProduction: false,
+      realPortfolioDerivativesConfigured: false,
+      placeholderAssetsRemovedOrDocumented: false,
+      sitemapRuntimeVerified: true,
+      robotsRuntimeVerified: false,
+      jsonLdRuntimeVerified: false,
+      canonicalRuntimeVerified: false,
+      privacyAndLegalRoutesReviewed: false,
+      ciEvidenceCaptured: false,
+      launchArtifactsSecretSafe: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["test"]);
+    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/web build");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "web typecheck, build, and route smoke output",
+      "desktop/mobile Playwright, accessibility, and Lighthouse/performance evidence",
+      "tenant-scoped persistence, provider-backed route, and production local-runtime fallback evidence",
+      "real scanned media derivative evidence and placeholder asset disposition",
+      "runtime sitemap, robots, rendered JSON-LD, and canonical validation evidence",
+      "legal-route review, CI, and secret-safe launch artifact evidence",
+    ]));
+    expect(plan.blockers).toContain("@inkroute/web build must pass.");
+    expect(plan.blockers).toContain("Public API routes must use tenant-scoped persistence instead of local runtime state in production.");
+    expect(plan.blockers).toContain("Public web launch artifacts must be redacted and free of secrets or client-private data.");
+  });
+
+  it("marks public web launch evidence ready when build, smoke, accessibility, performance, persistence, media, SEO runtime, CI, and artifacts align", () => {
+    const plan = buildPublicWebLaunchEvidencePlan({
+      packageScripts: {
+        typecheck: "tsc --noEmit",
+        build: "next build",
+        test: "vitest run",
+      },
+      webTypecheckPassed: true,
+      webBuildPassed: true,
+      webRouteSmokePassed: true,
+      webPlaywrightDesktopPassed: true,
+      webPlaywrightMobilePassed: true,
+      accessibilityAuditPassed: true,
+      lighthousePerformancePassed: true,
+      apiRoutesUseTenantScopedPersistence: true,
+      providerBackedRoutesVerified: true,
+      localRuntimeFallbackDisabledForProduction: true,
+      realPortfolioDerivativesConfigured: true,
+      placeholderAssetsRemovedOrDocumented: true,
+      sitemapRuntimeVerified: true,
+      robotsRuntimeVerified: true,
+      jsonLdRuntimeVerified: true,
+      canonicalRuntimeVerified: true,
+      privacyAndLegalRoutesReviewed: true,
+      ciEvidenceCaptured: true,
+      launchArtifactsSecretSafe: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.missingScripts).toEqual([]);
+    expect(plan.requiredEvidence).toEqual([]);
+    expect(plan.blockers).toEqual([]);
   });
 
   it("creates city and style SEO briefs with internal link plans", () => {

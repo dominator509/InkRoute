@@ -6,6 +6,7 @@ import {
   buildMobileApiRequestPlan,
   buildMobileDeviceQaChecklist,
   buildMobileDeviceQaRuntimeReadinessPlan,
+  buildMobileLaunchEvidencePlan,
   buildMobileRuntimeReadinessPlan,
   buildMobileScreenSyncRequirements,
   buildMobileTestingExecutionReadinessPlan,
@@ -558,5 +559,78 @@ describe("mobile support helpers", () => {
       requiredEvidence: [],
       blockers: [],
     });
+  });
+
+  it("blocks mobile launch evidence until Expo, provider, device, OTA, accessibility, CI, and artifact proof exists", () => {
+    const plan = buildMobileLaunchEvidencePlan({
+      packageScripts: { typecheck: "tsc --noEmit", test: "vitest run" },
+      mobileSupportTypecheckPassed: true,
+      mobileSupportTestsPassed: true,
+      mobileAppTypecheckPassed: false,
+      mobileAppTestsPassed: false,
+      expoRuntimeStarted: false,
+      iosSimulatorSmokePassed: false,
+      androidEmulatorSmokePassed: false,
+      easPreviewBuildPassed: false,
+      authSessionBiometricQaPassed: false,
+      tenantApiClientQaPassed: false,
+      pushNotificationQaPassed: false,
+      encryptedOfflineStoreQaPassed: false,
+      uploadFlowQaPassed: false,
+      crashReportingQaPassed: false,
+      otaUpdateRollbackQaPassed: false,
+      physicalDeviceQaCompleted: false,
+      accessibilityQaPassed: false,
+      appJsonProjectConfigured: false,
+      easChannelsConfigured: false,
+      ciEvidenceCaptured: false,
+      launchArtifactsSecretSafe: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["ios", "android"]);
+    expect(plan.requiredCommands).toContain("eas build --profile preview --platform all");
+    expect(plan.requiredEvidence).toEqual([
+      "mobile-support and mobile app typecheck/test output",
+      "Expo runtime, iOS simulator, Android emulator, and EAS preview build evidence",
+      "auth/biometric, tenant API, push, and encrypted offline QA evidence",
+      "upload, crash, OTA rollback, physical device, and accessibility QA evidence",
+      "Expo project/channel configuration, CI, and secret-safe artifact evidence",
+    ]);
+    expect(plan.blockers).toContain("Tenant-scoped mobile API client QA must pass against preview APIs.");
+    expect(plan.blockers).toContain("OTA update and rollback QA must pass on the same runtime version.");
+    expect(plan.blockers).toContain("Mobile launch artifacts must be redacted and free of secrets, tokens, PII, medical, or payment data.");
+  });
+
+  it("marks mobile launch evidence ready when Expo, provider, device, OTA, accessibility, CI, and artifact proof align", () => {
+    const plan = buildMobileLaunchEvidencePlan({
+      packageScripts: { typecheck: "tsc --noEmit", test: "vitest run", ios: "expo start --ios", android: "expo start --android" },
+      mobileSupportTypecheckPassed: true,
+      mobileSupportTestsPassed: true,
+      mobileAppTypecheckPassed: true,
+      mobileAppTestsPassed: true,
+      expoRuntimeStarted: true,
+      iosSimulatorSmokePassed: true,
+      androidEmulatorSmokePassed: true,
+      easPreviewBuildPassed: true,
+      authSessionBiometricQaPassed: true,
+      tenantApiClientQaPassed: true,
+      pushNotificationQaPassed: true,
+      encryptedOfflineStoreQaPassed: true,
+      uploadFlowQaPassed: true,
+      crashReportingQaPassed: true,
+      otaUpdateRollbackQaPassed: true,
+      physicalDeviceQaCompleted: true,
+      accessibilityQaPassed: true,
+      appJsonProjectConfigured: true,
+      easChannelsConfigured: true,
+      ciEvidenceCaptured: true,
+      launchArtifactsSecretSafe: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.missingScripts).toEqual([]);
+    expect(plan.requiredEvidence).toEqual([]);
+    expect(plan.blockers).toEqual([]);
   });
 });

@@ -883,6 +883,35 @@ export interface AuthSessionTenantGuardRuntimeReadinessPlan {
   blockers: readonly string[];
 }
 
+export interface ProviderSessionStoreReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  providerSelected: boolean;
+  providerEnvConfigured: boolean;
+  loginCallbackWired: boolean;
+  logoutCallbackWired: boolean;
+  sessionCallbackWired: boolean;
+  userProvisioningConfigured: boolean;
+  tenantMembershipLookupPersisted: boolean;
+  customRoleLookupPersisted: boolean;
+  databaseSessionStoreConfigured: boolean;
+  sessionRevocationPersisted: boolean;
+  secureDashboardCookiesConfigured: boolean;
+  mobileTokenStorageConfigured: boolean;
+  auditLogWritesConfigured: boolean;
+  providerBackedTestsPassed: boolean;
+  crossTenantSmokeTestsPassed: boolean;
+  commandEvidenceCaptured: boolean;
+}
+
+export interface ProviderSessionStoreReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
 export type DashboardSurfaceKind = "page" | "api" | "server_action";
 export type DashboardSurfaceMode = "static_demo" | "read_only_api" | "mutation_api" | "provider_action";
 
@@ -920,6 +949,36 @@ export interface DashboardReadinessPlan {
   unpersistedSurfaces: readonly string[];
   untestedSurfaces: readonly string[];
   requiredCommands: readonly string[];
+  requiredControls: readonly string[];
+  blockers: readonly string[];
+}
+
+export interface DashboardLaunchEvidenceInput {
+  packageScripts: Readonly<Record<string, string>>;
+  dashboardTypecheckPassed: boolean;
+  dashboardBuildPassed: boolean;
+  dashboardUnitTestsPassed: boolean;
+  dashboardPlaywrightSmokePassed: boolean;
+  seededTenantDataAvailable: boolean;
+  providerBackedAuthConfigured: boolean;
+  tenantScopedApisImplemented: boolean;
+  prismaRepositoriesImplemented: boolean;
+  realMutationsEnabled: boolean;
+  mutationAuditLogsPersisted: boolean;
+  providerActionsImplemented: boolean;
+  rbacDenialTestsPassed: boolean;
+  crossTenantDenialTestsPassed: boolean;
+  fieldRedactionVerified: boolean;
+  loadingEmptyErrorStatesVerified: boolean;
+  ciEvidenceCaptured: boolean;
+  dashboardArtifactsSecretSafe: boolean;
+}
+
+export interface DashboardLaunchEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
   requiredControls: readonly string[];
   blockers: readonly string[];
 }
@@ -1056,6 +1115,70 @@ export function buildAuthSessionTenantGuardRuntimeReadinessPlan(input: AuthSessi
   };
 }
 
+export function buildProviderSessionStoreReadinessPlan(
+  input: ProviderSessionStoreReadinessInput,
+): ProviderSessionStoreReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/auth package script is missing ${script}.`);
+  if (!input.providerSelected) blockers.push("Auth provider must be selected before provider-backed sessions can be claimed.");
+  if (!input.providerEnvConfigured) blockers.push("Auth provider environment variables and callback URLs must be configured without committing secrets.");
+  if (!input.loginCallbackWired) blockers.push("Provider login callback must create or resolve the application user.");
+  if (!input.logoutCallbackWired) blockers.push("Provider logout callback must clear server and client session state.");
+  if (!input.sessionCallbackWired) blockers.push("Provider session callback must attach tenant-scoped membership and role context server-side.");
+  if (!input.userProvisioningConfigured) blockers.push("Provider user provisioning must map provider identities to application users.");
+  if (!input.tenantMembershipLookupPersisted) blockers.push("TenantMember lookup must come from the database or provider-backed server store.");
+  if (!input.customRoleLookupPersisted) blockers.push("CustomRole grants must be loaded from persistent tenant-scoped storage.");
+  if (!input.databaseSessionStoreConfigured) blockers.push("Database-backed session store must persist active session metadata.");
+  if (!input.sessionRevocationPersisted) blockers.push("Session revocation must persist and be checked before guarded route access.");
+  if (!input.secureDashboardCookiesConfigured) blockers.push("Dashboard session cookies must be HttpOnly, Secure, SameSite, rotating, and CSRF-bound.");
+  if (!input.mobileTokenStorageConfigured) blockers.push("Mobile auth tokens must be stored in secure device storage and cleared on logout/revocation.");
+  if (!input.auditLogWritesConfigured) blockers.push("Login, logout, callback, denial, tenant switch, and revocation events must write AuditLog rows.");
+  if (!input.providerBackedTestsPassed) blockers.push("Provider-backed login/logout/session callback tests must pass.");
+  if (!input.crossTenantSmokeTestsPassed) blockers.push("Tenant isolation smoke tests must deny cross-tenant provider sessions.");
+  if (!input.commandEvidenceCaptured) blockers.push("Command and smoke-test evidence must be captured before GAP-003 can close.");
+
+  if (!input.providerSelected || !input.providerEnvConfigured || !input.loginCallbackWired || !input.logoutCallbackWired || !input.sessionCallbackWired) {
+    requiredEvidence.push("provider selection, redacted environment/callback configuration, and login/logout/session callback evidence");
+  }
+  if (!input.userProvisioningConfigured || !input.tenantMembershipLookupPersisted || !input.customRoleLookupPersisted || !input.databaseSessionStoreConfigured) {
+    requiredEvidence.push("provider identity mapping plus persisted user, TenantMember, CustomRole, and session lookup evidence");
+  }
+  if (!input.sessionRevocationPersisted || !input.secureDashboardCookiesConfigured || !input.mobileTokenStorageConfigured) {
+    requiredEvidence.push("revocation, secure dashboard cookie, and mobile secure-token storage evidence");
+  }
+  if (!input.auditLogWritesConfigured || !input.providerBackedTestsPassed || !input.crossTenantSmokeTestsPassed || !input.commandEvidenceCaptured) {
+    requiredEvidence.push("audit-log, provider-backed auth test, cross-tenant smoke, and command-output evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/auth typecheck",
+      "pnpm --filter @inkroute/auth test",
+      "provider-backed login callback test",
+      "provider-backed logout callback test",
+      "provider-backed session callback and TenantMember lookup test",
+      "dashboard/API tenant isolation smoke tests",
+      "mobile session storage/revocation smoke tests",
+    ],
+    requiredEvidence,
+    requiredControls: [
+      "Map provider identity to application User records without trusting client headers.",
+      "Resolve TenantMember and CustomRole rows server-side for every guarded request.",
+      "Persist active sessions and revocations before route authorization.",
+      "Use secure dashboard cookies and secure mobile token storage with logout/revocation clearing.",
+      "Write redacted AuditLog rows for auth lifecycle and authorization decisions.",
+      "Deny cross-tenant provider sessions in dashboard, API, and mobile surfaces.",
+    ],
+    blockers,
+  };
+}
+
 export function buildDashboardReadinessPlan(input: DashboardReadinessInput): DashboardReadinessPlan {
   const blockers: string[] = [];
   const mutationSurfaces = input.surfaces.filter((surface) => surface.mode === "mutation_api" || surface.mode === "provider_action");
@@ -1105,6 +1228,73 @@ export function buildDashboardReadinessPlan(input: DashboardReadinessInput): Das
       "Execute state-changing actions inside tenant-scoped transactions with AuditLog writes.",
       "Redact or deny sensitive fields by role before serializing dashboard payloads.",
       "Run seeded-data Playwright smoke tests and cross-tenant denial tests before launch.",
+    ],
+    blockers,
+  };
+}
+
+export function buildDashboardLaunchEvidencePlan(input: DashboardLaunchEvidenceInput): DashboardLaunchEvidencePlan {
+  const requiredScripts = ["typecheck", "build", "test"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/dashboard package script is missing ${script}.`);
+  if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass.");
+  if (!input.dashboardUnitTestsPassed) blockers.push("Dashboard unit/contract tests must pass.");
+  if (!input.dashboardPlaywrightSmokePassed) blockers.push("Dashboard Playwright smoke tests must pass with seeded tenant data.");
+  if (!input.seededTenantDataAvailable) blockers.push("Seeded tenant data must be available for dashboard smoke and mutation tests.");
+  if (!input.providerBackedAuthConfigured) blockers.push("Dashboard must use provider-backed auth/session state.");
+  if (!input.tenantScopedApisImplemented) blockers.push("Dashboard pages and APIs must load data through tenant-scoped authenticated APIs.");
+  if (!input.prismaRepositoriesImplemented) blockers.push("Dashboard data surfaces must use Prisma repositories or server services instead of demo state.");
+  if (!input.realMutationsEnabled) blockers.push("Dashboard state-changing actions must be implemented beyond static/demo gates.");
+  if (!input.mutationAuditLogsPersisted) blockers.push("Every dashboard mutation/provider action must persist AuditLog rows.");
+  if (!input.providerActionsImplemented) blockers.push("Dashboard provider actions must be implemented or explicitly blocked with audit evidence.");
+  if (!input.rbacDenialTestsPassed) blockers.push("RBAC denial tests must pass for dashboard pages, APIs, and actions.");
+  if (!input.crossTenantDenialTestsPassed) blockers.push("Cross-tenant dashboard access and mutation denial tests must pass.");
+  if (!input.fieldRedactionVerified) blockers.push("Dashboard field-level redaction must be verified for private client, medical, payment, consent, and system fields.");
+  if (!input.loadingEmptyErrorStatesVerified) blockers.push("Dashboard loading, empty, and error states must be verified for launch-critical surfaces.");
+  if (!input.ciEvidenceCaptured) blockers.push("CI evidence for dashboard launch gates must be captured.");
+  if (!input.dashboardArtifactsSecretSafe) blockers.push("Dashboard test/build artifacts must be redacted and free of secrets or client-private data.");
+
+  if (!input.dashboardTypecheckPassed || !input.dashboardBuildPassed || !input.dashboardUnitTestsPassed || !input.dashboardPlaywrightSmokePassed) {
+    requiredEvidence.push("dashboard typecheck, build, unit/contract, and Playwright smoke output");
+  }
+  if (!input.seededTenantDataAvailable || !input.providerBackedAuthConfigured || !input.tenantScopedApisImplemented) {
+    requiredEvidence.push("seeded tenant data, provider-backed auth, and tenant-scoped API evidence");
+  }
+  if (!input.prismaRepositoriesImplemented || !input.realMutationsEnabled || !input.mutationAuditLogsPersisted) {
+    requiredEvidence.push("Prisma repository, real mutation, and AuditLog persistence evidence");
+  }
+  if (!input.providerActionsImplemented || !input.rbacDenialTestsPassed || !input.crossTenantDenialTestsPassed || !input.fieldRedactionVerified) {
+    requiredEvidence.push("provider action, RBAC denial, cross-tenant denial, and field-redaction evidence");
+  }
+  if (!input.loadingEmptyErrorStatesVerified || !input.ciEvidenceCaptured || !input.dashboardArtifactsSecretSafe) {
+    requiredEvidence.push("loading/empty/error state, CI, and secret-safe artifact evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/dashboard test",
+      "pnpm test:e2e --project=dashboard-chromium",
+      "dashboard provider-backed auth smoke tests",
+      "dashboard RBAC and cross-tenant denial tests",
+      "dashboard mutation AuditLog persistence tests",
+      "GitHub Actions dashboard launch evidence job",
+    ],
+    requiredEvidence,
+    requiredControls: [
+      "Resolve provider-backed session and tenant membership before every dashboard data load.",
+      "Load dashboard data through tenant-scoped repositories or authenticated APIs.",
+      "Execute mutations in tenant-scoped transactions with AuditLog rows.",
+      "Enforce RBAC and cross-tenant denial for pages, APIs, server actions, and provider actions.",
+      "Redact private client, medical, payment, consent, and system fields before serialization.",
+      "Capture secret-safe build, smoke, and CI artifacts for launch closeout.",
     ],
     blockers,
   };

@@ -180,6 +180,44 @@ export interface PrivateStorageRuntimeReadinessPlan {
   blockers: readonly string[];
 }
 
+export interface ProviderStorageUploadReadinessInput {
+  packageScripts: readonly string[];
+  securityTestsPassed: boolean;
+  securityTypecheckPassed: boolean;
+  webUploadRouteTestsPassed: boolean;
+  webTypecheckPassed: boolean;
+  storageProviderSelected: boolean;
+  storageProviderConfigured: boolean;
+  storageSecretsConfigured: boolean;
+  privateBucketAclVerified: boolean;
+  derivativeBucketPolicyVerified: boolean;
+  signedUploadUrlsProviderBacked: boolean;
+  signedDownloadUrlsProviderBacked: boolean;
+  serverOwnedObjectKeysEnforced: boolean;
+  fileAssetPersistenceTransactional: boolean;
+  auditLogPersistenceConfigured: boolean;
+  linkTablePersistenceConfigured: boolean;
+  signedUrlGrantPersistenceConfigured: boolean;
+  malwareScanProviderConfigured: boolean;
+  scanVerdictPersistenceConfigured: boolean;
+  metadataStrippingWorkerConfigured: boolean;
+  publicDerivativeGenerationConfigured: boolean;
+  privateOriginalPublicReadDenied: boolean;
+  approvedDerivativePublicReadVerified: boolean;
+  tenantScopedProviderIntegrationTestsPassed: boolean;
+  privacyRetentionEnforced: boolean;
+  ciEvidenceCaptured: boolean;
+  secretSafeArtifactsCaptured: boolean;
+}
+
+export interface ProviderStorageUploadReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
 export type FileAssetPersistenceStatus = "ready" | "blocked";
 export type FileAssetAccessLevel = "public_derivative" | "tenant_member" | "client_private" | "system_only";
 
@@ -3342,6 +3380,78 @@ export function buildFileAssetPersistencePlan(input: FileAssetPersistencePlanInp
       "Write AuditLog rows for upload intent creation, scan verdicts, signed URL grants, revocations, and deletion.",
       "Apply privacy retention rules to private reference, consent, document, and healed follow-up files.",
     ],
+    blockers,
+  };
+}
+
+export function buildProviderStorageUploadReadinessPlan(
+  input: ProviderStorageUploadReadinessInput,
+): ProviderStorageUploadReadinessPlan {
+  const missingScripts = ["test", "typecheck"].filter((script) => !input.packageScripts.includes(script));
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/security package script is missing ${script}.`);
+  if (!input.securityTestsPassed) blockers.push("@inkroute/security upload policy tests must pass.");
+  if (!input.securityTypecheckPassed) blockers.push("@inkroute/security typecheck must pass.");
+  if (!input.webUploadRouteTestsPassed) blockers.push("Web secure-upload-intents route tests must pass.");
+  if (!input.webTypecheckPassed) blockers.push("@inkroute/web typecheck must pass with provider upload wiring.");
+  if (!input.storageProviderSelected) blockers.push("Supabase Storage, S3, or equivalent object storage provider must be selected.");
+  if (!input.storageProviderConfigured) blockers.push("Object storage provider must be configured in a non-production environment.");
+  if (!input.storageSecretsConfigured) blockers.push("Storage provider credentials must be configured through the secret store.");
+  if (!input.privateBucketAclVerified) blockers.push("Private original bucket ACL must deny public reads.");
+  if (!input.derivativeBucketPolicyVerified) blockers.push("Derivative bucket or prefix policy must allow only approved public derivatives.");
+  if (!input.signedUploadUrlsProviderBacked) blockers.push("Signed upload URLs must be provider-backed instead of local plan-only responses.");
+  if (!input.signedDownloadUrlsProviderBacked) blockers.push("Signed download URLs must be provider-backed with expiry and revocation checks.");
+  if (!input.serverOwnedObjectKeysEnforced) blockers.push("Object keys must be server-owned and tenant-scoped.");
+  if (!input.fileAssetPersistenceTransactional) blockers.push("FileAsset metadata must persist transactionally with link rows and audit logs.");
+  if (!input.auditLogPersistenceConfigured) blockers.push("Upload intent, scan verdict, signed URL, revocation, derivative, and deletion events must write AuditLog rows.");
+  if (!input.linkTablePersistenceConfigured) blockers.push("BookingReferenceImage, ConsentArtifact, portfolio, or document link rows must persist where applicable.");
+  if (!input.signedUrlGrantPersistenceConfigured) blockers.push("SignedUrlGrant persistence must support expiry and revocation checks.");
+  if (!input.malwareScanProviderConfigured) blockers.push("Malware scan provider must be configured before private downloads or public derivatives are enabled.");
+  if (!input.scanVerdictPersistenceConfigured) blockers.push("Scan verdicts, detected MIME, metadata stripping, and derivative status must persist.");
+  if (!input.metadataStrippingWorkerConfigured) blockers.push("Metadata stripping worker must run before public derivative publication.");
+  if (!input.publicDerivativeGenerationConfigured) blockers.push("Public portfolio derivative generation must be configured after scan approval.");
+  if (!input.privateOriginalPublicReadDenied) blockers.push("Provider integration tests must prove private originals cannot be publicly fetched.");
+  if (!input.approvedDerivativePublicReadVerified) blockers.push("Provider integration tests must prove only approved derivatives are publicly readable.");
+  if (!input.tenantScopedProviderIntegrationTestsPassed) blockers.push("Provider integration tests must deny cross-tenant upload/download access.");
+  if (!input.privacyRetentionEnforced) blockers.push("Privacy retention rules must apply to private reference, consent, document, and healed follow-up files.");
+  if (!input.ciEvidenceCaptured) blockers.push("CI evidence for storage/upload provider tests must be captured.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Storage artifacts must be redacted and free of provider secrets or client-private files.");
+
+  if (!input.storageProviderSelected || !input.storageProviderConfigured || !input.storageSecretsConfigured) {
+    requiredEvidence.push("storage provider selection plus redacted provider configuration evidence");
+  }
+  if (!input.privateBucketAclVerified || !input.derivativeBucketPolicyVerified || !input.privateOriginalPublicReadDenied || !input.approvedDerivativePublicReadVerified) {
+    requiredEvidence.push("private bucket ACL and derivative-publication policy proof");
+  }
+  if (!input.signedUploadUrlsProviderBacked || !input.signedDownloadUrlsProviderBacked || !input.signedUrlGrantPersistenceConfigured) {
+    requiredEvidence.push("provider-backed signed upload/download URL evidence with persisted grant expiry and revocation");
+  }
+  if (!input.fileAssetPersistenceTransactional || !input.auditLogPersistenceConfigured || !input.linkTablePersistenceConfigured) {
+    requiredEvidence.push("transactional FileAsset, AuditLog, and related link-row persistence evidence");
+  }
+  if (!input.malwareScanProviderConfigured || !input.scanVerdictPersistenceConfigured || !input.metadataStrippingWorkerConfigured || !input.publicDerivativeGenerationConfigured) {
+    requiredEvidence.push("malware scan, MIME verification, metadata stripping, and derivative generation evidence");
+  }
+  if (!input.tenantScopedProviderIntegrationTestsPassed || !input.privacyRetentionEnforced || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
+    requiredEvidence.push("tenant-isolated provider integration, retention, CI, and secret-safe artifact evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts",
+      "object storage provider upload/download integration tests",
+      "malware scan and derivative worker integration tests",
+      "private-original public-read denial test",
+      "GitHub Actions storage/upload evidence job",
+    ],
+    requiredEvidence,
     blockers,
   };
 }

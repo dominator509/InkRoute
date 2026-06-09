@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   assertPermission,
   buildAuthSessionTenantGuardRuntimeReadinessPlan,
+  buildDashboardLaunchEvidencePlan,
   buildDashboardReadinessPlan,
   buildDomainAuthorizationRuntimeReadinessPlan,
   buildMobileAuthRuntimeReadinessPlan,
+  buildProviderSessionStoreReadinessPlan,
   buildSessionPersistencePlan,
   evaluateApiRouteGuard,
   evaluateDashboardRouteGuard,
@@ -605,6 +607,72 @@ describe("auth authorization helpers", () => {
     ]));
   });
 
+  it("blocks dashboard launch evidence until build, provider auth, tenant APIs, mutations, audits, denial tests, states, CI, and artifacts are proven", () => {
+    const plan = buildDashboardLaunchEvidencePlan({
+      packageScripts: { typecheck: "tsc --noEmit", build: "next build" },
+      dashboardTypecheckPassed: true,
+      dashboardBuildPassed: false,
+      dashboardUnitTestsPassed: false,
+      dashboardPlaywrightSmokePassed: false,
+      seededTenantDataAvailable: false,
+      providerBackedAuthConfigured: false,
+      tenantScopedApisImplemented: false,
+      prismaRepositoriesImplemented: false,
+      realMutationsEnabled: false,
+      mutationAuditLogsPersisted: false,
+      providerActionsImplemented: false,
+      rbacDenialTestsPassed: false,
+      crossTenantDenialTestsPassed: false,
+      fieldRedactionVerified: false,
+      loadingEmptyErrorStatesVerified: false,
+      ciEvidenceCaptured: false,
+      dashboardArtifactsSecretSafe: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["test"]);
+    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/dashboard build");
+    expect(plan.requiredEvidence).toEqual([
+      "dashboard typecheck, build, unit/contract, and Playwright smoke output",
+      "seeded tenant data, provider-backed auth, and tenant-scoped API evidence",
+      "Prisma repository, real mutation, and AuditLog persistence evidence",
+      "provider action, RBAC denial, cross-tenant denial, and field-redaction evidence",
+      "loading/empty/error state, CI, and secret-safe artifact evidence",
+    ]);
+    expect(plan.requiredControls).toContain("Execute mutations in tenant-scoped transactions with AuditLog rows.");
+    expect(plan.blockers).toContain("Dashboard Playwright smoke tests must pass with seeded tenant data.");
+    expect(plan.blockers).toContain("Dashboard must use provider-backed auth/session state.");
+    expect(plan.blockers).toContain("Dashboard test/build artifacts must be redacted and free of secrets or client-private data.");
+  });
+
+  it("marks dashboard launch evidence ready when build, provider auth, tenant APIs, mutations, audits, denial tests, states, CI, and artifacts align", () => {
+    const plan = buildDashboardLaunchEvidencePlan({
+      packageScripts: { typecheck: "tsc --noEmit", build: "next build", test: "vitest run" },
+      dashboardTypecheckPassed: true,
+      dashboardBuildPassed: true,
+      dashboardUnitTestsPassed: true,
+      dashboardPlaywrightSmokePassed: true,
+      seededTenantDataAvailable: true,
+      providerBackedAuthConfigured: true,
+      tenantScopedApisImplemented: true,
+      prismaRepositoriesImplemented: true,
+      realMutationsEnabled: true,
+      mutationAuditLogsPersisted: true,
+      providerActionsImplemented: true,
+      rbacDenialTestsPassed: true,
+      crossTenantDenialTestsPassed: true,
+      fieldRedactionVerified: true,
+      loadingEmptyErrorStatesVerified: true,
+      ciEvidenceCaptured: true,
+      dashboardArtifactsSecretSafe: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.missingScripts).toEqual([]);
+    expect(plan.requiredEvidence).toEqual([]);
+    expect(plan.blockers).toEqual([]);
+  });
+
   it("summarizes domain authorization runtime readiness across middleware, roles, audits, CSRF, and route tests", () => {
     const plan = buildDomainAuthorizationRuntimeReadinessPlan({
       packageScripts: { test: "vitest run" },
@@ -703,5 +771,68 @@ describe("auth authorization helpers", () => {
         "Cross-tenant route integration tests must prove tenant isolation.",
       ]),
     );
+  });
+
+  it("blocks provider session-store readiness until callbacks, persisted membership, revocation, secure storage, audits, and smoke evidence exist", () => {
+    const plan = buildProviderSessionStoreReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      providerSelected: false,
+      providerEnvConfigured: false,
+      loginCallbackWired: false,
+      logoutCallbackWired: false,
+      sessionCallbackWired: true,
+      userProvisioningConfigured: false,
+      tenantMembershipLookupPersisted: false,
+      customRoleLookupPersisted: false,
+      databaseSessionStoreConfigured: false,
+      sessionRevocationPersisted: false,
+      secureDashboardCookiesConfigured: false,
+      mobileTokenStorageConfigured: false,
+      auditLogWritesConfigured: false,
+      providerBackedTestsPassed: false,
+      crossTenantSmokeTestsPassed: false,
+      commandEvidenceCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toContain("provider-backed session callback and TenantMember lookup test");
+    expect(plan.requiredEvidence).toEqual([
+      "provider selection, redacted environment/callback configuration, and login/logout/session callback evidence",
+      "provider identity mapping plus persisted user, TenantMember, CustomRole, and session lookup evidence",
+      "revocation, secure dashboard cookie, and mobile secure-token storage evidence",
+      "audit-log, provider-backed auth test, cross-tenant smoke, and command-output evidence",
+    ]);
+    expect(plan.requiredControls).toContain("Resolve TenantMember and CustomRole rows server-side for every guarded request.");
+    expect(plan.blockers).toContain("Auth provider must be selected before provider-backed sessions can be claimed.");
+    expect(plan.blockers).toContain("TenantMember lookup must come from the database or provider-backed server store.");
+    expect(plan.blockers).toContain("Tenant isolation smoke tests must deny cross-tenant provider sessions.");
+  });
+
+  it("marks provider session-store readiness ready when callbacks, persistence, revocation, secure storage, audits, and smoke evidence align", () => {
+    const plan = buildProviderSessionStoreReadinessPlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      providerSelected: true,
+      providerEnvConfigured: true,
+      loginCallbackWired: true,
+      logoutCallbackWired: true,
+      sessionCallbackWired: true,
+      userProvisioningConfigured: true,
+      tenantMembershipLookupPersisted: true,
+      customRoleLookupPersisted: true,
+      databaseSessionStoreConfigured: true,
+      sessionRevocationPersisted: true,
+      secureDashboardCookiesConfigured: true,
+      mobileTokenStorageConfigured: true,
+      auditLogWritesConfigured: true,
+      providerBackedTestsPassed: true,
+      crossTenantSmokeTestsPassed: true,
+      commandEvidenceCaptured: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.missingScripts).toEqual([]);
+    expect(plan.requiredEvidence).toEqual([]);
+    expect(plan.blockers).toEqual([]);
   });
 });

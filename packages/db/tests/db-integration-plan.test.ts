@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildDbIntegrationRuntimeReadinessPlan } from "../src/index";
+import { buildDbIntegrationRuntimeReadinessPlan, buildPrismaSchemaLifecycleReadinessPlan } from "../src/index";
 
 const root = resolve(__dirname, "../../..");
 
@@ -130,6 +130,79 @@ describe("database integration test plan", () => {
     ]));
     expect(plan.blockers).toContain("Tenant-isolation integration tests must deny cross-tenant reads and writes across critical models.");
     expect(plan.blockers).toContain("Audit-log integration tests must prove tenant-scoped actor, entity, action, and metadata writes.");
+  });
+
+  it("blocks Prisma schema lifecycle readiness until provisioning, migration, SQL review, seed, drift, and CI evidence exist", () => {
+    const plan = buildPrismaSchemaLifecycleReadinessPlan({
+      packageScripts: {
+        "db:validate": "prisma validate",
+        "db:generate": "prisma generate",
+        "db:migrate": "prisma migrate dev",
+      },
+      schemaModelsCount: 44,
+      schemaEnumsCount: 36,
+      minimumExpectedModels: 44,
+      minimumExpectedEnums: 36,
+      postgresProvisioned: false,
+      databaseUrlConfigured: false,
+      directUrlConfigured: false,
+      prismaValidatePassed: true,
+      prismaGeneratePassed: false,
+      migrationGenerated: false,
+      migrationSqlReviewed: false,
+      migrationAppliedToDevDb: false,
+      seedScriptPassed: false,
+      seedReadinessVerified: false,
+      destructiveProductionUrlGuarded: false,
+      migrationDriftChecked: false,
+      commandEvidenceCaptured: false,
+      ciEvidenceCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["db:seed", "db:verify-seed"]);
+    expect(plan.schemaCoverageStatus).toBe("pass");
+    expect(plan.requiredCommands).toContain("Prisma migration SQL review");
+    expect(plan.requiredEvidence).toContain("Generated migration SQL review notes and drift-check output.");
+    expect(plan.blockers).toContain("A non-production Postgres database must be provisioned.");
+    expect(plan.blockers).toContain("DIRECT_URL must be configured for Prisma migrations when required by the provider.");
+    expect(plan.blockers).toContain("Generated migration SQL must be reviewed before applying to shared environments.");
+    expect(plan.blockers).toContain("Migration drift must be checked after applying migrations.");
+  });
+
+  it("marks Prisma schema lifecycle ready when schema coverage, migration, seed, drift, guards, and CI evidence exist", () => {
+    const plan = buildPrismaSchemaLifecycleReadinessPlan({
+      packageScripts: {
+        "db:validate": "prisma validate",
+        "db:generate": "prisma generate",
+        "db:migrate": "prisma migrate dev",
+        "db:seed": "tsx prisma/seed.ts",
+        "db:verify-seed": "node ../../scripts/db/verify-seed-readiness.mjs",
+      },
+      schemaModelsCount: 44,
+      schemaEnumsCount: 36,
+      minimumExpectedModels: 44,
+      minimumExpectedEnums: 36,
+      postgresProvisioned: true,
+      databaseUrlConfigured: true,
+      directUrlConfigured: true,
+      prismaValidatePassed: true,
+      prismaGeneratePassed: true,
+      migrationGenerated: true,
+      migrationSqlReviewed: true,
+      migrationAppliedToDevDb: true,
+      seedScriptPassed: true,
+      seedReadinessVerified: true,
+      destructiveProductionUrlGuarded: true,
+      migrationDriftChecked: true,
+      commandEvidenceCaptured: true,
+      ciEvidenceCaptured: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.missingScripts).toEqual([]);
+    expect(plan.schemaCoverageStatus).toBe("pass");
+    expect(plan.blockers).toEqual([]);
   });
 
   it("marks DB integration runtime ready only after lifecycle, seeded tenant, isolation, audit, transcript, and CI evidence exist", () => {

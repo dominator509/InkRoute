@@ -4,6 +4,7 @@ import {
   buildAvailabilityPersistencePlan,
   buildAvailabilityRuntimeReadinessPlan,
   buildCalendarAutomatedTestReadinessPlan,
+  buildCalendarLaunchEvidencePlan,
   buildCalendarRuntimeReadinessPlan,
   buildGoogleCalendarRuntimeReadinessPlan,
   buildGoogleCalendarProviderSyncPlan,
@@ -639,6 +640,85 @@ describe("calendar availability", () => {
       "Signed ICS feed token store is not configured.",
       "Timezone/DST/recurrence/provider-render QA matrix is not ready.",
     ]));
+  });
+
+  it("blocks calendar launch evidence until Postgres, Google, signed ICS, timezone, travel, CI, and artifacts are proven", () => {
+    const plan = buildCalendarLaunchEvidencePlan({
+      packageScripts: { test: "vitest run" },
+      calendarTypecheckPassed: false,
+      calendarTestsPassed: true,
+      availabilityRepositoriesImplemented: false,
+      availabilityPostgresIntegrationPassed: false,
+      concurrentHoldRaceTestsPassed: false,
+      tenantIsolationTestsPassed: false,
+      googleOauthConfigured: false,
+      googleEncryptedTokensConfigured: false,
+      googleWorkerEnabled: false,
+      googleFreebusySmokePassed: false,
+      googleEventSyncSmokePassed: false,
+      googlePushOrIncrementalSyncVerified: false,
+      signedIcsTokenPersistenceConfigured: false,
+      signedIcsAccessSmokePassed: false,
+      signedIcsClientImportSmokePassed: false,
+      timezoneDstQaPassed: false,
+      providerRenderMatrixPassed: false,
+      travelPublishPersistencePassed: false,
+      cacheRevalidationVerified: false,
+      dashboardCalendarSmokePassed: false,
+      publicTravelSmokePassed: false,
+      ciEvidenceCaptured: false,
+      calendarArtifactsSecretSafe: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toContain("Google Calendar OAuth/freebusy/event-sync smoke tests");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "calendar package typecheck and unit/helper test output",
+      "tenant-scoped availability repository, Postgres integration, race-condition, and tenant-isolation evidence",
+      "Google OAuth, encrypted token, worker, FreeBusy, event sync, and push/incremental recovery evidence",
+      "signed ICS token persistence, route access, and client import smoke evidence",
+      "timezone/DST/recurrence and provider render matrix QA evidence",
+      "travel publish persistence, cache revalidation, dashboard smoke, and public travel smoke evidence",
+      "CI calendar job and secret-safe artifact evidence",
+    ]));
+    expect(plan.blockers).toContain("Google OAuth client, redirect URI, and scopes must be configured.");
+    expect(plan.blockers).toContain("Signed ICS token hash, expiry, rotation, and revocation persistence must be configured.");
+    expect(plan.blockers).toContain("Calendar artifacts must be redacted and free of provider tokens, client data, or private calendar details.");
+  });
+
+  it("marks calendar launch evidence ready when Postgres, Google, signed ICS, timezone, travel, CI, and artifacts align", () => {
+    const plan = buildCalendarLaunchEvidencePlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      calendarTypecheckPassed: true,
+      calendarTestsPassed: true,
+      availabilityRepositoriesImplemented: true,
+      availabilityPostgresIntegrationPassed: true,
+      concurrentHoldRaceTestsPassed: true,
+      tenantIsolationTestsPassed: true,
+      googleOauthConfigured: true,
+      googleEncryptedTokensConfigured: true,
+      googleWorkerEnabled: true,
+      googleFreebusySmokePassed: true,
+      googleEventSyncSmokePassed: true,
+      googlePushOrIncrementalSyncVerified: true,
+      signedIcsTokenPersistenceConfigured: true,
+      signedIcsAccessSmokePassed: true,
+      signedIcsClientImportSmokePassed: true,
+      timezoneDstQaPassed: true,
+      providerRenderMatrixPassed: true,
+      travelPublishPersistencePassed: true,
+      cacheRevalidationVerified: true,
+      dashboardCalendarSmokePassed: true,
+      publicTravelSmokePassed: true,
+      ciEvidenceCaptured: true,
+      calendarArtifactsSecretSafe: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.missingScripts).toEqual([]);
+    expect(plan.requiredEvidence).toEqual([]);
+    expect(plan.blockers).toEqual([]);
   });
 
   it("blocks calendar automated test readiness until route, DB, Google, timezone matrix, Playwright, CI, and artifact evidence exist", () => {

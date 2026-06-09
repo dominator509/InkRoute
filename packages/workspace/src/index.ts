@@ -88,6 +88,30 @@ export interface RuntimeReadinessSummary {
   readonly notes: readonly string[];
 }
 
+export interface DependencyInstallReadinessInput {
+  readonly packageJsonPresent: boolean;
+  readonly pnpmWorkspacePresent: boolean;
+  readonly pnpmLockfilePresent: boolean;
+  readonly packageManagerPinned: boolean;
+  readonly installCommandPassed: boolean;
+  readonly frozenLockfileInstallPassed: boolean;
+  readonly typecheckPassed: boolean;
+  readonly lintPassed: boolean;
+  readonly unitTestsPassed: boolean;
+  readonly workspaceAuditPassed: boolean;
+  readonly ciEvidenceCaptured: boolean;
+  readonly lockfileCommitted: boolean;
+  readonly productionBlockersVisible: boolean;
+}
+
+export interface DependencyInstallReadinessPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingSourceFiles: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
+}
+
 export interface RuntimeEvidenceRequirement {
   readonly id: string;
   readonly command: string;
@@ -112,6 +136,25 @@ export interface RuntimeEvidenceAuditSummary {
   readonly requirementsChecked: number;
   readonly missingRequiredEvidence: readonly string[];
   readonly findings: readonly RuntimeEvidenceFinding[];
+}
+
+export interface RuntimeEvidenceReadinessInput {
+  readonly requirements: readonly RuntimeEvidenceRequirement[];
+  readonly records: readonly RuntimeEvidenceRecord[];
+  readonly auditStatus: WorkspaceAuditStatus;
+  readonly runtimeEvidenceCommandPassed: boolean;
+  readonly workspaceAllIncludesRuntimeEvidence: boolean;
+  readonly ciEvidenceCaptured: boolean;
+  readonly productionBlockersVisible: boolean;
+}
+
+export interface RuntimeEvidenceReadinessPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingEvidenceIds: readonly string[];
+  readonly nonPassingEvidenceIds: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
 }
 
 export interface WorkspaceRequiredChecksContract {
@@ -144,6 +187,28 @@ export interface WorkspaceRequiredChecksAuditSummary {
   readonly prEnforcementTermsChecked: number;
   readonly requiredBranchProtectionChecks: readonly string[];
   readonly externalSettingsStillRequired: readonly string[];
+}
+
+export interface WorkspaceRequiredChecksReadinessInput {
+  readonly requiredChecksAuditStatus: WorkspaceAuditStatus;
+  readonly workspaceRequiredChecksPassed: boolean;
+  readonly workspaceAllPassed: boolean;
+  readonly qualityRequiredChecksPassed: boolean;
+  readonly ciQualityJobPassed: boolean;
+  readonly requiredBranchProtectionChecks: readonly string[];
+  readonly protectedBranchRequiredChecks: readonly string[];
+  readonly failingWorkspaceAuditBlocksMerge: boolean;
+  readonly prGapDiffCheckBlocksMerge: boolean;
+  readonly evidenceCaptured: boolean;
+  readonly logsRedacted: boolean;
+}
+
+export interface WorkspaceRequiredChecksReadinessPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingBranchProtectionChecks: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
 }
 
 export interface WorkspaceToolchainContract {
@@ -500,6 +565,75 @@ export function summarizeRuntimeReadiness(input: {
   };
 }
 
+export function buildDependencyInstallReadinessPlan(
+  input: DependencyInstallReadinessInput,
+): DependencyInstallReadinessPlan {
+  const missingSourceFiles: string[] = [];
+  const blockers: string[] = [];
+
+  if (!input.packageJsonPresent) missingSourceFiles.push("package.json");
+  if (!input.pnpmWorkspacePresent) missingSourceFiles.push("pnpm-workspace.yaml");
+  if (!input.pnpmLockfilePresent) missingSourceFiles.push("pnpm-lock.yaml");
+
+  if (missingSourceFiles.length > 0) {
+    blockers.push("Dependency source files must include package.json, pnpm-workspace.yaml, and pnpm-lock.yaml.");
+  }
+  if (!input.packageManagerPinned) {
+    blockers.push("The package manager must be pinned before install evidence can be stable.");
+  }
+  if (!input.lockfileCommitted) {
+    blockers.push("pnpm-lock.yaml must be committed before dependency readiness can be claimed.");
+  }
+  if (!input.installCommandPassed) {
+    blockers.push("pnpm install must pass in the working environment.");
+  }
+  if (!input.frozenLockfileInstallPassed) {
+    blockers.push("pnpm install --frozen-lockfile must pass in CI or a clean checkout.");
+  }
+  if (!input.typecheckPassed) {
+    blockers.push("pnpm typecheck must pass after dependency install.");
+  }
+  if (!input.lintPassed) {
+    blockers.push("pnpm lint must pass after dependency install.");
+  }
+  if (!input.unitTestsPassed) {
+    blockers.push("pnpm test:unit must pass after dependency install.");
+  }
+  if (!input.workspaceAuditPassed) {
+    blockers.push("pnpm workspace:all must pass after dependency install.");
+  }
+  if (!input.ciEvidenceCaptured) {
+    blockers.push("CI evidence for install, typecheck, lint, tests, and workspace audits must be captured.");
+  }
+  if (!input.productionBlockersVisible) {
+    blockers.push("Dependency readiness evidence must keep unresolved production blockers visible.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingSourceFiles,
+    requiredCommands: [
+      "corepack enable",
+      "pnpm install",
+      "pnpm install --frozen-lockfile",
+      "pnpm workspace:all",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm test:unit",
+      "GitHub Actions CI quality job",
+    ],
+    requiredEvidence: [
+      "package.json, pnpm-workspace.yaml, and pnpm-lock.yaml are present and committed.",
+      "Package manager pin and lockfile are used for a deterministic pnpm install.",
+      "Local or clean-checkout install output plus frozen-lockfile CI output.",
+      "typecheck, lint, unit test, and workspace audit output after install.",
+      "CI evidence showing the same install/tooling gates passed.",
+      "GAP_TRACKER.md continues to show unresolved provider/runtime/legal blockers separately.",
+    ],
+    blockers,
+  };
+}
+
 export function auditRuntimeEvidence(
   requirements: readonly RuntimeEvidenceRequirement[],
   records: readonly RuntimeEvidenceRecord[],
@@ -535,6 +669,67 @@ export function auditRuntimeEvidence(
     requirementsChecked: requirements.length,
     missingRequiredEvidence,
     findings,
+  };
+}
+
+export function buildRuntimeEvidenceReadinessPlan(input: RuntimeEvidenceReadinessInput): RuntimeEvidenceReadinessPlan {
+  const recordsById = new Map(input.records.map((record) => [record.id, record]));
+  const missingEvidenceIds: string[] = [];
+  const nonPassingEvidenceIds: string[] = [];
+  const blockers: string[] = [];
+
+  for (const requirement of input.requirements) {
+    const record = recordsById.get(requirement.id);
+    if (!record) {
+      missingEvidenceIds.push(requirement.id);
+      if (requirement.requiredForProduction) {
+        blockers.push(`Runtime evidence is missing for ${requirement.command}.`);
+      }
+      continue;
+    }
+
+    if (record.status !== "passed" || !record.evidence || record.evidence.length < 10) {
+      nonPassingEvidenceIds.push(requirement.id);
+      if (requirement.requiredForProduction) {
+        blockers.push(`Runtime evidence for ${requirement.command} must be passed with a redacted evidence label.`);
+      }
+    }
+  }
+
+  if (input.auditStatus !== "pass") {
+    blockers.push("Runtime evidence audit must pass before runtime readiness can be claimed.");
+  }
+  if (!input.runtimeEvidenceCommandPassed) {
+    blockers.push("pnpm workspace:runtime-evidence must pass.");
+  }
+  if (!input.workspaceAllIncludesRuntimeEvidence) {
+    blockers.push("pnpm workspace:all must include workspace:runtime-evidence.");
+  }
+  if (!input.ciEvidenceCaptured) {
+    blockers.push("CI evidence must be captured for the runtime evidence audit.");
+  }
+  if (!input.productionBlockersVisible) {
+    blockers.push("Runtime evidence reports must keep production blockers visible until launch blockers are resolved.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingEvidenceIds,
+    nonPassingEvidenceIds,
+    requiredCommands: [
+      ...input.requirements.map((requirement) => requirement.command),
+      "pnpm workspace:runtime-evidence",
+      "pnpm workspace:all",
+      "GitHub Actions Phase 18 workspace runtime readiness job",
+    ],
+    requiredEvidence: [
+      "Each required runtime command has a passed record with a redacted evidence label.",
+      "runtime-evidence-audit.json reports pass.",
+      "workspace:runtime-evidence and workspace:all command output are captured.",
+      "GitHub Actions evidence is captured without secrets or private customer data.",
+      "Production blockers remain visible in readiness evidence until resolved.",
+    ],
+    blockers,
   };
 }
 
@@ -583,6 +778,68 @@ export function auditWorkspaceRequiredChecks(
     prEnforcementTermsChecked: contract.requiredPrEnforcementTerms.length,
     requiredBranchProtectionChecks: contract.requiredBranchProtectionChecks,
     externalSettingsStillRequired: contract.externalSettingsStillRequired,
+  };
+}
+
+export function buildWorkspaceRequiredChecksReadinessPlan(
+  input: WorkspaceRequiredChecksReadinessInput,
+): WorkspaceRequiredChecksReadinessPlan {
+  const protectedChecks = new Set(input.protectedBranchRequiredChecks);
+  const missingBranchProtectionChecks = input.requiredBranchProtectionChecks.filter((check) => !protectedChecks.has(check));
+  const blockers: string[] = [];
+
+  if (input.requiredChecksAuditStatus !== "pass") {
+    blockers.push("Workspace required-check contract audit must pass.");
+  }
+  if (!input.workspaceRequiredChecksPassed) {
+    blockers.push("pnpm workspace:required-checks must pass.");
+  }
+  if (!input.workspaceAllPassed) {
+    blockers.push("pnpm workspace:all must pass with required-check enforcement included.");
+  }
+  if (!input.qualityRequiredChecksPassed) {
+    blockers.push("pnpm quality:required-checks must pass.");
+  }
+  if (!input.ciQualityJobPassed) {
+    blockers.push("GitHub Actions CI / quality job must pass.");
+  }
+  if (missingBranchProtectionChecks.length > 0) {
+    blockers.push("GitHub branch protection must require every workspace and PR gap-diff check before merge.");
+  }
+  if (!input.failingWorkspaceAuditBlocksMerge) {
+    blockers.push("A failing workspace-audit PR must be proven unable to merge.");
+  }
+  if (!input.prGapDiffCheckBlocksMerge) {
+    blockers.push("The PR GAP tracker diff evidence check must be proven merge-blocking.");
+  }
+  if (!input.evidenceCaptured) {
+    blockers.push("Required-check enforcement evidence must be captured from GitHub settings and CI.");
+  }
+  if (!input.logsRedacted) {
+    blockers.push("Required-check evidence logs must be redacted and free of secrets.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingBranchProtectionChecks,
+    requiredCommands: [
+      "pnpm workspace:required-checks",
+      "pnpm workspace:all",
+      "pnpm quality:required-checks",
+      "GitHub Actions CI / quality",
+      "GitHub branch protection required-check review",
+      "Failing workspace-audit PR merge-block proof",
+      "PR GAP tracker diff evidence merge-block proof",
+    ],
+    requiredEvidence: [
+      "workspace:required-checks, workspace:all, and quality:required-checks command output.",
+      "GitHub Actions CI / quality job output showing workspace and PR gap-diff checks.",
+      "Branch protection settings showing every required workspace and PR gap-diff check is required before merge.",
+      "A failing workspace-audit PR cannot merge.",
+      "A failing PR GAP tracker diff evidence check cannot merge.",
+      "Evidence logs are redacted and contain no secrets.",
+    ],
+    blockers,
   };
 }
 

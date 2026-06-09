@@ -6,6 +6,7 @@ import {
   auditRepositoryGovernance,
   auditSemanticDocumentationClaims,
   buildDocumentationAuditRuntimeReadinessPlan,
+  buildLegalReviewRuntimeReadinessPlan,
   buildPrDiffEvidenceRuntimeReadinessPlan,
   buildPrGapEvidenceEnforcementReadinessPlan,
   buildQualityGateRuntimeReadinessPlan,
@@ -475,6 +476,54 @@ describe("quality gates", () => {
     expect(plan.missingRootScripts).toEqual([]);
     expect(plan.missingPackageScripts).toEqual([]);
     expect(plan.missingGeneratedManifests).toEqual([]);
+    expect(plan.blockers).toEqual([]);
+  });
+
+  it("blocks legal review readiness until approvals, artifacts, redacted labels, CI, and launch gates are complete", () => {
+    const plan = buildLegalReviewRuntimeReadinessPlan({
+      legalReviewAuditPassed: false,
+      requiredReviewItemIds: ["privacy-policy", "terms-of-service", "sms-notifications"],
+      approvedReviewItemIds: ["privacy-policy"],
+      requiredArtifactPaths: ["apps/web/app/privacy/page.tsx", "apps/web/app/terms/page.tsx"],
+      existingArtifactPaths: ["apps/web/app/privacy/page.tsx"],
+      redactedEvidenceLabelsPresent: false,
+      privilegedAdviceExcluded: true,
+      placeholderCopyReplacedAfterApproval: false,
+      legalVerifyCommandPassed: false,
+      ciQualityGateIncludesLegalReview: false,
+      productionLaunchBlockedUntilApproval: true,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingApprovedItems).toEqual(["terms-of-service", "sms-notifications"]);
+    expect(plan.missingArtifacts).toEqual(["apps/web/app/terms/page.tsx"]);
+    expect(plan.requiredCommands).toContain("pnpm legal:verify-review");
+    expect(plan.requiredEvidence).toContain("No privileged attorney advice, secrets, or client data are committed.");
+    expect(plan.blockers).toContain("Every required legal review item must be attorney-approved before production launch.");
+    expect(plan.blockers).toContain("Legal review audit must pass.");
+    expect(plan.blockers).toContain("CI quality gates must include legal review verification.");
+  });
+
+  it("marks legal review readiness ready when approval evidence, artifacts, CI, and launch gates align", () => {
+    const requiredReviewItemIds = ["privacy-policy", "terms-of-service", "sms-notifications"];
+    const requiredArtifactPaths = ["apps/web/app/privacy/page.tsx", "apps/web/app/terms/page.tsx"];
+    const plan = buildLegalReviewRuntimeReadinessPlan({
+      legalReviewAuditPassed: true,
+      requiredReviewItemIds,
+      approvedReviewItemIds: requiredReviewItemIds,
+      requiredArtifactPaths,
+      existingArtifactPaths: requiredArtifactPaths,
+      redactedEvidenceLabelsPresent: true,
+      privilegedAdviceExcluded: true,
+      placeholderCopyReplacedAfterApproval: true,
+      legalVerifyCommandPassed: true,
+      ciQualityGateIncludesLegalReview: true,
+      productionLaunchBlockedUntilApproval: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.missingApprovedItems).toEqual([]);
+    expect(plan.missingArtifacts).toEqual([]);
     expect(plan.blockers).toEqual([]);
   });
 

@@ -1207,6 +1207,89 @@ export function buildQualityGateRuntimeReadinessPlan(
   };
 }
 
+export interface LegalReviewRuntimeReadinessInput {
+  readonly legalReviewAuditPassed: boolean;
+  readonly requiredReviewItemIds: readonly string[];
+  readonly approvedReviewItemIds: readonly string[];
+  readonly requiredArtifactPaths: readonly string[];
+  readonly existingArtifactPaths: readonly string[];
+  readonly redactedEvidenceLabelsPresent: boolean;
+  readonly privilegedAdviceExcluded: boolean;
+  readonly placeholderCopyReplacedAfterApproval: boolean;
+  readonly legalVerifyCommandPassed: boolean;
+  readonly ciQualityGateIncludesLegalReview: boolean;
+  readonly productionLaunchBlockedUntilApproval: boolean;
+}
+
+export interface LegalReviewRuntimeReadinessPlan {
+  readonly status: "ready" | "blocked";
+  readonly missingApprovedItems: readonly string[];
+  readonly missingArtifacts: readonly string[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly blockers: readonly string[];
+}
+
+export function buildLegalReviewRuntimeReadinessPlan(
+  input: LegalReviewRuntimeReadinessInput,
+): LegalReviewRuntimeReadinessPlan {
+  const approved = new Set(input.approvedReviewItemIds);
+  const existingArtifacts = new Set(input.existingArtifactPaths);
+  const missingApprovedItems = input.requiredReviewItemIds.filter((id) => !approved.has(id));
+  const missingArtifacts = input.requiredArtifactPaths.filter((path) => !existingArtifacts.has(path));
+  const blockers: string[] = [];
+
+  if (missingApprovedItems.length > 0) {
+    blockers.push("Every required legal review item must be attorney-approved before production launch.");
+  }
+  if (missingArtifacts.length > 0) {
+    blockers.push("Every required legal review artifact must exist before legal approval can be claimed.");
+  }
+  if (!input.legalReviewAuditPassed) {
+    blockers.push("Legal review audit must pass.");
+  }
+  if (!input.redactedEvidenceLabelsPresent) {
+    blockers.push("Legal review evidence must use redacted evidence labels for every approved item.");
+  }
+  if (!input.privilegedAdviceExcluded) {
+    blockers.push("Privileged attorney advice, secrets, and client data must stay out of the repository.");
+  }
+  if (!input.placeholderCopyReplacedAfterApproval) {
+    blockers.push("Placeholder legal/compliance copy must be replaced only after approval is recorded.");
+  }
+  if (!input.legalVerifyCommandPassed) {
+    blockers.push("pnpm legal:verify-review must pass.");
+  }
+  if (!input.ciQualityGateIncludesLegalReview) {
+    blockers.push("CI quality gates must include legal review verification.");
+  }
+  if (!input.productionLaunchBlockedUntilApproval) {
+    blockers.push("Production launch must remain blocked until legal approval evidence is complete.");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingApprovedItems,
+    missingArtifacts,
+    requiredCommands: [
+      "pnpm legal:verify-review",
+      "pnpm quality:gates",
+      "pnpm quality:all",
+      "GitHub Actions CI quality job",
+      "qualified counsel review outside the repository",
+    ],
+    requiredEvidence: [
+      "Legal review audit output showing every required item approved.",
+      "Redacted evidence labels for privacy, terms, consent, medical, payments/refunds, SMS/notifications, and aftercare review items.",
+      "Required legal artifacts exist in the repo and match the approved review packet.",
+      "No privileged attorney advice, secrets, or client data are committed.",
+      "Placeholder legal/compliance copy is replaced only after approval is recorded.",
+      "CI quality gate evidence includes legal review verification.",
+    ],
+    blockers,
+  };
+}
+
 export interface PrDiffEvidenceRuntimeReadinessInput {
   readonly diffAuditScriptPresent: boolean;
   readonly prContextDetectionImplemented: boolean;

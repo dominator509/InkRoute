@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildPaymentLifecyclePersistencePlan,
   buildPaymentAutomatedTestReadinessPlan,
+  buildLiveStripePaymentsReadinessPlan,
   buildPaymentOperationsWorkflowPlan,
   buildPaymentOperationsRuntimeReadinessPlan,
   buildPaymentPersistenceRuntimeReadinessPlan,
@@ -708,5 +709,73 @@ describe("payment policy engine", () => {
     expect(plan.blockers).toContain("Stripe CLI lifecycle tests must cover checkout completed, failed payment, expired checkout, refund, dispute, invalid signature, and replay.");
     expect(plan.blockers).toContain("Booking-to-paid Playwright/E2E flow must pass.");
     expect(plan.blockers).toContain("Payment test artifacts must capture Stripe CLI logs, DB reconciliation output, and E2E screenshots/traces.");
+  });
+
+  it("blocks live Stripe payments readiness until provider checkout, webhooks, DB reconciliation, refunds, E2E, CI, and artifacts are proven", () => {
+    const plan = buildLiveStripePaymentsReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      stripeSdkInstalled: false,
+      stripeSecretConfigured: false,
+      stripeWebhookSecretConfigured: true,
+      stripeApiVersionPinned: false,
+      checkoutProviderCallImplemented: false,
+      paymentIntentLifecycleHandled: false,
+      providerIdempotencyStoreBackedByDb: false,
+      checkoutSessionPersisted: false,
+      webhookRawBodyVerificationConfigured: true,
+      webhookReplayProtectionPersisted: false,
+      dbReconciliationTransactional: false,
+      refundExecutionImplemented: false,
+      disputeWorkflowImplemented: false,
+      stripeCliLifecycleVerified: false,
+      bookingToPaidE2eVerified: false,
+      crossTenantPaymentIsolationVerified: false,
+      ciPaymentEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toContain("Stripe CLI checkout/payment/refund/dispute/replay lifecycle tests");
+    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
+      "Stripe SDK pin plus redacted secret/webhook/API-version configuration evidence.",
+      "Real Checkout session creation with persisted provider session and DB-backed idempotency evidence.",
+      "Raw-body webhook verification, replay protection, and supported lifecycle event evidence.",
+      "Tenant-scoped transactional reconciliation and cross-tenant denial evidence.",
+      "Refund execution and dispute workflow evidence or explicit blocked-operation audit evidence.",
+      "Stripe CLI, booking-to-paid E2E, CI, and secret-safe artifact evidence.",
+    ]));
+    expect(plan.blockers).toContain("Deposit session route must create real Stripe Checkout sessions in provider-backed mode.");
+    expect(plan.blockers).toContain("Payment/refund/dispute reconciliation must run in tenant-scoped database transactions.");
+    expect(plan.blockers).toContain("Payment artifacts must be redacted and free of Stripe secrets or client-private data.");
+  });
+
+  it("marks live Stripe payments readiness ready when provider, persistence, webhook, refund, E2E, CI, and artifact evidence align", () => {
+    const plan = buildLiveStripePaymentsReadinessPlan({
+      packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+      stripeSdkInstalled: true,
+      stripeSecretConfigured: true,
+      stripeWebhookSecretConfigured: true,
+      stripeApiVersionPinned: true,
+      checkoutProviderCallImplemented: true,
+      paymentIntentLifecycleHandled: true,
+      providerIdempotencyStoreBackedByDb: true,
+      checkoutSessionPersisted: true,
+      webhookRawBodyVerificationConfigured: true,
+      webhookReplayProtectionPersisted: true,
+      dbReconciliationTransactional: true,
+      refundExecutionImplemented: true,
+      disputeWorkflowImplemented: true,
+      stripeCliLifecycleVerified: true,
+      bookingToPaidE2eVerified: true,
+      crossTenantPaymentIsolationVerified: true,
+      ciPaymentEvidenceCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.missingScripts).toEqual([]);
+    expect(plan.requiredEvidence).toEqual([]);
+    expect(plan.blockers).toEqual([]);
   });
 });

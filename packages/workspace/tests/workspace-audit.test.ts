@@ -6,6 +6,9 @@ import {
   auditWorkspaceRequiredChecks,
   auditWorkspaceToolchainReadiness,
   auditWorkspaceDependencies,
+  buildDependencyInstallReadinessPlan,
+  buildRuntimeEvidenceReadinessPlan,
+  buildWorkspaceRequiredChecksReadinessPlan,
   buildWorkspaceRuntimeToolchainReadinessPlan,
   classifyWorkspacePath,
   extractImportSpecifiers,
@@ -214,6 +217,54 @@ describe("workspace audit helpers", () => {
     expect(withLockfile.checks.some((check) => check.id === "production-blockers" && check.status === "fail")).toBe(true);
   });
 
+  it("blocks dependency install readiness until lockfile, install, tooling, CI, and blocker visibility are proven", () => {
+    const plan = buildDependencyInstallReadinessPlan({
+      packageJsonPresent: true,
+      pnpmWorkspacePresent: true,
+      pnpmLockfilePresent: false,
+      packageManagerPinned: false,
+      installCommandPassed: false,
+      frozenLockfileInstallPassed: false,
+      typecheckPassed: true,
+      lintPassed: false,
+      unitTestsPassed: false,
+      workspaceAuditPassed: false,
+      ciEvidenceCaptured: false,
+      lockfileCommitted: false,
+      productionBlockersVisible: true,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingSourceFiles).toEqual(["pnpm-lock.yaml"]);
+    expect(plan.requiredCommands).toContain("pnpm install --frozen-lockfile");
+    expect(plan.requiredEvidence).toContain("typecheck, lint, unit test, and workspace audit output after install.");
+    expect(plan.blockers).toContain("Dependency source files must include package.json, pnpm-workspace.yaml, and pnpm-lock.yaml.");
+    expect(plan.blockers).toContain("pnpm install must pass in the working environment.");
+    expect(plan.blockers).toContain("CI evidence for install, typecheck, lint, tests, and workspace audits must be captured.");
+  });
+
+  it("marks dependency install readiness ready when source files, install, tooling, CI, and blocker visibility are proven", () => {
+    const plan = buildDependencyInstallReadinessPlan({
+      packageJsonPresent: true,
+      pnpmWorkspacePresent: true,
+      pnpmLockfilePresent: true,
+      packageManagerPinned: true,
+      installCommandPassed: true,
+      frozenLockfileInstallPassed: true,
+      typecheckPassed: true,
+      lintPassed: true,
+      unitTestsPassed: true,
+      workspaceAuditPassed: true,
+      ciEvidenceCaptured: true,
+      lockfileCommitted: true,
+      productionBlockersVisible: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.missingSourceFiles).toEqual([]);
+    expect(plan.blockers).toEqual([]);
+  });
+
   it("audits runtime evidence requirements", () => {
     const requirements = [
       { id: "install", command: "pnpm install", gapIds: ["GAP-001"], requiredForProduction: true },
@@ -229,6 +280,61 @@ describe("workspace audit helpers", () => {
     expect(audit.requirementsChecked).toBe(3);
     expect(audit.missingRequiredEvidence).toContain("typecheck");
     expect(audit.findings.some((finding) => finding.id === "storybook" && finding.status === "warn")).toBe(true);
+  });
+
+  it("blocks runtime evidence readiness until required command evidence, audit output, CI, and blocker visibility are proven", () => {
+    const requirements = [
+      { id: "install", command: "pnpm install", gapIds: ["GAP-001", "GAP-132"], requiredForProduction: true },
+      { id: "typecheck", command: "pnpm typecheck", gapIds: ["GAP-132"], requiredForProduction: true },
+      { id: "storybook", command: "pnpm storybook", gapIds: ["GAP-016"], requiredForProduction: false },
+    ];
+
+    const plan = buildRuntimeEvidenceReadinessPlan({
+      requirements,
+      records: [
+        { id: "install", status: "passed", evidence: "local install passed" },
+        { id: "typecheck", status: "missing" },
+      ],
+      auditStatus: "fail",
+      runtimeEvidenceCommandPassed: false,
+      workspaceAllIncludesRuntimeEvidence: true,
+      ciEvidenceCaptured: false,
+      productionBlockersVisible: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingEvidenceIds).toEqual(["storybook"]);
+    expect(plan.nonPassingEvidenceIds).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toContain("pnpm workspace:runtime-evidence");
+    expect(plan.requiredEvidence).toContain("Production blockers remain visible in readiness evidence until resolved.");
+    expect(plan.blockers).toContain("Runtime evidence for pnpm typecheck must be passed with a redacted evidence label.");
+    expect(plan.blockers).toContain("Runtime evidence audit must pass before runtime readiness can be claimed.");
+    expect(plan.blockers).toContain("CI evidence must be captured for the runtime evidence audit.");
+  });
+
+  it("marks runtime evidence readiness ready when required command evidence and audit proof are present", () => {
+    const requirements = [
+      { id: "install", command: "pnpm install", gapIds: ["GAP-001", "GAP-132"], requiredForProduction: true },
+      { id: "typecheck", command: "pnpm typecheck", gapIds: ["GAP-132"], requiredForProduction: true },
+    ];
+
+    const plan = buildRuntimeEvidenceReadinessPlan({
+      requirements,
+      records: [
+        { id: "install", status: "passed", evidence: "local install passed" },
+        { id: "typecheck", status: "passed", evidence: "local typecheck passed" },
+      ],
+      auditStatus: "pass",
+      runtimeEvidenceCommandPassed: true,
+      workspaceAllIncludesRuntimeEvidence: true,
+      ciEvidenceCaptured: true,
+      productionBlockersVisible: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.missingEvidenceIds).toEqual([]);
+    expect(plan.nonPassingEvidenceIds).toEqual([]);
+    expect(plan.blockers).toEqual([]);
   });
 
   it("audits workspace required check wiring", () => {
@@ -262,6 +368,54 @@ describe("workspace audit helpers", () => {
     expect(failing.findings.some((finding) => finding.rule === "root-script")).toBe(true);
     expect(failing.findings.some((finding) => finding.rule === "workspace-all-chain")).toBe(true);
     expect(failing.findings.some((finding) => finding.rule === "pr-enforcement-term")).toBe(true);
+  });
+
+  it("blocks workspace required-check readiness until CI, branch protection, merge-block proof, and redacted evidence exist", () => {
+    const plan = buildWorkspaceRequiredChecksReadinessPlan({
+      requiredChecksAuditStatus: "pass",
+      workspaceRequiredChecksPassed: true,
+      workspaceAllPassed: false,
+      qualityRequiredChecksPassed: false,
+      ciQualityJobPassed: false,
+      requiredBranchProtectionChecks: ["CI / quality", "Verify Phase 18 workspace runtime readiness", "Verify PR GAP tracker diff evidence"],
+      protectedBranchRequiredChecks: ["CI / quality"],
+      failingWorkspaceAuditBlocksMerge: false,
+      prGapDiffCheckBlocksMerge: false,
+      evidenceCaptured: false,
+      logsRedacted: true,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingBranchProtectionChecks).toEqual([
+      "Verify Phase 18 workspace runtime readiness",
+      "Verify PR GAP tracker diff evidence",
+    ]);
+    expect(plan.requiredCommands).toContain("pnpm workspace:required-checks");
+    expect(plan.requiredEvidence).toContain("A failing workspace-audit PR cannot merge.");
+    expect(plan.blockers).toContain("pnpm workspace:all must pass with required-check enforcement included.");
+    expect(plan.blockers).toContain("GitHub branch protection must require every workspace and PR gap-diff check before merge.");
+    expect(plan.blockers).toContain("The PR GAP tracker diff evidence check must be proven merge-blocking.");
+  });
+
+  it("marks workspace required-check readiness ready when branch protection and merge-block evidence are complete", () => {
+    const requiredChecks = ["CI / quality", "Verify Phase 18 workspace runtime readiness", "Verify PR GAP tracker diff evidence"];
+    const plan = buildWorkspaceRequiredChecksReadinessPlan({
+      requiredChecksAuditStatus: "pass",
+      workspaceRequiredChecksPassed: true,
+      workspaceAllPassed: true,
+      qualityRequiredChecksPassed: true,
+      ciQualityJobPassed: true,
+      requiredBranchProtectionChecks: requiredChecks,
+      protectedBranchRequiredChecks: requiredChecks,
+      failingWorkspaceAuditBlocksMerge: true,
+      prGapDiffCheckBlocksMerge: true,
+      evidenceCaptured: true,
+      logsRedacted: true,
+    });
+
+    expect(plan.status).toBe("ready");
+    expect(plan.missingBranchProtectionChecks).toEqual([]);
+    expect(plan.blockers).toEqual([]);
   });
 
   it("audits workspace toolchain readiness", () => {

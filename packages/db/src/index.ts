@@ -1,10 +1,13 @@
 export { prisma } from "./prisma";
 export {
   buildDbIntegrationRuntimeReadinessPlan,
+  buildPrismaSchemaLifecycleReadinessPlan,
 } from "./integration-readiness";
 export type {
   DbIntegrationRuntimeReadinessInput,
   DbIntegrationRuntimeReadinessPlan,
+  PrismaSchemaLifecycleReadinessInput,
+  PrismaSchemaLifecycleReadinessPlan,
 } from "./integration-readiness";
 export {
   assertTenantScopedData,

@@ -1060,6 +1060,104 @@ export function buildMobileRuntimeReadinessPlan(input: MobileRuntimeReadinessInp
   };
 }
 
+export interface MobileLaunchEvidenceInput {
+  packageScripts: Readonly<Record<string, string>>;
+  mobileSupportTypecheckPassed: boolean;
+  mobileSupportTestsPassed: boolean;
+  mobileAppTypecheckPassed: boolean;
+  mobileAppTestsPassed: boolean;
+  expoRuntimeStarted: boolean;
+  iosSimulatorSmokePassed: boolean;
+  androidEmulatorSmokePassed: boolean;
+  easPreviewBuildPassed: boolean;
+  authSessionBiometricQaPassed: boolean;
+  tenantApiClientQaPassed: boolean;
+  pushNotificationQaPassed: boolean;
+  encryptedOfflineStoreQaPassed: boolean;
+  uploadFlowQaPassed: boolean;
+  crashReportingQaPassed: boolean;
+  otaUpdateRollbackQaPassed: boolean;
+  physicalDeviceQaCompleted: boolean;
+  accessibilityQaPassed: boolean;
+  appJsonProjectConfigured: boolean;
+  easChannelsConfigured: boolean;
+  ciEvidenceCaptured: boolean;
+  launchArtifactsSecretSafe: boolean;
+}
+
+export interface MobileLaunchEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: readonly string[];
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export function buildMobileLaunchEvidencePlan(input: MobileLaunchEvidenceInput): MobileLaunchEvidencePlan {
+  const requiredScripts = ["typecheck", "test", "ios", "android"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/mobile package script is missing ${script}.`);
+  if (!input.mobileSupportTypecheckPassed) blockers.push("@inkroute/mobile-support typecheck must pass.");
+  if (!input.mobileSupportTestsPassed) blockers.push("@inkroute/mobile-support tests must pass.");
+  if (!input.mobileAppTypecheckPassed) blockers.push("@inkroute/mobile typecheck must pass.");
+  if (!input.mobileAppTestsPassed) blockers.push("@inkroute/mobile tests must pass.");
+  if (!input.expoRuntimeStarted) blockers.push("Expo runtime must start locally or from a preview build.");
+  if (!input.iosSimulatorSmokePassed) blockers.push("iOS simulator smoke tests must pass across registered screens.");
+  if (!input.androidEmulatorSmokePassed) blockers.push("Android emulator smoke tests must pass across registered screens.");
+  if (!input.easPreviewBuildPassed) blockers.push("EAS preview build must pass for iOS and Android.");
+  if (!input.authSessionBiometricQaPassed) blockers.push("Auth/session/biometric QA must pass on simulator or physical device.");
+  if (!input.tenantApiClientQaPassed) blockers.push("Tenant-scoped mobile API client QA must pass against preview APIs.");
+  if (!input.pushNotificationQaPassed) blockers.push("Push notification permission, token, opt-out, receipt, and tap-routing QA must pass.");
+  if (!input.encryptedOfflineStoreQaPassed) blockers.push("Encrypted offline storage and reconnect sync QA must pass.");
+  if (!input.uploadFlowQaPassed) blockers.push("Mobile upload/portfolio flow QA must pass with signed upload boundaries.");
+  if (!input.crashReportingQaPassed) blockers.push("Mobile crash reporting QA must capture sanitized crash events.");
+  if (!input.otaUpdateRollbackQaPassed) blockers.push("OTA update and rollback QA must pass on the same runtime version.");
+  if (!input.physicalDeviceQaCompleted) blockers.push("Physical device QA checklist must be completed.");
+  if (!input.accessibilityQaPassed) blockers.push("Mobile accessibility QA must pass for VoiceOver/TalkBack, text scaling, contrast, and touch targets.");
+  if (!input.appJsonProjectConfigured) blockers.push("app.json must contain real Expo/EAS project configuration.");
+  if (!input.easChannelsConfigured) blockers.push("EAS preview/update channels and runtimeVersion policy must be configured.");
+  if (!input.ciEvidenceCaptured) blockers.push("CI/mobile evidence must be captured.");
+  if (!input.launchArtifactsSecretSafe) blockers.push("Mobile launch artifacts must be redacted and free of secrets, tokens, PII, medical, or payment data.");
+
+  if (!input.mobileSupportTypecheckPassed || !input.mobileSupportTestsPassed || !input.mobileAppTypecheckPassed || !input.mobileAppTestsPassed) {
+    requiredEvidence.push("mobile-support and mobile app typecheck/test output");
+  }
+  if (!input.expoRuntimeStarted || !input.iosSimulatorSmokePassed || !input.androidEmulatorSmokePassed || !input.easPreviewBuildPassed) {
+    requiredEvidence.push("Expo runtime, iOS simulator, Android emulator, and EAS preview build evidence");
+  }
+  if (!input.authSessionBiometricQaPassed || !input.tenantApiClientQaPassed || !input.pushNotificationQaPassed || !input.encryptedOfflineStoreQaPassed) {
+    requiredEvidence.push("auth/biometric, tenant API, push, and encrypted offline QA evidence");
+  }
+  if (!input.uploadFlowQaPassed || !input.crashReportingQaPassed || !input.otaUpdateRollbackQaPassed || !input.physicalDeviceQaCompleted || !input.accessibilityQaPassed) {
+    requiredEvidence.push("upload, crash, OTA rollback, physical device, and accessibility QA evidence");
+  }
+  if (!input.appJsonProjectConfigured || !input.easChannelsConfigured || !input.ciEvidenceCaptured || !input.launchArtifactsSecretSafe) {
+    requiredEvidence.push("Expo project/channel configuration, CI, and secret-safe artifact evidence");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: [
+      "pnpm --filter @inkroute/mobile-support typecheck",
+      "pnpm --filter @inkroute/mobile-support test",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "pnpm --filter @inkroute/mobile test",
+      "pnpm --filter @inkroute/mobile ios",
+      "pnpm --filter @inkroute/mobile android",
+      "eas build --profile preview --platform all",
+      "eas update --channel preview",
+      "manual physical-device QA for auth/api/offline/push/upload/crash/OTA/accessibility",
+      "GitHub Actions mobile launch evidence job",
+    ],
+    requiredEvidence,
+    blockers,
+  };
+}
+
 export interface MobileHealthCheck {
   id: string;
   label: string;
