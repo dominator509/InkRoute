@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   dependencyInstallArtifactPaths,
   dependencyInstallReadiness,
+  dependencyInstallRunPersistenceContract,
   dependencyInstallRuntimeCommands,
   dependencyInstallRuntimeMatrix,
   dependencyInstallSourceFiles,
@@ -18,6 +19,10 @@ describe("dependency install runtime contract", () => {
   const workspaceTests = readRepoFile("packages/workspace/tests/workspace-audit.test.ts");
   const runtimeEvidence = readRepoFile("docs/workspace/manifests/runtime-evidence.json");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const dependencyInstallMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609032500_add_dependency_install_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -50,6 +55,32 @@ describe("dependency install runtime contract", () => {
     ]);
     expect(dependencyInstallArtifactPaths).toContain("coverage/dependency-install-runtime.json");
     expect(dependencyInstallArtifactPaths).toContain("test-results/dependency-install-runtime");
+  });
+
+  it("pins the DependencyInstallRun persistence model and migration", () => {
+    expect(dependencyInstallRunPersistenceContract.model).toBe("DependencyInstallRun");
+    expect(dependencyInstallRunPersistenceContract.tenantRelation).toBe("dependencyInstallRuns");
+    expect(dependencyInstallRunPersistenceContract.migration).toBe("20260609032500_add_dependency_install_runs");
+    expect(dependencyInstallRunPersistenceContract.jsonFields).toEqual([
+      "commandMatrix",
+      "sourceFileManifest",
+      "artifactManifest",
+      "productionBlockerManifest",
+    ]);
+    expect(dependencyInstallRunPersistenceContract.evidenceBooleans).toContain("packageManagerPinned");
+    expect(dependencyInstallRunPersistenceContract.evidenceBooleans).toContain("frozenLockfileInstallPassed");
+    expect(dependencyInstallRunPersistenceContract.evidenceBooleans).toContain("ciEvidenceCaptured");
+    expect(dependencyInstallRunPersistenceContract.artifactFields).toContain("installArtifactPath");
+    expect(dependencyInstallRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(prismaSchema).toContain("dependencyInstallRuns DependencyInstallRun[]");
+    expect(prismaSchema).toContain("model DependencyInstallRun");
+    expect(prismaSchema).toContain("sourceFileManifest");
+    expect(prismaSchema).toContain("frozenLockfileInstallPassed");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(dependencyInstallMigration).toContain('CREATE TABLE "DependencyInstallRun"');
+    expect(dependencyInstallMigration).toContain('"sourceFileManifest" JSONB NOT NULL');
+    expect(dependencyInstallMigration).toContain('"frozenLockfileInstallPassed" BOOLEAN NOT NULL DEFAULT false');
+    expect(dependencyInstallMigration).toContain('CREATE UNIQUE INDEX "DependencyInstallRun_tenantId_runId_key"');
   });
 
   it("keeps dependency source files, package manager pin, lockfile, and helper tests wired", () => {
@@ -92,6 +123,8 @@ describe("dependency install runtime contract", () => {
     expect(ciWorkflow).toContain("dependency-install-runtime-static.test.ts");
     expect(ciWorkflow).toContain("dependency-install-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-dependency-install-runtime-static");
+    expect(unitManifest).toContain("DependencyInstallRun Prisma model and app row contract");
+    expect(gapTracker).toContain("DependencyInstallRun");
     expect(gapTracker).toContain("apps/web/lib/dependencyInstallRuntime.ts");
     expect(gapTracker).toContain("live install, frozen-lockfile install, typecheck, lint, unit-test, workspace audit, and CI evidence remain open");
   });

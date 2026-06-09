@@ -13,6 +13,88 @@ export interface DependencyInstallRuntimeMatrixEntry {
   readonly status: DependencyInstallRuntimeStatus;
 }
 
+export interface DependencyInstallRunPersistenceContract {
+  readonly model: "DependencyInstallRun";
+  readonly tenantRelation: "dependencyInstallRuns";
+  readonly migration: "20260609032500_add_dependency_install_runs";
+  readonly jsonFields: readonly [
+    "commandMatrix",
+    "sourceFileManifest",
+    "artifactManifest",
+    "productionBlockerManifest",
+  ];
+  readonly evidenceBooleans: readonly [
+    "packageJsonPresent",
+    "pnpmWorkspacePresent",
+    "pnpmLockfilePresent",
+    "packageManagerPinned",
+    "lockfileCommitted",
+    "corepackEnabled",
+    "installCommandPassed",
+    "frozenLockfileInstallPassed",
+    "workspaceAuditPassed",
+    "typecheckPassed",
+    "lintPassed",
+    "unitTestsPassed",
+    "ciQualityJobPassed",
+    "ciEvidenceCaptured",
+    "productionBlockersVisible",
+  ];
+  readonly artifactFields: readonly [
+    "corepackArtifactPath",
+    "installArtifactPath",
+    "frozenLockfileArtifactPath",
+    "workspaceAllArtifactPath",
+    "typecheckArtifactPath",
+    "lintArtifactPath",
+    "unitTestArtifactPath",
+    "ciQualityJobArtifactPath",
+    "productionBlockerArtifactPath",
+    "ciRunUrl",
+  ];
+}
+
+export const dependencyInstallRunPersistenceContract: DependencyInstallRunPersistenceContract = {
+  model: "DependencyInstallRun",
+  tenantRelation: "dependencyInstallRuns",
+  migration: "20260609032500_add_dependency_install_runs",
+  jsonFields: [
+    "commandMatrix",
+    "sourceFileManifest",
+    "artifactManifest",
+    "productionBlockerManifest",
+  ],
+  evidenceBooleans: [
+    "packageJsonPresent",
+    "pnpmWorkspacePresent",
+    "pnpmLockfilePresent",
+    "packageManagerPinned",
+    "lockfileCommitted",
+    "corepackEnabled",
+    "installCommandPassed",
+    "frozenLockfileInstallPassed",
+    "workspaceAuditPassed",
+    "typecheckPassed",
+    "lintPassed",
+    "unitTestsPassed",
+    "ciQualityJobPassed",
+    "ciEvidenceCaptured",
+    "productionBlockersVisible",
+  ],
+  artifactFields: [
+    "corepackArtifactPath",
+    "installArtifactPath",
+    "frozenLockfileArtifactPath",
+    "workspaceAllArtifactPath",
+    "typecheckArtifactPath",
+    "lintArtifactPath",
+    "unitTestArtifactPath",
+    "ciQualityJobArtifactPath",
+    "productionBlockerArtifactPath",
+    "ciRunUrl",
+  ],
+};
+
 export const dependencyInstallRuntimeCommands = [
   "corepack enable",
   "pnpm install",

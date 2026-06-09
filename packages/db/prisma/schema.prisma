@@ -398,6 +398,7 @@ model Tenant {
   staticDependencyAuditRuns StaticDependencyAuditRun[]
   runtimeEvidenceRuns RuntimeEvidenceRun[]
   workspaceRequiredChecksRuns WorkspaceRequiredChecksRun[]
+  dependencyInstallRuns DependencyInstallRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2708,6 +2709,50 @@ model WorkspaceRequiredChecksRun {
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())
   updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model DependencyInstallRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String?
+  status                          String
+  commandMatrix                   Json
+  sourceFileManifest              Json
+  artifactManifest                Json
+  productionBlockerManifest       Json
+  packageJsonPresent              Boolean  @default(false)
+  pnpmWorkspacePresent            Boolean  @default(false)
+  pnpmLockfilePresent             Boolean  @default(false)
+  packageManagerPinned            Boolean  @default(false)
+  lockfileCommitted               Boolean  @default(false)
+  corepackEnabled                 Boolean  @default(false)
+  installCommandPassed            Boolean  @default(false)
+  frozenLockfileInstallPassed     Boolean  @default(false)
+  workspaceAuditPassed            Boolean  @default(false)
+  typecheckPassed                 Boolean  @default(false)
+  lintPassed                      Boolean  @default(false)
+  unitTestsPassed                 Boolean  @default(false)
+  ciQualityJobPassed              Boolean  @default(false)
+  ciEvidenceCaptured              Boolean  @default(false)
+  productionBlockersVisible       Boolean  @default(false)
+  corepackArtifactPath            String?
+  installArtifactPath             String?
+  frozenLockfileArtifactPath      String?
+  workspaceAllArtifactPath        String?
+  typecheckArtifactPath           String?
+  lintArtifactPath                String?
+  unitTestArtifactPath            String?
+  ciQualityJobArtifactPath        String?
+  productionBlockerArtifactPath   String?
+  ciRunUrl                        String?
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

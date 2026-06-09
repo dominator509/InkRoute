@@ -2280,13 +2280,13 @@
       "file": "apps/web/tests/dependency-install-runtime-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-001 dependency install runtime matrix covers corepack enable, pnpm install, frozen-lockfile install, workspace:all, typecheck, lint, unit tests, CI quality job, source files, package manager pinning, lockfile commitment, and production blocker visibility",
+        "GAP-001 DependencyInstallRun Prisma model and app row contract plus dependency install runtime matrix covers corepack enable, pnpm install, frozen-lockfile install, workspace:all, typecheck, lint, unit tests, CI quality job, source files, package manager pinning, lockfile commitment, and production blocker visibility",
         "GAP-001 package.json, pnpm-workspace.yaml, pnpm-lock.yaml, workspace helper tests, runtime evidence manifest, CI labels, artifact paths, and tracker row remain wired before live install evidence",
         "GAP-001 readiness keeps install, frozen-lockfile, typecheck, lint, unit-test, workspace audit, and CI evidence explicit blockers"
       ],
       "blockedBy": [
         "Static dependency install runtime test execution pending",
-        "pnpm install and frozen-lockfile install proof pending",
+        "Provider-backed DependencyInstallRun transaction plus pnpm install and frozen-lockfile install proof pending",
         "typecheck, lint, unit-test, and workspace:all proof pending",
         "GitHub Actions CI evidence pending"
       ]
