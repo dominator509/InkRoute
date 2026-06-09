@@ -1,4 +1,4 @@
-name: CI
+﻿name: CI
 
 on:
   pull_request:
@@ -77,7 +77,6 @@ jobs:
             test-results/calendar
             test-results/travel
           if-no-files-found: warn
-
       - name: Run Phase 9 notification and messaging lifecycle contracts
         run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/email-provider-static.test.ts apps/web/tests/sms-provider-static.test.ts apps/web/tests/preference-center-static.test.ts apps/web/tests/notification-automation-static.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/notification-persistence-static.test.ts apps/dashboard/tests/notification-scheduler-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
 
@@ -99,7 +98,6 @@ jobs:
             coverage/structured-data-closeout.md
             test-results/structured-data-crawl
           if-no-files-found: warn
-
       - name: Run Phase 10 SEO analytics attribution contracts
         run: pnpm --filter @inkroute/analytics test && pnpm vitest run apps/web/tests/seo-analytics-attribution-static.test.ts
 
@@ -115,7 +113,6 @@ jobs:
             coverage/playwright-seo-attribution-results.json
             test-results/seo-analytics
           if-no-files-found: warn
-
       - name: Run Phase 10 Search Console contracts
         run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/dashboard/tests/search-console-route-static.test.ts
 
@@ -131,7 +128,6 @@ jobs:
             coverage/search-console-sitemap-submission-redacted.json
             test-results/search-console
           if-no-files-found: warn
-
       - name: Run Phase 10 SEO app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm vitest run apps/web/tests/phase10-seo-runtime-build-static.test.ts apps/web/tests/sitemap-route.test.ts apps/web/tests/canonical-domain-runtime-static.test.ts apps/web/tests/structured-data-crawl-qa-static.test.ts apps/dashboard/tests/seo-read-route-static.test.ts apps/dashboard/tests/seo-publication-route-static.test.ts apps/dashboard/tests/search-console-route-static.test.ts
 
@@ -151,7 +147,6 @@ jobs:
             test-results/phase10-seo-dashboard
             test-results/structured-data-crawl
           if-no-files-found: warn
-
       - name: Run Phase 10 image SEO pipeline contracts
         run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/dashboard/tests/image-seo-pipeline-static.test.ts
 
@@ -168,7 +163,6 @@ jobs:
             coverage/lighthouse-image-seo-audit.json
             test-results/image-seo-pipeline
           if-no-files-found: warn
-
       - name: Run Phase 10 SEO automated test gate
         run: pnpm --filter @inkroute/seo test && pnpm --filter @inkroute/seo typecheck && pnpm vitest run apps/web/tests/seo-automated-tests-static.test.ts apps/web/tests/sitemap-route.test.ts apps/web/tests/canonical-domain-runtime-static.test.ts apps/web/tests/structured-data-crawl-qa-static.test.ts apps/web/tests/phase10-seo-runtime-build-static.test.ts apps/dashboard/tests/search-console-route-static.test.ts apps/dashboard/tests/image-seo-pipeline-static.test.ts
 
@@ -185,7 +179,6 @@ jobs:
             coverage/search-console-provider-route.json
             test-results/seo-automated
           if-no-files-found: warn
-
       - name: Run Phase 11 observability runtime verification contracts
         run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/observability-runtime-verification-static.test.ts apps/web/tests/observability-routes.test.ts apps/dashboard/tests/error-report-route-static.test.ts
 
@@ -203,7 +196,6 @@ jobs:
             test-results/observability/dashboard
             test-results/observability/mobile
           if-no-files-found: warn
-
       - name: Run Phase 11 Sentry SDK implementation contracts
         run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/sentry-sdk-runtime-static.test.ts apps/mobile/tests/mobile-crash-static.test.ts
 
@@ -219,7 +211,6 @@ jobs:
             coverage/sentry-provider-no-pii-proof-redacted.json
             test-results/sentry-sdk
           if-no-files-found: warn
-
       - name: Run Phase 11 error-report ingest hardening contracts
         run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/error-report-ingest-hardening-static.test.ts apps/web/tests/observability-routes.test.ts apps/dashboard/tests/error-report-route-static.test.ts
 
@@ -237,7 +228,6 @@ jobs:
             coverage/error-report-postgres-tenant-isolation.json
             test-results/error-report-ingest
           if-no-files-found: warn
-
       - name: Run Phase 11 provider webhook reconciliation contracts
         run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/provider-webhook-reconciliation-static.test.ts apps/web/tests/observability-routes.test.ts
 
@@ -480,7 +470,8 @@ jobs:
             test-results/release-dashboard
             test-results/release-provider
             test-results/release-expo
-          if-no-files-found: warn      - name: Run Phase 13 auth session tenant guard contracts
+          if-no-files-found: warn
+      - name: Run Phase 13 auth session tenant guard contracts
         run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/auth-session-tenant-guard-static.test.ts apps/dashboard/tests/security-trust-route-static.test.ts apps/dashboard/tests/security-privacy-route-static.test.ts apps/mobile/tests/mobile-security-static.test.ts
 
       - name: Upload auth session tenant guard artifacts
@@ -499,7 +490,8 @@ jobs:
             test-results/auth-session-tenant-guards
             test-results/dashboard-auth-guards
             test-results/mobile-auth-guards
-          if-no-files-found: warn      - name: Run Phase 13 upload scan worker contracts
+          if-no-files-found: warn
+      - name: Run Phase 13 upload scan worker contracts
         run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts apps/web/tests/upload-scan-worker-static.test.ts
 
       - name: Upload upload scan worker artifacts
@@ -516,7 +508,8 @@ jobs:
             coverage/upload-fileasset-scan-persistence.json
             coverage/upload-quarantine-rejection.json
             test-results/upload-scan-worker
-          if-no-files-found: warn      - name: Run Phase 13 private storage signed URL contracts
+          if-no-files-found: warn
+      - name: Run Phase 13 private storage signed URL contracts
         run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts apps/web/tests/private-storage-signed-url-static.test.ts
 
       - name: Upload private storage signed URL artifacts
@@ -534,7 +527,8 @@ jobs:
             coverage/private-storage-fileasset-grant-persistence.json
             coverage/private-storage-public-derivative-access.json
             test-results/private-storage-signed-urls
-          if-no-files-found: warn      - name: Run Phase 13 privacy request workflow contracts
+          if-no-files-found: warn
+      - name: Run Phase 13 privacy request workflow contracts
         run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/privacy-requests-public-route.test.ts apps/web/tests/privacy-requests-dashboard-route.test.ts apps/web/tests/privacy-request-workflow-static.test.ts apps/dashboard/tests/security-privacy-route-static.test.ts
 
       - name: Upload privacy request workflow artifacts
@@ -555,7 +549,8 @@ jobs:
             coverage/privacy-notification-version-redacted.json
             coverage/privacy-audit-log-persistence.json
             test-results/privacy-request-workflow
-          if-no-files-found: warn      - name: Run Phase 13 retention enforcement contracts
+          if-no-files-found: warn
+      - name: Run Phase 13 retention enforcement contracts
         run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/retention-enforcement-static.test.ts apps/web/tests/privacy-request-workflow-static.test.ts
 
       - name: Upload retention enforcement artifacts
@@ -576,7 +571,8 @@ jobs:
             coverage/retention-backup-restore-tombstone-replay.json
             coverage/retention-destructive-rollback.md
             test-results/retention-enforcement
-          if-no-files-found: warn      - name: Run Phase 13 legal review evidence contracts
+          if-no-files-found: warn
+      - name: Run Phase 13 legal review evidence contracts
         run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/legal-review-evidence-static.test.ts
 
       - name: Upload legal review evidence artifacts
@@ -596,7 +592,8 @@ jobs:
             coverage/legal-payment-policy-review-redacted.json
             coverage/legal-copy-rollback-plan.md
             test-results/legal-review
-          if-no-files-found: warn      - name: Run Phase 13 abuse control runtime contracts
+          if-no-files-found: warn
+      - name: Run Phase 13 abuse control runtime contracts
         run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/abuse-control-runtime-static.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/privacy-requests-public-route.test.ts apps/web/tests/error-report-ingest-hardening-static.test.ts
 
       - name: Upload abuse control runtime artifacts
@@ -614,7 +611,8 @@ jobs:
             coverage/abuse-alert-delivery-redacted.json
             coverage/abuse-fail-closed.json
             test-results/abuse-control-runtime
-          if-no-files-found: warn      - name: Run Phase 13 security middleware runtime contracts
+          if-no-files-found: warn
+      - name: Run Phase 13 security middleware runtime contracts
         run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/security-runtime-middleware.test.ts apps/web/tests/security-runtime-middleware-static.test.ts apps/web/tests/dashboard-security-runtime-middleware-static.test.ts apps/web/tests/security-middleware-runtime-static.test.ts
 
       - name: Upload security middleware runtime artifacts
@@ -634,7 +632,8 @@ jobs:
             coverage/security-csrf-valid-session-binding.json
             coverage/security-webhook-csrf-bypass-review.json
             test-results/security-middleware-runtime
-          if-no-files-found: warn      - name: Run Phase 13 security automated coverage contracts
+          if-no-files-found: warn
+      - name: Run Phase 13 security automated coverage contracts
         run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/security-automated-coverage-static.test.ts apps/web/tests/secure-upload-intents-route.test.ts apps/web/tests/privacy-requests-public-route.test.ts apps/web/tests/privacy-requests-dashboard-route.test.ts apps/web/tests/dashboard-trust-status-route.test.ts apps/web/tests/security-runtime-middleware.test.ts apps/web/tests/security-runtime-middleware-static.test.ts apps/web/tests/dashboard-security-runtime-middleware-static.test.ts
 
       - name: Upload security automated coverage artifacts
@@ -656,7 +655,8 @@ jobs:
             coverage/security-role-boundary-authenticated.json
             coverage/security-failure-mode-fixtures.md
             test-results/security-automated
-          if-no-files-found: warn      - name: Run Phase 13 security app runtime verification contracts
+          if-no-files-found: warn
+      - name: Run Phase 13 security app runtime verification contracts
         run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/security-next-config-static.test.ts apps/mobile/tests/mobile-security-static.test.ts apps/web/tests/security-app-runtime-verification-static.test.ts
 
       - name: Upload security app runtime verification artifacts
@@ -679,7 +679,31 @@ jobs:
             coverage/security-browser-runtime-smoke.json
             coverage/security-mobile-device-smoke.json
             test-results/security-app-runtime
-          if-no-files-found: warn      - name: Run Phase 9 app runtime and build gate
+          if-no-files-found: warn
+      - name: Run Phase 14 runner execution contracts
+        run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/phase14-runner-execution-static.test.ts
+
+      - name: Upload Phase 14 runner execution artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase14-runner-execution-artifacts
+          path: |
+            coverage/phase14-runner-execution.json
+            coverage/phase14-frozen-install.log
+            coverage/phase14-static-check.json
+            coverage/phase14-manifest-check.json
+            coverage/phase14-typecheck.log
+            coverage/phase14-unit-results.json
+            coverage/phase14-playwright-install.log
+            coverage/phase14-e2e-results.json
+            coverage/phase14-ci-run-redacted.json
+            coverage/phase14-runner-failure-triage.md
+            coverage/phase14-scaffold-coverage-diff.json
+            coverage/phase14-flaky-policy.md
+            test-results/phase14-runner
+          if-no-files-found: warn
+      - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
         if: always()
@@ -699,7 +723,6 @@ jobs:
             test-results/notifications
             test-results/messaging
           if-no-files-found: warn
-
       - name: Upload Phase 9 app runtime/build artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -727,6 +750,8 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
+
 
 
 

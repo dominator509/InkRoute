@@ -1,4 +1,4 @@
-{
+﻿{
     "phase":  "14",
     "status":  "scaffolded",
     "command":  "pnpm test:unit",
@@ -1797,6 +1797,23 @@
                                          "Mobile typecheck and SystemStatus runtime proof pending",
                                          "Web/dashboard route and middleware smoke proof pending",
                                          "Browser and device/emulator runtime proof pending"
+                                     ]
+                   },
+                   {
+                       "id":  "unit-web-phase14-runner-execution-static",
+                       "file":  "apps/web/tests/phase14-runner-execution-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-105 Phase 14 runner execution matrix covers frozen install, static and manifest checks, typecheck, unit, Playwright browser install, E2E, CI, artifacts, runner failure triage, scaffold preservation, and flaky policy targets",
+                                        "GAP-105 package scripts, Vitest workspace, Playwright config, manifest verifier, and expanded security/mobile/E2E manifest requirements stay wired before live runner proof",
+                                        "GAP-105 CI retains frozen install, static check, manifest check, typecheck, unit, Playwright install, E2E, CI run, failure triage, scaffold diff, and flaky policy artifact paths"
+                                    ],
+                       "blockedBy":  [
+                                         "Static Phase 14 runner execution test execution pending",
+                                         "Frozen install and lockfile proof pending",
+                                         "Typecheck/unit/E2E runtime proof pending",
+                                         "Playwright browser install and CI artifact proof pending",
+                                         "Runner failure triage, scaffold preservation, and flaky policy proof pending"
                                      ]
                    }
                ]
