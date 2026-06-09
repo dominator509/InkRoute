@@ -1696,6 +1696,23 @@
                                          "Object-storage privacy export/delete proof pending",
                                          "Legal hold, notification, audit, and cross-tenant integration proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-retention-enforcement-static",
+                       "file":  "apps/web/tests/retention-enforcement-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-099 retention enforcement contract maps due records to scheduled database, storage, export, tombstone, legal-hold, audit, dry-run reconciliation, restore replay, and destructive rollback actions",
+                                        "GAP-099 due delete, anonymize, legal-hold, audit event, and backup/restore replay classifications stay pinned to package retention rules",
+                                        "GAP-099 CI retains scheduled worker, Postgres, object-storage, export artifact, tombstone, legal hold, audit, backup restore, rollback, and tenant-isolation artifact paths"
+                                    ],
+                       "blockedBy":  [
+                                         "Static retention enforcement test execution pending",
+                                         "Scheduled DB/storage retention worker proof pending",
+                                         "Deletion/anonymization tombstone persistence proof pending",
+                                         "Backup/restore tombstone replay proof pending",
+                                         "Tenant-isolation and destructive rollback drill proof pending"
+                                     ]
                    }
                ]
 }

@@ -555,6 +555,27 @@ jobs:
             coverage/privacy-notification-version-redacted.json
             coverage/privacy-audit-log-persistence.json
             test-results/privacy-request-workflow
+          if-no-files-found: warn      - name: Run Phase 13 retention enforcement contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/retention-enforcement-static.test.ts apps/web/tests/privacy-request-workflow-static.test.ts
+
+      - name: Upload retention enforcement artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retention-enforcement-artifacts
+          path: |
+            coverage/retention-enforcement-dry-run.json
+            coverage/retention-scheduled-worker.json
+            coverage/retention-postgres-execution.json
+            coverage/retention-object-storage-execution.json
+            coverage/retention-export-artifacts-redacted.json
+            coverage/retention-deletion-tombstones.json
+            coverage/retention-anonymization-tombstones.json
+            coverage/retention-legal-hold-skips.json
+            coverage/retention-audit-log-persistence.json
+            coverage/retention-backup-restore-tombstone-replay.json
+            coverage/retention-destructive-rollback.md
+            test-results/retention-enforcement
           if-no-files-found: warn      - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
@@ -603,6 +624,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
