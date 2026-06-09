@@ -2456,13 +2456,13 @@
       "file": "apps/web/tests/testing-launch-execution-runtime-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-012 testing launch execution runtime matrix covers frozen install, static checks, manifests, typecheck, unit tests, unit coverage, Playwright E2E, web/dashboard builds, Prisma/database integration, provider sandbox, security, mobile simulator/device, CI quality run, branch protection, flaky policy, failure-debug artifacts, and secret-safe artifacts",
+        "GAP-012 TestingLaunchExecutionRun Prisma model and app row contract plus testing launch execution runtime matrix covers frozen install, static checks, manifests, typecheck, unit tests, unit coverage, Playwright E2E, web/dashboard builds, Prisma/database integration, provider sandbox, security, mobile simulator/device, CI quality run, branch protection, flaky policy, failure-debug artifacts, and secret-safe artifacts",
         "GAP-012 root scripts, testing helper/tests, Vitest workspace, Playwright reporters, CI labels, artifact paths, and tracker row remain wired without claiming live test execution evidence exists",
         "GAP-012 readiness keeps command execution, provider, mobile, CI, branch-protection, flaky-policy, debug-artifact, and secret-safe evidence explicit blockers"
       ],
       "blockedBy": [
         "Static testing launch execution runtime test execution pending",
-        "Frozen install, static, manifest, typecheck, unit, coverage, E2E, and app build proof pending",
+        "Provider-backed TestingLaunchExecutionRun transaction plus frozen install, static, manifest, typecheck, unit, coverage, E2E, and app build proof pending",
         "Prisma/database, provider sandbox, security, mobile simulator/device proof pending",
         "CI run, branch protection, flaky policy, failure-debug artifact, and secret-safe artifact proof pending"
       ]

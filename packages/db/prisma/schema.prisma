@@ -409,6 +409,7 @@ model Tenant {
   calendarLaunchRuns CalendarLaunchRun[]
   notificationLaunchRuns NotificationLaunchRun[]
   observabilityLaunchRuns ObservabilityLaunchRun[]
+  testingLaunchExecutionRuns TestingLaunchExecutionRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3322,6 +3323,70 @@ model ObservabilityLaunchRun {
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())
   updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model TestingLaunchExecutionRun {
+  id                                 String   @id @default(cuid())
+  tenantId                           String
+  runId                              String
+  commitSha                          String?
+  status                             String
+  commandMatrix                      Json
+  artifactManifest                   Json
+  coverageReportManifest             Json
+  playwrightReportManifest           Json
+  policyEvidenceManifest             Json
+  lockfileInstallPassed              Boolean  @default(false)
+  staticChecksPassed                 Boolean  @default(false)
+  manifestChecksPassed               Boolean  @default(false)
+  typecheckPassed                    Boolean  @default(false)
+  unitTestsPassed                    Boolean  @default(false)
+  unitCoveragePassed                 Boolean  @default(false)
+  e2eTestsPassed                     Boolean  @default(false)
+  webBuildPassed                     Boolean  @default(false)
+  dashboardBuildPassed               Boolean  @default(false)
+  prismaIntegrationTestsPassed       Boolean  @default(false)
+  providerSandboxTestsPassed         Boolean  @default(false)
+  securityTestsPassed                Boolean  @default(false)
+  mobileSimulatorTestsPassed         Boolean  @default(false)
+  mobileDeviceTestsPassed            Boolean  @default(false)
+  coverageThresholdsMet              Boolean  @default(false)
+  coverageArtifactsUploaded          Boolean  @default(false)
+  playwrightArtifactsUploaded        Boolean  @default(false)
+  junitJsonReportsPublished          Boolean  @default(false)
+  ciRunPassed                        Boolean  @default(false)
+  branchProtectionRequiresCi         Boolean  @default(false)
+  flakyTestPolicyDocumented          Boolean  @default(false)
+  failureDebugArtifactsVerified      Boolean  @default(false)
+  secretSafeArtifactsCaptured        Boolean  @default(false)
+  frozenInstallArtifactPath          String?
+  phase14StaticArtifactPath          String?
+  manifestArtifactPath               String?
+  typecheckArtifactPath              String?
+  unitOutputArtifactPath             String?
+  unitCoverageArtifactPath           String?
+  e2eOutputArtifactPath              String?
+  playwrightReportArtifactPath       String?
+  webBuildArtifactPath               String?
+  dashboardBuildArtifactPath         String?
+  prismaIntegrationArtifactPath      String?
+  providerSandboxArtifactPath        String?
+  securityArtifactPath               String?
+  mobileSimulatorArtifactPath        String?
+  mobileDeviceArtifactPath           String?
+  ciQualityRunArtifactPath           String?
+  branchProtectionArtifactPath       String?
+  flakyPolicyArtifactPath            String?
+  failureDebugArtifactPath           String?
+  secretSafeArtifactPath             String?
+  ciRunUrl                           String?
+  tenant                             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                          DateTime @default(now())
+  updatedAt                          DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

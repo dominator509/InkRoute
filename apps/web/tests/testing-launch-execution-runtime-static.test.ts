@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   testingLaunchExecutionArtifactPaths,
+  testingLaunchExecutionRunPersistenceContract,
   testingLaunchExecutionRuntimeCommands,
   testingLaunchExecutionRuntimeMatrix,
   testingLaunchExecutionRuntimeReadiness,
@@ -18,6 +19,10 @@ describe("testing launch execution runtime contract", () => {
   const vitestWorkspace = readRepoFile("vitest.workspace.ts");
   const playwrightConfig = readRepoFile("playwright.config.ts");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const testingLaunchExecutionMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609033600_add_testing_launch_execution_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -53,6 +58,33 @@ describe("testing launch execution runtime contract", () => {
     expect(testingLaunchExecutionArtifactPaths).toContain("coverage/testing-launch-execution-runtime.json");
     expect(testingLaunchExecutionArtifactPaths).toContain("coverage/playwright-report");
     expect(testingLaunchExecutionArtifactPaths).toContain("test-results/testing-launch-execution-runtime");
+  });
+
+  it("pins the TestingLaunchExecutionRun persistence model and migration", () => {
+    expect(testingLaunchExecutionRunPersistenceContract.model).toBe("TestingLaunchExecutionRun");
+    expect(testingLaunchExecutionRunPersistenceContract.tenantRelation).toBe("testingLaunchExecutionRuns");
+    expect(testingLaunchExecutionRunPersistenceContract.migration).toBe("20260609033600_add_testing_launch_execution_runs");
+    expect(testingLaunchExecutionRunPersistenceContract.jsonFields).toEqual([
+      "commandMatrix",
+      "artifactManifest",
+      "coverageReportManifest",
+      "playwrightReportManifest",
+      "policyEvidenceManifest",
+    ]);
+    expect(testingLaunchExecutionRunPersistenceContract.evidenceBooleans).toContain("unitCoveragePassed");
+    expect(testingLaunchExecutionRunPersistenceContract.evidenceBooleans).toContain("branchProtectionRequiresCi");
+    expect(testingLaunchExecutionRunPersistenceContract.evidenceBooleans).toContain("secretSafeArtifactsCaptured");
+    expect(testingLaunchExecutionRunPersistenceContract.artifactFields).toContain("playwrightReportArtifactPath");
+    expect(testingLaunchExecutionRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(prismaSchema).toContain("testingLaunchExecutionRuns TestingLaunchExecutionRun[]");
+    expect(prismaSchema).toContain("model TestingLaunchExecutionRun");
+    expect(prismaSchema).toContain("coverageReportManifest");
+    expect(prismaSchema).toContain("failureDebugArtifactsVerified");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(testingLaunchExecutionMigration).toContain('CREATE TABLE "TestingLaunchExecutionRun"');
+    expect(testingLaunchExecutionMigration).toContain('"playwrightReportManifest" JSONB NOT NULL');
+    expect(testingLaunchExecutionMigration).toContain('"secretSafeArtifactsCaptured" BOOLEAN NOT NULL DEFAULT false');
+    expect(testingLaunchExecutionMigration).toContain('CREATE UNIQUE INDEX "TestingLaunchExecutionRun_tenantId_runId_key"');
   });
 
   it("keeps root scripts, testing helpers, runner configs, and test plan wired", () => {
@@ -97,6 +129,8 @@ describe("testing launch execution runtime contract", () => {
     expect(ciWorkflow).toContain("testing-launch-execution-runtime-artifacts");
     expect(ciWorkflow).toContain("coverage/testing-launch-execution-runtime.json");
     expect(unitManifest).toContain("unit-web-testing-launch-execution-runtime-static");
+    expect(unitManifest).toContain("TestingLaunchExecutionRun Prisma model and app row contract");
+    expect(gapTracker).toContain("TestingLaunchExecutionRun");
     expect(gapTracker).toContain("apps/web/lib/testingLaunchExecutionRuntime.ts");
     expect(gapTracker).toContain("live frozen install, typecheck, unit coverage, E2E, web/dashboard builds, database/provider/security/mobile tests, CI run, branch protection, flaky policy, failure-debug evidence, and secret-safe artifact proof remain open");
   });
