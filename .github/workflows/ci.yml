@@ -634,6 +634,28 @@ jobs:
             coverage/security-csrf-valid-session-binding.json
             coverage/security-webhook-csrf-bypass-review.json
             test-results/security-middleware-runtime
+          if-no-files-found: warn      - name: Run Phase 13 security automated coverage contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/security-automated-coverage-static.test.ts apps/web/tests/secure-upload-intents-route.test.ts apps/web/tests/privacy-requests-public-route.test.ts apps/web/tests/privacy-requests-dashboard-route.test.ts apps/web/tests/dashboard-trust-status-route.test.ts apps/web/tests/security-runtime-middleware.test.ts apps/web/tests/security-runtime-middleware-static.test.ts apps/web/tests/dashboard-security-runtime-middleware-static.test.ts
+
+      - name: Upload security automated coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-automated-coverage-artifacts
+          path: |
+            coverage/security-automated-coverage.json
+            coverage/security-package-tests.json
+            coverage/security-route-vitest.json
+            coverage/security-middleware-runtime.json
+            coverage/security-middleware-static.json
+            coverage/security-web-playwright.json
+            coverage/security-dashboard-playwright.json
+            coverage/security-db-tenant-isolation.json
+            coverage/security-storage-provider-negative.json
+            coverage/security-privacy-workflow-integration.json
+            coverage/security-role-boundary-authenticated.json
+            coverage/security-failure-mode-fixtures.md
+            test-results/security-automated
           if-no-files-found: warn      - name: Run Phase 9 app runtime and build gate
         run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
       - name: Upload notification messaging lifecycle artifacts
@@ -682,6 +704,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
