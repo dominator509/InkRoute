@@ -403,6 +403,7 @@ model Tenant {
   providerSessionRuns ProviderSessionRun[]
   liveStripePaymentsRuns LiveStripePaymentsRun[]
   providerStorageUploadRuns ProviderStorageUploadRun[]
+  publicWebLaunchRuns PublicWebLaunchRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2967,6 +2968,62 @@ model ProviderStorageUploadRun {
   tenant                                     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                                  DateTime @default(now())
   updatedAt                                  DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model PublicWebLaunchRun {
+  id                                       String   @id @default(cuid())
+  tenantId                                 String
+  runId                                    String
+  commitSha                                String?
+  status                                   String
+  commandMatrix                            Json
+  readinessAreaManifest                    Json
+  artifactManifest                         Json
+  providerRouteManifest                    Json
+  runtimeSeoManifest                       Json
+  legalRouteReviewManifest                 Json
+  webTypecheckPassed                       Boolean  @default(false)
+  webBuildPassed                           Boolean  @default(false)
+  webTestsPassed                           Boolean  @default(false)
+  webRouteSmokePassed                      Boolean  @default(false)
+  webPlaywrightDesktopPassed               Boolean  @default(false)
+  webPlaywrightMobilePassed                Boolean  @default(false)
+  accessibilityAuditPassed                 Boolean  @default(false)
+  lighthousePerformancePassed              Boolean  @default(false)
+  apiRoutesUseTenantScopedPersistence      Boolean  @default(false)
+  providerBackedRoutesVerified             Boolean  @default(false)
+  localRuntimeFallbackDisabledForProduction Boolean @default(false)
+  realPortfolioDerivativesConfigured       Boolean  @default(false)
+  placeholderAssetsRemovedOrDocumented     Boolean  @default(false)
+  sitemapRuntimeVerified                   Boolean  @default(false)
+  robotsRuntimeVerified                    Boolean  @default(false)
+  jsonLdRuntimeVerified                    Boolean  @default(false)
+  canonicalRuntimeVerified                 Boolean  @default(false)
+  privacyAndLegalRoutesReviewed            Boolean  @default(false)
+  ciEvidenceCaptured                       Boolean  @default(false)
+  launchArtifactsSecretSafe                Boolean  @default(false)
+  webTypecheckArtifactPath                 String?
+  webBuildArtifactPath                     String?
+  webTestArtifactPath                      String?
+  routeSmokeArtifactPath                   String?
+  playwrightDesktopArtifactPath            String?
+  playwrightMobileArtifactPath             String?
+  axeAuditArtifactPath                     String?
+  lighthouseArtifactPath                   String?
+  providerRoutesArtifactPath               String?
+  mediaDerivativesArtifactPath             String?
+  runtimeSeoArtifactPath                   String?
+  legalRoutesArtifactPath                  String?
+  ciEvidenceArtifactPath                   String?
+  secretSafeArtifactsPath                  String?
+  ciRunUrl                                 String?
+  tenant                                   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                                DateTime @default(now())
+  updatedAt                                DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

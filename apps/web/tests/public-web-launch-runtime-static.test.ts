@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   publicWebLaunchArtifactPaths,
   publicWebLaunchReadinessAreas,
+  publicWebLaunchRunPersistenceContract,
   publicWebLaunchRuntimeCommands,
   publicWebLaunchRuntimeMatrix,
   publicWebLaunchRuntimeReadiness,
@@ -17,6 +18,10 @@ describe("public web launch runtime contract", () => {
   const seoTests = readRepoFile("packages/seo/tests/seo-engine.test.ts");
   const localRuntimeState = readRepoFile("apps/web/lib/localRuntimeState.ts");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const publicWebLaunchMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260609033000_add_public_web_launch_runs/migration.sql",
+  );
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
 
@@ -52,6 +57,34 @@ describe("public web launch runtime contract", () => {
     expect(publicWebLaunchArtifactPaths).toContain("test-results/public-web-launch-runtime");
   });
 
+  it("pins the PublicWebLaunchRun persistence model and migration", () => {
+    expect(publicWebLaunchRunPersistenceContract.model).toBe("PublicWebLaunchRun");
+    expect(publicWebLaunchRunPersistenceContract.tenantRelation).toBe("publicWebLaunchRuns");
+    expect(publicWebLaunchRunPersistenceContract.migration).toBe("20260609033000_add_public_web_launch_runs");
+    expect(publicWebLaunchRunPersistenceContract.jsonFields).toEqual([
+      "commandMatrix",
+      "readinessAreaManifest",
+      "artifactManifest",
+      "providerRouteManifest",
+      "runtimeSeoManifest",
+      "legalRouteReviewManifest",
+    ]);
+    expect(publicWebLaunchRunPersistenceContract.evidenceBooleans).toContain("webBuildPassed");
+    expect(publicWebLaunchRunPersistenceContract.evidenceBooleans).toContain("jsonLdRuntimeVerified");
+    expect(publicWebLaunchRunPersistenceContract.evidenceBooleans).toContain("launchArtifactsSecretSafe");
+    expect(publicWebLaunchRunPersistenceContract.artifactFields).toContain("runtimeSeoArtifactPath");
+    expect(publicWebLaunchRunPersistenceContract.artifactFields).toContain("ciRunUrl");
+    expect(prismaSchema).toContain("publicWebLaunchRuns PublicWebLaunchRun[]");
+    expect(prismaSchema).toContain("model PublicWebLaunchRun");
+    expect(prismaSchema).toContain("runtimeSeoManifest");
+    expect(prismaSchema).toContain("localRuntimeFallbackDisabledForProduction");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(publicWebLaunchMigration).toContain('CREATE TABLE "PublicWebLaunchRun"');
+    expect(publicWebLaunchMigration).toContain('"runtimeSeoManifest" JSONB NOT NULL');
+    expect(publicWebLaunchMigration).toContain('"launchArtifactsSecretSafe" BOOLEAN NOT NULL DEFAULT false');
+    expect(publicWebLaunchMigration).toContain('CREATE UNIQUE INDEX "PublicWebLaunchRun_tenantId_runId_key"');
+  });
+
   it("keeps web package scripts, SEO helper tests, and local-runtime boundary wired", () => {
     expect(webPackageJson).toContain('"typecheck"');
     expect(webPackageJson).toContain('"build"');
@@ -82,6 +115,8 @@ describe("public web launch runtime contract", () => {
     expect(ciWorkflow).toContain("public-web-launch-runtime-static.test.ts");
     expect(ciWorkflow).toContain("public-web-launch-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-public-web-launch-runtime-static");
+    expect(unitManifest).toContain("PublicWebLaunchRun Prisma model and app row contract");
+    expect(gapTracker).toContain("PublicWebLaunchRun");
     expect(gapTracker).toContain("apps/web/lib/publicWebLaunchRuntime.ts");
     expect(gapTracker).toContain("live web typecheck/build/test, route smoke, Playwright, axe/Lighthouse, provider/database route verification, real media derivatives, runtime SEO validation, legal-route review, CI evidence, and secret-safe launch artifacts remain open");
   });

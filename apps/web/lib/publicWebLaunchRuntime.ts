@@ -15,6 +15,112 @@ export interface PublicWebLaunchRuntimeMatrixEntry {
   readonly status: PublicWebLaunchRuntimeStatus;
 }
 
+export interface PublicWebLaunchRunPersistenceContract {
+  readonly model: "PublicWebLaunchRun";
+  readonly tenantRelation: "publicWebLaunchRuns";
+  readonly migration: "20260609033000_add_public_web_launch_runs";
+  readonly jsonFields: readonly [
+    "commandMatrix",
+    "readinessAreaManifest",
+    "artifactManifest",
+    "providerRouteManifest",
+    "runtimeSeoManifest",
+    "legalRouteReviewManifest",
+  ];
+  readonly evidenceBooleans: readonly [
+    "webTypecheckPassed",
+    "webBuildPassed",
+    "webTestsPassed",
+    "webRouteSmokePassed",
+    "webPlaywrightDesktopPassed",
+    "webPlaywrightMobilePassed",
+    "accessibilityAuditPassed",
+    "lighthousePerformancePassed",
+    "apiRoutesUseTenantScopedPersistence",
+    "providerBackedRoutesVerified",
+    "localRuntimeFallbackDisabledForProduction",
+    "realPortfolioDerivativesConfigured",
+    "placeholderAssetsRemovedOrDocumented",
+    "sitemapRuntimeVerified",
+    "robotsRuntimeVerified",
+    "jsonLdRuntimeVerified",
+    "canonicalRuntimeVerified",
+    "privacyAndLegalRoutesReviewed",
+    "ciEvidenceCaptured",
+    "launchArtifactsSecretSafe",
+  ];
+  readonly artifactFields: readonly [
+    "webTypecheckArtifactPath",
+    "webBuildArtifactPath",
+    "webTestArtifactPath",
+    "routeSmokeArtifactPath",
+    "playwrightDesktopArtifactPath",
+    "playwrightMobileArtifactPath",
+    "axeAuditArtifactPath",
+    "lighthouseArtifactPath",
+    "providerRoutesArtifactPath",
+    "mediaDerivativesArtifactPath",
+    "runtimeSeoArtifactPath",
+    "legalRoutesArtifactPath",
+    "ciEvidenceArtifactPath",
+    "secretSafeArtifactsPath",
+    "ciRunUrl",
+  ];
+}
+
+export const publicWebLaunchRunPersistenceContract: PublicWebLaunchRunPersistenceContract = {
+  model: "PublicWebLaunchRun",
+  tenantRelation: "publicWebLaunchRuns",
+  migration: "20260609033000_add_public_web_launch_runs",
+  jsonFields: [
+    "commandMatrix",
+    "readinessAreaManifest",
+    "artifactManifest",
+    "providerRouteManifest",
+    "runtimeSeoManifest",
+    "legalRouteReviewManifest",
+  ],
+  evidenceBooleans: [
+    "webTypecheckPassed",
+    "webBuildPassed",
+    "webTestsPassed",
+    "webRouteSmokePassed",
+    "webPlaywrightDesktopPassed",
+    "webPlaywrightMobilePassed",
+    "accessibilityAuditPassed",
+    "lighthousePerformancePassed",
+    "apiRoutesUseTenantScopedPersistence",
+    "providerBackedRoutesVerified",
+    "localRuntimeFallbackDisabledForProduction",
+    "realPortfolioDerivativesConfigured",
+    "placeholderAssetsRemovedOrDocumented",
+    "sitemapRuntimeVerified",
+    "robotsRuntimeVerified",
+    "jsonLdRuntimeVerified",
+    "canonicalRuntimeVerified",
+    "privacyAndLegalRoutesReviewed",
+    "ciEvidenceCaptured",
+    "launchArtifactsSecretSafe",
+  ],
+  artifactFields: [
+    "webTypecheckArtifactPath",
+    "webBuildArtifactPath",
+    "webTestArtifactPath",
+    "routeSmokeArtifactPath",
+    "playwrightDesktopArtifactPath",
+    "playwrightMobileArtifactPath",
+    "axeAuditArtifactPath",
+    "lighthouseArtifactPath",
+    "providerRoutesArtifactPath",
+    "mediaDerivativesArtifactPath",
+    "runtimeSeoArtifactPath",
+    "legalRoutesArtifactPath",
+    "ciEvidenceArtifactPath",
+    "secretSafeArtifactsPath",
+    "ciRunUrl",
+  ],
+};
+
 export const publicWebLaunchRuntimeCommands = [
   "pnpm --filter @inkroute/web typecheck",
   "pnpm --filter @inkroute/web build",
