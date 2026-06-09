@@ -423,6 +423,7 @@ model Tenant {
   privacyRetentionRuns PrivacyRetentionRun[]
   publicContentRuns PublicContentRun[]
   webBuildRuntimeRuns WebBuildRuntimeRun[]
+  portfolioImagePerformanceRuns PortfolioImagePerformanceRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3762,6 +3763,33 @@ model WebBuildRuntimeRun {
   createdAt                       DateTime @default(now())
   updatedAt                       DateTime @updatedAt
   tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model PortfolioImagePerformanceRun {
+  id                                    String   @id @default(cuid())
+  tenantId                              String
+  runId                                 String
+  commitSha                             String
+  status                                String
+  commandMatrix                         Json
+  artifactManifest                      Json
+  derivativeFixtureEvidenceCaptured     Boolean  @default(false)
+  nextImageEvidenceCaptured             Boolean  @default(false)
+  exifStrippingEvidenceCaptured         Boolean  @default(false)
+  privateOriginalDenialEvidenceCaptured Boolean  @default(false)
+  browserRenderingEvidenceCaptured      Boolean  @default(false)
+  lighthouseEvidenceCaptured            Boolean  @default(false)
+  ciEvidenceCaptured                    Boolean  @default(false)
+  secretSafeArtifactsCaptured           Boolean  @default(false)
+  derivativeFixtureReportPath           String?
+  lighthouseReportPath                  String?
+  createdAt                             DateTime @default(now())
+  updatedAt                             DateTime @updatedAt
+  tenant                                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

@@ -15,6 +15,45 @@ export interface PortfolioImagePerformanceMatrixEntry {
   readonly status: PortfolioImagePerformanceStatus;
 }
 
+
+export interface PortfolioImagePerformanceRunPersistenceContract {
+  readonly prismaModel: "PortfolioImagePerformanceRun";
+  readonly tenantRelation: "portfolioImagePerformanceRuns";
+  readonly migration: "20260609035000_add_portfolio_image_performance_runs";
+  readonly storesRunId: true;
+  readonly storesCommitSha: true;
+  readonly storesReadinessStatus: true;
+  readonly storesCommandMatrix: true;
+  readonly storesArtifactManifest: true;
+  readonly storesDerivativeFixtureEvidence: true;
+  readonly storesNextImageEvidence: true;
+  readonly storesExifStrippingEvidence: true;
+  readonly storesPrivateOriginalDenialEvidence: true;
+  readonly storesBrowserRenderingEvidence: true;
+  readonly storesLighthouseEvidence: true;
+  readonly storesCiEvidence: true;
+  readonly storesSecretSafeArtifacts: true;
+}
+
+export const portfolioImagePerformanceRunPersistenceContract = {
+  prismaModel: "PortfolioImagePerformanceRun",
+  tenantRelation: "portfolioImagePerformanceRuns",
+  migration: "20260609035000_add_portfolio_image_performance_runs",
+  storesRunId: true,
+  storesCommitSha: true,
+  storesReadinessStatus: true,
+  storesCommandMatrix: true,
+  storesArtifactManifest: true,
+  storesDerivativeFixtureEvidence: true,
+  storesNextImageEvidence: true,
+  storesExifStrippingEvidence: true,
+  storesPrivateOriginalDenialEvidence: true,
+  storesBrowserRenderingEvidence: true,
+  storesLighthouseEvidence: true,
+  storesCiEvidence: true,
+  storesSecretSafeArtifacts: true,
+} as const satisfies PortfolioImagePerformanceRunPersistenceContract;
+
 export const portfolioImagePerformanceCommands = [
   "pnpm --filter @inkroute/config typecheck",
   "pnpm --filter @inkroute/config test",

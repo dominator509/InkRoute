@@ -6,6 +6,7 @@ import {
   portfolioImagePerformanceCommands,
   portfolioImagePerformanceMatrix,
   portfolioImagePerformanceReadiness,
+  portfolioImagePerformanceRunPersistenceContract,
 } from "../lib/portfolioImagePerformanceRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -18,6 +19,8 @@ describe("portfolio image performance runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const portfolioImagePerformanceRunMigration = readRepoFile("packages/db/prisma/migrations/20260609035000_add_portfolio_image_performance_runs/migration.sql");
 
   it("pins portfolio image performance commands, matrix rows, and artifact paths", () => {
     expect(portfolioImagePerformanceCommands).toEqual([
@@ -79,13 +82,45 @@ describe("portfolio image performance runtime contract", () => {
     expect(portfolioImagePerformanceReadiness.blockers).toContain("Lighthouse image/performance audit must pass or document accepted image-specific exceptions.");
   });
 
+  it("pins the PortfolioImagePerformanceRun persistence model and migration", () => {
+    expect(portfolioImagePerformanceRunPersistenceContract).toEqual({
+      prismaModel: "PortfolioImagePerformanceRun",
+      tenantRelation: "portfolioImagePerformanceRuns",
+      migration: "20260609035000_add_portfolio_image_performance_runs",
+      storesRunId: true,
+      storesCommitSha: true,
+      storesReadinessStatus: true,
+      storesCommandMatrix: true,
+      storesArtifactManifest: true,
+      storesDerivativeFixtureEvidence: true,
+      storesNextImageEvidence: true,
+      storesExifStrippingEvidence: true,
+      storesPrivateOriginalDenialEvidence: true,
+      storesBrowserRenderingEvidence: true,
+      storesLighthouseEvidence: true,
+      storesCiEvidence: true,
+      storesSecretSafeArtifacts: true,
+    });
+    expect(prismaSchema).toContain("model PortfolioImagePerformanceRun");
+    expect(prismaSchema).toContain("portfolioImagePerformanceRuns PortfolioImagePerformanceRun[]");
+    expect(prismaSchema).toContain("derivativeFixtureEvidenceCaptured");
+    expect(prismaSchema).toContain("lighthouseEvidenceCaptured");
+    expect(prismaSchema).toContain("secretSafeArtifactsCaptured");
+    expect(portfolioImagePerformanceRunMigration).toContain('CREATE TABLE "PortfolioImagePerformanceRun"');
+    expect(portfolioImagePerformanceRunMigration).toContain('"commandMatrix" JSONB NOT NULL');
+    expect(portfolioImagePerformanceRunMigration).toContain('"artifactManifest" JSONB NOT NULL');
+    expect(portfolioImagePerformanceRunMigration).toContain('"PortfolioImagePerformanceRun_tenantId_runId_key"');
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming image performance readiness", () => {
     expect(ciWorkflow).toContain("Run Phase 3 portfolio image performance runtime contracts");
     expect(ciWorkflow).toContain("portfolio-image-performance-runtime-static.test.ts");
     expect(ciWorkflow).toContain("portfolio-image-performance-runtime-artifacts");
     expect(ciWorkflow).toContain("coverage/portfolio-image-performance-runtime.json");
     expect(unitManifest).toContain("unit-web-portfolio-image-performance-runtime-static");
+    expect(unitManifest).toContain("PortfolioImagePerformanceRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/portfolioImagePerformanceRuntime.ts");
+    expect(gapTracker).toContain("PortfolioImagePerformanceRun Prisma model and app row contract");
     expect(gapTracker).toContain("storage-backed derivative fixtures, EXIF-stripping proof, private-original/reference denial tests, browser rendering proof, Lighthouse image audit, web typecheck/build, CI evidence, and secret-safe artifact review remain open");
   });
 });
