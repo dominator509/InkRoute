@@ -371,6 +371,7 @@ model Tenant {
   securityAppRuntimeRuns SecurityAppRuntimeRun[]
   phase14RunnerRuns Phase14RunnerRun[]
   appE2eRuntimeRuns AppE2eRuntimeRun[]
+  dbIntegrationRuns DbIntegrationRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -1652,6 +1653,38 @@ model AppE2eRuntimeRun {
   tenant                       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                    DateTime @default(now())
   updatedAt                    DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model DbIntegrationRun {
+  id                             String   @id @default(cuid())
+  tenantId                       String
+  runId                          String
+  commitSha                      String?
+  status                         String
+  runtimeMatrix                  Json
+  artifactManifest               Json
+  nonProductionPostgresProvisioned Boolean @default(false)
+  databaseUrlConfigured          Boolean  @default(false)
+  directUrlConfigured            Boolean  @default(false)
+  prismaValidatePassed           Boolean  @default(false)
+  prismaGeneratePassed           Boolean  @default(false)
+  prismaMigratePassed            Boolean  @default(false)
+  prismaSeedPassed               Boolean  @default(false)
+  seedVerificationPassed         Boolean  @default(false)
+  tenantIsolationPassed          Boolean  @default(false)
+  workflowPersistencePassed      Boolean  @default(false)
+  auditLogIntegrationPassed      Boolean  @default(false)
+  destructiveResetGuarded        Boolean  @default(false)
+  rollbackDocumented             Boolean  @default(false)
+  redactedTranscriptPath         String?
+  ciRunUrl                       String?
+  tenant                         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                      DateTime @default(now())
+  updatedAt                      DateTime @updatedAt
 
   @@unique([tenantId, runId])
   @@index([tenantId, status])

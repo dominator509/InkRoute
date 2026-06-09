@@ -13,6 +13,53 @@ export interface DbIntegrationRuntimeMatrixEntry {
   readonly status: DbIntegrationRuntimeStatus;
 }
 
+export interface DbIntegrationRunPersistenceInput {
+  tenantId: string;
+  runId: string;
+  commitSha?: string;
+  status: "blocked" | "running" | "passed" | "failed" | "database_gated";
+  runtimeMatrix: readonly DbIntegrationRuntimeMatrixEntry[];
+  artifactManifest: readonly string[];
+  nonProductionPostgresProvisioned: boolean;
+  databaseUrlConfigured: boolean;
+  directUrlConfigured: boolean;
+  prismaValidatePassed: boolean;
+  prismaGeneratePassed: boolean;
+  prismaMigratePassed: boolean;
+  prismaSeedPassed: boolean;
+  seedVerificationPassed: boolean;
+  tenantIsolationPassed: boolean;
+  workflowPersistencePassed: boolean;
+  auditLogIntegrationPassed: boolean;
+  destructiveResetGuarded: boolean;
+  rollbackDocumented: boolean;
+  redactedTranscriptPath?: string;
+  ciRunUrl?: string;
+}
+
+export interface DbIntegrationRunPersistenceContract {
+  modelName: "DbIntegrationRun";
+  row: DbIntegrationRunPersistenceInput;
+  transactionWrites: readonly ["DbIntegrationRun", "AuditLog"];
+  requiredDbFlags: readonly [
+    "nonProductionPostgresProvisioned",
+    "databaseUrlConfigured",
+    "directUrlConfigured",
+    "prismaValidatePassed",
+    "prismaGeneratePassed",
+    "prismaMigratePassed",
+    "prismaSeedPassed",
+    "seedVerificationPassed",
+    "tenantIsolationPassed",
+    "workflowPersistencePassed",
+    "auditLogIntegrationPassed",
+    "destructiveResetGuarded",
+    "rollbackDocumented",
+  ];
+  artifactFields: readonly ["runtimeMatrix", "artifactManifest", "redactedTranscriptPath"];
+  tenantIsolationKey: "tenantId";
+}
+
 export const dbIntegrationRuntimeArtifactPaths = [
   "coverage/db-integration-runtime.json",
   "coverage/db-postgres-provisioning-redacted.json",
@@ -97,6 +144,33 @@ export const dbIntegrationRuntimeMatrix: readonly DbIntegrationRuntimeMatrixEntr
   }
 ];
 
+export function buildDbIntegrationRunPersistenceContract(
+  input: DbIntegrationRunPersistenceInput,
+): DbIntegrationRunPersistenceContract {
+  return {
+    modelName: "DbIntegrationRun",
+    row: input,
+    transactionWrites: ["DbIntegrationRun", "AuditLog"],
+    requiredDbFlags: [
+      "nonProductionPostgresProvisioned",
+      "databaseUrlConfigured",
+      "directUrlConfigured",
+      "prismaValidatePassed",
+      "prismaGeneratePassed",
+      "prismaMigratePassed",
+      "prismaSeedPassed",
+      "seedVerificationPassed",
+      "tenantIsolationPassed",
+      "workflowPersistencePassed",
+      "auditLogIntegrationPassed",
+      "destructiveResetGuarded",
+      "rollbackDocumented",
+    ],
+    artifactFields: ["runtimeMatrix", "artifactManifest", "redactedTranscriptPath"],
+    tenantIsolationKey: "tenantId",
+  };
+}
+
 export const dbIntegrationRuntimeReadiness = buildDbIntegrationRuntimeReadinessPlan({
   packageScripts: {
     "db:validate": "prisma validate --schema prisma/schema.prisma",
@@ -119,4 +193,26 @@ export const dbIntegrationRuntimeReadiness = buildDbIntegrationRuntimeReadinessP
   migrationRollbackDocumented: false,
   commandOutputCaptured: false,
   ciDbJobPassed: false
+});
+
+export const dbIntegrationRunPersistencePreview = buildDbIntegrationRunPersistenceContract({
+  tenantId: "tenant_demo",
+  runId: "db-integration-demo",
+  status: "database_gated",
+  runtimeMatrix: dbIntegrationRuntimeMatrix,
+  artifactManifest: dbIntegrationRuntimeArtifactPaths,
+  nonProductionPostgresProvisioned: false,
+  databaseUrlConfigured: false,
+  directUrlConfigured: false,
+  prismaValidatePassed: false,
+  prismaGeneratePassed: false,
+  prismaMigratePassed: false,
+  prismaSeedPassed: false,
+  seedVerificationPassed: false,
+  tenantIsolationPassed: false,
+  workflowPersistencePassed: false,
+  auditLogIntegrationPassed: false,
+  destructiveResetGuarded: false,
+  rollbackDocumented: false,
+  redactedTranscriptPath: "coverage/db-command-transcript-redacted.log",
 });

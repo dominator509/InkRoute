@@ -2,6 +2,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildDbIntegrationRunPersistenceContract,
+  dbIntegrationRunPersistencePreview,
   dbIntegrationRuntimeArtifactPaths,
   dbIntegrationRuntimeCommands,
   dbIntegrationRuntimeMatrix,
@@ -96,6 +98,43 @@ describe("GAP-107 DB integration runtime wiring", () => {
     );
   });
 
+  it("pins durable DbIntegrationRun rows, lifecycle flags, tenant isolation, transcript, rollback, and CI artifacts", () => {
+    const schema = read("packages/db/prisma/schema.prisma");
+    const contract = buildDbIntegrationRunPersistenceContract({
+      tenantId: "tenant_demo",
+      runId: "db-integration-demo",
+      commitSha: "abc1234",
+      status: "database_gated",
+      runtimeMatrix: dbIntegrationRuntimeMatrix,
+      artifactManifest: dbIntegrationRuntimeArtifactPaths,
+      nonProductionPostgresProvisioned: false,
+      databaseUrlConfigured: false,
+      directUrlConfigured: false,
+      prismaValidatePassed: false,
+      prismaGeneratePassed: false,
+      prismaMigratePassed: false,
+      prismaSeedPassed: false,
+      seedVerificationPassed: false,
+      tenantIsolationPassed: false,
+      workflowPersistencePassed: false,
+      auditLogIntegrationPassed: false,
+      destructiveResetGuarded: false,
+      rollbackDocumented: false,
+      redactedTranscriptPath: "coverage/db-command-transcript-redacted.log",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/redacted"
+    });
+
+    expect(schema).toContain("model DbIntegrationRun");
+    expect(schema).toContain("nonProductionPostgresProvisioned");
+    expect(schema).toContain("redactedTranscriptPath");
+    expect(schema).toContain("@@unique([tenantId, runId])");
+    expect(contract.transactionWrites).toEqual(["DbIntegrationRun", "AuditLog"]);
+    expect(contract.requiredDbFlags).toContain("tenantIsolationPassed");
+    expect(contract.artifactFields).toContain("redactedTranscriptPath");
+    expect(contract.tenantIsolationKey).toBe("tenantId");
+    expect(dbIntegrationRunPersistencePreview.modelName).toBe("DbIntegrationRun");
+  });
+
   it("keeps CI, manifest registration, and tracker status aligned", () => {
     expect(ciWorkflow).toContain("Run Phase 14 DB integration runtime contracts");
     expect(ciWorkflow).toContain("packages/db/tests/db-integration-runtime-static.test.ts");
@@ -103,6 +142,7 @@ describe("GAP-107 DB integration runtime wiring", () => {
     expect(ciWorkflow).toContain("coverage/db-command-transcript-redacted.log");
     expect(ciWorkflow).toContain("test-results/db-integration-runtime");
     expect(unitManifest).toContain("unit-db-integration-runtime-static");
+    expect(unitManifest).toContain("DbIntegrationRun Prisma model and app row contract are wired");
     expect(gapTracker).toContain("packages/db/src/db-integration-runtime.ts");
     expect(gapTracker).toContain("live Postgres integration proof remains open");
   });
