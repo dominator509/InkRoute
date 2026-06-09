@@ -453,6 +453,26 @@ jobs:
             test-results/semantic-documentation-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 1 legal review runtime contracts
+        run: pnpm --filter @inkroute/quality test && pnpm vitest run apps/web/tests/legal-review-runtime-static.test.ts
+
+      - name: Upload Phase 1 legal review runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legal-review-runtime-artifacts
+          path: |
+            coverage/legal-review-runtime.json
+            coverage/legal-review-audit-output.txt
+            coverage/legal-review-quality-gates-output.txt
+            coverage/legal-review-quality-all-output.txt
+            coverage/legal-review-ci-quality-job.json
+            coverage/legal-review-counsel-approval-redacted.json
+            coverage/legal-review-placeholder-replacement.json
+            coverage/legal-review-privileged-advice-exclusion.json
+            test-results/legal-review-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 17 quality gates
         run: pnpm quality:all
       - name: Verify PR GAP tracker diff evidence
