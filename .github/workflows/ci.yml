@@ -466,6 +466,38 @@ jobs:
             test-results/dependency-install-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 2 seed runtime execution contracts
+        run: pnpm --filter @inkroute/db test && pnpm vitest run apps/web/tests/seed-runtime-execution-static.test.ts
+
+      - name: Upload Phase 2 seed runtime execution artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed-runtime-execution-artifacts
+          path: |
+            coverage/seed-runtime-execution.json
+            coverage/seed-readiness-verifier-output.txt
+            coverage/seed-fake-data-legal-placeholder-proof.json
+            coverage/seed-production-provider-ban.json
+            coverage/seed-postgres-provisioning-redacted.json
+            coverage/seed-database-url-redacted.json
+            coverage/seed-prisma-validate-output.txt
+            coverage/seed-prisma-generate-output.txt
+            coverage/seed-prisma-migrate-output.txt
+            coverage/seed-command-output.txt
+            coverage/seeded-tenant-query.json
+            coverage/seeded-tenant-members-query.json
+            coverage/seeded-booking-workflow-query.json
+            coverage/seeded-payments-files-messages-query.json
+            coverage/seeded-seo-release-flags-query.json
+            coverage/seeded-audit-logs-query.json
+            coverage/seed-web-api-smoke.json
+            coverage/seed-dashboard-smoke.json
+            coverage/seed-command-transcript-redacted.log
+            coverage/seed-ci-clean-checkout-evidence.json
+            test-results/seed-runtime-execution
+          if-no-files-found: warn
+
       - name: Run Phase 2 Prisma lifecycle runtime contracts
         run: pnpm --filter @inkroute/db test && pnpm vitest run apps/web/tests/prisma-lifecycle-runtime-static.test.ts
 
