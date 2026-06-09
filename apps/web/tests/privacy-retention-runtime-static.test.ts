@@ -6,6 +6,7 @@ import {
   privacyRetentionRuntimeCommands,
   privacyRetentionRuntimeMatrix,
   privacyRetentionRuntimeReadiness,
+  privacyRetentionRunPersistenceContract,
 } from "../lib/privacyRetentionRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -18,6 +19,8 @@ describe("privacy retention dry-run runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const privacyRetentionRunMigration = readRepoFile("packages/db/prisma/migrations/20260609034700_add_privacy_retention_runs/migration.sql");
 
   it("pins privacy retention commands, matrix rows, and artifact paths", () => {
     expect(privacyRetentionRuntimeCommands).toEqual([
@@ -85,13 +88,46 @@ describe("privacy retention dry-run runtime contract", () => {
     );
   });
 
+  it("pins the PrivacyRetentionRun persistence model and migration", () => {
+    expect(privacyRetentionRunPersistenceContract).toEqual({
+      prismaModel: "PrivacyRetentionRun",
+      tenantRelation: "privacyRetentionRuns",
+      migration: "20260609034700_add_privacy_retention_runs",
+      storesRunId: true,
+      storesCommitSha: true,
+      storesReadinessStatus: true,
+      storesCommandMatrix: true,
+      storesArtifactManifest: true,
+      storesAttorneyApprovalEvidence: true,
+      storesWorkerPersistenceEvidence: true,
+      storesPrismaDryRunEvidence: true,
+      storesObjectStorageDryRunEvidence: true,
+      storesTenantIsolationEvidence: true,
+      storesLegalHoldEvidence: true,
+      storesTombstoneReplayEvidence: true,
+      storesCiEvidence: true,
+      storesSecretSafeArtifacts: true,
+    });
+    expect(prismaSchema).toContain("model PrivacyRetentionRun");
+    expect(prismaSchema).toContain("privacyRetentionRuns PrivacyRetentionRun[]");
+    expect(prismaSchema).toContain("attorneyApprovalEvidenceCaptured");
+    expect(prismaSchema).toContain("tombstoneReplayEvidenceCaptured");
+    expect(prismaSchema).toContain("secretSafeArtifactsCaptured");
+    expect(privacyRetentionRunMigration).toContain('CREATE TABLE "PrivacyRetentionRun"');
+    expect(privacyRetentionRunMigration).toContain('"commandMatrix" JSONB NOT NULL');
+    expect(privacyRetentionRunMigration).toContain('"artifactManifest" JSONB NOT NULL');
+    expect(privacyRetentionRunMigration).toContain('"PrivacyRetentionRun_tenantId_runId_key"');
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming privacy retention production readiness", () => {
     expect(ciWorkflow).toContain("Run Phase 2 privacy retention runtime contracts");
     expect(ciWorkflow).toContain("privacy-retention-runtime-static.test.ts");
     expect(ciWorkflow).toContain("privacy-retention-runtime-artifacts");
     expect(ciWorkflow).toContain("coverage/privacy-retention-runtime.json");
     expect(unitManifest).toContain("unit-web-privacy-retention-runtime-static");
+    expect(unitManifest).toContain("PrivacyRetentionRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/privacyRetentionRuntime.ts");
+    expect(gapTracker).toContain("PrivacyRetentionRun Prisma model and app row contract");
     expect(gapTracker).toContain("live attorney approval, persisted DB/storage privacy workers, production dry-run artifacts, backup/restore tombstone replay proof, notification approval, CI evidence, and secret-safe artifact review remain open");
   });
 });

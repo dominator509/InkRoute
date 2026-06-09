@@ -15,6 +15,47 @@ export interface PrivacyRetentionRuntimeMatrixEntry {
   readonly status: PrivacyRetentionRuntimeStatus;
 }
 
+
+export interface PrivacyRetentionRunPersistenceContract {
+  readonly prismaModel: "PrivacyRetentionRun";
+  readonly tenantRelation: "privacyRetentionRuns";
+  readonly migration: "20260609034700_add_privacy_retention_runs";
+  readonly storesRunId: true;
+  readonly storesCommitSha: true;
+  readonly storesReadinessStatus: true;
+  readonly storesCommandMatrix: true;
+  readonly storesArtifactManifest: true;
+  readonly storesAttorneyApprovalEvidence: true;
+  readonly storesWorkerPersistenceEvidence: true;
+  readonly storesPrismaDryRunEvidence: true;
+  readonly storesObjectStorageDryRunEvidence: true;
+  readonly storesTenantIsolationEvidence: true;
+  readonly storesLegalHoldEvidence: true;
+  readonly storesTombstoneReplayEvidence: true;
+  readonly storesCiEvidence: true;
+  readonly storesSecretSafeArtifacts: true;
+}
+
+export const privacyRetentionRunPersistenceContract = {
+  prismaModel: "PrivacyRetentionRun",
+  tenantRelation: "privacyRetentionRuns",
+  migration: "20260609034700_add_privacy_retention_runs",
+  storesRunId: true,
+  storesCommitSha: true,
+  storesReadinessStatus: true,
+  storesCommandMatrix: true,
+  storesArtifactManifest: true,
+  storesAttorneyApprovalEvidence: true,
+  storesWorkerPersistenceEvidence: true,
+  storesPrismaDryRunEvidence: true,
+  storesObjectStorageDryRunEvidence: true,
+  storesTenantIsolationEvidence: true,
+  storesLegalHoldEvidence: true,
+  storesTombstoneReplayEvidence: true,
+  storesCiEvidence: true,
+  storesSecretSafeArtifacts: true,
+} as const satisfies PrivacyRetentionRunPersistenceContract;
+
 export const privacyRetentionRuntimeCommands = [
   "pnpm --filter @inkroute/security typecheck",
   "pnpm --filter @inkroute/security test",

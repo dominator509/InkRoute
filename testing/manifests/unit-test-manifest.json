@@ -2627,13 +2627,13 @@
       "file": "apps/web/tests/privacy-retention-runtime-static.test.ts",
       "priority": "critical",
       "verifies": [
-        "GAP-025 privacy retention runtime matrix covers @inkroute/security typecheck/tests, attorney approval, identity verification, export/delete/anonymize worker persistence, PrivacyRequest/PrivacyCase and AuditLog persistence, Prisma dry-runs, object-storage dry-runs, tenant-isolation dry-runs, legal holds, notification template approval, backup/restore tombstone replay, retention reports, CI evidence, and secret-safe artifacts",
+        "GAP-025 PrivacyRetentionRun Prisma model and app row contract plus privacy retention runtime matrix covers @inkroute/security typecheck/tests, attorney approval, identity verification, export/delete/anonymize worker persistence, PrivacyRequest/PrivacyCase and AuditLog persistence, Prisma dry-runs, object-storage dry-runs, tenant-isolation dry-runs, legal holds, notification template approval, backup/restore tombstone replay, retention reports, CI evidence, and secret-safe artifacts",
         "GAP-025 security helper/tests, database audit persistence reference, CI labels, artifact paths, and tracker row remain wired without claiming production privacy deletion readiness",
         "GAP-025 readiness keeps attorney approval, worker persistence, DB/storage execution, tenant isolation, legal holds, notifications, tombstones, CI, and redacted artifact evidence explicit blockers"
       ],
       "blockedBy": [
         "Static privacy retention runtime test execution pending",
-        "Attorney approval and notification-template approval proof pending",
+        "Provider-backed PrivacyRetentionRun transaction plus attorney approval and notification-template approval proof pending",
         "Persisted identity/export/delete/anonymize worker and case/audit/tombstone proof pending",
         "Prisma/object-storage/tenant-isolation/legal-hold dry-runs, backup restore tombstone replay, CI evidence, and secret-safe artifact proof pending"
       ]

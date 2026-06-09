@@ -420,6 +420,7 @@ model Tenant {
   tenantIsolationRuns TenantIsolationRun[]
   domainAuthorizationRuns DomainAuthorizationRun[]
   domainEventAuditRuns DomainEventAuditRun[]
+  privacyRetentionRuns PrivacyRetentionRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3673,6 +3674,34 @@ model DomainEventAuditRun {
   secretSafeArtifactsCaptured         Boolean  @default(false)
   transactionReportPath               String?
   idempotencyReportPath               String?
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model PrivacyRetentionRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String
+  status                              String
+  commandMatrix                       Json
+  artifactManifest                    Json
+  attorneyApprovalEvidenceCaptured    Boolean  @default(false)
+  workerPersistenceEvidenceCaptured   Boolean  @default(false)
+  prismaDryRunEvidenceCaptured        Boolean  @default(false)
+  objectStorageDryRunEvidenceCaptured Boolean  @default(false)
+  tenantIsolationEvidenceCaptured     Boolean  @default(false)
+  legalHoldEvidenceCaptured           Boolean  @default(false)
+  tombstoneReplayEvidenceCaptured     Boolean  @default(false)
+  ciEvidenceCaptured                  Boolean  @default(false)
+  secretSafeArtifactsCaptured         Boolean  @default(false)
+  retentionReportPath                 String?
+  tombstoneReplayReportPath           String?
   createdAt                           DateTime @default(now())
   updatedAt                           DateTime @updatedAt
   tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
