@@ -6,6 +6,7 @@ import {
   bookingContactRuntimeCommands,
   bookingContactRuntimeMatrix,
   bookingContactRuntimeReadiness,
+  bookingContactRunPersistenceContract,
 } from "../lib/bookingContactRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -22,6 +23,8 @@ describe("booking/contact runtime evidence contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const bookingContactRunMigration = readRepoFile("packages/db/prisma/migrations/20260609035100_add_booking_contact_runs/migration.sql");
 
   it("pins booking/contact commands, matrix rows, and artifact paths", () => {
     expect(bookingContactRuntimeCommands).toEqual([
@@ -85,13 +88,46 @@ describe("booking/contact runtime evidence contract", () => {
     expect(bookingContactRuntimeReadiness.blockers).toContain("Booking/contact artifacts must be redacted and free of secrets, raw medical notes, payment data, provider tokens, and private file URLs.");
   });
 
+  it("pins the BookingContactRun persistence model and migration", () => {
+    expect(bookingContactRunPersistenceContract).toEqual({
+      prismaModel: "BookingContactRun",
+      tenantRelation: "bookingContactRuns",
+      migration: "20260609035100_add_booking_contact_runs",
+      storesRunId: true,
+      storesCommitSha: true,
+      storesReadinessStatus: true,
+      storesCommandMatrix: true,
+      storesArtifactManifest: true,
+      storesDatabasePersistenceEvidence: true,
+      storesTenantIsolationEvidence: true,
+      storesProviderHandoffEvidence: true,
+      storesNoLivePaymentEvidence: true,
+      storesApiE2eEvidence: true,
+      storesBrowserE2eEvidence: true,
+      storesWebBuildEvidence: true,
+      storesCiEvidence: true,
+      storesSecretSafeArtifacts: true,
+    });
+    expect(prismaSchema).toContain("model BookingContactRun");
+    expect(prismaSchema).toContain("bookingContactRuns BookingContactRun[]");
+    expect(prismaSchema).toContain("databasePersistenceEvidenceCaptured");
+    expect(prismaSchema).toContain("browserE2eEvidenceCaptured");
+    expect(prismaSchema).toContain("secretSafeArtifactsCaptured");
+    expect(bookingContactRunMigration).toContain('CREATE TABLE "BookingContactRun"');
+    expect(bookingContactRunMigration).toContain('"commandMatrix" JSONB NOT NULL');
+    expect(bookingContactRunMigration).toContain('"artifactManifest" JSONB NOT NULL');
+    expect(bookingContactRunMigration).toContain('"BookingContactRun_tenantId_runId_key"');
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming booking/contact launch readiness", () => {
     expect(ciWorkflow).toContain("Run Phase 4 booking contact runtime contracts");
     expect(ciWorkflow).toContain("booking-contact-runtime-static.test.ts");
     expect(ciWorkflow).toContain("booking-contact-runtime-artifacts");
     expect(ciWorkflow).toContain("coverage/booking-contact-runtime.json");
     expect(unitManifest).toContain("unit-web-booking-contact-runtime-static");
+    expect(unitManifest).toContain("BookingContactRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/bookingContactRuntime.ts");
+    expect(gapTracker).toContain("BookingContactRun Prisma model and app row contract");
     expect(gapTracker).toContain("live DB transaction integration, tenant-isolation integration, browser/API E2E, provider sandbox handoff evidence, web typecheck/build, CI evidence, and secret-safe artifact review remain open");
   });
 });

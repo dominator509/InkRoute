@@ -2703,13 +2703,13 @@
       "file": "apps/web/tests/booking-contact-runtime-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-029 booking/contact runtime matrix covers booking package typecheck/tests, web typecheck/build, public booking route post-submit plan wiring, confirmation provider boundary state, contact form local persistence, provider-gated upload/deposit/notification/calendar handoffs, no-live-payment boundaries, API E2E, browser E2E, provider sandbox evidence, CI evidence, and secret-safe artifacts",
+        "GAP-029 BookingContactRun Prisma model and app row contract plus booking/contact runtime matrix covers booking package typecheck/tests, web typecheck/build, public booking route post-submit plan wiring, confirmation provider boundary state, contact form local persistence, provider-gated upload/deposit/notification/calendar handoffs, no-live-payment boundaries, API E2E, browser E2E, provider sandbox evidence, CI evidence, and secret-safe artifacts",
         "GAP-029 booking route, contact route/page, local runtime persistence, package helper, CI labels, artifact paths, and tracker row remain wired without claiming production booking/contact readiness",
         "GAP-029 readiness keeps DB integration, tenant isolation, provider sandbox, E2E, CI, and redacted artifact evidence explicit blockers"
       ],
       "blockedBy": [
         "Static booking/contact runtime test execution pending",
-        "Tenant-scoped DB transaction and tenant-isolation integration proof pending",
+        "Provider-backed BookingContactRun transaction plus tenant-scoped DB transaction and tenant-isolation integration proof pending",
         "Booking/contact API and browser E2E proof pending",
         "Provider sandbox, web typecheck/build, CI evidence, and secret-safe artifact proof pending"
       ]

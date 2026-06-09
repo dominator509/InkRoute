@@ -14,6 +14,47 @@ export interface BookingContactRuntimeMatrixEntry {
   readonly status: BookingContactRuntimeStatus;
 }
 
+
+export interface BookingContactRunPersistenceContract {
+  readonly prismaModel: "BookingContactRun";
+  readonly tenantRelation: "bookingContactRuns";
+  readonly migration: "20260609035100_add_booking_contact_runs";
+  readonly storesRunId: true;
+  readonly storesCommitSha: true;
+  readonly storesReadinessStatus: true;
+  readonly storesCommandMatrix: true;
+  readonly storesArtifactManifest: true;
+  readonly storesDatabasePersistenceEvidence: true;
+  readonly storesTenantIsolationEvidence: true;
+  readonly storesProviderHandoffEvidence: true;
+  readonly storesNoLivePaymentEvidence: true;
+  readonly storesApiE2eEvidence: true;
+  readonly storesBrowserE2eEvidence: true;
+  readonly storesWebBuildEvidence: true;
+  readonly storesCiEvidence: true;
+  readonly storesSecretSafeArtifacts: true;
+}
+
+export const bookingContactRunPersistenceContract = {
+  prismaModel: "BookingContactRun",
+  tenantRelation: "bookingContactRuns",
+  migration: "20260609035100_add_booking_contact_runs",
+  storesRunId: true,
+  storesCommitSha: true,
+  storesReadinessStatus: true,
+  storesCommandMatrix: true,
+  storesArtifactManifest: true,
+  storesDatabasePersistenceEvidence: true,
+  storesTenantIsolationEvidence: true,
+  storesProviderHandoffEvidence: true,
+  storesNoLivePaymentEvidence: true,
+  storesApiE2eEvidence: true,
+  storesBrowserE2eEvidence: true,
+  storesWebBuildEvidence: true,
+  storesCiEvidence: true,
+  storesSecretSafeArtifacts: true,
+} as const satisfies BookingContactRunPersistenceContract;
+
 export const bookingContactRuntimeCommands = [
   "pnpm --filter @inkroute/booking typecheck",
   "pnpm --filter @inkroute/booking test",

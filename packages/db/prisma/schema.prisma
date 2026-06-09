@@ -424,6 +424,7 @@ model Tenant {
   publicContentRuns PublicContentRun[]
   webBuildRuntimeRuns WebBuildRuntimeRun[]
   portfolioImagePerformanceRuns PortfolioImagePerformanceRun[]
+  bookingContactRuns BookingContactRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -3787,6 +3788,34 @@ model PortfolioImagePerformanceRun {
   secretSafeArtifactsCaptured           Boolean  @default(false)
   derivativeFixtureReportPath           String?
   lighthouseReportPath                  String?
+  createdAt                             DateTime @default(now())
+  updatedAt                             DateTime @updatedAt
+  tenant                                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model BookingContactRun {
+  id                                    String   @id @default(cuid())
+  tenantId                              String
+  runId                                 String
+  commitSha                             String
+  status                                String
+  commandMatrix                         Json
+  artifactManifest                      Json
+  databasePersistenceEvidenceCaptured   Boolean  @default(false)
+  tenantIsolationEvidenceCaptured       Boolean  @default(false)
+  providerHandoffEvidenceCaptured       Boolean  @default(false)
+  noLivePaymentEvidenceCaptured         Boolean  @default(false)
+  apiE2eEvidenceCaptured                Boolean  @default(false)
+  browserE2eEvidenceCaptured            Boolean  @default(false)
+  webBuildEvidenceCaptured              Boolean  @default(false)
+  ciEvidenceCaptured                    Boolean  @default(false)
+  secretSafeArtifactsCaptured           Boolean  @default(false)
+  e2eReportPath                         String?
+  providerBoundaryReportPath            String?
   createdAt                             DateTime @default(now())
   updatedAt                             DateTime @updatedAt
   tenant                                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
