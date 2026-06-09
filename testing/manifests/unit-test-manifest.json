@@ -3069,7 +3069,8 @@
         "FreeBusy/event/full-sync/incremental-sync/invalid-token/push smoke artifacts pending",
         "Tenant isolation, Google test-calendar artifacts, CI evidence, and secret-safe artifact proof pending"
       ]
-    }    ,{
+    }
+    ,{
       "id": "unit-timezone-recurrence-qa-runtime-static",
       "file": "apps/dashboard/tests/timezone-recurrence-qa-runtime-static.test.ts",
       "priority": "high",
@@ -3083,6 +3084,21 @@
         "Temporal/date-library implementation and route/persistence boundary proof pending",
         "DST, recurrence expansion, all-day travel, cross-city, Google, and ICS render proof pending",
         "Seeded persistence-boundary tests, CI evidence, and secret-safe artifact proof pending"
+      ]
+    }    ,{
+      "id": "unit-calendar-automation-runtime-static",
+      "file": "apps/web/tests/calendar-automation-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-059 calendar automation runtime matrix covers calendar typecheck/tests, signed ICS route tests, availability preview route tests, Postgres integration, Google provider tests, timezone provider matrix, dashboard/public travel Playwright, concurrent hold race tests, signed-feed revocation DB tests, CI evidence, artifact retention, and secret-safe artifacts",
+        "GAP-059 existing calendar automation contract remains wired for package helpers, route tests, dashboard calendar surface, suite ids, redacted-only policy, and retained artifact paths",
+        "GAP-059 readiness keeps actual command execution, seeded Postgres output, Google provider transcripts, Playwright traces, concurrent hold race tests, signed-feed revocation DB tests, CI upload evidence, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static calendar automation runtime test execution pending",
+        "Seeded Postgres integration, concurrent hold race, and signed-feed revocation DB tests pending",
+        "Google provider, timezone matrix, and Playwright dashboard/public travel artifacts pending",
+        "CI artifact upload evidence and secret-safe artifact proof pending"
       ]
     }  ]
 }

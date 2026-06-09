@@ -1595,6 +1595,33 @@ jobs:
             test-results/timezone-recurrence-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 8 calendar automation runtime contracts
+        run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/web/tests/calendar-automation-runtime-static.test.ts apps/web/tests/calendar-automation-static.test.ts apps/web/tests/ics-feed-route.test.ts apps/web/tests/availability-preview-route.test.ts
+
+      - name: Upload Phase 8 calendar automation runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calendar-automation-runtime-artifacts
+          path: |
+            coverage/calendar-automation-runtime.json
+            coverage/calendar-automation-calendar-typecheck.txt
+            coverage/calendar-automation-calendar-test.txt
+            coverage/calendar-automation-signed-ics-route.json
+            coverage/calendar-automation-availability-preview-route.json
+            coverage/calendar-automation-postgres-integration.json
+            coverage/calendar-automation-google-provider-redacted.json
+            coverage/calendar-automation-timezone-provider-matrix.json
+            coverage/calendar-automation-dashboard-playwright-redacted.json
+            coverage/calendar-automation-public-travel-playwright-redacted.json
+            coverage/calendar-automation-concurrent-hold-race.json
+            coverage/calendar-automation-signed-ics-revocation-db.json
+            coverage/calendar-automation-ci-job.json
+            coverage/calendar-automation-artifact-retention.json
+            coverage/calendar-automation-secret-safe-artifacts.json
+            test-results/calendar-automation-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 8 calendar lifecycle contracts
         run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/web/tests/ics-feed-route.test.ts apps/web/tests/availability-preview-route.test.ts apps/web/tests/signed-ics-feed-static.test.ts apps/web/tests/calendar-automation-static.test.ts apps/dashboard/tests/availability-persistence-static.test.ts apps/dashboard/tests/google-calendar-sync-static.test.ts apps/dashboard/tests/timezone-recurrence-qa-static.test.ts apps/dashboard/tests/travel-publish-static.test.ts
       - name: Upload Vitest coverage artifacts
