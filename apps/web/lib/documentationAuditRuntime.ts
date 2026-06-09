@@ -14,6 +14,41 @@ export interface DocumentationAuditRuntimeMatrixEntry {
   readonly status: DocumentationAuditRuntimeStatus;
 }
 
+export interface DocumentationAuditRunPersistenceContract {
+  readonly prismaModel: "DocumentationAuditRun";
+  readonly tenantRelation: "documentationAuditRuns";
+  readonly uniqueKey: readonly ["tenantId", "runId"];
+  readonly jsonFields: readonly [
+    "auditReportMatrix",
+    "documentationConsistencyFindings",
+    "reviewEvidenceManifest",
+    "artifactManifest"
+  ];
+  readonly requiredBooleanProofs: readonly [
+    "qualityDocsPassed",
+    "markdownLinkAuditPassed",
+    "documentationConsistencyPassed",
+    "documentationInventoryPassed",
+    "apiRouteReferencesPassed",
+    "providerReadinessLanguagePassed",
+    "legalReadinessLanguagePassed",
+    "workspaceInventoryPassed",
+    "generatedReportsCaptured",
+    "ciQualityDocsEvidenceCaptured",
+    "providerReviewEvidenceCaptured",
+    "legalReviewEvidenceCaptured",
+    "staleProviderStatusProofCaptured"
+  ];
+  readonly redactedArtifactFields: readonly [
+    "linkAuditArtifactPath",
+    "consistencyAuditArtifactPath",
+    "inventoryAuditArtifactPath",
+    "providerReviewArtifactPath",
+    "legalReviewArtifactPath",
+    "staleProviderStatusArtifactPath"
+  ];
+}
+
 export const documentationAuditRuntimeCommands = [
   "pnpm quality:docs",
   "node scripts/quality/audit-doc-links.mjs",
@@ -98,6 +133,41 @@ export const documentationAuditRuntimeMatrix = [
     status: "evidence-gated",
   },
 ] as const satisfies readonly DocumentationAuditRuntimeMatrixEntry[];
+
+export const documentationAuditRunPersistenceContract: DocumentationAuditRunPersistenceContract = {
+  prismaModel: "DocumentationAuditRun",
+  tenantRelation: "documentationAuditRuns",
+  uniqueKey: ["tenantId", "runId"],
+  jsonFields: [
+    "auditReportMatrix",
+    "documentationConsistencyFindings",
+    "reviewEvidenceManifest",
+    "artifactManifest",
+  ],
+  requiredBooleanProofs: [
+    "qualityDocsPassed",
+    "markdownLinkAuditPassed",
+    "documentationConsistencyPassed",
+    "documentationInventoryPassed",
+    "apiRouteReferencesPassed",
+    "providerReadinessLanguagePassed",
+    "legalReadinessLanguagePassed",
+    "workspaceInventoryPassed",
+    "generatedReportsCaptured",
+    "ciQualityDocsEvidenceCaptured",
+    "providerReviewEvidenceCaptured",
+    "legalReviewEvidenceCaptured",
+    "staleProviderStatusProofCaptured",
+  ],
+  redactedArtifactFields: [
+    "linkAuditArtifactPath",
+    "consistencyAuditArtifactPath",
+    "inventoryAuditArtifactPath",
+    "providerReviewArtifactPath",
+    "legalReviewArtifactPath",
+    "staleProviderStatusArtifactPath",
+  ],
+};
 
 export const documentationAuditRuntimeReadiness = buildDocumentationAuditRuntimeReadinessPlan({
   rootScripts: {

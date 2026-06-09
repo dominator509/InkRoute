@@ -388,6 +388,7 @@ model Tenant {
   handoffToolingRuns HandoffToolingRun[]
   agentTaskTrackingRuns AgentTaskTrackingRun[]
   prGapEvidenceEnforcementRuns PrGapEvidenceEnforcementRun[]
+  documentationAuditRuns DocumentationAuditRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -2288,6 +2289,45 @@ model PrGapEvidenceEnforcementRun {
   liveFailingPrArtifactPath               String?
   livePassingPrArtifactPath               String?
   secretSafeLogReviewArtifactPath         String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model DocumentationAuditRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  auditReportMatrix                       Json
+  documentationConsistencyFindings        Json
+  reviewEvidenceManifest                  Json
+  artifactManifest                        Json
+  qualityDocsPassed                       Boolean  @default(false)
+  markdownLinkAuditPassed                 Boolean  @default(false)
+  documentationConsistencyPassed          Boolean  @default(false)
+  documentationInventoryPassed            Boolean  @default(false)
+  apiRouteReferencesPassed                Boolean  @default(false)
+  providerReadinessLanguagePassed         Boolean  @default(false)
+  legalReadinessLanguagePassed            Boolean  @default(false)
+  workspaceInventoryPassed                Boolean  @default(false)
+  generatedReportsCaptured                Boolean  @default(false)
+  ciQualityDocsEvidenceCaptured           Boolean  @default(false)
+  providerReviewEvidenceCaptured          Boolean  @default(false)
+  legalReviewEvidenceCaptured             Boolean  @default(false)
+  staleProviderStatusProofCaptured        Boolean  @default(false)
+  linkAuditArtifactPath                   String?
+  consistencyAuditArtifactPath            String?
+  inventoryAuditArtifactPath              String?
+  providerReviewArtifactPath              String?
+  legalReviewArtifactPath                 String?
+  staleProviderStatusArtifactPath         String?
   ciRunUrl                                String?
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())
