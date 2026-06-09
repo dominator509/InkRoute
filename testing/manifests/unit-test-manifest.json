@@ -1193,6 +1193,26 @@
                                          "Retention/export/delete integration tests pending",
                                          "Notification E2E artifacts pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-phase9-app-runtime-build-static",
+                       "file":  "apps/web/tests/phase9-app-runtime-build-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-070 cross-app runtime/build matrix covers testing package, web build, dashboard build, mobile typecheck, notification routes, provider webhooks, booking/deposit runtime smokes, dashboard Playwright smokes, provider-disabled states, mobile/Expo smokes, booking-to-notification smoke, and artifacts",
+                                        "GAP-070 CI requires the Phase 9 app runtime/build gate before merge",
+                                        "GAP-070 artifacts are retained through phase9-prefixed and redacted paths without claiming live browser/device execution proof"
+                                    ],
+                       "blockedBy":  [
+                                         "Static Phase 9 app runtime/build test execution pending",
+                                         "Web and dashboard build output pending",
+                                         "Mobile typecheck output pending",
+                                         "Dashboard Playwright template/message smoke tests pending",
+                                         "Dashboard provider-disabled runtime proof pending",
+                                         "Expo simulator/device notification smoke tests pending",
+                                         "Booking-to-notification runtime smoke pending",
+                                         "Phase 9 runtime artifact publication pending"
+                                     ]
                    }
                ]
 }
