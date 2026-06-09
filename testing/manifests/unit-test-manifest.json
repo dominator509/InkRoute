@@ -2061,6 +2061,22 @@
         "Completed redacted ledger entries with command/artifact evidence pending",
         "Secret-safety review and GAP_TRACKER evidence update proof pending"
       ]
+    },
+    {
+      "id": "unit-web-handoff-tooling-runtime-static",
+      "file": "apps/web/tests/handoff-tooling-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-121 handoff tooling runtime matrix covers dependency install, package typecheck/test, handoff verify-docs/audit/next/verify-ledger/verify-tooling/all scripts, CI run capture, and report artifact capture",
+        "GAP-121 root scripts, handoff package scripts, tooling manifest, verifier, docs, reports, and CI labels remain wired before live runtime proof",
+        "GAP-121 tracker and CI artifact paths stay explicit without claiming install, script execution, CI run, or artifact evidence has completed"
+      ],
+      "blockedBy": [
+        "Static handoff tooling runtime test execution pending",
+        "pnpm install, @inkroute/handoff typecheck/test, and handoff script execution proof pending",
+        "GitHub Actions CI run capture pending",
+        "Handoff report artifact capture pending"
+      ]
     }
   ]
 }

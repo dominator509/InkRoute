@@ -214,6 +214,29 @@ jobs:
             coverage/agent-execution-ci-run-redacted.json
             test-results/agent-execution-ledger-runtime
           if-no-files-found: warn
+      - name: Run Phase 16 handoff tooling runtime contracts
+        run: pnpm --filter @inkroute/handoff test && pnpm vitest run apps/web/tests/handoff-tooling-runtime-static.test.ts
+
+      - name: Upload Phase 16 handoff tooling runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: handoff-tooling-runtime-artifacts
+          path: |
+            coverage/handoff-tooling-runtime.json
+            coverage/handoff-tooling-install-output.txt
+            coverage/handoff-tooling-package-typecheck.txt
+            coverage/handoff-tooling-package-test.txt
+            coverage/handoff-verify-docs.json
+            coverage/handoff-audit.json
+            coverage/handoff-next.json
+            coverage/handoff-ledger-verification.json
+            coverage/handoff-tooling-verification.json
+            coverage/handoff-all-output.txt
+            coverage/handoff-tooling-ci-run.json
+            test-results/handoff-tooling-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 16 handoff manifests
         run: pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next && pnpm handoff:verify-ledger && pnpm handoff:verify-tooling && pnpm handoff:verify-task-sync
       - name: Verify Phase 18 workspace runtime readiness
