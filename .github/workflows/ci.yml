@@ -1551,6 +1551,30 @@ jobs:
             test-results/release-launch-control-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 2 privacy retention runtime contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/privacy-retention-runtime-static.test.ts
+
+      - name: Upload Phase 2 privacy retention runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-retention-runtime-artifacts
+          path: |
+            coverage/privacy-retention-runtime.json
+            coverage/privacy-retention-security-typecheck.txt
+            coverage/privacy-retention-security-test.txt
+            coverage/privacy-retention-attorney-approval-redacted.json
+            coverage/privacy-retention-worker-output-redacted.json
+            coverage/privacy-retention-prisma-dry-run-redacted.json
+            coverage/privacy-retention-object-storage-dry-run-redacted.json
+            coverage/privacy-retention-tenant-isolation.json
+            coverage/privacy-retention-legal-hold.json
+            coverage/privacy-retention-tombstone-replay.json
+            coverage/privacy-retention-ci-evidence.json
+            coverage/privacy-retention-secret-safe-artifacts.json
+            test-results/privacy-retention-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 13 legal review evidence contracts
         run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/legal-review-evidence-static.test.ts
 
