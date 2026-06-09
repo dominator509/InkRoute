@@ -2030,7 +2030,7 @@ jobs:
             coverage/structured-data-closeout.md
             test-results/structured-data-crawl
           if-no-files-found: warn
-      - name: Run Phase 10 SEO analytics attribution contracts
+      - name: Run Phase 10 SEO analytics attribution runtime contracts
         run: pnpm --filter @inkroute/analytics test && pnpm vitest run apps/web/tests/seo-analytics-attribution-static.test.ts
 
       - name: Upload SEO analytics attribution artifacts
@@ -2040,6 +2040,17 @@ jobs:
           name: seo-analytics-attribution-artifacts
           path: |
             coverage/seo-analytics-attribution.json
+            coverage/seo-analytics-secret-safe-artifacts.json
+            coverage/seo-analytics-ci-evidence.json
+            coverage/seo-analytics-booking-attribution-integration.json
+            coverage/search-console-import-credentials-redacted.json
+            coverage/seo-analytics-campaign-persistence.json
+            coverage/seo-analytics-event-persistence.json
+            coverage/seo-analytics-idempotency-store.json
+            coverage/seo-analytics-ingestion-redaction.json
+            coverage/seo-analytics-public-cookie-capture.json
+            coverage/seo-analytics-analytics-test.txt
+            coverage/seo-analytics-analytics-typecheck.txt
             coverage/seo-analytics-dashboard-report.json
             coverage/search-console-import-fixture.json
             coverage/playwright-seo-attribution-results.json
