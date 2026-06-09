@@ -741,6 +741,32 @@ jobs:
               coverage/dashboard-auth-secret-safe-artifacts.json
               test-results/dashboard-auth-guard-runtime
             if-no-files-found: warn
+        - name: Run Phase 5 dashboard data layer runtime contracts
+          run: pnpm --filter @inkroute/config test && pnpm vitest run apps/dashboard/tests/dashboard-data-layer-runtime-static.test.ts apps/dashboard/tests/booking-state-route-static.test.ts apps/dashboard/tests/client-read-route-static.test.ts apps/dashboard/tests/payment-read-route-static.test.ts apps/dashboard/tests/portfolio-read-route-static.test.ts apps/dashboard/tests/travel-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/seo-read-route-static.test.ts apps/dashboard/tests/settings-read-route-static.test.ts apps/dashboard/tests/calendar-read-route-static.test.ts apps/dashboard/tests/review-read-route-static.test.ts
+
+        - name: Upload Phase 5 dashboard data layer runtime artifacts
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: dashboard-data-layer-runtime-artifacts
+            path: |
+              coverage/dashboard-data-layer-runtime.json
+              coverage/dashboard-data-config-typecheck.txt
+              coverage/dashboard-data-config-test.txt
+              coverage/dashboard-data-dashboard-typecheck.txt
+              coverage/dashboard-data-dashboard-build.txt
+              coverage/dashboard-data-prisma-loader-matrix.json
+              coverage/dashboard-data-route-wiring-matrix.json
+              coverage/dashboard-data-static-demo-removal.json
+              coverage/dashboard-data-seeded-db-smoke.json
+              coverage/dashboard-data-tenant-isolation.json
+              coverage/dashboard-data-rbac-redaction.json
+              coverage/dashboard-data-sensitive-read-auditlog.json
+              coverage/dashboard-data-no-store-cache.json
+              coverage/dashboard-data-ci-evidence.json
+              coverage/dashboard-data-secret-safe-artifacts.json
+              test-results/dashboard-data-layer-runtime
+            if-no-files-found: warn
 
       - name: Run Phase 5 dashboard launch runtime contracts
         run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/dashboard-launch-runtime-static.test.ts

@@ -2749,5 +2749,21 @@
         "Browser login/logout, tenant-switch, cross-tenant denial, no-store, and AuditLog proof pending",
         "Dashboard typecheck/build, CI evidence, and secret-safe artifact proof pending"
       ]
+    }
+    ,{
+      "id": "unit-dashboard-data-layer-runtime-static",
+      "file": "apps/dashboard/tests/dashboard-data-layer-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-037 dashboard data layer runtime matrix covers config typecheck/tests, dashboard typecheck/build, Prisma loader matrix, route wiring matrix, static-demo removal matrix, seeded DB smoke, tenant isolation, RBAC/redaction, sensitive-read AuditLog persistence, CI evidence, and secret-safe artifacts",
+        "GAP-037 dashboard read/write route static contracts remain wired for booking, client, payment, portfolio, travel, message, SEO, settings, calendar, and review APIs",
+        "GAP-037 readiness keeps seeded DB smoke, repository/API tests, tenant isolation, RBAC, redaction, AuditLog, CI, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static dashboard data layer runtime test execution pending",
+        "Seeded database dashboard route smoke proof pending",
+        "Repository/API tenant-isolation, RBAC, redaction, and sensitive-read AuditLog proof pending",
+        "Dashboard typecheck/build, CI evidence, and secret-safe artifact proof pending"
+      ]
     }  ]
 }
