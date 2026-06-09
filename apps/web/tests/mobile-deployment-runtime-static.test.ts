@@ -5,7 +5,8 @@ import {
   mobileDeploymentRuntimeArtifactPaths,
   mobileDeploymentRuntimeCommands,
   mobileDeploymentRuntimeMatrix,
-  mobileDeploymentRuntimeReadiness
+  mobileDeploymentRuntimeReadiness,
+  mobileDeploymentRunPersistenceContract
 } from "../lib/mobileDeploymentRuntime";
 
 const root = process.cwd();
@@ -19,6 +20,8 @@ const deploymentTests = read("packages/deployment/tests/deployment-readiness.tes
 const ciWorkflow = read(".github/workflows/ci.yml");
 const unitManifest = read("testing/manifests/unit-test-manifest.json");
 const gapTracker = read("GAP_TRACKER.md");
+const prismaSchema = read("packages/db/prisma/schema.prisma");
+const prismaMigration = read("packages/db/prisma/migrations/20260609019000_add_mobile_deployment_runs/migration.sql");
 
 describe("GAP-116 mobile deployment runtime wiring", () => {
   it("pins mobile deployment commands, matrix entries, and redacted artifact paths", () => {
@@ -115,5 +118,40 @@ describe("GAP-116 mobile deployment runtime wiring", () => {
     expect(unitManifest).toContain("unit-web-mobile-deployment-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/mobileDeploymentRuntime.ts");
     expect(gapTracker).toContain("live EAS/native credential/mobile store proof remains open");
+  });
+
+  it("pins durable MobileDeploymentRun persistence for EAS/native/mobile-store proof", () => {
+    expect(mobileDeploymentRunPersistenceContract.prismaModel).toBe("MobileDeploymentRun");
+    expect(mobileDeploymentRunPersistenceContract.tenantRelation).toBe("mobileDeploymentRuns");
+    expect(mobileDeploymentRunPersistenceContract.uniqueKey).toEqual(["tenantId", "runId"]);
+    expect(mobileDeploymentRunPersistenceContract.jsonFields).toEqual([
+      "buildProfileMatrix",
+      "qaEvidenceMatrix",
+      "artifactManifest"
+    ]);
+    expect(mobileDeploymentRunPersistenceContract.requiredBooleanProofs).toEqual(
+      expect.arrayContaining([
+        "easDevelopmentBuildPassed",
+        "easPreviewIosBuildPassed",
+        "easProductionAndroidBuildPassed",
+        "nativeCredentialsConfigured",
+        "pushCredentialsConfigured",
+        "deviceQaPassed",
+        "sentryCrashCapturePassed",
+        "otaRollbackRehearsed",
+        "storeReadinessReviewed",
+        "ciMobileDeploymentArtifactsCaptured"
+      ])
+    );
+    expect(mobileDeploymentRunPersistenceContract.redactedArtifactFields).toContain("redactedBuildArtifactPath");
+    expect(prismaSchema).toContain("mobileDeploymentRuns MobileDeploymentRun[]");
+    expect(prismaSchema).toContain("model MobileDeploymentRun");
+    expect(prismaSchema).toContain("buildProfileMatrix                      Json");
+    expect(prismaSchema).toContain("easProductionAndroidBuildPassed         Boolean  @default(false)");
+    expect(prismaSchema).toContain("@@unique([tenantId, runId])");
+    expect(prismaMigration).toContain('CREATE TABLE "MobileDeploymentRun"');
+    expect(prismaMigration).toContain('"otaRollbackArtifactPath" TEXT');
+    expect(unitManifest).toContain("MobileDeploymentRun Prisma model and app row contract");
+    expect(gapTracker).toContain("packages/db/prisma/migrations/20260609019000_add_mobile_deployment_runs/migration.sql");
   });
 });

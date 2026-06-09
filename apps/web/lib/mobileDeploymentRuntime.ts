@@ -15,6 +15,39 @@ export interface MobileDeploymentRuntimeMatrixEntry {
   readonly status: MobileDeploymentRuntimeStatus;
 }
 
+export interface MobileDeploymentRunPersistenceContract {
+  readonly prismaModel: "MobileDeploymentRun";
+  readonly tenantRelation: "mobileDeploymentRuns";
+  readonly uniqueKey: readonly ["tenantId", "runId"];
+  readonly jsonFields: readonly ["buildProfileMatrix", "qaEvidenceMatrix", "artifactManifest"];
+  readonly requiredBooleanProofs: readonly [
+    "verifierPassed",
+    "easDevelopmentBuildPassed",
+    "easPreviewIosBuildPassed",
+    "easPreviewAndroidBuildPassed",
+    "easProductionIosBuildPassed",
+    "easProductionAndroidBuildPassed",
+    "easChannelsConfigured",
+    "nativeCredentialsConfigured",
+    "pushCredentialsConfigured",
+    "deviceQaPassed",
+    "pushTokenSmokePassed",
+    "sentryCrashCapturePassed",
+    "otaPreviewPublishPassed",
+    "otaRollbackRehearsed",
+    "runtimePolicyParityVerified",
+    "storeReadinessReviewed",
+    "redactedBuildArtifactsRecorded",
+    "ciMobileDeploymentArtifactsCaptured"
+  ];
+  readonly redactedArtifactFields: readonly [
+    "redactedBuildArtifactPath",
+    "deviceQaArtifactPath",
+    "otaRollbackArtifactPath",
+    "storeReadinessArtifactPath"
+  ];
+}
+
 export const mobileDeploymentRuntimeArtifactPaths = [
   "coverage/mobile-deployment-runtime.json",
   "coverage/mobile-deployment-verifier.json",
@@ -96,6 +129,39 @@ export const mobileDeploymentRuntimeMatrix: readonly MobileDeploymentRuntimeMatr
     status: "ci-gated"
   }
 ];
+
+export const mobileDeploymentRunPersistenceContract: MobileDeploymentRunPersistenceContract = {
+  prismaModel: "MobileDeploymentRun",
+  tenantRelation: "mobileDeploymentRuns",
+  uniqueKey: ["tenantId", "runId"],
+  jsonFields: ["buildProfileMatrix", "qaEvidenceMatrix", "artifactManifest"],
+  requiredBooleanProofs: [
+    "verifierPassed",
+    "easDevelopmentBuildPassed",
+    "easPreviewIosBuildPassed",
+    "easPreviewAndroidBuildPassed",
+    "easProductionIosBuildPassed",
+    "easProductionAndroidBuildPassed",
+    "easChannelsConfigured",
+    "nativeCredentialsConfigured",
+    "pushCredentialsConfigured",
+    "deviceQaPassed",
+    "pushTokenSmokePassed",
+    "sentryCrashCapturePassed",
+    "otaPreviewPublishPassed",
+    "otaRollbackRehearsed",
+    "runtimePolicyParityVerified",
+    "storeReadinessReviewed",
+    "redactedBuildArtifactsRecorded",
+    "ciMobileDeploymentArtifactsCaptured"
+  ],
+  redactedArtifactFields: [
+    "redactedBuildArtifactPath",
+    "deviceQaArtifactPath",
+    "otaRollbackArtifactPath",
+    "storeReadinessArtifactPath"
+  ]
+};
 
 export const mobileDeploymentRuntimeReadiness = buildMobileDeploymentRuntimeReadinessPlan({
   buildProfiles: [

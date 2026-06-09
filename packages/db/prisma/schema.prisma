@@ -380,6 +380,7 @@ model Tenant {
   deploymentToolingRuns DeploymentToolingRun[]
   providerEnvironmentRuns ProviderEnvironmentRun[]
   secretManagementRuns SecretManagementRun[]
+  mobileDeploymentRuns MobileDeploymentRun[]
   errors           ErrorReport[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
@@ -1962,6 +1963,47 @@ model SecretManagementRun {
   providerAuditLogArtifactPath            String?
   incidentRotationTabletopArtifactPath     String?
   committedSecretScanArtifactPath          String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model MobileDeploymentRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  buildProfileMatrix                      Json
+  qaEvidenceMatrix                        Json
+  artifactManifest                        Json
+  verifierPassed                          Boolean  @default(false)
+  easDevelopmentBuildPassed               Boolean  @default(false)
+  easPreviewIosBuildPassed                Boolean  @default(false)
+  easPreviewAndroidBuildPassed            Boolean  @default(false)
+  easProductionIosBuildPassed             Boolean  @default(false)
+  easProductionAndroidBuildPassed         Boolean  @default(false)
+  easChannelsConfigured                   Boolean  @default(false)
+  nativeCredentialsConfigured             Boolean  @default(false)
+  pushCredentialsConfigured               Boolean  @default(false)
+  deviceQaPassed                          Boolean  @default(false)
+  pushTokenSmokePassed                    Boolean  @default(false)
+  sentryCrashCapturePassed                Boolean  @default(false)
+  otaPreviewPublishPassed                 Boolean  @default(false)
+  otaRollbackRehearsed                    Boolean  @default(false)
+  runtimePolicyParityVerified             Boolean  @default(false)
+  storeReadinessReviewed                  Boolean  @default(false)
+  redactedBuildArtifactsRecorded          Boolean  @default(false)
+  ciMobileDeploymentArtifactsCaptured     Boolean  @default(false)
+  redactedBuildArtifactPath               String?
+  deviceQaArtifactPath                    String?
+  otaRollbackArtifactPath                 String?
+  storeReadinessArtifactPath              String?
   ciRunUrl                                String?
   tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt                               DateTime @default(now())
