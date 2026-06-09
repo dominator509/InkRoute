@@ -1981,6 +1981,22 @@
                                          "Masked CI/provider audit log proof pending",
                                          "Committed-secret scan and incident rotation tabletop proof pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-web-mobile-deployment-runtime-static",
+                       "file":  "apps/web/tests/mobile-deployment-runtime-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-116 mobile deployment runtime matrix covers EAS development/preview/production profiles, iOS/Android build evidence, device QA, push token smoke, crash capture, OTA rollback, runtime policy parity, native credentials, Sentry mobile setup, store readiness, redacted artifacts, and CI evidence",
+                                        "GAP-116 mobile deployment manifest, verifier, app.json runtime policy, eas.json profiles, and deployment readiness blockers stay aligned before live EAS proof",
+                                        "GAP-116 CI retains mobile deployment runtime contract and redacted artifact paths without claiming EAS/native/mobile-store execution has passed"
+                                    ],
+                       "blockedBy":  [
+                                         "Static mobile deployment runtime test execution pending",
+                                         "EAS project and native credential proof pending",
+                                         "Development/preview/production iOS and Android build proof pending",
+                                         "Device QA, push, crash, OTA rollback, and store readiness proof pending"
+                                     ]
                    }
                ]
 }

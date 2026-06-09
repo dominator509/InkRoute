@@ -22,6 +22,32 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Verify Phase 14 testing manifests
         run: pnpm test:phase14:static && pnpm test:manifest
+      - name: Run Phase 15 mobile deployment runtime contracts
+        run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/mobile-deployment-runtime-static.test.ts
+
+      - name: Upload Phase 15 mobile deployment runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-deployment-runtime-artifacts
+          path: |
+            coverage/mobile-deployment-runtime.json
+            coverage/mobile-deployment-verifier.json
+            coverage/mobile-eas-development-build-redacted.json
+            coverage/mobile-eas-preview-build-redacted.json
+            coverage/mobile-eas-production-build-redacted.json
+            coverage/mobile-ios-build-redacted.json
+            coverage/mobile-android-build-redacted.json
+            coverage/mobile-device-qa-checklist-redacted.json
+            coverage/mobile-push-token-smoke-redacted.json
+            coverage/mobile-sentry-crash-capture-redacted.json
+            coverage/mobile-ota-rollback-redacted.json
+            coverage/mobile-runtime-policy.json
+            coverage/mobile-native-credentials-redacted.json
+            coverage/mobile-store-readiness-redacted.json
+            coverage/mobile-deployment-ci-run-redacted.json
+            test-results/mobile-deployment-runtime
+          if-no-files-found: warn
       - name: Run Phase 15 secret management runtime contracts
         run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/secret-management-runtime-static.test.ts
 
@@ -1018,6 +1044,7 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
+
 
 
 
