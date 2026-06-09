@@ -905,6 +905,30 @@ jobs:
             coverage/dashboard-secret-safe-artifacts.json
             test-results/dashboard-launch-runtime
           if-no-files-found: warn
+      - name: Run Phase 6 mobile auth runtime contracts
+        run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/mobile/tests/mobile-auth-runtime-static.test.ts apps/mobile/tests/mobile-auth-static.test.ts
+
+      - name: Upload Phase 6 mobile auth runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-auth-runtime-artifacts
+          path: |
+            coverage/mobile-auth-runtime.json
+            coverage/mobile-auth-auth-typecheck.txt
+            coverage/mobile-auth-auth-test.txt
+            coverage/mobile-auth-app-typecheck.txt
+            coverage/mobile-auth-app-test.txt
+            coverage/mobile-auth-provider-login-logout-redacted.json
+            coverage/mobile-auth-securestore-redacted.json
+            coverage/mobile-auth-biometric-device-redacted.json
+            coverage/mobile-auth-refresh-logout-revocation.json
+            coverage/mobile-auth-tenant-role-denial.json
+            coverage/mobile-auth-auditlog-redacted.json
+            coverage/mobile-auth-ios-android-smoke-redacted.json
+            coverage/mobile-auth-secret-safe-artifacts.json
+            test-results/mobile-auth-runtime
+          if-no-files-found: warn
 
       - name: Run Phase 6 mobile launch runtime contracts
         run: pnpm --filter @inkroute/mobile-support test && pnpm vitest run apps/web/tests/mobile-launch-runtime-static.test.ts

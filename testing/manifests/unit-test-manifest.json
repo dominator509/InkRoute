@@ -2829,5 +2829,21 @@
         "axe, keyboard, and Playwright dashboard critical-flow proof pending",
         "CI artifacts, branch protection, flaky policy, and secret-safe artifact proof pending"
       ]
+    }
+    ,{
+      "id": "unit-mobile-auth-runtime-static",
+      "file": "apps/mobile/tests/mobile-auth-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-042 mobile auth runtime matrix covers auth typecheck/tests, mobile typecheck/tests, provider-backed login/logout, Expo SecureStore no-plaintext storage, biometric device unlock, refresh/logout/revocation clearing, tenant membership, role resolution, cross-tenant denial, AuditLog persistence, iOS/Android smoke, and secret-safe artifacts",
+        "GAP-042 mobile app secure-session adapter, biometric boundary, redacted audit event, shared session gate helper, readiness preview, and Auth screen surfacing remain wired",
+        "GAP-042 readiness keeps provider auth, SecureStore, biometric device, tenant membership, audit persistence, mobile command, and device smoke proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static mobile auth runtime test execution pending",
+        "Provider-backed login/logout/refresh and tenant membership proof pending",
+        "Expo SecureStore plaintext-denial, biometric device, logout/revocation clearing, and cross-tenant denial proof pending",
+        "Audit persistence, mobile typecheck/tests, device smoke, CI, and secret-safe artifact proof pending"
+      ]
     }  ]
 }
