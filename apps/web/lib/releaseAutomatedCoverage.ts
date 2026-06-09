@@ -57,6 +57,48 @@ export const releaseAutomatedCoverageMatrix = [
   },
 ] as const;
 
+export function buildProviderBackedReleaseRouteIntegrationPlan(input: {
+  tenantId: string;
+  releaseRoute: string;
+  featureFlagRoute: string;
+}) {
+  return {
+    tenantId: input.tenantId,
+    routes: [
+      {
+        id: "release-route-db-backed-read",
+        path: input.releaseRoute,
+        requiredHeaders: ["x-tenant-id", "x-user-id", "x-user-role"],
+        expectedStatus: [200, 503],
+        requiresDatabase: true,
+        requiresProviderMutation: false,
+      },
+      {
+        id: "feature-flag-route-db-backed-read",
+        path: input.featureFlagRoute,
+        requiredHeaders: ["x-tenant-id", "x-user-id", "x-user-role"],
+        expectedStatus: [200, 503],
+        requiresDatabase: true,
+        requiresProviderMutation: false,
+      },
+    ],
+    assertions: [
+      "no-store cache headers",
+      "tenant mismatch denial",
+      "server-side TenantMember permission lookup",
+      "provider actions remain disabled without secrets",
+      "redacted artifact capture",
+    ],
+    artifact: "coverage/release-provider-backed-route-integration.json",
+  };
+}
+
+export const providerBackedReleaseRouteIntegrationPlan = buildProviderBackedReleaseRouteIntegrationPlan({
+  tenantId: "inkroute-demo",
+  releaseRoute: "/api/releases?tenantId=inkroute-demo",
+  featureFlagRoute: "/api/feature-flags?tenantId=inkroute-demo",
+});
+
 export function buildReleaseAutomatedCoverageContract() {
   return buildReleaseAutomatedTestReadinessPlan({
     packageScripts: ["test", "typecheck"],

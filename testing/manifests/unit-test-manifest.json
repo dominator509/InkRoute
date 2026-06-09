@@ -1624,7 +1624,7 @@
       "priority": "high",
       "verifies": [
         "GAP-094 Playwright dashboard release smoke target covers release page sections and no-store release/feature-flag reads",
-        "GAP-094 release automated matrix tracks provider-backed route, Expo render/device, GitHub Actions execution, real secrets/environments, and CI artifact evidence",
+        "GAP-094 release automated matrix tracks provider-backed route integration plans, Expo render/device, GitHub Actions execution, real secrets/environments, and CI artifact evidence",
         "GAP-094 CI retains package, route, static, mobile, Playwright, provider, Expo, workflow, and secret-safe artifact paths without claiming live execution"
       ],
       "blockedBy": [

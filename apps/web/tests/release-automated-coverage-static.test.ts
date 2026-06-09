@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildProviderBackedReleaseRouteIntegrationPlan,
+  providerBackedReleaseRouteIntegrationPlan,
   releaseAutomatedCoverageArtifactPaths,
   releaseAutomatedCoverageCommands,
   releaseAutomatedCoverageContract,
@@ -37,6 +39,12 @@ describe("GAP-094 release automated coverage contracts", () => {
   });
 
   it("tracks provider, Expo, GitHub Actions, real-secret, and CI artifact proof as explicit gates", () => {
+    const providerPlan = buildProviderBackedReleaseRouteIntegrationPlan({
+      tenantId: "tenant_1",
+      releaseRoute: "/api/releases?tenantId=tenant_1",
+      featureFlagRoute: "/api/feature-flags?tenantId=tenant_1",
+    });
+
     expect(releaseAutomatedCoverageCommands).toContain("pnpm exec playwright test apps/dashboard/tests/e2e/release-dashboard.spec.ts");
     expect(releaseAutomatedCoverageCommands).toContain("provider-backed release route integration tests");
     expect(releaseAutomatedCoverageCommands).toContain("Expo release status render/device tests");
@@ -50,6 +58,9 @@ describe("GAP-094 release automated coverage contracts", () => {
       ]),
     );
     expect(releaseAutomatedCoverageArtifactPaths).toContain("coverage/release-github-actions-execution-redacted.json");
+    expect(providerPlan.routes.map((route) => route.id)).toEqual(expect.arrayContaining(["release-route-db-backed-read", "feature-flag-route-db-backed-read"]));
+    expect(providerPlan.assertions).toEqual(expect.arrayContaining(["tenant mismatch denial", "server-side TenantMember permission lookup"]));
+    expect(providerBackedReleaseRouteIntegrationPlan.artifact).toBe("coverage/release-provider-backed-route-integration.json");
     expect(releaseAutomatedCoverageContract.status).toBe("blocked");
     expect(releaseAutomatedCoverageContract.blockers).toEqual(
       expect.arrayContaining([
