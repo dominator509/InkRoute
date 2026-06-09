@@ -1,4 +1,9 @@
-import { createBookingTransitionPlan, type BookingLifecycleAction } from "@inkroute/booking";
+import {
+  buildDashboardMutationPlan,
+  createBookingTransitionPlan,
+  type BookingLifecycleAction,
+  type DashboardMutationAction,
+} from "@inkroute/booking";
 import { prisma } from "@inkroute/db";
 import type { BookingStatus } from "@inkroute/types";
 import { NextRequest, NextResponse } from "next/server";
@@ -38,6 +43,28 @@ function normalizeIdempotencyKey(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed ? trimmed.slice(0, 180) : undefined;
+}
+
+function toDashboardMutationAction(action: BookingLifecycleAction): DashboardMutationAction {
+  switch (action) {
+    case "accept":
+    case "decline":
+    case "complete":
+      return action;
+    case "record_deposit_paid":
+      return "mark_deposit_paid";
+    case "schedule":
+      return "confirm_appointment";
+    case "request_deposit":
+      return "create_deposit_session";
+    case "request_more_info":
+    case "request_reschedule":
+    case "cancel":
+    case "mark_no_show":
+    case "archive":
+    default:
+      return "request_changes";
+  }
 }
 
 export async function POST(request: NextRequest, context: BookingStateRouteContext) {
@@ -99,6 +126,17 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
         return { status: "not_found" as const };
       }
 
+      const idempotencyKey = normalizeIdempotencyKey(input.idempotencyKey);
+      const dashboardMutationPlan = buildDashboardMutationPlan({
+        tenantId,
+        actorId: actor.actorUserId,
+        actorType: actor.role === "admin" ? "admin" : "artist",
+        action: toDashboardMutationAction(action),
+        bookingRequestId: booking.id,
+        currentStatus: booking.status as BookingStatus,
+        occurredAt: new Date().toISOString(),
+        idempotencyKey,
+      });
       const plan = createBookingTransitionPlan({
         tenantId,
         bookingRequestId: booking.id,
@@ -108,11 +146,11 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
         actorType: actor.role === "admin" ? "admin" : "artist",
         occurredAt: new Date().toISOString(),
         reason: normalizeNote(input.note),
-        idempotencyKey: normalizeIdempotencyKey(input.idempotencyKey),
+        idempotencyKey,
       });
 
       if (!plan.canCommit || !plan.transition) {
-        return { status: "invalid_transition" as const, plan };
+        return { status: "invalid_transition" as const, plan, dashboardMutationPlan };
       }
 
       const updated = await tx.bookingRequest.update({
@@ -137,7 +175,8 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
             source: "dashboard-api",
             action,
             actorRole: actor.role,
-            idempotencyKey: normalizeIdempotencyKey(input.idempotencyKey) ?? null,
+            dashboardMutationPlan,
+            idempotencyKey: idempotencyKey ?? null,
           },
         },
         select: { id: true, type: true, createdAt: true },
@@ -156,13 +195,16 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
             toStatus: plan.transition.to,
             eventId: event.id,
             actorRole: actor.role,
+            dashboardMutationAuditAction: dashboardMutationPlan.auditAction,
+            dashboardMutationProviderBoundary: dashboardMutationPlan.providerBoundary,
+            idempotencyKey: idempotencyKey ?? null,
             assignedToUserChanged: typeof input.assignedToUserId === "string" && input.assignedToUserId.trim() !== booking.assignedToUserId,
           },
         },
         select: { id: true, createdAt: true },
       });
 
-      return { status: "persisted" as const, plan, booking: updated, event, audit };
+      return { status: "persisted" as const, plan, dashboardMutationPlan, booking: updated, event, audit };
     });
 
     if (result.status === "not_found") {
@@ -183,8 +225,9 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
       booking: result.booking,
       event: result.event,
       auditId: result.audit.id,
+      dashboardMutationPlan: result.dashboardMutationPlan,
       transition: result.plan.transition,
-      gapIds: ["GAP-007", "GAP-037"],
+      gapIds: ["GAP-007", "GAP-037", "GAP-038"],
       boundary: "Booking lifecycle mutation persisted in one tenant-scoped transaction with BookingStateEvent and AuditLog rows.",
     });
   } catch (error) {

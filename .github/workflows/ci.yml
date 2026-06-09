@@ -767,6 +767,33 @@ jobs:
               coverage/dashboard-data-secret-safe-artifacts.json
               test-results/dashboard-data-layer-runtime
             if-no-files-found: warn
+        - name: Run Phase 5 dashboard mutation runtime contracts
+          run: pnpm --filter @inkroute/booking test && pnpm vitest run apps/dashboard/tests/dashboard-mutation-runtime-static.test.ts apps/dashboard/tests/booking-state-route-static.test.ts
+
+        - name: Upload Phase 5 dashboard mutation runtime artifacts
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: dashboard-mutation-runtime-artifacts
+            path: |
+              coverage/dashboard-mutation-runtime.json
+              coverage/dashboard-mutation-booking-typecheck.txt
+              coverage/dashboard-mutation-booking-test.txt
+              coverage/dashboard-mutation-dashboard-typecheck.txt
+              coverage/dashboard-mutation-dashboard-build.txt
+              coverage/dashboard-mutation-action-route-matrix.json
+              coverage/dashboard-mutation-server-action-matrix.json
+              coverage/dashboard-mutation-booking-state-route.json
+              coverage/dashboard-mutation-prisma-transactions.json
+              coverage/dashboard-mutation-idempotency.json
+              coverage/dashboard-mutation-auditlog.json
+              coverage/dashboard-mutation-tenant-rbac-denial.json
+              coverage/dashboard-mutation-provider-rollback-retry.json
+              coverage/dashboard-mutation-gated-ui-feedback.json
+              coverage/dashboard-mutation-ci-evidence.json
+              coverage/dashboard-mutation-secret-safe-artifacts.json
+              test-results/dashboard-mutation-runtime
+            if-no-files-found: warn
 
       - name: Run Phase 5 dashboard launch runtime contracts
         run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/dashboard-launch-runtime-static.test.ts

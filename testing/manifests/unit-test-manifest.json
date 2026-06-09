@@ -2765,5 +2765,21 @@
         "Repository/API tenant-isolation, RBAC, redaction, and sensitive-read AuditLog proof pending",
         "Dashboard typecheck/build, CI evidence, and secret-safe artifact proof pending"
       ]
+    }
+    ,{
+      "id": "unit-dashboard-mutation-runtime-static",
+      "file": "apps/dashboard/tests/dashboard-mutation-runtime-static.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "GAP-038 dashboard mutation runtime matrix covers booking typecheck/tests, dashboard typecheck/build, lifecycle actions, upload intents, deposit sessions, notifications, calendar holds, travel/portfolio publishes, feature flags, release rollback, settings, server-action/API route coverage, route tests, Prisma transactions, idempotency, AuditLog persistence, RBAC/tenant denial, provider rollback/retry, gated UI replacement, feedback states, CI evidence, and secret-safe artifacts",
+        "GAP-038 booking state mutation API emits buildDashboardMutationPlan output and persists booking status, BookingStateEvent, and AuditLog metadata inside a tenant-scoped transaction",
+        "GAP-038 readiness keeps provider actions, full route/server-action matrix, idempotency, rollback/retry, UI feedback, dashboard build, CI, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static dashboard mutation runtime test execution pending",
+        "Full dashboard mutation server-action/API route and route-test matrix proof pending",
+        "Idempotency, tenant-isolation/RBAC, provider rollback/retry, and UI feedback-state proof pending",
+        "Dashboard typecheck/build, CI evidence, and secret-safe artifact proof pending"
+      ]
     }  ]
 }
