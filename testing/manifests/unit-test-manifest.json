@@ -1213,6 +1213,22 @@
                                          "Booking-to-notification runtime smoke pending",
                                          "Phase 9 runtime artifact publication pending"
                                      ]
+                   },
+                   {
+                       "id":  "unit-dashboard-seo-publication-route-static",
+                       "file":  "apps/dashboard/tests/seo-publication-route-static.test.ts",
+                       "priority":  "high",
+                       "verifies":  [
+                                        "GAP-071 dashboard SEO publication mutations enforce seo:write RBAC and tenant isolation",
+                                        "GAP-071 mutations use buildSeoPublicationMutationPlan before committing SeoCityPage, SeoStylePage, SeoRedirect, AuditLog, idempotency, association, and revalidation metadata",
+                                        "GAP-071 city/style/redirect repositories are transaction-backed and local fallback is dry-run only"
+                                    ],
+                       "blockedBy":  [
+                                         "Static SEO publication route test execution pending",
+                                         "Prisma integration test against seeded tenant data pending",
+                                         "Dashboard publish/edit/archive Playwright flow pending",
+                                         "Dedicated persisted revalidation job/idempotency stores pending"
+                                     ]
                    }
                ]
 }

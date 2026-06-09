@@ -1,3 +1,4 @@
+﻿import { buildSeoPublicationMutationPlan, type SeoPublicationAction, type SeoPublishableModel, type SeoRouteRecord } from "@inkroute/seo";
 import { prisma } from "@inkroute/db";
 import { NextRequest, NextResponse } from "next/server";
 import { dashboardSeoRouteRecords } from "../../lib/seoDemo";
@@ -6,6 +7,84 @@ import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "
 function jsonObject(value: unknown): Record<string, unknown> | unknown[] | null {
   if (typeof value !== "object" || value === null) return null;
   return value as Record<string, unknown> | unknown[];
+}
+
+function stringValue(value: unknown, fallback = ""): string {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function objectValue(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function stringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map((item) => item.trim());
+}
+
+function publicationAction(value: unknown): SeoPublicationAction {
+  if (value === "create" || value === "update" || value === "publish" || value === "archive" || value === "redirect") return value;
+  return "update";
+}
+
+function publicationModel(value: unknown): SeoPublishableModel {
+  if (value === "SeoStylePage" || value === "SeoRedirect") return value;
+  return "SeoCityPage";
+}
+
+function pageStatus(action: SeoPublicationAction, value: unknown) {
+  if (action === "publish") return "published" as const;
+  if (action === "archive") return "archived" as const;
+  if (value === "published" || value === "archived") return value;
+  return "draft" as const;
+}
+
+function canonicalPathFor(model: SeoPublishableModel, payload: Record<string, unknown>): string {
+  const explicit = stringValue(payload.canonicalPath);
+  if (explicit) return explicit.startsWith("/") ? explicit : `/${explicit}`;
+  const slug = stringValue(payload.slug, "draft");
+  if (model === "SeoStylePage") return `/styles/${slug}`;
+  if (model === "SeoRedirect") return stringValue(payload.fromPath, `/${slug}`);
+  return `/cities/${slug}`;
+}
+
+function routeRecordFor(model: SeoPublishableModel, action: SeoPublicationAction, payload: Record<string, unknown>): SeoRouteRecord {
+  const canonicalPath = canonicalPathFor(model, payload);
+  const status = pageStatus(action, payload.status);
+  return {
+    path: canonicalPath,
+    canonicalPath,
+    kind: model === "SeoStylePage" ? "style" : model === "SeoCityPage" ? "city" : "custom",
+    title: stringValue(payload.title, "Draft SEO page"),
+    description: stringValue(payload.metaDescription, "Draft SEO metadata pending editorial review."),
+    status,
+    indexMode: status === "published" ? "index" : "noindex",
+    priority: 0.7,
+    changeFrequency: "monthly",
+    lastModified: new Date().toISOString(),
+    city: optionalString(payload.city),
+    region: optionalString(payload.region),
+    style: optionalString(payload.styleName),
+    relatedPortfolioIds: stringArray(payload.featuredPortfolioIds),
+    revalidationTags: [`seo:${model}:${canonicalPath}`],
+  };
+}
+
+function mutationResponse(plan: ReturnType<typeof buildSeoPublicationMutationPlan>, status = 200, extra: Record<string, unknown> = {}) {
+  return NextResponse.json(
+    {
+      ok: plan.canCommit,
+      plan,
+      gapIds: ["GAP-071", "GAP-076"],
+      boundary: "SEO publication mutations are tenant-scoped, RBAC-gated, transaction-backed, audited, and revalidation-ready.",
+      ...extra,
+    },
+    { status, headers: { "Cache-Control": "no-store" } },
+  );
 }
 
 export async function GET(request: NextRequest) {
@@ -192,5 +271,195 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ ok: false, error: { code: "SEO_READ_FAILED", message: "SEO records could not be loaded." } }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  return mutateSeoPublication(request);
+}
+
+export async function PATCH(request: NextRequest) {
+  return mutateSeoPublication(request);
+}
+
+async function mutateSeoPublication(request: NextRequest) {
+  const actor = resolveDashboardActor(request);
+  try {
+    assertPermission(actor, "seo:write");
+  } catch {
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to mutate SEO records." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+  }
+
+  const body = objectValue(await request.json().catch(() => ({})));
+  const tenantId = stringValue(body.tenantId, actor.tenantId);
+  if (tenantId !== actor.tenantId) {
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot mutate SEO records for another tenant." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+  }
+
+  const action = publicationAction(body.action);
+  const model = publicationModel(body.model);
+  const route = routeRecordFor(model, action, body);
+  const idempotencyKey = optionalString(request.headers.get("idempotency-key")) ?? optionalString(body.idempotencyKey);
+  const plan = buildSeoPublicationMutationPlan({
+    action,
+    model,
+    tenantId,
+    actorId: actor.actorUserId,
+    actorRole: actor.role,
+    route,
+    now: new Date().toISOString(),
+    targetStatus: pageStatus(action, body.status),
+    idempotencyKey,
+    relatedFaqIds: stringArray(body.relatedFaqIds),
+    relatedReviewIds: stringArray(body.relatedReviewIds),
+    relatedImageIds: stringArray(body.relatedImageIds),
+    redirectFromPath: optionalString(body.fromPath),
+    redirectToPath: optionalString(body.toPath),
+  });
+
+  if (!plan.canCommit) {
+    return mutationResponse(plan, plan.status === "invalid" ? 422 : 403);
+  }
+
+  if (actor.source === "local-fallback") {
+    return mutationResponse(plan, 202, {
+      persistence: "dry-run",
+      boundary: "Local fallback returns a SEO publication mutation plan only; database mode is required to commit publishing writes.",
+    });
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      let entityId = stringValue(body.id);
+
+      if (model === "SeoRedirect") {
+        const redirect = await tx.seoRedirect.upsert({
+          where: { tenantId_fromPath: { tenantId, fromPath: stringValue(body.fromPath, route.canonicalPath) } },
+          create: {
+            tenantId,
+            fromPath: stringValue(body.fromPath, route.canonicalPath),
+            toPath: stringValue(body.toPath, "/"),
+            statusCode: Number(body.statusCode ?? 301),
+            isActive: action !== "archive",
+          },
+          update: {
+            toPath: stringValue(body.toPath, "/"),
+            statusCode: Number(body.statusCode ?? 301),
+            isActive: action !== "archive",
+          },
+          select: { id: true },
+        });
+        entityId = redirect.id;
+      } else if (model === "SeoStylePage") {
+        const status = pageStatus(action, body.status);
+        const style = await tx.seoStylePage.upsert({
+          where: { tenantId_slug: { tenantId, slug: stringValue(body.slug, route.canonicalPath.replace(/^\/styles\//, "")) } },
+          create: {
+            tenantId,
+            slug: stringValue(body.slug, route.canonicalPath.replace(/^\/styles\//, "")),
+            styleName: stringValue(body.styleName, route.style ?? "Tattoo style"),
+            title: route.title,
+            metaDescription: route.description,
+            canonicalPath: route.canonicalPath,
+            status,
+            bodyCopy: optionalString(body.bodyCopy),
+            faq: jsonObject(body.faq),
+            internalLinks: jsonObject(body.internalLinks),
+            publishedAt: status === "published" ? new Date() : null,
+          },
+          update: {
+            styleName: stringValue(body.styleName, route.style ?? "Tattoo style"),
+            title: route.title,
+            metaDescription: route.description,
+            canonicalPath: route.canonicalPath,
+            status,
+            bodyCopy: optionalString(body.bodyCopy),
+            faq: jsonObject(body.faq),
+            internalLinks: jsonObject(body.internalLinks),
+            publishedAt: status === "published" ? new Date() : null,
+          },
+          select: { id: true },
+        });
+        entityId = style.id;
+      } else {
+        const status = pageStatus(action, body.status);
+        const city = await tx.seoCityPage.upsert({
+          where: { tenantId_slug: { tenantId, slug: stringValue(body.slug, route.canonicalPath.replace(/^\/cities\//, "")) } },
+          create: {
+            tenantId,
+            slug: stringValue(body.slug, route.canonicalPath.replace(/^\/cities\//, "")),
+            city: stringValue(body.city, route.city ?? "City"),
+            region: stringValue(body.region, route.region ?? "Region"),
+            country: stringValue(body.country, "US"),
+            title: route.title,
+            metaDescription: route.description,
+            canonicalPath: route.canonicalPath,
+            status,
+            heroCopy: optionalString(body.heroCopy),
+            faq: jsonObject(body.faq),
+            internalLinks: jsonObject(body.internalLinks),
+            publishedAt: status === "published" ? new Date() : null,
+          },
+          update: {
+            city: stringValue(body.city, route.city ?? "City"),
+            region: stringValue(body.region, route.region ?? "Region"),
+            country: stringValue(body.country, "US"),
+            title: route.title,
+            metaDescription: route.description,
+            canonicalPath: route.canonicalPath,
+            status,
+            heroCopy: optionalString(body.heroCopy),
+            faq: jsonObject(body.faq),
+            internalLinks: jsonObject(body.internalLinks),
+            publishedAt: status === "published" ? new Date() : null,
+          },
+          select: { id: true },
+        });
+        entityId = city.id;
+      }
+
+      const audit = await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorUserId: actor.actorUserId,
+          action: plan.auditAction,
+          entityType: model,
+          entityId,
+          metadata: {
+            idempotencyKey: plan.idempotencyKey,
+            writes: plan.writes,
+            revalidation: plan.revalidation,
+            relatedFaqIds: stringArray(body.relatedFaqIds),
+            relatedReviewIds: stringArray(body.relatedReviewIds),
+            relatedImageIds: stringArray(body.relatedImageIds),
+          },
+        },
+        select: { id: true },
+      });
+
+      return { entityId, auditId: audit.id };
+    });
+
+    return mutationResponse(plan, action === "create" ? 201 : 200, {
+      persistence: "database",
+      entityId: result.entityId,
+      auditId: result.auditId,
+      revalidation: plan.revalidation,
+    });
+  } catch (error) {
+    if (isDatabaseUnavailable(error)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          tenantId,
+          error: { code: "DATABASE_UNAVAILABLE", message: "SEO publication writes require the dashboard database connection." },
+          plan,
+          gapIds: ["GAP-071", "GAP-076"],
+        },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
+    return NextResponse.json({ ok: false, error: { code: "SEO_WRITE_FAILED", message: "SEO record could not be mutated." } }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
 }
