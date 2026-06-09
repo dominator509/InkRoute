@@ -2973,7 +2973,8 @@
         "Persistent replay protection, provider object fetch, tenant transaction, and DB reconciliation proof pending",
         "Amount/currency mismatch tests, Stripe CLI replay, web typecheck/payment route tests, CI evidence, and secret-safe artifact proof pending"
       ]
-    }    ,{
+    }
+    ,{
       "id": "unit-payment-persistence-runtime-static",
       "file": "apps/dashboard/tests/payment-persistence-runtime-static.test.ts",
       "priority": "critical",
@@ -2987,6 +2988,21 @@
         "Prisma transaction implementation, idempotency store, and lifecycle persistence proof pending",
         "PaymentAuditLog/BookingStateEvent, cross-tenant denial, replay idempotency, and seeded Postgres proof pending",
         "Dashboard repository route/action tests, command evidence, CI evidence, and secret-safe artifact proof pending"
+      ]
+    }    ,{
+      "id": "unit-payment-operations-runtime-static",
+      "file": "apps/dashboard/tests/payment-operations-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-052 payment operations runtime matrix covers payments typecheck/tests, dashboard typecheck/tests, authorized payment actions, Stripe test-mode refund, refund persistence, no-show audit, dispute evidence, dispute provider sync, receipt generation/delivery, accounting export redaction, tax/accounting review, idempotency, PaymentAuditLog persistence, tenant authorization, dashboard E2E, CI evidence, and secret-safe artifacts",
+        "GAP-052 dashboard operation contract remains wired for refund, no-show, dispute, receipt, and export actions, authorization, idempotency, transactional writes, provider result persistence, PaymentAuditLog controls, and payments page surfacing",
+        "GAP-052 readiness keeps live Stripe refunds, receipt provider delivery, dispute provider sync, accounting/tax approval, tenant-denial tests, dashboard E2E artifacts, command evidence, CI, and redacted artifact proof explicit until evidence exists"
+      ],
+      "blockedBy": [
+        "Static payment operations runtime test execution pending",
+        "Stripe test-mode refund and dispute provider sync proof pending",
+        "Receipt delivery, accounting export, tax/accounting review, and tenant authorization tests pending",
+        "Dashboard E2E artifacts, dashboard typecheck/tests, CI evidence, and secret-safe artifact proof pending"
       ]
     }  ]
 }

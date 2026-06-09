@@ -1409,6 +1409,38 @@ jobs:
             test-results/payment-persistence-runtime
           if-no-files-found: warn
 
+      - name: Run Phase 7 payment operations runtime contracts
+        run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/dashboard/tests/payment-operations-runtime-static.test.ts apps/dashboard/tests/payment-operations-static.test.ts
+
+      - name: Upload Phase 7 payment operations runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payment-operations-runtime-artifacts
+          path: |
+            coverage/payment-operations-runtime.json
+            coverage/payment-operations-payments-typecheck.txt
+            coverage/payment-operations-payments-test.txt
+            coverage/payment-operations-dashboard-typecheck.txt
+            coverage/payment-operations-dashboard-unit-tests.json
+            coverage/payment-operations-authorized-actions.json
+            coverage/payment-operations-stripe-refund-redacted.json
+            coverage/payment-operations-refund-persistence.json
+            coverage/payment-operations-no-show-audit.json
+            coverage/payment-operations-dispute-evidence-redacted.json
+            coverage/payment-operations-dispute-provider-sync-redacted.json
+            coverage/payment-operations-receipt-generation.json
+            coverage/payment-operations-receipt-delivery-redacted.json
+            coverage/payment-operations-accounting-export-redacted.json
+            coverage/payment-operations-tax-accounting-approval-redacted.json
+            coverage/payment-operations-idempotency.json
+            coverage/payment-operations-audit-log.json
+            coverage/payment-operations-tenant-authorization.json
+            coverage/payment-operations-dashboard-e2e-redacted.json
+            coverage/payment-operations-secret-safe-artifacts.json
+            test-results/payment-operations-runtime
+          if-no-files-found: warn
+
       - name: Run Phase 7 payment lifecycle contracts
         run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/payment-routes.test.ts apps/web/tests/stripe-webhook-static.test.ts apps/web/tests/payment-automation-static.test.ts apps/dashboard/tests/payment-operations-static.test.ts apps/dashboard/tests/payment-read-route-static.test.ts
       - name: Run Phase 8 calendar lifecycle contracts
