@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildProviderWebhookEvidenceDecision,
   providerWebhookArtifactPaths,
   providerWebhookRuntimeCommands,
   providerWebhookRuntimeMatrix,
+  providerWebhookRuntimeProofFiles,
   providerWebhookRuntimeReadiness,
 } from "../lib/providerWebhookRuntime";
 
@@ -84,13 +86,104 @@ describe("provider webhook runtime contract", () => {
     expect(providerWebhookRuntimeReadiness.blockers).toContain("Failed webhook verification or reconciliation must emit alerting.");
   });
 
+  it("classifies provider webhook evidence before GAP-066 can close", () => {
+    const blockedDecision = buildProviderWebhookEvidenceDecision({
+      notificationsTypecheckPassed: true,
+      notificationsTestsPassed: true,
+      routeTestsPassed: true,
+      contractTestsPassed: true,
+      emailSignatureVerified: false,
+      smsSignatureVerified: false,
+      pushReceiptSourceVerified: false,
+      providerEventPersistenceVerified: false,
+      exactlyOnceDeliveryVerified: false,
+      suppressionPersistenceVerified: false,
+      inboundRoutingVerified: false,
+      invalidPushTokenVerified: false,
+      failedAlertingVerified: false,
+      sandboxReplayVerified: false,
+      concurrentCallbacksVerified: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactReviewPassed: false,
+      capturedArtifacts: [
+        "coverage/provider-webhook-runtime.json",
+        "coverage/provider-webhook-notifications-typecheck.txt",
+        "coverage/provider-webhook-notifications-test.txt",
+        "coverage/provider-webhook-route-tests.json",
+        "coverage/provider-webhook-contract-tests.json",
+      ],
+    });
+
+    expect(blockedDecision.status).toBe("blocked");
+    expect(blockedDecision.blockers).toContain("Email provider cryptographic signature evidence is missing.");
+    expect(blockedDecision.blockers).toContain("ProviderEvent/idempotency persistence evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Exactly-once delivery-log reconciliation evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Failed-webhook alerting evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Concurrent callback exactly-once evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Secret-safe provider webhook artifact review evidence is missing.");
+    expect(blockedDecision.missingArtifacts).toContain("coverage/provider-webhook-email-signature.json");
+    expect(blockedDecision.missingArtifacts).toContain("coverage/provider-webhook-secret-safe-artifacts.json");
+    expect(blockedDecision.requiredCommands).toEqual([...providerWebhookRuntimeCommands]);
+    expect(blockedDecision.requiredEvidence).toContain("concurrent callback exactly-once delivery-log evidence");
+    expect(blockedDecision.redactedSummary).toEqual({
+      capturedArtifactCount: 5,
+      requiredArtifactCount: providerWebhookArtifactPaths.length,
+    });
+
+    const completeDecision = buildProviderWebhookEvidenceDecision({
+      notificationsTypecheckPassed: true,
+      notificationsTestsPassed: true,
+      routeTestsPassed: true,
+      contractTestsPassed: true,
+      emailSignatureVerified: true,
+      smsSignatureVerified: true,
+      pushReceiptSourceVerified: true,
+      providerEventPersistenceVerified: true,
+      exactlyOnceDeliveryVerified: true,
+      suppressionPersistenceVerified: true,
+      inboundRoutingVerified: true,
+      invalidPushTokenVerified: true,
+      failedAlertingVerified: true,
+      sandboxReplayVerified: true,
+      concurrentCallbacksVerified: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactReviewPassed: true,
+      capturedArtifacts: providerWebhookArtifactPaths,
+    });
+
+    expect(completeDecision.status).toBe("complete");
+    expect(completeDecision.blockers).toEqual([]);
+    expect(completeDecision.missingArtifacts).toEqual([]);
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming provider sandbox readiness", () => {
     expect(ciWorkflow).toContain("Run Phase 9 provider webhook runtime contracts");
     expect(ciWorkflow).toContain("provider-webhook-runtime-static.test.ts");
     expect(ciWorkflow).toContain("provider-webhook-runtime-artifacts");
     expect(unitManifest).toContain("unit-provider-webhook-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/providerWebhookRuntime.ts");
-    expect(gapTracker).toContain("GAP-066 is provider-webhook-runtime-matrix wired");
+    expect(gapTracker).toContain("provider webhook evidence classifier");
+    expect(gapTracker).toContain("GAP-066 is provider-webhook-runtime-matrix wired with evidence classifier");
     expect(providerWebhookArtifactPaths).toContain("coverage/provider-webhook-secret-safe-artifacts.json");
+  });
+
+  it("pins current provider webhook proof files for GAP-066", () => {
+    expect(providerWebhookRuntimeProofFiles).toEqual(expect.arrayContaining([
+      "packages/notifications/package.json",
+      "packages/notifications/src/index.ts",
+      "packages/notifications/tests/delivery-plan.test.ts",
+      "apps/web/lib/providerWebhookReconciliation.ts",
+      "apps/web/lib/providerWebhookRuntime.ts",
+      "apps/web/app/api/webhooks/email/route.ts",
+      "apps/web/app/api/webhooks/sms/route.ts",
+      "apps/web/tests/provider-webhook-contracts.test.ts",
+      "apps/web/tests/provider-webhook-routes.test.ts",
+      "apps/web/tests/provider-webhook-runtime-static.test.ts",
+      "testing/manifests/unit-test-manifest.json",
+      ".github/workflows/ci.yml",
+    ]));
+    for (const file of providerWebhookRuntimeProofFiles) {
+      expect(readRepoFile(file).length).toBeGreaterThan(0);
+    }
   });
 });

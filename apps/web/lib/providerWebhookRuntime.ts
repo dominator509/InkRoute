@@ -50,6 +50,104 @@ export const providerWebhookArtifactPaths = [
   "test-results/provider-webhook-runtime",
 ] as const;
 
+export const providerWebhookRuntimeProofFiles = [
+  "packages/notifications/package.json",
+  "packages/notifications/src/index.ts",
+  "packages/notifications/tests/delivery-plan.test.ts",
+  "apps/web/lib/providerWebhookReconciliation.ts",
+  "apps/web/lib/providerWebhookRuntime.ts",
+  "apps/web/app/api/webhooks/email/route.ts",
+  "apps/web/app/api/webhooks/sms/route.ts",
+  "apps/web/tests/provider-webhook-contracts.test.ts",
+  "apps/web/tests/provider-webhook-routes.test.ts",
+  "apps/web/tests/provider-webhook-runtime-static.test.ts",
+  "testing/manifests/unit-test-manifest.json",
+  ".github/workflows/ci.yml",
+] as const;
+
+export type ProviderWebhookEvidenceArtifact = (typeof providerWebhookArtifactPaths)[number];
+
+export interface ProviderWebhookEvidenceInput {
+  readonly notificationsTypecheckPassed: boolean;
+  readonly notificationsTestsPassed: boolean;
+  readonly routeTestsPassed: boolean;
+  readonly contractTestsPassed: boolean;
+  readonly emailSignatureVerified: boolean;
+  readonly smsSignatureVerified: boolean;
+  readonly pushReceiptSourceVerified: boolean;
+  readonly providerEventPersistenceVerified: boolean;
+  readonly exactlyOnceDeliveryVerified: boolean;
+  readonly suppressionPersistenceVerified: boolean;
+  readonly inboundRoutingVerified: boolean;
+  readonly invalidPushTokenVerified: boolean;
+  readonly failedAlertingVerified: boolean;
+  readonly sandboxReplayVerified: boolean;
+  readonly concurrentCallbacksVerified: boolean;
+  readonly ciEvidenceCaptured: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly ProviderWebhookEvidenceArtifact[];
+}
+
+export interface ProviderWebhookEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly ProviderWebhookEvidenceArtifact[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly redactedSummary: {
+    readonly capturedArtifactCount: number;
+    readonly requiredArtifactCount: number;
+  };
+}
+
+export const buildProviderWebhookEvidenceDecision = (
+  input: ProviderWebhookEvidenceInput,
+): ProviderWebhookEvidenceDecision => {
+  const captured = new Set(input.capturedArtifacts);
+  const missingArtifacts = providerWebhookArtifactPaths.filter((artifact) => !captured.has(artifact));
+  const blockers = [
+    ...(!input.notificationsTypecheckPassed ? ["Notifications package typecheck evidence is missing."] : []),
+    ...(!input.notificationsTestsPassed ? ["Notifications package test evidence is missing."] : []),
+    ...(!input.routeTestsPassed ? ["Provider webhook route test evidence is missing."] : []),
+    ...(!input.contractTestsPassed ? ["Provider webhook contract test evidence is missing."] : []),
+    ...(!input.emailSignatureVerified ? ["Email provider cryptographic signature evidence is missing."] : []),
+    ...(!input.smsSignatureVerified ? ["SMS provider cryptographic signature evidence is missing."] : []),
+    ...(!input.pushReceiptSourceVerified ? ["Trusted push receipt source evidence is missing."] : []),
+    ...(!input.providerEventPersistenceVerified ? ["ProviderEvent/idempotency persistence evidence is missing."] : []),
+    ...(!input.exactlyOnceDeliveryVerified ? ["Exactly-once delivery-log reconciliation evidence is missing."] : []),
+    ...(!input.suppressionPersistenceVerified ? ["Suppression persistence evidence is missing."] : []),
+    ...(!input.inboundRoutingVerified ? ["Inbound routing persistence evidence is missing."] : []),
+    ...(!input.invalidPushTokenVerified ? ["Invalid push-token persistence evidence is missing."] : []),
+    ...(!input.failedAlertingVerified ? ["Failed-webhook alerting evidence is missing."] : []),
+    ...(!input.sandboxReplayVerified ? ["Provider sandbox replay/invalid-signature evidence is missing."] : []),
+    ...(!input.concurrentCallbacksVerified ? ["Concurrent callback exactly-once evidence is missing."] : []),
+    ...(!input.ciEvidenceCaptured ? ["Provider webhook CI evidence is missing."] : []),
+    ...(!input.secretSafeArtifactReviewPassed
+      ? ["Secret-safe provider webhook artifact review evidence is missing."]
+      : []),
+    ...(missingArtifacts.length > 0 ? ["All provider webhook artifacts must be captured."] : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: [...providerWebhookRuntimeCommands],
+    requiredEvidence: [
+      "provider signature verification and raw-body route evidence",
+      "durable replay protection and exactly-once ProviderEvent evidence",
+      "delivery, suppression, inbound routing, and invalid-token persistence evidence",
+      "provider sandbox, invalid-signature, and failed-webhook alerting evidence",
+      "concurrent callback exactly-once delivery-log evidence",
+      "secret-safe review of retained provider webhook artifacts",
+    ],
+    redactedSummary: {
+      capturedArtifactCount: captured.size,
+      requiredArtifactCount: providerWebhookArtifactPaths.length,
+    },
+  };
+};
+
 export const providerWebhookRuntimeMatrix = [
   { id: "notifications-typecheck", command: "pnpm --filter @inkroute/notifications typecheck", artifact: "coverage/provider-webhook-notifications-typecheck.txt", status: "wired" },
   { id: "notifications-tests", command: "pnpm --filter @inkroute/notifications test", artifact: "coverage/provider-webhook-notifications-test.txt", status: "wired" },

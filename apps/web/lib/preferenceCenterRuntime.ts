@@ -49,6 +49,108 @@ export const preferenceCenterArtifactPaths = [
   "test-results/preference-center-runtime",
 ] as const;
 
+export const preferenceCenterRuntimeProofFiles = [
+  "packages/notifications/package.json",
+  "packages/notifications/src/index.ts",
+  "packages/notifications/tests/delivery-plan.test.ts",
+  "apps/web/lib/preferenceCenter.ts",
+  "apps/web/lib/preferenceCenterRuntime.ts",
+  "apps/web/app/api/public/[tenantSlug]/preferences/route.ts",
+  "apps/web/app/api/public/[tenantSlug]/unsubscribe/route.ts",
+  "apps/web/app/preferences/page.tsx",
+  "apps/web/tests/preference-center-static.test.ts",
+  "apps/web/tests/preference-center-runtime-static.test.ts",
+  "apps/dashboard/app/settings/page.tsx",
+  "testing/manifests/unit-test-manifest.json",
+  "SECURITY.md",
+  ".github/workflows/ci.yml",
+] as const;
+
+export type PreferenceCenterEvidenceArtifact = (typeof preferenceCenterArtifactPaths)[number];
+
+export interface PreferenceCenterEvidenceInput {
+  readonly notificationsTypecheckPassed: boolean;
+  readonly notificationsTestsPassed: boolean;
+  readonly staticContractTestsPassed: boolean;
+  readonly routeApiTestsPassed: boolean;
+  readonly dashboardSettingsTestsPassed: boolean;
+  readonly signedTokenCryptoVerified: boolean;
+  readonly tokenHashPersistenceVerified: boolean;
+  readonly tokenExpiryForgeryReuseVerified: boolean;
+  readonly clientPreferencePersistenceVerified: boolean;
+  readonly suppressionPersistenceVerified: boolean;
+  readonly tenantSettingsPersistenceVerified: boolean;
+  readonly auditLogPersistenceVerified: boolean;
+  readonly idempotencyKeyVerified: boolean;
+  readonly listUnsubscribeProviderVerified: boolean;
+  readonly legalCopyApproved: boolean;
+  readonly preSendSuppressionVerified: boolean;
+  readonly ciEvidenceCaptured: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly PreferenceCenterEvidenceArtifact[];
+}
+
+export interface PreferenceCenterEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly PreferenceCenterEvidenceArtifact[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly redactedSummary: {
+    readonly capturedArtifactCount: number;
+    readonly requiredArtifactCount: number;
+  };
+}
+
+export const buildPreferenceCenterEvidenceDecision = (
+  input: PreferenceCenterEvidenceInput,
+): PreferenceCenterEvidenceDecision => {
+  const captured = new Set(input.capturedArtifacts);
+  const missingArtifacts = preferenceCenterArtifactPaths.filter((artifact) => !captured.has(artifact));
+  const blockers = [
+    ...(!input.notificationsTypecheckPassed ? ["Notifications package typecheck evidence is missing."] : []),
+    ...(!input.notificationsTestsPassed ? ["Notifications package test evidence is missing."] : []),
+    ...(!input.staticContractTestsPassed ? ["Preference center static contract evidence is missing."] : []),
+    ...(!input.routeApiTestsPassed ? ["Preference center route/API evidence is missing."] : []),
+    ...(!input.dashboardSettingsTestsPassed ? ["Tenant notification settings dashboard evidence is missing."] : []),
+    ...(!input.signedTokenCryptoVerified ? ["Signed preference token crypto evidence is missing."] : []),
+    ...(!input.tokenHashPersistenceVerified ? ["PreferenceToken hash persistence evidence is missing."] : []),
+    ...(!input.tokenExpiryForgeryReuseVerified ? ["Token expiry/forgery/reuse rejection evidence is missing."] : []),
+    ...(!input.clientPreferencePersistenceVerified ? ["ClientNotificationPreference persistence evidence is missing."] : []),
+    ...(!input.suppressionPersistenceVerified ? ["SuppressionListEntry persistence evidence is missing."] : []),
+    ...(!input.tenantSettingsPersistenceVerified ? ["TenantNotificationSetting persistence evidence is missing."] : []),
+    ...(!input.auditLogPersistenceVerified ? ["NotificationAuditLog persistence evidence is missing."] : []),
+    ...(!input.idempotencyKeyVerified ? ["Preference IdempotencyKey evidence is missing."] : []),
+    ...(!input.listUnsubscribeProviderVerified ? ["Provider List-Unsubscribe integration evidence is missing."] : []),
+    ...(!input.legalCopyApproved ? ["Legal-approved preference/STOP/START/settings copy evidence is missing."] : []),
+    ...(!input.preSendSuppressionVerified ? ["Pre-send suppression integration evidence is missing."] : []),
+    ...(!input.ciEvidenceCaptured ? ["Preference center CI evidence is missing."] : []),
+    ...(!input.secretSafeArtifactReviewPassed
+      ? ["Secret-safe preference center artifact review evidence is missing."]
+      : []),
+    ...(missingArtifacts.length > 0 ? ["All preference center artifacts must be captured."] : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: [...preferenceCenterRuntimeCommands],
+    requiredEvidence: [
+      "signed preference token issuance, hash persistence, expiry, and forgery rejection evidence",
+      "email unsubscribe, SMS STOP/START, and pre-send suppression persistence evidence",
+      "client preference, tenant setting, audit, and idempotency persistence evidence",
+      "provider List-Unsubscribe and one-click unsubscribe integration evidence",
+      "audit, idempotency, legal copy, and route/API test evidence",
+      "secret-safe review of retained preference center artifacts",
+    ],
+    redactedSummary: {
+      capturedArtifactCount: captured.size,
+      requiredArtifactCount: preferenceCenterArtifactPaths.length,
+    },
+  };
+};
+
 export const preferenceCenterRuntimeMatrix = [
   { id: "notifications-typecheck", command: "pnpm --filter @inkroute/notifications typecheck", artifact: "coverage/preference-center-notifications-typecheck.txt", status: "wired" },
   { id: "notifications-tests", command: "pnpm --filter @inkroute/notifications test", artifact: "coverage/preference-center-notifications-test.txt", status: "wired" },

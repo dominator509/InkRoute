@@ -2,7 +2,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildNotificationSchedulerEvidenceDecision,
   notificationSchedulerArtifactPaths,
+  notificationSchedulerRuntimeProofFiles,
   notificationSchedulerRuntimeCommands,
   notificationSchedulerRuntimeMatrix,
   notificationSchedulerRuntimeReadiness,
@@ -96,13 +98,107 @@ describe("dashboard notification scheduler runtime contract", () => {
     expect(notificationSchedulerRuntimeReadiness.blockers).toContain("DeadLetterJob persistence must be available.");
   });
 
+  it("classifies notification scheduler evidence before GAP-065 can close", () => {
+    const blockedDecision = buildNotificationSchedulerEvidenceDecision({
+      notificationsTypecheckPassed: true,
+      notificationsTestsPassed: true,
+      dashboardTypecheckPassed: true,
+      staticContractTestsPassed: true,
+      queueBackendVerified: false,
+      notificationJobPersistenceVerified: false,
+      deadLetterPersistenceVerified: false,
+      workerAuditPersistenceVerified: false,
+      idempotencyKeyVerified: false,
+      schedulerProcessVerified: false,
+      workerProcessVerified: false,
+      providerDispatchVerified: false,
+      dueJobConcurrencyVerified: false,
+      retryBackoffVerified: false,
+      cancellationVerified: false,
+      postgresQueueVerified: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactReviewPassed: false,
+      capturedArtifacts: [
+        "coverage/notification-scheduler-runtime.json",
+        "coverage/notification-scheduler-notifications-typecheck.txt",
+        "coverage/notification-scheduler-notifications-test.txt",
+        "coverage/notification-scheduler-dashboard-typecheck.txt",
+        "coverage/notification-scheduler-static-contract.json",
+      ],
+    });
+
+    expect(blockedDecision.status).toBe("blocked");
+    expect(blockedDecision.blockers).toContain("Notification queue backend evidence is missing.");
+    expect(blockedDecision.blockers).toContain("NotificationJob persistence evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Provider dispatch worker evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Transactional due-job concurrency evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Postgres queue integration evidence is missing.");
+    expect(blockedDecision.blockers).toContain(
+      "Secret-safe notification scheduler artifact review evidence is missing.",
+    );
+    expect(blockedDecision.missingArtifacts).toContain("coverage/notification-scheduler-queue-backend.json");
+    expect(blockedDecision.missingArtifacts).toContain("coverage/notification-scheduler-secret-safe-artifacts.json");
+    expect(blockedDecision.requiredCommands).toEqual([...notificationSchedulerRuntimeCommands]);
+    expect(blockedDecision.requiredEvidence).toContain("provider dispatch worker integration evidence");
+    expect(blockedDecision.redactedSummary).toEqual({
+      capturedArtifactCount: 5,
+      requiredArtifactCount: notificationSchedulerArtifactPaths.length,
+    });
+
+    const completeDecision = buildNotificationSchedulerEvidenceDecision({
+      notificationsTypecheckPassed: true,
+      notificationsTestsPassed: true,
+      dashboardTypecheckPassed: true,
+      staticContractTestsPassed: true,
+      queueBackendVerified: true,
+      notificationJobPersistenceVerified: true,
+      deadLetterPersistenceVerified: true,
+      workerAuditPersistenceVerified: true,
+      idempotencyKeyVerified: true,
+      schedulerProcessVerified: true,
+      workerProcessVerified: true,
+      providerDispatchVerified: true,
+      dueJobConcurrencyVerified: true,
+      retryBackoffVerified: true,
+      cancellationVerified: true,
+      postgresQueueVerified: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactReviewPassed: true,
+      capturedArtifacts: notificationSchedulerArtifactPaths,
+    });
+
+    expect(completeDecision.status).toBe("complete");
+    expect(completeDecision.blockers).toEqual([]);
+    expect(completeDecision.missingArtifacts).toEqual([]);
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming live queue execution", () => {
     expect(ciWorkflow).toContain("Run Phase 9 notification scheduler runtime contracts");
     expect(ciWorkflow).toContain("notification-scheduler-runtime-static.test.ts");
     expect(ciWorkflow).toContain("notification-scheduler-runtime-artifacts");
     expect(unitManifest).toContain("unit-notification-scheduler-runtime-static");
     expect(gapTracker).toContain("apps/dashboard/lib/notificationSchedulerRuntime.ts");
-    expect(gapTracker).toContain("GAP-065 is notification-scheduler-runtime-matrix wired");
+    expect(gapTracker).toContain("notification scheduler evidence classifier");
+    expect(gapTracker).toContain("GAP-065 is notification-scheduler-runtime-matrix wired with evidence classifier");
     expect(notificationSchedulerArtifactPaths).toContain("coverage/notification-scheduler-secret-safe-artifacts.json");
+  });
+
+  it("pins current notification scheduler proof files for GAP-065", () => {
+    expect(notificationSchedulerRuntimeProofFiles).toEqual(expect.arrayContaining([
+      "packages/notifications/package.json",
+      "packages/notifications/src/index.ts",
+      "packages/notifications/tests/delivery-plan.test.ts",
+      "apps/dashboard/lib/notificationScheduler.ts",
+      "apps/dashboard/lib/notificationSchedulerRuntime.ts",
+      "apps/dashboard/app/api/notifications/scheduler/route.ts",
+      "apps/dashboard/app/templates/page.tsx",
+      "apps/dashboard/tests/notification-scheduler-static.test.ts",
+      "apps/dashboard/tests/notification-scheduler-runtime-static.test.ts",
+      "testing/manifests/unit-test-manifest.json",
+      ".github/workflows/ci.yml",
+    ]));
+    for (const file of notificationSchedulerRuntimeProofFiles) {
+      expect(readRepoFile(file).length).toBeGreaterThan(0);
+    }
   });
 });

@@ -52,6 +52,105 @@ export const notificationSchedulerArtifactPaths = [
   "test-results/notification-scheduler-runtime",
 ] as const;
 
+export const notificationSchedulerRuntimeProofFiles = [
+  "packages/notifications/package.json",
+  "packages/notifications/src/index.ts",
+  "packages/notifications/tests/delivery-plan.test.ts",
+  "apps/dashboard/lib/notificationScheduler.ts",
+  "apps/dashboard/lib/notificationSchedulerRuntime.ts",
+  "apps/dashboard/app/api/notifications/scheduler/route.ts",
+  "apps/dashboard/app/templates/page.tsx",
+  "apps/dashboard/tests/notification-scheduler-static.test.ts",
+  "apps/dashboard/tests/notification-scheduler-runtime-static.test.ts",
+  "testing/manifests/unit-test-manifest.json",
+  ".github/workflows/ci.yml",
+] as const;
+
+export type NotificationSchedulerEvidenceArtifact = (typeof notificationSchedulerArtifactPaths)[number];
+
+export interface NotificationSchedulerEvidenceInput {
+  readonly notificationsTypecheckPassed: boolean;
+  readonly notificationsTestsPassed: boolean;
+  readonly dashboardTypecheckPassed: boolean;
+  readonly staticContractTestsPassed: boolean;
+  readonly queueBackendVerified: boolean;
+  readonly notificationJobPersistenceVerified: boolean;
+  readonly deadLetterPersistenceVerified: boolean;
+  readonly workerAuditPersistenceVerified: boolean;
+  readonly idempotencyKeyVerified: boolean;
+  readonly schedulerProcessVerified: boolean;
+  readonly workerProcessVerified: boolean;
+  readonly providerDispatchVerified: boolean;
+  readonly dueJobConcurrencyVerified: boolean;
+  readonly retryBackoffVerified: boolean;
+  readonly cancellationVerified: boolean;
+  readonly postgresQueueVerified: boolean;
+  readonly ciEvidenceCaptured: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly NotificationSchedulerEvidenceArtifact[];
+}
+
+export interface NotificationSchedulerEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly NotificationSchedulerEvidenceArtifact[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly redactedSummary: {
+    readonly capturedArtifactCount: number;
+    readonly requiredArtifactCount: number;
+  };
+}
+
+export const buildNotificationSchedulerEvidenceDecision = (
+  input: NotificationSchedulerEvidenceInput,
+): NotificationSchedulerEvidenceDecision => {
+  const captured = new Set(input.capturedArtifacts);
+  const missingArtifacts = notificationSchedulerArtifactPaths.filter((artifact) => !captured.has(artifact));
+  const blockers = [
+    ...(!input.notificationsTypecheckPassed ? ["Notifications package typecheck evidence is missing."] : []),
+    ...(!input.notificationsTestsPassed ? ["Notifications package test evidence is missing."] : []),
+    ...(!input.dashboardTypecheckPassed ? ["Dashboard typecheck evidence is missing."] : []),
+    ...(!input.staticContractTestsPassed ? ["Notification scheduler static contract evidence is missing."] : []),
+    ...(!input.queueBackendVerified ? ["Notification queue backend evidence is missing."] : []),
+    ...(!input.notificationJobPersistenceVerified ? ["NotificationJob persistence evidence is missing."] : []),
+    ...(!input.deadLetterPersistenceVerified ? ["DeadLetterJob persistence evidence is missing."] : []),
+    ...(!input.workerAuditPersistenceVerified ? ["NotificationWorkerAuditLog persistence evidence is missing."] : []),
+    ...(!input.idempotencyKeyVerified ? ["Scheduler IdempotencyKey persistence evidence is missing."] : []),
+    ...(!input.schedulerProcessVerified ? ["Scheduler process deployment evidence is missing."] : []),
+    ...(!input.workerProcessVerified ? ["Notification worker process evidence is missing."] : []),
+    ...(!input.providerDispatchVerified ? ["Provider dispatch worker evidence is missing."] : []),
+    ...(!input.dueJobConcurrencyVerified ? ["Transactional due-job concurrency evidence is missing."] : []),
+    ...(!input.retryBackoffVerified ? ["Retry/backoff and dead-letter integration evidence is missing."] : []),
+    ...(!input.cancellationVerified ? ["Scheduled-job cancellation integration evidence is missing."] : []),
+    ...(!input.postgresQueueVerified ? ["Postgres queue integration evidence is missing."] : []),
+    ...(!input.ciEvidenceCaptured ? ["Notification scheduler CI evidence is missing."] : []),
+    ...(!input.secretSafeArtifactReviewPassed
+      ? ["Secret-safe notification scheduler artifact review evidence is missing."]
+      : []),
+    ...(missingArtifacts.length > 0 ? ["All notification scheduler artifacts must be captured."] : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: [...notificationSchedulerRuntimeCommands],
+    requiredEvidence: [
+      "queue backend and NotificationJob persistence evidence",
+      "scheduler/worker process and transactional due-job claiming evidence",
+      "retry, dead-letter, and worker audit persistence evidence",
+      "provider dispatch worker integration evidence",
+      "queue, retry/dead-letter, and appointment cancellation integration test evidence",
+      "secret-safe review of retained notification scheduler artifacts",
+    ],
+    redactedSummary: {
+      capturedArtifactCount: captured.size,
+      requiredArtifactCount: notificationSchedulerArtifactPaths.length,
+    },
+  };
+};
+
 export const notificationSchedulerRuntimeMatrix = [
   { id: "notifications-typecheck", command: "pnpm --filter @inkroute/notifications typecheck", artifact: "coverage/notification-scheduler-notifications-typecheck.txt", status: "wired" },
   { id: "notifications-tests", command: "pnpm --filter @inkroute/notifications test", artifact: "coverage/notification-scheduler-notifications-test.txt", status: "wired" },

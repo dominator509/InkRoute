@@ -63,6 +63,116 @@ export const smsProviderArtifactPaths = [
   "test-results/sms-provider-runtime",
 ] as const;
 
+export const smsProviderRuntimeProofFiles = [
+  "packages/notifications/package.json",
+  "packages/notifications/src/index.ts",
+  "packages/notifications/tests/delivery-plan.test.ts",
+  "apps/web/lib/smsProvider.ts",
+  "apps/web/lib/smsProviderRuntime.ts",
+  "apps/web/app/api/webhooks/sms/route.ts",
+  "apps/web/tests/sms-provider-static.test.ts",
+  "apps/web/tests/sms-provider-runtime-static.test.ts",
+  "testing/manifests/unit-test-manifest.json",
+  "SECURITY.md",
+  "ENVIRONMENT_VARIABLES.md",
+  ".env.example",
+  ".github/workflows/ci.yml",
+] as const;
+
+export type SmsProviderEvidenceArtifact = (typeof smsProviderArtifactPaths)[number];
+
+export interface SmsProviderEvidenceInput {
+  readonly notificationsTypecheckPassed: boolean;
+  readonly notificationsTestsPassed: boolean;
+  readonly staticContractTestsPassed: boolean;
+  readonly twilioSdkCredentialsVerified: boolean;
+  readonly messagingServiceVerified: boolean;
+  readonly legalConsentCopyApproved: boolean;
+  readonly consentProofVerified: boolean;
+  readonly quietHoursVerified: boolean;
+  readonly rawBodySignatureVerified: boolean;
+  readonly requestUrlValidationVerified: boolean;
+  readonly deliveryPersistenceVerified: boolean;
+  readonly providerEventPersistenceVerified: boolean;
+  readonly suppressionPersistenceVerified: boolean;
+  readonly inboundThreadPersistenceVerified: boolean;
+  readonly sandboxSentPassed: boolean;
+  readonly sandboxDeliveredPassed: boolean;
+  readonly sandboxFailedPassed: boolean;
+  readonly stopSuppressionPassed: boolean;
+  readonly helpInboundThreadPassed: boolean;
+  readonly invalidSignatureRoutePassed: boolean;
+  readonly ciEvidenceCaptured: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly SmsProviderEvidenceArtifact[];
+}
+
+export interface SmsProviderEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly SmsProviderEvidenceArtifact[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly redactedSummary: {
+    readonly capturedArtifactCount: number;
+    readonly requiredArtifactCount: number;
+  };
+}
+
+export const buildSmsProviderEvidenceDecision = (
+  input: SmsProviderEvidenceInput,
+): SmsProviderEvidenceDecision => {
+  const captured = new Set(input.capturedArtifacts);
+  const missingArtifacts = smsProviderArtifactPaths.filter((artifact) => !captured.has(artifact));
+  const blockers = [
+    ...(!input.notificationsTypecheckPassed ? ["Notifications package typecheck evidence is missing."] : []),
+    ...(!input.notificationsTestsPassed ? ["Notifications package test evidence is missing."] : []),
+    ...(!input.staticContractTestsPassed ? ["SMS provider static contract evidence is missing."] : []),
+    ...(!input.twilioSdkCredentialsVerified ? ["Twilio SDK credential evidence is missing."] : []),
+    ...(!input.messagingServiceVerified ? ["Twilio messaging service evidence is missing."] : []),
+    ...(!input.legalConsentCopyApproved ? ["Legal-approved SMS consent/STOP/HELP copy evidence is missing."] : []),
+    ...(!input.consentProofVerified ? ["Stored SMS consent proof evidence is missing."] : []),
+    ...(!input.quietHoursVerified ? ["SMS quiet-hours policy evidence is missing."] : []),
+    ...(!input.rawBodySignatureVerified ? ["Raw-body Twilio signature evidence is missing."] : []),
+    ...(!input.requestUrlValidationVerified ? ["Twilio request URL validation evidence is missing."] : []),
+    ...(!input.deliveryPersistenceVerified ? ["NotificationDelivery persistence evidence is missing."] : []),
+    ...(!input.providerEventPersistenceVerified ? ["ProviderEvent persistence evidence is missing."] : []),
+    ...(!input.suppressionPersistenceVerified ? ["STOP suppression persistence evidence is missing."] : []),
+    ...(!input.inboundThreadPersistenceVerified ? ["HELP/client reply inbound-thread evidence is missing."] : []),
+    ...(!input.sandboxSentPassed ? ["Twilio sandbox sent-event evidence is missing."] : []),
+    ...(!input.sandboxDeliveredPassed ? ["Twilio sandbox delivered-event evidence is missing."] : []),
+    ...(!input.sandboxFailedPassed ? ["Twilio sandbox failed-event evidence is missing."] : []),
+    ...(!input.stopSuppressionPassed ? ["Twilio STOP suppression evidence is missing."] : []),
+    ...(!input.helpInboundThreadPassed ? ["Twilio HELP inbound-thread evidence is missing."] : []),
+    ...(!input.invalidSignatureRoutePassed ? ["Invalid SMS webhook signature route evidence is missing."] : []),
+    ...(!input.ciEvidenceCaptured ? ["SMS provider CI evidence is missing."] : []),
+    ...(!input.secretSafeArtifactReviewPassed
+      ? ["Secret-safe SMS provider artifact review evidence is missing."]
+      : []),
+    ...(missingArtifacts.length > 0 ? ["All SMS provider artifacts must be captured."] : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: [...smsProviderRuntimeCommands],
+    requiredEvidence: [
+      "Twilio SDK credentials and messaging service evidence",
+      "legal-approved consent/STOP/HELP copy, stored consent proof, and quiet-hours evidence",
+      "raw-body Twilio signature verification, request URL validation, and invalid-signature route evidence",
+      "durable NotificationDelivery, ProviderEvent, SuppressionListEntry, MessageThread, and idempotency evidence",
+      "sandbox sent, delivered, failed, STOP, and HELP transcripts",
+      "CI SMS provider runtime evidence with secret-safe artifacts",
+      "secret-safe review of retained SMS provider artifacts",
+    ],
+    redactedSummary: {
+      capturedArtifactCount: captured.size,
+      requiredArtifactCount: smsProviderArtifactPaths.length,
+    },
+  };
+};
+
 export const smsProviderRuntimeMatrix = [
   { id: "notifications-typecheck", command: "pnpm --filter @inkroute/notifications typecheck", artifact: "coverage/sms-provider-notifications-typecheck.txt", status: "wired" },
   { id: "notifications-tests", command: "pnpm --filter @inkroute/notifications test", artifact: "coverage/sms-provider-notifications-test.txt", status: "wired" },

@@ -56,6 +56,102 @@ export const emailProviderArtifactPaths = [
   "test-results/email-provider-runtime",
 ] as const;
 
+export const emailProviderRuntimeProofFiles = [
+  "packages/notifications/package.json",
+  "packages/notifications/src/index.ts",
+  "packages/notifications/tests/delivery-plan.test.ts",
+  "apps/web/lib/emailProvider.ts",
+  "apps/web/lib/emailProviderRuntime.ts",
+  "apps/web/app/api/webhooks/email/route.ts",
+  "apps/web/tests/email-provider-static.test.ts",
+  "apps/web/tests/email-provider-runtime-static.test.ts",
+  "testing/manifests/unit-test-manifest.json",
+  "ENVIRONMENT_VARIABLES.md",
+  ".env.example",
+  ".github/workflows/ci.yml",
+] as const;
+
+export type EmailProviderEvidenceArtifact = (typeof emailProviderArtifactPaths)[number];
+
+export interface EmailProviderEvidenceInput {
+  readonly notificationsTypecheckPassed: boolean;
+  readonly notificationsTestsPassed: boolean;
+  readonly staticContractTestsPassed: boolean;
+  readonly resendSdkApiKeyVerified: boolean;
+  readonly verifiedSenderDomainVerified: boolean;
+  readonly rawBodySignatureVerified: boolean;
+  readonly deliveryPersistenceVerified: boolean;
+  readonly providerEventPersistenceVerified: boolean;
+  readonly suppressionPersistenceVerified: boolean;
+  readonly sandboxDeliveredPassed: boolean;
+  readonly sandboxBouncedPassed: boolean;
+  readonly sandboxComplainedPassed: boolean;
+  readonly unsubscribeSuppressionPassed: boolean;
+  readonly invalidSignatureRoutePassed: boolean;
+  readonly ciEvidenceCaptured: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly EmailProviderEvidenceArtifact[];
+}
+
+export interface EmailProviderEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly EmailProviderEvidenceArtifact[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly redactedSummary: {
+    readonly capturedArtifactCount: number;
+    readonly requiredArtifactCount: number;
+  };
+}
+
+export const buildEmailProviderEvidenceDecision = (
+  input: EmailProviderEvidenceInput,
+): EmailProviderEvidenceDecision => {
+  const captured = new Set(input.capturedArtifacts);
+  const missingArtifacts = emailProviderArtifactPaths.filter((artifact) => !captured.has(artifact));
+  const blockers = [
+    ...(!input.notificationsTypecheckPassed ? ["Notifications package typecheck evidence is missing."] : []),
+    ...(!input.notificationsTestsPassed ? ["Notifications package test evidence is missing."] : []),
+    ...(!input.staticContractTestsPassed ? ["Email provider static contract evidence is missing."] : []),
+    ...(!input.resendSdkApiKeyVerified ? ["Resend SDK/API key evidence is missing."] : []),
+    ...(!input.verifiedSenderDomainVerified ? ["Verified sender/domain evidence is missing."] : []),
+    ...(!input.rawBodySignatureVerified ? ["Raw-body Resend/Svix signature evidence is missing."] : []),
+    ...(!input.deliveryPersistenceVerified ? ["NotificationDelivery persistence evidence is missing."] : []),
+    ...(!input.providerEventPersistenceVerified ? ["ProviderEvent persistence evidence is missing."] : []),
+    ...(!input.suppressionPersistenceVerified ? ["Suppression persistence evidence is missing."] : []),
+    ...(!input.sandboxDeliveredPassed ? ["Resend sandbox delivered-event evidence is missing."] : []),
+    ...(!input.sandboxBouncedPassed ? ["Resend sandbox bounced-event evidence is missing."] : []),
+    ...(!input.sandboxComplainedPassed ? ["Resend sandbox complained-event evidence is missing."] : []),
+    ...(!input.unsubscribeSuppressionPassed ? ["Unsubscribe suppression evidence is missing."] : []),
+    ...(!input.invalidSignatureRoutePassed ? ["Invalid email webhook signature route evidence is missing."] : []),
+    ...(!input.ciEvidenceCaptured ? ["Email provider CI evidence is missing."] : []),
+    ...(!input.secretSafeArtifactReviewPassed
+      ? ["Secret-safe email provider artifact review evidence is missing."]
+      : []),
+    ...(missingArtifacts.length > 0 ? ["All email provider artifacts must be captured."] : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: [...emailProviderRuntimeCommands],
+    requiredEvidence: [
+      "Resend SDK/API key and verified sender/domain evidence",
+      "raw-body Resend/Svix signature verification and invalid-signature route evidence",
+      "durable NotificationDelivery, ProviderEvent, and suppression persistence evidence",
+      "sandbox delivered, bounced, complained, and unsubscribe event transcripts",
+      "CI email provider runtime evidence with secret-safe artifacts",
+      "secret-safe review of retained email provider artifacts",
+    ],
+    redactedSummary: {
+      capturedArtifactCount: captured.size,
+      requiredArtifactCount: emailProviderArtifactPaths.length,
+    },
+  };
+};
+
 export const emailProviderRuntimeMatrix = [
   { id: "notifications-typecheck", command: "pnpm --filter @inkroute/notifications typecheck", artifact: "coverage/email-provider-notifications-typecheck.txt", status: "wired" },
   { id: "notifications-tests", command: "pnpm --filter @inkroute/notifications test", artifact: "coverage/email-provider-notifications-test.txt", status: "wired" },

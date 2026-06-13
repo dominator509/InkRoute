@@ -2,9 +2,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildPreferenceCenterEvidenceDecision,
   preferenceCenterArtifactPaths,
   preferenceCenterRuntimeCommands,
   preferenceCenterRuntimeMatrix,
+  preferenceCenterRuntimeProofFiles,
   preferenceCenterRuntimeReadiness,
 } from "../lib/preferenceCenterRuntime";
 
@@ -82,13 +84,107 @@ describe("preference center runtime contract", () => {
     expect(preferenceCenterRuntimeReadiness.blockers).toContain("Preference, unsubscribe, SMS STOP/START, and tenant settings copy must be legal-approved.");
   });
 
+  it("classifies preference center evidence before GAP-067 can close", () => {
+    const blockedDecision = buildPreferenceCenterEvidenceDecision({
+      notificationsTypecheckPassed: true,
+      notificationsTestsPassed: true,
+      staticContractTestsPassed: true,
+      routeApiTestsPassed: false,
+      dashboardSettingsTestsPassed: false,
+      signedTokenCryptoVerified: false,
+      tokenHashPersistenceVerified: false,
+      tokenExpiryForgeryReuseVerified: false,
+      clientPreferencePersistenceVerified: false,
+      suppressionPersistenceVerified: false,
+      tenantSettingsPersistenceVerified: false,
+      auditLogPersistenceVerified: false,
+      idempotencyKeyVerified: false,
+      listUnsubscribeProviderVerified: false,
+      legalCopyApproved: false,
+      preSendSuppressionVerified: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactReviewPassed: false,
+      capturedArtifacts: [
+        "coverage/preference-center-runtime.json",
+        "coverage/preference-center-notifications-typecheck.txt",
+        "coverage/preference-center-notifications-test.txt",
+        "coverage/preference-center-static-contract.json",
+      ],
+    });
+
+    expect(blockedDecision.status).toBe("blocked");
+    expect(blockedDecision.blockers).toContain("Signed preference token crypto evidence is missing.");
+    expect(blockedDecision.blockers).toContain("PreferenceToken hash persistence evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Token expiry/forgery/reuse rejection evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Provider List-Unsubscribe integration evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Legal-approved preference/STOP/START/settings copy evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Secret-safe preference center artifact review evidence is missing.");
+    expect(blockedDecision.missingArtifacts).toContain("coverage/preference-center-token-crypto.json");
+    expect(blockedDecision.missingArtifacts).toContain("coverage/preference-center-secret-safe-artifacts.json");
+    expect(blockedDecision.requiredCommands).toEqual([...preferenceCenterRuntimeCommands]);
+    expect(blockedDecision.requiredEvidence).toContain("secret-safe review of retained preference center artifacts");
+    expect(blockedDecision.redactedSummary).toEqual({
+      capturedArtifactCount: 4,
+      requiredArtifactCount: preferenceCenterArtifactPaths.length,
+    });
+
+    const completeDecision = buildPreferenceCenterEvidenceDecision({
+      notificationsTypecheckPassed: true,
+      notificationsTestsPassed: true,
+      staticContractTestsPassed: true,
+      routeApiTestsPassed: true,
+      dashboardSettingsTestsPassed: true,
+      signedTokenCryptoVerified: true,
+      tokenHashPersistenceVerified: true,
+      tokenExpiryForgeryReuseVerified: true,
+      clientPreferencePersistenceVerified: true,
+      suppressionPersistenceVerified: true,
+      tenantSettingsPersistenceVerified: true,
+      auditLogPersistenceVerified: true,
+      idempotencyKeyVerified: true,
+      listUnsubscribeProviderVerified: true,
+      legalCopyApproved: true,
+      preSendSuppressionVerified: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactReviewPassed: true,
+      capturedArtifacts: preferenceCenterArtifactPaths,
+    });
+
+    expect(completeDecision.status).toBe("complete");
+    expect(completeDecision.blockers).toEqual([]);
+    expect(completeDecision.missingArtifacts).toEqual([]);
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming durable preference readiness", () => {
     expect(ciWorkflow).toContain("Run Phase 9 preference center runtime contracts");
     expect(ciWorkflow).toContain("preference-center-runtime-static.test.ts");
     expect(ciWorkflow).toContain("preference-center-runtime-artifacts");
     expect(unitManifest).toContain("unit-preference-center-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/preferenceCenterRuntime.ts");
-    expect(gapTracker).toContain("GAP-067 is preference-center-runtime-matrix wired");
+    expect(gapTracker).toContain("preference center evidence classifier");
+    expect(gapTracker).toContain("GAP-067 is preference-center-runtime-matrix wired with evidence classifier");
     expect(preferenceCenterArtifactPaths).toContain("coverage/preference-center-secret-safe-artifacts.json");
+  });
+
+  it("pins current preference center proof files for GAP-067", () => {
+    expect(preferenceCenterRuntimeProofFiles).toEqual(expect.arrayContaining([
+      "packages/notifications/package.json",
+      "packages/notifications/src/index.ts",
+      "packages/notifications/tests/delivery-plan.test.ts",
+      "apps/web/lib/preferenceCenter.ts",
+      "apps/web/lib/preferenceCenterRuntime.ts",
+      "apps/web/app/api/public/[tenantSlug]/preferences/route.ts",
+      "apps/web/app/api/public/[tenantSlug]/unsubscribe/route.ts",
+      "apps/web/app/preferences/page.tsx",
+      "apps/web/tests/preference-center-static.test.ts",
+      "apps/web/tests/preference-center-runtime-static.test.ts",
+      "apps/dashboard/app/settings/page.tsx",
+      "testing/manifests/unit-test-manifest.json",
+      "SECURITY.md",
+      ".github/workflows/ci.yml",
+    ]));
+    for (const file of preferenceCenterRuntimeProofFiles) {
+      expect(readRepoFile(file).length).toBeGreaterThan(0);
+    }
   });
 });

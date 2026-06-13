@@ -51,6 +51,111 @@ export const notificationPersistenceArtifactPaths = [
   "test-results/notification-persistence-runtime",
 ] as const;
 
+export const notificationPersistenceRuntimeProofFiles = [
+  "packages/db/prisma/schema.prisma",
+  "packages/types/src/index.ts",
+  "packages/auth/src/index.ts",
+  "packages/notifications/package.json",
+  "packages/notifications/src/index.ts",
+  "packages/notifications/tests/delivery-plan.test.ts",
+  "apps/dashboard/lib/notificationPersistence.ts",
+  "apps/dashboard/lib/notificationPersistenceRuntime.ts",
+  "apps/dashboard/app/messages/page.tsx",
+  "apps/dashboard/app/api/messages/route.ts",
+  "apps/dashboard/app/api/messages/[threadId]/route.ts",
+  "apps/dashboard/tests/message-read-route-static.test.ts",
+  "apps/dashboard/tests/notification-persistence-static.test.ts",
+  "apps/dashboard/tests/notification-persistence-runtime-static.test.ts",
+  "testing/manifests/unit-test-manifest.json",
+  ".github/workflows/ci.yml",
+] as const;
+
+export type NotificationPersistenceEvidenceArtifact = (typeof notificationPersistenceArtifactPaths)[number];
+
+export interface NotificationPersistenceEvidenceInput {
+  readonly notificationsTypecheckPassed: boolean;
+  readonly notificationsTestsPassed: boolean;
+  readonly dashboardTypecheckPassed: boolean;
+  readonly staticContractTestsPassed: boolean;
+  readonly prismaSchemaVerified: boolean;
+  readonly repositoryContractVerified: boolean;
+  readonly messageTransactionVerified: boolean;
+  readonly notificationDeliveryVerified: boolean;
+  readonly auditLogVerified: boolean;
+  readonly idempotencyKeyVerified: boolean;
+  readonly readStateVerified: boolean;
+  readonly statusTransitionVerified: boolean;
+  readonly providerWorkerHandoffVerified: boolean;
+  readonly rbacRedactionVerified: boolean;
+  readonly tenantIsolationVerified: boolean;
+  readonly postgresIntegrationVerified: boolean;
+  readonly ciEvidenceCaptured: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly NotificationPersistenceEvidenceArtifact[];
+}
+
+export interface NotificationPersistenceEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly NotificationPersistenceEvidenceArtifact[];
+  readonly requiredCommands: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly redactedSummary: {
+    readonly capturedArtifactCount: number;
+    readonly requiredArtifactCount: number;
+  };
+}
+
+export const buildNotificationPersistenceEvidenceDecision = (
+  input: NotificationPersistenceEvidenceInput,
+): NotificationPersistenceEvidenceDecision => {
+  const captured = new Set(input.capturedArtifacts);
+  const missingArtifacts = notificationPersistenceArtifactPaths.filter((artifact) => !captured.has(artifact));
+  const blockers = [
+    ...(!input.notificationsTypecheckPassed ? ["Notifications package typecheck evidence is missing."] : []),
+    ...(!input.notificationsTestsPassed ? ["Notifications package test evidence is missing."] : []),
+    ...(!input.dashboardTypecheckPassed ? ["Dashboard typecheck evidence is missing."] : []),
+    ...(!input.staticContractTestsPassed ? ["Notification persistence static contract evidence is missing."] : []),
+    ...(!input.prismaSchemaVerified ? ["Notification/message Prisma schema evidence is missing."] : []),
+    ...(!input.repositoryContractVerified ? ["Notification persistence repository contract evidence is missing."] : []),
+    ...(!input.messageTransactionVerified ? ["Message transaction write evidence is missing."] : []),
+    ...(!input.notificationDeliveryVerified ? ["NotificationDelivery persistence evidence is missing."] : []),
+    ...(!input.auditLogVerified ? ["Notification audit-log evidence is missing."] : []),
+    ...(!input.idempotencyKeyVerified ? ["IdempotencyKey persistence evidence is missing."] : []),
+    ...(!input.readStateVerified ? ["NotificationReadState persistence evidence is missing."] : []),
+    ...(!input.statusTransitionVerified ? ["Delivery status transition evidence is missing."] : []),
+    ...(!input.providerWorkerHandoffVerified ? ["Provider worker handoff evidence is missing."] : []),
+    ...(!input.rbacRedactionVerified ? ["RBAC/redaction evidence is missing."] : []),
+    ...(!input.tenantIsolationVerified ? ["Cross-tenant notification/message isolation evidence is missing."] : []),
+    ...(!input.postgresIntegrationVerified ? ["Notification repository Postgres integration evidence is missing."] : []),
+    ...(!input.ciEvidenceCaptured ? ["Notification persistence CI evidence is missing."] : []),
+    ...(!input.secretSafeArtifactReviewPassed
+      ? ["Secret-safe notification persistence artifact review evidence is missing."]
+      : []),
+    ...(missingArtifacts.length > 0 ? ["All notification persistence artifacts must be captured."] : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: [...notificationPersistenceRuntimeCommands],
+    requiredEvidence: [
+      "Prisma schema, repository contract, and transactional message write evidence",
+      "transactional audit/idempotency write evidence",
+      "NotificationReadState and delivery status transition persistence evidence",
+      "provider worker handoff integration evidence",
+      "RBAC, redaction, and destination hashing evidence",
+      "Postgres tenant-isolation and persistence integration test evidence",
+      "secret-safe review of retained notification persistence artifacts",
+    ],
+    redactedSummary: {
+      capturedArtifactCount: captured.size,
+      requiredArtifactCount: notificationPersistenceArtifactPaths.length,
+    },
+  };
+};
+
 export const notificationPersistenceRuntimeMatrix = [
   { id: "notifications-typecheck", command: "pnpm --filter @inkroute/notifications typecheck", artifact: "coverage/notification-persistence-notifications-typecheck.txt", status: "wired" },
   { id: "notifications-tests", command: "pnpm --filter @inkroute/notifications test", artifact: "coverage/notification-persistence-notifications-test.txt", status: "wired" },

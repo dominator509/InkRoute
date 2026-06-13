@@ -2,9 +2,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildEmailProviderEvidenceDecision,
   emailProviderArtifactPaths,
   emailProviderRuntimeCommands,
   emailProviderRuntimeMatrix,
+  emailProviderRuntimeProofFiles,
   emailProviderRuntimeReadiness,
 } from "../lib/emailProviderRuntime";
 
@@ -53,6 +55,26 @@ describe("email provider runtime contract", () => {
     expect(emailProviderArtifactPaths).toContain("test-results/email-provider-runtime");
   });
 
+  it("pins current email provider proof files for GAP-061", () => {
+    expect(emailProviderRuntimeProofFiles).toEqual(expect.arrayContaining([
+      "packages/notifications/package.json",
+      "packages/notifications/src/index.ts",
+      "packages/notifications/tests/delivery-plan.test.ts",
+      "apps/web/lib/emailProvider.ts",
+      "apps/web/lib/emailProviderRuntime.ts",
+      "apps/web/app/api/webhooks/email/route.ts",
+      "apps/web/tests/email-provider-static.test.ts",
+      "apps/web/tests/email-provider-runtime-static.test.ts",
+      "testing/manifests/unit-test-manifest.json",
+      "ENVIRONMENT_VARIABLES.md",
+      ".env.example",
+      ".github/workflows/ci.yml",
+    ]));
+    for (const file of emailProviderRuntimeProofFiles) {
+      expect(readRepoFile(file).length).toBeGreaterThan(0);
+    }
+  });
+
   it("keeps package helpers, provider contract, webhook route, and static guard wired", () => {
     expect(notificationsPackageJson).toContain('"typecheck"');
     expect(notificationsPackageJson).toContain('"test"');
@@ -76,13 +98,81 @@ describe("email provider runtime contract", () => {
     expect(emailProviderRuntimeReadiness.blockers).toContain("Delivered, bounced, complained, and unsubscribe provider events must be tested against the sandbox.");
   });
 
+  it("classifies email provider evidence before GAP-061 can close", () => {
+    const blockedDecision = buildEmailProviderEvidenceDecision({
+      notificationsTypecheckPassed: true,
+      notificationsTestsPassed: true,
+      staticContractTestsPassed: true,
+      resendSdkApiKeyVerified: false,
+      verifiedSenderDomainVerified: false,
+      rawBodySignatureVerified: false,
+      deliveryPersistenceVerified: false,
+      providerEventPersistenceVerified: false,
+      suppressionPersistenceVerified: false,
+      sandboxDeliveredPassed: false,
+      sandboxBouncedPassed: false,
+      sandboxComplainedPassed: false,
+      unsubscribeSuppressionPassed: false,
+      invalidSignatureRoutePassed: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactReviewPassed: false,
+      capturedArtifacts: [
+        "coverage/email-provider-runtime.json",
+        "coverage/email-provider-notifications-typecheck.txt",
+        "coverage/email-provider-notifications-test.txt",
+        "coverage/email-provider-static-contract.json",
+      ],
+    });
+
+    expect(blockedDecision.status).toBe("blocked");
+    expect(blockedDecision.blockers).toContain("Resend SDK/API key evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Verified sender/domain evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Raw-body Resend/Svix signature evidence is missing.");
+    expect(blockedDecision.blockers).toContain("ProviderEvent persistence evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Resend sandbox complained-event evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Secret-safe email provider artifact review evidence is missing.");
+    expect(blockedDecision.missingArtifacts).toContain("coverage/email-provider-resend-sdk.json");
+    expect(blockedDecision.missingArtifacts).toContain("coverage/email-provider-secret-safe-artifacts.json");
+    expect(blockedDecision.requiredCommands).toEqual([...emailProviderRuntimeCommands]);
+    expect(blockedDecision.requiredEvidence).toContain("secret-safe review of retained email provider artifacts");
+    expect(blockedDecision.redactedSummary).toEqual({
+      capturedArtifactCount: 4,
+      requiredArtifactCount: emailProviderArtifactPaths.length,
+    });
+
+    const completeDecision = buildEmailProviderEvidenceDecision({
+      notificationsTypecheckPassed: true,
+      notificationsTestsPassed: true,
+      staticContractTestsPassed: true,
+      resendSdkApiKeyVerified: true,
+      verifiedSenderDomainVerified: true,
+      rawBodySignatureVerified: true,
+      deliveryPersistenceVerified: true,
+      providerEventPersistenceVerified: true,
+      suppressionPersistenceVerified: true,
+      sandboxDeliveredPassed: true,
+      sandboxBouncedPassed: true,
+      sandboxComplainedPassed: true,
+      unsubscribeSuppressionPassed: true,
+      invalidSignatureRoutePassed: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactReviewPassed: true,
+      capturedArtifacts: emailProviderArtifactPaths,
+    });
+
+    expect(completeDecision.status).toBe("complete");
+    expect(completeDecision.blockers).toEqual([]);
+    expect(completeDecision.missingArtifacts).toEqual([]);
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming provider readiness", () => {
     expect(ciWorkflow).toContain("Run Phase 9 email provider runtime contracts");
     expect(ciWorkflow).toContain("email-provider-runtime-static.test.ts");
     expect(ciWorkflow).toContain("email-provider-runtime-artifacts");
     expect(unitManifest).toContain("unit-email-provider-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/emailProviderRuntime.ts");
-    expect(gapTracker).toContain("GAP-061 is email-provider-runtime-matrix wired");
+    expect(gapTracker).toContain("email provider evidence classifier");
+    expect(gapTracker).toContain("GAP-061 is email-provider-runtime-matrix wired with evidence classifier");
     expect(emailProviderArtifactPaths).toContain("coverage/email-provider-secret-safe-artifacts.json");
   });
 });
