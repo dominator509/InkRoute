@@ -1872,7 +1872,7 @@
       "file": "apps/web/tests/provider-contract-runtime-static.test.ts",
       "priority": "critical",
       "verifies": [
-        "GAP-110 provider contract runtime matrix covers static webhook contracts, provider manifest verification, signed raw-body fixtures, replay/idempotency fixtures, Stripe CLI webhook/idempotency, Google Calendar OAuth/sync, storage signed URL/upload/download, Resend/Twilio/Expo Push sandbox sends, Sentry capture, auth fixtures, rate-limit stores, redacted artifacts, CI provider-contract evidence, and ProviderContractRun Prisma model/app row contract are wired",
+        "GAP-110 provider contract runtime matrix covers static webhook contracts, provider manifest verification, signed raw-body fixtures, replay/idempotency fixtures, Stripe CLI webhook/idempotency, Google Calendar OAuth/sync, storage signed URL/upload/download, Resend/Twilio/Expo Push sandbox sends, Sentry capture, auth fixtures, rate-limit stores, redacted artifacts, CI provider-contract evidence, and ProviderContractRun Prisma model and app row contract are wired",
         "GAP-110 provider test plan, manifest verifier, and webhook static suite stay aligned before live provider sandbox proof",
         "GAP-110 CI retains provider contract runtime artifact paths without claiming credential-gated provider execution has passed"
       ],

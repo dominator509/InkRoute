@@ -370,9 +370,24 @@ export function buildProviderContractRuntimeEvidenceDecision(
     (artifact) => !input.capturedArtifacts.includes(artifact),
   );
   const requiredCommandChecks = [
-    "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
-    "provider sandbox contract suite for calendar/storage/email/sms/push/sentry/auth/rate-limit",
-    "GitHub Actions provider-contract job",
+    {
+      command: "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
+      required:
+        !input.stripeCliWebhookPassed ||
+        !input.stripeIdempotencyVerified,
+    },
+    {
+      command: "provider sandbox contract suite for calendar/storage/email/sms/push/sentry/auth/rate-limit",
+      required:
+        !input.googleCalendarOauthPassed ||
+        !input.storageSignedUrlPassed ||
+        !input.resendSandboxPassed ||
+        !input.twilioSandboxPassed ||
+        !input.expoPushSandboxPassed ||
+        !input.sentryCaptureVerified ||
+        !input.authSessionFixturesPassed ||
+        !input.rateLimitStorePassed,
+    },
   ];
   const missingCommands = providerContractRuntimeCommands.filter((command) => !input.requiredCommandsRun.includes(command));
 
@@ -382,8 +397,8 @@ export function buildProviderContractRuntimeEvidenceDecision(
       ...blockers,
       ...missingCommands.map((command) => `Required command not recorded: ${command}`),
       ...requiredCommandChecks
-        .filter((command) => !input.requiredCommandsRun.includes(command))
-        .map((command) => `Required command not recorded: ${command}`),
+        .filter((entry) => entry.required)
+        .map((entry) => `Required command not recorded: ${entry.command}`),
     ],
     missingArtifacts,
     requiredCommands: providerContractRuntimeCommands,
@@ -507,15 +522,10 @@ export function persistProviderContractRun(
 }
 
 const providerContractRuntimeReadinessBlockers = [
-  "Commit signed raw-body fixtures.",
-  "Commit replay/idempotency fixtures.",
-  "Run Stripe CLI webhook proof.",
-  "Verify Stripe idempotency behavior.",
-  "Run Google Calendar OAuth sandbox proof.",
-  "Run storage signed URL proof.",
-  "Run Resend sandbox send proof.",
-  "Verify Sentry capture proof.",
-  "Capture CI provider-contract job proof.",
+  "Stripe CLI signed webhook replay must pass against the local or preview webhook route.",
+  "Google Calendar freebusy, sync-token, conflict, insert/update/delete, and disconnect flows must be verified.",
+  "Signed raw-body fixtures must be committed for Stripe, email, SMS, and Sentry webhook verification.",
+  "CI provider-contract job must pass or publish credential-gated skip evidence and retained artifacts.",
   "Required command not recorded: stripe listen --forward-to localhost:3000/api/webhooks/stripe",
   "Required command not recorded: provider sandbox contract suite for calendar/storage/email/sms/push/sentry/auth/rate-limit",
   "Required command not recorded: GitHub Actions provider-contract job",
