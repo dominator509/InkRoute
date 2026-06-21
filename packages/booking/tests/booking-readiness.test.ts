@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildBookingPostSubmitPlan,
@@ -712,7 +713,11 @@ describe("booking readiness", () => {
     expect(getTravelBookingCta("closed")).toBe("View travel notes");
   });
   it("pins GAP-035 booking state machine tracker closure", () => {
-    const gapTracker = readFileSync("GAP_TRACKER.md", "utf8");
+    const gapTrackerPath = existsSync("GAP_TRACKER.md")
+      ? path.resolve(process.cwd(), "GAP_TRACKER.md")
+      : path.resolve(process.cwd(), "..", "..", "GAP_TRACKER.md");
+
+    const gapTracker = readFileSync(gapTrackerPath, "utf8");
 
     expect(gapTracker).toContain("GAP-035 is booking-state-machine-tests wired with evidence classifier");
     expect(gapTracker).toContain("packages/booking/tests/booking-readiness.test.ts");
