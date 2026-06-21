@@ -15,6 +15,34 @@ function isUniqueConstraintError(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === "P2002";
 }
 
+type MessageListQueryRow = {
+  id: string;
+  tenantId: string;
+  clientId: string;
+  bookingRequestId: string | null;
+  appointmentId: string | null;
+  subject: string;
+  isArchived: boolean;
+  lastMessageAt: Date | null;
+  updatedAt: Date;
+  client: {
+    preferredName: string;
+    email: string | null;
+    phone: string | null;
+  };
+  messages: Array<{
+    id: string;
+    channel: string;
+    direction: string;
+    status: string;
+    body: string | null;
+    providerMessageId: string | null;
+    sentAt: Date | null;
+    readAt: Date | null;
+    createdAt: Date;
+  }>;
+};
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
@@ -118,7 +146,7 @@ export async function GET(request: NextRequest) {
       return { rows, audit };
     });
 
-    const threads = result.rows.map((row) => {
+    const threads = result.rows.map((row: MessageListQueryRow) => {
       const latest = row.messages[0];
       return {
         id: row.id,

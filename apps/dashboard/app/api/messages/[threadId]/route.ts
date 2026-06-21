@@ -137,7 +137,19 @@ export async function GET(request: NextRequest, context: MessageThreadDetailRout
       clientName: result.row.client.preferredName,
       clientEmail: "[redacted-dashboard-field]",
       clientPhone: result.row.client.phone ? "[redacted-dashboard-field]" : null,
-      messages: result.row.messages.map((message) => ({
+      messages: result.row.messages.map((message: {
+        id: string;
+        senderUserId: string | null;
+        senderClientId: string | null;
+        channel: string;
+        direction: string;
+        status: string;
+        body: string | null;
+        providerMessageId: string | null;
+        sentAt: Date | null;
+        readAt: Date | null;
+        createdAt: Date;
+      }) => ({
         id: message.id,
         senderUserId: message.senderUserId,
         senderClientId: message.senderClientId,

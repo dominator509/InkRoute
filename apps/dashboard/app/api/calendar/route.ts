@@ -150,7 +150,16 @@ export async function GET(request: NextRequest) {
         source: actor.source,
         tenantId,
         persistence: "database",
-        connections: result.connections.map((connection) => ({
+        connections: result.connections.map((connection: {
+          id: string;
+          artistId: string;
+          provider: string;
+          providerAccountId: string | null;
+          displayName: string | null;
+          syncStatus: string;
+          lastSyncedAt: Date | null;
+          updatedAt: Date;
+        }) => ({
           id: connection.id,
           artistId: connection.artistId,
           provider: connection.provider,
@@ -160,7 +169,19 @@ export async function GET(request: NextRequest) {
           lastSyncedAt: connection.lastSyncedAt?.toISOString() ?? null,
           updatedAt: connection.updatedAt.toISOString(),
         })),
-        events: result.events.map((event) => ({
+        events: result.events.map((event: {
+          id: string;
+          calendarConnectionId: string;
+          appointmentId: string | null;
+          provider: string;
+          externalEventId: string | null;
+          title: string;
+          startsAt: Date;
+          endsAt: Date;
+          timezone: string;
+          status: string;
+          rawPayload: unknown;
+        }) => ({
           id: event.id,
           calendarConnectionId: event.calendarConnectionId,
           appointmentId: event.appointmentId,
@@ -173,7 +194,22 @@ export async function GET(request: NextRequest) {
           status: event.status,
           rawPayload: redactProviderPayload(event.rawPayload),
         })),
-        availability: result.availability.map((window) => ({
+        availability: result.availability.map((window: {
+          id: string;
+          artistId: string;
+          travelCityId: string | null;
+          travelScheduleId: string | null;
+          kind: string;
+          status: string;
+          startsAt: Date;
+          endsAt: Date;
+          timezone: string | null;
+          maxBookings: number;
+          bufferBeforeMinutes: number;
+          bufferAfterMinutes: number;
+          publicLabel: string | null;
+          internalNotes: string | null;
+        }) => ({
           id: window.id,
           artistId: window.artistId,
           travelCityId: window.travelCityId,

@@ -429,7 +429,7 @@ function buildFallbackReport(body: Record<string, unknown>, tenantId: string): O
     tenantId,
     source: body.source === "dashboard" || body.source === "mobile" || body.source === "api" || body.source === "worker" || body.source === "webhook" ? body.source : "web",
     message: typeof body.message === "string" ? body.message : "Dashboard-approved issue automation request",
-    stack: typeof body.stack === "string" ? body.stack : undefined,
+    stack: typeof body.stack === "string" ? body.stack : "",
     route: typeof body.route === "string" ? body.route : "/dashboard/errors",
     release: typeof body.release === "string" ? body.release : "unknown",
     environment: body.environment === "production" || body.environment === "preview" || body.environment === "test" ? body.environment : "development",
@@ -446,7 +446,22 @@ async function loadReportDraft(input: { tenantId: string; errorReportId?: string
     return { report: buildFallbackReport(input.body, input.tenantId), persistedErrorReport: null };
   }
 
-  const persistedErrorReport = await prisma.errorReport.findFirst({
+  type ErrorReportQueryResult = {
+    id: string;
+    tenantId: string | null;
+    severity: string | null;
+    status: string;
+    source: string | null;
+    message: string;
+    stackHash: string | null;
+    route: string | null;
+    release: string | null;
+    metadata: Record<string, unknown> | null;
+    createdAt: Date;
+  };
+  const errorReportModel = prisma.errorReport as { findFirst: (args: unknown) => Promise<ErrorReportQueryResult | null> };
+
+  const persistedErrorReport = await errorReportModel.findFirst({
     where: { id: input.errorReportId, tenantId: input.tenantId },
     select: {
       id: true,
@@ -620,7 +635,11 @@ export async function handleGithubIssueAutomationPOST(request: NextRequest) {
   }
 
   try {
-    const { report, persistedErrorReport } = await loadReportDraft({ tenantId, errorReportId, body });
+    const { report, persistedErrorReport } = await loadReportDraft({
+      tenantId,
+      body,
+      ...(typeof errorReportId === "string" ? { errorReportId } : {}),
+    });
     if (process.env.NODE_ENV === "production" && !persistedErrorReport?.id) {
       return json(
         {
@@ -703,7 +722,8 @@ export async function handleGithubIssueAutomationPOST(request: NextRequest) {
     });
 
     if (persistedErrorReport?.id && dispatch.issueUrl) {
-      await persistGithubIssueLinkToErrorReport(prisma, {
+      const githubIssueRepository = prisma as unknown as GithubIssueLinkPersistenceRepository;
+      await persistGithubIssueLinkToErrorReport(githubIssueRepository, {
         tenantId,
         errorReportId: persistedErrorReport.id,
         approvalAuditLogId: auditLogId,

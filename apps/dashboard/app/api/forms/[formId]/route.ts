@@ -25,7 +25,7 @@ interface DashboardFormRouteContext {
 }
 
 export async function GET(request: NextRequest, context: DashboardFormRouteContext) {
-  const { params } = await context;
+  const params = await context.params;
   const actor = resolveDashboardActor(request);
   try {
     assertPermission(actor, "form:read");
@@ -146,7 +146,16 @@ export async function GET(request: NextRequest, context: DashboardFormRouteConte
           version: result.intakeForm.version,
           updatedAt: result.intakeForm.updatedAt.toISOString(),
           responseCount: result.intakeForm._count.responses,
-          questions: result.intakeForm.questions.map((question) => ({
+          questions: result.intakeForm.questions.map((question: {
+            id: string;
+            key: string;
+            label: string | null;
+            helpText: string | null;
+            type: string;
+            isRequired: boolean;
+            sortOrder: number;
+            options: unknown;
+          }) => ({
             id: question.id,
             key: question.key,
             label: question.label,
@@ -202,7 +211,7 @@ export async function GET(request: NextRequest, context: DashboardFormRouteConte
 }
 
 export async function PATCH(request: NextRequest, context: DashboardFormRouteContext) {
-  const { params } = await context;
+  const params = await context.params;
   const actor = resolveDashboardActor(request);
   try {
     assertPermission(actor, "form:write");

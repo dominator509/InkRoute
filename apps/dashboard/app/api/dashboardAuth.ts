@@ -96,10 +96,19 @@ export function assertPermission(context: DashboardActorContext, permission: Per
 
 export function evaluateDashboardApiGuard(request: NextRequest, permission: Permission, routePath = request.nextUrl.pathname) {
   const actor = resolveDashboardActor(request);
+  const method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" =
+    request.method === "GET" ||
+    request.method === "POST" ||
+    request.method === "PUT" ||
+    request.method === "PATCH" ||
+    request.method === "DELETE"
+      ? request.method
+      : "GET";
   const guard = evaluateApiRouteGuard({
     context: toTenantAccessContext(actor),
     tenantId: actor.tenantId,
     permission,
+    method,
     routePath,
     now: new Date().toISOString(),
   });

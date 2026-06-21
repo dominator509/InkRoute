@@ -35,18 +35,18 @@ function rowToReport(row: {
   route: string | null;
   metadata: unknown;
   createdAt: Date;
-}, environment: RuntimeEnvironment): ObservabilityReportDraft {
+}, environment: RuntimeEnvironment, fallbackTenantId: string): ObservabilityReportDraft {
   return {
     id: row.id,
-    tenantId: row.tenantId ?? undefined,
+    tenantId: row.tenantId ?? fallbackTenantId,
     severity: row.severity as ObservabilityReportDraft["severity"],
     status: row.status as ObservabilityReportDraft["status"],
     source: row.source as ObservabilityReportDraft["source"],
     message: row.message,
     redactedMessage: row.message,
     stackHash: row.stackHash ?? row.id,
-    route: row.route ?? undefined,
-    release: row.release ?? undefined,
+    route: row.route ?? "/dashboard/errors",
+    release: row.release ?? "unknown-release",
     environment,
     runtime: "server",
     handled: false,
@@ -113,9 +113,9 @@ export async function POST(request: NextRequest) {
       tenantId,
       reports: [buildFallbackReleaseIncidentReport({ tenantId, releaseVersion, environment })],
       rollbackRequested,
-      tenantCommunicationOwner,
+      ...(typeof tenantCommunicationOwner === "string" ? { tenantCommunicationOwner } : {}),
     });
-    return json({ ok: false, source: actor.source, tenantId, persistence: "local-fallback", ...fallback, artifactPaths: releaseIncidentLinkageArtifactPaths });
+    return json({ ok: false, source: actor.source, tenantId, ...fallback, persistence: "local-fallback", artifactPaths: releaseIncidentLinkageArtifactPaths });
   }
 
   try {
@@ -131,8 +131,16 @@ export async function POST(request: NextRequest) {
         orderBy: { createdAt: "desc" },
         select: { id: true },
       });
-      const reports = rows.map((row) => rowToReport(row, environment));
-      const linkage = buildReleaseIncidentPlanFromReports({ releaseId, releaseVersion, environment, tenantId, reports, rollbackRequested, tenantCommunicationOwner });
+      const reports = rows.map((row: Parameters<typeof rowToReport>[0]) => rowToReport(row, environment, tenantId));
+      const linkage = buildReleaseIncidentPlanFromReports({
+        releaseId,
+        releaseVersion,
+        environment,
+        tenantId,
+        reports,
+        rollbackRequested,
+        ...(typeof tenantCommunicationOwner === "string" ? { tenantCommunicationOwner } : {}),
+      });
       const audit = await tx.auditLog.create({
         data: {
           tenantId,
@@ -198,7 +206,7 @@ export async function POST(request: NextRequest) {
           where: { id: report.id },
           data: {
             metadata: {
-              ...report.redactedMetadata,
+              ...(report as unknown as { redactedMetadata: Record<string, unknown> }).redactedMetadata,
               releaseIncidentLinkage: {
                 releaseId,
                 releaseVersion,
@@ -223,7 +231,6 @@ export async function POST(request: NextRequest) {
           ok: false,
           source: actor.source,
           tenantId,
-          persistence: "database",
           auditId: result.auditId,
           releaseRecordId: result.releaseRecordId,
           releaseIncidentLinkIds: result.releaseIncidentLinkIds,
@@ -238,13 +245,27 @@ export async function POST(request: NextRequest) {
             requiredEvidence: result.linkage.readiness.requiredEvidence,
           },
           ...result.linkage,
+          persistence: "database",
           artifactPaths: releaseIncidentLinkageArtifactPaths,
         },
         503,
       );
     }
 
-    return json({ ok: result.linkage.plan.status === "ready", source: actor.source, tenantId, persistence: "database", auditId: result.auditId, releaseRecordId: result.releaseRecordId, releaseIncidentLinkIds: result.releaseIncidentLinkIds, ...result.linkage, artifactPaths: releaseIncidentLinkageArtifactPaths }, result.linkage.plan.status === "ready" ? 202 : 200);
+    return json(
+      {
+        ok: result.linkage.plan.status === "ready",
+        source: actor.source,
+        tenantId,
+        auditId: result.auditId,
+        releaseRecordId: result.releaseRecordId,
+        releaseIncidentLinkIds: result.releaseIncidentLinkIds,
+        ...result.linkage,
+        persistence: "database",
+        artifactPaths: releaseIncidentLinkageArtifactPaths,
+      },
+      result.linkage.plan.status === "ready" ? 202 : 200,
+    );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
       if (process.env.NODE_ENV === "production") {
@@ -271,9 +292,12 @@ export async function POST(request: NextRequest) {
         tenantId,
         reports: [buildFallbackReleaseIncidentReport({ tenantId, releaseVersion, environment })],
         rollbackRequested,
-        tenantCommunicationOwner,
+        ...(typeof tenantCommunicationOwner === "string" ? { tenantCommunicationOwner } : {}),
       });
-      return json({ ok: false, source: actor.source, tenantId, persistence: "local-fallback", warning: "Database unavailable; release incident link was not persisted.", ...fallback, artifactPaths: releaseIncidentLinkageArtifactPaths }, 503);
+      return json(
+        { ok: false, source: actor.source, tenantId, warning: "Database unavailable; release incident link was not persisted.", ...fallback, persistence: "local-fallback", artifactPaths: releaseIncidentLinkageArtifactPaths },
+        503,
+      );
     }
 
     return json({ ok: false, error: { code: "RELEASE_INCIDENT_LINK_FAILED", message: "Release incident linkage could not be persisted." } }, 500);

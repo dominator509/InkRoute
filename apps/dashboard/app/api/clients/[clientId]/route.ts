@@ -132,10 +132,12 @@ export async function GET(request: NextRequest, context: ClientDetailRouteContex
       return NextResponse.json({ ok: false, error: { code: "CLIENT_NOT_FOUND", message: "Client was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
     }
 
-    const lifetimeValueCents = result.row.bookingRequests.reduce(
-      (sum, booking) => sum + booking.payments.filter((payment) => payment.status === "paid").reduce((paymentSum, payment) => paymentSum + payment.amountCents, 0),
-      0,
-    );
+    const lifetimeValueCents = result.row.bookingRequests.reduce((sum: number, booking: { payments: { status: string; amountCents: number }[] }) => {
+      return sum + booking.payments.filter((payment: { status: string; amountCents: number }) => payment.status === "paid").reduce(
+        (paymentSum: number, payment: { amountCents: number }) => paymentSum + payment.amountCents,
+        0,
+      );
+    }, 0);
     const view = buildTenantDashboardView({
       collection: "clients",
       tenantId,
@@ -163,7 +165,13 @@ export async function GET(request: NextRequest, context: ClientDetailRouteContex
           ],
           medicalNotes: result.row.profile?.medicalNotesEncrypted ?? null,
           privateNotes: result.row.profile?.internalNotes ?? null,
-          relatedBookings: result.row.bookingRequests.map((booking) => ({
+          relatedBookings: result.row.bookingRequests.map((booking: {
+            id: string;
+            status: string;
+            style: string | null;
+            updatedAt: Date;
+            payments: readonly { status: string }[];
+          }) => ({
             id: booking.id,
             status: booking.status,
             style: booking.style,

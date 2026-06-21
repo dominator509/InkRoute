@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   dashboardTimezoneRecurrenceQaContract,
   validateTimezoneBoundaries,
+  type TimezoneBoundaryValidationInput,
 } from "../../../../lib/timezoneRecurrenceQa";
 import { assertPermission, resolveDashboardActor } from "../../dashboardAuth";
 
@@ -28,13 +29,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const boundaries = Array.isArray(body?.boundaries)
+  const boundaries: TimezoneBoundaryValidationInput[] = Array.isArray(body?.boundaries)
     ? body.boundaries.map((item, index) => {
         const record = typeof item === "object" && item !== null ? item as Record<string, unknown> : {};
+        const source =
+          record.source === "persistence" || record.source === "provider" || record.source === "route"
+            ? (record.source as TimezoneBoundaryValidationInput["source"])
+            : "route";
+
         return {
           id: String(record.id ?? `boundary-${index}`),
           timezone: String(record.timezone ?? ""),
-          source: record.source === "persistence" || record.source === "provider" ? record.source : "route",
+          source,
         };
       })
     : [];

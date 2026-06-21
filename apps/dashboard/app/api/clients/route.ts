@@ -112,10 +112,32 @@ export async function GET(request: NextRequest) {
       collection: "clients",
       tenantId,
       source: "repository",
-      records: result.rows.map((row) => {
-        const latestBooking = row.bookingRequests.slice().sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0];
+      records: result.rows.map((row: {
+        id: string;
+        tenantId: string;
+        preferredName: string | null;
+        email: string | null;
+        phone: string | null;
+        city: string | null;
+        region: string | null;
+        country: string | null;
+        marketingOptIn: boolean;
+        smsOptIn: boolean;
+        updatedAt: Date;
+        profile: { preferredContactMethod: string | null; internalNotes: string | null; medicalNotesEncrypted: string | null } | null;
+        bookingRequests: Array<{ status: string; updatedAt: Date; payments: Array<{ amountCents: number; status: string }> }>;
+      }) => {
+        const latestBooking = row.bookingRequests
+          .slice()
+          .sort(
+            (a: { updatedAt: Date }, b: { updatedAt: Date }) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+          )[0];
         const lifetimeValueCents = row.bookingRequests.reduce(
-          (sum, booking) => sum + booking.payments.filter((payment) => payment.status === "paid").reduce((paymentSum, payment) => paymentSum + payment.amountCents, 0),
+          (sum: number, booking: { payments: { status: string; amountCents: number }[] }) =>
+            sum +
+            booking.payments
+              .filter((payment: { status: string }) => payment.status === "paid")
+              .reduce((paymentSum: number, payment: { amountCents: number }) => paymentSum + payment.amountCents, 0),
           0,
         );
         return {

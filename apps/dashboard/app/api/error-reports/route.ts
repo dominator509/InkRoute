@@ -32,8 +32,19 @@ const localErrorReports = new Map<string, LocalErrorReport[]>();
 const LOCAL_REPORT_LIMIT = 150;
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
-type ErrorReportCreateData = Parameters<(typeof prisma)["errorReport"]["create"]>[0]["data"];
-type ErrorReportMetadataInput = Exclude<ErrorReportCreateData["metadata"], undefined>;
+type ErrorReportMetadataInput = Record<string, unknown>;
+type ErrorReportCreateData = {
+  tenantId: string;
+  severity: ErrorSeverity;
+  status: ErrorReportStatus;
+  source: ErrorSurface;
+  message: string;
+  stackHash: string;
+  release?: string | null;
+  route?: string | null;
+  userAgent?: string | null;
+  metadata: ErrorReportMetadataInput | null;
+};
 
 function nextLocalErrorId(tenantId: string): string {
   const random = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2);
@@ -206,7 +217,19 @@ export async function GET(request: NextRequest) {
         persistence: "database",
         count: result.rows.length,
         status: "authenticated-read",
-        reports: result.rows.map((entry) => ({
+        reports: result.rows.map((entry: {
+          id: string;
+          tenantId: string;
+          severity: ErrorSeverity;
+          status: ErrorReportStatus;
+          source: ErrorSurface;
+          message: string;
+          stackHash: string;
+          release: string | null;
+          route: string | null;
+          metadata: unknown;
+          createdAt: Date;
+        }) => ({
           id: entry.id,
           tenantId: entry.tenantId,
           severity: entry.severity,

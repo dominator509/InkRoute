@@ -183,16 +183,16 @@ function buildPostSuccessPayload(
     ...(auditId ? { auditId } : {}),
     gapIds: deploymentGapIds,
     ciResult: buildReleaseRecordCiResultMetadata({
-      workflowRunId: input.requestId,
-      workflowRunUrl: undefined,
-      releaseVersion: undefined,
+      workflowRunId: input.requestId ?? null,
+      workflowRunUrl: null,
+      releaseVersion: null,
       releaseChannel: input.targetEnvironment,
-      commitSha: undefined,
+      commitSha: null,
       status: policy.implemented ? "requested" : "blocked",
     }),
     ciResultWritePlan: buildReleaseRecordCiResultWritePlan({
-      workflowRunId: input.requestId,
-      workflowRunUrl: undefined,
+      workflowRunId: input.requestId ?? null,
+      workflowRunUrl: null,
       status: policy.implemented ? "requested" : "blocked",
     }),
     cicdAutomation: buildCicdDeploymentAutomationContract(),
@@ -242,7 +242,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const audit = await prisma.auditLog.create({
+    const auditLogModel = prisma.auditLog as { create: (args: unknown) => Promise<{ id: string }> };
+    const audit = await auditLogModel.create({
       data: {
         tenantId,
         actorUserId: actor.actorUserId,
@@ -345,7 +346,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const audit = await prisma.auditLog.create({
+    const auditLogModel = prisma.auditLog as { create: (args: unknown) => Promise<{ id: string }> };
+    const audit = await auditLogModel.create({
       data: {
         tenantId: actor.tenantId,
         actorUserId: actor.actorUserId,
@@ -360,16 +362,16 @@ export async function POST(request: NextRequest) {
           source: actor.source,
           implemented: policy.implemented,
           ciResult: buildReleaseRecordCiResultMetadata({
-            workflowRunId: input.requestId,
-            workflowRunUrl: undefined,
-            releaseVersion: undefined,
+            workflowRunId: input.requestId ?? null,
+            workflowRunUrl: null,
+            releaseVersion: null,
             releaseChannel: input.targetEnvironment,
-            commitSha: undefined,
+            commitSha: null,
             status: policy.implemented ? "requested" : "blocked",
           }),
           ciResultWritePlan: buildReleaseRecordCiResultWritePlan({
-            workflowRunId: input.requestId,
-            workflowRunUrl: undefined,
+            workflowRunId: input.requestId ?? null,
+            workflowRunUrl: null,
             status: policy.implemented ? "requested" : "blocked",
           }),
           cicdAutomation: buildCicdDeploymentAutomationContract(),

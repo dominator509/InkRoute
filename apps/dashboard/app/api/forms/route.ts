@@ -158,7 +158,26 @@ export async function GET(request: NextRequest) {
         source: actor.source,
         tenantId,
         persistence: "database",
-        intakeForms: result.intakeForms.map((form) => ({
+        intakeForms: result.intakeForms.map((form: {
+          id: string;
+          key: string;
+          title: string | null;
+          description: string | null;
+          status: string;
+          version: number;
+          updatedAt: Date;
+          questions: Array<{
+            id: string;
+            key: string;
+            label: string | null;
+            helpText: string | null;
+            type: string;
+            isRequired: boolean;
+            sortOrder: number;
+            options: unknown;
+          }>;
+          _count: { responses: number };
+        }) => ({
           id: form.id,
           key: form.key,
           type: "intake",
@@ -169,7 +188,16 @@ export async function GET(request: NextRequest) {
           updatedAt: form.updatedAt.toISOString(),
           questionCount: form.questions.length,
           responseCount: form._count.responses,
-          questions: form.questions.map((question) => ({
+          questions: form.questions.map((question: {
+            id: string;
+            key: string;
+            label: string | null;
+            helpText: string | null;
+            type: string;
+            isRequired: boolean;
+            sortOrder: number;
+            options: unknown;
+          }) => ({
             id: question.id,
             key: question.key,
             label: question.label,
@@ -180,7 +208,7 @@ export async function GET(request: NextRequest) {
             options: redactQuestionOptions(question.options),
           })),
         })),
-        consentForms: result.consentForms.map((form) => ({
+        consentForms: result.consentForms.map((form: { id: string; key: string; title: string | null; status: string; version: number; requiresMedicalAcknowledgment: boolean; _count: { signatures: number }; updatedAt: Date }) => ({
           id: form.id,
           key: form.key,
           type: "consent",
@@ -191,7 +219,7 @@ export async function GET(request: NextRequest) {
           signatureCount: form._count.signatures,
           updatedAt: form.updatedAt.toISOString(),
         })),
-        medicalAcknowledgments: result.medicalAcknowledgments.map((acknowledgment) => ({
+        medicalAcknowledgments: result.medicalAcknowledgments.map((acknowledgment: { id: string; status: string; flaggedReasons: unknown; reviewedAt: Date | null; updatedAt: Date }) => ({
           id: acknowledgment.id,
           status: acknowledgment.status,
           flaggedReasons: acknowledgment.flaggedReasons,

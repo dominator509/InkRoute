@@ -27,6 +27,32 @@ type FlagDecisionContext = {
   stableIdentifier: string;
 };
 
+type FeatureFlagFindManyFilter = {
+  where: { OR: Array<{ tenantId: string } | { tenantId: null }> };
+  orderBy: { updatedAt: "desc" };
+  select: {
+    key: true;
+    scope: true;
+    enabled: true;
+    description: true;
+    rules: true;
+  };
+};
+
+type FeatureFlagRow = {
+  key: string;
+  scope: DbFeatureScope;
+  enabled: boolean;
+  description: string | null;
+  rules: unknown;
+};
+
+type FeatureFlagRepository = {
+  featureFlag: {
+    findMany(filter: FeatureFlagFindManyFilter): Promise<FeatureFlagRow[]>;
+  };
+};
+
 function normalizeEnvironment(value: string | null): FeatureFlagChannel {
   const normalized = value?.toLowerCase().trim();
   if (normalized === "mobile_preview") return "mobile-preview";
@@ -97,7 +123,7 @@ function mergeDefinitionWithRecord(
   };
 }
 
-type FeatureFlagRulesInput = Exclude<Parameters<(typeof prisma)["featureFlag"]["upsert"]>[0]["create"]["rules"], undefined>;
+type FeatureFlagRulesInput = Record<string, unknown>;
 
 function buildDefinitionFallback(key: string): FeatureFlagDefinition {
   return {
@@ -130,7 +156,7 @@ function normalizeRulesInput(inputRules: unknown): Record<string, unknown> {
   return normalized;
 }
 
-function buildDefinitionsForTenant(tenantId: string, client: Pick<typeof prisma, "featureFlag"> = prisma) {
+function buildDefinitionsForTenant(tenantId: string, client: FeatureFlagRepository = prisma as unknown as FeatureFlagRepository) {
   const baseDefinitions = new Map<string, FeatureFlagDefinition>();
   defaultFeatureFlags.forEach((definition) => {
     baseDefinitions.set(definition.key, definition);
@@ -265,7 +291,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const definitions = await buildDefinitionsForTenant(tenantId, tx)();
+      const definitions = await buildDefinitionsForTenant(tenantId, tx as FeatureFlagRepository)();
       const audit = await tx.auditLog.create({
         data: {
           tenantId,
