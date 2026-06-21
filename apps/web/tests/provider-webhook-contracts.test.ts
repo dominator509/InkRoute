@@ -7,6 +7,7 @@ import {
   executeProviderWebhookReconciliation,
   providerWebhookRouteBoundaryRequiredControls,
 } from "../lib/providerWebhookReconciliation";
+// Stripe, email, SMS, and Expo webhook contracts are verified against shared boundary readiness and replay-safe persistence.
 
 const contractSource = readFileSync(join(process.cwd(), "apps/web/lib/providerWebhookReconciliation.ts"), "utf8");
 const emailRouteSource = readFileSync(join(process.cwd(), "apps/web/app/api/webhooks/email/route.ts"), "utf8");

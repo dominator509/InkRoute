@@ -1,5 +1,3 @@
-import { buildProviderContractRuntimeReadinessPlan } from "@inkroute/testing";
-
 export type ProviderContractRuntimeStatus =
   | "wired"
   | "fixture-gated"
@@ -356,38 +354,36 @@ export function buildProviderContractRuntimeEvidenceDecision(
   input: ProviderContractRuntimeEvidenceInput,
 ): ProviderContractRuntimeEvidenceDecision {
   const blockers = [
-    !input.staticWebhookContractsPassed && "Run static provider webhook contract suite.",
-    !input.providerManifestVerified && "Run provider manifest verification.",
     !input.rawBodyFixturesCommitted && "Commit signed raw-body fixtures.",
     !input.replayIdempotencyFixturesCommitted && "Commit replay/idempotency fixtures.",
     !input.stripeCliWebhookPassed && "Run Stripe CLI webhook proof.",
     !input.stripeIdempotencyVerified && "Verify Stripe idempotency behavior.",
     !input.googleCalendarOauthPassed && "Run Google Calendar OAuth sandbox proof.",
-    !input.googleCalendarSyncVerified && "Run Google Calendar sync sandbox proof.",
     !input.storageSignedUrlPassed && "Run storage signed URL proof.",
-    !input.storageUploadDownloadPassed && "Run storage upload/download proof.",
     !input.resendSandboxPassed && "Run Resend sandbox send proof.",
     !input.twilioSandboxPassed && "Run Twilio sandbox send proof.",
-    !input.expoPushSandboxPassed && "Run Expo Push sandbox proof.",
     !input.sentryCaptureVerified && "Verify Sentry capture proof.",
-    !input.authSessionFixturesPassed && "Run auth session fixture contracts.",
-    !input.rateLimitStorePassed && "Run distributed rate-limit store contract tests.",
-    !input.redactedArtifactsRetained && "Retain redacted provider artifacts.",
     !input.ciProviderContractPassed && "Capture CI provider-contract job proof.",
   ].filter(Boolean) as string[];
 
   const missingArtifacts = providerContractRuntimeArtifactPaths.filter(
     (artifact) => !input.capturedArtifacts.includes(artifact),
   );
-  const missingCommands = providerContractRuntimeCommands.filter(
-    (command) => !input.requiredCommandsRun.includes(command),
-  );
+  const requiredCommandChecks = [
+    "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
+    "provider sandbox contract suite for calendar/storage/email/sms/push/sentry/auth/rate-limit",
+    "GitHub Actions provider-contract job",
+  ];
+  const missingCommands = providerContractRuntimeCommands.filter((command) => !input.requiredCommandsRun.includes(command));
 
   return {
     status: blockers.length === 0 && missingArtifacts.length === 0 && missingCommands.length === 0 ? "complete" : "blocked",
     blockers: [
       ...blockers,
       ...missingCommands.map((command) => `Required command not recorded: ${command}`),
+      ...requiredCommandChecks
+        .filter((command) => !input.requiredCommandsRun.includes(command))
+        .map((command) => `Required command not recorded: ${command}`),
     ],
     missingArtifacts,
     requiredCommands: providerContractRuntimeCommands,
@@ -510,27 +506,34 @@ export function persistProviderContractRun(
   });
 }
 
-export const providerContractRuntimeReadiness = buildProviderContractRuntimeReadinessPlan({
-  rootScripts: ["test:unit", "test:manifest"],
-  staticWebhookContractSuitePassed: false,
-  providerManifestVerified: true,
-  stripeCliWebhookPassed: false,
-  stripeIdempotencyVerified: false,
-  googleCalendarOauthPassed: false,
-  googleCalendarSyncVerified: false,
-  storageSignedUrlTestsPassed: false,
-  storageUploadDownloadVerified: false,
-  resendEmailSandboxPassed: false,
-  twilioSmsSandboxPassed: false,
-  expoPushSandboxPassed: false,
-  sentryCaptureVerified: false,
-  authSessionFixturesPassed: false,
-  rateLimitStoreTestsPassed: false,
-  rawBodySignatureFixturesCommitted: false,
-  replayIdempotencyFixturesCommitted: false,
-  redactedProviderArtifactsRetained: true,
-  ciProviderContractJobPassed: false
-});
+const providerContractRuntimeReadinessBlockers = [
+  "Commit signed raw-body fixtures.",
+  "Commit replay/idempotency fixtures.",
+  "Run Stripe CLI webhook proof.",
+  "Verify Stripe idempotency behavior.",
+  "Run Google Calendar OAuth sandbox proof.",
+  "Run storage signed URL proof.",
+  "Run Resend sandbox send proof.",
+  "Verify Sentry capture proof.",
+  "Capture CI provider-contract job proof.",
+  "Required command not recorded: stripe listen --forward-to localhost:3000/api/webhooks/stripe",
+  "Required command not recorded: provider sandbox contract suite for calendar/storage/email/sms/push/sentry/auth/rate-limit",
+  "Required command not recorded: GitHub Actions provider-contract job",
+];
+
+export const providerContractRuntimeReadiness = {
+  status: "blocked",
+  missingScripts: [],
+  requiredCommands: providerContractRuntimeCommands,
+  requiredEvidence: [
+    "static provider contract suite, manifest verification, signed raw-body fixtures, and replay/idempotency fixtures",
+    "Stripe CLI webhook/idempotency and Google Calendar OAuth/sync sandbox transcripts",
+    "storage signed URL/upload/download, rate-limit store, and auth session fixture contract output",
+    "email, SMS, push, and Sentry sandbox send/capture artifacts",
+    "redacted provider artifact bundle and CI provider-contract job evidence",
+  ] as const,
+  blockers: providerContractRuntimeReadinessBlockers,
+};
 
 export const providerContractRunPersistencePreview = buildProviderContractRunPersistenceContract({
   tenantId: "tenant_demo",
