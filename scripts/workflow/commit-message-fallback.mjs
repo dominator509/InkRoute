@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import { execSync } from "node:child_process";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const normalizeArg = (value) => {
   if (!value) return value;
@@ -11,7 +12,17 @@ const normalizeArg = (value) => {
 
 const [, , rawMessageFile] = process.argv;
 const messageFile = normalizeArg(rawMessageFile);
+
+const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+
 const resolveGitDir = () => {
+  const explicitGitDir = process.env.GIT_DIR;
+  if (explicitGitDir) {
+    return path.isAbsolute(explicitGitDir)
+      ? explicitGitDir
+      : path.resolve(process.cwd(), explicitGitDir);
+  }
+
   try {
     const rawGitDir = execSync("git rev-parse --absolute-git-dir", {
       encoding: "utf8",
@@ -21,12 +32,22 @@ const resolveGitDir = () => {
 
     return rawGitDir;
   } catch {
+    const cwdGitDir = path.join(process.cwd(), ".git");
+    if (fs.existsSync(cwdGitDir)) {
+      return cwdGitDir;
+    }
+
+    const scriptGitDir = path.join(scriptRoot, ".git");
+    if (fs.existsSync(scriptGitDir)) {
+      return scriptGitDir;
+    }
+
     return path.join(process.cwd(), ".git");
   }
 };
 
 const targetMessageFile = messageFile
-  ? messageFile
+  ? path.resolve(process.cwd(), messageFile)
   : path.join(resolveGitDir(), "COMMIT_EDITMSG");
 
 if (!messageFile) {

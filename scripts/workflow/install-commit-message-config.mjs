@@ -1,5 +1,6 @@
 import { execSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const root = execSync('git rev-parse --show-toplevel', {
   encoding: 'utf8',
@@ -8,15 +9,16 @@ const root = execSync('git rev-parse --show-toplevel', {
 
 const templatePath = resolve(root, '.gitmessage').replace(/\\/g, '/');
 const editorScriptPath = resolve(root, 'scripts/workflow/commit-message-fallback.mjs').replace(/\\/g, '/');
+const fallbackEditor = process.execPath.replace(/\\/g, '/');
 
 execSync(`git config commit.template ${templatePath}`, {
   stdio: 'inherit',
 });
 
-execSync(`git config core.editor "node ${editorScriptPath}"`, {
+execSync(`git config core.editor "${fallbackEditor} ${editorScriptPath}"`, {
   stdio: 'inherit',
 });
 
 console.log('Commit message fallback configured:');
 console.log(`  commit.template = ${templatePath}`);
-console.log(`  core.editor = node ${editorScriptPath}`);
+console.log(`  core.editor = ${fallbackEditor} ${editorScriptPath}`);
