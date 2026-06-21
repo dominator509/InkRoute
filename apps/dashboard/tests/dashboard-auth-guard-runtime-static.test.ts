@@ -93,6 +93,8 @@ describe("dashboard auth guard runtime contract", () => {
     expect(dashboardAuthApi).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(dashboardAuthApi).toContain("headers: noStoreHeaders");
     expect(dashboardAuthApi).not.toContain('headers: { "Cache-Control": "no-store" }');
+    expect(dashboardAuthApi).toContain('const normalizedRole = (value ?? "").trim().toLowerCase()');
+    expect(dashboardAuthApi).toContain('return "assistant";');
   });
 
   it("keeps evidence blockers explicit until provider sessions, DB roles, browser denial, CI, and safe artifacts exist", () => {

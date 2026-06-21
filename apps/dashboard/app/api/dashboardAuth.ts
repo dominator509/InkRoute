@@ -26,10 +26,11 @@ export interface DashboardMembershipLookupMetadata {
 }
 
 function normalizeRole(value: string | null): Role {
-  if (allowedRoles.includes(value as Role)) {
-    return value as Role;
+  const normalizedRole = (value ?? "").trim().toLowerCase();
+  if (allowedRoles.includes(normalizedRole as Role)) {
+    return normalizedRole as Role;
   }
-  return "owner";
+  return "assistant";
 }
 
 function isProductionEnv() {
