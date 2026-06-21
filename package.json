@@ -91,7 +91,8 @@
     "workflow:obsidian:daily:open": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap-obsidian-vault.ps1 -WithDailyNote -OpenNow",
     "workflow:obsidian:refresh": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap-obsidian-vault.ps1 -ForceNotes",
     "workflow:obsidian:force-config": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap-obsidian-vault.ps1 -ForceConfig",
-    "workflow:obsidian:refresh-all": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap-obsidian-vault.ps1 -ForceNotes -ForceConfig"
+    "workflow:obsidian:refresh-all": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap-obsidian-vault.ps1 -ForceNotes -ForceConfig",
+    "workflow:commit-template": "git config commit.template .gitmessage"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
