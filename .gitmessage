@@ -1,10 +1,13 @@
-chore: summary
+chore: <short summary>
 
-Impact:
-- 
+# Optional structured sections for Codex/serena workflow work
+# Examples: GAP-017, GAP-021, workflow:tooling
 
-Validation:
-- 
+## Impact
+- <key behavior or doc update>
 
-Risks:
-- 
+## Validation
+- <tests/checks run or "not run">
+
+## Risks
+- <any residual risk or "none">
