@@ -11,6 +11,10 @@ describe("dashboard privacy request route static contract", () => {
     expect(routeSource).toContain("resolveDashboardActor");
     expect(routeSource).toContain('request.headers.get("x-tenant-id")');
     expect(routeSource).toContain("allowedDashboardRoles");
+    expect(routeSource).toContain("function normalizeHeaderValue(value: string | null): string | null");
+    expect(routeSource).toContain("const fallbackRole = \"viewer\";");
+    expect(routeSource).toContain("const defaultDemoActorId = \"demo-dashboard-user\";");
+    expect(routeSource).toContain("const normalizedRole = role.toLowerCase()");
     expect(routeSource).toContain("TENANT_SCOPE_REQUIRED");
     expect(routeSource).toContain("ROLE_NOT_AUTHORIZED");
     expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');

@@ -32,9 +32,16 @@ type DashboardActor = {
 const requestTypes: PrivacyRequestType[] = ["access", "export", "rectification", "deletion", "restriction"];
 const demoTenantId = "demo-studio-alpha";
 const allowedDashboardRoles = new Set(["owner", "studio_manager", "admin"]);
+const fallbackRole = "viewer";
 const inMemoryPrivacyRequests: DemoPrivacyRequest[] = [];
 const rateLimitBuckets = new Map<string, { windowStart: number; count: number }>();
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+const defaultDemoActorId = "demo-dashboard-user";
+
+function normalizeHeaderValue(value: string | null): string | null {
+  const normalized = value?.trim();
+  return normalized && normalized.length > 0 ? normalized : null;
+}
 let requestCounter = 1;
 
 function isPrivacyRequestType(value: unknown): value is PrivacyRequestType {
@@ -54,9 +61,10 @@ function getClientIp(request: NextRequest): string {
 }
 
 function resolveDashboardActor(request: NextRequest): { actor?: DashboardActor; error?: { status: number; code: string; message: string } } {
-  const tenantId = request.headers.get("x-tenant-id");
-  const role = request.headers.get("x-user-role") ?? "viewer";
-  const userId = request.headers.get("x-user-id") ?? "demo-dashboard-user";
+  const tenantId = normalizeHeaderValue(request.headers.get("x-tenant-id"));
+  const role = normalizeHeaderValue(request.headers.get("x-user-role")) ?? fallbackRole;
+  const userId = normalizeHeaderValue(request.headers.get("x-user-id")) ?? defaultDemoActorId;
+  const normalizedRole = role.toLowerCase();
 
   if (tenantId !== demoTenantId) {
     return {
@@ -68,7 +76,7 @@ function resolveDashboardActor(request: NextRequest): { actor?: DashboardActor; 
     };
   }
 
-  if (!allowedDashboardRoles.has(role)) {
+  if (!allowedDashboardRoles.has(normalizedRole)) {
     return {
       error: {
         status: 403,
@@ -78,7 +86,7 @@ function resolveDashboardActor(request: NextRequest): { actor?: DashboardActor; 
     };
   }
 
-  return { actor: { tenantId, userId, role } };
+  return { actor: { tenantId, userId, role: normalizedRole } };
 }
 
 function checkDashboardMutationRateLimit(request: NextRequest, actor: DashboardActor) {

@@ -10,11 +10,14 @@ describe("dashboard trust status route static contract", () => {
     expect(routeSource).toContain("resolveDashboardReader");
     expect(routeSource).toContain('request.headers.get("x-tenant-id")');
     expect(routeSource).toContain("allowedReadRoles");
+    expect(routeSource).toContain("function normalizeHeaderValue(value: string | null): string | null");
+    expect(routeSource).toContain("const fallbackRole = \"viewer\";");
     expect(routeSource).toContain("TENANT_SCOPE_REQUIRED");
     expect(routeSource).toContain("ROLE_NOT_AUTHORIZED");
     expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(routeSource).toContain("headers: noStoreHeaders");
     expect(routeSource).not.toContain('headers: { "Cache-Control": "no-store" }');
+    expect(routeSource).toContain("const normalizedRole = role.toLowerCase()");
   });
 
   it("returns security posture helper outputs without enabling production controls", () => {

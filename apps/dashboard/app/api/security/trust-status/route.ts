@@ -11,12 +11,18 @@ import {
 
 const demoTenantId = "demo-studio-alpha";
 const allowedReadRoles = new Set(["owner", "studio_manager", "admin", "artist"]);
+const fallbackRole = "viewer";
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
+function normalizeHeaderValue(value: string | null): string | null {
+  const normalized = value?.trim();
+  return normalized && normalized.length > 0 ? normalized : null;
+}
+
 function resolveDashboardReader(request: NextRequest): { tenantId: string; role: string; userId: string } | { error: { status: number; code: string; message: string } } {
-  const tenantId = request.headers.get("x-tenant-id");
-  const role = request.headers.get("x-user-role") ?? "viewer";
-  const userId = request.headers.get("x-user-id") ?? "demo-dashboard-reader";
+  const tenantId = normalizeHeaderValue(request.headers.get("x-tenant-id"));
+  const role = normalizeHeaderValue(request.headers.get("x-user-role")) ?? fallbackRole;
+  const userId = normalizeHeaderValue(request.headers.get("x-user-id")) ?? "demo-dashboard-reader";
 
   if (tenantId !== demoTenantId) {
     return {
@@ -28,7 +34,9 @@ function resolveDashboardReader(request: NextRequest): { tenantId: string; role:
     };
   }
 
-  if (!allowedReadRoles.has(role)) {
+  const normalizedRole = role.toLowerCase();
+
+  if (!allowedReadRoles.has(normalizedRole)) {
     return {
       error: {
         status: 403,
@@ -38,7 +46,7 @@ function resolveDashboardReader(request: NextRequest): { tenantId: string; role:
     };
   }
 
-  return { tenantId, role, userId };
+  return { tenantId, role: normalizedRole, userId };
 }
 
 export async function GET(request: NextRequest) {
