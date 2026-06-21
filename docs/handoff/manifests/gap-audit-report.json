@@ -1,10 +1,11 @@
 {
-  "generatedAt": "2026-06-12T09:04:32.108Z",
+  "generatedAt": "2026-06-21T11:34:51.292Z",
   "status": "warn",
-  "totalGaps": 133,
-  "blockingGaps": 126,
+  "totalGaps": 112,
+  "blockingGaps": 112,
   "criticalBlockingGapIds": [
-    "GAP-003",
+    "GAP-001",
+    "GAP-002",
     "GAP-004",
     "GAP-005",
     "GAP-013",
@@ -14,168 +15,146 @@
     "GAP-032",
     "GAP-033",
     "GAP-034",
-    "GAP-036",
     "GAP-037",
     "GAP-038",
     "GAP-040",
-    "GAP-042",
     "GAP-043",
     "GAP-045",
     "GAP-049",
     "GAP-050",
     "GAP-051",
     "GAP-053",
-    "GAP-056",
-    "GAP-057",
     "GAP-062",
     "GAP-064",
-    "GAP-066",
-    "GAP-067",
     "GAP-080",
     "GAP-081",
     "GAP-088",
     "GAP-089",
-    "GAP-095",
     "GAP-096",
     "GAP-097",
     "GAP-098",
     "GAP-100",
     "GAP-101",
     "GAP-107",
-    "GAP-110",
     "GAP-114",
     "GAP-115",
     "GAP-117",
-    "GAP-118"
+    "GAP-118",
+    "GAP-119",
+    "GAP-120",
+    "GAP-121",
+    "GAP-122",
+    "GAP-123",
+    "GAP-124",
+    "GAP-125",
+    "GAP-126",
+    "GAP-127",
+    "GAP-128",
+    "GAP-129",
+    "GAP-130",
+    "GAP-131",
+    "GAP-132",
+    "GAP-133"
   ],
   "bySeverity": {
-    "High": 66,
-    "Critical": 43,
-    "Medium": 24
+    "Critical": 51,
+    "High": 46,
+    "Medium": 15
   },
   "byPhase": {
-    "Phase 1": 6,
-    "Phase 2": 9,
+    "Gap": 19,
     "Phase 7": 7,
+    "Phase 1": 4,
     "Phase 3": 4,
-    "Phase 5": 7,
-    "Phase 6": 6,
-    "Phase 8": 7,
-    "Phase 9": 12,
+    "Phase 6": 5,
+    "Phase 9": 11,
     "Phase 11": 10,
-    "Phase 14": 9,
-    "Phase 6/15": 1,
     "Phase 12": 9,
+    "Phase 2": 7,
     "Phase 4": 5,
-    "Phase 10": 9,
+    "Phase 10": 8,
     "Phase 4/7": 1,
-    "Phase 13": 10,
-    "Phase 15": 7,
-    "Phase 15/16": 1,
-    "Phase 16": 5,
-    "Phase 17": 4,
-    "Phase 18": 4
+    "Phase 5": 4,
+    "Phase 8": 3,
+    "Phase 13": 9,
+    "Phase 14": 3,
+    "Phase 15": 3
   },
   "findings": [
     {
       "status": "warn",
-      "gapId": "GAP-011",
-      "message": "Blocks production uses qualified value: Yes for launch."
+      "gapId": "GAP-004",
+      "message": "Expected sequential GAP-003."
+    },
+    {
+      "status": "warn",
+      "gapId": "GAP-008",
+      "message": "Expected sequential GAP-007."
+    },
+    {
+      "status": "warn",
+      "gapId": "GAP-010",
+      "message": "Expected sequential GAP-009."
+    },
+    {
+      "status": "warn",
+      "gapId": "GAP-013",
+      "message": "Expected sequential GAP-012."
     },
     {
       "status": "warn",
       "gapId": "GAP-015",
-      "message": "Blocks production uses qualified value: No for MVP demo; Yes for SaaS launch."
+      "message": "Expected sequential GAP-014."
     },
     {
       "status": "warn",
-      "gapId": "GAP-018",
-      "message": "Blocks production uses qualified value: No for code scaffold; Yes for integrated app."
+      "gapId": "GAP-024",
+      "message": "Expected sequential GAP-023."
     },
     {
       "status": "warn",
-      "gapId": "GAP-020",
-      "message": "Blocks production uses qualified value: Yes for validated API launch."
+      "gapId": "GAP-037",
+      "message": "Expected sequential GAP-036."
     },
     {
       "status": "warn",
-      "gapId": "GAP-030",
-      "message": "Blocks production uses qualified value: Yes for launch quality."
+      "gapId": "GAP-043",
+      "message": "Expected sequential GAP-041."
     },
     {
       "status": "warn",
-      "gapId": "GAP-035",
-      "message": "Blocks production uses qualified value: Yes for reliable launch."
+      "gapId": "GAP-058",
+      "message": "Expected sequential GAP-056."
     },
     {
       "status": "warn",
-      "gapId": "GAP-046",
-      "message": "Blocks production uses qualified value: Yes for launch."
+      "gapId": "GAP-060",
+      "message": "Expected sequential GAP-059."
     },
     {
       "status": "warn",
-      "gapId": "GAP-047",
-      "message": "Blocks production uses qualified value: Yes for mobile launch."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-055",
-      "message": "Blocks production uses qualified value: Yes for production calendar feeds."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-063",
-      "message": "Blocks production uses qualified value: Yes for mobile launch."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-073",
-      "message": "Blocks production uses qualified value: Yes for launch quality."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-074",
-      "message": "Blocks production uses qualified value: No for MVP demo; yes for SaaS analytics."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-075",
-      "message": "Blocks production uses qualified value: No for local demo; yes for production SEO operations."
+      "gapId": "GAP-071",
+      "message": "Expected sequential GAP-070."
     },
     {
       "status": "warn",
       "gapId": "GAP-077",
-      "message": "Blocks production uses qualified value: Yes for production media quality."
+      "message": "Expected sequential GAP-076."
     },
     {
       "status": "warn",
-      "gapId": "GAP-078",
-      "message": "Blocks production uses qualified value: Yes for safe iteration."
+      "gapId": "GAP-096",
+      "message": "Expected sequential GAP-095."
     },
     {
       "status": "warn",
-      "gapId": "GAP-083",
-      "message": "Blocks production uses qualified value: Yes for production ops."
+      "gapId": "GAP-107",
+      "message": "Expected sequential GAP-106."
     },
     {
       "status": "warn",
-      "gapId": "GAP-084",
-      "message": "Blocks production uses qualified value: No for MVP demo; yes for production debugging."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-085",
-      "message": "Blocks production uses qualified value: No for MVP demo; yes for agentic ops."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-091",
-      "message": "Blocks production uses qualified value: Yes for mobile launch."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-093",
-      "message": "Blocks production uses qualified value: Yes for production operations."
+      "gapId": "GAP-114",
+      "message": "Expected sequential GAP-109."
     }
   ]
 }
