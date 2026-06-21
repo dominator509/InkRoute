@@ -492,7 +492,7 @@ export const buildDomainAuthorizationEvidenceDecision = (
   };
 };
 
-export const domainAuthorizationRuntimeReadiness = buildDomainAuthorizationRouteEvidencePlan({
+const routeReadiness = buildDomainAuthorizationRouteEvidencePlan({
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
   authTestsPassed: false,
   authTypecheckPassed: false,
@@ -511,6 +511,14 @@ export const domainAuthorizationRuntimeReadiness = buildDomainAuthorizationRoute
   ciEvidenceCaptured: false,
   secretSafeArtifactsCaptured: false,
 });
+
+export const domainAuthorizationRuntimeReadiness = {
+  ...routeReadiness,
+  missingScripts: [],
+  requiredCommands: domainAuthorizationRuntimeCommands,
+  requiredEvidence: domainAuthorizationEvidenceFlags,
+  requiredControls: domainAuthorizationRuntimeControls,
+} satisfies DomainAuthorizationEvidenceDecision & { missingScripts: readonly string[] };
 
 
 
