@@ -1,6 +1,1 @@
-chore: update
-
-# Optional structure for Codex/Serena commits. Replace this line and sections before committing.
-# Impact: concise change summary
-# Validation: tests/checks run (or not run)
-# Risks: residual risk (or none)
+chore: <summary>
