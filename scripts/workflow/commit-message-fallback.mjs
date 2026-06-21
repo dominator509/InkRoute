@@ -2,17 +2,26 @@
 
 import fs from "node:fs";
 import { execSync } from "node:child_process";
+import path from "node:path";
 
 const [, , messageFile] = process.argv;
+const targetMessageFile =
+  messageFile || path.join(process.cwd(), ".git", "COMMIT_EDITMSG");
 
 if (!messageFile) {
-  process.exit(1);
+  // Some clients invoke core.editor without passing the temporary file path.
+  // Fall back to the default repository message file so commit can still proceed.
 }
 
-const stagedOutput = execSync("git diff --cached --name-only --", {
-  encoding: "utf8",
-  stdio: ["ignore", "pipe", "ignore"],
-}).trim();
+let stagedOutput = "";
+try {
+  stagedOutput = execSync("git diff --cached --name-only --", {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  }).trim();
+} catch {
+  stagedOutput = "";
+}
 
 const stagedFiles = stagedOutput
   ? stagedOutput.split(/\r?\n/).filter(Boolean)
@@ -45,4 +54,5 @@ Risk:
 - Review generated diff and regenerate the message if needed before push.
 `;
 
-fs.writeFileSync(messageFile, `${body}\n`);
+fs.mkdirSync(path.dirname(targetMessageFile), { recursive: true });
+fs.writeFileSync(targetMessageFile, `${body}\n`);
