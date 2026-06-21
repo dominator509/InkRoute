@@ -10,8 +10,28 @@ const normalizeArg = (value) => {
   return value.replace(/^"|"$/g, "").replace(/^'|'$/g, "");
 };
 
-const [, , rawMessageFile] = process.argv;
-const messageFile = normalizeArg(rawMessageFile);
+const normalizeArgs = process.argv
+  .slice(2)
+  .map(normalizeArg)
+  .filter(Boolean)
+  .filter((arg) => !arg.startsWith("-"));
+
+const resolveMessageFile = () => {
+  const maybeFileArg = normalizeArgs.find((arg) => {
+    if (!arg) return false;
+    const resolved = path.resolve(process.cwd(), arg);
+    return (
+      fs.existsSync(resolved) ||
+      /[\\/]COMMIT_EDITMSG$/i.test(arg) ||
+      /[\\/]COMMIT_EDITMSG$/i.test(resolved)
+    );
+  });
+
+  if (!maybeFileArg) return null;
+  return path.resolve(process.cwd(), maybeFileArg);
+};
+
+const messageFile = resolveMessageFile();
 
 const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
