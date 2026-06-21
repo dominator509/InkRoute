@@ -15,7 +15,7 @@ execSync(`git config commit.template ${templatePath}`, {
   stdio: 'inherit',
 });
 
-execSync(`git config core.editor "${fallbackEditor} ${editorScriptPath}"`, {
+execSync(`git config core.editor "\"${fallbackEditor}\" \"${editorScriptPath}\""`, {
   stdio: 'inherit',
 });
 
