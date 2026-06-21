@@ -1,6 +1,10 @@
-chore: replace this summary
+chore: <summary>
 
-- Why: what this change does
-- Key changes
-- Verification
-- Risk or notes
+# Why:
+# - <details>
+
+# Validation:
+# - <tests/checks run>
+
+# Risk:
+# - <risk or "none">
