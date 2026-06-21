@@ -1129,6 +1129,7 @@ export const performanceLoadRuntimeReadinessRequiredCommands = [
       "database EXPLAIN/ANALYZE query-plan checks",
       "image optimization benchmark report",
       "verify performance regression thresholds",
+      "GitHub Actions performance/load job",
     ] as const;
 
 export const performanceLoadRuntimeReadinessRequiredEvidence = [

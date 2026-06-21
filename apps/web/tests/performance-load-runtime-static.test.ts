@@ -109,7 +109,7 @@ describe("GAP-112 performance and load runtime wiring", () => {
   it("keeps readiness blocked until real Lighthouse, load, EXPLAIN, image, CI, and triage proof exists", () => {
     expect(performanceLoadRuntimeReadiness.status).toBe("blocked");
     expect(performanceLoadRuntimeReadiness.missingScripts).toEqual([]);
-    expect(performanceLoadRuntimeReadiness.requiredCommands).toBe(performanceLoadRuntimeCommands);
+    expect(performanceLoadRuntimeReadiness.requiredCommands).toStrictEqual(performanceLoadRuntimeCommands);
     expect(performanceLoadRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "performance budget verifier, Lighthouse CI, Core Web Vitals, and route budget reports",

@@ -1904,7 +1904,7 @@
       "file": "apps/web/tests/performance-load-runtime-static.test.ts",
       "priority": "medium",
       "verifies": [
-        "GAP-112 performance/load runtime matrix covers performance budget verifier, Lighthouse CI, Core Web Vitals, public/dashboard route budgets, booking/webhook/upload load tests, DB EXPLAIN/ANALYZE, image optimization benchmarks, regression thresholds, retained artifacts, CI performance job, regression triage, and PerformanceLoadRun Prisma model/app row contract are wired",
+        "GAP-112 performance/load runtime matrix covers performance budget verifier, Lighthouse CI, Core Web Vitals, public/dashboard route budgets, booking/webhook/upload load tests, DB EXPLAIN/ANALYZE, image optimization benchmarks, regression thresholds, retained artifacts, CI performance job, regression triage, and PerformanceLoadRun Prisma model and app row contract are wired",
         "GAP-112 performance budget manifest, verifier script, root script, static checker, and readiness blockers stay aligned before live benchmark proof",
         "GAP-112 CI retains performance/load runtime contract and artifact paths without claiming Lighthouse/load/database benchmark execution has passed"
       ],
