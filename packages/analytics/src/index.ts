@@ -88,10 +88,14 @@ function cleanAttributionValue(value: string | null): string | undefined {
 export function parseUtmAttribution(url: string): UtmAttribution {
   try {
     const parsed = new URL(url, "https://inkroute.local");
+    const source = cleanAttributionValue(parsed.searchParams.get("utm_source"));
+    const medium = cleanAttributionValue(parsed.searchParams.get("utm_medium"));
+    const campaign = cleanAttributionValue(parsed.searchParams.get("utm_campaign"));
+
     return {
-      source: cleanAttributionValue(parsed.searchParams.get("utm_source")),
-      medium: cleanAttributionValue(parsed.searchParams.get("utm_medium")),
-      campaign: cleanAttributionValue(parsed.searchParams.get("utm_campaign")),
+      ...(source !== undefined ? { source } : {}),
+      ...(medium !== undefined ? { medium } : {}),
+      ...(campaign !== undefined ? { campaign } : {}),
     };
   } catch {
     return {};
@@ -99,15 +103,21 @@ export function parseUtmAttribution(url: string): UtmAttribution {
 }
 
 export function normalizeAnalyticsEvent(name: AnalyticsEventName, payload: AnalyticsEventPayload): AnalyticsEvent {
+  const city = payload.city?.trim();
+  const style = payload.style?.trim().toLowerCase().replace(/\s+/g, "_");
+  const source = cleanAttributionValue(payload.source ?? null);
+  const medium = cleanAttributionValue(payload.medium ?? null);
+  const campaign = cleanAttributionValue(payload.campaign ?? null);
+
   return {
     name,
     payload: {
       ...payload,
-      city: payload.city?.trim(),
-      style: payload.style?.trim().toLowerCase().replace(/\s+/g, "_"),
-      source: cleanAttributionValue(payload.source ?? null),
-      medium: cleanAttributionValue(payload.medium ?? null),
-      campaign: cleanAttributionValue(payload.campaign ?? null),
+      ...(city !== undefined ? { city } : {}),
+      ...(style !== undefined ? { style } : {}),
+      ...(source !== undefined ? { source } : {}),
+      ...(medium !== undefined ? { medium } : {}),
+      ...(campaign !== undefined ? { campaign } : {}),
     },
   };
 }
@@ -132,11 +142,15 @@ export function derivePortfolioBookingAttribution(input: {
     return { reason: "No recent tenant-scoped portfolio view was available for booking attribution." };
   }
 
+  const source = winner.payload.source ?? input.bookingEvent.payload.source;
+  const medium = winner.payload.medium ?? input.bookingEvent.payload.medium;
+  const campaign = winner.payload.campaign ?? input.bookingEvent.payload.campaign;
+
   return {
     portfolioItemId: winner.payload.portfolioItemId,
-    source: winner.payload.source ?? input.bookingEvent.payload.source,
-    medium: winner.payload.medium ?? input.bookingEvent.payload.medium,
-    campaign: winner.payload.campaign ?? input.bookingEvent.payload.campaign,
+    ...(source !== undefined ? { source } : {}),
+    ...(medium !== undefined ? { medium } : {}),
+    ...(campaign !== undefined ? { campaign } : {}),
     reason: "Most recent tenant-scoped portfolio view before booking submission.",
   };
 }

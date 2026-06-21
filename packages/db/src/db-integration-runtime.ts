@@ -16,7 +16,7 @@ export interface DbIntegrationRuntimeMatrixEntry {
 export interface DbIntegrationRunPersistenceInput {
   tenantId: string;
   runId: string;
-  commitSha?: string;
+  commitSha?: string | null;
   status: "blocked" | "running" | "passed" | "failed" | "database_gated";
   runtimeMatrix: readonly DbIntegrationRuntimeMatrixEntry[];
   artifactManifest: readonly string[];
@@ -33,8 +33,8 @@ export interface DbIntegrationRunPersistenceInput {
   auditLogIntegrationPassed: boolean;
   destructiveResetGuarded: boolean;
   rollbackDocumented: boolean;
-  redactedTranscriptPath?: string;
-  ciRunUrl?: string;
+  redactedTranscriptPath?: string | null;
+  ciRunUrl?: string | null;
 }
 
 export interface DbIntegrationRunPersistenceContract {

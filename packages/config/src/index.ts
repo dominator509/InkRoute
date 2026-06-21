@@ -577,7 +577,7 @@ const publicContentRedactedFields = [
   "travel.artistId",
 ];
 
-const portfolioImageDerivatives: Record<string, Omit<PublicPortfolioImageDerivative, "altText">> = {
+const portfolioImageDerivatives: Record<string, Omit<PublicPortfolioImageDerivative, "altText" | "blurDataUrl">> = {
   "orbital-serpent": {
     src: "/demo/portfolio/orbital-serpent.svg",
     width: 1200,

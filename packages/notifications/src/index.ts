@@ -1399,8 +1399,8 @@ export function buildEmailWebhookRuntimeReadinessPlan(input: EmailWebhookRuntime
     provider: "resend",
     eventId: input.eventId,
     eventType: input.eventType,
-    providerMessageId: input.providerMessageId,
-    alreadyProcessedEventIds: input.alreadyProcessedEventIds,
+    ...(input.providerMessageId ? { providerMessageId: input.providerMessageId } : {}),
+    ...(input.alreadyProcessedEventIds ? { alreadyProcessedEventIds: input.alreadyProcessedEventIds } : {}),
   });
   const blockers: string[] = [...reconciliation.blockers];
 
@@ -1451,9 +1451,9 @@ export function buildSmsWebhookRuntimeReadinessPlan(input: SmsWebhookRuntimeRead
     provider: "twilio",
     eventId: input.eventId,
     eventType: input.eventType,
-    providerMessageId: input.providerMessageId,
     inboundBody: input.inboundBody,
-    alreadyProcessedEventIds: input.alreadyProcessedEventIds,
+    ...(input.providerMessageId ? { providerMessageId: input.providerMessageId } : {}),
+    ...(input.alreadyProcessedEventIds ? { alreadyProcessedEventIds: input.alreadyProcessedEventIds } : {}),
   });
   const blockers: string[] = [...reconciliation.blockers];
 

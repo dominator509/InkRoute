@@ -1,7 +1,7 @@
-type PrismaRuntimeClient = {
-  readonly [delegate: string]: Record<string, (...args: unknown[]) => Promise<any>>;
-  $transaction<T>(operation: (tx: Record<string, any>) => Promise<T>): Promise<T>;
-};
+interface PrismaRuntimeClient {
+  [delegate: string]: any;
+  $transaction<T>(operation: (tx: PrismaRuntimeClient) => Promise<T>): Promise<T>;
+}
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaRuntimeClient };
 const dynamicImport = new Function("specifier", "return import(specifier)") as (specifier: string) => Promise<unknown>;

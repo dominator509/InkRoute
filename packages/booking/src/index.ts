@@ -802,6 +802,21 @@ const dashboardProviderActions: Record<
     writes: ["Payment", "AuditLog"],
     auditAction: "dashboard.deposit_session.create",
   },
+  mark_deposit_paid: {
+    providerBoundary: "stripe",
+    writes: ["Payment", "BookingStateEvent", "AuditLog"],
+    auditAction: "dashboard.deposit_paid.mark",
+  },
+  confirm_appointment: {
+    providerBoundary: "database",
+    writes: ["BookingRequest", "BookingStateEvent", "AuditLog"],
+    auditAction: "dashboard.appointment.confirm",
+  },
+  request_changes: {
+    providerBoundary: "database",
+    writes: ["BookingRequest", "BookingStateEvent", "AuditLog"],
+    auditAction: "dashboard.request_changes",
+  },
   send_client_notification: {
     providerBoundary: "notification",
     writes: ["NotificationDelivery", "AuditLog"],

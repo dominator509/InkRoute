@@ -17,7 +17,7 @@ export interface MobileTestingExecutionMatrixEntry {
 export interface MobileTestingRunPersistenceInput {
   tenantId: string;
   runId: string;
-  commitSha?: string;
+  commitSha?: string | null;
   status: "blocked" | "running" | "passed" | "failed" | "device_gated" | "provider_gated";
   executionMatrix: readonly MobileTestingExecutionMatrixEntry[];
   checklistIds: readonly string[];
@@ -40,7 +40,7 @@ export interface MobileTestingRunPersistenceInput {
   easUpdateRollbackPassed: boolean;
   accessibilityQaPassed: boolean;
   ciMobileChecksPassed: boolean;
-  ciRunUrl?: string;
+  ciRunUrl?: string | null;
 }
 
 export interface MobileTestingRunPersistenceContract {

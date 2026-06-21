@@ -88,7 +88,13 @@ async function persistAlertDelivery(input: {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const alertDelivery = await tx.alertDelivery.create({
+      const alertDeliveryDelegate = tx.alertDelivery;
+      const auditLogDelegate = tx.auditLog;
+      if (!alertDeliveryDelegate?.create || !auditLogDelegate?.create) {
+        throw new Error("Prisma transaction delegates unavailable.");
+      }
+
+      const alertDelivery = await alertDeliveryDelegate.create({
         data: {
           tenantId: input.report.tenantId!,
           fingerprint: input.report.fingerprint,
@@ -104,7 +110,7 @@ async function persistAlertDelivery(input: {
         select: { id: true },
       });
 
-      const auditLog = await tx.auditLog.create({
+      const auditLog = await auditLogDelegate.create({
         data: {
           tenantId: input.report.tenantId!,
           action: "observability.alert_escalation.enqueue",
