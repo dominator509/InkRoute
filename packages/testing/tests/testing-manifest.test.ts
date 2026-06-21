@@ -158,10 +158,9 @@ describe("Phase 14 testing manifest", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toBe(dashboardTestExecutionEvidenceRequiredCommands);
-    expect(plan.requiredCommands).toEqual(dashboardTestExecutionEvidenceRequiredCommands);
-    expect(plan.requiredControls).toBe(dashboardTestExecutionEvidenceRequiredControls);
-    expect(plan.requiredEvidence).toBe(dashboardTestExecutionEvidenceRequiredEvidence);
+    expect(plan.requiredCommands).toStrictEqual(dashboardTestExecutionEvidenceRequiredCommands);
+    expect(plan.requiredControls).toStrictEqual(dashboardTestExecutionEvidenceRequiredControls);
+    expect(plan.requiredEvidence).toStrictEqual(dashboardTestExecutionEvidenceRequiredEvidence);
     expect(plan.blockers).toContain("Dashboard axe accessibility checks must pass.");
     expect(plan.blockers).toContain("Branch protection must require the dashboard test gate before merge.");
     expect(plan.blockers).toContain("Dashboard test artifacts must be redacted and free of secrets, tokens, raw PII, medical notes, payment data, provider tokens, and private file URLs.");
@@ -195,7 +194,7 @@ describe("Phase 14 testing manifest", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toBe(dashboardTestExecutionEvidenceRequiredControls);
+    expect(plan.requiredControls).toStrictEqual(dashboardTestExecutionEvidenceRequiredControls);
   });
 
   it("summarizes testing runtime readiness across install, execution, coverage, artifacts, CI, and branch protection", () => {
