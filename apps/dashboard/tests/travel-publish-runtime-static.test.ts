@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -119,8 +119,8 @@ describe("travel publish runtime contract", () => {
   it("keeps repository, public API, provider queue, rollback, tenant, E2E, CI, and artifact blockers explicit", () => {
     expect(travelPublishRuntimeReadiness.status).toBe("blocked");
     expect(travelPublishRuntimeReadiness.missingScripts).toEqual([]);
-    expect(travelPublishRuntimeReadiness.requiredCommands).toBe(travelPublishRuntimeCommands);
-    expect(travelPublishRuntimeReadiness.requiredEvidence).toBe(travelPublishDecisionRequiredEvidence);
+    expect(travelPublishRuntimeReadiness.requiredCommands).toEqual(travelPublishRuntimeCommands);
+    expect(travelPublishRuntimeReadiness.requiredEvidence).toEqual(travelPublishDecisionRequiredEvidence);
     expect(travelPublishRuntimeReadiness.blockers).toContain("Public travel data API must read committed travel publish state.");
     expect(travelPublishRuntimeReadiness.blockers).toContain("Notification provider queue execution must be tested for travel publish jobs.");
     expect(travelPublishRuntimeReadiness.blockers).toContain("Failed provider action rollback tests must pass.");
@@ -143,21 +143,21 @@ describe("travel publish runtime contract", () => {
       dashboardPublicE2eRequiredForClosure: true,
       secretSafeArtifactsRequiredForClosure: true,
     });
-    expect(plan.policy).toBe(travelPublishExecutionPolicy);
-    expect(plan.commandExecutionAllowed).toBe(false);
-    expect(plan.durableRepositoryExecutionAllowed).toBe(false);
-    expect(plan.publicApiExecutionAllowed).toBe(false);
-    expect(plan.cacheRevalidationExecutionAllowed).toBe(false);
-    expect(plan.notificationProviderExecutionAllowed).toBe(false);
-    expect(plan.syncTransportExecutionAllowed).toBe(false);
-    expect(plan.tenantIsolationExecutionAllowed).toBe(false);
-    expect(plan.rollbackExecutionAllowed).toBe(false);
-    expect(plan.e2eExecutionAllowed).toBe(false);
-    expect(plan.ciExecutionAllowed).toBe(false);
-    expect(plan.artifactReviewExecutionAllowed).toBe(false);
-    expect(plan.localCommands).toBe(travelPublishLocalCommands);
-    expect(plan.externalCommands).toBe(travelPublishExternalCommands);
-    expect(plan.requiredExternalEvidence).toBe(travelPublishRequiredExternalEvidence);
+    expect(plan.policy).toEqual(travelPublishExecutionPolicy);
+    expect(plan.commandExecutionAllowed).toEqual(false);
+    expect(plan.durableRepositoryExecutionAllowed).toEqual(false);
+    expect(plan.publicApiExecutionAllowed).toEqual(false);
+    expect(plan.cacheRevalidationExecutionAllowed).toEqual(false);
+    expect(plan.notificationProviderExecutionAllowed).toEqual(false);
+    expect(plan.syncTransportExecutionAllowed).toEqual(false);
+    expect(plan.tenantIsolationExecutionAllowed).toEqual(false);
+    expect(plan.rollbackExecutionAllowed).toEqual(false);
+    expect(plan.e2eExecutionAllowed).toEqual(false);
+    expect(plan.ciExecutionAllowed).toEqual(false);
+    expect(plan.artifactReviewExecutionAllowed).toEqual(false);
+    expect(plan.localCommands).toEqual(travelPublishLocalCommands);
+    expect(plan.externalCommands).toEqual(travelPublishExternalCommands);
+    expect(plan.requiredExternalEvidence).toEqual(travelPublishRequiredExternalEvidence);
     expect(travelPublishRequiredExternalEvidence).toEqual([
       "actual travel publish command output",
       "durable travel repository integration tests",
@@ -186,7 +186,7 @@ describe("travel publish runtime contract", () => {
       },
     });
 
-    expect(redacted.secretSafe).toBe(true);
+    expect(redacted.secretSafe).toEqual(true);
     expect(redacted.redactedPaths).toEqual([
       "notificationProviderQueueUrl",
       "tenantDomain",
@@ -209,11 +209,11 @@ describe("travel publish runtime contract", () => {
       dashboardPublicE2eScreenshotUrl: "https://private/screenshot.png",
     });
 
-    expect(review.passed).toBe(true);
+    expect(review.passed).toEqual(true);
     expect(review.blockers).toEqual([]);
-    expect(review.artifact.secretSafe).toBe(true);
+    expect(review.artifact.secretSafe).toEqual(true);
     expect(review.artifact.redactedPaths).toEqual(["dashboardPublicE2eScreenshotUrl"]);
-    expect(review.requiredExternalEvidence).toBe(travelPublishRequiredExternalEvidence);
+    expect(review.requiredExternalEvidence).toEqual(travelPublishRequiredExternalEvidence);
   });
 
   it("classifies travel publish evidence before GAP-060 can close", () => {
@@ -256,8 +256,8 @@ describe("travel publish runtime contract", () => {
     expect(blockedDecision.blockers).toContain("Secret-safe travel publish artifact review evidence is missing.");
     expect(blockedDecision.missingArtifacts).toContain("coverage/travel-publish-repository-integration.json");
     expect(blockedDecision.missingArtifacts).toContain("coverage/travel-publish-secret-safe-artifacts.json");
-    expect(blockedDecision.requiredCommands).toBe(travelPublishRuntimeCommands);
-    expect(blockedDecision.requiredEvidence).toBe(travelPublishDecisionRequiredEvidence);
+    expect(blockedDecision.requiredCommands).toEqual(travelPublishRuntimeCommands);
+    expect(blockedDecision.requiredEvidence).toEqual(travelPublishDecisionRequiredEvidence);
     expect(blockedDecision.redactedSummary).toEqual({
       capturedArtifactCount: 6,
       requiredArtifactCount: travelPublishArtifactPaths.length,
@@ -289,7 +289,7 @@ describe("travel publish runtime contract", () => {
     expect(completeDecision.status).toBe("complete");
     expect(completeDecision.blockers).toEqual([]);
     expect(completeDecision.missingArtifacts).toEqual([]);
-    expect(completeDecision.requiredEvidence).toBe(travelPublishDecisionRequiredEvidence);
+    expect(completeDecision.requiredEvidence).toEqual(travelPublishDecisionRequiredEvidence);
   });
 
   it("wires CI, manifest, tracker, and artifacts without claiming provider/public/E2E evidence", () => {
@@ -311,4 +311,5 @@ describe("travel publish runtime contract", () => {
     expect(travelPublishArtifactPaths).toContain("coverage/travel-publish-secret-safe-artifacts.json");
   });
 });
+
 

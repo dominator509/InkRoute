@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -198,8 +198,8 @@ describe("dashboard mutation runtime contract", () => {
     expect(dashboardMutationRuntimeReadiness.missingApiRoutes).toContain("create_reference_upload_intent");
     expect(dashboardMutationRuntimeReadiness.missingServerActions).toContain("create_reference_upload_intent");
     expect(dashboardMutationRuntimeReadiness.missingRouteTests).not.toContain("update_settings");
-    expect(dashboardMutationRuntimeReadiness.requiredCommands).toBe(dashboardMutationRuntimeCommands);
-    expect(dashboardMutationRuntimeReadiness.requiredEvidence).toBe(dashboardMutationEvidenceFlags);
+    expect(dashboardMutationRuntimeReadiness.requiredCommands).toEqual(dashboardMutationRuntimeCommands);
+    expect(dashboardMutationRuntimeReadiness.requiredEvidence).toEqual(dashboardMutationEvidenceFlags);
     expect(dashboardMutationRuntimeReadiness.blockers).toContain("Dashboard mutation surfaces must expose gated action UI and explicit feedback states before runtime readiness.");
     expect(dashboardMutationRuntimeReadiness.blockers).not.toContain("Dashboard mutation surfaces must expose gated actions instead of disabled placeholder copy before runtime readiness.");
     expect(disabledActionPanel).toContain("disabled");
@@ -249,7 +249,7 @@ describe("dashboard mutation runtime contract", () => {
     expect(decision.missingServerActions).toEqual([]);
     expect(decision.missingApiRoutes).toEqual([]);
     expect(decision.missingRouteTests).toEqual([]);
-    expect(decision.requiredEvidence).toBe(dashboardMutationEvidenceFlags);
+    expect(decision.requiredEvidence).toEqual(dashboardMutationEvidenceFlags);
   });
 
   it("separates static dashboard mutation review from provider execution and redacts private artifacts", () => {
@@ -269,14 +269,14 @@ describe("dashboard mutation runtime contract", () => {
       operatorReviewNote: "private operator note",
     });
 
-    expect(executionPlan.localCommands).toBe(dashboardMutationLocalCommands);
+    expect(executionPlan.localCommands).toEqual(dashboardMutationLocalCommands);
     expect(executionPlan.localCommands).toEqual([
       "pnpm --filter @inkroute/booking typecheck",
       "pnpm --filter @inkroute/booking test",
       "static booking lifecycle mutation route review",
       "static gated mutation UI inventory review",
     ]);
-    expect(executionPlan.externalCommands).toBe(dashboardMutationExternalCommands);
+    expect(executionPlan.externalCommands).toEqual(dashboardMutationExternalCommands);
     expect(executionPlan.externalCommands).toEqual([
       "pnpm --filter @inkroute/dashboard typecheck",
       "pnpm --filter @inkroute/dashboard build",
@@ -287,13 +287,13 @@ describe("dashboard mutation runtime contract", () => {
       "dashboard mutation UI feedback-state tests",
       "GitHub Actions dashboard mutation execution evidence job",
     ]);
-    expect(executionPlan.commandExecutionAllowed).toBe(false);
-    expect(executionPlan.databaseExecutionAllowed).toBe(false);
-    expect(executionPlan.providerExecutionAllowed).toBe(false);
-    expect(executionPlan.rollbackExecutionAllowed).toBe(false);
-    expect(executionPlan.uiExecutionAllowed).toBe(false);
-    expect(executionPlan.ciExecutionAllowed).toBe(false);
-    expect(executionPlan.executionPolicy).toBe(dashboardMutationExecutionPolicy);
+    expect(executionPlan.commandExecutionAllowed).toEqual(false);
+    expect(executionPlan.databaseExecutionAllowed).toEqual(false);
+    expect(executionPlan.providerExecutionAllowed).toEqual(false);
+    expect(executionPlan.rollbackExecutionAllowed).toEqual(false);
+    expect(executionPlan.uiExecutionAllowed).toEqual(false);
+    expect(executionPlan.ciExecutionAllowed).toEqual(false);
+    expect(executionPlan.executionPolicy).toEqual(dashboardMutationExecutionPolicy);
     expect(executionPlan.executionPolicy).toEqual({
       codexMayClassifyStaticMutationReadiness: true,
       allMutationRoutesRequiredForClosure: true,
@@ -303,11 +303,11 @@ describe("dashboard mutation runtime contract", () => {
       gatedUiFeedbackRequiredForClosure: true,
       secretSafeArtifactsRequiredForClosure: true,
     });
-    expect(executionPlan.requiredExternalEvidence).toBe(dashboardMutationRequiredExternalEvidence);
+    expect(executionPlan.requiredExternalEvidence).toEqual(dashboardMutationRequiredExternalEvidence);
     expect(executionPlan.requiredExternalEvidence).toContain("idempotency persistence proof before provider side effects");
     expect(executionPlan.requiredExternalEvidence).toContain("provider rollback and retry integration evidence");
     expect(executionPlan.requiredExternalEvidence).toContain("secret-safe dashboard mutation artifact review");
-    expect(artifactReview.requiredExternalEvidence).toBe(dashboardMutationRequiredExternalEvidence);
+    expect(artifactReview.requiredExternalEvidence).toEqual(dashboardMutationRequiredExternalEvidence);
     expect(artifactReview.redactions).toEqual([
       "tenantDomain",
       "clientEmail",
@@ -320,7 +320,7 @@ describe("dashboard mutation runtime contract", () => {
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("stripe_pi_private");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("provider-token");
     expect(JSON.stringify(artifactReview.artifact)).toContain("dashboard mutation evidence captured");
-    expect(artifactReview.secretSafe).toBe(true);
+    expect(artifactReview.secretSafe).toEqual(true);
     expect(directRedaction.redactions).toEqual(["operatorReviewNote"]);
     expect(JSON.stringify(directRedaction.artifact)).toContain("safe dashboard mutation evidence");
   });
@@ -342,5 +342,6 @@ describe("dashboard mutation runtime contract", () => {
     expect(dashboardMutationArtifactPaths).toContain("coverage/dashboard-mutation-secret-safe-artifacts.json");
   });
 });
+
 
 

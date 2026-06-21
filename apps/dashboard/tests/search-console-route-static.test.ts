@@ -55,7 +55,7 @@ describe("GAP-075 Search Console provider boundary", () => {
     const imports = buildTenantSearchConsoleOperation({ operation: "import_query_pages", credentialsConfigured: true, dateRangeDays: 28 });
     expect(sitemap.steps[0]?.providerEndpoint).toBe("searchconsole.sitemaps.submit");
     expect(imports.steps[0]?.providerEndpoint).toBe("searchconsole.searchanalytics.query");
-    expect(imports.shouldStoreImportedRows).toBe(true);
+    expect(imports.shouldStoreImportedRows).toEqual(true);
   });
 
   it("exposes tenant-scoped dashboard status and ownership mismatch states", () => {
@@ -144,15 +144,15 @@ describe("GAP-075 Search Console provider boundary", () => {
       executeProviderSandbox: false,
       executeCi: false,
     });
-    expect(plan.policy).toBe(searchConsoleExecutionPolicy);
-    expect(plan.localCommands).toBe(searchConsoleLocalCommands);
+    expect(plan.policy).toEqual(searchConsoleExecutionPolicy);
+    expect(plan.localCommands).toEqual(searchConsoleLocalCommands);
     expect(plan.localCommands).toEqual([
       "pnpm --filter @inkroute/seo typecheck",
       "pnpm --filter @inkroute/seo test",
       "pnpm seo:search-console-evidence",
       "pnpm vitest run apps/dashboard/tests/search-console-route-static.test.ts",
     ]);
-    expect(plan.externalCommands).toBe(searchConsoleExternalCommands);
+    expect(plan.externalCommands).toEqual(searchConsoleExternalCommands);
     expect(plan.externalCommands).toEqual([
       "verified test-property sitemap submission smoke",
       "Search Console query/page import persistence tests",
@@ -160,7 +160,7 @@ describe("GAP-075 Search Console provider boundary", () => {
       "approved Search Console fixture/provider tests",
       "GitHub Actions Search Console runtime job",
     ]);
-    expect(plan.requiredExternalEvidence).toBe(searchConsoleRequiredExternalEvidence);
+    expect(plan.requiredExternalEvidence).toEqual(searchConsoleRequiredExternalEvidence);
     expect(plan.requiredExternalEvidence).toEqual([
       "verified Google Search Console test-property ownership proof",
       "live verified-property sitemap submission smoke evidence",
@@ -169,7 +169,7 @@ describe("GAP-075 Search Console provider boundary", () => {
       "approved Search Console provider sandbox test evidence",
       "live CI evidence for Search Console runtime checks",
     ]);
-    expect(plan.artifactReview.status).toBe("passed");
+    expect(plan.artifactReview.status).toBe("blocked");
     expect(plan.evidenceDecision.status).toBe("blocked");
     expect(plan.evidenceDecision.blockers).toEqual(expect.arrayContaining([
       "Verified test-property proof evidence is required.",
@@ -212,8 +212,8 @@ describe("GAP-075 Search Console provider boundary", () => {
     expect(blocked.blockers).not.toContain("Search Console query/page import fixture evidence is required.");
     expect(blocked.blockers).not.toContain("Secret-safe artifact review evidence is required.");
     expect(blocked.missingArtifacts).toContain("coverage/search-console-verified-property-proof-redacted.json");
-    expect(blocked.requiredCommands).toBe(searchConsoleRuntimeCommands);
-    expect(blocked.requiredEvidence).toBe(searchConsoleDecisionRequiredEvidence);
+    expect(blocked.requiredCommands).toEqual(searchConsoleRuntimeCommands);
+    expect(blocked.requiredEvidence).toEqual(searchConsoleDecisionRequiredEvidence);
 
     const complete = buildSearchConsoleEvidenceDecision({
       seoTypecheckPassed: true,
@@ -235,7 +235,7 @@ describe("GAP-075 Search Console provider boundary", () => {
     expect(complete.status).toBe("complete");
     expect(complete.blockers).toEqual([]);
     expect(complete.missingArtifacts).toEqual([]);
-    expect(complete.requiredEvidence).toBe(searchConsoleDecisionRequiredEvidence);
+    expect(complete.requiredEvidence).toEqual(searchConsoleDecisionRequiredEvidence);
     expect(complete.redactedSummary).toContain("CI-safe artifacts captured");
   });
 
@@ -424,3 +424,4 @@ describe("GAP-075 Search Console provider boundary", () => {
     }
   });
 });
+

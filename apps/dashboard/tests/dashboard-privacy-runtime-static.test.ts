@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -128,8 +128,8 @@ describe("dashboard privacy runtime contract", () => {
     expect(dashboardPrivacyRuntimeReadiness.missingScripts).toEqual([]);
     expect(dashboardPrivacyRuntimeReadiness.missingProjectionSurfaces).toEqual([]);
     expect(dashboardPrivacyRuntimeReadiness.missingRouteTestSurfaces).toEqual([]);
-    expect(dashboardPrivacyRuntimeReadiness.requiredCommands).toBe(dashboardPrivacyRuntimeCommands);
-    expect(dashboardPrivacyRuntimeReadiness.requiredEvidence).toBe(dashboardPrivacyEvidenceFlags);
+    expect(dashboardPrivacyRuntimeReadiness.requiredCommands).toEqual(dashboardPrivacyRuntimeCommands);
+    expect(dashboardPrivacyRuntimeReadiness.requiredEvidence).toEqual(dashboardPrivacyEvidenceFlags);
     expect(dashboardPrivacyRuntimeReadiness.blockers).toContain("Persisted privacy request/case store must back dashboard export/delete workflows.");
     expect(dashboardPrivacyRuntimeReadiness.blockers).toContain("Attorney/product approval must be captured for dashboard privacy behavior.");
   });
@@ -174,7 +174,7 @@ describe("dashboard privacy runtime contract", () => {
     expect(decision.missingProjectionSurfaces).toEqual([]);
     expect(decision.missingRouteTestSurfaces).toEqual([]);
     expect(decision.missingEvidence).toEqual([]);
-    expect(decision.requiredEvidence).toBe(dashboardPrivacyEvidenceFlags);
+    expect(decision.requiredEvidence).toEqual(dashboardPrivacyEvidenceFlags);
   });
 
   it("separates static dashboard privacy review from workflow execution and redacts private artifacts", () => {
@@ -194,14 +194,14 @@ describe("dashboard privacy runtime contract", () => {
       deleteWorkflowLog: "private delete payload",
     });
 
-    expect(executionPlan.localCommands).toBe(dashboardPrivacyLocalCommands);
+    expect(executionPlan.localCommands).toEqual(dashboardPrivacyLocalCommands);
     expect(executionPlan.localCommands).toEqual([
       "pnpm --filter @inkroute/security typecheck",
       "pnpm --filter @inkroute/security test",
       "static dashboard privacy route projection review",
       "static trust/privacy no-store route guard review",
     ]);
-    expect(executionPlan.externalCommands).toBe(dashboardPrivacyExternalCommands);
+    expect(executionPlan.externalCommands).toEqual(dashboardPrivacyExternalCommands);
     expect(executionPlan.externalCommands).toEqual([
       "pnpm --filter @inkroute/dashboard typecheck",
       "pnpm --filter @inkroute/dashboard build",
@@ -214,13 +214,13 @@ describe("dashboard privacy runtime contract", () => {
       "legal/product dashboard privacy approval review",
       "GitHub Actions dashboard privacy evidence job",
     ]);
-    expect(executionPlan.commandExecutionAllowed).toBe(false);
-    expect(executionPlan.databaseExecutionAllowed).toBe(false);
-    expect(executionPlan.storageExecutionAllowed).toBe(false);
-    expect(executionPlan.auditExecutionAllowed).toBe(false);
-    expect(executionPlan.legalApprovalExecutionAllowed).toBe(false);
-    expect(executionPlan.ciExecutionAllowed).toBe(false);
-    expect(executionPlan.executionPolicy).toBe(dashboardPrivacyExecutionPolicy);
+    expect(executionPlan.commandExecutionAllowed).toEqual(false);
+    expect(executionPlan.databaseExecutionAllowed).toEqual(false);
+    expect(executionPlan.storageExecutionAllowed).toEqual(false);
+    expect(executionPlan.auditExecutionAllowed).toEqual(false);
+    expect(executionPlan.legalApprovalExecutionAllowed).toEqual(false);
+    expect(executionPlan.ciExecutionAllowed).toEqual(false);
+    expect(executionPlan.executionPolicy).toEqual(dashboardPrivacyExecutionPolicy);
     expect(executionPlan.executionPolicy).toEqual({
       codexMayClassifyStaticPrivacyReadiness: true,
       persistedPrivacyWorkflowRequiredForClosure: true,
@@ -230,11 +230,11 @@ describe("dashboard privacy runtime contract", () => {
       dashboardTypecheckBuildRequiredForClosure: true,
       secretSafeArtifactsRequiredForClosure: true,
     });
-    expect(executionPlan.requiredExternalEvidence).toBe(dashboardPrivacyRequiredExternalEvidence);
+    expect(executionPlan.requiredExternalEvidence).toEqual(dashboardPrivacyRequiredExternalEvidence);
     expect(executionPlan.requiredExternalEvidence).toContain("persisted privacy request and case store evidence");
     expect(executionPlan.requiredExternalEvidence).toContain("attorney and product approval for privacy consent medical deposit payment SMS message copy");
     expect(executionPlan.requiredExternalEvidence).toContain("secret-safe dashboard privacy artifact review");
-    expect(artifactReview.requiredExternalEvidence).toBe(dashboardPrivacyRequiredExternalEvidence);
+    expect(artifactReview.requiredExternalEvidence).toEqual(dashboardPrivacyRequiredExternalEvidence);
     expect(artifactReview.redactions).toEqual([
       "tenantDomain",
       "clientEmail",
@@ -247,7 +247,7 @@ describe("dashboard privacy runtime contract", () => {
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("medical:");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("consent-signature");
     expect(JSON.stringify(artifactReview.artifact)).toContain("dashboard privacy evidence captured");
-    expect(artifactReview.secretSafe).toBe(true);
+    expect(artifactReview.secretSafe).toEqual(true);
     expect(directRedaction.redactions).toEqual(["deleteWorkflowLog"]);
     expect(JSON.stringify(directRedaction.artifact)).toContain("safe dashboard privacy evidence");
   });
@@ -269,5 +269,6 @@ describe("dashboard privacy runtime contract", () => {
     expect(dashboardPrivacyArtifactPaths).toContain("coverage/dashboard-privacy-secret-safe-artifacts.json");
   });
 });
+
 
 

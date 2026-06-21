@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -100,8 +100,8 @@ describe("dashboard notification scheduler runtime contract", () => {
   it("keeps backend, persistence, worker, provider, concurrency, integration, CI, and artifact blockers explicit", () => {
     expect(notificationSchedulerRuntimeReadiness.status).toBe("blocked");
     expect(notificationSchedulerRuntimeReadiness.missingScripts).toEqual([]);
-    expect(notificationSchedulerRuntimeReadiness.requiredCommands).toBe(notificationSchedulerRuntimeCommands);
-    expect(notificationSchedulerRuntimeReadiness.requiredEvidence).toBe(notificationSchedulerDecisionRequiredEvidence);
+    expect(notificationSchedulerRuntimeReadiness.requiredCommands).toEqual(notificationSchedulerRuntimeCommands);
+    expect(notificationSchedulerRuntimeReadiness.requiredEvidence).toEqual(notificationSchedulerDecisionRequiredEvidence);
     expect(notificationSchedulerRuntimeReadiness.blockers).toContain("Notification queue backend must be configured before scheduler promotion.");
     expect(notificationSchedulerRuntimeReadiness.blockers).toContain("NotificationJob persistence must be available.");
     expect(notificationSchedulerRuntimeReadiness.blockers).toContain("Due-job claiming must be transactional to prevent duplicate sends.");
@@ -124,20 +124,20 @@ describe("dashboard notification scheduler runtime contract", () => {
       ciEvidenceRequiredForClosure: true,
       secretSafeArtifactsRequiredForClosure: true,
     });
-    expect(plan.policy).toBe(notificationSchedulerExecutionPolicy);
-    expect(plan.commandExecutionAllowed).toBe(false);
-    expect(plan.queueBackendExecutionAllowed).toBe(false);
-    expect(plan.durableRepositoryExecutionAllowed).toBe(false);
-    expect(plan.schedulerProcessExecutionAllowed).toBe(false);
-    expect(plan.workerProcessExecutionAllowed).toBe(false);
-    expect(plan.providerDispatchExecutionAllowed).toBe(false);
-    expect(plan.concurrencyExecutionAllowed).toBe(false);
-    expect(plan.integrationExecutionAllowed).toBe(false);
-    expect(plan.ciExecutionAllowed).toBe(false);
-    expect(plan.artifactReviewExecutionAllowed).toBe(false);
-    expect(plan.localCommands).toBe(notificationSchedulerLocalCommands);
-    expect(plan.externalCommands).toBe(notificationSchedulerExternalCommands);
-    expect(plan.requiredExternalEvidence).toBe(notificationSchedulerRequiredExternalEvidence);
+    expect(plan.policy).toEqual(notificationSchedulerExecutionPolicy);
+    expect(plan.commandExecutionAllowed).toEqual(false);
+    expect(plan.queueBackendExecutionAllowed).toEqual(false);
+    expect(plan.durableRepositoryExecutionAllowed).toEqual(false);
+    expect(plan.schedulerProcessExecutionAllowed).toEqual(false);
+    expect(plan.workerProcessExecutionAllowed).toEqual(false);
+    expect(plan.providerDispatchExecutionAllowed).toEqual(false);
+    expect(plan.concurrencyExecutionAllowed).toEqual(false);
+    expect(plan.integrationExecutionAllowed).toEqual(false);
+    expect(plan.ciExecutionAllowed).toEqual(false);
+    expect(plan.artifactReviewExecutionAllowed).toEqual(false);
+    expect(plan.localCommands).toEqual(notificationSchedulerLocalCommands);
+    expect(plan.externalCommands).toEqual(notificationSchedulerExternalCommands);
+    expect(plan.requiredExternalEvidence).toEqual(notificationSchedulerRequiredExternalEvidence);
     expect(notificationSchedulerRequiredExternalEvidence).toEqual([
       "actual notification scheduler command output",
       "queue backend configuration evidence",
@@ -168,7 +168,7 @@ describe("dashboard notification scheduler runtime contract", () => {
       },
     });
 
-    expect(redacted.secretSafe).toBe(true);
+    expect(redacted.secretSafe).toEqual(true);
     expect(redacted.redactedPaths).toEqual([
       "tenantId",
       "notificationJobPayload",
@@ -193,11 +193,11 @@ describe("dashboard notification scheduler runtime contract", () => {
       queueBackendUrl: "https://private/queue",
     });
 
-    expect(review.passed).toBe(true);
+    expect(review.passed).toEqual(true);
     expect(review.blockers).toEqual([]);
-    expect(review.artifact.secretSafe).toBe(true);
+    expect(review.artifact.secretSafe).toEqual(true);
     expect(review.artifact.redactedPaths).toEqual(["queueBackendUrl"]);
-    expect(review.requiredExternalEvidence).toBe(notificationSchedulerRequiredExternalEvidence);
+    expect(review.requiredExternalEvidence).toEqual(notificationSchedulerRequiredExternalEvidence);
   });
 
   it("classifies notification scheduler evidence before GAP-065 can close", () => {
@@ -240,8 +240,8 @@ describe("dashboard notification scheduler runtime contract", () => {
     );
     expect(blockedDecision.missingArtifacts).toContain("coverage/notification-scheduler-queue-backend.json");
     expect(blockedDecision.missingArtifacts).toContain("coverage/notification-scheduler-secret-safe-artifacts.json");
-    expect(blockedDecision.requiredCommands).toBe(notificationSchedulerRuntimeCommands);
-    expect(blockedDecision.requiredEvidence).toBe(notificationSchedulerDecisionRequiredEvidence);
+    expect(blockedDecision.requiredCommands).toEqual(notificationSchedulerRuntimeCommands);
+    expect(blockedDecision.requiredEvidence).toEqual(notificationSchedulerDecisionRequiredEvidence);
     expect(blockedDecision.redactedSummary).toEqual({
       capturedArtifactCount: 5,
       requiredArtifactCount: notificationSchedulerArtifactPaths.length,
@@ -272,7 +272,7 @@ describe("dashboard notification scheduler runtime contract", () => {
     expect(completeDecision.status).toBe("complete");
     expect(completeDecision.blockers).toEqual([]);
     expect(completeDecision.missingArtifacts).toEqual([]);
-    expect(completeDecision.requiredEvidence).toBe(notificationSchedulerDecisionRequiredEvidence);
+    expect(completeDecision.requiredEvidence).toEqual(notificationSchedulerDecisionRequiredEvidence);
   });
 
   it("wires CI, manifest, tracker, and artifacts without claiming live queue execution", () => {
@@ -316,4 +316,5 @@ describe("dashboard notification scheduler runtime contract", () => {
     }
   });
 });
+
 

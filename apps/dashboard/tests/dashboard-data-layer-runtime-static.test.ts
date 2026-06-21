@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -97,7 +97,7 @@ describe("dashboard data layer runtime contract", () => {
     expect(readRepoFile("apps/dashboard/tests/client-read-route-static.test.ts")).toContain("buildTenantDashboardView");
     expect(readRepoFile("apps/dashboard/tests/payment-read-route-static.test.ts")).toContain("stripe");
     expect(readRepoFile("apps/dashboard/tests/portfolio-read-route-static.test.ts")).toContain("storage-key redaction");
-    expect(readRepoFile("apps/dashboard/tests/message-read-route-static.test.ts")).toContain("message body redaction");
+    expect(readRepoFile("apps/dashboard/tests/message-read-route-static.test.ts")).toContain("uses Prisma message-thread reads with body/provider/contact redaction and audit logs");
     expect(dashboardDemo).toContain("Dashboard read and mutation contracts added");
     expect(dashboardDemo).toContain("Booking flow and tenant-scoped API contract wired");
     expect(dashboardDemo).toContain("Provider delivery and unsubscribe footer proof remain evidence-gated");
@@ -120,8 +120,8 @@ describe("dashboard data layer runtime contract", () => {
     expect(dashboardDataLayerRuntimeReadiness.missingPrismaLoaders).toEqual([]);
     expect(dashboardDataLayerRuntimeReadiness.missingRouteWiring).toEqual([]);
     expect(dashboardDataLayerRuntimeReadiness.remainingStaticDemoImports).toEqual([]);
-    expect(dashboardDataLayerRuntimeReadiness.requiredCommands).toBe(dashboardDataLayerRuntimeCommands);
-    expect(dashboardDataLayerRuntimeReadiness.requiredEvidence).toBe(dashboardDataLayerEvidenceFlags);
+    expect(dashboardDataLayerRuntimeReadiness.requiredCommands).toEqual(dashboardDataLayerRuntimeCommands);
+    expect(dashboardDataLayerRuntimeReadiness.requiredEvidence).toEqual(dashboardDataLayerEvidenceFlags);
     expect(dashboardDataLayerRuntimeReadiness.blockers).toContain("Seeded database dashboard route smoke must pass.");
     expect(dashboardDataLayerRuntimeReadiness.blockers).toContain("Tenant-isolation tests must reject cross-tenant dashboard data reads.");
     expect(dashboardDataLayerRuntimeReadiness.blockers).toContain("Dashboard data artifacts must be redacted and free of secrets, raw PII, medical notes, payment data, provider tokens, and private object keys.");
@@ -170,7 +170,7 @@ describe("dashboard data layer runtime contract", () => {
     expect(decision.missingPrismaLoaders).toEqual([]);
     expect(decision.missingRouteWiring).toEqual([]);
     expect(decision.remainingStaticDemoImports).toEqual([]);
-    expect(decision.requiredEvidence).toBe(dashboardDataLayerEvidenceFlags);
+    expect(decision.requiredEvidence).toEqual(dashboardDataLayerEvidenceFlags);
   });
 
   it("separates static dashboard data review from seeded database execution and redacts private artifacts", () => {
@@ -190,14 +190,14 @@ describe("dashboard data layer runtime contract", () => {
       rbacMemberRole: "owner",
     });
 
-    expect(executionPlan.localCommands).toBe(dashboardDataLayerLocalCommands);
+    expect(executionPlan.localCommands).toEqual(dashboardDataLayerLocalCommands);
     expect(executionPlan.localCommands).toEqual([
       "pnpm --filter @inkroute/config typecheck",
       "pnpm --filter @inkroute/config test",
       "static dashboard route wiring matrix review",
       "static no-store/read redaction route review",
     ]);
-    expect(executionPlan.externalCommands).toBe(dashboardDataLayerExternalCommands);
+    expect(executionPlan.externalCommands).toEqual(dashboardDataLayerExternalCommands);
     expect(executionPlan.externalCommands).toEqual([
       "pnpm --filter @inkroute/dashboard typecheck",
       "pnpm --filter @inkroute/dashboard build",
@@ -207,13 +207,13 @@ describe("dashboard data layer runtime contract", () => {
       "dashboard sensitive-read AuditLog persistence tests",
       "GitHub Actions dashboard data repository evidence job",
     ]);
-    expect(executionPlan.commandExecutionAllowed).toBe(false);
-    expect(executionPlan.databaseExecutionAllowed).toBe(false);
-    expect(executionPlan.tenantIsolationExecutionAllowed).toBe(false);
-    expect(executionPlan.rbacExecutionAllowed).toBe(false);
-    expect(executionPlan.auditPersistenceExecutionAllowed).toBe(false);
-    expect(executionPlan.ciExecutionAllowed).toBe(false);
-    expect(executionPlan.executionPolicy).toBe(dashboardDataLayerExecutionPolicy);
+    expect(executionPlan.commandExecutionAllowed).toEqual(false);
+    expect(executionPlan.databaseExecutionAllowed).toEqual(false);
+    expect(executionPlan.tenantIsolationExecutionAllowed).toEqual(false);
+    expect(executionPlan.rbacExecutionAllowed).toEqual(false);
+    expect(executionPlan.auditPersistenceExecutionAllowed).toEqual(false);
+    expect(executionPlan.ciExecutionAllowed).toEqual(false);
+    expect(executionPlan.executionPolicy).toEqual(dashboardDataLayerExecutionPolicy);
     expect(executionPlan.executionPolicy).toEqual({
       codexMayClassifyStaticRepositoryRouteReadiness: true,
       seededDatabaseSmokeRequiredForClosure: true,
@@ -223,11 +223,11 @@ describe("dashboard data layer runtime contract", () => {
       noStorePolicyRequiredForClosure: true,
       secretSafeArtifactsRequiredForClosure: true,
     });
-    expect(executionPlan.requiredExternalEvidence).toBe(dashboardDataLayerRequiredExternalEvidence);
+    expect(executionPlan.requiredExternalEvidence).toEqual(dashboardDataLayerRequiredExternalEvidence);
     expect(executionPlan.requiredExternalEvidence).toContain("seeded database dashboard route smoke evidence");
     expect(executionPlan.requiredExternalEvidence).toContain("sensitive-read AuditLog persistence evidence");
     expect(executionPlan.requiredExternalEvidence).toContain("secret-safe dashboard data artifact review");
-    expect(artifactReview.requiredExternalEvidence).toBe(dashboardDataLayerRequiredExternalEvidence);
+    expect(artifactReview.requiredExternalEvidence).toEqual(dashboardDataLayerRequiredExternalEvidence);
     expect(artifactReview.redactions).toEqual([
       "tenantDomain",
       "clientEmail",
@@ -240,7 +240,7 @@ describe("dashboard data layer runtime contract", () => {
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("stripe_pi_private");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("postgres://");
     expect(JSON.stringify(artifactReview.artifact)).toContain("dashboard data layer evidence captured");
-    expect(artifactReview.secretSafe).toBe(true);
+    expect(artifactReview.secretSafe).toEqual(true);
     expect(directRedaction.redactions).toEqual(["rbacMemberRole"]);
     expect(JSON.stringify(directRedaction.artifact)).toContain("safe dashboard data evidence");
   });
@@ -262,5 +262,6 @@ describe("dashboard data layer runtime contract", () => {
     expect(dashboardDataLayerArtifactPaths).toContain("coverage/dashboard-data-secret-safe-artifacts.json");
   });
 });
+
 
 

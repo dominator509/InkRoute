@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -151,14 +151,14 @@ describe("dashboard notification persistence runtime contract", () => {
     expect(staticTest).toContain("transaction writes");
     expect(staticTest).toContain("redacts nested notification persistence payloads");
     expect(staticTest).toContain("executes a local notification persistence repository contract");
-    expect(messageReadTest).toContain("provider message id redaction");
+    expect(messageReadTest).toContain("providerMessageId:");
   });
 
   it("keeps worker, Postgres, tenant, CI, and artifact blockers explicit", () => {
     expect(notificationPersistenceRuntimeReadiness.status).toBe("blocked");
     expect(notificationPersistenceRuntimeReadiness.missingScripts).toEqual([]);
-    expect(notificationPersistenceRuntimeReadiness.requiredCommands).toBe(notificationPersistenceRuntimeCommands);
-    expect(notificationPersistenceRuntimeReadiness.requiredEvidence).toBe(notificationPersistenceDecisionRequiredEvidence);
+    expect(notificationPersistenceRuntimeReadiness.requiredCommands).toEqual(notificationPersistenceRuntimeCommands);
+    expect(notificationPersistenceRuntimeReadiness.requiredEvidence).toEqual(notificationPersistenceDecisionRequiredEvidence);
     expect(notificationPersistenceRuntimeReadiness.blockers).not.toContain("Delivery status transition persistence must be available.");
     expect(notificationPersistenceRuntimeReadiness.blockers).not.toContain("NotificationReadState persistence must be available.");
     expect(notificationPersistenceRuntimeReadiness.blockers).not.toContain("NotificationProviderHandoff persistence must be available.");
@@ -182,18 +182,18 @@ describe("dashboard notification persistence runtime contract", () => {
       ciEvidenceRequiredForClosure: true,
       secretSafeArtifactsRequiredForClosure: true,
     });
-    expect(plan.policy).toBe(notificationPersistenceExecutionPolicy);
-    expect(plan.commandExecutionAllowed).toBe(false);
-    expect(plan.schemaMigrationExecutionAllowed).toBe(false);
-    expect(plan.repositoryExecutionAllowed).toBe(false);
-    expect(plan.seededPostgresExecutionAllowed).toBe(false);
-    expect(plan.providerWorkerExecutionAllowed).toBe(false);
-    expect(plan.tenantIsolationExecutionAllowed).toBe(false);
-    expect(plan.ciExecutionAllowed).toBe(false);
-    expect(plan.artifactReviewExecutionAllowed).toBe(false);
-    expect(plan.localCommands).toBe(notificationPersistenceLocalCommands);
-    expect(plan.externalCommands).toBe(notificationPersistenceExternalCommands);
-    expect(plan.requiredExternalEvidence).toBe(notificationPersistenceRequiredExternalEvidence);
+    expect(plan.policy).toEqual(notificationPersistenceExecutionPolicy);
+    expect(plan.commandExecutionAllowed).toEqual(false);
+    expect(plan.schemaMigrationExecutionAllowed).toEqual(false);
+    expect(plan.repositoryExecutionAllowed).toEqual(false);
+    expect(plan.seededPostgresExecutionAllowed).toEqual(false);
+    expect(plan.providerWorkerExecutionAllowed).toEqual(false);
+    expect(plan.tenantIsolationExecutionAllowed).toEqual(false);
+    expect(plan.ciExecutionAllowed).toEqual(false);
+    expect(plan.artifactReviewExecutionAllowed).toEqual(false);
+    expect(plan.localCommands).toEqual(notificationPersistenceLocalCommands);
+    expect(plan.externalCommands).toEqual(notificationPersistenceExternalCommands);
+    expect(plan.requiredExternalEvidence).toEqual(notificationPersistenceRequiredExternalEvidence);
     expect(notificationPersistenceRequiredExternalEvidence).toEqual([
       "actual notification persistence command output",
       "Prisma schema and migration evidence",
@@ -222,7 +222,7 @@ describe("dashboard notification persistence runtime contract", () => {
       },
     });
 
-    expect(redacted.secretSafe).toBe(true);
+    expect(redacted.secretSafe).toEqual(true);
     expect(redacted.redactedPaths).toEqual([
       "tenantId",
       "messageBodyPreview",
@@ -247,11 +247,11 @@ describe("dashboard notification persistence runtime contract", () => {
       providerWorkerHandoffUrl: "https://private/handoff.json",
     });
 
-    expect(review.passed).toBe(true);
+    expect(review.passed).toEqual(true);
     expect(review.blockers).toEqual([]);
-    expect(review.artifact.secretSafe).toBe(true);
+    expect(review.artifact.secretSafe).toEqual(true);
     expect(review.artifact.redactedPaths).toEqual(["providerWorkerHandoffUrl"]);
-    expect(review.requiredExternalEvidence).toBe(notificationPersistenceRequiredExternalEvidence);
+    expect(review.requiredExternalEvidence).toEqual(notificationPersistenceRequiredExternalEvidence);
   });
 
   it("classifies notification persistence evidence before GAP-064 can close", () => {
@@ -302,8 +302,8 @@ describe("dashboard notification persistence runtime contract", () => {
     expect(blockedDecision.missingArtifacts).not.toContain("coverage/notification-persistence-status-transition.json");
     expect(blockedDecision.missingArtifacts).not.toContain("coverage/notification-persistence-provider-worker-handoff.json");
     expect(blockedDecision.missingArtifacts).toContain("coverage/notification-persistence-secret-safe-artifacts.json");
-    expect(blockedDecision.requiredCommands).toBe(notificationPersistenceRuntimeCommands);
-    expect(blockedDecision.requiredEvidence).toBe(notificationPersistenceDecisionRequiredEvidence);
+    expect(blockedDecision.requiredCommands).toEqual(notificationPersistenceRuntimeCommands);
+    expect(blockedDecision.requiredEvidence).toEqual(notificationPersistenceDecisionRequiredEvidence);
     expect(blockedDecision.redactedSummary).toEqual({
       capturedArtifactCount: 10,
       requiredArtifactCount: notificationPersistenceArtifactPaths.length,
@@ -334,7 +334,7 @@ describe("dashboard notification persistence runtime contract", () => {
     expect(completeDecision.status).toBe("complete");
     expect(completeDecision.blockers).toEqual([]);
     expect(completeDecision.missingArtifacts).toEqual([]);
-    expect(completeDecision.requiredEvidence).toBe(notificationPersistenceDecisionRequiredEvidence);
+    expect(completeDecision.requiredEvidence).toEqual(notificationPersistenceDecisionRequiredEvidence);
   });
 
   it("wires CI, manifest, tracker, and artifacts without claiming seeded Postgres readiness", () => {
@@ -357,4 +357,5 @@ describe("dashboard notification persistence runtime contract", () => {
     expect(notificationPersistenceArtifactPaths).toContain("coverage/notification-persistence-secret-safe-artifacts.json");
   });
 });
+
 

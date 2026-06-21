@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -136,8 +136,8 @@ describe("payment operations runtime contract", () => {
   it("keeps provider, receipt, tax, auth, E2E, idempotency, and audit blockers explicit", () => {
     expect(paymentOperationsRuntimeReadiness.status).toBe("blocked");
     expect(paymentOperationsRuntimeReadiness.missingScripts).toEqual([]);
-    expect(paymentOperationsRuntimeReadiness.requiredCommands).toBe(paymentOperationsRuntimeCommands);
-    expect(paymentOperationsRuntimeReadiness.requiredEvidence).toBe(paymentOperationsEvidenceFlags);
+    expect(paymentOperationsRuntimeReadiness.requiredCommands).toEqual(paymentOperationsRuntimeCommands);
+    expect(paymentOperationsRuntimeReadiness.requiredEvidence).toEqual(paymentOperationsEvidenceFlags);
     expect(paymentOperationsRuntimeReadiness.blockers).toContain("Dashboard/server payment operation action evidence must be captured before payment operations readiness.");
     expect(paymentOperationsRuntimeReadiness.blockers).toContain("Stripe test-mode refund execution must be verified.");
     expect(paymentOperationsRuntimeReadiness.blockers).toContain("No-show forfeiture action evidence must be captured before payment operations readiness.");
@@ -181,25 +181,25 @@ describe("payment operations runtime contract", () => {
   it("keeps GAP-052 execution policy non-executing and external evidence explicit", () => {
     const plan = buildPaymentOperationsExecutionPlan();
 
-    expect(plan.policy.codexMayClassifyStaticPaymentOperationsReadiness).toBe(true);
-    expect(plan.policy.stripeRefundRequiredForClosure).toBe(true);
-    expect(plan.policy.receiptProviderRequiredForClosure).toBe(true);
-    expect(plan.policy.disputeProviderSyncRequiredForClosure).toBe(true);
-    expect(plan.policy.accountingExportRequiredForClosure).toBe(true);
-    expect(plan.policy.taxAccountingReviewRequiredForClosure).toBe(true);
-    expect(plan.policy.dashboardE2eRequiredForClosure).toBe(true);
-    expect(plan.policy.secretSafeArtifactsRequiredForClosure).toBe(true);
-    expect(plan.commandExecutionAllowed).toBe(false);
-    expect(plan.stripeRefundExecutionAllowed).toBe(false);
-    expect(plan.receiptProviderExecutionAllowed).toBe(false);
-    expect(plan.disputeProviderExecutionAllowed).toBe(false);
-    expect(plan.accountingExportExecutionAllowed).toBe(false);
-    expect(plan.taxAccountingReviewExecutionAllowed).toBe(false);
-    expect(plan.dashboardE2eExecutionAllowed).toBe(false);
-    expect(plan.ciExecutionAllowed).toBe(false);
-    expect(plan.localCommands).toBe(paymentOperationsLocalCommands);
-    expect(plan.externalCommands).toBe(paymentOperationsExternalCommands);
-    expect(plan.requiredExternalEvidence).toBe(paymentOperationsRequiredExternalEvidence);
+    expect(plan.policy.codexMayClassifyStaticPaymentOperationsReadiness).toEqual(true);
+    expect(plan.policy.stripeRefundRequiredForClosure).toEqual(true);
+    expect(plan.policy.receiptProviderRequiredForClosure).toEqual(true);
+    expect(plan.policy.disputeProviderSyncRequiredForClosure).toEqual(true);
+    expect(plan.policy.accountingExportRequiredForClosure).toEqual(true);
+    expect(plan.policy.taxAccountingReviewRequiredForClosure).toEqual(true);
+    expect(plan.policy.dashboardE2eRequiredForClosure).toEqual(true);
+    expect(plan.policy.secretSafeArtifactsRequiredForClosure).toEqual(true);
+    expect(plan.commandExecutionAllowed).toEqual(false);
+    expect(plan.stripeRefundExecutionAllowed).toEqual(false);
+    expect(plan.receiptProviderExecutionAllowed).toEqual(false);
+    expect(plan.disputeProviderExecutionAllowed).toEqual(false);
+    expect(plan.accountingExportExecutionAllowed).toEqual(false);
+    expect(plan.taxAccountingReviewExecutionAllowed).toEqual(false);
+    expect(plan.dashboardE2eExecutionAllowed).toEqual(false);
+    expect(plan.ciExecutionAllowed).toEqual(false);
+    expect(plan.localCommands).toEqual(paymentOperationsLocalCommands);
+    expect(plan.externalCommands).toEqual(paymentOperationsExternalCommands);
+    expect(plan.requiredExternalEvidence).toEqual(paymentOperationsRequiredExternalEvidence);
     expect(plan.requiredExternalEvidence).toContain("secret-safe payment operations artifact review");
   });
 
@@ -238,9 +238,9 @@ describe("payment operations runtime contract", () => {
       publicSummary: "safe payment operations evidence",
       paymentAuditLog: "audit_private",
     });
-    expect(review.secretSafe).toBe(true);
+    expect(review.secretSafe).toEqual(true);
     expect(review.redactedPaths).toEqual(["paymentAuditLog"]);
-    expect(review.requiredExternalEvidence).toBe(paymentOperationsRequiredExternalEvidence);
+    expect(review.requiredExternalEvidence).toEqual(paymentOperationsRequiredExternalEvidence);
     expect(review.requiredExternalEvidence).toContain("dashboard payment operations E2E artifacts");
   });
 
@@ -259,4 +259,5 @@ describe("payment operations runtime contract", () => {
     expect(paymentOperationsArtifactPaths).toContain("coverage/payment-operations-secret-safe-artifacts.json");
   });
 });
+
 

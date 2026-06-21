@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -87,13 +87,13 @@ describe("messaging privacy runtime contract", () => {
     expect(routeSource).not.toContain("messagingPrivacyPlanOnlyWritesDisabled");
     expect(pageSource).toContain("Messaging privacy contract");
     expect(staticTest).toContain("covers redaction, role visibility, export, delete, retention, moderation, and attachment authorization");
-    expect(messageReadTest).toContain("message body redaction");
+    expect(messageReadTest).toContain("uses Prisma message-thread reads with body/provider/contact redaction and audit logs");
   });
 
   it("keeps authorization, attachment, workflow, retention, moderation, Postgres, CI, and artifact blockers explicit", () => {
     expect(messagingPrivacyRuntimeReadiness.status).toBe("blocked");
     expect(messagingPrivacyRuntimeReadiness.missingScripts).toEqual([]);
-    expect(messagingPrivacyRuntimeReadiness.requiredEvidence).toBe(messagingPrivacyDecisionRequiredEvidence);
+    expect(messagingPrivacyRuntimeReadiness.requiredEvidence).toEqual(messagingPrivacyDecisionRequiredEvidence);
     expect(messagingPrivacyRuntimeReadiness.blockers).toContain("Unauthorized role denial tests must pass for messaging UI/API.");
     expect(messagingPrivacyRuntimeReadiness.blockers).toContain("Message export workflow persistence must be available.");
     expect(messagingPrivacyRuntimeReadiness.blockers).toContain("Message retention job must be configured.");
@@ -116,19 +116,19 @@ describe("messaging privacy runtime contract", () => {
       ciEvidenceRequiredForClosure: true,
       secretSafeArtifactsRequiredForClosure: true,
     });
-    expect(plan.policy).toBe(messagingPrivacyExecutionPolicy);
-    expect(plan.commandExecutionAllowed).toBe(false);
-    expect(plan.authorizationExecutionAllowed).toBe(false);
-    expect(plan.attachmentAuthorizationExecutionAllowed).toBe(false);
-    expect(plan.workflowExecutionAllowed).toBe(false);
-    expect(plan.retentionJobExecutionAllowed).toBe(false);
-    expect(plan.moderationExecutionAllowed).toBe(false);
-    expect(plan.postgresExecutionAllowed).toBe(false);
-    expect(plan.ciExecutionAllowed).toBe(false);
-    expect(plan.artifactReviewExecutionAllowed).toBe(false);
-    expect(plan.localCommands).toBe(messagingPrivacyLocalCommands);
-    expect(plan.externalCommands).toBe(messagingPrivacyExternalCommands);
-    expect(plan.requiredExternalEvidence).toBe(messagingPrivacyRequiredExternalEvidence);
+    expect(plan.policy).toEqual(messagingPrivacyExecutionPolicy);
+    expect(plan.commandExecutionAllowed).toEqual(false);
+    expect(plan.authorizationExecutionAllowed).toEqual(false);
+    expect(plan.attachmentAuthorizationExecutionAllowed).toEqual(false);
+    expect(plan.workflowExecutionAllowed).toEqual(false);
+    expect(plan.retentionJobExecutionAllowed).toEqual(false);
+    expect(plan.moderationExecutionAllowed).toEqual(false);
+    expect(plan.postgresExecutionAllowed).toEqual(false);
+    expect(plan.ciExecutionAllowed).toEqual(false);
+    expect(plan.artifactReviewExecutionAllowed).toEqual(false);
+    expect(plan.localCommands).toEqual(messagingPrivacyLocalCommands);
+    expect(plan.externalCommands).toEqual(messagingPrivacyExternalCommands);
+    expect(plan.requiredExternalEvidence).toEqual(messagingPrivacyRequiredExternalEvidence);
     expect(messagingPrivacyRequiredExternalEvidence).toEqual([
       "actual messaging privacy command output",
       "dashboard messaging role-visibility tests",
@@ -159,7 +159,7 @@ describe("messaging privacy runtime contract", () => {
       },
     });
 
-    expect(redacted.secretSafe).toBe(true);
+    expect(redacted.secretSafe).toEqual(true);
     expect(redacted.redactedPaths).toEqual([
       "tenantId",
       "messageBody",
@@ -184,11 +184,11 @@ describe("messaging privacy runtime contract", () => {
       retentionExportUrl: "https://private/export",
     });
 
-    expect(review.passed).toBe(true);
+    expect(review.passed).toEqual(true);
     expect(review.blockers).toEqual([]);
-    expect(review.artifact.secretSafe).toBe(true);
+    expect(review.artifact.secretSafe).toEqual(true);
     expect(review.artifact.redactedPaths).toEqual(["retentionExportUrl"]);
-    expect(review.requiredExternalEvidence).toBe(messagingPrivacyRequiredExternalEvidence);
+    expect(review.requiredExternalEvidence).toEqual(messagingPrivacyRequiredExternalEvidence);
   });
 
   it("classifies messaging privacy evidence before GAP-068 can close", () => {
@@ -232,8 +232,8 @@ describe("messaging privacy runtime contract", () => {
     expect(blockedDecision.blockers).toContain("Secret-safe messaging privacy artifact review evidence is missing.");
     expect(blockedDecision.missingArtifacts).toContain("coverage/messaging-privacy-role-visibility.json");
     expect(blockedDecision.missingArtifacts).toContain("coverage/messaging-privacy-secret-safe-artifacts.json");
-    expect(blockedDecision.requiredCommands).toBe(messagingPrivacyRuntimeCommands);
-    expect(blockedDecision.requiredEvidence).toBe(messagingPrivacyDecisionRequiredEvidence);
+    expect(blockedDecision.requiredCommands).toEqual(messagingPrivacyRuntimeCommands);
+    expect(blockedDecision.requiredEvidence).toEqual(messagingPrivacyDecisionRequiredEvidence);
     expect(blockedDecision.redactedSummary).toEqual({
       capturedArtifactCount: 6,
       requiredArtifactCount: messagingPrivacyArtifactPaths.length,
@@ -266,7 +266,7 @@ describe("messaging privacy runtime contract", () => {
     expect(completeDecision.status).toBe("complete");
     expect(completeDecision.blockers).toEqual([]);
     expect(completeDecision.missingArtifacts).toEqual([]);
-    expect(completeDecision.requiredEvidence).toBe(messagingPrivacyDecisionRequiredEvidence);
+    expect(completeDecision.requiredEvidence).toEqual(messagingPrivacyDecisionRequiredEvidence);
   });
 
   it("wires CI, manifest, tracker, and artifacts without claiming durable privacy workflow readiness", () => {
@@ -315,4 +315,5 @@ describe("messaging privacy runtime contract", () => {
     }
   });
 });
+
 

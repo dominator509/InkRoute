@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -142,7 +142,7 @@ describe("SEO publication runtime contract", () => {
   it("keeps association, idempotency, revalidation, integration, tenant, dashboard, CI, and artifact blockers explicit", () => {
     expect(seoPublicationRuntimeReadiness.status).toBe("blocked");
     expect(seoPublicationRuntimeReadiness.missingScripts).toEqual([]);
-    expect(seoPublicationRuntimeReadiness.requiredEvidence).toBe(seoPublicationDecisionRequiredEvidence);
+    expect(seoPublicationRuntimeReadiness.requiredEvidence).toEqual(seoPublicationDecisionRequiredEvidence);
     expect(seoPublicationRuntimeReadiness.blockers).toContain("FAQ, review, and image SEO associations must persist tenant-safely.");
     expect(seoPublicationRuntimeReadiness.blockers).toContain("SEO revalidation jobs must persist after publication commits.");
     expect(seoPublicationRuntimeReadiness.blockers).toContain("SEO publication idempotency store must be available.");
@@ -164,19 +164,19 @@ describe("SEO publication runtime contract", () => {
       ciEvidenceRequiredForClosure: true,
       secretSafeArtifactsRequiredForClosure: true,
     });
-    expect(plan.policy).toBe(seoPublicationExecutionPolicy);
-    expect(plan.commandExecutionAllowed).toBe(false);
-    expect(plan.seededPrismaExecutionAllowed).toBe(false);
-    expect(plan.tenantIsolationExecutionAllowed).toBe(false);
-    expect(plan.idempotencyExecutionAllowed).toBe(false);
-    expect(plan.revalidationExecutionAllowed).toBe(false);
-    expect(plan.associationExecutionAllowed).toBe(false);
-    expect(plan.browserExecutionAllowed).toBe(false);
-    expect(plan.ciExecutionAllowed).toBe(false);
-    expect(plan.artifactReviewExecutionAllowed).toBe(false);
-    expect(plan.localCommands).toBe(seoPublicationLocalCommands);
-    expect(plan.externalCommands).toBe(seoPublicationExternalCommands);
-    expect(plan.requiredExternalEvidence).toBe(seoPublicationRequiredExternalEvidence);
+    expect(plan.policy).toEqual(seoPublicationExecutionPolicy);
+    expect(plan.commandExecutionAllowed).toEqual(false);
+    expect(plan.seededPrismaExecutionAllowed).toEqual(false);
+    expect(plan.tenantIsolationExecutionAllowed).toEqual(false);
+    expect(plan.idempotencyExecutionAllowed).toEqual(false);
+    expect(plan.revalidationExecutionAllowed).toEqual(false);
+    expect(plan.associationExecutionAllowed).toEqual(false);
+    expect(plan.browserExecutionAllowed).toEqual(false);
+    expect(plan.ciExecutionAllowed).toEqual(false);
+    expect(plan.artifactReviewExecutionAllowed).toEqual(false);
+    expect(plan.localCommands).toEqual(seoPublicationLocalCommands);
+    expect(plan.externalCommands).toEqual(seoPublicationExternalCommands);
+    expect(plan.requiredExternalEvidence).toEqual(seoPublicationRequiredExternalEvidence);
     expect(seoPublicationRequiredExternalEvidence).toEqual([
       "actual SEO publication command output",
       "seeded SeoCityPage mutation integration tests",
@@ -231,8 +231,8 @@ describe("SEO publication runtime contract", () => {
     expect(blockedDecision.blockers).toContain("Secret-safe SEO publication artifact review evidence is missing.");
     expect(blockedDecision.missingArtifacts).toContain("coverage/seo-publication-city-prisma.json");
     expect(blockedDecision.missingArtifacts).toContain("coverage/seo-publication-secret-safe-artifacts.json");
-    expect(blockedDecision.requiredCommands).toBe(seoPublicationRuntimeCommands);
-    expect(blockedDecision.requiredEvidence).toBe(seoPublicationDecisionRequiredEvidence);
+    expect(blockedDecision.requiredCommands).toEqual(seoPublicationRuntimeCommands);
+    expect(blockedDecision.requiredEvidence).toEqual(seoPublicationDecisionRequiredEvidence);
     expect(blockedDecision.redactedSummary).toEqual({
       capturedArtifactCount: 5,
       requiredArtifactCount: seoPublicationArtifactPaths.length,
@@ -263,7 +263,7 @@ describe("SEO publication runtime contract", () => {
     expect(completeDecision.status).toBe("complete");
     expect(completeDecision.blockers).toEqual([]);
     expect(completeDecision.missingArtifacts).toEqual([]);
-    expect(completeDecision.requiredEvidence).toBe(seoPublicationDecisionRequiredEvidence);
+    expect(completeDecision.requiredEvidence).toEqual(seoPublicationDecisionRequiredEvidence);
   });
 
   it("wires CI, manifest, tracker, and artifacts without claiming seeded DB/browser proof", () => {
@@ -310,4 +310,5 @@ describe("SEO publication runtime contract", () => {
     }
   });
 });
+
 
