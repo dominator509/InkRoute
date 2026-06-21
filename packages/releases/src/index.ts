@@ -56,6 +56,7 @@ export type ReleaseRuntimeVerificationRequiredEvidence = (typeof releaseRuntimeV
 
 export const releasePersistenceRbacReadinessRequiredEvidence = [
   "dashboard static route test and dashboard typecheck evidence",
+  "ReleaseRecord/FeatureFlag persistence, transaction, and audit-log evidence",
   "tenant-scoped RBAC, mismatch rejection, and membership lookup evidence",
   "provider credential gate, previous-state metadata, and optimistic concurrency evidence",
   "approval state machine, rendered dashboard workflow, orchestration hook, and DB-backed route evidence",
@@ -1529,8 +1530,8 @@ export function buildFeatureFlagRuntimeIntegrationReadinessPlan(input: FeatureFl
     missingScripts,
     requiredCommands: featureFlagRuntimeIntegrationReadinessRequiredCommands,
     requiredEvidence:
-      requiredEvidence.length === releaseLaunchControlEvidenceRequiredEvidence.length
-        ? releaseLaunchControlEvidenceRequiredEvidence
+      requiredEvidence.length === featureFlagRuntimeIntegrationReadinessRequiredEvidence.length
+        ? featureFlagRuntimeIntegrationReadinessRequiredEvidence
         : requiredEvidence,
     blockers,
   };

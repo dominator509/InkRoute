@@ -1451,7 +1451,7 @@ export function buildSmsWebhookRuntimeReadinessPlan(input: SmsWebhookRuntimeRead
     provider: "twilio",
     eventId: input.eventId,
     eventType: input.eventType,
-    inboundBody: input.inboundBody,
+    ...(input.inboundBody ? { inboundBody: input.inboundBody } : {}),
     ...(input.providerMessageId ? { providerMessageId: input.providerMessageId } : {}),
     ...(input.alreadyProcessedEventIds ? { alreadyProcessedEventIds: input.alreadyProcessedEventIds } : {}),
   });

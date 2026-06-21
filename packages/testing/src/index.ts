@@ -1261,8 +1261,8 @@ export function buildPhase9AppRuntimeBuildReadinessPlan(input: Phase9AppRuntimeB
     missingScripts,
     requiredCommands: phase9AppRuntimeBuildReadinessRequiredCommands,
     requiredEvidence:
-      requiredEvidence.length === phase10SeoAppRuntimeBuildReadinessRequiredEvidence.length
-        ? phase10SeoAppRuntimeBuildReadinessRequiredEvidence
+      requiredEvidence.length === phase9AppRuntimeBuildReadinessRequiredEvidence.length
+        ? phase9AppRuntimeBuildReadinessRequiredEvidence
         : requiredEvidence,
     blockers,
   };
@@ -1332,8 +1332,8 @@ export function buildPhase10SeoAppRuntimeBuildReadinessPlan(input: Phase10SeoApp
     missingScripts,
     requiredCommands: phase10SeoAppRuntimeBuildReadinessRequiredCommands,
     requiredEvidence:
-      requiredEvidence.length === testingLaunchExecutionEvidenceRequiredEvidence.length
-        ? testingLaunchExecutionEvidenceRequiredEvidence
+      requiredEvidence.length === phase10SeoAppRuntimeBuildReadinessRequiredEvidence.length
+        ? phase10SeoAppRuntimeBuildReadinessRequiredEvidence
         : requiredEvidence,
     blockers,
   };

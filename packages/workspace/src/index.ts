@@ -477,7 +477,7 @@ export function auditWorkspaceDependencies(input: {
     projectsChecked: input.projects.length,
     workspacePackages: packageNames.sort(),
     importRecords: input.imports,
-    externalImportRecords: input.externalImports,
+    ...(input.externalImports ? { externalImportRecords: input.externalImports } : {}),
     findings,
   };
 }
