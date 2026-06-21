@@ -6,6 +6,12 @@ import type { NextRequest } from "next/server";
 
 const FALLBACK_ACTOR_ID = "dashboard-demo-user";
 const allowedRoles: ReadonlyArray<Role> = ["owner", "artist", "assistant", "studio_manager", "admin"];
+const fallbackRole = "assistant";
+
+function normalizeHeaderValue(value: string | null): string | null {
+  const normalized = value?.trim();
+  return normalized && normalized.length > 0 ? normalized : null;
+}
 
 export interface DashboardActorContext {
   tenantId: string;
@@ -26,11 +32,14 @@ export interface DashboardMembershipLookupMetadata {
 }
 
 function normalizeRole(value: string | null): Role {
-  const normalizedRole = (value ?? "").trim().toLowerCase();
+  const normalizedRole = normalizeHeaderValue(value)?.toLowerCase();
+  if (!normalizedRole) {
+    return fallbackRole;
+  }
   if (allowedRoles.includes(normalizedRole as Role)) {
     return normalizedRole as Role;
   }
-  return "assistant";
+  return fallbackRole;
 }
 
 function isProductionEnv() {
@@ -38,12 +47,15 @@ function isProductionEnv() {
 }
 
 export function resolveDashboardActor(request: NextRequest): DashboardActorContext {
-  const tenantId =
+  const tenantId = normalizeHeaderValue(
     request.headers.get("x-tenant-id") ??
-    request.headers.get("x-dashboard-tenant-id") ??
-    request.headers.get("x-demo-tenant-id");
+      request.headers.get("x-dashboard-tenant-id") ??
+      request.headers.get("x-demo-tenant-id"),
+  );
 
-  const actorUserId = request.headers.get("x-user-id") ?? request.headers.get("x-dashboard-user-id") ?? FALLBACK_ACTOR_ID;
+  const actorUserId = normalizeHeaderValue(
+    request.headers.get("x-user-id") ?? request.headers.get("x-dashboard-user-id") ?? FALLBACK_ACTOR_ID,
+  );
   const role = normalizeRole(request.headers.get("x-user-role") ?? request.headers.get("x-dashboard-role"));
 
   if (tenantId) {
