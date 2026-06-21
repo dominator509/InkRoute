@@ -98,9 +98,20 @@ describe("dashboard auth guard runtime contract", () => {
   it("keeps evidence blockers explicit until provider sessions, DB roles, browser denial, CI, and safe artifacts exist", () => {
     expect(dashboardAuthGuardRuntimeReadiness.status).toBe("blocked");
     expect(dashboardAuthGuardRuntimeReadiness.missingScripts).toEqual([]);
-    expect(dashboardAuthGuardRuntimeReadiness.requiredCommands).toBe(dashboardAuthGuardRuntimeCommands);
-    expect(dashboardAuthGuardRuntimeReadiness.requiredControls).toBe(dashboardAuthGuardRuntimeRequiredControls);
-    expect(dashboardAuthGuardRuntimeReadiness.requiredEvidence).toBe(dashboardAuthGuardEvidenceFlags);
+    expect(dashboardAuthGuardRuntimeReadiness.requiredCommands).toEqual(dashboardAuthGuardRuntimeCommands);
+    expect(dashboardAuthGuardRuntimeReadiness.requiredControls).toEqual(dashboardAuthGuardRuntimeRequiredControls);
+    expect(dashboardAuthGuardRuntimeReadiness.requiredEvidence).toContain(
+      "provider-backed session plus TenantMember/CustomRole database lookup evidence",
+    );
+    expect(dashboardAuthGuardRuntimeReadiness.requiredEvidence).toContain(
+      "unauthorized state, redacted AuditLog, and no-store cache evidence",
+    );
+    expect(dashboardAuthGuardRuntimeReadiness.requiredEvidence).toContain(
+      "browser login/logout, tenant-switch, and cross-tenant denial evidence",
+    );
+    expect(dashboardAuthGuardRuntimeReadiness.requiredEvidence).toContain(
+      "dashboard typecheck/build, CI, and secret-safe artifact evidence",
+    );
     expect(dashboardAuthGuardRuntimeReadiness.blockers).toContain(
       "Real auth provider sessions must be configured for dashboard guard tests.",
     );
@@ -264,7 +275,7 @@ describe("dashboard auth guard runtime contract", () => {
     expect(gapTracker).toContain("dashboardAuthGuardExecutionPolicy");
     expect(gapTracker).toContain("dashboardAuthGuardRequiredExternalEvidence");
     expect(gapTracker).toContain("GAP-036 is dashboard-auth-guard-runtime-matrix wired with evidence classifier");
-    expect(gapTracker).toContain("GAP-036 is middleware/layout/API-helper wired");
+    expect(gapTracker).toContain("GAP-036 is dashboard-auth-guard-runtime-matrix");
     expect(dashboardAuthGuardArtifactPaths).toContain("coverage/dashboard-auth-secret-safe-artifacts.json");
   });
 });
