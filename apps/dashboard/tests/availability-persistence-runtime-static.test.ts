@@ -109,15 +109,18 @@ describe("availability persistence runtime contract", () => {
     expect(holdRoute).toContain("AVAILABILITY_HOLD_BLOCKED");
     expect(holdRoute).toContain("{ status: 202, headers: noStoreHeaders }");
     expect(holdRoute).not.toContain("{ status: 501, headers: noStoreHeaders }");
-    expect(calendarRoute).toContain("AvailabilityWindow");
-    expect(readRouteStaticTest).toContain("AvailabilityWindow");
+    expect(calendarRoute).toContain("tx.availabilityWindow.findMany");
+    expect(readRouteStaticTest).toContain("loads calendar connections, events, and availability while omitting provider secrets");
   });
 
   it("keeps transaction, persisted conflict, concurrent hold, tenant isolation, seeded DB, and CI blockers explicit", () => {
     expect(availabilityPersistenceRuntimeReadiness.status).toBe("blocked");
     expect(availabilityPersistenceRuntimeReadiness.missingScripts).toEqual([]);
-    expect(availabilityPersistenceRuntimeReadiness.requiredCommands).toBe(availabilityPersistenceRuntimeCommands);
-    expect(availabilityPersistenceRuntimeReadiness.requiredEvidence).toBe(availabilityPersistenceDecisionRequiredEvidence);
+    expect(availabilityPersistenceRuntimeReadiness.requiredCommands).toEqual(availabilityPersistenceRuntimeCommands);
+    expect(availabilityPersistenceRuntimeReadiness.requiredEvidence).toEqual([
+      "persisted conflict detection and concurrent hold rejection evidence",
+      "seeded Postgres tenant isolation and availability lifecycle integration test output",
+    ]);
     expect(availabilityPersistenceRuntimeReadiness.blockers).toContain("@inkroute/calendar availability tests must pass.");
     expect(availabilityPersistenceRuntimeReadiness.blockers).toContain("Overlapping slot persistence rejection must be tested against DB rows.");
     expect(availabilityPersistenceRuntimeReadiness.blockers).toContain("Seeded Postgres integration tests must prove availability persistence lifecycle.");
@@ -168,7 +171,7 @@ describe("availability persistence runtime contract", () => {
       "coverage/availability-persistence-secret-safe-artifacts.json",
     );
     expect(blockedDecision.requiredCommands).toBe(availabilityPersistenceRuntimeCommands);
-    expect(blockedDecision.requiredEvidence).toBe(availabilityPersistenceDecisionRequiredEvidence);
+    expect(blockedDecision.requiredEvidence).toEqual(availabilityPersistenceDecisionRequiredEvidence);
     expect(blockedDecision.redactedSummary).toEqual({
       capturedArtifactCount: 7,
       requiredArtifactCount: availabilityPersistenceArtifactPaths.length,
