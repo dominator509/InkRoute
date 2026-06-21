@@ -3,6 +3,7 @@ import { buildPrivacyRequestDraft, redactRecord, type PrivacyRequestType } from 
 import { checkRateLimit, getClientIp, persistPrivacyRequest, resolveTenant } from "../../../../../lib/localRuntimeState";
 
 const requestTypes: PrivacyRequestType[] = ["access", "export", "rectification", "deletion", "restriction"];
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
 function isPrivacyRequestType(value: unknown): value is PrivacyRequestType {
   return typeof value === "string" && requestTypes.includes(value as PrivacyRequestType);
@@ -15,18 +16,18 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Privacy request body must be valid JSON." } }, { status: 400 });
+    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Privacy request body must be valid JSON." } }, { status: 400, headers: noStoreHeaders });
   }
 
   const input = typeof body === "object" && body !== null ? body as Record<string, unknown> : {};
   if (!isPrivacyRequestType(input.type) || typeof input.email !== "string") {
-    return NextResponse.json({ ok: false, error: { code: "VALIDATION_FAILED", message: "Expected type and email." } }, { status: 400 });
+    return NextResponse.json({ ok: false, error: { code: "VALIDATION_FAILED", message: "Expected type and email." } }, { status: 400, headers: noStoreHeaders });
   }
 
   const draft = buildPrivacyRequestDraft(input.type);
   const resolvedTenant = resolveTenant(tenantSlug);
   if (!resolvedTenant) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_NOT_FOUND", message: "Privacy requests are available for local demo tenant slug only." } }, { status: 404 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_NOT_FOUND", message: "Privacy requests are available for local demo tenant slug only." } }, { status: 404, headers: noStoreHeaders });
   }
 
   const rateLimit = checkRateLimit("public-privacy-request", tenantSlug, `${getClientIp(Object.fromEntries(request.headers.entries()))}:${resolvedTenant.tenantId}`);
@@ -40,7 +41,30 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           details: { gapIds: ["GAP-098", "GAP-101"], remaining: rateLimit.remaining, retryAfterSeconds: rateLimit.retryAfterSeconds },
         },
       },
-      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+      { status: 429, headers: { ...noStoreHeaders, "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "PROVIDER_PRIVACY_REQUEST_PERSISTENCE_NOT_CONFIGURED",
+          message: "Production privacy requests require identity proofing, tenant relationship checks, durable case persistence, and audited worker execution; local runtime persistence is disabled.",
+          gapIds: ["GAP-025", "GAP-098", "GAP-099", "GAP-100"],
+        },
+        productionBoundary: {
+          localPrivacyRequestPersistenceDisabled: true,
+          requiredBeforeEnablement: [
+            "identity proofing and tenant relationship verification",
+            "PrivacyRequest case/status database persistence",
+            "export/delete/anonymize/rectify worker execution",
+            "legal hold, notification, and AuditLog persistence",
+          ],
+        },
+      },
+      { status: 503, headers: noStoreHeaders },
     );
   }
 
@@ -56,6 +80,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
         gapIds: ["GAP-013", "GAP-098", "GAP-099", "GAP-100"],
       },
     },
-    { status: 201 },
+    { status: 201, headers: noStoreHeaders },
   );
 }

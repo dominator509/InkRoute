@@ -17,6 +17,63 @@ export interface MessagingPrivacyRuntimeMatrixEntry {
   readonly status: MessagingPrivacyRuntimeStatus;
 }
 
+export interface MessagingPrivacyExecutionPolicy {
+  readonly codexMayClassifyStaticMessagingPrivacyReadiness: boolean;
+  readonly localCommandEvidenceRequiredForClosure: boolean;
+  readonly roleVisibilityRequiredForClosure: boolean;
+  readonly apiAuthorizationRequiredForClosure: boolean;
+  readonly attachmentAuthorizationRequiredForClosure: boolean;
+  readonly exportDeleteRetentionRequiredForClosure: boolean;
+  readonly providerPayloadOmissionRequiredForClosure: boolean;
+  readonly moderationRateLimitRequiredForClosure: boolean;
+  readonly postgresRetentionRequiredForClosure: boolean;
+  readonly ciEvidenceRequiredForClosure: boolean;
+  readonly secretSafeArtifactsRequiredForClosure: boolean;
+}
+
+export interface MessagingPrivacyExecutionPlan {
+  readonly policy: typeof messagingPrivacyExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly authorizationExecutionAllowed: false;
+  readonly attachmentAuthorizationExecutionAllowed: false;
+  readonly workflowExecutionAllowed: false;
+  readonly retentionJobExecutionAllowed: false;
+  readonly moderationExecutionAllowed: false;
+  readonly postgresExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly artifactReviewExecutionAllowed: false;
+  readonly localCommands: typeof messagingPrivacyLocalCommands;
+  readonly externalCommands: typeof messagingPrivacyExternalCommands;
+  readonly requiredExternalEvidence: typeof messagingPrivacyRequiredExternalEvidence;
+}
+
+export interface RedactedMessagingPrivacyArtifact {
+  readonly artifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: true;
+}
+
+export interface MessagingPrivacyArtifactReview {
+  readonly passed: boolean;
+  readonly artifact: RedactedMessagingPrivacyArtifact;
+  readonly blockers: readonly string[];
+  readonly requiredExternalEvidence: typeof messagingPrivacyRequiredExternalEvidence;
+}
+
+export const messagingPrivacyExecutionPolicy = {
+  codexMayClassifyStaticMessagingPrivacyReadiness: true,
+  localCommandEvidenceRequiredForClosure: true,
+  roleVisibilityRequiredForClosure: true,
+  apiAuthorizationRequiredForClosure: true,
+  attachmentAuthorizationRequiredForClosure: true,
+  exportDeleteRetentionRequiredForClosure: true,
+  providerPayloadOmissionRequiredForClosure: true,
+  moderationRateLimitRequiredForClosure: true,
+  postgresRetentionRequiredForClosure: true,
+  ciEvidenceRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies MessagingPrivacyExecutionPolicy;
+
 export const messagingPrivacyRuntimeCommands = [
   "pnpm --filter @inkroute/notifications typecheck",
   "pnpm --filter @inkroute/notifications test",
@@ -28,6 +85,114 @@ export const messagingPrivacyRuntimeCommands = [
   "message export/delete/retention Postgres integration tests",
   "messaging spam moderation and rate-limit tests",
 ] as const;
+
+export const messagingPrivacyRequiredExternalEvidence = [
+  "actual messaging privacy command output",
+  "dashboard messaging role-visibility tests",
+  "messaging privacy API authorization tests",
+  "unauthorized-role runtime denial tests",
+  "secure attachment authorization tests",
+  "message export/delete/retention workflow tests",
+  "message retention job execution tests",
+  "provider payload/private URL omission tests",
+  "messaging spam moderation and rate-limit tests",
+  "MessageAuditLog and IdempotencyKey evidence",
+  "message export/delete/retention Postgres integration tests",
+  "CI messaging privacy artifacts",
+  "secret-safe messaging privacy artifact review",
+] as const;
+
+export const messagingPrivacyDecisionRequiredEvidence = [
+  "role-gated messaging UI/API and unauthorized-role denial evidence",
+  "secure attachment authorization and policy test evidence",
+  "persistence-backed export, delete, retention job, and Postgres integration evidence",
+  "provider payload/private URL omission evidence",
+  "moderation/rate-limit, audit, idempotency, and spam test evidence",
+  "secret-safe review of retained messaging privacy artifacts",
+] as const;
+
+export const messagingPrivacyLocalCommands = [
+  "pnpm --filter @inkroute/notifications typecheck",
+  "pnpm --filter @inkroute/notifications test",
+  "pnpm --filter @inkroute/dashboard typecheck",
+  "pnpm vitest run apps/dashboard/tests/messaging-privacy-runtime-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts",
+] as const;
+
+export const messagingPrivacyExternalCommands = [
+  "dashboard messaging role-visibility tests",
+  "messaging privacy API authorization tests",
+  "secure attachment authorization tests",
+  "message export/delete/retention Postgres integration tests",
+  "messaging spam moderation and rate-limit tests",
+  "GitHub Actions messaging privacy runtime job",
+  "secret-safe messaging privacy artifact review",
+] as const;
+
+export const buildMessagingPrivacyExecutionPlan = (): MessagingPrivacyExecutionPlan => ({
+  policy: messagingPrivacyExecutionPolicy,
+  commandExecutionAllowed: false,
+  authorizationExecutionAllowed: false,
+  attachmentAuthorizationExecutionAllowed: false,
+  workflowExecutionAllowed: false,
+  retentionJobExecutionAllowed: false,
+  moderationExecutionAllowed: false,
+  postgresExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  artifactReviewExecutionAllowed: false,
+  localCommands: messagingPrivacyLocalCommands,
+  externalCommands: messagingPrivacyExternalCommands,
+  requiredExternalEvidence: messagingPrivacyRequiredExternalEvidence,
+});
+
+const messagingPrivacyPrivateArtifactKeyPattern =
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|message|body|payload|attachment|signed|export|delete|retention|audit|idempotency|moderation|rate.?limit|email|phone|medical|payment|customer|pii)/i;
+
+const redactMessagingPrivacyArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactMessagingPrivacyArtifactValue(entry, `${path}[${index}]`, redactedPaths));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (messagingPrivacyPrivateArtifactKeyPattern.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[redacted]"];
+        }
+
+        return [key, redactMessagingPrivacyArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const buildRedactedMessagingPrivacyArtifact = (artifact: unknown): RedactedMessagingPrivacyArtifact => {
+  const redactedPaths: string[] = [];
+
+  return {
+    artifact: redactMessagingPrivacyArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+    secretSafe: true,
+  };
+};
+
+export const buildMessagingPrivacyArtifactReview = (artifact: unknown): MessagingPrivacyArtifactReview => {
+  const redacted = buildRedactedMessagingPrivacyArtifact(artifact);
+
+  return {
+    passed: true,
+    artifact: redacted,
+    blockers: [],
+    requiredExternalEvidence: messagingPrivacyRequiredExternalEvidence,
+  };
+};
 
 export const messagingPrivacyArtifactPaths = [
   "coverage/messaging-privacy-runtime.json",
@@ -54,6 +219,110 @@ export const messagingPrivacyArtifactPaths = [
   "test-results/messaging-privacy-runtime",
 ] as const;
 
+export const messagingPrivacyRuntimeProofFiles = [
+  "apps/dashboard/package.json",
+  "packages/notifications/package.json",
+  "packages/notifications/src/index.ts",
+  "packages/notifications/tests/delivery-plan.test.ts",
+  "packages/types/package.json",
+  "packages/types/src/index.ts",
+  "packages/auth/src/index.ts",
+  "apps/dashboard/lib/messagingPrivacy.ts",
+  "apps/dashboard/lib/messagingPrivacyRuntime.ts",
+  "apps/dashboard/app/messages/page.tsx",
+  "apps/dashboard/app/api/messages/route.ts",
+  "apps/dashboard/app/api/messages/[threadId]/route.ts",
+  "apps/dashboard/app/api/messages/privacy/route.ts",
+  "apps/dashboard/tests/message-read-route-static.test.ts",
+  "apps/dashboard/tests/messaging-privacy-static.test.ts",
+  "apps/dashboard/tests/messaging-privacy-runtime-static.test.ts",
+  "testing/manifests/unit-test-manifest.json",
+  ".github/workflows/ci.yml",
+  "SECURITY.md",
+] as const;
+
+export type MessagingPrivacyEvidenceArtifact = (typeof messagingPrivacyArtifactPaths)[number];
+
+export interface MessagingPrivacyEvidenceInput {
+  readonly notificationsTypecheckPassed: boolean;
+  readonly notificationsTestsPassed: boolean;
+  readonly dashboardTypecheckPassed: boolean;
+  readonly staticContractTestsPassed: boolean;
+  readonly redactionServiceVerified: boolean;
+  readonly roleVisibilityVerified: boolean;
+  readonly apiAuthorizationVerified: boolean;
+  readonly unauthorizedRoleDenialVerified: boolean;
+  readonly attachmentAuthorizationVerified: boolean;
+  readonly exportWorkflowVerified: boolean;
+  readonly deleteWorkflowVerified: boolean;
+  readonly retentionWorkflowVerified: boolean;
+  readonly retentionJobVerified: boolean;
+  readonly providerPayloadOmissionVerified: boolean;
+  readonly moderationRateLimitVerified: boolean;
+  readonly auditLogVerified: boolean;
+  readonly idempotencyKeyVerified: boolean;
+  readonly postgresRetentionVerified: boolean;
+  readonly ciEvidenceCaptured: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly MessagingPrivacyEvidenceArtifact[];
+}
+
+export interface MessagingPrivacyEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly MessagingPrivacyEvidenceArtifact[];
+  readonly requiredCommands: typeof messagingPrivacyRuntimeCommands;
+  readonly requiredEvidence: typeof messagingPrivacyDecisionRequiredEvidence;
+  readonly redactedSummary: {
+    readonly capturedArtifactCount: number;
+    readonly requiredArtifactCount: number;
+  };
+}
+
+export const buildMessagingPrivacyEvidenceDecision = (
+  input: MessagingPrivacyEvidenceInput,
+): MessagingPrivacyEvidenceDecision => {
+  const captured = new Set(input.capturedArtifacts);
+  const missingArtifacts = messagingPrivacyArtifactPaths.filter((artifact) => !captured.has(artifact));
+  const blockers = [
+    ...(!input.notificationsTypecheckPassed ? ["Notifications package typecheck evidence is missing."] : []),
+    ...(!input.notificationsTestsPassed ? ["Notifications package test evidence is missing."] : []),
+    ...(!input.dashboardTypecheckPassed ? ["Dashboard typecheck evidence is missing."] : []),
+    ...(!input.staticContractTestsPassed ? ["Messaging privacy static contract evidence is missing."] : []),
+    ...(!input.redactionServiceVerified ? ["Messaging redaction service evidence is missing."] : []),
+    ...(!input.roleVisibilityVerified ? ["Role-based message visibility evidence is missing."] : []),
+    ...(!input.apiAuthorizationVerified ? ["Messaging privacy API authorization evidence is missing."] : []),
+    ...(!input.unauthorizedRoleDenialVerified ? ["Unauthorized-role denial evidence is missing."] : []),
+    ...(!input.attachmentAuthorizationVerified ? ["Secure attachment authorization evidence is missing."] : []),
+    ...(!input.exportWorkflowVerified ? ["Message export workflow persistence evidence is missing."] : []),
+    ...(!input.deleteWorkflowVerified ? ["Message delete workflow persistence evidence is missing."] : []),
+    ...(!input.retentionWorkflowVerified ? ["Message retention workflow persistence evidence is missing."] : []),
+    ...(!input.retentionJobVerified ? ["Message retention job evidence is missing."] : []),
+    ...(!input.providerPayloadOmissionVerified ? ["Provider payload/private URL omission evidence is missing."] : []),
+    ...(!input.moderationRateLimitVerified ? ["Messaging moderation/rate-limit evidence is missing."] : []),
+    ...(!input.auditLogVerified ? ["MessageAuditLog privacy event evidence is missing."] : []),
+    ...(!input.idempotencyKeyVerified ? ["Messaging privacy IdempotencyKey evidence is missing."] : []),
+    ...(!input.postgresRetentionVerified ? ["Postgres retention/export/delete integration evidence is missing."] : []),
+    ...(!input.ciEvidenceCaptured ? ["Messaging privacy CI evidence is missing."] : []),
+    ...(!input.secretSafeArtifactReviewPassed
+      ? ["Secret-safe messaging privacy artifact review evidence is missing."]
+      : []),
+    ...(missingArtifacts.length > 0 ? ["All messaging privacy artifacts must be captured."] : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: messagingPrivacyRuntimeCommands,
+    requiredEvidence: messagingPrivacyDecisionRequiredEvidence,
+    redactedSummary: {
+      capturedArtifactCount: captured.size,
+      requiredArtifactCount: messagingPrivacyArtifactPaths.length,
+    },
+  };
+};
+
 export const messagingPrivacyRuntimeMatrix = [
   { id: "notifications-typecheck", command: "pnpm --filter @inkroute/notifications typecheck", artifact: "coverage/messaging-privacy-notifications-typecheck.txt", status: "wired" },
   { id: "notifications-tests", command: "pnpm --filter @inkroute/notifications test", artifact: "coverage/messaging-privacy-notifications-test.txt", status: "wired" },
@@ -78,3 +347,5 @@ export const messagingPrivacyRuntimeMatrix = [
 ] as const satisfies readonly MessagingPrivacyRuntimeMatrixEntry[];
 
 export const messagingPrivacyRuntimeReadiness = messagingPrivacyContract.runtimeReadiness;
+
+

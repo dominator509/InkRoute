@@ -8,6 +8,8 @@ function parseAction(value: unknown): PreferenceMutationAction {
   return typeof value === "string" && actions.includes(value as PreferenceMutationAction) ? (value as PreferenceMutationAction) : "update_email_preferences";
 }
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 export async function GET(_request: NextRequest, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;
   return NextResponse.json(
@@ -18,7 +20,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ te
       gapIds: ["GAP-067"],
       boundary: "Preference center route exposes token, unsubscribe, STOP/START, tenant settings, List-Unsubscribe, and legal-copy gates without mutating durable stores.",
     },
-    { headers: { "Cache-Control": "no-store" } },
+    { headers: noStoreHeaders },
   );
 }
 
@@ -28,7 +30,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   try {
     body = (await request.json()) as Record<string, unknown>;
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "INVALID_PREFERENCE_JSON", message: "Preference mutation body must be valid JSON." } }, { status: 400 });
+    return NextResponse.json({ ok: false, error: { code: "INVALID_PREFERENCE_JSON", message: "Preference mutation body must be valid JSON." } }, { status: 400, headers: noStoreHeaders });
   }
 
   const action = parseAction(body.action);
@@ -53,6 +55,29 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     ...(typeof body.legalCopyApproved === "boolean" ? { legalCopyApproved: body.legalCopyApproved } : {}),
   });
 
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "PROVIDER_PREFERENCE_PERSISTENCE_NOT_CONFIGURED",
+          message: "Production preference mutations require signed token crypto, hash-only persistence, suppression repositories, audit logs, and idempotency storage; local-contract fallback responses are disabled.",
+          gapIds: ["GAP-010", "GAP-061", "GAP-067", "GAP-069"],
+        },
+        productionBoundary: {
+          localContractMutationFallbackDisabled: true,
+          requiredBeforeEnablement: [
+            "signed preference token crypto and hash persistence",
+            "ClientNotificationPreference and SuppressionListEntry persistence",
+            "NotificationAuditLog and IdempotencyKey persistence",
+            "provider List-Unsubscribe and pre-send suppression evidence",
+          ],
+        },
+      },
+      { status: 503, headers: noStoreHeaders },
+    );
+  }
+
   return NextResponse.json(
     {
       ok: plan.status === "ready",
@@ -60,8 +85,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
       plan,
       requiredRepositoryMethods: preferenceCenterContract.requiredRepositoryMethods,
       gapIds: ["GAP-067"],
-      boundary: "Preference POST returns the mutation/write plan; durable token, suppression, preference, settings, audit, and idempotency repositories remain required for live mutations.",
+      boundary: "Preference POST returns the local mutation contract; durable token, suppression, preference, settings, audit, and idempotency repositories remain required for live mutations.",
     },
-    { status: plan.status === "ready" ? 202 : 409, headers: { "Cache-Control": "no-store" } },
+    { status: plan.status === "ready" ? 202 : 409, headers: noStoreHeaders },
   );
 }

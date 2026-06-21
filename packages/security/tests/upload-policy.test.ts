@@ -1,5 +1,42 @@
 import { describe, expect, it } from "vitest";
 import {
+  uploadScanPipelineRequiredControls,
+  securityMiddlewareRuntimeReadinessRequiredCommands,
+  securityMiddlewareRuntimeReadinessRequiredEvidence,
+  securityAutomatedCoverageReadinessRequiredCommands,
+  securityAutomatedCoverageReadinessRequiredEvidence,
+  securityAppRuntimeVerificationRequiredCommands,
+  securityAppRuntimeVerificationRequiredEvidence,
+  retentionEnforcementRuntimeReadinessRequiredCommands,
+  referenceUploadProviderEvidenceRequiredControls,
+  referenceUploadProviderEvidenceRequiredCommands,
+  referenceUploadProviderEvidenceRequiredEvidence,
+  providerStorageUploadReadinessRequiredCommands,
+  providerStorageUploadReadinessRequiredEvidence,
+  privacyRetentionRuntimeReadinessRequiredCommands,
+  privacyRetentionRuntimeReadinessRequiredEvidence,
+  privacyRetentionDryRunEvidenceRequiredCommands,
+  privacyRetentionDryRunEvidenceRequiredControls,
+  privacyRetentionDryRunEvidenceRequiredEvidence,
+  privacyRequestRuntimeReadinessRequiredCommands,
+  privacyRequestRuntimeReadinessRequiredEvidence,
+  privateStorageRuntimeReadinessRequiredCommands,
+  privateStorageRuntimeReadinessRequiredEvidence,
+  privateStorageAccessRequiredControls,
+  legalDocumentProductionReadinessRequiredCommands,
+  legalDocumentProductionReadinessRequiredEvidence,
+  paymentPolicyLegalReviewRuntimeReadinessRequiredCommands,
+  paymentPolicyLegalReviewRuntimeReadinessRequiredEvidence,
+  retentionEnforcementRuntimeReadinessRequiredEvidence,
+  fileAssetPersistenceRequiredControls,
+  dashboardPrivacyWorkflowEvidenceRequiredCommands,
+  dashboardPrivacyWorkflowEvidenceRequiredControls,
+  dashboardPrivacyWorkflowEvidenceRequiredEvidence,
+  dashboardPrivacyRuntimeReadinessRequiredCommands,
+  dashboardPrivacyRuntimeReadinessRequiredEvidence,
+  buildSignedUploadIntentRequiredControls,
+  abuseControlRuntimeReadinessRequiredCommands,
+  abuseControlRuntimeReadinessRequiredEvidence,
   buildDashboardPrivacyRuntimeReadinessPlan,
   buildDashboardPrivacyWorkflowEvidencePlan,
   buildPrivacyLifecyclePlan,
@@ -27,14 +64,38 @@ import {
   buildUploadScanPipelinePlan,
   detectMimeTypeFromSignature,
   buildTenantIsolationFixtures,
+  phase13SecurityControls,
   evaluateDashboardPrivacyField,
   evaluateRateLimitDraft,
   projectDashboardPrivacyRecord,
   redactRecord,
+  summarizeSecurityPosture,
   validateUploadDraft,
 } from "../src/index";
 
 describe("security and privacy helpers", () => {
+  it("keeps Phase 13 security control copy aligned with local route and upload contracts", () => {
+    const authz = phase13SecurityControls.find((control) => control.id === "SEC-AUTHZ-001");
+    const upload = phase13SecurityControls.find((control) => control.id === "SEC-UPLOAD-001");
+    const privacy = phase13SecurityControls.find((control) => control.id === "SEC-PRIVACY-001");
+    const summary = summarizeSecurityPosture();
+
+    expect(authz?.status).toBe("local_contract");
+    expect(upload?.status).toBe("local_contract");
+    expect(privacy?.status).toBe("local_contract");
+    expect(summary.localContracts).toBeGreaterThan(0);
+    expect(summary.scaffolded).toBe(summary.localContracts);
+    expect(authz?.currentImplementation).toContain("dashboard route guards");
+    expect(authz?.currentImplementation).toContain("redacted data-loader contracts are wired locally");
+    expect(authz?.currentImplementation).not.toContain("app route guards and data loader enforcement are not wired");
+    expect(upload?.currentImplementation).toContain("signed-intent plans");
+    expect(upload?.currentImplementation).toContain("route evidence are wired locally");
+    expect(upload?.currentImplementation).not.toContain("signed uploads, scanning, private buckets, and derivative pipeline are not live");
+    expect(privacy?.currentImplementation).toContain("Privacy request intake, workflow planning, fail-closed route guards");
+    expect(privacy?.currentImplementation).toContain("attorney-reviewed copy remain gated");
+    expect(privacy?.currentImplementation).not.toContain("Privacy request drafts and placeholder policy pages exist only as non-binding demo content");
+  });
+
   it("accepts reference image drafts only within private-upload policy limits", () => {
     const accepted = validateUploadDraft({ kind: "reference_private", filename: "rib-reference.jpg", mimeType: "image/jpeg", sizeBytes: 400000, declaredByAuthenticatedUser: false });
     const rejected = validateUploadDraft({ kind: "portfolio_public", filename: "flash.jpg.php", mimeType: "image/jpeg", sizeBytes: 400000, declaredByAuthenticatedUser: true });
@@ -68,7 +129,7 @@ describe("security and privacy helpers", () => {
       requiredWrites: ["FileAsset", "BookingReferenceImage", "AuditLog"],
     });
     expect(plan.objectKey).toBe("private/tenant-demo-nomad/reference_private/booking-001/reference-001.jpg");
-    expect(plan.requiredControls).toContain("Private upload objects must not be readable through public URLs before or after scan completion.");
+    expect(plan.requiredControls).toEqual(buildSignedUploadIntentRequiredControls(plan.validation));
   });
 
   it("rejects signed upload intents when metadata validation fails", () => {
@@ -152,7 +213,7 @@ describe("security and privacy helpers", () => {
     expect(cleanDerivative.status).toBe("approved");
     expect(cleanDerivative.metadataStrippingRequired).toBe(true);
     expect(cleanDerivative.publicDerivativeAllowed).toBe(true);
-    expect(cleanDerivative.requiredControls).toContain("Never expose original private uploads publicly; publish only safe derivatives when allowed.");
+    expect(cleanDerivative.requiredControls).toBe(uploadScanPipelineRequiredControls);
   });
 
   it("requires scoped signed URLs for private uploads and downloads", () => {
@@ -191,7 +252,7 @@ describe("security and privacy helpers", () => {
       requiredWrites: ["FileAsset", "AuditLog", "SignedUrlGrant"],
     });
     expect(download.status).toBe("signed_url_ready");
-    expect(download.requiredControls).toContain("Check revocation and expiry before every private download grant.");
+    expect(download.requiredControls).toBe(privateStorageAccessRequiredControls);
   });
 
   it("plans FileAsset persistence with scan, derivative, privacy, and audit blockers", () => {
@@ -231,7 +292,7 @@ describe("security and privacy helpers", () => {
       requiredWrites: ["FileAsset", "AuditLog", "BookingReferenceImage"],
       blockers: [],
     });
-    expect(privateReference.requiredControls).toContain("Apply privacy retention rules to private reference, consent, document, and healed follow-up files.");
+    expect(privateReference.requiredControls).toBe(fileAssetPersistenceRequiredControls);
     expect(blockedPublic.status).toBe("blocked");
     expect(blockedPublic.publicReadAllowed).toBe(false);
     expect(blockedPublic.blockers).toEqual(expect.arrayContaining([
@@ -314,6 +375,27 @@ describe("security and privacy helpers", () => {
       tenantScopedAccessIntegrationTestsPassed: false,
       providerSandboxIntegrationTestsPassed: false,
     });
+    const allMissingEvidencePlan = buildPrivateStorageRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      storageProviderConfigured: false,
+      storageEnvVarsConfigured: false,
+      privateBucketAclVerified: false,
+      serverOwnedObjectKeysEnforced: false,
+      signedUploadUrlsImplemented: false,
+      signedDownloadUrlsImplemented: false,
+      fileAssetPersistenceConfigured: false,
+      signedUrlGrantPersistenceConfigured: false,
+      signedUrlRevocationPersistenceConfigured: false,
+      auditLogPersistenceConfigured: false,
+      scanApprovalGateEnforced: false,
+      publicDerivativeSeparationEnforced: false,
+      privateOriginalPublicReadDenied: false,
+      approvedDerivativePublicReadVerified: false,
+      tenantScopedAccessIntegrationTestsPassed: false,
+      providerSandboxIntegrationTestsPassed: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
@@ -325,12 +407,15 @@ describe("security and privacy helpers", () => {
       "Integration tests must prove private originals cannot be read publicly.",
       "Tenant-scoped storage access integration tests must deny cross-tenant object keys and grants.",
     ]));
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "configured S3/Supabase private bucket, signing environment, and ACL denial transcript",
-      "persisted FileAsset, SignedUrlGrant, revocation, and AuditLog rows for signed storage flows",
-      "private/public object access integration tests against provider sandbox or emulator",
-    ]));
-    expect(plan.requiredCommands).toContain("node scripts/storage/verify-private-bucket-acl.mjs");
+    expect(plan.requiredEvidence).toEqual([
+      privateStorageRuntimeReadinessRequiredEvidence[0],
+      privateStorageRuntimeReadinessRequiredEvidence[1],
+      privateStorageRuntimeReadinessRequiredEvidence[2],
+      privateStorageRuntimeReadinessRequiredEvidence[3],
+      privateStorageRuntimeReadinessRequiredEvidence[4],
+    ]);
+    expect(plan.requiredCommands).toBe(privateStorageRuntimeReadinessRequiredCommands);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(privateStorageRuntimeReadinessRequiredEvidence);
   });
 
   it("marks private storage runtime ready only after signed URL, persistence, ACL, and private/public proofs exist", () => {
@@ -469,17 +554,40 @@ describe("security and privacy helpers", () => {
       paymentLanguageApproved: true,
       smsLanguageApproved: false,
     });
+    const allMissingEvidencePlan = buildDashboardPrivacyRuntimeReadinessPlan({
+      packageScripts: { test: "vitest run" },
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      dashboardTypecheckPassed: false,
+      dashboardBuildPassed: false,
+      surfacesUsingProjection: [],
+      surfacesWithRouteTests: [],
+      legalReviewApproved: false,
+      persistedPrivacyWorkflowsConfigured: false,
+      exportWorkflowTested: false,
+      deletionWorkflowTested: false,
+      privateFileStorageDeletionTested: false,
+      auditLogPersistenceConfigured: false,
+      logAndErrorRedactionVerified: false,
+      consentLanguageApproved: false,
+      medicalLanguageApproved: false,
+      paymentLanguageApproved: false,
+      smsLanguageApproved: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
     expect(plan.missingProjectionSurfaces).toEqual(["consent_form", "message", "file_asset"]);
     expect(plan.missingRouteTestSurfaces).toContain("payment");
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/dashboard test -- dashboard-privacy");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "dashboard route/API privacy projection matrix for client, booking, consent, payment, message, and file surfaces",
-      "persisted export/delete/anonymization workflow test output for tenant dashboard data",
-      "AuditLog persistence and sanitized log/error evidence for dashboard privacy actions",
-    ]));
+    expect(plan.requiredCommands).toBe(dashboardPrivacyRuntimeReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toEqual([
+      dashboardPrivacyRuntimeReadinessRequiredEvidence[0],
+      dashboardPrivacyRuntimeReadinessRequiredEvidence[1],
+      dashboardPrivacyRuntimeReadinessRequiredEvidence[2],
+      dashboardPrivacyRuntimeReadinessRequiredEvidence[3],
+      dashboardPrivacyRuntimeReadinessRequiredEvidence[4],
+    ]);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(dashboardPrivacyRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Dashboard logs and error reports must be verified to redact PII, medical notes, payment identifiers, file keys, and message bodies.");
   });
 
@@ -504,26 +612,35 @@ describe("security and privacy helpers", () => {
       ciEvidenceCaptured: false,
       secretSafeArtifactsCaptured: false,
     });
-
+    const allMissingEvidencePlan = buildDashboardPrivacyWorkflowEvidencePlan({
+      packageScripts: { test: "vitest run" },
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      dashboardTypecheckPassed: false,
+      dashboardBuildPassed: false,
+      routeProjectionSurfaces: [],
+      routeTestSurfaces: [],
+      persistedPrivacyRequestStoreConfigured: false,
+      exportWorkflowIntegrationPassed: false,
+      deleteAnonymizeWorkflowIntegrationPassed: false,
+      privateStorageDeletionIntegrationPassed: false,
+      auditLogPersistencePassed: false,
+      legalApprovalCaptured: false,
+      consentMedicalDepositSmsCopyApproved: false,
+      sanitizedLogEvidenceCaptured: false,
+      sanitizedErrorEvidenceCaptured: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
     expect(plan.missingProjectionSurfaces).toEqual(["consent_form", "payment", "message", "file_asset"]);
     expect(plan.missingRouteTestSurfaces).toContain("booking_request");
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "dashboard privacy route/API tests",
-      "persisted dashboard export workflow tests",
-      "persisted dashboard delete/anonymize workflow tests",
-      "private file deletion integration tests",
-      "dashboard sanitized log/error evidence sweep",
-    ]));
-    expect(plan.requiredControls).toContain("Apply privacy projections before serializing client, booking, consent, payment, message, and file surfaces.");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "dashboard privacy route projection and route-test matrix for client, booking, consent, payment, message, and file surfaces",
-      "persisted privacy request, export/delete/anonymize, and private storage deletion workflow evidence",
-      "redacted AuditLog, sanitized runtime log, and sanitized error-report evidence",
-      "attorney/product approval for privacy, consent, medical, deposit/payment, and SMS/message copy",
-      "dashboard typecheck/build, CI, and secret-safe artifact evidence",
-    ]));
+    expect(plan.requiredCommands).toBe(dashboardPrivacyWorkflowEvidenceRequiredCommands);
+    expect(plan.requiredCommands).toEqual(dashboardPrivacyWorkflowEvidenceRequiredCommands);
+    expect(plan.requiredControls).toBe(dashboardPrivacyWorkflowEvidenceRequiredControls);
+    expect(plan.requiredEvidence).toBe(dashboardPrivacyWorkflowEvidenceRequiredEvidence);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(dashboardPrivacyWorkflowEvidenceRequiredEvidence);
     expect(plan.blockers).toContain("Private storage deletion integration tests must cover consent signatures, reference files, documents, and message attachments.");
     expect(plan.blockers).toContain("Dashboard privacy artifacts must be redacted and free of secrets, raw PII, medical notes, payment data, provider tokens, message bodies, and private file URLs.");
   });
@@ -559,11 +676,17 @@ describe("security and privacy helpers", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Redact runtime logs and error reports before they leave the dashboard boundary.");
+    expect(plan.requiredControls).toBe(dashboardPrivacyWorkflowEvidenceRequiredControls);
   });
 
   it("provides tenant isolation and rate-limit fixtures for future integration tests", () => {
+    const bookingRule = rateLimitRules.find((rule) => rule.id === "public-booking-submit");
+    const allowed = evaluateRateLimitDraft({ ruleId: "public-booking-submit", observedRequests: 4, windowSeconds: 3600 });
+
     expect(buildTenantIsolationFixtures().some((fixture) => fixture.expectedDecision === "deny")).toBe(true);
+    expect(bookingRule?.status).toBe("local_contract");
+    expect(allowed.warning).toBe("Local-contract evaluation only; production requires distributed counters.");
+    expect(allowed.warning).not.toBe("Scaffolded evaluation only; production requires distributed counters.");
     expect(evaluateRateLimitDraft({ ruleId: "public-booking-submit", observedRequests: 12, windowSeconds: 60 }).status).toBe("throttle");
   });
 
@@ -684,6 +807,26 @@ describe("security and privacy helpers", () => {
       failClosedBehaviorVerified: false,
       publicRouteIntegrationTestsPassed: false,
     });
+    const allMissingEvidencePlan = buildAbuseControlRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      distributedLimiterConfigured: false,
+      limiterEnvVarsConfigured: false,
+      edgeOrMiddlewareWired: false,
+      routeFamilyPoliciesApplied: false,
+      tenantSafeKeysVerified: false,
+      botChallengeProviderConfigured: false,
+      botChallengeRouteTestsPassed: false,
+      providerWebhookSignatureBypassVerified: false,
+      invalidWebhookSignatureChallengeVerified: false,
+      privacySafeAbuseLogPersistenceConfigured: false,
+      abuseLogRedactionVerified: false,
+      alertDeliveryConfigured: false,
+      throttlingAlertSmokePassed: false,
+      failClosedBehaviorVerified: false,
+      publicRouteIntegrationTestsPassed: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
@@ -694,13 +837,15 @@ describe("security and privacy helpers", () => {
       "Privacy-safe AbuseEvent persistence must record hashed actor keys, tenant, route family, action, and reason.",
       "Alert smoke tests must prove throttling and invalid-signature events reach the configured alert channel.",
     ]));
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "live distributed limiter configuration and middleware route-family enforcement proof",
-      "privacy-safe hashed abuse keys and redacted AbuseEvent persistence evidence",
-      "provider webhook bypass, invalid signature challenge, replay validation, and fail-closed behavior tests",
-      "abuse alert delivery smoke and public-route limiter integration tests",
-    ]));
-    expect(plan.requiredCommands).toContain("node scripts/security/verify-abuse-rate-limits.mjs");
+    expect(plan.requiredEvidence).toEqual([
+      abuseControlRuntimeReadinessRequiredEvidence[0],
+      abuseControlRuntimeReadinessRequiredEvidence[1],
+      abuseControlRuntimeReadinessRequiredEvidence[2],
+      abuseControlRuntimeReadinessRequiredEvidence[3],
+      abuseControlRuntimeReadinessRequiredEvidence[4],
+    ]);
+    expect(plan.requiredCommands).toBe(abuseControlRuntimeReadinessRequiredCommands);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(abuseControlRuntimeReadinessRequiredEvidence);
   });
 
   it("marks abuse-control runtime ready only after limiter, middleware, webhook, logging, alert, and route proofs exist", () => {
@@ -763,6 +908,8 @@ describe("security and privacy helpers", () => {
     expect(production.testExpectations.join(" ")).toContain("production-only HSTS");
     expect(preview.hstsEnabled).toBe(false);
     expect(preview.headers.map((header) => header.name)).not.toContain("Strict-Transport-Security");
+    expect(production.headers.find((header) => header.name === "Content-Security-Policy")?.status).toBe("local_contract");
+    expect(production.headers.find((header) => header.name === "X-Content-Type-Options")?.status).toBe("local_contract");
   });
 
   it("blocks production header enforcement when HTTPS or CSP invariants are not ready", () => {
@@ -836,6 +983,25 @@ describe("security and privacy helpers", () => {
       providerWebhookCsrfBypassReviewed: false,
       routeRuntimeIntegrationTestsPassed: false,
     });
+    const allMissingEvidencePlan = buildSecurityMiddlewareRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      webMiddlewareWired: false,
+      dashboardMiddlewareWired: false,
+      webHeaderBrowserSmokePassed: false,
+      dashboardHeaderBrowserSmokePassed: false,
+      productionHstsDeploymentVerified: false,
+      previewLocalHstsSuppressionVerified: false,
+      cspProviderConnectSourcesVerified: false,
+      cspFrameBaseFormInvariantsVerified: false,
+      csrfCookieMutationAttackTestsPassed: false,
+      csrfValidTokenAllowTestsPassed: false,
+      sameSiteCookieBehaviorVerified: false,
+      csrfSessionBindingVerified: false,
+      providerWebhookCsrfBypassReviewed: false,
+      routeRuntimeIntegrationTestsPassed: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
@@ -846,13 +1012,9 @@ describe("security and privacy helpers", () => {
       "Cookie-authenticated POST/PATCH/DELETE attack simulations must be rejected without valid CSRF tokens.",
       "Provider webhook CSRF bypass rules must be reviewed so signed callbacks bypass CSRF without weakening public mutations.",
     ]));
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "web/dashboard middleware wiring plus runtime route integration tests",
-      "browser header smoke tests with production HSTS and preview/local HSTS suppression proof",
-      "runtime CSP provider connect-src and frame/base/form invariant verification",
-      "CSRF attack/allow simulations, SameSite session behavior, token binding, and signed webhook bypass review",
-    ]));
-    expect(plan.requiredCommands).toContain("node scripts/security/verify-runtime-security-headers.mjs");
+    expect(plan.requiredEvidence).toBe(securityMiddlewareRuntimeReadinessRequiredEvidence);
+    expect(plan.requiredCommands).toBe(securityMiddlewareRuntimeReadinessRequiredCommands);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(securityMiddlewareRuntimeReadinessRequiredEvidence);
   });
 
   it("marks security middleware runtime ready only after headers, CSP, HSTS, SameSite, CSRF, and route proofs exist", () => {
@@ -904,6 +1066,25 @@ describe("security and privacy helpers", () => {
       coverageArtifactsCollected: false,
       failureModeFixturesDocumented: false,
     });
+    const allMissingEvidencePlan = buildSecurityAutomatedCoverageReadinessPlan({
+      packageScripts: ["test"],
+      securityPackageTestsPassed: false,
+      securityPackageTypecheckPassed: false,
+      routeVitestSuitePassed: false,
+      middlewareRuntimeSuitePassed: false,
+      middlewareStaticSuitePassed: false,
+      webE2eSecuritySuitePassed: false,
+      dashboardE2eSecuritySuitePassed: false,
+      fullUnitSuitePassed: false,
+      ciSecurityChecksPassed: false,
+      testManifestIncludesSecuritySuites: false,
+      dbBackedTenantIsolationTestsPassed: false,
+      storageProviderNegativeTestsPassed: false,
+      privacyWorkflowIntegrationTestsPassed: false,
+      authenticatedRoleBoundaryTestsPassed: false,
+      coverageArtifactsCollected: false,
+      failureModeFixturesDocumented: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
@@ -915,14 +1096,9 @@ describe("security and privacy helpers", () => {
       "Storage provider or emulator negative tests must pass for unsafe upload, private original public denial, signed URL revocation, and derivative exposure.",
       "Coverage, Playwright, CI, and provider/emulator artifacts must be collected for audit handoff.",
     ]));
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "executed package typecheck/tests, full unit suite, and CI security check transcript",
-      "route, runtime middleware, static wiring, and manifest verification test output",
-      "web and dashboard Playwright security smoke artifacts",
-      "authenticated DB-backed tenant isolation, role-boundary, and privacy workflow integration output",
-      "storage provider negative-test artifacts, coverage bundle, and documented security failure fixtures",
-    ]));
-    expect(plan.requiredCommands).toContain("pnpm test:unit");
+    expect(plan.requiredEvidence).toBe(securityAutomatedCoverageReadinessRequiredEvidence);
+    expect(plan.requiredCommands).toBe(securityAutomatedCoverageReadinessRequiredCommands);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(securityAutomatedCoverageReadinessRequiredEvidence);
   });
 
   it("marks security automated coverage ready only after all scaffold, E2E, DB, provider, CI, and artifact evidence exists", () => {
@@ -975,6 +1151,26 @@ describe("security and privacy helpers", () => {
       deviceRuntimeSmokePassed: false,
       ciRuntimeEvidenceCollected: false,
     });
+    const allMissingEvidencePlan = buildSecurityAppRuntimeVerificationPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      webTypecheckPassed: false,
+      webBuildPassed: false,
+      dashboardTypecheckPassed: false,
+      dashboardBuildPassed: false,
+      mobileTypecheckPassed: false,
+      nextConfigStaticTestsPassed: false,
+      mobileSecurityStaticTestsPassed: false,
+      webSecurityRoutesSmokePassed: false,
+      dashboardSecurityRoutesSmokePassed: false,
+      webMiddlewareRuntimeSmokePassed: false,
+      dashboardMiddlewareRuntimeSmokePassed: false,
+      mobileSystemStatusScreenSmokePassed: false,
+      browserRuntimeSmokePassed: false,
+      deviceRuntimeSmokePassed: false,
+      ciRuntimeEvidenceCollected: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
@@ -986,12 +1182,13 @@ describe("security and privacy helpers", () => {
       "Browser runtime smoke must prove web/dashboard Phase 13 surfaces load with headers and without integration errors.",
       "Device or emulator smoke must prove mobile Phase 13 security surfaces load without dependency/runtime errors.",
     ]));
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "web/dashboard/mobile typecheck and build command output",
-      "web/dashboard route and middleware runtime smoke transcripts",
-      "browser, mobile device/emulator, and CI runtime artifact bundle",
-    ]));
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/mobile typecheck");
+    expect(plan.requiredEvidence).toEqual([
+      securityAppRuntimeVerificationRequiredEvidence[0],
+      securityAppRuntimeVerificationRequiredEvidence[2],
+      securityAppRuntimeVerificationRequiredEvidence[3],
+    ]);
+    expect(plan.requiredCommands).toBe(securityAppRuntimeVerificationRequiredCommands);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(securityAppRuntimeVerificationRequiredEvidence);
   });
 
   it("marks security app runtime verification ready only after all app dependency, route, middleware, browser, and mobile evidence exists", () => {
@@ -1234,6 +1431,28 @@ describe("security and privacy helpers", () => {
       tenantIsolationIntegrationTestsPassed: false,
       postgresStorageIntegrationTestsPassed: false,
     });
+    const allMissingEvidencePlan = buildPrivacyRequestRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      publicRouteTestsPassed: true,
+      dashboardRouteTestsPassed: false,
+      privacyCasePersistenceConfigured: false,
+      identityProofingConfigured: false,
+      tenantRelationshipProofingConfigured: false,
+      requesterMismatchDenied: false,
+      exportWorkerConfigured: false,
+      deleteAnonymizeRectifyWorkersConfigured: false,
+      storageExportDeleteConfigured: false,
+      thirdPartyRedactionConfigured: false,
+      legalHoldHandlingConfigured: false,
+      notificationProviderConfigured: false,
+      notificationTemplatesApproved: false,
+      auditLogPersistenceConfigured: false,
+      statusTransitionPersistenceConfigured: false,
+      tenantIsolationIntegrationTestsPassed: false,
+      postgresStorageIntegrationTestsPassed: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
@@ -1245,13 +1464,15 @@ describe("security and privacy helpers", () => {
       "Exports must redact third-party artist/client/payment/provider data before delivery.",
       "Tenant-isolation integration tests must deny cross-tenant privacy exports and deletions.",
     ]));
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "persisted PrivacyRequest status transitions and AuditLog records",
-      "identity, tenant relationship, requester mismatch, and cross-tenant denial proof",
-      "Postgres and object-storage export/delete/anonymize worker integration output",
-      "approved notification templates and provider delivery transcript",
-    ]));
-    expect(plan.requiredCommands).toContain("node scripts/privacy/verify-privacy-request-workers.mjs");
+    expect(plan.requiredEvidence).toEqual([
+      privacyRequestRuntimeReadinessRequiredEvidence[0],
+      privacyRequestRuntimeReadinessRequiredEvidence[1],
+      privacyRequestRuntimeReadinessRequiredEvidence[2],
+      privacyRequestRuntimeReadinessRequiredEvidence[3],
+      privacyRequestRuntimeReadinessRequiredEvidence[4],
+    ]);
+    expect(plan.requiredCommands).toBe(privacyRequestRuntimeReadinessRequiredCommands);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(privacyRequestRuntimeReadinessRequiredEvidence);
   });
 
   it("marks privacy request runtime ready only after workflow, worker, notification, and integration proofs exist", () => {
@@ -1307,6 +1528,26 @@ describe("security and privacy helpers", () => {
       dryRunToExecutionReconciliationVerified: false,
       destructiveActionRollbackDocumented: false,
     });
+    const allMissingEvidencePlan = buildRetentionEnforcementRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      attorneyRetentionScheduleApproved: false,
+      scheduledWorkerConfigured: false,
+      workerIdempotencyConfigured: false,
+      postgresRetentionExecutionVerified: false,
+      objectStorageRetentionExecutionVerified: false,
+      exportArtifactGenerationVerified: false,
+      deletionTombstonePersistenceConfigured: false,
+      anonymizationTombstonePersistenceConfigured: false,
+      restoreTombstoneReplayVerified: false,
+      backupRetentionPolicyDocumented: false,
+      legalHoldEnforcementVerified: false,
+      auditLogPersistenceConfigured: false,
+      tenantIsolationIntegrationTestsPassed: false,
+      dryRunToExecutionReconciliationVerified: false,
+      destructiveActionRollbackDocumented: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
@@ -1317,12 +1558,15 @@ describe("security and privacy helpers", () => {
       "Restore jobs must replay deletion and anonymization tombstones before restored data becomes queryable.",
       "Tenant-isolation integration tests must deny cross-tenant retention, export, deletion, and restore actions.",
     ]));
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "attorney-approved retention schedule and legal-hold enforcement transcript",
-      "scheduled idempotent worker run with dry-run-to-execution reconciliation",
-      "deletion/anonymization tombstone persistence plus backup restore replay drill",
-    ]));
-    expect(plan.requiredCommands).toContain("node scripts/privacy/execute-retention-workers.mjs");
+    expect(plan.requiredEvidence).toEqual([
+      retentionEnforcementRuntimeReadinessRequiredEvidence[0],
+      retentionEnforcementRuntimeReadinessRequiredEvidence[1],
+      retentionEnforcementRuntimeReadinessRequiredEvidence[2],
+      retentionEnforcementRuntimeReadinessRequiredEvidence[3],
+      retentionEnforcementRuntimeReadinessRequiredEvidence[4],
+    ]);
+    expect(plan.requiredCommands).toBe(retentionEnforcementRuntimeReadinessRequiredCommands);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(retentionEnforcementRuntimeReadinessRequiredEvidence);
   });
 
   it("marks retention enforcement runtime ready only after destructive-action, tombstone, export, and restore proofs exist", () => {
@@ -1377,15 +1621,39 @@ describe("security and privacy helpers", () => {
       notificationCopyApproved: false,
       dryRunEvidenceCollected: false,
     });
+    const allMissingEvidencePlan = buildPrivacyRetentionRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      packageTestsPassed: true,
+      packageTypecheckPassed: false,
+      attorneyApprovalRecorded: false,
+      privacyCaseStoreConfigured: false,
+      auditLogPersistenceConfigured: false,
+      identityVerificationWorkerConfigured: true,
+      exportWorkerConfigured: false,
+      deleteAnonymizeWorkerConfigured: false,
+      storageDeletionConfigured: false,
+      retentionScheduleApproved: false,
+      prismaExecutionVerified: false,
+      objectStorageExecutionVerified: false,
+      legalHoldWorkflowConfigured: false,
+      backupRestorePolicyDocumented: false,
+      restoreTombstoneReplayVerified: false,
+      tenantIsolationVerified: false,
+      notificationCopyApproved: false,
+      dryRunEvidenceCollected: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/security test -- privacy-workers");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "attorney-approved privacy retention and deletion schedule",
-      "Prisma and object-storage export/delete/anonymization dry-run output",
-      "backup/restore tombstone replay policy and drill evidence",
-    ]));
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(privacyRetentionRuntimeReadinessRequiredEvidence);
+    expect(plan.requiredCommands).toBe(privacyRetentionRuntimeReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toEqual([
+      privacyRetentionRuntimeReadinessRequiredEvidence[0],
+      privacyRetentionRuntimeReadinessRequiredEvidence[1],
+      privacyRetentionRuntimeReadinessRequiredEvidence[2],
+      privacyRetentionRuntimeReadinessRequiredEvidence[3],
+      privacyRetentionRuntimeReadinessRequiredEvidence[4],
+    ]);
     expect(plan.blockers).toEqual(expect.arrayContaining([
       "Object storage deletion must be configured for private reference, consent, document, and follow-up files.",
       "Restore jobs must replay deletion/anonymization tombstones before restored data becomes queryable.",
@@ -1413,23 +1681,32 @@ describe("security and privacy helpers", () => {
       ciEvidenceCaptured: false,
       secretSafeArtifactsCaptured: false,
     });
-
+    const allMissingEvidencePlan = buildPrivacyRetentionDryRunEvidencePlan({
+      packageScripts: ["test"],
+      securityTestsPassed: false,
+      securityTypecheckPassed: false,
+      attorneyApprovalCaptured: false,
+      identityVerificationWorkerIntegrated: false,
+      exportWorkerPersisted: false,
+      deleteAnonymizeWorkerPersisted: false,
+      caseAuditPersistenceConfigured: false,
+      prismaDryRunPassed: false,
+      objectStorageDryRunPassed: false,
+      tenantIsolationDryRunPassed: false,
+      legalHoldEnforced: false,
+      notificationTemplatesApproved: false,
+      backupRestoreTombstoneReplayPassed: false,
+      retentionReportCaptured: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "privacy request worker integration tests",
-      "Prisma privacy delete/anonymize dry run",
-      "object storage deletion dry run",
-      "backup/restore tombstone replay drill",
-    ]));
-    expect(plan.requiredControls).toContain("Keep all evidence artifacts redacted, secret-safe, and free of client PII or medical details.");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "attorney approval packet for retention schedule, legal holds, destructive actions, and notification templates",
-      "persisted identity, export, delete/anonymize, PrivacyRequest/PrivacyCase, tombstone, and AuditLog worker output",
-      "Prisma, object-storage, tenant-isolation, and legal-hold privacy dry-run transcripts",
-      "backup/restore tombstone replay drill output",
-      "redacted CI artifact bundle with retention report and no secrets or client PII",
-    ]));
+    expect(plan.requiredCommands).toBe(privacyRetentionDryRunEvidenceRequiredCommands);
+    expect(plan.requiredCommands).toEqual(privacyRetentionDryRunEvidenceRequiredCommands);
+    expect(plan.requiredControls).toBe(privacyRetentionDryRunEvidenceRequiredControls);
+    expect(plan.requiredEvidence).toBe(privacyRetentionDryRunEvidenceRequiredEvidence);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(privacyRetentionDryRunEvidenceRequiredEvidence);
     expect(plan.blockers).toEqual(expect.arrayContaining([
       "Delete/anonymize worker dry-runs must persist tombstones, skipped legal holds, and audit events.",
       "Tenant-isolation privacy dry-run must deny cross-tenant export/delete attempts.",
@@ -1541,6 +1818,24 @@ describe("security and privacy helpers", () => {
       consentAcceptanceRouteTestsPassed: false,
       rollbackPlanDocumented: false,
     });
+    const allMissingEvidencePlan = buildLegalDocumentProductionReadinessPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      attorneyApprovalsRecorded: false,
+      allRequiredTopicsApproved: false,
+      jurisdictionPoliciesApproved: false,
+      reviewedPublicPageCopyCommitted: false,
+      placeholderCopyRemoved: false,
+      noindexRemovedAfterApproval: false,
+      consentVersionPersistenceConfigured: false,
+      studioPolicyVersionPersistenceConfigured: false,
+      acceptanceAuditPersistenceConfigured: false,
+      dashboardAcceptanceUiWired: false,
+      publicPageRouteSmokePassed: false,
+      consentAcceptanceRouteTestsPassed: false,
+      rollbackPlanDocumented: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
@@ -1551,13 +1846,9 @@ describe("security and privacy helpers", () => {
       "Acceptance audit persistence must record user, tenant, document, version, IP hash, user agent, timestamp, and source surface.",
       "Consent acceptance route tests must prove versioned persistence and audit-log writes.",
     ]));
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "attorney approval records for all required legal topics and jurisdiction policies",
-      "reviewed public legal pages with placeholder removal and approved indexing smoke evidence",
-      "versioned consent/studio policy persistence plus acceptance audit route tests",
-      "dashboard acceptance UI proof and legal-copy rollback plan",
-    ]));
-    expect(plan.requiredCommands).toContain("node scripts/legal/verify-approved-legal-pages.mjs");
+    expect(plan.requiredEvidence).toBe(legalDocumentProductionReadinessRequiredEvidence);
+    expect(plan.requiredCommands).toBe(legalDocumentProductionReadinessRequiredCommands);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(legalDocumentProductionReadinessRequiredEvidence);
   });
 
   it("marks legal documents production-ready only after reviewed copy, approvals, audits, routes, and rollback proof exist", () => {
@@ -1611,23 +1902,34 @@ describe("security and privacy helpers", () => {
       e2eApprovedLanguageVerified: false,
       rollbackCopyPlanDocumented: false,
     });
+    const allMissingEvidencePlan = buildPaymentPolicyLegalReviewRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: true,
+      securityTypecheckPassed: false,
+      webTypecheckPassed: false,
+      dashboardTypecheckPassed: false,
+      attorneyApprovalRecorded: false,
+      taxAccountingApprovalRecorded: false,
+      reviewedPaymentCopyCommitted: false,
+      reviewedCancellationCopyCommitted: false,
+      reviewedNoShowCopyCommitted: false,
+      reviewedRefundCopyCommitted: false,
+      reviewedSmsConsentCopyCommitted: false,
+      reviewedReceiptCopyCommitted: false,
+      reviewedTaxDisclosureCopyCommitted: false,
+      termsPrivacyConsentUpdated: false,
+      placeholdersRemovedFromPaymentFlows: false,
+      acceptanceAuditConfigured: false,
+      policyVersioningConfigured: false,
+      e2eApprovedLanguageVerified: false,
+      rollbackCopyPlanDocumented: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "pnpm --filter @inkroute/security typecheck",
-      "pnpm --filter @inkroute/web typecheck",
-      "pnpm --filter @inkroute/dashboard typecheck",
-      "payment policy approved-copy E2E sweep",
-      "legal/tax approval packet review",
-    ]));
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "signed attorney and tax/accounting approval records for payment policy language",
-      "committed reviewed copy for deposits, cancellation, no-show, refund, SMS, receipts, and tax disclosures",
-      "versioned Terms/Privacy/Consent/studio policy updates plus acceptance audit evidence",
-      "E2E screenshots or test output proving approved copy appears in booking, dashboard payment, receipt, and SMS flows",
-      "documented policy-copy correction and rollback plan",
-    ]));
+    expect(plan.requiredCommands).toBe(paymentPolicyLegalReviewRuntimeReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(paymentPolicyLegalReviewRuntimeReadinessRequiredEvidence);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(paymentPolicyLegalReviewRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Attorney approval must be recorded for payment, cancellation, no-show, refund, SMS, receipt, and liability language.");
     expect(plan.blockers).toContain("Tax/accounting approval must be recorded for receipt and accounting export language.");
     expect(plan.blockers).toContain("Demo/planning placeholders must be removed from payment-facing flows before launch.");
@@ -1663,19 +1965,45 @@ describe("security and privacy helpers", () => {
       ciEvidenceCaptured: false,
       secretSafeArtifactsCaptured: false,
     });
+    const allMissingEvidencePlan = buildProviderStorageUploadReadinessPlan({
+      packageScripts: ["test"],
+      securityTestsPassed: false,
+      securityTypecheckPassed: false,
+      webUploadRouteTestsPassed: false,
+      webTypecheckPassed: false,
+      storageProviderSelected: false,
+      storageProviderConfigured: false,
+      storageSecretsConfigured: false,
+      privateBucketAclVerified: false,
+      derivativeBucketPolicyVerified: false,
+      signedUploadUrlsProviderBacked: false,
+      signedDownloadUrlsProviderBacked: false,
+      serverOwnedObjectKeysEnforced: false,
+      fileAssetPersistenceTransactional: false,
+      auditLogPersistenceConfigured: false,
+      linkTablePersistenceConfigured: false,
+      signedUrlGrantPersistenceConfigured: false,
+      malwareScanProviderConfigured: false,
+      scanVerdictPersistenceConfigured: false,
+      metadataStrippingWorkerConfigured: false,
+      publicDerivativeGenerationConfigured: false,
+      privateOriginalPublicReadDenied: false,
+      approvedDerivativePublicReadVerified: false,
+      tenantScopedProviderIntegrationTestsPassed: false,
+      privacyRetentionEnforced: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toContain("object storage provider upload/download integration tests");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "storage provider selection plus redacted provider configuration evidence",
-      "private bucket ACL and derivative-publication policy proof",
-      "provider-backed signed upload/download URL evidence with persisted grant expiry and revocation",
-      "transactional FileAsset, AuditLog, and related link-row persistence evidence",
-      "malware scan, MIME verification, metadata stripping, and derivative generation evidence",
-      "tenant-isolated provider integration, retention, CI, and secret-safe artifact evidence",
-    ]));
+    expect(plan.requiredCommands).toBe(providerStorageUploadReadinessRequiredCommands);
+
+    expect(plan.requiredEvidence).toBe(providerStorageUploadReadinessRequiredEvidence);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(providerStorageUploadReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Supabase Storage, S3, or equivalent object storage provider must be selected.");
+    expect(plan.blockers).toContain("Signed upload URLs must be provider-backed instead of local-contract fallback responses.");
+    expect(plan.blockers).not.toContain("Signed upload URLs must be provider-backed instead of local plan-only responses.");
     expect(plan.blockers).toContain("Provider integration tests must prove private originals cannot be publicly fetched.");
     expect(plan.blockers).toContain("Storage artifacts must be redacted and free of provider secrets or client-private files.");
   });
@@ -1739,23 +2067,34 @@ describe("security and privacy helpers", () => {
       ciEvidenceCaptured: false,
       secretSafeArtifactsCaptured: false,
     });
+    const allMissingEvidencePlan = buildReferenceUploadProviderEvidencePlan({
+      packageScripts: [],
+      securityTestsPassed: false,
+      securityTypecheckPassed: false,
+      webUploadRouteTestsPassed: false,
+      webTypecheckPassed: false,
+      uploadIntentRouteUsesSignedPlan: false,
+      providerSignedUploadUrlIssued: false,
+      byteUploadVerified: false,
+      magicByteValidationPassed: false,
+      malwareScanConfigured: false,
+      quarantineFlowVerified: false,
+      privateBucketAclVerified: false,
+      fileAssetRowsPersisted: false,
+      bookingReferenceImageRowsPersisted: false,
+      auditLogRowsPersisted: false,
+      privateFetchDenied: false,
+      crossTenantFetchDenied: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "reference image provider-signed upload integration test",
-      "reference image magic-byte and malware scan integration test",
-      "FileAsset/BookingReferenceImage/AuditLog persistence integration test",
-      "private reference anonymous and cross-tenant fetch-denial tests",
-    ]));
-    expect(plan.requiredControls).toContain("Keep reference originals private; do not generate public derivatives for booking references.");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "secure upload intent route, provider-signed URL, and byte upload verification evidence",
-      "magic-byte validation, malware scan, and quarantine flow evidence",
-      "FileAsset, BookingReferenceImage, and AuditLog persistence evidence",
-      "private ACL, anonymous fetch denial, and cross-tenant denial evidence",
-      "web typecheck/route test, CI, and secret-safe artifact evidence",
-    ]));
+    expect(plan.requiredCommands).toBe(referenceUploadProviderEvidenceRequiredCommands);
+    expect(plan.requiredControls).toBe(referenceUploadProviderEvidenceRequiredControls);
+    expect(plan.requiredEvidence).toBe(referenceUploadProviderEvidenceRequiredEvidence);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(referenceUploadProviderEvidenceRequiredEvidence);
     expect(plan.blockers).toContain("Provider-signed upload URL must be issued for reference_private uploads.");
     expect(plan.blockers).toContain("BookingReferenceImage rows must link reference files to booking requests.");
     expect(plan.blockers).toContain("Reference upload artifacts must be redacted and free of provider secrets, private URLs, client PII, and raw image payloads.");
@@ -1790,6 +2129,6 @@ describe("security and privacy helpers", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Deny anonymous and cross-tenant reads for every private reference object.");
+    expect(plan.requiredControls).toBe(referenceUploadProviderEvidenceRequiredControls);
   });
 });

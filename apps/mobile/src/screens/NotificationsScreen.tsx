@@ -21,6 +21,7 @@ export function NotificationsScreen() {
       <MobileCard title="Push runtime contract" eyebrow="GAP-063" detail={mobilePushContractPreview.boundary}>
         <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
           <MobilePill label={mobilePushContractPreview.registration.shouldPersistToken ? "token registration planned" : "token blocked"} tone="good" />
+          <MobilePill label={mobilePushContractPreview.localContract.localContractReady ? "local contract ready" : "local contract blocked"} tone={mobilePushContractPreview.localContract.localContractReady ? "good" : "danger"} />
           <MobilePill label={mobilePushContractPreview.delivery.status === "ready" ? "delivery log planned" : "delivery blocked"} tone="good" />
           <MobilePill label={mobilePushContractPreview.receipt.shouldMarkPushTokenInactive ? "invalid token suppression" : "receipt tracked"} tone="warn" />
           <MobilePill label={`provider ${mobilePushContractPreview.provider.runtimeReadiness.status}`} tone={mobilePushContractPreview.provider.runtimeReadiness.status === "ready" ? "good" : "danger"} />

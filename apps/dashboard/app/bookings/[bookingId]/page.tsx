@@ -1,6 +1,6 @@
 import { getAvailableBookingActions } from "@inkroute/booking";
+import { BookingLifecycleActionPanel } from "../../../components/BookingLifecycleActionPanel";
 import { DashboardPageHeader } from "../../../components/DashboardPageHeader";
-import { DisabledActionPanel } from "../../../components/DisabledActionPanel";
 import { StatusPill } from "../../../components/StatusPill";
 import { Timeline } from "../../../components/Timeline";
 import { bookingStatusActionSummary, clientTimeline, dashboardProjectedBookingRows, dashboardProjectedPayments } from "../../../lib/demo";
@@ -26,7 +26,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
   }
 
   const payment = dashboardProjectedPayments.find((item) => item.bookingId === booking.id);
-  const actions = getAvailableBookingActions(booking.status).map((action) => action.action.replace(/_/g, " "));
+  const actions = getAvailableBookingActions(booking.status).map((action) => action.action);
 
   return (
     <main>
@@ -59,7 +59,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
           <dl className="detail-list">
             <div><dt>Deposit estimate</dt><dd>{payment ? centsToUsd(payment.amountCents) : "Not calculated"}</dd></div>
             <div><dt>Status</dt><dd>{payment?.status ?? "missing"}</dd></div>
-            <div><dt>Provider</dt><dd>{payment?.provider ?? "not wired"}</dd></div>
+            <div><dt>Provider</dt><dd>{payment?.provider ?? "provider proof gated"}</dd></div>
           </dl>
           <ul className="compact-list">
             {booking.notes.map((note) => <li key={note}>{note}</li>)}
@@ -67,11 +67,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
         </article>
       </section>
 
-      <DisabledActionPanel
-        title="Lifecycle actions"
-        description={`These buttons are disabled in the static UI, but the server mutation path is wired at POST /api/bookings/${booking.id}/state with RBAC, tenant checks, BookingStateEvent writes, and AuditLog persistence. Notification queues and live client-side forms remain gated.`}
-        actions={actions.length > 0 ? actions : ["Archive"]}
-      />
+      <BookingLifecycleActionPanel bookingId={booking.id} actions={actions} />
 
       <section className="grid two spacious">
         <article className="card">

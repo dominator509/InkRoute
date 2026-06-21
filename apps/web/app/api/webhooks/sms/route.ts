@@ -1,6 +1,8 @@
 ﻿import { interpretSmsWebhook } from "@inkroute/notifications";
 import { inkrouteDemoTenant } from "@inkroute/config";
 import { NextResponse, type NextRequest } from "next/server";
+
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 import { persistWebhookEvent } from "../../../../lib/localRuntimeState";
 import { buildSmsProviderReconciliation, buildSmsWebhookReadinessFromPayload, smsProviderContract } from "../../../../lib/smsProvider";
 import { buildProviderWebhookRouteBoundary, providerWebhookContract } from "../../../../lib/providerWebhookReconciliation";
@@ -28,7 +30,7 @@ export async function POST(request: NextRequest) {
   if (!signature) {
     return NextResponse.json(
       { ok: false, error: { code: "MISSING_SMS_PROVIDER_SIGNATURE", message: "SMS webhooks must include the provider signature header before production processing." } },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -44,7 +46,7 @@ export async function POST(request: NextRequest) {
       inboundBody = typeof event.Body === "string" ? event.Body : undefined;
       eventPayload = event as Record<string, unknown>;
     } catch {
-      return NextResponse.json({ ok: false, error: { code: "INVALID_WEBHOOK_JSON", message: "SMS JSON webhook body must be valid JSON." } }, { status: 400 });
+      return NextResponse.json({ ok: false, error: { code: "INVALID_WEBHOOK_JSON", message: "SMS JSON webhook body must be valid JSON." } }, { status: 400, headers: noStoreHeaders });
     }
   } else {
     const params = new URLSearchParams(rawBody);
@@ -81,6 +83,42 @@ export async function POST(request: NextRequest) {
     reconciliation,
   });
   const interpretation = interpretSmsWebhook(eventType, inboundBody);
+
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "PROVIDER_SMS_WEBHOOK_RECONCILIATION_NOT_CONFIGURED",
+          message:
+            "Production SMS webhooks require Twilio signature verification plus durable ProviderEvent, suppression, and inbound-thread reconciliation; local runtime webhook persistence is disabled.",
+          gapIds: ["GAP-010", "GAP-062", "GAP-064", "GAP-066"],
+        },
+        data: {
+          tenantSlug,
+          eventId,
+          eventType,
+          interpretation,
+          readiness,
+          reconciliation,
+          providerWebhookBoundary,
+          crossProviderReadiness: providerWebhookContract.runtimeReadiness,
+          inboundBodyProvided: typeof inboundBody === "string",
+          rawBodyBytes: rawBody.length,
+          productionBoundary: {
+            localSmsWebhookPersistenceDisabled: true,
+            requiresDurableProviderEventPersistence: true,
+            gapIds: ["GAP-010", "GAP-062", "GAP-064", "GAP-066"],
+            requiredWrites: readiness.requiredWrites,
+            requiredControls: readiness.requiredControls,
+            crossProviderRequiredMethods: providerWebhookContract.requiredRepositoryMethods,
+          },
+        },
+      },
+      { status: 503, headers: noStoreHeaders },
+    );
+  }
+
   const storedWebhook = persistWebhookEvent(tenantSlug, {
     source: "sms",
     eventType,
@@ -124,6 +162,7 @@ export async function POST(request: NextRequest) {
         },
       },
     },
-    { status: 200 },
+    { status: 200, headers: noStoreHeaders },
   );
 }
+

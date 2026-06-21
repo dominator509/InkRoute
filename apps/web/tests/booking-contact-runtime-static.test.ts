@@ -1,10 +1,23 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildBookingContactArtifactReview,
+  buildBookingContactEvidenceDecision,
+  buildBookingContactExecutionPlan,
+  buildBookingContactRunData,
+  buildRedactedBookingContactArtifact,
+  persistBookingContactRun,
   bookingContactArtifactPaths,
+  bookingContactEvidenceFlags,
+  bookingContactExternalCommands,
+  bookingContactExecutionPolicy,
+  bookingContactLocalCommands,
+  bookingContactRequiredExternalEvidence,
   bookingContactRuntimeCommands,
+  bookingContactRuntimeControls,
   bookingContactRuntimeMatrix,
+  bookingContactRuntimeProofFiles,
   bookingContactRuntimeReadiness,
   bookingContactRunPersistenceContract,
 } from "../lib/bookingContactRuntime";
@@ -50,6 +63,21 @@ describe("booking/contact runtime evidence contract", () => {
     expect(bookingContactArtifactPaths).toContain("test-results/booking-contact-runtime");
   });
 
+  it("pins booking/contact runtime control helper identity", () => {
+    const decision = buildBookingContactEvidenceDecision({
+      commands: bookingContactRuntimeCommands,
+      artifacts: bookingContactArtifactPaths,
+      controls: bookingContactRuntimeControls,
+      evidence: Object.fromEntries(bookingContactEvidenceFlags.map((flag) => [flag, true])) as Record<
+        (typeof bookingContactEvidenceFlags)[number],
+        true
+      >,
+    });
+
+    expect(decision.requiredControls).toBe(bookingContactRuntimeControls);
+    expect(gapTracker).toContain("bookingContactRuntimeControls");
+  });
+
   it("keeps booking route plan, confirmation boundaries, and contact persistence wiring visible", () => {
     for (const scriptName of ["typecheck", "test"]) {
       expect(bookingPackageJson).toContain(`"${scriptName}"`);
@@ -60,7 +88,17 @@ describe("booking/contact runtime evidence contract", () => {
     expect(bookingRoute).toContain("buildBookingPostSubmitPlan");
     expect(bookingRoute).toContain("packagePostSubmitPlan");
     expect(confirmationPage).toContain("Provider boundaries");
+    expect(confirmationPage).toContain("booking request identifier");
+    expect(confirmationPage).toContain("provider follow-up evidence remain runtime-gated");
+    expect(confirmationPage).not.toContain("no request ID exists because there is no database write");
     expect(contactRoute).toContain("persistContactSubmission");
+    expect(contactRoute).toContain("PROVIDER_CONTACT_PERSISTENCE_NOT_CONFIGURED");
+    expect(contactRoute).toContain("Production contact submissions require tenant-scoped database persistence");
+    expect(contactRoute).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(contactRoute).toContain("headers: noStoreHeaders");
+    expect(contactRoute).not.toContain('headers: { "Cache-Control": "no-store" }');
+    expect(contactRoute).toContain("function rateLimitHeaders");
+    expect(contactRoute).toContain("headers: rateLimitHeaders(rateLimit.retryAfterSeconds)");
     expect(contactRoute).toContain("provider_gated");
     expect(contactPage).toContain("/api/public/${inkrouteDemoTenant.slug}/contact");
     expect(localRuntime).toContain("LocalContactSubmissionRecord");
@@ -70,25 +108,35 @@ describe("booking/contact runtime evidence contract", () => {
   it("keeps runtime evidence blocked until DB integration, tenant isolation, E2E, provider sandbox, CI, and safe artifacts exist", () => {
     expect(bookingContactRuntimeReadiness.status).toBe("blocked");
     expect(bookingContactRuntimeReadiness.missingScripts).toEqual([]);
-    expect(bookingContactRuntimeReadiness.requiredCommands).toEqual([...bookingContactRuntimeCommands]);
-    expect(bookingContactRuntimeReadiness.requiredControls).toEqual([
-      "Persist booking/contact submissions before creating upload, deposit, notification, or calendar handoff work.",
-      "Keep provider work idempotent, audit logged, tenant scoped, and retryable.",
-      "Preserve no-live-payment behavior until Stripe sandbox credentials and reviewed deposit copy are configured.",
-      "Render confirmation states from persisted workflow data instead of optimistic client-only state.",
-      "Redact medical notes, payment data, provider tokens, private file URLs, and raw client PII from evidence artifacts.",
-    ]);
-    expect(bookingContactRuntimeReadiness.requiredEvidence).toEqual([
-      "tenant-scoped booking/contact database integration evidence",
-      "browser E2E, API E2E, and provider sandbox transcript evidence",
-      "web typecheck/build, CI, and secret-safe artifact evidence",
-    ]);
+    expect(bookingContactRuntimeReadiness.requiredCommands).toBe(bookingContactRuntimeCommands);
+    expect(bookingContactRuntimeReadiness.requiredControls).toBe(bookingContactRuntimeControls);
+    expect(bookingContactRuntimeReadiness.requiredEvidence).toBe(bookingContactEvidenceFlags);
     expect(bookingContactRuntimeReadiness.blockers).toContain("Database integration evidence must prove booking/contact persistence and transaction behavior.");
     expect(bookingContactRuntimeReadiness.blockers).toContain("Browser E2E must cover booking submission, confirmation state, contact submission, validation errors, and provider-gated handoffs.");
     expect(bookingContactRuntimeReadiness.blockers).toContain("Booking/contact artifacts must be redacted and free of secrets, raw medical notes, payment data, provider tokens, and private file URLs.");
   });
 
   it("pins the BookingContactRun persistence model and migration", () => {
+    const runData = buildBookingContactRunData({
+      tenantId: "tenant_static",
+      runId: "booking_contact_static",
+      commitSha: "abc123",
+      status: "blocked",
+      commands: ["booking/contact API E2E tests"],
+      artifacts: ["coverage/booking-contact-api-e2e.json"],
+      databasePersistenceEvidenceCaptured: false,
+      tenantIsolationEvidenceCaptured: false,
+      providerHandoffEvidenceCaptured: false,
+      noLivePaymentEvidenceCaptured: true,
+      apiE2eEvidenceCaptured: false,
+      browserE2eEvidenceCaptured: false,
+      webBuildEvidenceCaptured: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: true,
+      e2eReportPath: "coverage/booking-contact-api-e2e.json",
+      providerBoundaryReportPath: "coverage/booking-contact-provider-boundaries.json",
+    });
+
     expect(bookingContactRunPersistenceContract).toEqual({
       prismaModel: "BookingContactRun",
       tenantRelation: "bookingContactRuns",
@@ -108,6 +156,21 @@ describe("booking/contact runtime evidence contract", () => {
       storesCiEvidence: true,
       storesSecretSafeArtifacts: true,
     });
+    expect(runData).toMatchObject({
+      tenantId: "tenant_static",
+      runId: "booking_contact_static",
+      commitSha: "abc123",
+      status: "blocked",
+      commandMatrix: ["booking/contact API E2E tests"],
+      artifactManifest: ["coverage/booking-contact-api-e2e.json"],
+      databasePersistenceEvidenceCaptured: false,
+      noLivePaymentEvidenceCaptured: true,
+      apiE2eEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: true,
+      e2eReportPath: "coverage/booking-contact-api-e2e.json",
+      providerBoundaryReportPath: "coverage/booking-contact-provider-boundaries.json",
+    });
+    expect(String(persistBookingContactRun)).toContain("repository.bookingContactRun.upsert");
     expect(prismaSchema).toContain("model BookingContactRun");
     expect(prismaSchema).toContain("bookingContactRuns BookingContactRun[]");
     expect(prismaSchema).toContain("databasePersistenceEvidenceCaptured");
@@ -119,6 +182,109 @@ describe("booking/contact runtime evidence contract", () => {
     expect(bookingContactRunMigration).toContain('"BookingContactRun_tenantId_runId_key"');
   });
 
+  it("blocks booking/contact completion when DB, tenant, provider, E2E, CI, or safe evidence is missing", () => {
+    const decision = buildBookingContactEvidenceDecision({
+      commands: ["pnpm --filter @inkroute/booking typecheck"],
+      artifacts: ["coverage/booking-contact-booking-typecheck.txt"],
+      controls: ["persist-booking-contact-before-provider-handoff-work"],
+      evidence: {
+        bookingTypecheckPassed: true,
+        bookingRouteUsesPostSubmitPlan: true,
+        noLivePaymentBoundaryPreserved: true,
+      },
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.missingCommands).toContain("provider sandbox handoff boundary tests");
+    expect(decision.missingArtifacts).toContain("coverage/booking-contact-ci-evidence.json");
+    expect(decision.missingControls).toContain("preserve-no-live-payment-until-stripe-sandbox-and-copy-review");
+    expect(decision.missingEvidence).toContain("databasePersistenceIntegrationPassed");
+    expect(decision.missingEvidence).toContain("providerSandboxEvidenceCaptured");
+    expect(decision.blockers).toContain(
+      "Database integration evidence must prove booking/contact persistence and transaction behavior.",
+    );
+    expect(decision.blockers).toContain("Provider sandbox handoff boundary evidence must be captured.");
+  });
+
+  it("completes booking/contact readiness only when every command, artifact, control, and evidence flag is present", () => {
+    const completeEvidence = Object.fromEntries(bookingContactEvidenceFlags.map((flag) => [flag, true]));
+    const decision = buildBookingContactEvidenceDecision({
+      commands: bookingContactRuntimeCommands,
+      artifacts: bookingContactArtifactPaths,
+      controls: bookingContactRuntimeControls,
+      evidence: completeEvidence,
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.missingArtifacts).toEqual([]);
+    expect(decision.missingControls).toEqual([]);
+    expect(decision.missingEvidence).toEqual([]);
+    expect(decision.requiredEvidence).toBe(bookingContactEvidenceFlags);
+  });
+
+  it("separates static booking/contact review from external execution and redacts private artifacts", () => {
+    const executionPlan = buildBookingContactExecutionPlan();
+    const artifactReview = buildBookingContactArtifactReview({
+      tenantDomain: "tenant.example.com",
+      clientEmail: "client@example.com",
+      medicalNotes: "medical: sleeve restriction",
+      stripePaymentIntent: "stripe_pi_private",
+      providerToken: "provider-token-private",
+      nested: {
+        privateFileUrl: "https://files.example.com/private-file/reference.png",
+        publicSummary: "booking contact evidence captured",
+      },
+    });
+    const directRedaction = buildRedactedBookingContactArtifact({
+      publicSummary: "safe booking contact evidence",
+      contactPhone: "+15551234567",
+    });
+
+    expect(executionPlan.localCommands).toBe(bookingContactLocalCommands);
+    expect(executionPlan.externalCommands).toBe(bookingContactExternalCommands);
+    expect(executionPlan.commandExecutionAllowed).toBe(false);
+    expect(executionPlan.databaseExecutionAllowed).toBe(false);
+    expect(executionPlan.providerExecutionAllowed).toBe(false);
+    expect(executionPlan.paymentExecutionAllowed).toBe(false);
+    expect(executionPlan.browserExecutionAllowed).toBe(false);
+    expect(executionPlan.ciExecutionAllowed).toBe(false);
+    expect(executionPlan.providerPersistenceExecutionAllowed).toBe(false);
+    expect(executionPlan.executionPolicy).toBe(bookingContactExecutionPolicy);
+    expect(executionPlan.executionPolicy).toEqual({
+      codexMayClassifyStaticBookingContactReadiness: true,
+      databaseTransactionsRequiredForClosure: true,
+      tenantIsolationRequiredForClosure: true,
+      providerSandboxEvidenceRequiredForClosure: true,
+      noLivePaymentBoundaryRequiredUntilStripeSandboxProof: true,
+      browserAndApiE2eRequiredForClosure: true,
+      providerDatabaseRequiredForPersistence: true,
+      secretSafeArtifactsRequiredForClosure: true,
+    });
+    expect(executionPlan.requiredExternalEvidence).toBe(bookingContactRequiredExternalEvidence);
+    expect(executionPlan.requiredExternalEvidence).toContain("live DB transaction integration evidence");
+    expect(executionPlan.requiredExternalEvidence).toContain("provider sandbox upload, deposit, notification, and calendar handoff evidence");
+    expect(executionPlan.requiredExternalEvidence).toContain("secret-safe booking/contact artifact review");
+    expect(artifactReview.requiredExternalEvidence).toBe(bookingContactRequiredExternalEvidence);
+    expect(artifactReview.redactions).toEqual([
+      "tenantDomain",
+      "clientEmail",
+      "medicalNotes",
+      "stripePaymentIntent",
+      "providerToken",
+      "nested.privateFileUrl",
+    ]);
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant.example.com");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("client@example.com");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("medical:");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("stripe_pi_private");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("provider-token");
+    expect(JSON.stringify(artifactReview.artifact)).toContain("booking contact evidence captured");
+    expect(artifactReview.secretSafe).toBe(true);
+    expect(directRedaction.redactions).toEqual(["contactPhone"]);
+    expect(JSON.stringify(directRedaction.artifact)).toContain("safe booking contact evidence");
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming booking/contact launch readiness", () => {
     expect(ciWorkflow).toContain("Run Phase 4 booking contact runtime contracts");
     expect(ciWorkflow).toContain("booking-contact-runtime-static.test.ts");
@@ -127,7 +293,26 @@ describe("booking/contact runtime evidence contract", () => {
     expect(unitManifest).toContain("unit-web-booking-contact-runtime-static");
     expect(unitManifest).toContain("BookingContactRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/bookingContactRuntime.ts");
-    expect(gapTracker).toContain("BookingContactRun Prisma model and app row contract");
-    expect(gapTracker).toContain("live DB transaction integration, tenant-isolation integration, browser/API E2E, provider sandbox handoff evidence, web typecheck/build, CI evidence, and secret-safe artifact review remain open");
+    expect(gapTracker).toContain("persistBookingContactRun upsert seam");
+    expect(gapTracker).toContain("buildBookingContactExecutionPlan");
+    expect(gapTracker).toContain("buildRedactedBookingContactArtifact");
+    expect(gapTracker).toContain("buildBookingContactArtifactReview");
+    expect(gapTracker).toContain("bookingContactExecutionPolicy");
+    expect(gapTracker).toContain("bookingContactRequiredExternalEvidence");
+    expect(gapTracker).toContain("GAP-029 is booking-contact-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("live DB transaction integration, provider-backed persistBookingContactRun execution, tenant-isolation integration, browser/API E2E, provider sandbox handoff evidence, web typecheck/build, CI evidence, and secret-safe artifact review remain open");
+    expect(gapTracker).toContain("proof inventory");
+  });
+
+  it("pins current booking contact proof files for GAP-029", () => {
+    expect(bookingContactRuntimeProofFiles).toContain("packages/booking/package.json");
+    expect(bookingContactRuntimeProofFiles).toContain("apps/web/package.json");
+    expect(bookingContactRuntimeProofFiles).toContain("apps/web/lib/bookingContactRuntime.ts");
+    expect(bookingContactRuntimeProofFiles).toContain("apps/web/tests/booking-contact-runtime-static.test.ts");
+    for (const proofFile of bookingContactRuntimeProofFiles) {
+      expect(readRepoFile(proofFile).length).toBeGreaterThan(0);
+    }
   });
 });
+
+

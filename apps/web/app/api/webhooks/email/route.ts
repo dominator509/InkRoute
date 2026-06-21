@@ -1,6 +1,8 @@
 ﻿import { interpretEmailWebhook } from "@inkroute/notifications";
 import { inkrouteDemoTenant } from "@inkroute/config";
 import { NextResponse, type NextRequest } from "next/server";
+
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 import { persistWebhookEvent } from "../../../../lib/localRuntimeState";
 import { buildEmailProviderReconciliation, buildEmailWebhookReadinessFromPayload, emailProviderContract } from "../../../../lib/emailProvider";
 import { buildProviderWebhookRouteBoundary, providerWebhookContract } from "../../../../lib/providerWebhookReconciliation";
@@ -20,7 +22,7 @@ export async function POST(request: NextRequest) {
   if (!signature) {
     return NextResponse.json(
       { ok: false, error: { code: "MISSING_EMAIL_PROVIDER_SIGNATURE", message: "Email webhooks must include a provider signature header before production processing." } },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -35,7 +37,7 @@ export async function POST(request: NextRequest) {
     eventId = typeof eventPayload.id === "string" ? eventPayload.id : typeof eventPayload.event_id === "string" ? eventPayload.event_id : eventId;
     providerMessageId = typeof eventPayload.email_id === "string" ? eventPayload.email_id : typeof eventPayload.message_id === "string" ? eventPayload.message_id : undefined;
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "INVALID_WEBHOOK_JSON", message: "Email webhook body must be valid JSON." } }, { status: 400 });
+    return NextResponse.json({ ok: false, error: { code: "INVALID_WEBHOOK_JSON", message: "Email webhook body must be valid JSON." } }, { status: 400, headers: noStoreHeaders });
   }
 
   const tenantSlug = getTenantSlugFromPayload(eventPayload);
@@ -61,12 +63,47 @@ export async function POST(request: NextRequest) {
     signatureHeaderPresent: true,
     reconciliation,
   });
+  const interpretation = interpretEmailWebhook(eventType);
+
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "PROVIDER_EMAIL_WEBHOOK_RECONCILIATION_NOT_CONFIGURED",
+          message:
+            "Production email webhooks require cryptographic signature verification plus durable NotificationDelivery, ProviderEvent, and suppression reconciliation; local runtime webhook persistence is disabled.",
+          gapIds: ["GAP-010", "GAP-061", "GAP-064", "GAP-066"],
+        },
+        data: {
+          tenantSlug,
+          eventId,
+          eventType,
+          interpretation,
+          readiness,
+          reconciliation,
+          providerWebhookBoundary,
+          crossProviderReadiness: providerWebhookContract.runtimeReadiness,
+          productionBoundary: {
+            localEmailWebhookPersistenceDisabled: true,
+            requiresDurableProviderEventPersistence: true,
+            gapIds: ["GAP-010", "GAP-061", "GAP-064", "GAP-066"],
+            requiredWrites: readiness.requiredWrites,
+            requiredControls: readiness.requiredControls,
+            crossProviderRequiredMethods: providerWebhookContract.requiredRepositoryMethods,
+          },
+        },
+      },
+      { status: 503, headers: noStoreHeaders },
+    );
+  }
+
   const storedWebhook = persistWebhookEvent(tenantSlug, {
     source: "email",
     eventType,
     signatureHeader: "present",
     payloadLength: rawBody.length,
-    interpretation: interpretEmailWebhook(eventType).eventType,
+    interpretation: interpretation.eventType,
   });
 
   return NextResponse.json(
@@ -75,7 +112,7 @@ export async function POST(request: NextRequest) {
       data: {
         tenantSlug,
         storedWebhook,
-        interpretation: interpretEmailWebhook(eventType),
+        interpretation,
         readiness,
         reconciliation,
         providerWebhookBoundary,
@@ -101,6 +138,7 @@ export async function POST(request: NextRequest) {
         },
       },
     },
-    { status: 200 },
+    { status: 200, headers: noStoreHeaders },
   );
 }
+

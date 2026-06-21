@@ -11,7 +11,7 @@ export type TestLayer =
 
 export type TestSurface = "web" | "dashboard" | "mobile" | "api" | "package" | "database" | "provider" | "ci";
 export type TestPriority = "critical" | "high" | "medium" | "low";
-export type TestAutomationStatus = "implemented" | "scaffolded" | "runtime_gated" | "credential_gated" | "manual";
+export type TestAutomationStatus = "implemented" | "local_contract" | "scaffolded" | "runtime_gated" | "credential_gated" | "manual";
 export type QualityGateStatus = "pass" | "warn" | "block" | "not_run";
 
 export interface TestCaseRecord {
@@ -109,8 +109,8 @@ export interface DashboardTestingRuntimeReadinessPlan {
   missingScripts: readonly string[];
   missingImplementedRequirements: readonly string[];
   missingPassingRequirements: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof dashboardTestingRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly DashboardTestingRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -142,8 +142,8 @@ export interface TestingRuntimeReadinessInput {
 export interface TestingRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof testingRuntimeReadinessRequiredCommands;
+  requiredEvidence: typeof testingRuntimeReadinessRequiredEvidence;
   blockers: readonly string[];
 }
 
@@ -169,8 +169,8 @@ export interface Phase14RunnerExecutionReadinessInput {
 export interface Phase14RunnerExecutionReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof phase14RunnerExecutionReadinessRequiredCommands;
+  requiredEvidence: readonly Phase14RunnerExecutionReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -199,8 +199,8 @@ export interface AppE2eRuntimeReadinessInput {
 export interface AppE2eRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof appE2eRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly AppE2eRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -225,8 +225,8 @@ export interface AccessibilityVisualRuntimeReadinessInput {
 export interface AccessibilityVisualRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof accessibilityVisualRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly AccessibilityVisualRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -255,8 +255,8 @@ export interface ProviderContractRuntimeReadinessInput {
 export interface ProviderContractRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof providerContractRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly ProviderContractRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -283,8 +283,8 @@ export interface CiCoverageReportingReadinessInput {
 export interface CiCoverageReportingReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof ciCoverageReportingReadinessRequiredCommands;
+  requiredEvidence: readonly CiCoverageReportingReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -309,8 +309,8 @@ export interface PerformanceLoadRuntimeReadinessInput {
 export interface PerformanceLoadRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof performanceLoadRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly PerformanceLoadRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -340,8 +340,8 @@ export interface Phase9AppRuntimeBuildReadinessInput {
 export interface Phase9AppRuntimeBuildReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof phase9AppRuntimeBuildReadinessRequiredCommands;
+  requiredEvidence: readonly Phase9AppRuntimeBuildReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -368,8 +368,8 @@ export interface Phase10SeoAppRuntimeBuildReadinessInput {
 export interface Phase10SeoAppRuntimeBuildReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof phase10SeoAppRuntimeBuildReadinessRequiredCommands;
+  requiredEvidence: readonly Phase10SeoAppRuntimeBuildReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -390,6 +390,7 @@ export function summarizeSuites(suites: readonly TestSuiteRecord[]) {
     },
     {
       implemented: 0,
+      local_contract: 0,
       scaffolded: 0,
       runtime_gated: 0,
       credential_gated: 0,
@@ -543,9 +544,16 @@ export function buildDashboardTestRequirements(): DashboardTestRequirement[] {
       priority: "high",
       status: "runtime_gated",
       command: "pnpm --filter @inkroute/dashboard test -- dashboard-components",
-      targetFiles: ["apps/dashboard/components/**/*", "apps/dashboard/tests/components/dashboard-components.test.tsx"],
-      verifies: ["empty states", "loading states", "error states", "disabled provider action states"],
-      blockers: ["React/Next component test harness is not wired for dashboard app components."],
+      targetFiles: [
+        "apps/dashboard/components/BookingLifecycleActionPanel.tsx",
+        "apps/dashboard/components/MessageActionPanel.tsx",
+        "apps/dashboard/components/PaymentActionPanel.tsx",
+        "apps/dashboard/components/TravelPublishActionPanel.tsx",
+        "apps/dashboard/components/SeoPublicationActionPanel.tsx",
+        "apps/dashboard/tests/dashboard-mutation-runtime-static.test.ts",
+      ],
+      verifies: ["empty states", "loading states", "error states", "gated provider action states", "operator-review copy"],
+      blockers: ["Runnable dashboard unit/component test evidence must be captured for empty, loading, error, gated provider action, and operator-review states."],
       gapIds: ["GAP-038", "GAP-041"]
     },
     {
@@ -556,7 +564,7 @@ export function buildDashboardTestRequirements(): DashboardTestRequirement[] {
       command: "pnpm --filter @inkroute/dashboard test -- dashboard-rbac",
       targetFiles: ["apps/dashboard/tests/auth/dashboard-rbac.test.ts", "packages/auth/tests/authorization.test.ts"],
       verifies: ["login redirect", "tenant switch redirect", "cross-tenant denial", "sensitive field redaction"],
-      blockers: ["Dashboard auth middleware and tenant-scoped loaders must be wired before app-level RBAC tests are meaningful."],
+      blockers: ["Dashboard RBAC and tenant-isolation fixture evidence must be captured against the wired auth middleware and tenant-scoped loader contracts."],
       gapIds: ["GAP-036", "GAP-037", "GAP-040", "GAP-041"]
     },
     {
@@ -619,6 +627,23 @@ export function summarizeDashboardTestRequirements(requirements: readonly Dashbo
   };
 }
 
+export const dashboardTestingRuntimeReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/testing typecheck",
+      "pnpm --filter @inkroute/testing test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/dashboard test",
+      "pnpm test:e2e --project=dashboard-chromium",
+    ] as const;
+
+export const dashboardTestingRuntimeReadinessRequiredEvidence = [
+      "passing route/component/RBAC/mutation/accessibility/E2E dashboard test output",
+      "seeded auth, tenant, and RBAC fixture evidence",
+      "CI artifact upload and required-check enforcement evidence",
+    ] as const;
+
+export type DashboardTestingRuntimeReadinessRequiredEvidence = (typeof dashboardTestingRuntimeReadinessRequiredEvidence)[number];
+
 export function buildDashboardTestingRuntimeReadinessPlan(
   input: DashboardTestingRuntimeReadinessInput,
   requirements: readonly DashboardTestRequirement[] = buildDashboardTestRequirements(),
@@ -629,7 +654,7 @@ export function buildDashboardTestingRuntimeReadinessPlan(
   const missingImplementedRequirements = requirementIds.filter((id) => !input.implementedRequirementIds.includes(id));
   const missingPassingRequirements = requirementIds.filter((id) => !input.passingRequirementIds.includes(id));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: DashboardTestingRuntimeReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/testing package script is missing ${script}.`);
   if (!input.testingPackageTestsPassed) blockers.push("@inkroute/testing dashboard matrix tests must pass.");
@@ -648,13 +673,13 @@ export function buildDashboardTestingRuntimeReadinessPlan(
   if (!input.branchProtectionRequiresDashboardTests) blockers.push("Branch protection must require dashboard test gates before merge.");
 
   if (missingImplementedRequirements.length > 0 || missingPassingRequirements.length > 0) {
-    requiredEvidence.push("passing route/component/RBAC/mutation/accessibility/E2E dashboard test output");
+    requiredEvidence.push(dashboardTestingRuntimeReadinessRequiredEvidence[0]);
   }
   if (!input.seededAuthFixturesConfigured || !input.seededTenantDataConfigured || !input.rbacTenantIsolationFixturesConfigured) {
-    requiredEvidence.push("seeded auth, tenant, and RBAC fixture evidence");
+    requiredEvidence.push(dashboardTestingRuntimeReadinessRequiredEvidence[1]);
   }
   if (!input.ciUploadsDashboardArtifacts || !input.branchProtectionRequiresDashboardTests) {
-    requiredEvidence.push("CI artifact upload and required-check enforcement evidence");
+    requiredEvidence.push(dashboardTestingRuntimeReadinessRequiredEvidence[2]);
   }
 
   return {
@@ -662,18 +687,38 @@ export function buildDashboardTestingRuntimeReadinessPlan(
     missingScripts,
     missingImplementedRequirements,
     missingPassingRequirements,
-    requiredCommands: [
-      "pnpm --filter @inkroute/testing typecheck",
-      "pnpm --filter @inkroute/testing test",
-      "pnpm --filter @inkroute/dashboard typecheck",
-      "pnpm --filter @inkroute/dashboard build",
-      "pnpm --filter @inkroute/dashboard test",
-      "pnpm test:e2e --project=dashboard-chromium",
-    ],
-    requiredEvidence,
+    requiredCommands: dashboardTestingRuntimeReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === dashboardTestingRuntimeReadinessRequiredEvidence.length
+        ? dashboardTestingRuntimeReadinessRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
+
+export const testingRuntimeReadinessRequiredCommands = [
+      "pnpm install --frozen-lockfile",
+      "pnpm test:phase14:static",
+      "pnpm test:manifest",
+      "pnpm typecheck",
+      "pnpm test:unit",
+      "pnpm test:unit:coverage",
+      "pnpm test:e2e",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "Prisma integration test suite against non-production fixtures",
+      "Expo simulator/device smoke suite",
+      "provider sandbox integration suites",
+    ] as const;
+
+export const testingRuntimeReadinessRequiredEvidence = [
+  "Committed lockfile and reproducible dependency install output.",
+  "Passing local or CI output for static, manifest, typecheck, unit, coverage, E2E, app build, Prisma, provider, and mobile commands.",
+  "Vitest coverage thresholds plus retained coverage artifact from CI.",
+  "Playwright report, JUnit/JSON output, and retained failure traces/screenshots/videos from CI.",
+  "Branch protection settings showing CI required before merge.",
+  "Documented flaky-test handling and quarantine process.",
+] as const;
 
 export function buildTestingRuntimeReadinessPlan(input: TestingRuntimeReadinessInput): TestingRuntimeReadinessPlan {
   const requiredScripts = ["test:phase14:static", "test:manifest", "test:unit", "test:e2e", "typecheck"];
@@ -706,31 +751,31 @@ export function buildTestingRuntimeReadinessPlan(input: TestingRuntimeReadinessI
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
+    requiredCommands: testingRuntimeReadinessRequiredCommands,
+    requiredEvidence: testingRuntimeReadinessRequiredEvidence,
+    blockers,
+  };
+}
+
+export const phase14RunnerExecutionReadinessRequiredCommands = [
       "pnpm install --frozen-lockfile",
       "pnpm test:phase14:static",
       "pnpm test:manifest",
       "pnpm typecheck",
       "pnpm test:unit",
-      "pnpm test:unit:coverage",
+      "pnpm exec playwright install --with-deps",
       "pnpm test:e2e",
-      "pnpm --filter @inkroute/web build",
-      "pnpm --filter @inkroute/dashboard build",
-      "Prisma integration test suite against non-production fixtures",
-      "Expo simulator/device smoke suite",
-      "provider sandbox integration suites",
-    ],
-    requiredEvidence: [
-      "Committed lockfile and reproducible dependency install output.",
-      "Passing local or CI output for static, manifest, typecheck, unit, coverage, E2E, app build, Prisma, provider, and mobile commands.",
-      "Vitest coverage thresholds plus retained coverage artifact from CI.",
-      "Playwright report, JUnit/JSON output, and retained failure traces/screenshots/videos from CI.",
-      "Branch protection settings showing CI required before merge.",
-      "Documented flaky-test handling and quarantine process.",
-    ],
-    blockers,
-  };
-}
+    ] as const;
+
+export const phase14RunnerExecutionReadinessRequiredEvidence = [
+      "committed lockfile and frozen pnpm install transcript",
+      "Vitest workspace, static manifest, unit, and typecheck execution output",
+      "Playwright browser install and web/dashboard E2E execution output",
+      "passing CI workflow with retained Vitest, coverage, Playwright, trace, screenshot, video, and manifest artifacts",
+      "triaged runner failure log, committed fixes, preserved local-contract coverage diff, and flaky-test policy",
+    ] as const;
+
+export type Phase14RunnerExecutionReadinessRequiredEvidence = (typeof phase14RunnerExecutionReadinessRequiredEvidence)[number];
 
 export function buildPhase14RunnerExecutionReadinessPlan(
   input: Phase14RunnerExecutionReadinessInput,
@@ -738,14 +783,14 @@ export function buildPhase14RunnerExecutionReadinessPlan(
   const requiredScripts = ["test:phase14:static", "test:manifest", "test:unit", "test:e2e", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.rootScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: Phase14RunnerExecutionReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing root ${script} script.`);
   if (!input.lockfileCommitted) blockers.push("Committed pnpm-lock.yaml is required for reproducible Phase 14 runner execution.");
   if (!input.frozenInstallPassed) blockers.push("pnpm install --frozen-lockfile must pass before runner evidence is production-significant.");
   if (!input.vitestWorkspaceResolved) blockers.push("Vitest workspace must resolve all package, app, route, and contract test projects.");
   if (!input.playwrightBrowsersInstalled) blockers.push("Playwright browsers must install before web/dashboard E2E execution.");
-  if (!input.phase14StaticPassed) blockers.push("Phase 14 static scaffold check must pass.");
+  if (!input.phase14StaticPassed) blockers.push("Phase 14 static local-contract check must pass.");
   if (!input.manifestVerificationPassed) blockers.push("Test manifest verification must pass with security route, middleware, E2E, Next config, and mobile static suites included.");
   if (!input.unitCommandPassed) blockers.push("pnpm test:unit must execute and pass across packages and app contract tests.");
   if (!input.e2eCommandPassed) blockers.push("pnpm test:e2e must execute and pass for configured web/dashboard Playwright projects.");
@@ -754,47 +799,60 @@ export function buildPhase14RunnerExecutionReadinessPlan(
   if (!input.ciArtifactsUploaded) blockers.push("CI must upload Vitest, coverage, Playwright, traces, screenshots, videos, and manifest artifacts.");
   if (!input.runnerFailuresTriaged) blockers.push("Real runner failures must be triaged from local or CI output before marking Phase 14 ready.");
   if (!input.runnerFixesCommitted) blockers.push("Fixes for TypeScript, module resolution, test environment, browser, or runner failures must be committed.");
-  if (!input.scaffoldCoveragePreserved) blockers.push("Runner fixes must preserve the Phase 14 scaffolded security, route, middleware, E2E, Next config, and mobile coverage.");
+  if (!input.scaffoldCoveragePreserved) blockers.push("Runner fixes must preserve the Phase 14 local-contract security, route, middleware, E2E, Next config, and mobile coverage.");
   if (!input.flakyRetryPolicyDocumented) blockers.push("Flaky retry/quarantine policy must be documented before CI runner evidence is trusted.");
 
   if (!input.lockfileCommitted || !input.frozenInstallPassed) {
-    requiredEvidence.push("committed lockfile and frozen pnpm install transcript");
+    requiredEvidence.push(phase14RunnerExecutionReadinessRequiredEvidence[0]);
   }
   if (!input.vitestWorkspaceResolved || !input.phase14StaticPassed || !input.manifestVerificationPassed || !input.unitCommandPassed || !input.typecheckCommandPassed) {
-    requiredEvidence.push("Vitest workspace, static manifest, unit, and typecheck execution output");
+    requiredEvidence.push(phase14RunnerExecutionReadinessRequiredEvidence[1]);
   }
   if (!input.playwrightBrowsersInstalled || !input.e2eCommandPassed) {
-    requiredEvidence.push("Playwright browser install and web/dashboard E2E execution output");
+    requiredEvidence.push(phase14RunnerExecutionReadinessRequiredEvidence[2]);
   }
   if (!input.ciWorkflowPassed || !input.ciArtifactsUploaded) {
-    requiredEvidence.push("passing CI workflow with retained Vitest, coverage, Playwright, trace, screenshot, video, and manifest artifacts");
+    requiredEvidence.push(phase14RunnerExecutionReadinessRequiredEvidence[3]);
   }
   if (!input.runnerFailuresTriaged || !input.runnerFixesCommitted || !input.scaffoldCoveragePreserved || !input.flakyRetryPolicyDocumented) {
-    requiredEvidence.push("triaged runner failure log, committed fixes, preserved scaffold coverage diff, and flaky-test policy");
+    requiredEvidence.push(phase14RunnerExecutionReadinessRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm install --frozen-lockfile",
-      "pnpm test:phase14:static",
-      "pnpm test:manifest",
-      "pnpm typecheck",
-      "pnpm test:unit",
-      "pnpm exec playwright install --with-deps",
-      "pnpm test:e2e",
-    ],
-    requiredEvidence,
+    requiredCommands: phase14RunnerExecutionReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === phase14RunnerExecutionReadinessRequiredEvidence.length
+        ? phase14RunnerExecutionReadinessRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
+
+export const appE2eRuntimeReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm exec playwright install --with-deps chromium",
+      "pnpm test:e2e",
+      "pnpm test:manifest",
+    ] as const;
+
+export const appE2eRuntimeReadinessRequiredEvidence = [
+      "web/dashboard build output and running Next.js runtime logs",
+      "Playwright browser install plus public booking/security/SEO spec output",
+      "dashboard smoke/security/operator E2E output and manifest verification",
+      "retained Playwright report, traces, screenshots, videos, and CI E2E artifact bundle",
+      "documented E2E retry policy and committed fixes from real Playwright failures",
+    ] as const;
+
+export type AppE2eRuntimeReadinessRequiredEvidence = (typeof appE2eRuntimeReadinessRequiredEvidence)[number];
 
 export function buildAppE2eRuntimeReadinessPlan(input: AppE2eRuntimeReadinessInput): AppE2eRuntimeReadinessPlan {
   const requiredScripts = ["test:e2e"];
   const missingScripts = requiredScripts.filter((script) => !input.rootScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: AppE2eRuntimeReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing root ${script} script.`);
   if (!input.webBuildPassed) blockers.push("@inkroute/web build must pass before public-site E2E smoke results are meaningful.");
@@ -817,35 +875,53 @@ export function buildAppE2eRuntimeReadinessPlan(input: AppE2eRuntimeReadinessInp
   if (!input.ciE2eJobPassed) blockers.push("CI E2E job must pass with retained artifacts.");
 
   if (!input.webBuildPassed || !input.dashboardBuildPassed || !input.webRuntimeStarted || !input.dashboardRuntimeStarted) {
-    requiredEvidence.push("web/dashboard build output and running Next.js runtime logs");
+    requiredEvidence.push(appE2eRuntimeReadinessRequiredEvidence[0]);
   }
   if (!input.playwrightBrowsersInstalled || !input.publicBookingSpecPassed || !input.publicSecurityRuntimeSpecPassed || !input.publicSeoSpecPassed) {
-    requiredEvidence.push("Playwright browser install plus public booking/security/SEO spec output");
+    requiredEvidence.push(appE2eRuntimeReadinessRequiredEvidence[1]);
   }
   if (!input.dashboardSmokeSpecPassed || !input.dashboardSecurityRuntimeSpecPassed || !input.dashboardOperatorSurfacesSpecPassed || !input.e2eManifestVerificationPassed) {
-    requiredEvidence.push("dashboard smoke/security/operator E2E output and manifest verification");
+    requiredEvidence.push(appE2eRuntimeReadinessRequiredEvidence[2]);
   }
   if (!input.traceCaptureConfigured || !input.artifactsRetained || !input.failureScreenshotsVideosRetained || !input.ciE2eJobPassed) {
-    requiredEvidence.push("retained Playwright report, traces, screenshots, videos, and CI E2E artifact bundle");
+    requiredEvidence.push(appE2eRuntimeReadinessRequiredEvidence[3]);
   }
   if (!input.flakyRetriesConfigured || !input.hardenedFailuresCommitted) {
-    requiredEvidence.push("documented E2E retry policy and committed fixes from real Playwright failures");
+    requiredEvidence.push(appE2eRuntimeReadinessRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/web build",
-      "pnpm --filter @inkroute/dashboard build",
-      "pnpm exec playwright install --with-deps chromium",
-      "pnpm test:e2e",
-      "pnpm test:manifest",
-    ],
-    requiredEvidence,
+    requiredCommands: appE2eRuntimeReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === appE2eRuntimeReadinessRequiredEvidence.length
+        ? appE2eRuntimeReadinessRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
+
+export const accessibilityVisualRuntimeReadinessRequiredCommands = [
+      "pnpm test:e2e --project=web-chromium --grep @a11y",
+      "pnpm test:e2e --project=dashboard-chromium --grep @a11y",
+      "collect axe reports for public web and dashboard accessibility runs",
+      "Lighthouse accessibility budget run for public and dashboard routes",
+      "contrast audit for public web, dashboard, and mobile high-risk surfaces",
+      "responsive layout audit for mobile, tablet, and desktop breakpoints",
+      "visual regression baseline and diff review",
+      "manual screen-reader and mobile accessibility QA pass",
+    ] as const;
+
+export const accessibilityVisualRuntimeReadinessRequiredEvidence = [
+      "web/dashboard Playwright @a11y output and axe reports",
+      "Lighthouse, contrast, and responsive layout audit reports",
+      "manual screen-reader and mobile accessibility QA notes",
+      "visual regression baselines, reviewed diffs, screenshots, and retained artifacts",
+      "manifest verification, CI accessibility/visual job output, and triaged regression log",
+    ] as const;
+
+export type AccessibilityVisualRuntimeReadinessRequiredEvidence = (typeof accessibilityVisualRuntimeReadinessRequiredEvidence)[number];
 
 export function buildAccessibilityVisualRuntimeReadinessPlan(
   input: AccessibilityVisualRuntimeReadinessInput,
@@ -853,7 +929,7 @@ export function buildAccessibilityVisualRuntimeReadinessPlan(
   const requiredScripts = ["test:e2e"];
   const missingScripts = requiredScripts.filter((script) => !input.rootScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: AccessibilityVisualRuntimeReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing root ${script} script.`);
   if (!input.webA11ySpecPassed) blockers.push("Web Playwright @a11y spec must pass for public booking, navigation, labels, focus, and landmarks.");
@@ -872,35 +948,50 @@ export function buildAccessibilityVisualRuntimeReadinessPlan(
   if (!input.regressionsTriagedAndFixed) blockers.push("Accessibility and visual regressions found during execution must be triaged and fixed or documented as accepted exceptions.");
 
   if (!input.webA11ySpecPassed || !input.dashboardA11ySpecPassed || !input.axeReportsCollected) {
-    requiredEvidence.push("web/dashboard Playwright @a11y output and axe reports");
+    requiredEvidence.push(accessibilityVisualRuntimeReadinessRequiredEvidence[0]);
   }
   if (!input.lighthouseBudgetsPassed || !input.contrastAuditPassed || !input.responsiveLayoutChecksPassed) {
-    requiredEvidence.push("Lighthouse, contrast, and responsive layout audit reports");
+    requiredEvidence.push(accessibilityVisualRuntimeReadinessRequiredEvidence[1]);
   }
   if (!input.manualScreenReaderPassCompleted || !input.mobileAccessibilityQaPassed) {
-    requiredEvidence.push("manual screen-reader and mobile accessibility QA notes");
+    requiredEvidence.push(accessibilityVisualRuntimeReadinessRequiredEvidence[2]);
   }
   if (!input.visualBaselinesCaptured || !input.visualDiffsReviewed || !input.artifactsRetained) {
-    requiredEvidence.push("visual regression baselines, reviewed diffs, screenshots, and retained artifacts");
+    requiredEvidence.push(accessibilityVisualRuntimeReadinessRequiredEvidence[3]);
   }
   if (!input.accessibilityManifestVerified || !input.ciA11yVisualJobPassed || !input.regressionsTriagedAndFixed) {
-    requiredEvidence.push("manifest verification, CI accessibility/visual job output, and triaged regression log");
+    requiredEvidence.push(accessibilityVisualRuntimeReadinessRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm test:e2e --project=web-chromium --grep @a11y",
-      "pnpm test:e2e --project=dashboard-chromium --grep @a11y",
-      "Lighthouse accessibility budget run for public and dashboard routes",
-      "visual regression baseline and diff review",
-      "manual screen-reader and mobile accessibility QA pass",
-    ],
-    requiredEvidence,
+    requiredCommands: accessibilityVisualRuntimeReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === accessibilityVisualRuntimeReadinessRequiredEvidence.length
+        ? accessibilityVisualRuntimeReadinessRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
+
+export const providerContractRuntimeReadinessRequiredCommands = [
+      "pnpm test:manifest",
+      "pnpm vitest run apps/web/tests/provider-webhook-contracts.test.ts",
+      "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
+      "stripe trigger checkout.session.completed",
+      "provider sandbox contract suite for calendar/storage/email/sms/push/sentry/auth/rate-limit",
+    ] as const;
+
+export const providerContractRuntimeReadinessRequiredEvidence = [
+      "static provider contract suite, manifest verification, signed raw-body fixtures, and replay/idempotency fixtures",
+      "Stripe CLI webhook/idempotency and Google Calendar OAuth/sync sandbox transcripts",
+      "storage signed URL/upload/download, rate-limit store, and auth session fixture contract output",
+      "email, SMS, push, and Sentry sandbox send/capture artifacts",
+      "redacted provider artifact bundle and CI provider-contract job evidence",
+    ] as const;
+
+export type ProviderContractRuntimeReadinessRequiredEvidence = (typeof providerContractRuntimeReadinessRequiredEvidence)[number];
 
 export function buildProviderContractRuntimeReadinessPlan(
   input: ProviderContractRuntimeReadinessInput,
@@ -908,7 +999,7 @@ export function buildProviderContractRuntimeReadinessPlan(
   const requiredScripts = ["test:unit", "test:manifest"];
   const missingScripts = requiredScripts.filter((script) => !input.rootScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: ProviderContractRuntimeReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing root ${script} script.`);
   if (!input.staticWebhookContractSuitePassed) blockers.push("Static provider webhook contract suite must pass for Stripe, email, SMS, and Sentry route boundaries.");
@@ -931,35 +1022,49 @@ export function buildProviderContractRuntimeReadinessPlan(
   if (!input.ciProviderContractJobPassed) blockers.push("CI provider-contract job must pass or publish credential-gated skip evidence and retained artifacts.");
 
   if (!input.staticWebhookContractSuitePassed || !input.providerManifestVerified || !input.rawBodySignatureFixturesCommitted || !input.replayIdempotencyFixturesCommitted) {
-    requiredEvidence.push("static provider contract suite, manifest verification, signed raw-body fixtures, and replay/idempotency fixtures");
+    requiredEvidence.push(providerContractRuntimeReadinessRequiredEvidence[0]);
   }
   if (!input.stripeCliWebhookPassed || !input.stripeIdempotencyVerified || !input.googleCalendarOauthPassed || !input.googleCalendarSyncVerified) {
-    requiredEvidence.push("Stripe CLI webhook/idempotency and Google Calendar OAuth/sync sandbox transcripts");
+    requiredEvidence.push(providerContractRuntimeReadinessRequiredEvidence[1]);
   }
   if (!input.storageSignedUrlTestsPassed || !input.storageUploadDownloadVerified || !input.rateLimitStoreTestsPassed || !input.authSessionFixturesPassed) {
-    requiredEvidence.push("storage signed URL/upload/download, rate-limit store, and auth session fixture contract output");
+    requiredEvidence.push(providerContractRuntimeReadinessRequiredEvidence[2]);
   }
   if (!input.resendEmailSandboxPassed || !input.twilioSmsSandboxPassed || !input.expoPushSandboxPassed || !input.sentryCaptureVerified) {
-    requiredEvidence.push("email, SMS, push, and Sentry sandbox send/capture artifacts");
+    requiredEvidence.push(providerContractRuntimeReadinessRequiredEvidence[3]);
   }
   if (!input.redactedProviderArtifactsRetained || !input.ciProviderContractJobPassed) {
-    requiredEvidence.push("redacted provider artifact bundle and CI provider-contract job evidence");
+    requiredEvidence.push(providerContractRuntimeReadinessRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm test:manifest",
-      "pnpm vitest run apps/web/tests/provider-webhook-contracts.test.ts",
-      "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
-      "stripe trigger checkout.session.completed",
-      "provider sandbox contract suite for calendar/storage/email/sms/push/sentry/auth/rate-limit",
-    ],
-    requiredEvidence,
+    requiredCommands: providerContractRuntimeReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === providerContractRuntimeReadinessRequiredEvidence.length
+        ? providerContractRuntimeReadinessRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
+
+export const ciCoverageReportingReadinessRequiredCommands = [
+      "pnpm test:unit:coverage",
+      "pnpm test:e2e",
+      "gh run view <ci-run-id> --json conclusion,status,url",
+      "gh api repos/:owner/:repo/actions/runs/<ci-run-id>/artifacts",
+      "verify branch protection requires CI quality check",
+    ] as const;
+
+export const ciCoverageReportingReadinessRequiredEvidence = [
+      "CI workflow YAML and run log showing install, typecheck, coverage, and E2E gates",
+      "coverage thresholds, Vitest coverage artifact, JUnit/JSON reports, and published test summary",
+      "Playwright report plus retained traces, screenshots, videos, and failed-test debug artifact proof",
+      "passing CI run, branch protection settings, flaky-test policy, and artifact retention settings",
+    ] as const;
+
+export type CiCoverageReportingReadinessRequiredEvidence = (typeof ciCoverageReportingReadinessRequiredEvidence)[number];
 
 export function buildCiCoverageReportingReadinessPlan(
   input: CiCoverageReportingReadinessInput,
@@ -967,7 +1072,7 @@ export function buildCiCoverageReportingReadinessPlan(
   const requiredScripts = ["test:unit:coverage", "test:e2e", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.rootScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: CiCoverageReportingReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing root ${script} script.`);
   if (!input.ciWorkflowRunsInstall) blockers.push("CI workflow must run a frozen dependency install.");
@@ -988,32 +1093,52 @@ export function buildCiCoverageReportingReadinessPlan(
   if (!input.failureDebugArtifactsVerified) blockers.push("A failed-test artifact path must be verified for debugging traces/screenshots/videos.");
 
   if (!input.ciWorkflowRunsInstall || !input.ciWorkflowRunsTypecheck || !input.ciWorkflowRunsUnitCoverage || !input.ciWorkflowRunsE2e) {
-    requiredEvidence.push("CI workflow YAML and run log showing install, typecheck, coverage, and E2E gates");
+    requiredEvidence.push(ciCoverageReportingReadinessRequiredEvidence[0]);
   }
   if (!input.coverageThresholdsConfigured || !input.vitestCoverageArtifactUploaded || !input.junitJsonReportsPublished || !input.testReportSummaryPublished) {
-    requiredEvidence.push("coverage thresholds, Vitest coverage artifact, JUnit/JSON reports, and published test summary");
+    requiredEvidence.push(ciCoverageReportingReadinessRequiredEvidence[1]);
   }
   if (!input.playwrightReportArtifactUploaded || !input.playwrightTracesScreenshotsVideosUploaded || !input.failureDebugArtifactsVerified) {
-    requiredEvidence.push("Playwright report plus retained traces, screenshots, videos, and failed-test debug artifact proof");
+    requiredEvidence.push(ciCoverageReportingReadinessRequiredEvidence[2]);
   }
   if (!input.ciRunPassed || !input.branchProtectionRequiresCi || !input.flakyRetryPolicyConfigured || !input.flakyQuarantineDocumented || !input.artifactRetentionConfigured) {
-    requiredEvidence.push("passing CI run, branch protection settings, flaky-test policy, and artifact retention settings");
+    requiredEvidence.push(ciCoverageReportingReadinessRequiredEvidence[3]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm test:unit:coverage",
-      "pnpm test:e2e",
-      "gh run view <ci-run-id> --json conclusion,status,url",
-      "gh api repos/:owner/:repo/actions/runs/<ci-run-id>/artifacts",
-      "verify branch protection requires CI quality check",
-    ],
-    requiredEvidence,
+    requiredCommands: ciCoverageReportingReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === ciCoverageReportingReadinessRequiredEvidence.length
+        ? ciCoverageReportingReadinessRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
+
+export const performanceLoadRuntimeReadinessRequiredCommands = [
+      "pnpm test:performance:budgets",
+      "Lighthouse CI for public and dashboard route budgets",
+      "capture Core Web Vitals for public and dashboard critical routes",
+      "measure public home/booking/city SEO route budgets",
+      "measure dashboard overview and booking detail route budgets",
+      "load test public booking endpoint",
+      "load test Stripe webhook burst handling",
+      "load test secure upload intent endpoint",
+      "database EXPLAIN/ANALYZE query-plan checks",
+      "image optimization benchmark report",
+      "verify performance regression thresholds",
+    ] as const;
+
+export const performanceLoadRuntimeReadinessRequiredEvidence = [
+      "performance budget verifier, Lighthouse CI, Core Web Vitals, and route budget reports",
+      "booking, webhook, and upload-intent load-test reports",
+      "database EXPLAIN/ANALYZE query-plan output and image optimization benchmark report",
+      "CI performance job, retained artifacts, regression thresholds, and triage log",
+    ] as const;
+
+export type PerformanceLoadRuntimeReadinessRequiredEvidence = (typeof performanceLoadRuntimeReadinessRequiredEvidence)[number];
 
 export function buildPerformanceLoadRuntimeReadinessPlan(
   input: PerformanceLoadRuntimeReadinessInput,
@@ -1021,7 +1146,7 @@ export function buildPerformanceLoadRuntimeReadinessPlan(
   const requiredScripts = ["test:performance:budgets"];
   const missingScripts = requiredScripts.filter((script) => !input.rootScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: PerformanceLoadRuntimeReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing root ${script} script.`);
   if (!input.performanceBudgetVerifierPassed) blockers.push("Performance budget manifest verifier must pass.");
@@ -1040,38 +1165,59 @@ export function buildPerformanceLoadRuntimeReadinessPlan(
   if (!input.regressionsTriagedAndFixed) blockers.push("Performance regressions must be triaged and fixed or accepted with documented rationale.");
 
   if (!input.performanceBudgetVerifierPassed || !input.lighthouseCiPassed || !input.coreWebVitalsWithinBudget || !input.publicRouteBudgetsPassed || !input.dashboardRouteBudgetsPassed) {
-    requiredEvidence.push("performance budget verifier, Lighthouse CI, Core Web Vitals, and route budget reports");
+    requiredEvidence.push(performanceLoadRuntimeReadinessRequiredEvidence[0]);
   }
   if (!input.bookingLoadTestPassed || !input.webhookBurstTestPassed || !input.uploadIntentLoadTestPassed) {
-    requiredEvidence.push("booking, webhook, and upload-intent load-test reports");
+    requiredEvidence.push(performanceLoadRuntimeReadinessRequiredEvidence[1]);
   }
   if (!input.dbExplainPlansPassed || !input.imageOptimizationBenchmarksPassed) {
-    requiredEvidence.push("database EXPLAIN/ANALYZE query-plan output and image optimization benchmark report");
+    requiredEvidence.push(performanceLoadRuntimeReadinessRequiredEvidence[2]);
   }
   if (!input.regressionThresholdsConfigured || !input.performanceArtifactsRetained || !input.ciPerformanceJobPassed || !input.regressionsTriagedAndFixed) {
-    requiredEvidence.push("CI performance job, retained artifacts, regression thresholds, and triage log");
+    requiredEvidence.push(performanceLoadRuntimeReadinessRequiredEvidence[3]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm test:performance:budgets",
-      "Lighthouse CI for public and dashboard route budgets",
-      "load test public booking, Stripe webhook, and secure upload intent endpoints",
-      "database EXPLAIN/ANALYZE query-plan checks",
-      "image optimization benchmark report",
-    ],
-    requiredEvidence,
+    requiredCommands: performanceLoadRuntimeReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === performanceLoadRuntimeReadinessRequiredEvidence.length
+        ? performanceLoadRuntimeReadinessRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
+
+export const phase9AppRuntimeBuildReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/testing typecheck",
+      "pnpm --filter @inkroute/testing test",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "pnpm vitest run apps/web/tests/notification-messaging-routes.test.ts",
+      "pnpm vitest run apps/web/tests/provider-webhook-routes.test.ts",
+      "Playwright dashboard templates/messages smoke tests",
+      "Expo simulator notification screen smoke test",
+      "Expo device notification screen smoke test",
+      "booking-to-notification runtime smoke with provider sends disabled",
+    ] as const;
+
+export const phase9AppRuntimeBuildReadinessRequiredEvidence = [
+      "web build, dashboard build, and mobile typecheck output",
+      "Phase 9 API route and booking/deposit runtime smoke output",
+      "dashboard templates/messages Playwright smoke and provider-disabled state evidence",
+      "mobile notification screen simulator and device smoke evidence",
+      "booking-to-notification runtime, provider-disabled, artifact, and CI required-gate evidence",
+    ] as const;
+
+export type Phase9AppRuntimeBuildReadinessRequiredEvidence = (typeof phase9AppRuntimeBuildReadinessRequiredEvidence)[number];
 
 export function buildPhase9AppRuntimeBuildReadinessPlan(input: Phase9AppRuntimeBuildReadinessInput): Phase9AppRuntimeBuildReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: Phase9AppRuntimeBuildReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/testing package script is missing ${script}.`);
   if (!input.testingPackageTestsPassed) blockers.push("@inkroute/testing Phase 9 app runtime matrix tests must pass.");
@@ -1095,47 +1241,60 @@ export function buildPhase9AppRuntimeBuildReadinessPlan(input: Phase9AppRuntimeB
   if (!input.ciRequiresPhase9AppRuntimeGate) blockers.push("CI must require the Phase 9 app runtime/build gate before merge.");
 
   if (!input.webBuildPassed || !input.dashboardBuildPassed || !input.mobileTypecheckPassed) {
-    requiredEvidence.push("web build, dashboard build, and mobile typecheck output");
+    requiredEvidence.push(phase9AppRuntimeBuildReadinessRequiredEvidence[0]);
   }
   if (!input.notificationRouteTestsPassed || !input.providerWebhookRouteTestsPassed || !input.bookingRouteRuntimeSmokePassed || !input.depositRouteRuntimeSmokePassed) {
-    requiredEvidence.push("Phase 9 API route and booking/deposit runtime smoke output");
+    requiredEvidence.push(phase9AppRuntimeBuildReadinessRequiredEvidence[1]);
   }
   if (!input.dashboardTemplatesPlaywrightSmokePassed || !input.dashboardMessagesPlaywrightSmokePassed || !input.dashboardProviderDisabledStatesVerified) {
-    requiredEvidence.push("dashboard templates/messages Playwright smoke and provider-disabled state evidence");
+    requiredEvidence.push(phase9AppRuntimeBuildReadinessRequiredEvidence[2]);
   }
   if (!input.mobileNotificationScreenSmokePassed || !input.expoSimulatorNotificationSmokePassed || !input.expoDeviceNotificationSmokePassed) {
-    requiredEvidence.push("mobile notification screen simulator and device smoke evidence");
+    requiredEvidence.push(phase9AppRuntimeBuildReadinessRequiredEvidence[3]);
   }
   if (!input.bookingToNotificationRuntimeSmokePassed || !input.providerSendsDisabledInRuntimeSmoke || !input.runtimeArtifactsCaptured || !input.ciRequiresPhase9AppRuntimeGate) {
-    requiredEvidence.push("booking-to-notification runtime, provider-disabled, artifact, and CI required-gate evidence");
+    requiredEvidence.push(phase9AppRuntimeBuildReadinessRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
+    requiredCommands: phase9AppRuntimeBuildReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === phase10SeoAppRuntimeBuildReadinessRequiredEvidence.length
+        ? phase10SeoAppRuntimeBuildReadinessRequiredEvidence
+        : requiredEvidence,
+    blockers,
+  };
+}
+
+export const phase10SeoAppRuntimeBuildReadinessRequiredCommands = [
       "pnpm --filter @inkroute/testing typecheck",
       "pnpm --filter @inkroute/testing test",
       "pnpm --filter @inkroute/web build",
       "pnpm --filter @inkroute/dashboard build",
-      "pnpm --filter @inkroute/mobile typecheck",
-      "pnpm vitest run apps/web/tests/notification-messaging-routes.test.ts",
-      "pnpm vitest run apps/web/tests/provider-webhook-routes.test.ts",
-      "Playwright dashboard templates/messages smoke tests",
-      "Expo simulator notification screen smoke test",
-      "Expo device notification screen smoke test",
-      "booking-to-notification runtime smoke with provider sends disabled",
-    ],
-    requiredEvidence,
-    blockers,
-  };
-}
+      "pnpm vitest run apps/web/tests/sitemap-route.test.ts",
+      "SEO preview and sitemap preview route tests",
+      "dashboard SEO browser smoke test",
+      "dashboard SEO publish/edit/archive interaction smoke test",
+      "rendered public SEO route crawl",
+      "rendered sitemap/canonical crawl",
+    ] as const;
+
+export const phase10SeoAppRuntimeBuildReadinessRequiredEvidence = [
+      "web/dashboard build and sitemap/SEO preview route test output",
+      "dashboard SEO browser and publish/edit/archive interaction smoke evidence",
+      "rendered public SEO route, sitemap, and canonical crawl evidence",
+      "database-backed SEO route, runtime artifact, API preview, and CI required-gate evidence",
+    ] as const;
+
+export type Phase10SeoAppRuntimeBuildReadinessRequiredEvidence = (typeof phase10SeoAppRuntimeBuildReadinessRequiredEvidence)[number];
 
 export function buildPhase10SeoAppRuntimeBuildReadinessPlan(input: Phase10SeoAppRuntimeBuildReadinessInput): Phase10SeoAppRuntimeBuildReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: Phase10SeoAppRuntimeBuildReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/testing package script is missing ${script}.`);
   if (!input.testingPackageTestsPassed) blockers.push("@inkroute/testing Phase 10 SEO runtime matrix tests must pass.");
@@ -1149,41 +1308,33 @@ export function buildPhase10SeoAppRuntimeBuildReadinessPlan(input: Phase10SeoApp
   if (!input.dashboardSeoPublishInteractionSmokePassed) blockers.push("Dashboard SEO publish/edit/archive interaction smoke test must pass.");
   if (!input.renderedPublicSeoCrawlPassed) blockers.push("Rendered public SEO route crawl must pass.");
   if (!input.renderedSitemapCrawlPassed) blockers.push("Rendered sitemap crawl must pass.");
-  if (!input.databaseBackedSeoRoutesWired) blockers.push("Database-backed SEO routes must be wired before production runtime evidence is complete.");
+  if (!input.databaseBackedSeoRoutesWired) blockers.push("Database-backed SEO route execution evidence must be captured before production runtime evidence is complete.");
   if (!input.sitemapRuntimeEvidenceCaptured) blockers.push("Sitemap runtime evidence must be captured.");
   if (!input.apiPreviewRuntimeEvidenceCaptured) blockers.push("SEO and sitemap preview API runtime evidence must be captured.");
   if (!input.canonicalRuntimeEvidenceCaptured) blockers.push("Canonical/runtime crawl evidence must be captured.");
   if (!input.ciRequiresPhase10SeoRuntimeGate) blockers.push("CI must require the Phase 10 SEO app runtime/build gate before merge.");
 
   if (!input.webBuildPassed || !input.dashboardBuildPassed || !input.sitemapRouteTestsPassed || !input.seoPreviewRouteTestsPassed || !input.sitemapPreviewRouteTestsPassed) {
-    requiredEvidence.push("web/dashboard build and sitemap/SEO preview route test output");
+    requiredEvidence.push(phase10SeoAppRuntimeBuildReadinessRequiredEvidence[0]);
   }
   if (!input.dashboardSeoBrowserSmokePassed || !input.dashboardSeoPublishInteractionSmokePassed) {
-    requiredEvidence.push("dashboard SEO browser and publish/edit/archive interaction smoke evidence");
+    requiredEvidence.push(phase10SeoAppRuntimeBuildReadinessRequiredEvidence[1]);
   }
   if (!input.renderedPublicSeoCrawlPassed || !input.renderedSitemapCrawlPassed || !input.canonicalRuntimeEvidenceCaptured) {
-    requiredEvidence.push("rendered public SEO route, sitemap, and canonical crawl evidence");
+    requiredEvidence.push(phase10SeoAppRuntimeBuildReadinessRequiredEvidence[2]);
   }
   if (!input.databaseBackedSeoRoutesWired || !input.sitemapRuntimeEvidenceCaptured || !input.apiPreviewRuntimeEvidenceCaptured || !input.ciRequiresPhase10SeoRuntimeGate) {
-    requiredEvidence.push("database-backed SEO route, runtime artifact, API preview, and CI required-gate evidence");
+    requiredEvidence.push(phase10SeoAppRuntimeBuildReadinessRequiredEvidence[3]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/testing typecheck",
-      "pnpm --filter @inkroute/testing test",
-      "pnpm --filter @inkroute/web build",
-      "pnpm --filter @inkroute/dashboard build",
-      "pnpm vitest run apps/web/tests/sitemap-route.test.ts",
-      "SEO preview and sitemap preview route tests",
-      "dashboard SEO browser smoke test",
-      "dashboard SEO publish/edit/archive interaction smoke test",
-      "rendered public SEO route crawl",
-      "rendered sitemap/canonical crawl",
-    ],
-    requiredEvidence,
+    requiredCommands: phase10SeoAppRuntimeBuildReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === testingLaunchExecutionEvidenceRequiredEvidence.length
+        ? testingLaunchExecutionEvidenceRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -1218,10 +1369,41 @@ export interface TestingLaunchExecutionEvidenceInput {
 export interface TestingLaunchExecutionEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof testingLaunchExecutionEvidenceRequiredCommands;
+  requiredEvidence:
+    | readonly TestingLaunchExecutionEvidenceRequiredEvidence[]
+    | typeof testingLaunchExecutionEvidenceRequiredEvidence;
   blockers: readonly string[];
 }
+
+export const testingLaunchExecutionEvidenceRequiredCommands = [
+      "pnpm install --frozen-lockfile",
+      "pnpm test:phase14:static",
+      "pnpm test:manifest",
+      "pnpm typecheck",
+      "pnpm test:unit",
+      "pnpm test:unit:coverage",
+      "pnpm test:e2e",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "Prisma/database integration test suite",
+      "provider sandbox test suite",
+      "security test suite",
+      "Expo simulator and device test suites",
+      "GitHub Actions CI quality run with retained artifacts",
+      "branch protection required-check proof",
+    ] as const;
+
+export const testingLaunchExecutionEvidenceRequiredEvidence = [
+      "install, static, manifest, and typecheck command evidence",
+      "unit test, coverage threshold, and coverage artifact evidence",
+      "Playwright E2E report, traces, screenshots, videos, and failure-debug artifact evidence",
+      "app build, database integration, provider sandbox, and security test evidence",
+      "mobile simulator and device test evidence",
+      "CI reports, branch protection, flaky policy, and secret-safe artifact evidence",
+    ] as const;
+
+export type TestingLaunchExecutionEvidenceRequiredEvidence = (typeof testingLaunchExecutionEvidenceRequiredEvidence)[number];
 
 export function buildTestingLaunchExecutionEvidencePlan(
   input: TestingLaunchExecutionEvidenceInput,
@@ -1229,7 +1411,7 @@ export function buildTestingLaunchExecutionEvidencePlan(
   const requiredScripts = ["test:phase14:static", "test:manifest", "typecheck", "test:unit", "test:unit:coverage", "test:e2e"];
   const missingScripts = requiredScripts.filter((script) => !input.rootScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: TestingLaunchExecutionEvidenceRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing root ${script} script.`);
   if (!input.lockfileInstallPassed) blockers.push("pnpm install --frozen-lockfile must pass before testing launch execution is ready.");
@@ -1257,45 +1439,32 @@ export function buildTestingLaunchExecutionEvidencePlan(
   if (!input.secretSafeArtifactsCaptured) blockers.push("Testing artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.");
 
   if (!input.lockfileInstallPassed || !input.staticChecksPassed || !input.manifestChecksPassed || !input.typecheckPassed) {
-    requiredEvidence.push("install, static, manifest, and typecheck command evidence");
+    requiredEvidence.push(testingLaunchExecutionEvidenceRequiredEvidence[0]);
   }
   if (!input.unitTestsPassed || !input.unitCoveragePassed || !input.coverageThresholdsMet || !input.coverageArtifactsUploaded) {
-    requiredEvidence.push("unit test, coverage threshold, and coverage artifact evidence");
+    requiredEvidence.push(testingLaunchExecutionEvidenceRequiredEvidence[1]);
   }
   if (!input.e2eTestsPassed || !input.playwrightArtifactsUploaded || !input.failureDebugArtifactsVerified) {
-    requiredEvidence.push("Playwright E2E report, traces, screenshots, videos, and failure-debug artifact evidence");
+    requiredEvidence.push(testingLaunchExecutionEvidenceRequiredEvidence[2]);
   }
   if (!input.webBuildPassed || !input.dashboardBuildPassed || !input.prismaIntegrationTestsPassed || !input.providerSandboxTestsPassed || !input.securityTestsPassed) {
-    requiredEvidence.push("app build, database integration, provider sandbox, and security test evidence");
+    requiredEvidence.push(testingLaunchExecutionEvidenceRequiredEvidence[3]);
   }
   if (!input.mobileSimulatorTestsPassed || !input.mobileDeviceTestsPassed) {
-    requiredEvidence.push("mobile simulator and device test evidence");
+    requiredEvidence.push(testingLaunchExecutionEvidenceRequiredEvidence[4]);
   }
   if (!input.junitJsonReportsPublished || !input.ciRunPassed || !input.branchProtectionRequiresCi || !input.flakyTestPolicyDocumented || !input.secretSafeArtifactsCaptured) {
-    requiredEvidence.push("CI reports, branch protection, flaky policy, and secret-safe artifact evidence");
+    requiredEvidence.push(testingLaunchExecutionEvidenceRequiredEvidence[5]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm install --frozen-lockfile",
-      "pnpm test:phase14:static",
-      "pnpm test:manifest",
-      "pnpm typecheck",
-      "pnpm test:unit",
-      "pnpm test:unit:coverage",
-      "pnpm test:e2e",
-      "pnpm --filter @inkroute/web build",
-      "pnpm --filter @inkroute/dashboard build",
-      "Prisma/database integration test suite",
-      "provider sandbox test suite",
-      "security test suite",
-      "Expo simulator and device test suites",
-      "GitHub Actions CI quality run with retained artifacts",
-      "branch protection required-check proof",
-    ],
-    requiredEvidence,
+    requiredCommands: testingLaunchExecutionEvidenceRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === testingLaunchExecutionEvidenceRequiredEvidence.length
+        ? testingLaunchExecutionEvidenceRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -1307,7 +1476,7 @@ export const phase14Suites: TestSuiteRecord[] = [
     layer: "unit",
     surface: "package",
     command: "pnpm test:unit",
-    status: "scaffolded",
+    status: "local_contract",
     cases: [
       createTestCase({
         id: "unit-booking-readiness",
@@ -1315,7 +1484,7 @@ export const phase14Suites: TestSuiteRecord[] = [
         surface: "package",
         name: "Tattoo Readiness Score flags incomplete booking drafts",
         priority: "critical",
-        status: "scaffolded",
+        status: "local_contract",
         files: ["packages/booking/tests/booking-readiness.test.ts"],
         command: "pnpm test:unit -- packages/booking/tests/booking-readiness.test.ts",
         verifies: ["readiness score", "missing-field warnings"],
@@ -1328,7 +1497,7 @@ export const phase14Suites: TestSuiteRecord[] = [
         surface: "package",
         name: "Secure upload draft rejects suspicious file inputs",
         priority: "critical",
-        status: "scaffolded",
+        status: "local_contract",
         files: ["packages/security/tests/upload-policy.test.ts"],
         command: "pnpm test:unit -- packages/security/tests/upload-policy.test.ts",
         verifies: ["extension allowlist", "private storage recommendation", "suspicious filename detection"],
@@ -1349,7 +1518,7 @@ export const phase14Suites: TestSuiteRecord[] = [
         id: "e2e-public-booking-preview",
         layer: "e2e",
         surface: "web",
-        name: "Public booking preview can move through the scaffolded intake",
+        name: "Public booking preview can move through the local-contract intake",
         priority: "critical",
         status: "runtime_gated",
         files: ["apps/web/tests/e2e/public-booking.spec.ts"],
@@ -1362,7 +1531,7 @@ export const phase14Suites: TestSuiteRecord[] = [
         id: "e2e-dashboard-admin-surfaces",
         layer: "e2e",
         surface: "dashboard",
-        name: "Dashboard scaffold exposes critical admin surfaces",
+        name: "Dashboard local-contract shell exposes critical admin surfaces",
         priority: "high",
         status: "runtime_gated",
         files: ["apps/dashboard/tests/e2e/dashboard-smoke.spec.ts"],
@@ -1399,11 +1568,47 @@ export interface DashboardTestExecutionEvidenceInput {
 export interface DashboardTestExecutionEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredControls: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof dashboardTestExecutionEvidenceRequiredCommands;
+  requiredControls: typeof dashboardTestExecutionEvidenceRequiredControls;
+  requiredEvidence: readonly DashboardTestExecutionEvidenceRequiredEvidence[];
   blockers: readonly string[];
 }
+
+export const dashboardTestExecutionEvidenceRequiredCommands = [
+      "pnpm --filter @inkroute/testing typecheck",
+      "pnpm --filter @inkroute/testing test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/dashboard test",
+      "dashboard route rendering tests",
+      "dashboard auth/RBAC/tenant-isolation tests",
+      "dashboard booking mutation lifecycle tests",
+      "dashboard provider-safe state tests",
+      "dashboard axe accessibility checks",
+      "dashboard keyboard navigation checks",
+      "Playwright dashboard critical-flow suite",
+      "GitHub Actions dashboard test artifact upload",
+      "branch protection dashboard required-check proof",
+    ] as const;
+
+export const dashboardTestExecutionEvidenceRequiredControls = [
+      "Use real runnable dashboard test files instead of package-only coverage matrices.",
+      "Seed auth, tenant, RBAC, and dashboard data fixtures before route and mutation tests.",
+      "Cover route rendering, auth guard, tenant isolation, booking lifecycle mutations, provider-safe states, accessibility, and critical E2E flows.",
+      "Upload retained traces, screenshots, videos, coverage, and reports for failed dashboard tests.",
+      "Require dashboard test gates in CI branch protection before launch.",
+      "Redact secrets, tokens, raw PII, medical notes, payment data, provider tokens, and private file URLs from artifacts.",
+    ] as const;
+
+export const dashboardTestExecutionEvidenceRequiredEvidence = [
+      "dashboard typecheck and build command evidence",
+      "dashboard unit/component, route rendering, and auth guard test output",
+      "dashboard RBAC/tenant, mutation lifecycle, and provider-safe state test output",
+      "axe, keyboard, and Playwright dashboard critical-flow evidence",
+      "CI artifact, branch protection, flaky policy, and secret-safe artifact evidence",
+    ] as const;
+
+export type DashboardTestExecutionEvidenceRequiredEvidence = (typeof dashboardTestExecutionEvidenceRequiredEvidence)[number];
 
 export function buildDashboardTestExecutionEvidencePlan(
   input: DashboardTestExecutionEvidenceInput,
@@ -1411,7 +1616,7 @@ export function buildDashboardTestExecutionEvidencePlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: DashboardTestExecutionEvidenceRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/testing package script is missing ${script}.`);
   if (!input.testingPackageTestsPassed) blockers.push("@inkroute/testing tests must pass before dashboard test execution evidence can close.");
@@ -1433,48 +1638,26 @@ export function buildDashboardTestExecutionEvidencePlan(
   if (!input.secretSafeArtifactsCaptured) blockers.push("Dashboard test artifacts must be redacted and free of secrets, tokens, raw PII, medical notes, payment data, provider tokens, and private file URLs.");
 
   if (!input.dashboardTypecheckPassed || !input.dashboardBuildPassed) {
-    requiredEvidence.push("dashboard typecheck and build command evidence");
+    requiredEvidence.push(dashboardTestExecutionEvidenceRequiredEvidence[0]);
   }
   if (!input.dashboardUnitTestsPassed || !input.dashboardRouteRenderingTestsPassed || !input.dashboardAuthGuardTestsPassed) {
-    requiredEvidence.push("dashboard unit/component, route rendering, and auth guard test output");
+    requiredEvidence.push(dashboardTestExecutionEvidenceRequiredEvidence[1]);
   }
   if (!input.dashboardRbacTenantIsolationTestsPassed || !input.dashboardMutationLifecycleTestsPassed || !input.dashboardProviderSafeStateTestsPassed) {
-    requiredEvidence.push("dashboard RBAC/tenant, mutation lifecycle, and provider-safe state test output");
+    requiredEvidence.push(dashboardTestExecutionEvidenceRequiredEvidence[2]);
   }
   if (!input.dashboardAccessibilityAxePassed || !input.dashboardKeyboardChecksPassed || !input.playwrightDashboardSuitePassed) {
-    requiredEvidence.push("axe, keyboard, and Playwright dashboard critical-flow evidence");
+    requiredEvidence.push(dashboardTestExecutionEvidenceRequiredEvidence[3]);
   }
   if (!input.ciArtifactsUploaded || !input.branchProtectionRequiresDashboardGate || !input.flakyDashboardPolicyDocumented || !input.secretSafeArtifactsCaptured) {
-    requiredEvidence.push("CI artifact, branch protection, flaky policy, and secret-safe artifact evidence");
+    requiredEvidence.push(dashboardTestExecutionEvidenceRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/testing typecheck",
-      "pnpm --filter @inkroute/testing test",
-      "pnpm --filter @inkroute/dashboard typecheck",
-      "pnpm --filter @inkroute/dashboard build",
-      "pnpm --filter @inkroute/dashboard test",
-      "dashboard route rendering tests",
-      "dashboard auth/RBAC/tenant-isolation tests",
-      "dashboard booking mutation lifecycle tests",
-      "dashboard provider-safe state tests",
-      "dashboard axe accessibility checks",
-      "dashboard keyboard navigation checks",
-      "Playwright dashboard critical-flow suite",
-      "GitHub Actions dashboard test artifact upload",
-      "branch protection dashboard required-check proof",
-    ],
-    requiredControls: [
-      "Use real runnable dashboard test files instead of package-only coverage matrices.",
-      "Seed auth, tenant, RBAC, and dashboard data fixtures before route and mutation tests.",
-      "Cover route rendering, auth guard, tenant isolation, booking lifecycle mutations, provider-safe states, accessibility, and critical E2E flows.",
-      "Upload retained traces, screenshots, videos, coverage, and reports for failed dashboard tests.",
-      "Require dashboard test gates in CI branch protection before launch.",
-      "Redact secrets, tokens, raw PII, medical notes, payment data, provider tokens, and private file URLs from artifacts.",
-    ],
+    requiredCommands: dashboardTestExecutionEvidenceRequiredCommands,
+    requiredControls: dashboardTestExecutionEvidenceRequiredControls,
     requiredEvidence,
     blockers,
   };

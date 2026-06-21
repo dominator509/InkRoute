@@ -3,20 +3,21 @@ import { MobileCard } from "../components/MobileCard";
 import { MobilePill } from "../components/MobilePill";
 import { MobileScreen } from "../components/MobileScreen";
 import { mobileAuthSessionPreview } from "../lib/mobileAuth";
-import { mobileSessionPreview, mobileAccessPreview } from "../lib/mobileDemo";
+import { mobileSessionPreview, mobileAccessPreview, mobileSecureSessionContract } from "../lib/mobileDemo";
 
 export function AuthScreen() {
   return (
     <MobileScreen
       eyebrow="Phase 6 · Auth boundary"
       title="Secure mobile login posture"
-      summary="This screen documents how the artist app should feel before wiring auth, biometric unlock, tenant membership, and refresh-token handling."
+      summary="This screen documents the local secure-session contract for auth, biometric unlock, tenant membership, and refresh-token handling while provider login remains gated."
     >
-      <MobileCard title="Mock owner session" eyebrow="Scaffolded" detail={mobileSessionPreview.sessionBoundary}>
+      <MobileCard title="Owner session contract" eyebrow="Local contract" detail={mobileSessionPreview.sessionBoundary}>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           <MobilePill label={mobileSessionPreview.status} tone="warn" />
           <MobilePill label={mobileSessionPreview.tenantSlug ?? "tenant pending"} />
           <MobilePill label={mobileSessionPreview.biometricAvailable ? "biometric planned" : "no biometric"} tone="warn" />
+          <MobilePill label={mobileSecureSessionContract.status} tone={mobileSecureSessionContract.status === "ready" ? "good" : "warn"} />
         </View>
       </MobileCard>
       <MobileCard title="RBAC preview" detail="Role permissions are imported from the shared auth package, but no live session guard exists in Expo yet.">

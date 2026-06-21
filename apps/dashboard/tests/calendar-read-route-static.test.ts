@@ -21,6 +21,9 @@ describe("dashboard calendar read route contract", () => {
     expect(routeSource).toContain("tenantId !== actor.tenantId");
     expect(routeSource).toContain('code: "TENANT_MISMATCH"');
     expect(routeSource).toContain('"Cache-Control": "no-store"');
+    expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(routeSource).not.toContain('}, { status: 403 });');
+    expect(routeSource).not.toContain('}, { status: 500 });');
   });
 
   it("loads calendar connections, events, and availability while omitting provider secrets", () => {
@@ -46,6 +49,8 @@ describe("dashboard calendar read route contract", () => {
     expect(routeSource).toContain("dashboardAppointments");
     expect(routeSource).toContain("dashboardAvailabilitySlots");
     expect(routeSource).toContain('persistence: "local-fallback"');
+    expect(routeSource).toContain("PROVIDER_DASHBOARD_READS_NOT_CONFIGURED");
+    expect(routeSource).toContain("localDashboardReadFallbackDisabled");
     expect(routeSource).toContain('code: "DATABASE_UNAVAILABLE"');
   });
 
@@ -53,6 +58,11 @@ describe("dashboard calendar read route contract", () => {
     expect(calendarPageSource).toContain("Tenant-scoped calendar read API now exists");
     expect(calendarPageSource).toContain("Calendar reads now have a redacted dashboard API");
     expect(calendarPageSource).toContain("Read APIs wired");
+    expect(calendarPageSource).toContain("provider execution contract");
+    expect(calendarPageSource).toContain("Live Google dispatch remains evidence-gated");
+    expect(calendarPageSource).toContain("provider retry handling remain evidence-gated runtime contracts");
     expect(calendarPageSource).toContain("Google OAuth");
+    expect(calendarPageSource).not.toContain("not sent to Google in this scaffold");
+    expect(calendarPageSource).not.toContain("provider retry handling remain planned work");
   });
 });

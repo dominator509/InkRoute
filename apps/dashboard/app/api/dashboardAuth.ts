@@ -158,18 +158,20 @@ export function evaluateDashboardApiGuard(request: NextRequest, permission: Perm
   return { actor, guard };
 }
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 export function dashboardApiGuardFailureResponse(error: unknown, routePath: string) {
   if (error instanceof Error && error.message === "AUTH_REQUIRED") {
     return NextResponse.json(
       { ok: false, error: { code: "UNAUTHENTICATED", routePath } },
-      { status: 401, headers: { "Cache-Control": "no-store" } },
+      { status: 401, headers: noStoreHeaders },
     );
   }
 
   if (error instanceof Error && error.message === "FORBIDDEN") {
     return NextResponse.json(
       { ok: false, error: { code: "FORBIDDEN", routePath } },
-      { status: 403, headers: { "Cache-Control": "no-store" } },
+      { status: 403, headers: noStoreHeaders },
     );
   }
 

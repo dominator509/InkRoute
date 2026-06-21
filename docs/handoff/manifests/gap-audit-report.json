@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-06T16:06:46.815Z",
+  "generatedAt": "2026-06-12T09:04:32.108Z",
   "status": "warn",
   "totalGaps": 133,
   "blockingGaps": 126,
@@ -40,6 +40,7 @@
     "GAP-097",
     "GAP-098",
     "GAP-100",
+    "GAP-101",
     "GAP-107",
     "GAP-110",
     "GAP-114",
@@ -48,8 +49,8 @@
     "GAP-118"
   ],
   "bySeverity": {
-    "High": 67,
-    "Critical": 42,
+    "High": 66,
+    "Critical": 43,
     "Medium": 24
   },
   "byPhase": {

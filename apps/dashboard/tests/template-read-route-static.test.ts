@@ -4,6 +4,10 @@ import { describe, expect, it } from "vitest";
 
 const routeSource = readFileSync(join(process.cwd(), "apps/dashboard/app/api/templates/route.ts"), "utf8");
 const templatesPageSource = readFileSync(join(process.cwd(), "apps/dashboard/app/templates/page.tsx"), "utf8");
+const schedulerActionPanelSource = readFileSync(
+  join(process.cwd(), "apps/dashboard/components/NotificationSchedulerActionPanel.tsx"),
+  "utf8",
+);
 const authSource = readFileSync(join(process.cwd(), "packages/auth/src/index.ts"), "utf8");
 const typesSource = readFileSync(join(process.cwd(), "packages/types/src/index.ts"), "utf8");
 
@@ -21,6 +25,9 @@ describe("dashboard notification template read route contract", () => {
     expect(routeSource).toContain("tenantId !== actor.tenantId");
     expect(routeSource).toContain('code: "TENANT_MISMATCH"');
     expect(routeSource).toContain('"Cache-Control": "no-store"');
+    expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(routeSource).not.toContain('}, { status: 403 });');
+    expect(routeSource).not.toContain('}, { status: 500 });');
   });
 
   it("exposes coded template metadata and tenant-scoped queue summaries while auditing reads", () => {
@@ -49,6 +56,8 @@ describe("dashboard notification template read route contract", () => {
   it("keeps local fallback and database outage states explicit", () => {
     expect(routeSource).toContain("dashboardRedactedProviderSendDrafts");
     expect(routeSource).toContain('persistence: "local-fallback"');
+    expect(routeSource).toContain("PROVIDER_DASHBOARD_READS_NOT_CONFIGURED");
+    expect(routeSource).toContain("localDashboardReadFallbackDisabled");
     expect(routeSource).toContain('code: "DATABASE_UNAVAILABLE"');
   });
 
@@ -56,6 +65,12 @@ describe("dashboard notification template read route contract", () => {
     expect(templatesPageSource).toContain("tenant-scoped redacted template API");
     expect(templatesPageSource).toContain("GET /api/templates");
     expect(templatesPageSource).toContain("redacted queue/delivery summaries");
+    expect(templatesPageSource).toContain("local scheduler action contract");
     expect(templatesPageSource).toContain("provider credentials");
+    expect(templatesPageSource).toContain("NotificationSchedulerActionPanel");
+    expect(templatesPageSource).not.toContain("renders templates and delivery plans only");
+    expect(schedulerActionPanelSource).toContain('fetch("/api/notifications/scheduler"');
+    expect(schedulerActionPanelSource).toContain('action: "schedule_sequence"');
+    expect(schedulerActionPanelSource).toContain("provider sends, queue persistence, retries, dead letters, and delivery reconciliation remain gated");
   });
 });

@@ -30,6 +30,7 @@ type LocalErrorReport = {
 
 const localErrorReports = new Map<string, LocalErrorReport[]>();
 const LOCAL_REPORT_LIMIT = 150;
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
 type ErrorReportCreateData = Parameters<(typeof prisma)["errorReport"]["create"]>[0]["data"];
 type ErrorReportMetadataInput = Exclude<ErrorReportCreateData["metadata"], undefined>;
@@ -98,24 +99,41 @@ export async function GET(request: NextRequest) {
   try {
     assertPermission(actor, "error:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read error reports." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read error reports." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const parsed = parseErrorFilters(request, actor.tenantId);
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: { code: "VALIDATION_FAILED", message: "Error-report query parameters are invalid.", issues: parsed.error.flatten() } },
-      { status: 400, headers: { "Cache-Control": "no-store" } },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
   const filters = parsed.data;
   const tenantId = filters.tenantId ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a different tenant's error reports." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a different tenant's error reports." } }, { status: 403, headers: noStoreHeaders });
   }
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId: actor.tenantId,
+          error: {
+            code: "PROVIDER_ERROR_REPORT_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production dashboard error-report reads require DB-backed actor resolution and tenant-scoped persisted reports; local fallback reports are disabled.",
+            gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
+          },
+          productionBoundary: { localErrorReportFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     const localData = localErrorReports.get(actor.tenantId) ?? [];
     const filtered = localData.filter((candidate) => (!filters.status || candidate.status === filters.status) && (!filters.source || candidate.source === filters.source)).slice(0, filters.limit);
     return NextResponse.json(
@@ -131,7 +149,7 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-079", "GAP-081", "GAP-095"],
         boundary: "Local fallback mode active; errors are retained in-memory only.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   }
 
@@ -205,11 +223,27 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
         boundary: "Error report reads are tenant-scoped, RBAC-gated, no-store, audit-logged, and metadata-redacted in DB-backed mode.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   } catch (error) {
     if (!isDatabaseUnavailable(error)) {
       throw error;
+    }
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId: actor.tenantId,
+          error: {
+            code: "PROVIDER_ERROR_REPORT_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production dashboard error-report reads require the dashboard database connection; local fallback reports are disabled.",
+            gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
+          },
+          productionBoundary: { localErrorReportFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
     }
 
     const localData = localErrorReports.get(actor.tenantId) ?? [];
@@ -228,7 +262,7 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
         boundary: "DB outage fallback only; data persistence is temporary and request-scoped.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   }
 }
@@ -238,21 +272,21 @@ export async function POST(request: NextRequest) {
   try {
     assertPermission(actor, "error:write");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to create error reports." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to create error reports." } }, { status: 403, headers: noStoreHeaders });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Error report body must be valid JSON." } }, { status: 400 });
+    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Error report body must be valid JSON." } }, { status: 400, headers: noStoreHeaders });
   }
 
   const parsed = errorReportInputSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: { code: "VALIDATION_FAILED", message: "Error report payload failed validation.", issues: parsed.error.flatten() } },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -260,7 +294,7 @@ export async function POST(request: NextRequest) {
   if (tenantId !== actor.tenantId) {
     return NextResponse.json(
       { ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot create an error report for a different tenant." } },
-      { status: 403 },
+      { status: 403, headers: noStoreHeaders },
     );
   }
 
@@ -282,6 +316,20 @@ export async function POST(request: NextRequest) {
   };
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json({
+        ok: false,
+        source: actor.source,
+        tenantId,
+        error: {
+          code: "PROVIDER_ERROR_REPORT_PERSISTENCE_NOT_CONFIGURED",
+          message: "Production dashboard error-report writes require DB-backed actor resolution and tenant-scoped persisted reports; local fallback reports are disabled.",
+          gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
+        },
+        productionBoundary: { localErrorReportFallbackDisabled: true },
+      }, { status: 503, headers: noStoreHeaders });
+    }
+
     const persisted = storeLocalErrorReport({
       ...localPayload,
     });
@@ -306,7 +354,7 @@ export async function POST(request: NextRequest) {
       },
       gapIds: ["GAP-079", "GAP-081", "GAP-095"],
       boundary: "Local fallback mode active; report persisted in-memory for runtime continuity only.",
-    }, { status: 201 });
+    }, { status: 201, headers: noStoreHeaders });
   }
 
   try {
@@ -373,10 +421,24 @@ export async function POST(request: NextRequest) {
         gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
         boundary: "Dashboard error ingest is now authenticated and persisted in tenant scope; alert routing remains dashboard-level only until provider credentials exist.",
       },
-      { status: 201 },
+      { status: 201, headers: noStoreHeaders },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json({
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_ERROR_REPORT_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production dashboard error-report writes require the dashboard database connection; local fallback reports are disabled.",
+            gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
+          },
+          productionBoundary: { localErrorReportFallbackDisabled: true },
+        }, { status: 503, headers: noStoreHeaders });
+      }
+
       const persisted = storeLocalErrorReport({
         ...localPayload,
       });
@@ -401,7 +463,7 @@ export async function POST(request: NextRequest) {
         },
         warning: "Database was temporarily unavailable; report persisted in local fallback store.",
         gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
-      }, { status: 201 });
+      }, { status: 201, headers: noStoreHeaders });
     }
 
     return NextResponse.json(
@@ -409,7 +471,7 @@ export async function POST(request: NextRequest) {
         ok: false,
         error: { code: "ERROR_REPORT_PERSISTENCE_FAILED", message: "Error report could not be persisted after validation." },
       },
-      { status: 500 },
+      { status: 500, headers: noStoreHeaders },
     );
   }
 }

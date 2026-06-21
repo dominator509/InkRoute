@@ -63,6 +63,22 @@ export interface AppE2eRuntimeRunPersistenceContract {
   tenantIsolationKey: "tenantId";
 }
 
+export type AppE2eRuntimeRunData = AppE2eRuntimeRunPersistenceInput & {
+  commitSha: string | null;
+  failureHardeningArtifactPath: string | null;
+  ciRunUrl: string | null;
+};
+
+export interface AppE2eRuntimeRunRepository {
+  readonly appE2eRuntimeRun: {
+    upsert(args: {
+      where: { tenantId_runId: { tenantId: string; runId: string } };
+      create: AppE2eRuntimeRunData;
+      update: AppE2eRuntimeRunData;
+    }): unknown;
+  };
+}
+
 export const appE2eRuntimeArtifactPaths = [
   "coverage/app-e2e-runtime.json",
   "coverage/app-e2e-web-build.log",
@@ -83,6 +99,28 @@ export const appE2eRuntimeArtifactPaths = [
   "test-results/app-e2e-runtime"
 ] as const;
 
+export const appE2eRuntimeProofFiles = [
+  "apps/dashboard/package.json",
+  "apps/web/package.json",
+  "apps/web/lib/appE2eRuntime.ts",
+  "apps/web/tests/app-e2e-runtime-static.test.ts",
+  "apps/web/tests/e2e/public-booking.spec.ts",
+  "apps/web/tests/e2e/security-runtime.spec.ts",
+  "apps/web/tests/e2e/public-seo.spec.ts",
+  "apps/dashboard/tests/e2e/dashboard-smoke.spec.ts",
+  "apps/dashboard/tests/e2e/security-runtime.spec.ts",
+  "apps/dashboard/tests/e2e/operator-surfaces.spec.ts",
+  "packages/db/prisma/schema.prisma",
+  "packages/db/prisma/migrations/20260609009000_add_app_e2e_runtime_runs/migration.sql",
+  "testing/manifests/e2e-test-manifest.json",
+  "testing/manifests/unit-test-manifest.json",
+  "testing/scripts/verify-test-manifest.mjs",
+  "packages/testing/src/index.ts",
+  "packages/testing/tests/testing-manifest.test.ts",
+  "playwright.config.ts",
+  ".github/workflows/ci.yml",
+] as const;
+
 export const appE2eRuntimeCommands = [
   "pnpm --filter @inkroute/web build",
   "pnpm --filter @inkroute/dashboard build",
@@ -92,6 +130,239 @@ export const appE2eRuntimeCommands = [
   "pnpm test:manifest",
   "GitHub Actions CI E2E job"
 ] as const;
+
+export const appE2eRuntimeLocalCommands = ["pnpm test:manifest"] as const;
+export const appE2eRuntimeExternalCommands = appE2eRuntimeCommands.filter((command) => command !== "pnpm test:manifest");
+
+export const appE2eRuntimeRequiredExternalEvidence = [
+  "Web and dashboard build/runtime proof",
+  "Playwright Chromium install proof",
+  "Public booking/security/SEO E2E proof",
+  "Dashboard smoke/security/operator E2E proof",
+  "CI E2E artifact proof",
+  "Real failure hardening commit proof",
+  "Provider-backed AppE2eRuntimeRun persistence proof",
+] as const;
+
+export type AppE2eRuntimeArtifact = (typeof appE2eRuntimeArtifactPaths)[number];
+
+export const appE2eRuntimeLocalArtifacts = [
+  "coverage/app-e2e-manifest-check.json",
+] as const satisfies readonly AppE2eRuntimeArtifact[];
+
+export const appE2eRuntimeExternalArtifacts = appE2eRuntimeArtifactPaths.filter(
+  (artifact) => !appE2eRuntimeLocalArtifacts.includes(artifact as (typeof appE2eRuntimeLocalArtifacts)[number]),
+) as readonly AppE2eRuntimeArtifact[];
+
+export type AppE2eRuntimeCommand = (typeof appE2eRuntimeCommands)[number];
+
+export type AppE2eRuntimeExecutionPolicy = {
+  localManifestOnly: true;
+  webDashboardBuildRequiresExternalEvidence: true;
+  playwrightInstallRequiresExternalEvidence: true;
+  webE2eRequiresExternalEvidence: true;
+  dashboardE2eRequiresExternalEvidence: true;
+  ciE2eRequiresExternalEvidence: true;
+  persistenceRequiresExternalEvidence: true;
+  externalEvidenceRequired: typeof appE2eRuntimeRequiredExternalEvidence;
+};
+
+export type AppE2eRuntimeEvidenceInput = {
+  webBuildPassed: boolean;
+  dashboardBuildPassed: boolean;
+  webRuntimeStarted: boolean;
+  dashboardRuntimeStarted: boolean;
+  chromiumInstalled: boolean;
+  publicBookingSecuritySeoPassed: boolean;
+  dashboardSmokeSecurityOperatorPassed: boolean;
+  e2eManifestVerified: boolean;
+  tracesRetained: boolean;
+  screenshotsRetained: boolean;
+  videosRetained: boolean;
+  ciE2ePassed: boolean;
+  flakyRetriesConfigured: boolean;
+  hardenedFailuresCommitted: boolean;
+  requiredCommandsRun: readonly AppE2eRuntimeCommand[];
+  capturedArtifacts: readonly AppE2eRuntimeArtifact[];
+};
+
+export type AppE2eRuntimeEvidenceDecision = {
+  status: "complete" | "blocked";
+  blockers: string[];
+  missingArtifacts: AppE2eRuntimeArtifact[];
+  requiredCommands: typeof appE2eRuntimeCommands;
+  requiredEvidence: typeof appE2eRuntimeArtifactPaths;
+  e2ePolicy: {
+    chromiumInstallRequired: true;
+    traceScreenshotVideoRetentionRequired: true;
+    realFailureHardeningCommitsRequired: true;
+  };
+};
+
+export type AppE2eRuntimeExecutionPlan = {
+  status: "local-plan-ready";
+  policy: AppE2eRuntimeExecutionPolicy;
+  externalEvidenceRequired: typeof appE2eRuntimeRequiredExternalEvidence;
+  webBuildExecutionAllowed: false;
+  dashboardBuildExecutionAllowed: false;
+  playwrightInstallExecutionAllowed: false;
+  webE2eExecutionAllowed: false;
+  dashboardE2eExecutionAllowed: false;
+  ciE2eExecutionAllowed: false;
+  persistenceExecutionAllowed: false;
+  localCommands: typeof appE2eRuntimeLocalCommands;
+  externalCommands: typeof appE2eRuntimeExternalCommands;
+  localArtifacts: typeof appE2eRuntimeLocalArtifacts;
+  externalArtifacts: typeof appE2eRuntimeExternalArtifacts;
+  disabledReasons: readonly string[];
+};
+
+export const appE2eRuntimeExecutionPolicy: AppE2eRuntimeExecutionPolicy = {
+  localManifestOnly: true,
+  webDashboardBuildRequiresExternalEvidence: true,
+  playwrightInstallRequiresExternalEvidence: true,
+  webE2eRequiresExternalEvidence: true,
+  dashboardE2eRequiresExternalEvidence: true,
+  ciE2eRequiresExternalEvidence: true,
+  persistenceRequiresExternalEvidence: true,
+  externalEvidenceRequired: appE2eRuntimeRequiredExternalEvidence,
+};
+
+export type AppE2eRuntimeArtifactReview = {
+  status: "redacted-review-ready";
+  redactedArtifact: unknown;
+  requiredArtifacts: typeof appE2eRuntimeArtifactPaths;
+  retainedExternalGates: readonly string[];
+};
+
+const appE2eRuntimeSensitivePatterns = [
+  /(run[_-]?id['":=\s]+)[^"',\s}]+/gi,
+  /(commit[_-]?sha['":=\s]+)[^"',\s}]+/gi,
+  /(ci[_-]?run[_-]?url['":=\s]+)[^"',\s}]+/gi,
+  /(failure[_-]?hardening[_-]?artifact[_-]?path['":=\s]+)[^"',\s}]+/gi,
+  /(trace[_-]?path['":=\s]+)[^"',\s}]+/gi,
+  /(video[_-]?path['":=\s]+)[^"',\s}]+/gi,
+  /(screenshot[_-]?path['":=\s]+)[^"',\s}]+/gi,
+  /(authorization:\s*bearer\s+)[A-Za-z0-9._-]+/gi,
+  /(token['":=\s]+)[^"',\s}]+/gi,
+  /(secret['":=\s]+)[^"',\s}]+/gi,
+  /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
+  /\+?\d[\d\s().-]{7,}\d/g,
+] as const;
+
+export function buildRedactedAppE2eRuntimeArtifact(value: unknown): unknown {
+  if (typeof value === "string") {
+    return appE2eRuntimeSensitivePatterns.reduce(
+      (redacted, pattern) => redacted.replace(pattern, (_match, prefix: string | undefined) => `${prefix ?? ""}[REDACTED]`),
+      value,
+    );
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => buildRedactedAppE2eRuntimeArtifact(entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        /email|phone|token|secret|authorization|credential|password|rawBody|stack|ciRunUrl|commitSha|runId|artifactManifest|trace|video|screenshot|failureHardeningArtifactPath|runtimeLog/i.test(key)
+          ? "[REDACTED]"
+          : buildRedactedAppE2eRuntimeArtifact(entry),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+export function buildAppE2eRuntimeExecutionPlan(): AppE2eRuntimeExecutionPlan {
+  return {
+    status: "local-plan-ready",
+    policy: appE2eRuntimeExecutionPolicy,
+    externalEvidenceRequired: appE2eRuntimeRequiredExternalEvidence,
+    webBuildExecutionAllowed: false,
+    dashboardBuildExecutionAllowed: false,
+    playwrightInstallExecutionAllowed: false,
+    webE2eExecutionAllowed: false,
+    dashboardE2eExecutionAllowed: false,
+    ciE2eExecutionAllowed: false,
+    persistenceExecutionAllowed: false,
+    localCommands: appE2eRuntimeLocalCommands,
+    externalCommands: appE2eRuntimeExternalCommands,
+    localArtifacts: appE2eRuntimeLocalArtifacts,
+    externalArtifacts: appE2eRuntimeExternalArtifacts,
+    disabledReasons: [
+      "Web build and runtime proof requires Next.js build/start execution.",
+      "Dashboard build and runtime proof requires Next.js build/start execution.",
+      "Chromium install proof requires Playwright dependency installation.",
+      "Web and dashboard E2E proof requires browser runtime execution.",
+      "CI E2E artifact proof requires GitHub Actions execution.",
+      "AppE2eRuntimeRun persistence proof requires provider-backed database execution.",
+    ],
+  };
+}
+
+export function buildAppE2eRuntimeArtifactReview(rawArtifact: unknown): AppE2eRuntimeArtifactReview {
+  return {
+    status: "redacted-review-ready",
+    redactedArtifact: buildRedactedAppE2eRuntimeArtifact(rawArtifact),
+    requiredArtifacts: appE2eRuntimeArtifactPaths,
+    retainedExternalGates: [
+      "Web and dashboard build/runtime proof",
+      "Playwright Chromium install proof",
+      "Public booking/security/SEO E2E proof",
+      "Dashboard smoke/security/operator E2E proof",
+      "CI E2E artifact proof",
+      "Real failure hardening commit proof",
+      "Provider-backed AppE2eRuntimeRun persistence proof",
+    ],
+  };
+}
+
+export function buildAppE2eRuntimeEvidenceDecision(
+  input: AppE2eRuntimeEvidenceInput,
+): AppE2eRuntimeEvidenceDecision {
+  const blockers = [
+    !input.webBuildPassed && "Run web build for Playwright runtime.",
+    !input.dashboardBuildPassed && "Run dashboard build for Playwright runtime.",
+    !input.webRuntimeStarted && "Capture web Next.js runtime startup proof.",
+    !input.dashboardRuntimeStarted && "Capture dashboard Next.js runtime startup proof.",
+    !input.chromiumInstalled && "Install Chromium with Playwright dependencies.",
+    !input.publicBookingSecuritySeoPassed && "Run public booking, security, and SEO Playwright specs.",
+    !input.dashboardSmokeSecurityOperatorPassed && "Run dashboard smoke, security, and operator Playwright specs.",
+    !input.e2eManifestVerified && "Run E2E manifest verification.",
+    !input.tracesRetained && "Retain Playwright traces.",
+    !input.screenshotsRetained && "Retain Playwright screenshots.",
+    !input.videosRetained && "Retain Playwright videos.",
+    !input.ciE2ePassed && "Capture passing CI E2E job proof.",
+    !input.flakyRetriesConfigured && "Document E2E retry/flaky policy.",
+    !input.hardenedFailuresCommitted && "Commit hardening fixes from real Playwright failures.",
+  ].filter(Boolean) as string[];
+
+  const missingArtifacts = appE2eRuntimeArtifactPaths.filter(
+    (artifact) => !input.capturedArtifacts.includes(artifact),
+  );
+  const missingCommands = appE2eRuntimeCommands.filter(
+    (command) => !input.requiredCommandsRun.includes(command),
+  );
+
+  return {
+    status: blockers.length === 0 && missingArtifacts.length === 0 && missingCommands.length === 0 ? "complete" : "blocked",
+    blockers: [
+      ...blockers,
+      ...missingCommands.map((command) => `Required command not recorded: ${command}`),
+    ],
+    missingArtifacts,
+    requiredCommands: appE2eRuntimeCommands,
+    requiredEvidence: appE2eRuntimeArtifactPaths,
+    e2ePolicy: {
+      chromiumInstallRequired: true,
+      traceScreenshotVideoRetentionRequired: true,
+      realFailureHardeningCommitsRequired: true,
+    },
+  };
+}
 
 export const appE2eRuntimeSpecFiles = [
   "apps/web/tests/e2e/public-booking.spec.ts",
@@ -187,6 +458,28 @@ export function buildAppE2eRuntimeRunPersistenceContract(
   };
 }
 
+export function buildAppE2eRuntimeRunData(input: AppE2eRuntimeRunPersistenceInput): AppE2eRuntimeRunData {
+  return {
+    ...input,
+    commitSha: input.commitSha ?? null,
+    failureHardeningArtifactPath: input.failureHardeningArtifactPath ?? null,
+    ciRunUrl: input.ciRunUrl ?? null,
+  };
+}
+
+export function persistAppE2eRuntimeRun(
+  repository: AppE2eRuntimeRunRepository,
+  input: AppE2eRuntimeRunPersistenceInput,
+): unknown {
+  const data = buildAppE2eRuntimeRunData(input);
+
+  return repository.appE2eRuntimeRun.upsert({
+    where: { tenantId_runId: { tenantId: data.tenantId, runId: data.runId } },
+    create: data,
+    update: data,
+  });
+}
+
 export const appE2eRuntimeReadiness = buildAppE2eRuntimeReadinessPlan({
   rootScripts: ["test:e2e"],
   webBuildPassed: false,
@@ -232,3 +525,4 @@ export const appE2eRuntimeRunPersistencePreview = buildAppE2eRuntimeRunPersisten
   hardenedFailuresCommitted: false,
   failureHardeningArtifactPath: "coverage/app-e2e-runtime.json",
 });
+

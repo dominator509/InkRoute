@@ -4,7 +4,12 @@ import {
   assertTenantScopedWhere,
   buildTenantIsolationIntegrationReadinessPlan,
   buildTenantIsolationRepositoryEvidencePlan,
+  tenantIsolationIntegrationRequiredCommands,
+  tenantIsolationIntegrationRequiredEvidence,
   tenantOwnedModelNames,
+  tenantIsolationRepositoryRequiredCommands,
+  tenantIsolationRepositoryRequiredControls,
+  tenantIsolationRepositoryRequiredEvidence,
   withTenantData,
   withTenantWhere,
 } from "../src/index";
@@ -60,8 +65,8 @@ describe("tenant scope helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["db:migrate", "db:seed"]);
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/db db:migrate");
-    expect(plan.requiredEvidence).toContain("Cross-tenant read denial output for every tenant-owned model.");
+    expect(plan.requiredCommands).toBe(tenantIsolationIntegrationRequiredCommands);
+    expect(plan.requiredEvidence).toBe(tenantIsolationIntegrationRequiredEvidence);
     expect(plan.blockers).toContain("Non-production DATABASE_URL must be configured for tenant isolation integration tests.");
     expect(plan.blockers).toContain("Integration tests must cover every tenant-owned model in tenantOwnedModelNames.");
   });
@@ -89,14 +94,11 @@ describe("tenant scope helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck", "db:migrate", "db:seed"]);
-    expect(plan.requiredEvidence).toEqual([
-      "db typecheck/test, Prisma generate, migration, and seeded multi-tenant fixture evidence",
-      "tenant-scoped repository helper adoption and model coverage matrix evidence",
-      "cross-tenant read/write denial and missing-tenant rejection evidence",
-      "tenant-scoped audit-row and fixture cleanup evidence",
-      "redacted database, CI, and secret-safe artifact evidence",
-    ]);
-    expect(plan.blockers).toContain("Tenant-scoped repository/service layer must be implemented.");
+    expect(plan.requiredEvidence).toBe(tenantIsolationRepositoryRequiredEvidence);
+    expect(plan.requiredCommands).toBe(tenantIsolationRepositoryRequiredCommands);
+    expect(plan.requiredControls).toBe(tenantIsolationRepositoryRequiredControls);
+    expect(plan.blockers).toContain("Tenant-scoped repository/service adoption evidence must be captured before tenant isolation readiness.");
+    expect(plan.blockers).not.toContain("Tenant-scoped repository/service layer must be implemented.");
     expect(plan.blockers).toContain("Cross-tenant write denial tests must pass for tenant-owned mutations.");
     expect(plan.blockers).toContain("Tenant isolation artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.");
   });
@@ -128,6 +130,7 @@ describe("tenant scope helpers", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Use tenant scope helpers for every tenant-owned read and write path.");
+    expect(plan.requiredCommands).toBe(tenantIsolationRepositoryRequiredCommands);
+    expect(plan.requiredControls).toBe(tenantIsolationRepositoryRequiredControls);
   });
 });

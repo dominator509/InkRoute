@@ -5,6 +5,12 @@ import { resolve } from "node:path";
 import {
   buildSmsProviderReconciliation,
   buildSmsWebhookReadinessFromPayload,
+  buildRedactedSmsWebhookPayload,
+  createInMemorySmsProviderRepository,
+  executeSmsProviderSend,
+  sampleSmsConsent,
+  sampleSmsContext,
+  sanitizeSmsProviderSendResult,
   smsProviderContract,
 } from "../lib/smsProvider";
 
@@ -33,6 +39,115 @@ describe("sms provider contract", () => {
       "persistWebhookReconciliation",
       "persistInboundThread",
     ]);
+  });
+
+  it("sanitizes nested SMS provider send and webhook payloads before persistence", () => {
+    const sendResult = sanitizeSmsProviderSendResult({
+      providerMessageId: "SMdemo",
+      redactedPayload: {
+        status: "queued",
+        accountSid: "ACsecret",
+        to: "+12065550142",
+        nested: { body: "private sms body", signature: "twilio_signature" },
+      },
+    });
+    const webhookPayload = buildRedactedSmsWebhookPayload({
+      event: "inbound",
+      rawBody: "From=%2B12065550142&Body=HELP",
+      from: "+12065550142",
+      nested: { authorization: "Bearer secret" },
+    });
+
+    expect(sendResult?.redactedPayload).toEqual({
+      status: "queued",
+      accountSid: "[redacted]",
+      to: "[redacted]",
+      nested: { body: "[redacted]", signature: "[redacted]" },
+    });
+    expect(JSON.stringify(sendResult)).not.toContain("ACsecret");
+    expect(JSON.stringify(sendResult)).not.toContain("+12065550142");
+    expect(JSON.stringify(sendResult)).not.toContain("private sms body");
+    expect(JSON.stringify(webhookPayload)).not.toContain("Bearer secret");
+  });
+
+  it("executes a local SMS provider repository contract for authorization, consent proof, idempotency, queueing, and redacted provider results", async () => {
+    const repository = createInMemorySmsProviderRepository();
+    repository.state.allowedDeliveryKeys.add("tenant_demo:notification_demo:delivery_sms_demo");
+    repository.state.consentProofDestinationHashes.add("tenant_demo:+12065550142");
+
+    const input = {
+      tenantId: "tenant_demo",
+      notificationId: "notification_demo",
+      deliveryId: "delivery_sms_demo",
+      templateKey: "appointment_confirmed" as const,
+      context: sampleSmsContext,
+      consent: sampleSmsConsent,
+      requestId: "request_sms_demo",
+      providerRequestId: "provider-request-1",
+      providerSdkInstalled: true,
+      accountSidConfigured: true,
+      authTokenConfigured: true,
+      messagingServiceConfigured: true,
+      legalConsentCopyApproved: true,
+      consentProofAvailable: true,
+      quietHoursPolicyConfigured: true,
+      deliveryLogPersistenceAvailable: true,
+    };
+
+    const first = await executeSmsProviderSend(input, repository, async () => ({
+      providerMessageId: "SMdemo",
+      redactedPayload: { status: "queued", to: "+12065550142", body: "private sms body" },
+    }));
+    const duplicate = await executeSmsProviderSend(input, repository);
+
+    expect(first.status).toBe("ready");
+    expect(duplicate.status).toBe("duplicate");
+    expect(repository.state.queuedDeliveries).toHaveLength(1);
+    expect(repository.state.providerSendResults).toHaveLength(1);
+    expect(JSON.stringify(repository.state.providerSendResults[0])).not.toContain("+12065550142");
+    expect(JSON.stringify(repository.state.providerSendResults[0])).not.toContain("private sms body");
+
+    await expect(
+      executeSmsProviderSend(
+        {
+          ...input,
+          tenantId: "other_tenant",
+          providerRequestId: "provider-request-2",
+        },
+        repository,
+      ),
+    ).rejects.toThrow("SMS_PROVIDER_DELIVERY_ACCESS_DENIED");
+  });
+
+  it("blocks local SMS sends when consent proof is missing or destination is suppressed", async () => {
+    const repository = createInMemorySmsProviderRepository();
+    repository.state.allowedDeliveryKeys.add("tenant_demo:notification_demo:delivery_sms_demo");
+    repository.state.suppressedDestinationHashes.add("tenant_demo:+12065550142");
+
+    const result = await executeSmsProviderSend(
+      {
+        tenantId: "tenant_demo",
+        notificationId: "notification_demo",
+        deliveryId: "delivery_sms_demo",
+        templateKey: "appointment_confirmed",
+        context: sampleSmsContext,
+        consent: sampleSmsConsent,
+        requestId: "request_sms_demo",
+        providerRequestId: "provider-request-3",
+        providerSdkInstalled: true,
+        accountSidConfigured: true,
+        authTokenConfigured: true,
+        messagingServiceConfigured: true,
+        legalConsentCopyApproved: true,
+        consentProofAvailable: true,
+        quietHoursPolicyConfigured: true,
+        deliveryLogPersistenceAvailable: true,
+      },
+      repository,
+    );
+
+    expect(result.status).toBe("blocked");
+    expect(repository.state.queuedDeliveries).toHaveLength(0);
   });
 
   it("blocks STOP webhook reconciliation without Twilio verification and durable suppression stores", () => {
@@ -73,6 +188,9 @@ describe("sms provider contract", () => {
     expect(routeSource).toContain("buildSmsWebhookReadinessFromPayload");
     expect(routeSource).toContain("buildSmsProviderReconciliation");
     expect(routeSource).toContain("smsProviderContract");
+    expect(routeSource).toContain("PROVIDER_SMS_WEBHOOK_RECONCILIATION_NOT_CONFIGURED");
+    expect(routeSource).toContain("localSmsWebhookPersistenceDisabled");
+    expect(routeSource).toContain("requiresDurableProviderEventPersistence");
     expect(routeSource).toContain("requiredWrites");
   });
 });

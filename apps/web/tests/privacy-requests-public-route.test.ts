@@ -26,6 +26,7 @@ describe("public privacy request route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body.error).toMatchObject({ code: "INVALID_JSON" });
   });
 
@@ -34,6 +35,7 @@ describe("public privacy request route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body.error).toMatchObject({ code: "VALIDATION_FAILED", message: "Expected type and email." });
   });
 
@@ -44,6 +46,7 @@ describe("public privacy request route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(404);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body.error.code).toBe("TENANT_NOT_FOUND");
   });
 
@@ -52,6 +55,7 @@ describe("public privacy request route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(201);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body.ok).toBe(true);
     expect(body.data.tenantSlug).toBe("inkroute-demo");
     expect(body.data.persisted.requestType).toBe("export");
@@ -61,6 +65,32 @@ describe("public privacy request route", () => {
     expect(body.data.persisted.redactedSubmission.email).not.toBe("client@example.test");
     expect(body.data.persisted.id).toMatch(/^privacy_[a-f0-9-]+$/);
     expect(body.data.gapIds).toContain("GAP-098");
+  });
+
+  it("fail-closes production privacy requests instead of saving local runtime drafts", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      const response = await POST(privacyRequest(validPrivacyBody, "203.0.113.172"), {
+        params: Promise.resolve({ tenantSlug: "inkroute-demo" }),
+      });
+      const body = (await response.json()) as {
+        ok: boolean;
+        error: { code: string; gapIds: string[] };
+        productionBoundary: { localPrivacyRequestPersistenceDisabled: boolean };
+      };
+
+      expect(response.status).toBe(503);
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      expect(body.ok).toBe(false);
+      expect(body.error.code).toBe("PROVIDER_PRIVACY_REQUEST_PERSISTENCE_NOT_CONFIGURED");
+      expect(body.error.gapIds).toContain("GAP-098");
+      expect(body.error.gapIds).toContain("GAP-099");
+      expect(body.productionBoundary.localPrivacyRequestPersistenceDisabled).toBe(true);
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
   });
 
   it("throttles repeated privacy requests per tenant and client", async () => {
@@ -81,6 +111,7 @@ describe("public privacy request route", () => {
 
     expect(responses.slice(0, -1).every((response) => response.status === 201)).toBe(true);
     expect(throttled.status).toBe(429);
+    expect(throttled.headers.get("Cache-Control")).toBe("no-store");
     expect(throttled.headers.get("Retry-After")).toBeTruthy();
     expect(body).toMatchObject({
       ok: false,

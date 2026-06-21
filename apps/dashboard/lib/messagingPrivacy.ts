@@ -30,7 +30,42 @@ export interface MessagingPrivacyContract {
   requiredRepositoryMethods: readonly (keyof MessagingPrivacyRepository)[];
 }
 
+export interface InMemoryMessagingPrivacyRepositorySnapshot {
+  readonly idempotencyKeys: readonly string[];
+  readonly privacyEvents: readonly { tenantId: string; action: MessagingPrivacyAction; redactedMetadata: Record<string, unknown> }[];
+  readonly redactedMessages: readonly { tenantId: string; messageId: string; bodyPreview: string; findings: readonly string[] }[];
+  readonly exportWorkflows: readonly { tenantId: string; action: MessagingPrivacyAction; threadId?: string }[];
+  readonly deleteWorkflows: readonly { tenantId: string; action: MessagingPrivacyAction; threadId?: string }[];
+  readonly retentionWorkflows: readonly { tenantId: string; action: MessagingPrivacyAction; threadId?: string; retentionDays?: number }[];
+  readonly attachmentAuthorizations: readonly { tenantId: string; threadId: string; role: MessagingRole; attachmentUrl: string; status: "allowed" | "denied" }[];
+  readonly moderationDecisions: readonly { tenantId: string; action: MessagingPrivacyAction; spamScore: number; rateLimitAllowed?: boolean }[];
+  readonly auditLogs: readonly { tenantId: string; action: MessagingPrivacyAction; redactedMetadata: Record<string, unknown> }[];
+}
+
 const sensitiveBody = "Client email ari@example.test, phone +1 206 555 0142, card details, allergy notes, and private https://storage.example.test/private/token=secret URL.";
+
+const sensitiveKeyPattern = /(token|secret|password|authorization|cookie|provider|payload|email|phone|card|medical|allergy|privateurl|attachmenturl|url)/i;
+const sensitiveValuePatterns = [
+  /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
+  /\+?\d[\d\s().-]{7,}\d/g,
+  /\b(?:card|allergy|medical|diagnosis|medication|private)\b/gi,
+  /https?:\/\/\S+/gi,
+];
+
+export function buildRedactedMessagingPrivacyPayload(input: unknown): unknown {
+  if (Array.isArray(input)) return input.map((value) => buildRedactedMessagingPrivacyPayload(value));
+  if (!input || typeof input !== "object") {
+    if (typeof input !== "string") return input;
+    return sensitiveValuePatterns.reduce((value, pattern) => value.replace(pattern, "[redacted]"), input);
+  }
+
+  return Object.fromEntries(
+    Object.entries(input as Record<string, unknown>).map(([key, value]) => [
+      key,
+      sensitiveKeyPattern.test(key) ? "[redacted]" : buildRedactedMessagingPrivacyPayload(value),
+    ]),
+  );
+}
 
 export function buildMessagingPrivacyContract(): MessagingPrivacyContract {
   return {
@@ -79,7 +114,7 @@ export function buildMessagingPrivacyContract(): MessagingPrivacyContract {
       role: "assistant",
       actorId: "user_assistant_demo",
       messageId: "message_demo",
-      body: "Redacted message preview only.",
+      body: "Redacted message contract view.",
       bodyRedacted: true,
       attachmentPolicyApproved: false,
       idempotencyKey: "privacy:view:message_demo",
@@ -185,6 +220,91 @@ export async function executeMessagingPrivacyPlan(
   if (plan.action === "moderate_message") await repository.persistModerationDecision({ tenantId: input.tenantId, plan, spamScore: input.spamScore ?? 0 });
   await repository.persistAuditLog({ tenantId: input.tenantId, plan, redactedMetadata: { visibleFields: plan.visibleFields, requiredWrites: plan.requiredWrites } });
   return { status: "processed", plan };
+}
+
+export function createInMemoryMessagingPrivacyRepository(): MessagingPrivacyRepository & {
+  snapshot(): InMemoryMessagingPrivacyRepositorySnapshot;
+} {
+  const idempotencyKeys = new Set<string>();
+  const privacyEvents: { tenantId: string; action: MessagingPrivacyAction; redactedMetadata: Record<string, unknown> }[] = [];
+  const redactedMessages: { tenantId: string; messageId: string; bodyPreview: string; findings: readonly string[] }[] = [];
+  const exportWorkflows: { tenantId: string; action: MessagingPrivacyAction; threadId?: string }[] = [];
+  const deleteWorkflows: { tenantId: string; action: MessagingPrivacyAction; threadId?: string }[] = [];
+  const retentionWorkflows: { tenantId: string; action: MessagingPrivacyAction; threadId?: string; retentionDays?: number }[] = [];
+  const attachmentAuthorizations: { tenantId: string; threadId: string; role: MessagingRole; attachmentUrl: string; status: "allowed" | "denied" }[] = [];
+  const moderationDecisions: { tenantId: string; action: MessagingPrivacyAction; spamScore: number; rateLimitAllowed?: boolean }[] = [];
+  const auditLogs: { tenantId: string; action: MessagingPrivacyAction; redactedMetadata: Record<string, unknown> }[] = [];
+
+  return {
+    async claimIdempotencyKey(input) {
+      const scopedKey = `${input.tenantId}:${input.action}:${input.key}`;
+      if (idempotencyKeys.has(scopedKey)) return "duplicate";
+      idempotencyKeys.add(scopedKey);
+      return "claimed";
+    },
+    async persistPrivacyEvent(input) {
+      privacyEvents.push({
+        tenantId: input.tenantId,
+        action: input.plan.action,
+        redactedMetadata: buildRedactedMessagingPrivacyPayload(input.redactedMetadata) as Record<string, unknown>,
+      });
+    },
+    async persistRedactedMessage(input) {
+      redactedMessages.push({
+        tenantId: input.tenantId,
+        messageId: input.messageId,
+        bodyPreview: "[redacted-message-body]",
+        findings: input.findings,
+      });
+    },
+    async persistExportWorkflow(input) {
+      exportWorkflows.push({ tenantId: input.tenantId, action: input.plan.action, threadId: input.plan.threadId });
+    },
+    async persistDeleteWorkflow(input) {
+      deleteWorkflows.push({ tenantId: input.tenantId, action: input.plan.action, threadId: input.plan.threadId });
+    },
+    async persistRetentionWorkflow(input) {
+      retentionWorkflows.push({
+        tenantId: input.tenantId,
+        action: input.plan.action,
+        threadId: input.plan.threadId,
+        retentionDays: input.plan.retentionDays,
+      });
+    },
+    async authorizeAttachment(input) {
+      const status = input.attachmentUrl.includes("/private/") && input.role === "assistant" ? "denied" : "allowed";
+      attachmentAuthorizations.push({ ...input, status });
+      return status;
+    },
+    async persistModerationDecision(input) {
+      moderationDecisions.push({
+        tenantId: input.tenantId,
+        action: input.plan.action,
+        spamScore: input.spamScore,
+        rateLimitAllowed: input.plan.rateLimitAllowed,
+      });
+    },
+    async persistAuditLog(input) {
+      auditLogs.push({
+        tenantId: input.tenantId,
+        action: input.plan.action,
+        redactedMetadata: buildRedactedMessagingPrivacyPayload(input.redactedMetadata) as Record<string, unknown>,
+      });
+    },
+    snapshot() {
+      return {
+        idempotencyKeys: [...idempotencyKeys],
+        privacyEvents: [...privacyEvents],
+        redactedMessages: [...redactedMessages],
+        exportWorkflows: [...exportWorkflows],
+        deleteWorkflows: [...deleteWorkflows],
+        retentionWorkflows: [...retentionWorkflows],
+        attachmentAuthorizations: [...attachmentAuthorizations],
+        moderationDecisions: [...moderationDecisions],
+        auditLogs: [...auditLogs],
+      };
+    },
+  };
 }
 
 export const messagingPrivacyContract = buildMessagingPrivacyContract();

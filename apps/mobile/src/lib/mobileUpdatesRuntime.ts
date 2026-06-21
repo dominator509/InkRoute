@@ -1,4 +1,4 @@
-import { buildExpoEasRuntimeEvidencePlan } from "@inkroute/releases";
+﻿import { buildExpoEasRuntimeEvidencePlan } from "@inkroute/releases";
 
 export type MobileUpdatesRuntimeStatus =
   | "wired"
@@ -24,7 +24,7 @@ export const mobileUpdatesRuntimeCommands = [
   "eas build --profile preview --platform all",
   "eas update --channel preview",
   "eas update:list --channel preview",
-  "rollback republish drill on preview channel",
+  "eas update --channel preview --message rollback-republish-drill --non-interactive",
 ] as const;
 
 export const mobileUpdatesArtifactPaths = [
@@ -45,6 +45,140 @@ export const mobileUpdatesArtifactPaths = [
   "coverage/mobile-updates-release-health-monitoring.json",
   "coverage/mobile-updates-secret-safe-artifacts.json",
   "test-results/mobile-updates-runtime",
+] as const;
+
+export const mobileUpdatesRuntimeProofFiles = [
+  "apps/mobile/package.json",
+  "packages/releases/package.json",
+  "packages/releases/src/index.ts",
+  "packages/releases/tests/feature-flags.test.ts",
+  "apps/mobile/src/lib/mobileUpdates.ts",
+  "apps/mobile/src/lib/mobileUpdatesRuntime.ts",
+  "apps/mobile/src/screens/SystemStatusScreen.tsx",
+  "apps/mobile/tests/mobile-updates-static.test.ts",
+  "apps/mobile/tests/mobile-updates-runtime-static.test.ts",
+  "apps/mobile/eas.json",
+  "apps/mobile/app.json",
+  "testing/manifests/unit-test-manifest.json",
+  ".github/workflows/ci.yml",
+] as const;
+
+export const mobileUpdatesEvidenceFlags = [
+  "releasesTypecheckPassed",
+  "releasesTestsPassed",
+  "mobileTypecheckPassed",
+  "appConfigProjectVerified",
+  "easJsonChannelsVerified",
+  "credentialsConfigured",
+  "previewNativeBuildPassed",
+  "productionNativeBuildPassed",
+  "previewOtaPublished",
+  "deviceReceivedPreviewUpdate",
+  "rollbackRepublishVerified",
+  "compatibilityCheckPassed",
+  "adoptionMonitoringVerified",
+  "releaseHealthMonitoringConfigured",
+  "ciEvidenceCaptured",
+  "secretSafeArtifactsCaptured",
+] as const;
+
+export type MobileUpdatesEvidenceFlag = (typeof mobileUpdatesEvidenceFlags)[number];
+
+export interface MobileUpdatesExecutionPolicy {
+  readonly codexMayClassifyStaticMobileUpdatesReadiness: true;
+  readonly easProjectRequiredForClosure: true;
+  readonly easCredentialsRequiredForClosure: true;
+  readonly nativeBuildRequiredForClosure: true;
+  readonly otaPublishRequiredForClosure: true;
+  readonly rollbackRepublishRequiredForClosure: true;
+  readonly monitoringRequiredForClosure: true;
+  readonly secretSafeArtifactsRequiredForClosure: true;
+}
+
+export interface MobileUpdatesExecutionPlan {
+  readonly policy: typeof mobileUpdatesExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly easProjectExecutionAllowed: false;
+  readonly credentialExecutionAllowed: false;
+  readonly nativeBuildExecutionAllowed: false;
+  readonly otaPublishExecutionAllowed: false;
+  readonly rollbackExecutionAllowed: false;
+  readonly monitoringExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly localCommands: typeof mobileUpdatesLocalCommands;
+  readonly externalCommands: typeof mobileUpdatesExternalCommands;
+  readonly requiredExternalEvidence: typeof mobileUpdatesRequiredExternalEvidence;
+}
+
+export interface MobileUpdatesArtifactReview {
+  readonly artifact: unknown;
+  readonly redactedArtifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: boolean;
+  readonly requiredExternalEvidence: typeof mobileUpdatesRequiredExternalEvidence;
+}
+
+export interface MobileUpdatesEvidenceInput {
+  readonly commands?: readonly string[];
+  readonly artifacts?: readonly string[];
+  readonly evidence?: Partial<Record<MobileUpdatesEvidenceFlag, boolean>>;
+}
+
+export interface MobileUpdatesEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly requiredCommands: typeof mobileUpdatesRuntimeCommands;
+  readonly missingCommands: readonly string[];
+  readonly requiredArtifacts: typeof mobileUpdatesArtifactPaths;
+  readonly missingArtifacts: readonly string[];
+  readonly requiredEvidence: typeof mobileUpdatesEvidenceFlags;
+  readonly missingEvidence: readonly MobileUpdatesEvidenceFlag[];
+  readonly blockers: readonly string[];
+}
+
+export const mobileUpdatesExecutionPolicy = {
+  codexMayClassifyStaticMobileUpdatesReadiness: true,
+  easProjectRequiredForClosure: true,
+  easCredentialsRequiredForClosure: true,
+  nativeBuildRequiredForClosure: true,
+  otaPublishRequiredForClosure: true,
+  rollbackRepublishRequiredForClosure: true,
+  monitoringRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies MobileUpdatesExecutionPolicy;
+
+export const mobileUpdatesRequiredExternalEvidence = [
+  "real non-secret EAS project id/update URL evidence",
+  "EAS credentials configured outside source control evidence",
+  "preview native build evidence",
+  "production native build evidence",
+  "preview OTA publish evidence",
+  "device receipt proof",
+  "rollback republish proof",
+  "compatibility check proof",
+  "adoption monitoring proof",
+  "release-health monitoring proof",
+  "mobile updates typecheck output",
+  "CI mobile OTA evidence",
+  "secret-safe mobile OTA artifact review",
+] as const;
+
+export const mobileUpdatesLocalCommands = [
+  "pnpm --filter @inkroute/releases typecheck",
+  "pnpm --filter @inkroute/releases test",
+  "static mobile OTA compatibility classification review",
+  "static rollback audit payload redaction review",
+] as const;
+
+export const mobileUpdatesExternalCommands = [
+  "pnpm --filter @inkroute/mobile typecheck",
+  "eas build --profile preview --platform all",
+  "eas build --profile production --platform all",
+  "eas update --channel preview",
+  "eas update:list --channel preview",
+  "eas update --channel preview --message rollback-republish-drill --non-interactive",
+  "preview device receipt proof",
+  "adoption and release-health monitoring proof",
+  "GitHub Actions mobile OTA evidence job",
 ] as const;
 
 export const mobileUpdatesRuntimeMatrix = [
@@ -110,7 +244,7 @@ export const mobileUpdatesRuntimeMatrix = [
   },
   {
     id: "rollback-republish",
-    command: "rollback republish drill on preview channel",
+    command: "eas update --channel preview --message rollback-republish-drill --non-interactive",
     artifact: "coverage/mobile-updates-rollback-republish-redacted.json",
     status: "rollback-gated",
   },
@@ -162,3 +296,100 @@ export const mobileUpdatesRuntimeEvidence = buildExpoEasRuntimeEvidencePlan({
   adoptionMonitoringVerified: false,
   releaseHealthMonitoringConfigured: false,
 });
+
+const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
+  const actualSet = new Set(actual ?? []);
+  return required.filter((entry) => !actualSet.has(entry));
+};
+
+const sensitiveMobileUpdatesArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|eas|expo|credential|project|update|channel|runtime|device|receipt|rollback|release|health|adoption|monitoring|email|phone|medical|payment)/i;
+
+const redactMobileUpdatesArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactMobileUpdatesArtifactValue(entry, `${path}.${index}`, redactedPaths));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (sensitiveMobileUpdatesArtifactKey.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[REDACTED]"];
+        }
+        return [key, redactMobileUpdatesArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const buildMobileUpdatesExecutionPlan = (): MobileUpdatesExecutionPlan => ({
+  policy: mobileUpdatesExecutionPolicy,
+  commandExecutionAllowed: false,
+  easProjectExecutionAllowed: false,
+  credentialExecutionAllowed: false,
+  nativeBuildExecutionAllowed: false,
+  otaPublishExecutionAllowed: false,
+  rollbackExecutionAllowed: false,
+  monitoringExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  localCommands: mobileUpdatesLocalCommands,
+  externalCommands: mobileUpdatesExternalCommands,
+  requiredExternalEvidence: mobileUpdatesRequiredExternalEvidence,
+});
+
+export const buildRedactedMobileUpdatesArtifact = (artifact: unknown): Pick<MobileUpdatesArtifactReview, "redactedArtifact" | "redactedPaths"> => {
+  const redactedPaths: string[] = [];
+  return {
+    redactedArtifact: redactMobileUpdatesArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+  };
+};
+
+export const buildMobileUpdatesArtifactReview = (artifact: unknown): MobileUpdatesArtifactReview => {
+  const redacted = buildRedactedMobileUpdatesArtifact(artifact);
+  return {
+    artifact,
+    redactedArtifact: redacted.redactedArtifact,
+    redactedPaths: redacted.redactedPaths,
+    secretSafe: redacted.redactedPaths.length > 0,
+    requiredExternalEvidence: mobileUpdatesRequiredExternalEvidence,
+  };
+};
+
+export const buildMobileUpdatesEvidenceDecision = (
+  input: MobileUpdatesEvidenceInput = {},
+): MobileUpdatesEvidenceDecision => {
+  const missingCommands = missingFrom(input.commands, mobileUpdatesRuntimeCommands);
+  const missingArtifacts = missingFrom(input.artifacts, mobileUpdatesArtifactPaths);
+  const missingEvidence = mobileUpdatesEvidenceFlags.filter((flag) => input.evidence?.[flag] !== true);
+  const blockers = [
+    missingCommands.length > 0 ? "Pinned mobile OTA commands must be run and captured." : "",
+    missingArtifacts.length > 0
+      ? "Mobile OTA artifacts must be retained with EAS config, credentials, build, update, rollback, monitoring, CI, and secret-safe evidence."
+      : "",
+    missingEvidence.length > 0
+      ? "EAS project config, credentials, preview/production builds, OTA receipt, rollback, compatibility, monitoring, CI, and secret-safe evidence must pass."
+      : "",
+  ].filter(Boolean);
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    requiredCommands: mobileUpdatesRuntimeCommands,
+    missingCommands,
+    requiredArtifacts: mobileUpdatesArtifactPaths,
+    missingArtifacts,
+    requiredEvidence: mobileUpdatesEvidenceFlags,
+    missingEvidence,
+    blockers,
+  };
+};
+
+
+

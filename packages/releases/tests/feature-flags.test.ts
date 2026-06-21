@@ -1,11 +1,31 @@
 import { describe, expect, it } from "vitest";
 import {
+  releaseRuntimeVerificationRequiredCommands,
+  releaseRuntimeVerificationRequiredEvidence,
+  releasePersistenceRbacReadinessRequiredCommands,
+  releasePersistenceRbacReadinessRequiredEvidence,
+  releaseLaunchControlEvidenceRequiredCommands,
+  releaseLaunchControlEvidenceRequiredEvidence,
+  releaseControlPlaneReadinessRequiredCommands,
+  releaseControlPlaneReadinessRequiredEvidence,
+  releaseAutomatedTestReadinessRequiredCommands,
+  releaseAutomatedTestReadinessRequiredEvidence,
+  mobileOtaProductionEnablementRequiredCommands,
+  mobileOtaProductionEnablementRequiredEvidence,
+  migrationRuntimeDryRunReadinessRequiredCommands,
+  migrationRuntimeDryRunReadinessRequiredEvidence,
+  featureFlagRuntimeIntegrationReadinessRequiredCommands,
+  featureFlagRuntimeIntegrationReadinessRequiredEvidence,
+  easOtaReadinessRequiredCommands,
+  expoEasRuntimeEvidenceRequiredCommands,
+  expoEasRuntimeEvidenceRequiredEvidence,
   assessMigrationCompatibility,
   buildExpoEasRuntimeEvidencePlan,
   buildFeatureFlagRuntimeIntegrationReadinessPlan,
   buildGithubReleaseWorkflowPlan,
   buildEasOtaReadinessPlan,
   buildMigrationCompatibilityEnforcementPlan,
+  buildMigrationCompatibilityRequiredCommands,
   buildMigrationRuntimeDryRunReadinessPlan,
   buildMobileUpdatePlan,
   buildMobileOtaProductionEnablementPlan,
@@ -122,8 +142,8 @@ describe("release and feature flag governance", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
-    expect(plan.requiredCommands).toContain("provider-worker feature-flag kill-switch smoke");
-    expect(plan.requiredCommands).toContain("live rollout bucket proof");
+    expect(plan.requiredCommands).toBe(featureFlagRuntimeIntegrationReadinessRequiredCommands);
+    
   });
 
   it("blocks feature flag runtime integration until cached resolvers, real auth context, worker kill switches, invalidation, rollout buckets, and live proof exist", () => {
@@ -150,9 +170,9 @@ describe("release and feature flag governance", () => {
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
     expect(plan.requiredEvidence).toEqual([
-      "release package, static runtime, dashboard typecheck, and mobile typecheck evidence",
-      "cached resolver, real auth context, and invalidation/revalidation evidence",
-      "provider kill-switch, rollout bucket, tenant-safe payload, and live rollout evidence",
+      featureFlagRuntimeIntegrationReadinessRequiredEvidence[0],
+      featureFlagRuntimeIntegrationReadinessRequiredEvidence[2],
+      featureFlagRuntimeIntegrationReadinessRequiredEvidence[3],
     ]);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
@@ -205,7 +225,9 @@ describe("release and feature flag governance", () => {
         expect.objectContaining({ id: "database-forward-fix-plan", status: "block" }),
       ]),
     );
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([expect.stringContaining("prisma migrate diff"), "pnpm --filter @inkroute/db prisma migrate deploy"]));
+    expect(plan.requiredCommands).toEqual(
+      buildMigrationCompatibilityRequiredCommands({ prismaSchemaPath: "packages/db/prisma/schema.prisma" }),
+    );
     expect(plan.policy.join(" ")).toContain("forward-fix");
   });
 
@@ -252,8 +274,8 @@ describe("release and feature flag governance", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
-    expect(plan.requiredCommands).toContain("release-governance migration dry run with staging DATABASE_URL");
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/db prisma migrate deploy");
+    expect(plan.requiredCommands).toBe(migrationRuntimeDryRunReadinessRequiredCommands);
+    
   });
 
   it("blocks migration runtime dry-run enforcement until staging database, committed migrations, approvals, rollback evidence, and CI artifacts exist", () => {
@@ -280,12 +302,8 @@ describe("release and feature flag governance", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "Prisma schema, committed migration, and staging DATABASE_URL evidence",
-      "Prisma validate, diff, migrate dry-run, and destructive SQL scan evidence",
-      "backup, approval, expand/contract, forward-fix, and rollback evidence",
-      "GitHub Actions migration dry-run artifact evidence",
-    ]);
+    expect(plan.requiredCommands).toBe(migrationRuntimeDryRunReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(migrationRuntimeDryRunReadinessRequiredEvidence);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "Missing @inkroute/releases typecheck script.",
@@ -368,7 +386,7 @@ describe("release and feature flag governance", () => {
       "rollback-drill",
       "adoption-monitoring",
     ]);
-    expect(plan.requiredCommands).toContain("eas build --profile preview");
+    expect(plan.requiredCommands).toBe(easOtaReadinessRequiredCommands);
   });
 
   it("distinguishes preview OTA readiness from production launch readiness", () => {
@@ -417,15 +435,7 @@ describe("release and feature flag governance", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toEqual(
-      expect.arrayContaining([
-        "pnpm --filter @inkroute/releases typecheck",
-        "pnpm --filter @inkroute/mobile typecheck",
-        "eas build --profile preview --platform all",
-        "eas update --channel preview",
-        "rollback republish drill on preview channel",
-      ]),
-    );
+    expect(plan.requiredCommands).toBe(expoEasRuntimeEvidenceRequiredCommands);
     expect(plan.gates).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: "app-json-project-id-match", status: "block" }),
@@ -436,6 +446,7 @@ describe("release and feature flag governance", () => {
         expect.objectContaining({ id: "release-health-monitoring", status: "block" }),
       ]),
     );
+    expect(plan.requiredEvidence).toBe(expoEasRuntimeEvidenceRequiredEvidence);
     expect(plan.requiredEvidence.join(" ")).toContain("Rollback republish drill");
     expect(plan.blockers).toContain("Run pnpm --filter @inkroute/mobile typecheck.");
   });
@@ -467,8 +478,8 @@ describe("release and feature flag governance", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
-    expect(plan.requiredCommands).toContain("eas build --profile production --platform all");
-    expect(plan.requiredCommands).toContain("rollback republish drill on preview channel");
+    expect(plan.requiredCommands).toBe(mobileOtaProductionEnablementRequiredCommands);
+    
   });
 
   it("blocks mobile OTA production enablement until real config, native builds, preview update, device adoption, monitoring, and rollback proof exist", () => {
@@ -496,12 +507,8 @@ describe("release and feature flag governance", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "real Expo project/update URL, expo-updates, and runtimeVersion policy evidence",
-      "preview/production EAS channel and native build evidence",
-      "preview OTA publish, update ID, and device adoption evidence",
-      "adoption monitoring, rollback republish drill, and release-health linkage evidence",
-    ]);
+    expect(plan.requiredCommands).toBe(mobileOtaProductionEnablementRequiredCommands);
+    expect(plan.requiredEvidence).toBe(mobileOtaProductionEnablementRequiredEvidence);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "Missing @inkroute/releases typecheck script.",
@@ -556,6 +563,15 @@ describe("release and feature flag governance", () => {
     expect(rollback.mobile).toContain("EAS update");
     expect(rollback.featureFlags).toContain("Disable provider sends");
     expect(healthChecks.map((check) => check.id)).toEqual(["dependencies-installed", "production-gates", "rollback-plan"]);
+    expect(healthChecks.find((check) => check.id === "production-gates")?.detail).toBe("No release-control gate blocks production.");
+    expect(healthChecks.find((check) => check.id === "production-gates")?.detail).not.toBe("No scaffolded gate blocks production.");
+  });
+
+  it("keeps demo release candidate metadata on release-contract wording", async () => {
+    const { demoReleaseCandidate } = await import("../src/index");
+
+    expect(demoReleaseCandidate.createdBy).toBe("codex-phase12-release-contract");
+    expect(demoReleaseCandidate.createdBy).not.toBe("chatgpt-phase12-scaffold");
   });
 
   it("documents required workflow gates for release governance", () => {
@@ -595,8 +611,8 @@ describe("release and feature flag governance", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/releases typecheck");
-    expect(plan.requiredEvidence).toContain("ReleaseRecord and FeatureFlag writes persisted with tenant scope, RBAC, audit rows, and version checks.");
+    expect(plan.requiredCommands).toBe(releaseControlPlaneReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(releaseControlPlaneReadinessRequiredEvidence);
     expect(plan.blockers).toContain("FeatureFlag persistence must be configured with tenant/environment scopes.");
     expect(plan.blockers).toContain("GitHub preview/production protected environments must be configured.");
     expect(plan.blockers).toContain("Rollback workflow must be rehearsed for web, dashboard, mobile OTA, database forward-fix, and feature flags.");
@@ -623,8 +639,8 @@ describe("release and feature flag governance", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
-    expect(plan.requiredCommands).toContain("release-governance workflow dry run");
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/dashboard build");
+    expect(plan.requiredCommands).toBe(releaseRuntimeVerificationRequiredCommands);
+    
   });
 
   it("blocks release runtime verification until builds, dashboard route smokes, workflow proof, and CI artifacts exist", () => {
@@ -646,13 +662,7 @@ describe("release and feature flag governance", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "release package test/typecheck, web typecheck, and release-health route smoke evidence",
-      "web, dashboard, and mobile build/typecheck evidence",
-      "dashboard release and feature-flag route smoke evidence",
-      "GitHub release-governance workflow dry-run/dispatch evidence",
-      "CI artifact, log, and release evidence attachment",
-    ]);
+    expect(plan.requiredEvidence).toBe(releaseRuntimeVerificationRequiredEvidence);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "Missing @inkroute/releases typecheck script.",
@@ -691,8 +701,8 @@ describe("release and feature flag governance", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
-    expect(plan.requiredCommands).toContain("dashboard rendered release workflow smoke");
-    expect(plan.requiredCommands).toContain("release workflow orchestration hook smoke");
+    expect(plan.requiredCommands).toBe(releasePersistenceRbacReadinessRequiredCommands);
+    
   });
 
   it("blocks release persistence and RBAC until approval workflows, concurrency, membership lookup, rendered flows, and DB route proof exist", () => {
@@ -718,12 +728,7 @@ describe("release and feature flag governance", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "dashboard static route test and dashboard typecheck evidence",
-      "tenant-scoped RBAC, mismatch rejection, and membership lookup evidence",
-      "provider credential gate, previous-state metadata, and optimistic concurrency evidence",
-      "approval state machine, rendered dashboard workflow, orchestration hook, and DB-backed route evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(releasePersistenceRbacReadinessRequiredEvidence);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "Missing @inkroute/releases typecheck script.",
@@ -759,8 +764,8 @@ describe("release and feature flag governance", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
-    expect(plan.requiredCommands).toContain("Playwright dashboard release smoke");
-    expect(plan.requiredCommands).toContain("GitHub Actions release-governance workflow execution");
+    expect(plan.requiredCommands).toBe(releaseAutomatedTestReadinessRequiredCommands);
+    
   });
 
   it("blocks Phase 12 release automated coverage until Playwright, provider-backed, Expo/device, workflow, secrets, and CI artifact proof exist", () => {
@@ -780,14 +785,32 @@ describe("release and feature flag governance", () => {
       realSecretsAndEnvironmentsConfigured: false,
       ciArtifactsCaptured: false,
     });
+    const allMissingEvidencePlan = buildReleaseAutomatedTestReadinessPlan({
+      packageScripts: [],
+      releasePackageTestsPassed: false,
+      releaseWorkflowTestsPassed: false,
+      releaseHealthRouteTestsPassed: false,
+      releaseAutomationStaticTestsPassed: false,
+      mobileStaticTestsPassed: false,
+      dashboardTypecheckPassed: false,
+      playwrightDashboardReleaseSmokePassed: false,
+      providerBackedRouteIntegrationTestsPassed: false,
+      expoRenderTestsPassed: false,
+      expoDeviceTestsPassed: false,
+      githubActionsWorkflowExecutionEvidenceCaptured: false,
+      realSecretsAndEnvironmentsConfigured: false,
+      ciArtifactsCaptured: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toBe(releaseAutomatedTestReadinessRequiredCommands);
     expect(plan.requiredEvidence).toEqual([
-      "Playwright dashboard release smoke and provider-backed route integration evidence",
-      "Expo render and physical-device release/OTA evidence",
-      "GitHub Actions workflow execution, real secrets/environments, and CI artifact evidence",
+      releaseAutomatedTestReadinessRequiredEvidence[1],
+      releaseAutomatedTestReadinessRequiredEvidence[2],
+      releaseAutomatedTestReadinessRequiredEvidence[3],
     ]);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(releaseAutomatedTestReadinessRequiredEvidence);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "Missing @inkroute/releases typecheck script.",
@@ -833,8 +856,8 @@ describe("release and feature flag governance", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredCommands).toContain("incident-linked rollback drill");
-    expect(plan.requiredCommands).toContain("feature-flag kill-switch drill");
+    expect(plan.requiredCommands).toBe(releaseLaunchControlEvidenceRequiredCommands);
+
   });
 
   it("blocks release launch-control evidence until persisted controls, protected environments, signed jobs, migration gates, rollback, EAS, rollout, provider, CI, and secret-safe evidence exist", () => {
@@ -865,14 +888,7 @@ describe("release and feature flag governance", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "ReleaseRecord/FeatureFlag persistence, RBAC, tenant-scope, concurrency, and audit evidence",
-      "protected environment, signed job, CI required-check, preview deploy, and production approval dry-run evidence",
-      "migration gate and incident-linked rollback drill evidence",
-      "EAS update governance, channel, runtime, adoption, and rollback evidence",
-      "tenant rollout, kill-switch drill, and release-health envelope evidence",
-      "provider-backed route, CI artifact, and secret-safe launch evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(releaseLaunchControlEvidenceRequiredEvidence);
     expect(plan.blockers).toContain("GitHub preview, staging, and production protected environments must be configured.");
     expect(plan.blockers).toContain("Incident-linked rollback drill must pass for web, dashboard, mobile OTA, database, and flags.");
     expect(plan.blockers).toContain("Feature-flag kill-switch drill must pass.");

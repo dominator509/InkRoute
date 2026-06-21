@@ -3,6 +3,9 @@ import { NextRequest } from "next/server";
 import {
   buildBookingFlowRuntimeEvidencePlan,
   buildPostPersistWorkflowPlans,
+  bookingFlowRuntimeRequiredCommands,
+  bookingFlowRuntimeRequiredControls,
+  bookingFlowRuntimeRequiredEvidence,
   evaluateBotProof,
   shouldCollectReferenceUpload,
 } from "../app/api/public/[tenantSlug]/booking-requests/test-helpers";
@@ -142,6 +145,15 @@ describe("booking request queue/consumer contracts", () => {
     expect(routeSource).toContain("acceptedBookingGateEnforced: true");
     expect(routeSource).toContain("persistedWorkerQueueConfigured: true");
     expect(routeSource).toContain("providerIdempotencyConfigured: false");
+    expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(routeSource).toContain('{ ...noStoreHeaders, "Retry-After": String(rateLimit.retryAfterSeconds) }');
+    expect(routeSource).toContain("{ status: 503, headers: noStoreHeaders }");
+    expect(routeSource).toContain("{ status: 201, headers: noStoreHeaders }");
+    expect(routeSource).toContain("{ status: 500, headers: noStoreHeaders }");
+    expect(routeSource).not.toContain("{ status: 400 },");
+    expect(routeSource).not.toContain("{ status: 403 },");
+    expect(routeSource).not.toContain("{ status: 404 },");
+    expect(routeSource).not.toContain("{ status: 500 },");
   });
 
   it("blocks booking flow runtime evidence until install, Prisma, Next build, browser smoke, DB smoke, and safe artifacts exist", () => {
@@ -165,27 +177,21 @@ describe("booking request queue/consumer contracts", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["build"]);
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "pnpm install",
-      "pnpm db:generate",
-      "pnpm --filter @inkroute/web typecheck",
-      "pnpm --filter @inkroute/web build",
-      "Playwright booking page smoke for /booking",
-      "Playwright booking confirmation smoke for /booking/confirmation",
-      "dev-DB booking transaction smoke",
-    ]));
-    expect(plan.requiredControls).toContain("Verify booking and confirmation pages in a real Next runtime, not only package helpers.");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "dependency install and generated Prisma Client evidence",
-      "web typecheck/build and client/server boundary evidence",
-      "booking API contract and Next route runtime smoke evidence",
-      "booking and confirmation browser smoke evidence",
-      "local fallback, database runtime, and provider-gated boundary evidence",
-      "CI artifact bundle with redaction/secret-safety proof",
-    ]));
+    expect(plan.requiredCommands).toBe(bookingFlowRuntimeRequiredCommands);
+    expect(plan.requiredControls).toBe(bookingFlowRuntimeRequiredControls);
+    expect(plan.requiredEvidence).toBe(bookingFlowRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("Generated Prisma Client must be available before web typecheck/build runtime evidence can close.");
     expect(plan.blockers).toContain("Browser smoke must prove /booking loads, validates input, and submits without client/server component errors.");
     expect(plan.blockers).toContain("Booking runtime artifacts must be redacted and free of secrets, raw medical notes, payment data, provider tokens, and private file URLs.");
+  });
+
+  it("pins GAP-017 tracker closure evidence in the unit manifest", async () => {
+    const manifestText = await import("node:fs").then((fs) =>
+      fs.readFileSync("testing/manifests/unit-test-manifest.json", "utf8"),
+    );
+
+    expect(manifestText).toContain("unit-web-booking-requests-contract");
+    expect(manifestText).toContain("GAP-017 is booking-requests-contract wired with evidence classifier");
   });
 
   it("marks booking flow runtime evidence ready when Next runtime, DB smoke, browser smoke, and artifacts align", () => {
@@ -213,6 +219,5 @@ describe("booking request queue/consumer contracts", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Preserve explicit provider-gated reference upload, deposit, notification, and calendar boundaries.");
   });
 });

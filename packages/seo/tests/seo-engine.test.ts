@@ -29,11 +29,34 @@ import {
   buildWebPageSchema,
   buildWebsiteSchema,
   composeJsonLdGraph,
+  canonicalDomainRuntimeRequiredCommands,
+  canonicalDomainRuntimeRequiredControls,
+  canonicalDomainRuntimeRequiredEvidence,
   createCanonicalUrl,
   createSeoRouteRecord,
+  publicWebLaunchEvidenceRequiredCommands,
+  publicWebLaunchEvidenceRequiredEvidence,
+  publicWebReadinessRequiredCommands,
+  publicWebReadinessRequiredControls,
   resolveTenantCanonicalPolicy,
+  searchConsoleRuntimeRequiredCommands,
+  searchConsoleRuntimeRequiredControls,
+  searchConsoleRuntimeRequiredEvidence,
+  seoA11yPerformanceAuditRequiredCommands,
+  seoA11yPerformanceAuditRequiredControls,
+  seoA11yPerformanceAuditRequiredEvidence,
+  seoAutomatedTestReadinessRequiredCommands,
+  seoAutomatedTestReadinessRequiredEvidence,
+  seoImagePipelineRequiredCommands,
+  seoImagePipelineRequiredControls,
+  seoImagePipelineRequiredEvidence,
+  seoPublicationRuntimeRequiredCommands,
+  seoPublicationRuntimeRequiredControls,
+  seoPublicationRuntimeRequiredEvidence,
+  structuredDataCrawlQaRequiredCommands,
+  structuredDataCrawlQaRequiredControls,
+  structuredDataCrawlQaRequiredEvidence,
 } from "../src/index";
-
 describe("SEO engine helpers", () => {
   const cityRoute = createSeoRouteRecord({
     path: "/cities/seattle-wa",
@@ -46,16 +69,13 @@ describe("SEO engine helpers", () => {
     priority: 0.85,
     lastModified: "2026-06-01T00:00:00.000Z",
   });
-
   it("builds canonical metadata drafts", () => {
     const metadata = buildMetadataDraft({ baseUrl: "https://inkroute.example", route: cityRoute });
-
     expect(metadata.canonicalUrl).toBe("https://inkroute.example/cities/seattle-wa");
     expect(metadata.robots.index).toBe(true);
     expect(metadata.openGraph.url).toBe(metadata.canonicalUrl);
     expect(metadata.alternates.canonical).toBe(metadata.canonicalUrl);
   });
-
   it("generates sitemap entries only for indexable routes", () => {
     const noindexRoute = createSeoRouteRecord({
       path: "/dashboard",
@@ -65,12 +85,10 @@ describe("SEO engine helpers", () => {
       indexMode: "noindex",
     });
     const sitemap = buildSitemapPlan({ baseUrl: "https://inkroute.example", routes: [cityRoute, noindexRoute] });
-
     expect(sitemap.entries).toHaveLength(1);
     expect(sitemap.noindexCount).toBe(1);
     expect(sitemap.entries[0]?.url).toBe("https://inkroute.example/cities/seattle-wa");
   });
-
   it("reports content-length audit signals and internal-link recommendations", () => {
     const audit = auditSeoRoute(cityRoute);
     const links = buildInternalLinkPlan([
@@ -94,11 +112,9 @@ describe("SEO engine helpers", () => {
         description: "Start a booking request and submit preferences for consultation.",
       }),
     ]);
-
     expect(audit.path).toBe(cityRoute.path);
     expect(links.some((link) => link.fromPath === "/cities/seattle-wa" && link.toPath === "/booking")).toBe(true);
   });
-
   it("filters draft and noindex routes from sitemap generation", () => {
     const draftRoute = createSeoRouteRecord({
       path: "/city-draft",
@@ -128,17 +144,14 @@ describe("SEO engine helpers", () => {
       description: "This is a valid and visible style landing route that should remain searchable in sitemap output.",
       status: "published",
     });
-
     const sitemap = buildSitemapPlan({
       baseUrl: "https://inkroute.example",
       routes: [draftRoute, noindexRoute, archivedRoute, visibleRoute],
     });
-
     expect(sitemap.entries).toHaveLength(1);
     expect(sitemap.entries[0]?.url).toContain("/visible");
     expect(sitemap.noindexCount).toBe(3);
   });
-
   it("records audit issues for SEO-critical metadata edges", () => {
     const undersized = createSeoRouteRecord({
       path: "/tiny",
@@ -164,18 +177,15 @@ describe("SEO engine helpers", () => {
       region: "WA",
       status: "published",
     });
-
     const shortAudit = auditSeoRoute(undersized);
     const missingCityAudit = auditSeoRoute(cityWithNoRegion);
     const goodAudit = auditSeoRoute(cityGood);
-
     expect(shortAudit.score).toBeLessThan(100);
     expect(shortAudit.issues.some((issue) => issue.code === "TITLE_LENGTH" || issue.code === "META_DESCRIPTION_LENGTH")).toBe(true);
     expect(missingCityAudit.issues.some((issue) => issue.code === "CITY_CONTEXT_MISSING")).toBe(true);
     expect(goodAudit.issues.some((issue) => issue.code === "CITY_CONTEXT_MISSING")).toBe(false);
     expect(goodAudit.passedChecks).toContain("local_context");
   });
-
   it("builds JSON-LD drafts for composed web schema graphs", () => {
     const graph = composeJsonLdGraph([
       buildWebsiteSchema({
@@ -192,13 +202,11 @@ describe("SEO engine helpers", () => {
         { question: "Can I book a deposit?", answer: "Some deposits may be required in this demo." },
       ]),
     ]);
-
     expect(graph["@context"]).toBe("https://schema.org");
     expect(graph["@graph"]).toHaveLength(3);
     expect(graph["@graph"][1]?.["@type"]).toBe("WebPage");
     expect((graph["@graph"][1] as Record<string, unknown>).name).toBe("Seattle Tattoo Booking");
   });
-
   it("validates rendered page-style JSON-LD snapshots for required rich-result fields", () => {
     const artist: ArtistProfile = {
       id: "artist_snapshot",
@@ -243,18 +251,15 @@ describe("SEO engine helpers", () => {
       buildTravelEventSchema(travelStop, artist),
       buildFaqSchema([{ question: "Can I book Seattle?", answer: "Yes, Seattle booking is open in this demo snapshot." }]),
     ];
-
     const audit = auditJsonLdRichResultCompatibility({
       graph: renderedHomeSchema,
       sourcePath: "apps/web/app/page.tsx",
     });
-
     expect(audit.status).toBe("pass");
     expect(audit.itemCount).toBe(4);
     expect(audit.types).toEqual(["Event", "FAQPage", "ImageObject", "Person"]);
     expect(audit.findings).toHaveLength(0);
   });
-
   it("flags unsupported or malformed JSON-LD before external crawler validation", () => {
     const unsupported = auditJsonLdRichResultCompatibility({
       graph: composeJsonLdGraph([
@@ -278,7 +283,6 @@ describe("SEO engine helpers", () => {
       ]),
       sourcePath: "apps/web/app/travel/page.tsx",
     });
-
     expect(unsupported.status).toBe("warn");
     expect(unsupported.findings.some((finding) => finding.code === "JSON_LD_TYPE_NOT_GOOGLE_RICH_RESULT")).toBe(true);
     expect(malformed.status).toBe("fail");
@@ -286,7 +290,6 @@ describe("SEO engine helpers", () => {
       expect.arrayContaining(["startDate", "endDate", "location", "performer", "description"]),
     );
   });
-
   it("audits technical SEO readiness for sitemap, canonical, and JSON-LD invariants", () => {
     const goodRoute = createSeoRouteRecord({
       path: "/cities/portland-or",
@@ -306,17 +309,14 @@ describe("SEO engine helpers", () => {
         url: createCanonicalUrl("https://inkroute.example", goodRoute.path),
       }),
     ]);
-
     const passing = auditSeoTechnicalReadiness({
       baseUrl: "https://inkroute.example",
       routes: [goodRoute],
       jsonLdGraphs: [goodGraph],
     });
-
     expect(passing.status).toBe("pass");
     expect(passing.sitemapEntryCount).toBe(1);
     expect(passing.findings).toHaveLength(0);
-
     const duplicate = createSeoRouteRecord({
       path: "/cities/portland-or/",
       kind: "city",
@@ -339,14 +339,12 @@ describe("SEO engine helpers", () => {
       routes: [goodRoute, duplicate, missingRegion],
       jsonLdGraphs: [composeJsonLdGraph([{ name: "Missing type" }])],
     });
-
     expect(failing.status).toBe("fail");
     expect(failing.duplicateSitemapUrls).toContain("https://inkroute.example/cities/portland-or");
     expect(failing.findings.some((finding) => finding.code === "DUPLICATE_SITEMAP_URL")).toBe(true);
     expect(failing.findings.some((finding) => finding.code === "CITY_CONTEXT_MISSING")).toBe(true);
     expect(failing.findings.some((finding) => finding.code === "JSON_LD_ITEM_TYPE_MISSING")).toBe(true);
   });
-
   it("summarizes structured-data crawl QA readiness across rendered JSON-LD extraction, rich-result checks, sitemap/canonical crawl, artifacts, and closeout evidence", () => {
     const plan = buildStructuredDataCrawlQaReadinessPlan({
       packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
@@ -366,17 +364,15 @@ describe("SEO engine helpers", () => {
       crawlArtifactsCaptured: true,
       closeoutEvidenceAttached: true,
     });
-
     expect(plan).toMatchObject({
       status: "ready",
       missingScripts: [],
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Extract JSON-LD from rendered public pages instead of relying only on helper snapshots.");
-    expect(plan.requiredCommands).toContain("Google Rich Results-compatible structured-data validation");
+    expect(plan.requiredCommands).toBe(structuredDataCrawlQaRequiredCommands);
+    expect(plan.requiredControls).toBe(structuredDataCrawlQaRequiredControls);
   });
-
   it("blocks structured-data crawl QA readiness until rendered-page crawl, rich-result validation, unsupported-schema review, sitemap/canonical crawl, artifacts, and closeout evidence exist", () => {
     const plan = buildStructuredDataCrawlQaReadinessPlan({
       packageScripts: { test: "vitest run" },
@@ -396,21 +392,16 @@ describe("SEO engine helpers", () => {
       crawlArtifactsCaptured: false,
       closeoutEvidenceAttached: false,
     });
-
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "rendered-page crawler, JSON-LD extraction, and public page inventory evidence",
-      "Google Rich Results-compatible validation and unsupported-schema review evidence",
-      "production/demo content, sitemap, canonical, robots, and noindex crawl evidence",
-      "crawl artifact capture and closeout attachment evidence",
-    ]);
+    expect(plan.requiredCommands).toBe(structuredDataCrawlQaRequiredCommands);
+    expect(plan.requiredControls).toBe(structuredDataCrawlQaRequiredControls);
+    expect(plan.requiredEvidence).toBe(structuredDataCrawlQaRequiredEvidence);
     expect(plan.blockers).toContain("Rendered-page crawler tooling must be configured.");
     expect(plan.blockers).toContain("Google Rich Results-compatible structured-data checks must pass.");
     expect(plan.blockers).toContain("Demo schema content must be replaced with production content or documented as intentional.");
     expect(plan.blockers).toContain("Structured-data crawl and rich-results evidence must be attached to closeout.");
   });
-
   it("plans public web launch readiness across static, local-runtime, provider, and asset blockers", () => {
     const plan = buildPublicWebReadinessPlan({
       packageScripts: {
@@ -464,14 +455,14 @@ describe("SEO engine helpers", () => {
         },
       ],
     });
-
     expect(plan.status).toBe("blocked");
     expect(plan.surfaceCount).toBe(4);
     expect(plan.staticDemoSurfaceCount).toBe(2);
     expect(plan.localRuntimeSurfaceCount).toBe(2);
     expect(plan.untestedSurfaces).toEqual(["robots"]);
     expect(plan.placeholderAssetSurfaces).toEqual(["home"]);
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/web build");
+    expect(plan.requiredCommands).toBe(publicWebReadinessRequiredCommands);
+    expect(plan.requiredControls).toBe(publicWebReadinessRequiredControls);
     expect(plan.blockers).toEqual(expect.arrayContaining([
       "Next.js web build has not been verified in the installed workspace.",
       "Public routes that require persistence are still static-demo or local-runtime backed.",
@@ -479,7 +470,6 @@ describe("SEO engine helpers", () => {
       "Public portfolio/media surfaces still depend on placeholder or demo assets.",
     ]));
   });
-
   it("blocks public web launch evidence until build, smoke, accessibility, performance, persistence, media, SEO runtime, CI, and artifacts are proven", () => {
     const plan = buildPublicWebLaunchEvidencePlan({
       packageScripts: {
@@ -495,7 +485,7 @@ describe("SEO engine helpers", () => {
       lighthousePerformancePassed: false,
       apiRoutesUseTenantScopedPersistence: false,
       providerBackedRoutesVerified: false,
-      localRuntimeFallbackDisabledForProduction: false,
+      localRuntimeFallbackDisabledForProduction: true,
       realPortfolioDerivativesConfigured: false,
       placeholderAssetsRemovedOrDocumented: false,
       sitemapRuntimeVerified: true,
@@ -506,23 +496,15 @@ describe("SEO engine helpers", () => {
       ciEvidenceCaptured: false,
       launchArtifactsSecretSafe: false,
     });
-
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["test"]);
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/web build");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "web typecheck, build, and route smoke output",
-      "desktop/mobile Playwright, accessibility, and Lighthouse/performance evidence",
-      "tenant-scoped persistence, provider-backed route, and production local-runtime fallback evidence",
-      "real scanned media derivative evidence and placeholder asset disposition",
-      "runtime sitemap, robots, rendered JSON-LD, and canonical validation evidence",
-      "legal-route review, CI, and secret-safe launch artifact evidence",
-    ]));
+    expect(plan.requiredCommands).toBe(publicWebLaunchEvidenceRequiredCommands);
+    expect(plan.requiredEvidence).toBe(publicWebLaunchEvidenceRequiredEvidence);
     expect(plan.blockers).toContain("@inkroute/web build must pass.");
     expect(plan.blockers).toContain("Public API routes must use tenant-scoped persistence instead of local runtime state in production.");
+    expect(plan.blockers).not.toContain("Local runtime fallback must be disabled or fail-closed for production.");
     expect(plan.blockers).toContain("Public web launch artifacts must be redacted and free of secrets or client-private data.");
   });
-
   it("marks public web launch evidence ready when build, smoke, accessibility, performance, persistence, media, SEO runtime, CI, and artifacts align", () => {
     const plan = buildPublicWebLaunchEvidencePlan({
       packageScripts: {
@@ -550,13 +532,11 @@ describe("SEO engine helpers", () => {
       ciEvidenceCaptured: true,
       launchArtifactsSecretSafe: true,
     });
-
     expect(plan.status).toBe("ready");
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
   });
-
   it("creates city and style SEO briefs with internal link plans", () => {
     const cityPage: SeoCityPage = {
       id: "city_001",
@@ -570,7 +550,6 @@ describe("SEO engine helpers", () => {
       canonicalPath: "/cities/seattle-wa",
       status: "published",
     };
-
     const stylePage: SeoStylePage = {
       id: "style_001",
       tenantId: "tenant_001",
@@ -581,7 +560,6 @@ describe("SEO engine helpers", () => {
       canonicalPath: "/styles/blackwork",
       status: "published",
     };
-
     const travelStop: TravelStop = {
       id: "stop_001",
       tenantId: "tenant_001",
@@ -594,7 +572,6 @@ describe("SEO engine helpers", () => {
       endsAt: "2026-06-04T23:59:59.000Z",
       bookingStatus: "open",
     };
-
     const artist: ArtistProfile = {
       id: "artist_001",
       tenantId: "tenant_001",
@@ -604,7 +581,6 @@ describe("SEO engine helpers", () => {
       specialties: ["blackwork", "ornamental"],
       bookingEnabled: true,
     };
-
     const portfolioItems: PortfolioItem[] = [
       {
         id: "portfolio_001",
@@ -622,29 +598,24 @@ describe("SEO engine helpers", () => {
         isFeatured: true,
       },
     ];
-
     const cityBrief = buildCitySeoBrief({
       cityPage,
       artist,
       travelStops: [travelStop],
       portfolioItems,
     });
-
     const styleBrief = buildStyleSeoBrief({
       stylePage: { ...stylePage, styleName: stylePage.styleName },
       artist,
       portfolioItems,
     });
-
     expect(cityBrief.primaryKeyword).toBe("Seattle tattoo artist");
     expect(cityBrief.internalLinks.length).toBeGreaterThan(0);
     expect(cityBrief.analyticsEvents.some((event) => event.name === "seo_city_waitlist_clicked")).toBe(true);
-
     expect(styleBrief.primaryKeyword).toBe("Blackwork tattoo artist");
     expect(styleBrief.internalLinks.length).toBeGreaterThan(0);
     expect(styleBrief.secondaryKeywords[0]).toBe("blackwork tattoo booking");
   });
-
   it("plans tenant-scoped SEO publish mutations with audit and revalidation writes", () => {
     const route = createSeoRouteRecord({
       path: "/cities/seattle-wa",
@@ -655,7 +626,6 @@ describe("SEO engine helpers", () => {
       region: "WA",
       status: "draft",
     });
-
     const plan = buildSeoPublicationMutationPlan({
       action: "publish",
       model: "SeoCityPage",
@@ -669,7 +639,6 @@ describe("SEO engine helpers", () => {
       relatedReviewIds: ["review_001"],
       relatedImageIds: ["image_001"],
     });
-
     expect(plan.status).toBe("ready");
     expect(plan.canCommit).toBe(true);
     expect(plan.targetStatus).toBe("published");
@@ -681,7 +650,6 @@ describe("SEO engine helpers", () => {
     expect(plan.revalidation.paths).toContain("/cities/seattle-wa");
     expect(plan.idempotencyKey).toContain("tenant_001");
   });
-
   it("blocks SEO mutations for cross-tenant records and unauthorized dashboard roles", () => {
     const route = createSeoRouteRecord({
       path: "/styles/blackwork",
@@ -691,7 +659,6 @@ describe("SEO engine helpers", () => {
       style: "Blackwork",
       status: "draft",
     });
-
     const plan = buildSeoPublicationMutationPlan({
       action: "update",
       model: "SeoStylePage",
@@ -702,14 +669,12 @@ describe("SEO engine helpers", () => {
       existingTenantId: "tenant_other",
       now: "2026-06-08T00:00:00.000Z",
     });
-
     expect(plan.status).toBe("blocked");
     expect(plan.canCommit).toBe(false);
     expect(plan.blockers.join(" ")).toContain("owner or studio_manager");
     expect(plan.blockers.join(" ")).toContain("different tenant");
     expect(plan.writes.some((write) => write.model === "AuditLog")).toBe(true);
   });
-
   it("summarizes SEO publication runtime readiness across dashboard CRUD, Prisma repositories, tenant transactions, audit logs, revalidation, and integration tests", () => {
     const plan = buildSeoPublicationRuntimeReadinessPlan({
       packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
@@ -736,17 +701,15 @@ describe("SEO engine helpers", () => {
       tenantIsolationTestsPassed: true,
       dashboardPublishFlowTestsPassed: true,
     });
-
     expect(plan).toMatchObject({
       status: "ready",
       missingScripts: [],
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Use buildSeoPublicationMutationPlan as the service contract before every database mutation.");
-    expect(plan.requiredCommands).toContain("SEO tenant isolation tests");
+    expect(plan.requiredControls).toBe(seoPublicationRuntimeRequiredControls);
+    expect(plan.requiredCommands).toBe(seoPublicationRuntimeRequiredCommands);
   });
-
   it("blocks SEO publication runtime readiness until dashboard APIs, Prisma repositories, transactions, audit logs, revalidation jobs, and tests exist", () => {
     const plan = buildSeoPublicationRuntimeReadinessPlan({
       packageScripts: { test: "vitest run" },
@@ -773,22 +736,19 @@ describe("SEO engine helpers", () => {
       tenantIsolationTestsPassed: false,
       dashboardPublishFlowTestsPassed: false,
     });
-
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "Prisma migration and SEO repository implementation evidence",
-      "authenticated dashboard SEO CRUD, RBAC, preview, publish, archive, and redirect flow evidence",
-      "tenant-scoped transaction, audit, and idempotency evidence",
-      "SEO association, publish-state, and revalidation job persistence evidence",
-      "SEO Prisma integration, tenant isolation, and dashboard publish-flow test evidence",
-    ]);
-    expect(plan.blockers).toContain("Dashboard SEO CRUD mutation routes must be implemented.");
+    expect(plan.requiredEvidence).toBe(seoPublicationRuntimeRequiredEvidence);
+    expect(plan.blockers).toContain("Dashboard SEO CRUD mutation route evidence must be captured before SEO publication readiness.");
+    expect(plan.blockers).toContain("Dashboard SEO preview-to-publish flow evidence must be captured before SEO publication readiness.");
+    expect(plan.blockers).toContain("Dashboard SEO archive and redirect flow evidence must be captured before SEO publication readiness.");
+    expect(plan.blockers).not.toContain("Dashboard SEO CRUD mutation routes must be implemented.");
+    expect(plan.blockers).not.toContain("Dashboard SEO preview-to-publish flow must be implemented.");
+    expect(plan.blockers).not.toContain("Dashboard SEO archive and redirect flow must be implemented.");
     expect(plan.blockers).toContain("SEO publication mutations must run inside Prisma transactions.");
     expect(plan.blockers).toContain("SEO revalidation jobs must persist after publication commits.");
     expect(plan.blockers).toContain("Dashboard SEO publish/edit/archive flow tests must pass.");
   });
-
   it("resolves tenant canonical domains while excluding draft and noindex routes from sitemap entries", () => {
     const published = createSeoRouteRecord({
       path: "/cities/seattle-wa",
@@ -818,7 +778,6 @@ describe("SEO engine helpers", () => {
       indexMode: "noindex",
       tenantSlug: "inkroute-demo",
     });
-
     const policy = resolveTenantCanonicalPolicy({
       requestHost: "www.inkroute.example",
       requestPath: "/cities/seattle-wa",
@@ -836,7 +795,6 @@ describe("SEO engine helpers", () => {
       ],
       routes: [published, draft, noindex],
     });
-
     expect(policy.hostAllowed).toBe(true);
     expect(policy.shouldRedirectHost).toBe(true);
     expect(policy.shouldForceHttps).toBe(true);
@@ -845,7 +803,6 @@ describe("SEO engine helpers", () => {
     expect(policy.noindexPaths).toEqual(["/booking/confirmation", "/cities/draft"]);
     expect(policy.blockers).toHaveLength(0);
   });
-
   it("reports unregistered hosts and duplicate canonical paths before publishing", () => {
     const first = createSeoRouteRecord({
       path: "/styles/blackwork",
@@ -865,7 +822,6 @@ describe("SEO engine helpers", () => {
       status: "published",
       tenantSlug: "inkroute-demo",
     });
-
     const policy = resolveTenantCanonicalPolicy({
       requestHost: "evil.example",
       requestPath: "/styles/blackwork",
@@ -881,13 +837,11 @@ describe("SEO engine helpers", () => {
       ],
       routes: [first, duplicate],
     });
-
     expect(policy.hostAllowed).toBe(false);
     expect(policy.duplicateCanonicalPaths).toEqual(["/styles/blackwork"]);
     expect(policy.blockers.join(" ")).toContain("not registered");
     expect(policy.blockers.join(" ")).toContain("Duplicate canonical paths");
   });
-
   it("summarizes canonical/domain runtime readiness across middleware, repositories, redirects, sitemap exclusion, noindex, custom domains, and deployment proof", () => {
     const plan = buildCanonicalDomainRuntimeReadinessPlan({
       packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
@@ -910,17 +864,15 @@ describe("SEO engine helpers", () => {
       duplicateCanonicalRuntimeTestsPassed: true,
       deploymentDomainProofAvailable: true,
     });
-
     expect(plan).toMatchObject({
       status: "ready",
       missingScripts: [],
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Execute persisted tenant-scoped SeoRedirect records with their configured status codes.");
-    expect(plan.requiredCommands).toContain("runtime sitemap exclusion and noindex route tests");
+    expect(plan.requiredControls).toBe(canonicalDomainRuntimeRequiredControls);
+    expect(plan.requiredCommands).toBe(canonicalDomainRuntimeRequiredCommands);
   });
-
   it("blocks canonical/domain runtime readiness until middleware, repositories, redirects, sitemap/noindex assertions, custom-domain tests, and deployment proof exist", () => {
     const plan = buildCanonicalDomainRuntimeReadinessPlan({
       packageScripts: { test: "vitest run" },
@@ -943,22 +895,19 @@ describe("SEO engine helpers", () => {
       duplicateCanonicalRuntimeTestsPassed: false,
       deploymentDomainProofAvailable: false,
     });
-
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "public middleware/route canonical policy and allowed-host validation evidence",
-      "tenant domain and SeoRedirect repository runtime evidence",
-      "HTTPS/canonical host redirect, status-code, and canonical tag evidence",
-      "sitemap exclusion, noindex, and duplicate canonical runtime test evidence",
-      "custom-domain route test and deployment-domain proof evidence",
-    ]);
-    expect(plan.blockers).toContain("Public canonical/domain middleware or route handler must be implemented.");
+    expect(plan.requiredEvidence).toBe(canonicalDomainRuntimeRequiredEvidence);
+    expect(plan.blockers).toContain("Public canonical/domain middleware or route handler evidence must be captured before canonical-domain readiness.");
+    expect(plan.blockers).not.toContain("Public canonical/domain middleware or route handler must be implemented.");
+    expect(plan.blockers).toContain("TenantDomain repository runtime evidence must be captured before canonical-domain readiness.");
+    expect(plan.blockers).toContain("SeoRedirect repository runtime evidence must be captured before canonical-domain readiness.");
+    expect(plan.blockers).not.toContain("Tenant domain repository must be implemented.");
+    expect(plan.blockers).not.toContain("SeoRedirect repository must be implemented.");
     expect(plan.blockers).toContain("Persisted SeoRedirect records must execute at runtime.");
     expect(plan.blockers).toContain("Runtime sitemap must exclude draft, archived, private, and noindex content.");
     expect(plan.blockers).toContain("Deployment-domain proof must show configured tenant primary and allowed hosts.");
   });
-
   it("builds tenant-scoped redirect and noindex decisions", () => {
     const route = createSeoRouteRecord({
       path: "/cities/seattle-wa",
@@ -978,7 +927,6 @@ describe("SEO engine helpers", () => {
       region: "WA",
       status: "draft",
     });
-
     const redirect = buildSeoRedirectDecision({
       tenantId: "tenant_001",
       path: "/old-seattle",
@@ -987,13 +935,11 @@ describe("SEO engine helpers", () => {
     const allowed = buildSeoRedirectDecision({ tenantId: "tenant_001", path: "/cities/seattle-wa", route, rules: [] });
     const privateRoute = buildSeoRedirectDecision({ tenantId: "tenant_001", path: "/cities/private-preview", route: draft, rules: [] });
     const missing = buildSeoRedirectDecision({ tenantId: "tenant_001", path: "/missing", rules: [] });
-
     expect(redirect).toMatchObject({ action: "redirect", destinationPath: "/cities/seattle-wa", statusCode: 308, shouldIndex: false });
     expect(allowed).toMatchObject({ action: "allow", shouldIndex: true });
     expect(privateRoute).toMatchObject({ action: "noindex", shouldIndex: false });
     expect(missing).toMatchObject({ action: "not_found", shouldIndex: false });
   });
-
   it("blocks Search Console provider operations without credentials or tenant ownership", () => {
     const missingCredentials = buildSearchConsoleOperationPlan({
       operation: "submit_sitemap",
@@ -1012,7 +958,6 @@ describe("SEO engine helpers", () => {
       credentialsConfigured: true,
       propertyOwnerTenantId: "tenant_other",
     });
-
     expect(missingCredentials.status).toBe("blocked");
     expect(missingCredentials.canExecuteProviderCall).toBe(false);
     expect(missingCredentials.blockers.join(" ")).toContain("credentials");
@@ -1022,7 +967,6 @@ describe("SEO engine helpers", () => {
     expect(tenantMismatch.propertyType).toBe("domain");
     expect(tenantMismatch.verificationMethod).toBe("dns_txt");
   });
-
   it("plans Search Console sitemap submission and query/page imports as credential-gated tenant writes", () => {
     const sitemap = buildSearchConsoleOperationPlan({
       operation: "submit_sitemap",
@@ -1042,7 +986,6 @@ describe("SEO engine helpers", () => {
       propertyOwnerTenantId: "tenant_001",
       dateRangeDays: 28,
     });
-
     expect(sitemap.status).toBe("ready");
     expect(sitemap.canExecuteProviderCall).toBe(true);
     expect(sitemap.steps[0]).toMatchObject({
@@ -1055,7 +998,6 @@ describe("SEO engine helpers", () => {
     expect(importPlan.steps[0]?.providerEndpoint).toBe("searchconsole.searchanalytics.query");
     expect(importPlan.dashboardStatus).toBe("ready_for_provider");
   });
-
   it("summarizes Search Console runtime readiness across provider execution, verified properties, sitemap submission, imports, indexing monitoring, dashboard status, audit, and idempotency", () => {
     const plan = buildSearchConsoleRuntimeReadinessPlan({
       packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
@@ -1079,17 +1021,15 @@ describe("SEO engine helpers", () => {
       auditLogPersistenceAvailable: true,
       idempotencyStoreAvailable: true,
     });
-
     expect(plan).toMatchObject({
       status: "ready",
       missingScripts: [],
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Submit sitemaps only for verified properties owned by the tenant.");
-    expect(plan.requiredCommands).toContain("verified test-property sitemap submission smoke");
+    expect(plan.requiredControls).toBe(searchConsoleRuntimeRequiredControls);
+    expect(plan.requiredCommands).toBe(searchConsoleRuntimeRequiredCommands);
   });
-
   it("blocks Search Console runtime readiness until credentialed provider routes, tenant ownership proof, sitemap submission, imports, dashboard status, audit, and idempotency exist", () => {
     const plan = buildSearchConsoleRuntimeReadinessPlan({
       packageScripts: { test: "vitest run" },
@@ -1113,22 +1053,19 @@ describe("SEO engine helpers", () => {
       auditLogPersistenceAvailable: false,
       idempotencyStoreAvailable: false,
     });
-
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "credential-managed provider route/job execution evidence",
-      "tenant ownership persistence, ownership checks, and verified property proof evidence",
-      "verified-property sitemap submission evidence",
-      "query/page import, persisted rows, indexing monitoring, and dashboard status evidence",
-      "fixture/provider execution, audit, and idempotency evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(searchConsoleRuntimeRequiredEvidence);
+    expect(plan.blockers).toContain("Search Console provider route evidence must be captured before Search Console readiness.");
+    expect(plan.blockers).toContain("Search Console background job evidence must be captured before Search Console readiness.");
     expect(plan.blockers).toContain("Google Search Console credentials must be configured in a secret store.");
     expect(plan.blockers).toContain("Sitemap must be submitted for a verified test property.");
-    expect(plan.blockers).toContain("Dashboard Search Console import/monitoring status must be implemented.");
+    expect(plan.blockers).toContain("Dashboard Search Console import/monitoring status evidence must be captured before Search Console readiness.");
+    expect(plan.blockers).not.toContain("Search Console provider routes must be implemented.");
+    expect(plan.blockers).not.toContain("Search Console background jobs must be implemented.");
+    expect(plan.blockers).not.toContain("Dashboard Search Console import/monitoring status must be implemented.");
     expect(plan.blockers).toContain("Search Console operation idempotency store must be available.");
   });
-
   it("plans public image SEO derivatives while keeping source uploads private", () => {
     const item: PortfolioItem = {
       id: "portfolio_image_001",
@@ -1145,7 +1082,6 @@ describe("SEO engine helpers", () => {
       altText: "Healed blackwork sleeve tattoo",
       isFeatured: true,
     };
-
     const plan = buildSeoImagePipelinePlan({
       item,
       tenantSlug: "inkroute-demo",
@@ -1156,7 +1092,6 @@ describe("SEO engine helpers", () => {
       formats: ["webp", "avif"],
       now: "2026-06-08T00:00:00.000Z",
     });
-
     expect(plan.blockers).toHaveLength(0);
     expect(plan.sourceRemainsPrivate).toBe(true);
     expect(plan.requiresExifStrip).toBe(true);
@@ -1164,15 +1099,16 @@ describe("SEO engine helpers", () => {
     expect(plan.requiresBlurPlaceholder).toBe(true);
     expect(plan.derivatives).toHaveLength(4);
     expect(plan.derivatives.every((derivative) => derivative.acl === "public")).toBe(true);
+    expect(plan.derivatives.every((derivative) => derivative.blurDataUrl.startsWith("data:image/svg+xml;utf8,"))).toBe(true);
     expect(plan.derivatives[0]).toMatchObject({
       label: "thumbnail",
       width: 320,
       format: "webp",
+      blurDataUrl: expect.stringContaining("svg"),
       cacheControl: "public, max-age=31536000, immutable",
     });
     expect(plan.derivatives[0]?.publicUrl).toContain("https://cdn.inkroute.example/inkroute-demo/portfolio/portfolio_image_001");
   });
-
   it("blocks image SEO publication when originals are public or review text is missing", () => {
     const item: PortfolioItem = {
       id: "portfolio_image_002",
@@ -1188,20 +1124,17 @@ describe("SEO engine helpers", () => {
       altText: "",
       isFeatured: false,
     };
-
     const plan = buildSeoImagePipelinePlan({
       item,
       tenantSlug: "inkroute-demo",
       sourceObjectKey: "tenant_001/public/originals/untitled-flash.jpg",
       sourceAcl: "public",
     });
-
     expect(plan.sourceRemainsPrivate).toBe(false);
     expect(plan.blockers.join(" ")).toContain("Original portfolio uploads must remain private");
     expect(plan.blockers.join(" ")).toContain("Reviewed alt text");
     expect(plan.blockers.join(" ")).toContain("Reviewed caption");
   });
-
   it("summarizes image SEO pipeline runtime readiness across processing workers, storage metadata, ACLs, CDN headers, and Lighthouse audits", () => {
     const plan = buildSeoImagePipelineRuntimeReadinessPlan({
       packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
@@ -1226,17 +1159,15 @@ describe("SEO engine helpers", () => {
       cdnHeaderTestsPassed: true,
       lighthouseImageAuditPassed: true,
     });
-
     expect(plan).toMatchObject({
       status: "ready",
       missingScripts: [],
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Keep original uploads private and strip EXIF before creating public derivatives.");
-    expect(plan.requiredCommands).toContain("Lighthouse image optimization audit");
+    expect(plan.requiredCommands).toBe(seoImagePipelineRequiredCommands);
+    expect(plan.requiredControls).toBe(seoImagePipelineRequiredControls);
   });
-
   it("blocks image SEO pipeline runtime readiness until processing, persistence, ACL, CDN, and Lighthouse evidence exist", () => {
     const plan = buildSeoImagePipelineRuntimeReadinessPlan({
       packageScripts: { test: "vitest run" },
@@ -1261,22 +1192,25 @@ describe("SEO engine helpers", () => {
       cdnHeaderTestsPassed: false,
       lighthouseImageAuditPassed: false,
     });
-
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "storage-backed image processing worker and upload test evidence",
-      "dimension probe, EXIF stripping, responsive derivative, and blur placeholder evidence",
-      "FileAsset, PortfolioImage, and derivative metadata persistence evidence",
-      "private original and public derivative ACL/load test evidence",
-      "CDN cache header, immutable URL, and Lighthouse image audit evidence",
-    ]);
-    expect(plan.blockers).toContain("Image processing worker must be implemented.");
+    expect(plan.requiredCommands).toBe(seoImagePipelineRequiredCommands);
+    expect(plan.requiredControls).toBe(seoImagePipelineRequiredControls);
+    expect(plan.requiredEvidence).toBe(seoImagePipelineRequiredEvidence);
+    expect(plan.blockers).toContain("Image processing worker evidence must be captured before image pipeline readiness.");
+    expect(plan.blockers).toContain("Source image dimension probing evidence must be captured before image pipeline readiness.");
+    expect(plan.blockers).toContain("EXIF stripping evidence must be captured before public derivative creation readiness.");
+    expect(plan.blockers).toContain("Responsive WebP/AVIF/JPEG derivative generation evidence must be captured before image pipeline readiness.");
+    expect(plan.blockers).not.toContain("Image processing worker must be implemented.");
+    expect(plan.blockers).not.toContain("Source image dimension probing must be implemented.");
+    expect(plan.blockers).not.toContain("EXIF stripping must be implemented before public derivative creation.");
+    expect(plan.blockers).not.toContain("Responsive WebP/AVIF/JPEG derivative generation must be implemented.");
+    expect(plan.blockers).toContain("Blur placeholder generation proof must be captured for storage-backed derivatives.");
+    expect(plan.blockers).not.toContain("Blur placeholder generation must be implemented.");
     expect(plan.blockers).toContain("Private original ACL enforcement must be verified.");
     expect(plan.blockers).toContain("CDN cache header tests must pass.");
     expect(plan.blockers).toContain("Lighthouse image optimization audit must pass.");
   });
-
   it("summarizes SEO automated test readiness across helpers, snapshots, preview routes, linked runtime evidence, and CI gates", () => {
     const plan = buildSeoAutomatedTestReadinessPlan({
       packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
@@ -1300,26 +1234,24 @@ describe("SEO engine helpers", () => {
       crawlEvidenceCoveredByGap073: true,
       ciRunsSeoTestGate: true,
     });
-
     expect(plan).toMatchObject({
       status: "ready",
       missingScripts: [],
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredSuites).toContain("JSON-LD graph and structured-data snapshot tests");
-    expect(plan.requiredCommands).toContain("CI SEO package and preview route test gate");
+    expect(plan.requiredSuites).toEqual(expect.arrayContaining(["JSON-LD graph and structured-data snapshot tests"]));
+    expect(plan.requiredCommands).toBe(seoAutomatedTestReadinessRequiredCommands);
   });
-
   it("blocks SEO automated test readiness until helper, preview route, linked runtime, crawl, and CI evidence exist", () => {
     const plan = buildSeoAutomatedTestReadinessPlan({
       packageScripts: { test: "vitest run" },
       seoPackageTestsPassed: true,
       seoPackageTypecheckPassed: false,
-      routeRecordTestsPassed: true,
-      sitemapGenerationTestsPassed: true,
-      metadataDraftTestsPassed: true,
-      auditTestsPassed: true,
+      routeRecordTestsPassed: false,
+      sitemapGenerationTestsPassed: false,
+      metadataDraftTestsPassed: false,
+      auditTestsPassed: false,
       contentBriefTestsPassed: false,
       internalLinkTestsPassed: false,
       jsonLdGraphTestsPassed: false,
@@ -1334,21 +1266,15 @@ describe("SEO engine helpers", () => {
       crawlEvidenceCoveredByGap073: false,
       ciRunsSeoTestGate: false,
     });
-
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "content brief, internal-link, JSON-LD, and structured-data snapshot test output",
-      "image pipeline, canonical/redirect, and Search Console planner test output",
-      "web sitemap, SEO preview, and sitemap preview route test output",
-      "linked GAP-073/GAP-076 runtime evidence and CI SEO test-gate evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(seoAutomatedTestReadinessRequiredEvidence);
+    expect(plan.requiredCommands).toBe(seoAutomatedTestReadinessRequiredCommands);
     expect(plan.blockers).toContain("City/style content brief tests must pass.");
     expect(plan.blockers).toContain("SEO preview route tests must pass.");
     expect(plan.blockers).toContain("Runtime/build evidence must be covered by GAP-076.");
     expect(plan.blockers).toContain("CI must run the SEO package and preview route test gate.");
   });
-
   it("blocks SEO accessibility and performance audit evidence until browser, schema, axe, Lighthouse, mobile, CI, and safe artifacts exist", () => {
     const plan = buildSeoA11yPerformanceAuditEvidencePlan({
       packageScripts: { test: "vitest run" },
@@ -1368,30 +1294,16 @@ describe("SEO engine helpers", () => {
       ciArtifactsCaptured: false,
       secretSafeArtifactsCaptured: false,
     });
-
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "browser crawl for public Phase 10 routes",
-      "schema validator for rendered JSON-LD",
-      "axe accessibility audit for public routes",
-      "Lighthouse/Core Web Vitals audit",
-      "mobile visual QA sweep",
-    ]));
-    expect(plan.requiredControls).toContain("Audit rendered routes, not only package-level metadata helpers.");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "web typecheck and production build evidence",
-      "browser crawl, sitemap/canonical, schema validator, and structured-data snapshot evidence",
-      "axe accessibility audit output plus heading/focus/contrast fix evidence",
-      "Lighthouse and Core Web Vitals evidence for launch-critical routes",
-      "mobile visual QA screenshots or transcript evidence",
-      "CI artifact bundle with redaction/secret-safety proof",
-    ]));
+    expect(plan.requiredCommands).toBe(seoA11yPerformanceAuditRequiredCommands);
+    expect(plan.requiredControls).toBe(seoA11yPerformanceAuditRequiredControls);
+    expect(plan.requiredCommands).toEqual(seoA11yPerformanceAuditRequiredCommands);
+    expect(plan.requiredEvidence).toBe(seoA11yPerformanceAuditRequiredEvidence);
     expect(plan.blockers).toContain("Browser crawl must cover public home, portfolio, booking, travel, FAQ, city, style, privacy, and legal routes.");
     expect(plan.blockers).toContain("axe accessibility audit must pass for launch-critical public routes.");
     expect(plan.blockers).toContain("SEO/accessibility/performance artifacts must be redacted and free of secrets, client-private data, raw medical notes, private file URLs, and provider tokens.");
   });
-
   it("marks SEO accessibility and performance audit evidence ready when rendered-route audits and artifacts align", () => {
     const plan = buildSeoA11yPerformanceAuditEvidencePlan({
       packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
@@ -1411,13 +1323,13 @@ describe("SEO engine helpers", () => {
       ciArtifactsCaptured: true,
       secretSafeArtifactsCaptured: true,
     });
-
     expect(plan).toMatchObject({
       status: "ready",
       missingScripts: [],
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Validate JSON-LD, sitemap, canonical URLs, and internal links against browser-visible output.");
+    expect(plan.requiredCommands).toBe(seoA11yPerformanceAuditRequiredCommands);
+    expect(plan.requiredControls).toBe(seoA11yPerformanceAuditRequiredControls);
   });
 });

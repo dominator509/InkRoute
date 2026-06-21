@@ -10,7 +10,7 @@ import "./globals.css";
 
 export const metadata = {
   title: "InkRoute Dashboard",
-  description: "Private artist/admin dashboard scaffold for InkRoute Suite.",
+  description: "Private artist/admin dashboard control surface for InkRoute Suite.",
   robots: { index: false, follow: false },
 };
 

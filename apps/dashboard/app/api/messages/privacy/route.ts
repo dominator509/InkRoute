@@ -14,18 +14,20 @@ function parseRole(value: unknown): MessagingRole {
   return typeof value === "string" && roles.includes(value as MessagingRole) ? (value as MessagingRole) : "artist";
 }
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
     assertPermission(actor, "message:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to inspect messaging privacy controls." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to inspect messaging privacy controls." } }, { status: 403, headers: noStoreHeaders });
   }
   const tenantId = request.nextUrl.searchParams.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot inspect messaging privacy for another tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot inspect messaging privacy for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
-  return NextResponse.json({ ok: true, tenantId, contract: messagingPrivacyContract, gapIds: ["GAP-068"] }, { headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json({ ok: true, tenantId, contract: messagingPrivacyContract, gapIds: ["GAP-068"] }, { headers: noStoreHeaders });
 }
 
 export async function POST(request: NextRequest) {
@@ -33,19 +35,19 @@ export async function POST(request: NextRequest) {
   try {
     assertPermission(actor, "message:write");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to plan messaging privacy mutations." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to plan messaging privacy mutations." } }, { status: 403, headers: noStoreHeaders });
   }
 
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "INVALID_MESSAGING_PRIVACY_JSON", message: "Messaging privacy request body must be valid JSON." } }, { status: 400 });
+    return NextResponse.json({ ok: false, error: { code: "INVALID_MESSAGING_PRIVACY_JSON", message: "Messaging privacy request body must be valid JSON." } }, { status: 400, headers: noStoreHeaders });
   }
 
   const tenantId = typeof body.tenantId === "string" ? body.tenantId : actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot plan messaging privacy mutations for another tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot plan messaging privacy mutations for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const plan = buildMessagingPrivacyPlanFromRequest({
@@ -68,6 +70,31 @@ export async function POST(request: NextRequest) {
     idempotencyKey: typeof body.idempotencyKey === "string" ? body.idempotencyKey : `messaging-privacy:${tenantId}:${body.action ?? "authorize_message_view"}`,
   });
 
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      {
+        ok: false,
+        tenantId,
+        error: {
+          code: "MESSAGING_PRIVACY_WORKFLOW_PERSISTENCE_NOT_CONFIGURED",
+          message:
+            "Production messaging privacy mutations require durable MessagePrivacyEvent, MessageAuditLog, IdempotencyKey, export/delete/retention workflow, moderation, and attachment authorization persistence; local-contract fallback responses are disabled.",
+          gapIds: ["GAP-068"],
+        },
+        plan,
+        requiredRepositoryMethods: messagingPrivacyContract.requiredRepositoryMethods,
+        productionBoundary: {
+          messagingPrivacyLocalContractFallbackDisabled: true,
+          requiresPrivacyWorkflowPersistence: true,
+          requiresAuditAndIdempotencyPersistence: true,
+          requiresSecureAttachmentAuthorization: true,
+          gapIds: ["GAP-068"],
+        },
+      },
+      { status: 503, headers: noStoreHeaders },
+    );
+  }
+
   return NextResponse.json(
     {
       ok: plan.status === "ready",
@@ -75,8 +102,8 @@ export async function POST(request: NextRequest) {
       plan,
       requiredRepositoryMethods: messagingPrivacyContract.requiredRepositoryMethods,
       gapIds: ["GAP-068"],
-      boundary: "Messaging privacy POST returns redaction/export/delete/retention/moderation plans; durable workflow repositories remain required for live execution.",
+      boundary: "Messaging privacy POST returns the local redaction/export/delete/retention/moderation contract; durable workflow repositories remain required for live execution.",
     },
-    { status: plan.status === "ready" ? 202 : 409, headers: { "Cache-Control": "no-store" } },
+    { status: plan.status === "ready" ? 202 : 409, headers: noStoreHeaders },
   );
 }

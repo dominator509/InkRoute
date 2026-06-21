@@ -42,5 +42,9 @@ describe("mobile API client static contract", () => {
     expect(bookingScreenSource).toContain("mobileApiSyncPreview");
     expect(bookingScreenSource).toContain("Typed client ready");
     expect(bookingScreenSource).toContain("provider auth and seeded API smoke");
+    expect(bookingScreenSource).toContain("mobileBookingLifecycleActionContract");
+    expect(bookingScreenSource).toContain("lifecycle contract ready");
+    expect(bookingScreenSource).toContain("provider execution gated");
+    expect(bookingScreenSource).not.toContain("Actions disabled");
   });
 });

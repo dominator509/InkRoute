@@ -1,0 +1,166 @@
+﻿project_name: "InkRoute"
+languages:
+- typescript
+- markdown
+- yaml
+- json
+- powershell
+encoding: "utf-8"
+line_ending: native
+ignore_all_files_in_gitignore: true
+additional_workspace_folders:
+- .serena/memories/inkroute
+- .github/workflows
+- apps/dashboard
+- apps/mobile
+- apps/web
+- docs/ai
+- docs/handoff
+- docs/quality
+- docs/workspace
+- packages/analytics
+- packages/auth
+- packages/booking
+- packages/calendar
+- packages/config
+- packages/db
+- packages/deployment
+- packages/handoff
+- packages/mobile
+- packages/notifications
+- packages/observability
+- packages/payments
+- packages/quality
+- packages/releases
+- packages/security
+- packages/seo
+- packages/testing
+- packages/types
+- packages/ui
+- packages/validators
+- packages/workspace
+- scripts
+- spec
+ignored_paths:
+- .codex/**
+- node_modules/**
+- .git/**
+- .turbo/**
+- .next/**
+- .open-next/**
+- .vercel/**
+- .wrangler/**
+- .expo/**
+- apps/mobile/.expo/**
+- coverage/**
+- coverage.lcov-report/**
+- test-results/**
+- testing/artifacts/**
+- playwright-report/**
+- blob-report/**
+- dist/**
+- build/**
+- out/**
+- .cache/**
+- .pnpm-store/**
+- .vitest/**
+- .parcel-cache/**
+- .swc/**
+- .nyc_output/**
+- .claude/**
+- .serena/cache/**
+- .obsidian/**
+- **/.obsidian/**
+- **/.trash/**
+- **/.DS_Store
+- **/*.tsbuildinfo
+- **/*.tsbuildinfo.*
+- **/*.log
+- **/*.tmp
+- **/*.bak
+- **/*.map
+- **/.env
+- **/.env.*
+- **/.envrc
+- **/*.pem
+- **/*.key
+- **/*.crt
+- **/*.p12
+- **/*.sqlite
+- **/*.sqlite3
+- **/*.db
+- **/*.db-journal
+- **/*.snap
+- **/*.lock
+- GAP_TRACKER.md
+- pnpm-lock.yaml
+- package-lock.json
+- yarn.lock
+- **/generated/**
+- **/__generated__/**
+- docs/ai/repomix-summary.xml
+- docs/**/manifests/*.json
+- spec/retrofit/**
+- prisma/generated/**
+- **/prisma/generated/**
+- android/**/build/**
+- ios/**/Pods/**
+read_only: false
+excluded_tools: []
+included_optional_tools: []
+fixed_tools: []
+default_modes: []
+added_modes: []
+symbol_info_budget: 0.4
+read_only_memory_patterns:
+- "^archive/.*"
+ignored_memory_patterns:
+- "^scratch/.*"
+initial_prompt: |
+  InkRoute is a pnpm/Turborepo TypeScript monorepo. Serena is a one-jump router, not a research phase.
+
+  Default route:
+  - Exact file, route, helper, package, assertion, gap row, dependency, script, or CI seam known: skip Serena and Obsidian; use RTK on the exact repo slice.
+  - Serena/Obsidian/RTK workflow optimization: edit the known workflow surfaces directly; do not call Serena or Obsidian as ceremony.
+  - A bare mention of Serena or Obsidian is not tooling mode by itself; classify by concrete intent unless the task is about configuring, optimizing, routing, bootstrapping, or maintaining the tool workflow.
+  - Owner unknown: one Serena owner lookup, then RTK-read the located slice.
+  - Shared exported contract changes and call sites are unclear: one Serena references lookup.
+  - Prior accepted architecture/API decision changes the edit: read one targeted InkRoute Obsidian note.
+  - Tool is unavailable, noisy, credential-gated, or ambiguous after one follow-up: stop and use scoped RTK search.
+
+  RTK command policy:
+  - Use rtk proxy powershell -NoProfile -Command <scoped command> for PowerShell builtins and pipelines.
+  - Escape dollar signs as backtick-dollar inside RTK-proxied PowerShell command strings so variables survive the outer shell.
+  - Do not require RTK in package scripts, CI, provider commands, or production automation.
+
+  Authoritative anchors: AGENTS.md, CLAUDE.md, docs/ai/REPO_BRIEF.md, docs/ai/ARCHITECTURE_MAP.md, docs/ai/API_CONTRACTS.md, docs/ai/SERENA_OBSIDIAN_WORKFLOW.md, GAP_TRACKER.md, spec/PROJECT_STATE.md, spec/HANDOFF.md, and spec/HANDOFF_QUEUE.md.
+  GAP_TRACKER.md is intentionally ignored by Serena indexing because it is a tracker ledger, not semantic code. Read exact rows through RTK when tracker truth is needed.
+
+  Fast cards:
+  - .serena/memories/inkroute/quickstart.md
+  - .serena/memories/inkroute/current-gap-batch.md
+  - .serena/memories/inkroute/continuation-handoff.md
+  - .serena/memories/inkroute/exact-seam-protocol.md
+  - .serena/memories/inkroute/gap-closure-fast-path.md
+  - .serena/memories/inkroute/one-shot-protocol.md
+  - .serena/memories/inkroute/ci-fix-intake.md
+  - .serena/memories/inkroute/routing-contract.md
+  - .serena/memories/inkroute/tool-admission.md
+  - .serena/memories/inkroute/workflow-optimizer.md
+  - .serena/memories/inkroute/rtk-powershell.md
+
+  Active gap-batch bias: when source/test/tracker helper-identity work is already in motion, continue the exact row -> owner source -> static test -> tracker loop. Do not reopen Serena or Obsidian between rows.
+  Continuation bias: when a compacted summary, active goal, or handoff names the current runtime, static test, tracker row, artifact-identity seam, helper-identity seam, package loop, or next target, classify it as gap-batch. Treat it as the task brief, not evidence. Read only the exact current repo slices, skip Obsidian, and skip Serena unless ownership or exported references are genuinely unknown.
+
+  Workflow/tooling surfaces: docs/ai/SERENA_OBSIDIAN_WORKFLOW.md, .serena/project.yml, .serena/memories/inkroute/*, scripts/workflow/route-serena-obsidian.mjs, scripts/bootstrap-obsidian-vault.ps1, and package.json workflow scripts.
+  Workflow/tooling optimization: patch these known surfaces directly, never use Serena or Obsidian as a ceremony step, and refresh local vault notes only when repo-owned Obsidian note text must mirror the new contract.
+  Obsidian bootstrap shortcuts: workflow:obsidian preserves existing app config, workflow:obsidian:daily creates today's local scratch note, workflow:obsidian:daily:open creates today's scratch note and opens the vault, workflow:obsidian:refresh refreshes repo-owned notes/templates, workflow:obsidian:force-config refreshes app/workspace config, and workflow:obsidian:refresh-all refreshes both notes and config.
+  Tool admission: use rtk pnpm workflow:admit -- <task text> when the only question is whether Serena or Obsidian should be used. It prints the quickest classification, start, live tool ceilings, minimumFiles, next action, and done shape.
+  Operator intake: use rtk pnpm workflow:intake -- <task text> as the first move when a task is fuzzy, resumed, delegated, or at risk of becoming evidence collection. It prints the strict compact packet: classification, start, live and conditional tool ceilings, minimumFiles, next, evidence, done, strictRule, and stopRule.
+  Hot start: use rtk pnpm workflow:hotstart -- <task text> for resumed or fuzzy work that needs one-screen route output with live and conditional Serena/Obsidian ceilings. It is an alias for workflow:route:hot.
+  Codex hot path: use rtk pnpm workflow:codex -- <task text> as the default first move for fuzzy, resumed, delegated, or evidence-prone Codex work. It is the same hot route with a name that matches the operator.
+  Stoplight path: use rtk pnpm workflow:stoplight -- <task text> when the only decision is whether Serena or Obsidian should be admitted. It is the same micro route with a clearer operator name.
+  Router machine output: use rtk pnpm workflow:route:json -- <task text> for delegated agents or scripts that need stable fields. Treat route, budget, minimumFileSet, entrypoints, evidence, done, and stopRule as ceilings, not new research requirements. Budget includes numeric serenaLookups, obsidianNotes, obsidianReads, obsidianWrites, conditionalSerenaLookups, conditionalObsidianReads, and conditionalObsidianWrites fields so agents can distinguish immediate tool admission from guarded fallbacks. Entrypoints names the repo docs, Serena cards, or Obsidian notes for the lane; it is a shortcut, not a mandate to read all of them. minimumFileSet names the coherent first-pass files to read before patching.
+  Route packet: use rtk pnpm workflow:route:brief -- <task text> when a hot local task needs the lowest-noise route. Use rtk pnpm workflow:route:hot -- <task text> when a resumed, fuzzy, or evidence-prone task needs live and conditional tool ceilings plus the stop rule without full packet prose. Use rtk pnpm workflow:route:packet -- <task text> when a human or delegated agent needs evidence/stop details. Use rtk pnpm workflow:route:strict -- <task text> when context is hot or the user is pushing against evidence collection. Execute the compact packet first: classification, start, live Serena/Obsidian ceilings, minimumFiles, next, evidence, done, and stopRule. Do not read every entrypoint. Start with the start entrypoint only if the next patch is not already obvious.
+
+  One-shot discipline: name the smallest coherent file set, read each required file once, patch once, and do not run validation unless explicitly asked.

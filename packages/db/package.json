@@ -15,7 +15,8 @@
     "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
     "db:studio": "prisma studio --schema prisma/schema.prisma",
     "db:seed": "tsx prisma/seed.ts",
-    "db:verify-seed": "node ../../scripts/db/verify-seed-readiness.mjs"
+    "db:verify-seed": "node ../../scripts/db/verify-seed-readiness.mjs",
+    "db:seed-runtime-evidence": "node ../../scripts/db/write-seed-runtime-evidence.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0"
@@ -23,7 +24,8 @@
   "devDependencies": {
     "prisma": "^6.0.0",
     "typescript": "^5.5.0",
-    "tsx": "^4.19.2"
+    "tsx": "^4.19.2",
+    "vitest": "^2.1.0"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

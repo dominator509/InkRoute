@@ -12,6 +12,10 @@ function readWorkspaceFile(path: string): string {
 describe("mobile QA execution static contract", () => {
   const qaSource = readWorkspaceFile("apps/mobile/src/lib/mobileQa.ts");
   const appSource = readWorkspaceFile("apps/mobile/App.tsx");
+  const mobileDemoSource = readWorkspaceFile("apps/mobile/src/lib/mobileDemo.ts");
+  const bookingScreen = readWorkspaceFile("apps/mobile/src/screens/BookingRequestsScreen.tsx");
+  const travelUpdateScreen = readWorkspaceFile("apps/mobile/src/screens/TravelUpdateScreen.tsx");
+  const portfolioUploadScreen = readWorkspaceFile("apps/mobile/src/screens/PortfolioUploadScreen.tsx");
 
   it("maps every registered screen to an app render contract", () => {
     for (const screen of mobileScreenRegistry) {
@@ -28,13 +32,53 @@ describe("mobile QA execution static contract", () => {
   });
 
   it("links new mobile runtime contracts into QA evidence slots", () => {
+    expect(qaSource).toContain("Booking API sync and lifecycle action contract render smoke.");
     expect(qaSource).toContain("Push registration/delivery/tap contract render smoke.");
     expect(qaSource).toContain("Offline queue/reconnect contract render smoke.");
     expect(qaSource).toContain("Crash and OTA contract render smoke.");
   });
 
+  it("surfaces mobile booking lifecycle actions as a local contract, not disabled actions", () => {
+    expect(mobileDemoSource).toContain("buildMobileBookingLifecycleActionContract");
+    expect(mobileDemoSource).toContain("mobileBookingLifecycleActionContract");
+    expect(bookingScreen).toContain("lifecycle contract ready");
+    expect(bookingScreen).toContain("provider execution gated");
+    expect(bookingScreen).toContain("state events, calendar checks, notification handoff, audit logs");
+    expect(bookingScreen).not.toContain("Actions disabled");
+  });
+
+  it("surfaces mobile portfolio upload as a provider-gated contract, not an absent implementation", () => {
+    expect(portfolioUploadScreen).toContain("metadata and upload-intent contract are wired");
+    expect(portfolioUploadScreen).toContain("Mobile upload contract flow");
+    expect(portfolioUploadScreen).toContain("object keys");
+    expect(portfolioUploadScreen).toContain("signed provider storage remains runtime-gated");
+    expect(portfolioUploadScreen).toContain("Object key contract");
+    expect(mobileDemoSource).toContain("buildMobileUploadIntentContract");
+    expect(mobileDemoSource).toContain("mobilePortfolioUploadContract.objectKey");
+    expect(mobileDemoSource).toContain("Metadata and upload-intent contracts are wired");
+    expect(portfolioUploadScreen).not.toContain("Static mobile upload flow");
+    expect(mobileDemoSource).not.toContain("signed uploads are not wired");
+    expect(portfolioUploadScreen).not.toContain("Storage remains scaffolded only");
+  });
+
+  it("surfaces mobile travel publishing as a local contract, not a disabled implementation", () => {
+    expect(mobileDemoSource).toContain("buildMobileTravelPublishContract");
+    expect(mobileDemoSource).toContain("mobileTravelPublishContract");
+    expect(travelUpdateScreen).toContain("Travel publish contract");
+    expect(travelUpdateScreen).toContain("local contract ready");
+    expect(travelUpdateScreen).toContain("provider execution gated");
+    expect(travelUpdateScreen).toContain("request-id and idempotency headers");
+    expect(travelUpdateScreen).not.toContain("Publishing disabled");
+  });
+
   it("enforces secret-safe mobile QA artifacts", () => {
+    expect(qaSource).toContain("MobileQaArtifactBundle");
+    expect(qaSource).toContain("buildMobileQaArtifactBundles");
+    expect(qaSource).toContain("coverage/mobile-qa-artifacts/${checklistId}.redacted.json");
+    expect(qaSource).toContain('"provider-receipt"');
+    expect(qaSource).toContain('"redaction-review-required"');
     expect(qaSource).toContain("free of secrets, PII, medical details, payment data, and raw push tokens");
+    expect(qaSource).toContain("Retain each checklist bundle");
     expect(qaSource).toContain("Do not mark mobile runtime QA ready");
   });
 

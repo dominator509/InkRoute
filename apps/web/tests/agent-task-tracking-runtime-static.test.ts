@@ -1,15 +1,29 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   agentTaskTrackingDefaultLabels,
+  agentTaskTrackingRuntimeExternalArtifacts,
+  agentTaskTrackingRuntimeExternalCommands,
+  agentTaskTrackingRuntimeLocalArtifacts,
+  agentTaskTrackingRuntimeLocalCommands,
   agentTaskTrackingRuntimeArtifactPaths,
   agentTaskTrackingRuntimeCommands,
+  agentTaskTrackingRuntimeExecutionPolicy,
   agentTaskTrackingRuntimeMatrix,
+  agentTaskTrackingRuntimeProofFiles,
   agentTaskTrackingRuntimeReadiness,
+  agentTaskTrackingRuntimeRequiredExternalEvidence,
   agentTaskTrackingRunPersistenceContract,
+  agentTaskTrackingRequiredEvidence,
   agentTaskTrackingTargets,
   agentTaskTrackingTaskIds,
+  agentTaskTrackingReadinessRequiredEvidence,
+  buildAgentTaskTrackingDecisionRequiredEvidence,
+  buildAgentTaskTrackingEvidenceDecision,
+  buildAgentTaskTrackingRuntimeArtifactReview,
+  buildAgentTaskTrackingRuntimeExecutionPlan,
+  buildRedactedAgentTaskTrackingArtifact,
 } from "../lib/agentTaskTrackingRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -51,8 +65,12 @@ describe("agent task tracking runtime contract", () => {
       "pnpm handoff:verify-task-sync",
       "gh issue create or GitHub issue automation",
       "GitHub Project item sync",
+      "link redacted issue/project labels from handoff docs",
+      "link tracking evidence from GAP_TRACKER rows",
+      "trace status updates between queue, issues/projects, ledger, and gap tracker",
       "pnpm handoff:verify-ledger",
       "pnpm handoff:audit",
+      "capture CI agent task tracking artifacts",
     ]);
     expect(agentTaskTrackingRuntimeMatrix.map((entry) => entry.id)).toEqual([
       "task-sync-verifier",
@@ -61,8 +79,10 @@ describe("agent task tracking runtime contract", () => {
       "handoff-doc-links",
       "gap-tracker-links",
       "status-traceability",
+      "ci-task-tracking-artifacts",
     ]);
     expect(agentTaskTrackingRuntimeArtifactPaths).toContain("coverage/agent-task-tracking-issue-create-redacted.json");
+    expect(agentTaskTrackingRuntimeArtifactPaths).toContain("coverage/agent-task-tracking-ci-run-redacted.json");
     expect(agentTaskTrackingRuntimeArtifactPaths).toContain("test-results/agent-task-tracking-runtime");
   });
 
@@ -87,15 +107,8 @@ describe("agent task tracking runtime contract", () => {
     expect(agentTaskTrackingRuntimeReadiness.unknownIssueTaskIds).toEqual([]);
     expect(agentTaskTrackingRuntimeReadiness.incompleteIssueTaskIds).toEqual([]);
     expect(agentTaskTrackingRuntimeReadiness.unsafeTrackingFields).toEqual([]);
-    expect(agentTaskTrackingRuntimeReadiness.requiredCommands).toEqual([...agentTaskTrackingRuntimeCommands]);
-    expect(agentTaskTrackingRuntimeReadiness.requiredEvidence).toEqual([
-      "One redacted issue label or URL for every queued agent task.",
-      "Project item labels or documented blocker for every tracked task.",
-      "Labels for agent-task, gap-tracked, verification-required, target, and priority.",
-      "Gap IDs and acceptance evidence fields on every issue.",
-      "Handoff docs and GAP_TRACKER.md links to tracking evidence.",
-      "Traceable status updates from issue/project state into the execution ledger.",
-    ]);
+    expect(agentTaskTrackingRuntimeReadiness.requiredCommands).toBe(agentTaskTrackingRuntimeCommands);
+    expect(agentTaskTrackingRuntimeReadiness.requiredEvidence).toBe(agentTaskTrackingReadinessRequiredEvidence);
     expect(agentTaskTrackingRuntimeReadiness.blockers).toEqual([
       "pnpm handoff:verify-task-sync must pass.",
       "GitHub issues must be created for every queued agent task.",
@@ -106,6 +119,87 @@ describe("agent task tracking runtime contract", () => {
     ]);
   });
 
+  it("blocks agent task tracking closure until issue, project, artifact, command, persistence, and traceability proof exist", () => {
+    const decision = buildAgentTaskTrackingEvidenceDecision({
+      verifierPassed: true,
+      queueIssueParityVerified: true,
+      defaultLabelsApplied: true,
+      targetPriorityLabelsApplied: false,
+      gapIdsLinked: true,
+      acceptanceEvidenceFieldsLinked: false,
+      githubIssuesCreated: false,
+      githubProjectItemsLinked: false,
+      redactedTrackingUrlsRecorded: false,
+      handoffDocsLinked: false,
+      gapTrackerLinked: false,
+      statusUpdatesTraceable: false,
+      ciTaskTrackingArtifactsCaptured: false,
+      agentTaskTrackingRunPersisted: false,
+      capturedArtifacts: [
+        "coverage/agent-task-tracking-runtime.json",
+        "coverage/agent-task-tracking-sync-verifier.json",
+      ],
+      completedCommands: ["pnpm handoff:verify-task-sync"],
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.missingArtifacts).toEqual([
+      "coverage/agent-task-tracking-issue-create-redacted.json",
+      "coverage/agent-task-tracking-project-sync-redacted.json",
+      "coverage/agent-task-tracking-doc-links.json",
+      "coverage/agent-task-tracking-gap-links.json",
+      "coverage/agent-task-tracking-status-traceability.json",
+      "coverage/agent-task-tracking-ci-run-redacted.json",
+      "test-results/agent-task-tracking-runtime",
+    ]);
+    expect(decision.missingCommands).toEqual([
+      "gh issue create or GitHub issue automation",
+      "GitHub Project item sync",
+      "link redacted issue/project labels from handoff docs",
+      "link tracking evidence from GAP_TRACKER rows",
+      "trace status updates between queue, issues/projects, ledger, and gap tracker",
+      "pnpm handoff:verify-ledger",
+      "pnpm handoff:audit",
+      "capture CI agent task tracking artifacts",
+    ]);
+    expect(decision.requiredArtifacts).toBe(agentTaskTrackingRuntimeArtifactPaths);
+    expect(decision.requiredCommands).toBe(agentTaskTrackingRuntimeCommands);
+    expect(decision.requiredEvidence).toBe(agentTaskTrackingRequiredEvidence);
+    expect(agentTaskTrackingRequiredEvidence).toEqual(
+      buildAgentTaskTrackingDecisionRequiredEvidence(agentTaskTrackingReadinessRequiredEvidence),
+    );
+    expect(decision.blockers).toContain("GitHub issues must be created for every queued agent task.");
+    expect(decision.blockers).toContain("Target and priority labels must be applied to every tracked issue.");
+    expect(decision.blockers).toContain("AgentTaskTrackingRun persistence row must be captured for durable traceability.");
+    expect(decision.blockers).toContain("Every required agent task tracking artifact must be captured.");
+  });
+
+  it("completes agent task tracking closure when GitHub sync, traceability, persistence, artifacts, and commands are proven", () => {
+    const decision = buildAgentTaskTrackingEvidenceDecision({
+      verifierPassed: true,
+      queueIssueParityVerified: true,
+      defaultLabelsApplied: true,
+      targetPriorityLabelsApplied: true,
+      gapIdsLinked: true,
+      acceptanceEvidenceFieldsLinked: true,
+      githubIssuesCreated: true,
+      githubProjectItemsLinked: true,
+      redactedTrackingUrlsRecorded: true,
+      handoffDocsLinked: true,
+      gapTrackerLinked: true,
+      statusUpdatesTraceable: true,
+      ciTaskTrackingArtifactsCaptured: true,
+      agentTaskTrackingRunPersisted: true,
+      capturedArtifacts: agentTaskTrackingRuntimeArtifactPaths,
+      completedCommands: agentTaskTrackingRuntimeCommands,
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.missingArtifacts).toEqual([]);
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.blockers).toEqual([]);
+  });
+
   it("wires CI, manifest, tracker, and artifact capture without claiming GitHub sync is complete", () => {
     expect(ciWorkflow).toContain("Run Phase 16 agent task tracking runtime contracts");
     expect(ciWorkflow).toContain("agent-task-tracking-runtime-static.test.ts");
@@ -113,6 +207,32 @@ describe("agent task tracking runtime contract", () => {
     expect(unitManifest).toContain("unit-web-agent-task-tracking-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/agentTaskTrackingRuntime.ts");
     expect(gapTracker).toContain("live GitHub issue/project creation and traceable status-update proof remain open");
+    expect(gapTracker).toContain("GAP-123 is agent-task-tracking-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("buildAgentTaskTrackingRuntimeExecutionPlan");
+    expect(gapTracker).toContain("agentTaskTrackingRuntimeExecutionPolicy");
+    expect(gapTracker).toContain("agentTaskTrackingReadinessRequiredEvidence");
+    expect(gapTracker).toContain("agentTaskTrackingRequiredEvidence");
+    expect(gapTracker).toContain("agentTaskTrackingRuntimeRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildAgentTaskTrackingRuntimeArtifactReview");
+  });
+
+  it("pins current agent task tracking runtime proof files for GAP-123", () => {
+    expect(agentTaskTrackingRuntimeProofFiles).toEqual(
+      expect.arrayContaining([
+      "docs/handoff/AGENT_EXECUTION_QUEUE.md",
+      "packages/handoff/src/index.ts",
+        "docs/handoff/manifests/agent-execution-queue.json",
+        "docs/handoff/manifests/agent-task-tracking-sync.json",
+        "scripts/handoff/verify-agent-task-sync.mjs",
+        "apps/web/lib/agentTaskTrackingRuntime.ts",
+        "apps/web/tests/agent-task-tracking-runtime-static.test.ts",
+        "packages/db/prisma/migrations/20260609025000_add_agent_task_tracking_runs/migration.sql",
+        ".github/workflows/ci.yml"
+      ])
+    );
+    for (const file of agentTaskTrackingRuntimeProofFiles) {
+      expect(readRepoFile(file).length).toBeGreaterThan(0);
+    }
   });
 
   it("pins durable AgentTaskTrackingRun persistence for GitHub issue/project traceability proof", () => {
@@ -149,4 +269,98 @@ describe("agent task tracking runtime contract", () => {
     expect(unitManifest).toContain("AgentTaskTrackingRun Prisma model and app row contract");
     expect(gapTracker).toContain("packages/db/prisma/migrations/20260609025000_add_agent_task_tracking_runs/migration.sql");
   });
+
+  it("keeps GitHub task tracking execution disabled while splitting local verifier proof from external sync proof", () => {
+    const plan = buildAgentTaskTrackingRuntimeExecutionPlan();
+
+    expect(plan.localCommands).toBe(agentTaskTrackingRuntimeLocalCommands);
+    expect(plan.externalCommands).toBe(agentTaskTrackingRuntimeExternalCommands);
+    expect(plan.localArtifacts).toBe(agentTaskTrackingRuntimeLocalArtifacts);
+    expect(plan.externalArtifacts).toBe(agentTaskTrackingRuntimeExternalArtifacts);
+    expect(plan.localArtifacts).toEqual([
+      "coverage/agent-task-tracking-runtime.json",
+      "coverage/agent-task-tracking-sync-verifier.json",
+      "test-results/agent-task-tracking-runtime",
+    ]);
+    expect(plan.externalArtifacts).toEqual(
+      expect.arrayContaining([
+        "coverage/agent-task-tracking-issue-create-redacted.json",
+        "coverage/agent-task-tracking-project-sync-redacted.json",
+        "coverage/agent-task-tracking-doc-links.json",
+        "coverage/agent-task-tracking-gap-links.json",
+        "coverage/agent-task-tracking-status-traceability.json",
+        "coverage/agent-task-tracking-ci-run-redacted.json",
+      ]),
+    );
+    expect(plan.taskSyncVerifierExecutionAllowed).toBe(false);
+    expect(plan.githubIssueCreationAllowed).toBe(false);
+    expect(plan.githubProjectSyncAllowed).toBe(false);
+    expect(plan.handoffDocLinkExecutionAllowed).toBe(false);
+    expect(plan.gapTrackerLinkExecutionAllowed).toBe(false);
+    expect(plan.statusTraceabilityExecutionAllowed).toBe(false);
+    expect(plan.ledgerVerificationExecutionAllowed).toBe(false);
+    expect(plan.handoffAuditExecutionAllowed).toBe(false);
+    expect(plan.ciArtifactExecutionAllowed).toBe(false);
+    expect(plan.persistenceExecutionAllowed).toBe(false);
+    expect(plan.executionPolicy).toBe(agentTaskTrackingRuntimeExecutionPolicy);
+    expect(plan.executionPolicy).toEqual({
+      codexMayClassifyQueueAndTrackingLabels: true,
+      githubIssueCreationRequiresApprovedGhContext: true,
+      githubProjectSyncRequiresApprovedGhContext: true,
+      redactedTrackingUrlsOnly: true,
+      statusTraceabilityRequiredForClosure: true,
+      providerDatabaseRequiredForPersistence: true,
+    });
+    expect(plan.externalEvidenceRequired).toBe(agentTaskTrackingRuntimeRequiredExternalEvidence);
+  });
+
+  it("redacts agent task tracking artifacts before review or persistence", () => {
+    const rawArtifact = {
+      issueUrl: "https://github.com/dominator509/InkRoute/issues/123",
+      projectItemUrl: "https://github.com/orgs/dominator509/projects/1/views/1?pane=issue&itemId=project_issue_123",
+      trackingUrl: "https://github.com/dominator509/InkRoute/issues/123#status",
+      githubPayload: { actorEmail: "owner@example.com", token: "ghp_secret" },
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/123456",
+      nested: {
+        authorization: "Bearer task-tracking-token",
+        tenantId: "tenant_demo",
+        phone: "+1 555 232 1111",
+      },
+    };
+    const redacted = buildRedactedAgentTaskTrackingArtifact(rawArtifact);
+    const review = buildAgentTaskTrackingRuntimeArtifactReview("coverage/agent-task-tracking-issue-create-redacted.json", rawArtifact);
+    const serialized = JSON.stringify(review);
+
+    expect(JSON.stringify(redacted)).not.toContain("github.com/dominator509");
+    expect(serialized).not.toContain("owner@example.com");
+    expect(serialized).not.toContain("ghp_secret");
+    expect(serialized).not.toContain("Bearer task-tracking-token");
+    expect(serialized).not.toContain("tenant_demo");
+    expect(serialized).not.toContain("+1 555 232 1111");
+    expect(serialized).not.toContain("project_issue_123");
+    expect(review.containsUnredactedSensitiveValues).toBe(false);
+    expect(review.redactions).toEqual(
+      expect.arrayContaining([
+        "authorization",
+        "ciRunUrl",
+        "githubPayload",
+        "issueUrl",
+        "phone",
+        "projectItemUrl",
+        "trackingUrl",
+      ]),
+    );
+    expect(review.externalEvidenceRequired).toBe(agentTaskTrackingRuntimeRequiredExternalEvidence);
+    expect(review.externalEvidenceRequired).toEqual(
+      expect.arrayContaining([
+        "GitHub issue creation and Project sync must be performed only in approved GitHub context with tracking URLs redacted.",
+        "Handoff doc links, GAP_TRACKER links, and status traceability artifacts must redact issue URLs, project item URLs, actors, and private metadata.",
+        "CI agent task tracking artifacts must redact run URLs, tokens, provider labels, and raw logs before retention.",
+        "AgentTaskTrackingRun persistence must execute only against an approved provider-backed database.",
+      ]),
+    );
+  });
 });
+
+
+

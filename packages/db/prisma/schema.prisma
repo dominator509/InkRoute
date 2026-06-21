@@ -355,6 +355,10 @@ model Tenant {
   messages         Message[]
   notifications    Notification[]
   notificationDeliveries NotificationDelivery[]
+  notificationProviderHandoffs NotificationProviderHandoff[]
+  providerEvents   ProviderEvent[]
+  notificationChannelPreferences NotificationChannelPreference[]
+  notificationSuppressions NotificationSuppression[]
   reviews          Review[]
   seoCityPages     SeoCityPage[]
   seoStylePages    SeoStylePage[]
@@ -428,7 +432,18 @@ model Tenant {
   seoA11yPerformanceAuditRuns SeoA11yPerformanceAuditRun[]
   bookingFlowRuntimeRuns BookingFlowRuntimeRun[]
   bookingPersistenceApiRuns BookingPersistenceApiRun[]
+  analyticsEvents  AnalyticsEvent[]
+  campaigns        Campaign[]
+  searchConsoleImportedRows SearchConsoleImportedRow[]
+  searchConsoleOperationRuns SearchConsoleOperationRun[]
+  idempotencyKeys  IdempotencyKey[]
+  notificationReadStates NotificationReadState[]
+  notificationDeliveryStatusTransitions NotificationDeliveryStatusTransition[]
   errors           ErrorReport[]
+  providerWebhookDeliveries ProviderWebhookDelivery[]
+  alertDeliveries  AlertDelivery[]
+  githubIssueLinks GithubIssueLink[]
+  releaseIncidentLinks ReleaseIncidentLink[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
 
@@ -875,6 +890,85 @@ model BookingRequest {
   @@index([clientId, createdAt])
 }
 
+model AnalyticsEvent {
+  id               String   @id @default(cuid())
+  tenantId         String
+  name             String
+  payload          Json
+  bookingRequestId String?
+  portfolioItemId  String?
+  source           String?
+  medium           String?
+  campaign         String?
+  idempotencyKey   String?
+  occurredAt       DateTime @default(now())
+  createdAt        DateTime @default(now())
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, name, occurredAt])
+  @@index([tenantId, campaign])
+  @@index([tenantId, bookingRequestId])
+  @@index([tenantId, portfolioItemId])
+}
+
+model Campaign {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  source              String?
+  medium              String?
+  campaign            String
+  firstSeenAt         DateTime @default(now())
+  lastSeenAt          DateTime @default(now())
+  eventCount          Int      @default(0)
+  bookingRequestCount Int      @default(0)
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, source, medium, campaign])
+  @@index([tenantId, lastSeenAt])
+}
+
+model SearchConsoleImportedRow {
+  id          String   @id @default(cuid())
+  tenantId    String
+  siteUrl     String
+  query       String
+  page        String
+  clicks      Int      @default(0)
+  impressions Int      @default(0)
+  ctr         Float?
+  position    Float?
+  rangeStart  DateTime
+  rangeEnd    DateTime
+  importedAt  DateTime @default(now())
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, siteUrl, query, page, rangeStart, rangeEnd])
+  @@index([tenantId, importedAt])
+  @@index([tenantId, query])
+  @@index([tenantId, page])
+}
+
+model SearchConsoleOperationRun {
+  id             String   @id @default(cuid())
+  tenantId       String
+  runId          String
+  operation      String
+  siteUrl        String
+  status         String
+  idempotencyKey String
+  artifactManifest Json
+  providerMetadata Json?
+  startedAt      DateTime @default(now())
+  completedAt    DateTime?
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey])
+  @@unique([tenantId, runId])
+  @@index([tenantId, operation, status])
+  @@index([tenantId, startedAt])
+}
+
 model BookingStateEvent {
   id               String           @id @default(cuid())
   tenantId         String
@@ -1169,6 +1263,16 @@ model FileAsset {
   checksumSha256   String?
   publicUrl        String?
   signedUrlExpiresAt DateTime?
+  scanStatus       String          @default("pending")
+  detectedMimeType String?
+  malwareVerdict   String?
+  scanProvider     String?
+  scanCheckedAt    DateTime?
+  quarantineReason String?
+  derivativeObjectKey String?
+  derivativeMimeType String?
+  metadataStripped Boolean         @default(false)
+  storageVisibility String?
   metadata         Json?
   tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   uploadedByUser   User?           @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
@@ -1183,6 +1287,8 @@ model FileAsset {
   @@unique([bucket, objectKey])
   @@index([tenantId, kind])
   @@index([tenantId, visibility])
+  @@index([tenantId, scanStatus])
+  @@index([tenantId, derivativeObjectKey])
 }
 
 model SignedUrlGrant {
@@ -1294,6 +1400,7 @@ model Notification {
   bookingRequest   BookingRequest?     @relation(fields: [bookingRequestId], references: [id], onDelete: SetNull)
   appointment      Appointment?        @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   deliveries       NotificationDelivery[]
+  providerHandoffs NotificationProviderHandoff[]
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
 
@@ -1316,12 +1423,169 @@ model NotificationDelivery {
   deliveredAt    DateTime?
   tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   notification   Notification        @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  statusTransitions NotificationDeliveryStatusTransition[]
+  providerHandoffs NotificationProviderHandoff[]
+  providerEvents ProviderEvent[]
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
   @@index([tenantId, status])
   @@index([notificationId])
   @@index([providerMessageId])
+}
+
+model NotificationDeliveryStatusTransition {
+  id             String             @id @default(cuid())
+  tenantId       String
+  deliveryId     String
+  fromStatus     NotificationStatus?
+  toStatus       NotificationStatus
+  actorUserId    String?
+  reason         String
+  metadata       Json?
+  createdAt      DateTime           @default(now())
+  tenant         Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  delivery       NotificationDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, deliveryId, createdAt])
+  @@index([tenantId, toStatus])
+}
+
+model NotificationProviderHandoff {
+  id               String               @id @default(cuid())
+  tenantId         String
+  notificationId   String
+  deliveryId       String
+  threadId         String?
+  messageId        String?
+  channel          NotificationChannel
+  provider         String
+  state            String               @default("queued")
+  idempotencyKey   String
+  destinationHash  String?
+  sanitizedPayload Json
+  attempts         Int                  @default(0)
+  availableAt      DateTime             @default(now())
+  lockedAt         DateTime?
+  processedAt      DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  tenant           Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  notification     Notification         @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  delivery         NotificationDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey, provider])
+  @@index([tenantId, state, availableAt])
+  @@index([tenantId, deliveryId])
+  @@index([tenantId, notificationId])
+}
+
+model ProviderEvent {
+  id                String                @id @default(cuid())
+  tenantId          String
+  deliveryId        String?
+  provider          String
+  eventId           String
+  eventType         String
+  providerMessageId String?
+  normalizedStatus  NotificationStatus?
+  idempotencyKey    String
+  payloadSummary    Json
+  replayDetected    Boolean               @default(false)
+  rawPayloadStored  Boolean               @default(false)
+  processedAt       DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  tenant            Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  delivery          NotificationDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, provider, eventId])
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, provider, eventType, createdAt])
+  @@index([tenantId, providerMessageId])
+  @@index([tenantId, replayDetected])
+}
+
+model NotificationChannelPreference {
+  id               String              @id @default(cuid())
+  tenantId         String
+  subjectType      String
+  subjectId        String
+  channel          NotificationChannel
+  optedIn          Boolean             @default(true)
+  quietHoursStart  String?
+  quietHoursEnd    String?
+  timezone         String?
+  rateLimitWindow  String?
+  rateLimitCount   Int?
+  source           String              @default("preference_center")
+  metadata         Json?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, subjectType, subjectId, channel])
+  @@index([tenantId, channel, optedIn])
+  @@index([tenantId, subjectType, subjectId])
+}
+
+model NotificationSuppression {
+  id                String              @id @default(cuid())
+  tenantId          String
+  channel           NotificationChannel
+  provider          String?
+  destinationHash   String
+  reason            String
+  source            String
+  providerEventId   String?
+  active            Boolean             @default(true)
+  rawPayloadStored  Boolean             @default(false)
+  metadata          Json?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  expiresAt         DateTime?
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, channel, destinationHash, reason])
+  @@index([tenantId, channel, active])
+  @@index([tenantId, provider, source])
+  @@index([tenantId, expiresAt])
+}
+
+model IdempotencyKey {
+  id          String   @id @default(cuid())
+  tenantId    String
+  scope       String
+  key         String
+  status      String   @default("claimed")
+  result      Json?
+  metadata    Json?
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, scope, key])
+  @@index([tenantId, scope, status])
+  @@index([tenantId, expiresAt])
+}
+
+model NotificationReadState {
+  id          String   @id @default(cuid())
+  tenantId    String
+  threadId    String
+  messageId   String?
+  actorUserId String?
+  clientId    String?
+  readAt      DateTime @default(now())
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, threadId, actorUserId, clientId])
+  @@index([tenantId, threadId, readAt])
+  @@index([tenantId, messageId])
 }
 
 model Review {
@@ -3924,12 +4188,97 @@ model ErrorReport {
   userAgent      String?
   metadata       Json?
   tenant         Tenant?           @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  providerWebhookDeliveries ProviderWebhookDelivery[]
+  alertDeliveries AlertDelivery[]
+  githubIssueLink GithubIssueLink?
+  releaseIncidentLinks ReleaseIncidentLink[]
   createdAt      DateTime          @default(now())
   resolvedAt     DateTime?
 
   @@index([tenantId, severity, createdAt])
   @@index([tenantId, status])
   @@index([stackHash])
+}
+
+model ProviderWebhookDelivery {
+  id                    String            @id @default(cuid())
+  tenantId              String
+  provider              String
+  providerDeliveryId    String
+  idempotencyKey        String
+  providerFingerprint   String?
+  errorReportId         String?
+  action                String
+  targetErrorStatus     ErrorReportStatus @default(open)
+  statusMutationApplied Boolean           @default(false)
+  rawPayloadStored      Boolean           @default(false)
+  sanitizedPayload      Json
+  replayedAt            DateTime?
+  processedAt           DateTime          @default(now())
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  tenant                Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  errorReport           ErrorReport?      @relation(fields: [errorReportId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, providerDeliveryId])
+  @@unique([provider, idempotencyKey])
+  @@index([tenantId, processedAt])
+  @@index([tenantId, providerFingerprint])
+  @@index([errorReportId])
+}
+
+model AlertDelivery {
+  id                       String       @id @default(cuid())
+  tenantId                 String
+  errorReportId            String?
+  fingerprint              String
+  provider                 String
+  route                    String
+  deliveryState            String
+  acknowledgementState     String
+  retryPolicy              String
+  deadLetterState          String
+  attemptCount             Int          @default(0)
+  nextAttemptAt            DateTime?
+  acknowledgedAt           DateTime?
+  providerCallbackReceivedAt DateTime?
+  sanitizedPayload         Json
+  providerCallbackPayload  Json?
+  suppressExternalDelivery Boolean      @default(false)
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+  tenant                   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  errorReport              ErrorReport? @relation(fields: [errorReportId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, deliveryState, createdAt])
+  @@index([tenantId, acknowledgementState])
+  @@index([tenantId, fingerprint])
+  @@index([errorReportId])
+}
+
+model GithubIssueLink {
+  id                       String      @id @default(cuid())
+  tenantId                 String
+  errorReportId            String      @unique
+  approvalAuditLogId       String
+  provider                 String      @default("github")
+  repository               String
+  issueUrl                 String
+  issueNumber              Int?
+  dispatchState            String
+  reportFingerprint        String
+  dashboardStatusSynced    Boolean     @default(true)
+  providerDispatchExecuted Boolean     @default(false)
+  rawProviderPayloadStored Boolean     @default(false)
+  artifactPaths            Json
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime    @updatedAt
+  tenant                   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  errorReport              ErrorReport @relation(fields: [errorReportId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, repository, issueNumber])
+  @@index([tenantId, dispatchState, createdAt])
+  @@index([tenantId, reportFingerprint])
 }
 
 model ReleaseRecord {
@@ -3948,11 +4297,42 @@ model ReleaseRecord {
   mobileRuntimeVersion String?
   tenant          Tenant?        @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   releasedByUser  User?          @relation(fields: [releasedByUserId], references: [id], onDelete: SetNull)
+  incidentLinks   ReleaseIncidentLink[]
   createdAt       DateTime       @default(now())
 
   @@index([tenantId, channel, createdAt])
   @@index([version, channel])
   @@index([ciWorkflowRunId])
+}
+
+model ReleaseIncidentLink {
+  id                              String         @id @default(cuid())
+  tenantId                        String
+  releaseRecordId                 String?
+  releaseId                       String
+  releaseVersion                  String
+  environment                     String
+  errorReportId                   String
+  auditLogId                      String
+  incidentStatus                  String
+  rollbackRequested               Boolean        @default(false)
+  tenantCommunicationOwner        String
+  rollbackCommunicationHandoffPersisted Boolean  @default(false)
+  tenantScopedIncidentIsolationVerified Boolean  @default(false)
+  sanitizedPayloadsVerified       Boolean        @default(false)
+  liveProviderEvidenceCaptured    Boolean        @default(false)
+  rawPayloadStored                Boolean        @default(false)
+  artifactPaths                   Json
+  createdAt                       DateTime       @default(now())
+  updatedAt                       DateTime       @updatedAt
+  tenant                          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  releaseRecord                   ReleaseRecord? @relation(fields: [releaseRecordId], references: [id], onDelete: SetNull)
+  errorReport                     ErrorReport    @relation(fields: [errorReportId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, releaseId, errorReportId])
+  @@index([tenantId, releaseVersion, environment])
+  @@index([releaseRecordId])
+  @@index([errorReportId])
 }
 
 model FeatureFlag {

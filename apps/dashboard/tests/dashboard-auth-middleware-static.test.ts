@@ -5,26 +5,31 @@ import { describe, expect, it } from "vitest";
 const middlewareSource = readFileSync(join(process.cwd(), "apps/dashboard/middleware.ts"), "utf8");
 
 describe("dashboard auth middleware contract", () => {
-  it("requires a production session cookie before protected dashboard routes continue", () => {
-    expect(middlewareSource).toContain('runtimeEnvironment() === "production"');
-    expect(middlewareSource).toContain("!isDashboardAuthPublicPath(request.nextUrl.pathname)");
-    expect(middlewareSource).toContain("!hasSessionCookie(request)");
-    expect(middlewareSource).toContain("buildUnauthenticatedDashboardResponse(request)");
+  it("applies the shared dashboard route guard before protected routes continue", () => {
+    expect(middlewareSource).toContain("const guardedPathPattern");
+    expect(middlewareSource).toContain("guardedPathPattern.test(path)");
+    expect(middlewareSource).toContain("resolveDashboardActor(request)");
+    expect(middlewareSource).toContain("evaluateDashboardRouteGuard");
+    expect(middlewareSource).toContain("toTenantAccessContext(actor)");
+    expect(middlewareSource).toContain('permission: "booking:read"');
   });
 
-  it("keeps login and tenant switch routes public while preserving next redirects", () => {
-    expect(middlewareSource).toContain('const authPublicPathPrefixes = ["/login", "/tenant-switcher"]');
-    expect(middlewareSource).toContain('loginUrl.pathname = "/login"');
-    expect(middlewareSource).toContain('loginUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`)');
+  it("preserves login and tenant-switch redirects with no-store auth guard headers", () => {
+    expect(middlewareSource).toContain('guard.action === "redirect_login" || guard.action === "redirect_tenant_switch"');
+    expect(middlewareSource).toContain('guard.redirectTo ?? "/login"');
+    expect(middlewareSource).toContain('new URL(`/login?next=${encodeURIComponent(path)}`, request.url)');
+    expect(middlewareSource).toContain('response.headers.set("Cache-Control", "no-store")');
+    expect(middlewareSource).toContain('response.headers.set("x-inkroute-dashboard-auth-guard"');
   });
 
-  it("rejects unauthenticated dashboard APIs with 401 before CSRF handling", () => {
-    const authGateIndex = middlewareSource.indexOf("productionAuthRequired && !hasSessionCookie(request)");
+  it("rejects cookie-authenticated dashboard mutations with CSRF before protected route auth handling", () => {
     const csrfIndex = middlewareSource.indexOf("const csrf = csrfTokenIsValid(request)");
+    const guardIndex = middlewareSource.indexOf("resolveDashboardActor(request)");
 
-    expect(authGateIndex).toBeGreaterThan(-1);
-    expect(csrfIndex).toBeGreaterThan(authGateIndex);
-    expect(middlewareSource).toContain('code: "AUTH_REQUIRED"');
-    expect(middlewareSource).toContain("{ status: 401 }");
+    expect(csrfIndex).toBeGreaterThan(-1);
+    expect(guardIndex).toBeGreaterThan(csrfIndex);
+    expect(middlewareSource).toContain("cookieAuthenticatedMutation && !csrf.valid");
+    expect(middlewareSource).toContain('code: "CSRF_TOKEN_REQUIRED"');
+    expect(middlewareSource).toContain("headers: noStoreHeaders");
   });
 });

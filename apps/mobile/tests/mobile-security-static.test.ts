@@ -14,6 +14,8 @@ describe("mobile Phase 13 security runtime surface", () => {
     const demo = readWorkspaceFile("apps/mobile/src/lib/mobileDemo.ts");
 
     expect(screen).toContain("Security posture");
+    expect(screen).toContain("Phase 13 controls");
+    expect(screen).toContain("local runtime contracts");
     expect(screen).toContain("Privacy and upload preview");
     expect(screen).toContain("Tenant isolation tests");
     expect(screen).toContain("mobileSecuritySummary");
@@ -24,6 +26,8 @@ describe("mobile Phase 13 security runtime surface", () => {
     expect(demo).toContain("mobileTenantIsolationFixtures");
     expect(demo).toContain("mobilePrivacyDraft");
     expect(demo).toContain("mobileUploadValidationPreview");
+    expect(screen).not.toContain("Phase 13 scaffold");
+    expect(screen).not.toContain("local-control contracts");
   });
 
   it("keeps mobile security status explicitly non-production until provider-backed verification runs", () => {

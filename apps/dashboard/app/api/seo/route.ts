@@ -74,6 +74,8 @@ function routeRecordFor(model: SeoPublishableModel, action: SeoPublicationAction
   };
 }
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 function mutationResponse(plan: ReturnType<typeof buildSeoPublicationMutationPlan>, status = 200, extra: Record<string, unknown> = {}) {
   return NextResponse.json(
     {
@@ -83,7 +85,7 @@ function mutationResponse(plan: ReturnType<typeof buildSeoPublicationMutationPla
       boundary: "SEO publication mutations are tenant-scoped, RBAC-gated, transaction-backed, audited, and revalidation-ready.",
       ...extra,
     },
-    { status, headers: { "Cache-Control": "no-store" } },
+    { status, headers: noStoreHeaders },
   );
 }
 
@@ -92,18 +94,35 @@ export async function GET(request: NextRequest) {
   try {
     assertPermission(actor, "seo:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read SEO records." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read SEO records." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const params = new URL(request.url).searchParams;
   const tenantId = params.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query SEO records for another tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query SEO records for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const limit = Math.min(Math.max(Number(params.get("limit") ?? 100), 1), 200);
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
+            message: "Production dashboard SEO reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
+            gapIds: ["GAP-037", "GAP-071", "GAP-072", "GAP-076"],
+          },
+          productionBoundary: { localDashboardReadFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     return NextResponse.json(
       {
         ok: true,
@@ -115,7 +134,7 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-037", "GAP-071", "GAP-072", "GAP-076"],
         boundary: "Local fallback returns demo SEO route records only; database mode is required for live SEO reads.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   }
 
@@ -254,7 +273,7 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-037", "GAP-071", "GAP-072", "GAP-076"],
         boundary: "Dashboard SEO reads are tenant-scoped, no-store, and audited; publish/revalidation/Search Console writes remain gated.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
@@ -266,11 +285,11 @@ export async function GET(request: NextRequest) {
           error: { code: "DATABASE_UNAVAILABLE", message: "SEO reads require the dashboard database connection." },
           gapIds: ["GAP-037", "GAP-071", "GAP-072", "GAP-076"],
         },
-        { status: 503, headers: { "Cache-Control": "no-store" } },
+        { status: 503, headers: noStoreHeaders },
       );
     }
 
-    return NextResponse.json({ ok: false, error: { code: "SEO_READ_FAILED", message: "SEO records could not be loaded." } }, { status: 500 });
+    return NextResponse.json({ ok: false, error: { code: "SEO_READ_FAILED", message: "SEO records could not be loaded." } }, { status: 500, headers: noStoreHeaders });
   }
 }
 
@@ -287,13 +306,13 @@ async function mutateSeoPublication(request: NextRequest) {
   try {
     assertPermission(actor, "seo:write");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to mutate SEO records." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to mutate SEO records." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const body = objectValue(await request.json().catch(() => ({})));
   const tenantId = stringValue(body.tenantId, actor.tenantId);
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot mutate SEO records for another tenant." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot mutate SEO records for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const action = publicationAction(body.action);
@@ -322,9 +341,27 @@ async function mutateSeoPublication(request: NextRequest) {
   }
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_DASHBOARD_WRITES_NOT_CONFIGURED",
+            message: "Production dashboard SEO publication writes require DB-backed actor resolution and tenant-scoped persistence; local fallback mutation plans are disabled.",
+            gapIds: ["GAP-071", "GAP-076"],
+          },
+          plan,
+          productionBoundary: { localDashboardWriteFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     return mutationResponse(plan, 202, {
       persistence: "dry-run",
-      boundary: "Local fallback returns a SEO publication mutation plan only; database mode is required to commit publishing writes.",
+      boundary: "Local fallback returns a SEO publication mutation contract with idempotency, revalidation, and audit metadata; database mode is required to commit publishing writes.",
     });
   }
 
@@ -456,10 +493,10 @@ async function mutateSeoPublication(request: NextRequest) {
           plan,
           gapIds: ["GAP-071", "GAP-076"],
         },
-        { status: 503, headers: { "Cache-Control": "no-store" } },
+        { status: 503, headers: noStoreHeaders },
       );
     }
 
-    return NextResponse.json({ ok: false, error: { code: "SEO_WRITE_FAILED", message: "SEO record could not be mutated." } }, { status: 500, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "SEO_WRITE_FAILED", message: "SEO record could not be mutated." } }, { status: 500, headers: noStoreHeaders });
   }
 }

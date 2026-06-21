@@ -1,8 +1,9 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 const root = process.cwd();
 const fixtureDir = join(root, "scripts/quality/fixtures/pr-gap-diff");
+const outputPath = join(root, "docs/quality/manifests/pr-gap-diff-fixtures.json");
 const fixtures = [
   { file: "invalid-missing-evidence.diff", expectedOk: false },
   { file: "valid-with-evidence.diff", expectedOk: true }
@@ -39,26 +40,47 @@ function collectAddedGapRows(diffText) {
 }
 
 const failures = [];
+const results = [];
 for (const fixture of fixtures) {
   const fixturePath = join(fixtureDir, fixture.file);
   if (!existsSync(fixturePath)) {
     failures.push(`Missing PR gap diff fixture ${fixture.file}.`);
+    results.push({ file: fixture.file, expectedOk: fixture.expectedOk, status: "missing", addedGapRows: 0 });
     continue;
   }
   const rows = collectAddedGapRows(readFileSync(fixturePath, "utf8"));
   if (rows.length === 0) {
     failures.push(`Fixture ${fixture.file} must contain an added GAP row.`);
+    results.push({ file: fixture.file, expectedOk: fixture.expectedOk, status: "empty", addedGapRows: 0 });
     continue;
   }
   const actualOk = rows.every((row) => hasEvidence(row.currentStatus) && hasEvidence(row.verificationNeeded));
   if (actualOk !== fixture.expectedOk) {
     failures.push(`Fixture ${fixture.file} expected ok=${fixture.expectedOk} but got ok=${actualOk}.`);
   }
+  results.push({
+    file: fixture.file,
+    expectedOk: fixture.expectedOk,
+    actualOk,
+    status: actualOk === fixture.expectedOk ? "pass" : "fail",
+    addedGapRows: rows.length,
+    gapIds: rows.map((row) => row.gapId),
+  });
 }
 
+const report = {
+  generatedAt: new Date().toISOString(),
+  status: failures.length > 0 ? "fail" : "pass",
+  fixtureCount: fixtures.length,
+  results,
+  failures,
+};
+mkdirSync(dirname(outputPath), { recursive: true });
+writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`);
+
 if (failures.length > 0) {
-  console.error(JSON.stringify({ ok: false, failures }, null, 2));
+  console.error(JSON.stringify({ ok: false, failures, report: outputPath }, null, 2));
   process.exit(1);
 }
 
-console.log(JSON.stringify({ ok: true, fixtureCount: fixtures.length }, null, 2));
+console.log(JSON.stringify({ ok: true, fixtureCount: fixtures.length, report: outputPath }, null, 2));

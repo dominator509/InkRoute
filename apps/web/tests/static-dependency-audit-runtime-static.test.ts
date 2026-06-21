@@ -1,13 +1,27 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   staticDependencyAuditArtifactPaths,
   staticDependencyAuditCommands,
   staticDependencyAuditCoverageAreas,
+  staticDependencyAuditExternalArtifacts,
+  staticDependencyAuditExternalCommands,
+  staticDependencyAuditExecutionPolicy,
+  staticDependencyAuditLocalArtifacts,
+  staticDependencyAuditLocalCommands,
+  staticDependencyAuditProofFiles,
   staticDependencyAuditReadiness,
+  staticDependencyAuditReadinessRequiredEvidence,
+  staticDependencyAuditRequiredEvidence,
+  staticDependencyAuditRequiredExternalEvidence,
   staticDependencyAuditRunPersistenceContract,
   staticDependencyAuditRuntimeMatrix,
+  buildRedactedStaticDependencyAuditArtifact,
+  buildStaticDependencyAuditArtifactReview,
+  buildStaticDependencyAuditDecisionRequiredEvidence,
+  buildStaticDependencyAuditEvidenceDecision,
+  buildStaticDependencyAuditExecutionPlan,
 } from "../lib/staticDependencyAuditRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -37,6 +51,8 @@ describe("static dependency audit runtime contract", () => {
       "pnpm --filter @inkroute/web build",
       "pnpm --filter @inkroute/dashboard build",
       "GitHub Actions Phase 18 workspace runtime readiness job",
+      "inspect peer dependency compatibility and version warnings",
+      "capture runtime dependency resolution proof",
     ]);
     expect(staticDependencyAuditCoverageAreas).toEqual([
       "declared-workspace-dependencies",
@@ -59,6 +75,7 @@ describe("static dependency audit runtime contract", () => {
       "dashboard-build-resolution",
       "ci-workspace-resolution",
       "peer-version-review",
+      "runtime-resolution-proof",
     ]);
     expect(staticDependencyAuditArtifactPaths).toContain("coverage/static-dependency-audit-runtime.json");
     expect(staticDependencyAuditArtifactPaths).toContain("test-results/static-dependency-audit-runtime");
@@ -112,13 +129,110 @@ describe("static dependency audit runtime contract", () => {
       externalImports: 174,
       entrypointFindings: 0,
     });
-    expect(staticDependencyAuditReadiness.requiredCommands).toEqual([...staticDependencyAuditCommands]);
-    expect(staticDependencyAuditReadiness.requiredEvidence).toContain(
-      "Dependency install, workspace typecheck, web build, and dashboard build output proving runtime package resolution.",
-    );
+    expect(staticDependencyAuditReadiness.requiredCommands).toBe(staticDependencyAuditCommands);
+    expect(staticDependencyAuditReadiness.requiredEvidence).toBe(staticDependencyAuditReadinessRequiredEvidence);
     expect(staticDependencyAuditReadiness.blockers).toContain(
       "pnpm install, pnpm typecheck, and app builds must prove runtime dependency resolution.",
     );
+  });
+
+  it("blocks static dependency audit closure until runtime resolution, peer review, persistence, artifacts, and commands are proven", () => {
+    const decision = buildStaticDependencyAuditEvidenceDecision({
+      workspaceImportAuditPassed: true,
+      workspacePackageTestsPassed: false,
+      workspacePackageTypecheckPassed: false,
+      dependencyInstallEvidenceCaptured: false,
+      workspaceTypecheckPassed: false,
+      webBuildEvidenceCaptured: false,
+      dashboardBuildEvidenceCaptured: false,
+      ciWorkspaceResolutionPassed: false,
+      ciEvidenceCaptured: false,
+      peerVersionReviewCaptured: false,
+      runtimeResolutionProofCaptured: false,
+      staticDependencyAuditRunPersisted: false,
+      coveredAreas: [
+        "declared-workspace-dependencies",
+        "workspace-source-imports",
+        "tsconfig-path-aliases",
+      ],
+      capturedArtifacts: [
+        "coverage/static-dependency-audit-runtime.json",
+        "coverage/static-dependency-audit-output.txt",
+      ],
+      completedCommands: ["node scripts/workspace/audit-workspace-imports.mjs"],
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.missingCoverageAreas).toEqual([
+      "package-source-entrypoints",
+      "manifest-main-types-export-targets",
+      "bare-third-party-imports",
+      "root-devdependency-test-tooling",
+      "runtime-resolution-boundary",
+      "peer-version-boundary",
+    ]);
+    expect(decision.missingArtifacts).toEqual([
+      "coverage/static-dependency-workspace-package-test.txt",
+      "coverage/static-dependency-workspace-package-typecheck.txt",
+      "coverage/static-dependency-install-output.txt",
+      "coverage/static-dependency-typecheck-output.txt",
+      "coverage/static-dependency-web-build-output.txt",
+      "coverage/static-dependency-dashboard-build-output.txt",
+      "coverage/static-dependency-ci-job.json",
+      "coverage/static-dependency-peer-version-review.json",
+      "test-results/static-dependency-audit-runtime",
+    ]);
+    expect(decision.missingCommands).toEqual([
+      "pnpm --filter @inkroute/workspace test",
+      "pnpm --filter @inkroute/workspace typecheck",
+      "pnpm install",
+      "pnpm typecheck",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "GitHub Actions Phase 18 workspace runtime readiness job",
+      "inspect peer dependency compatibility and version warnings",
+      "capture runtime dependency resolution proof",
+    ]);
+    expect(decision.requiredCoverageAreas).toBe(staticDependencyAuditCoverageAreas);
+    expect(decision.requiredArtifacts).toBe(staticDependencyAuditArtifactPaths);
+    expect(decision.requiredCommands).toBe(staticDependencyAuditCommands);
+    expect(decision.requiredEvidence).toEqual(
+      buildStaticDependencyAuditDecisionRequiredEvidence(staticDependencyAuditReadinessRequiredEvidence),
+    );
+    expect(decision.requiredEvidence).toBe(staticDependencyAuditRequiredEvidence);
+    expect(decision.blockers).toContain("@inkroute/workspace package tests must pass after the static dependency audit patch.");
+    expect(decision.blockers).toContain("StaticDependencyAuditRun persistence row must be captured for durable auditability.");
+    expect(decision.blockers).toContain("Every required static dependency audit coverage area must be captured.");
+  });
+
+  it("completes static dependency audit closure when dependency boundaries, runtime resolution, CI, persistence, artifacts, and commands are proven", () => {
+    const decision = buildStaticDependencyAuditEvidenceDecision({
+      workspaceImportAuditPassed: true,
+      workspacePackageTestsPassed: true,
+      workspacePackageTypecheckPassed: true,
+      dependencyInstallEvidenceCaptured: true,
+      workspaceTypecheckPassed: true,
+      webBuildEvidenceCaptured: true,
+      dashboardBuildEvidenceCaptured: true,
+      ciWorkspaceResolutionPassed: true,
+      ciEvidenceCaptured: true,
+      peerVersionReviewCaptured: true,
+      runtimeResolutionProofCaptured: true,
+      staticDependencyAuditRunPersisted: true,
+      coveredAreas: staticDependencyAuditCoverageAreas,
+      capturedArtifacts: staticDependencyAuditArtifactPaths,
+      completedCommands: staticDependencyAuditCommands,
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.missingCoverageAreas).toEqual([]);
+    expect(decision.missingArtifacts).toEqual([]);
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.requiredEvidence).toEqual(
+      buildStaticDependencyAuditDecisionRequiredEvidence(staticDependencyAuditReadinessRequiredEvidence),
+    );
+    expect(decision.requiredEvidence).toBe(staticDependencyAuditRequiredEvidence);
+    expect(decision.blockers).toEqual([]);
   });
 
   it("wires CI, manifest, tracker, and artifacts without claiming runtime resolution is proven", () => {
@@ -130,5 +244,128 @@ describe("static dependency audit runtime contract", () => {
     expect(gapTracker).toContain("StaticDependencyAuditRun");
     expect(gapTracker).toContain("apps/web/lib/staticDependencyAuditRuntime.ts");
     expect(gapTracker).toContain("live package test/typecheck, install/typecheck/build, CI, peer/version, and runtime resolution proof remain open");
+    expect(gapTracker).toContain("GAP-131 is static-dependency-audit-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("buildStaticDependencyAuditExecutionPlan");
+    expect(gapTracker).toContain("staticDependencyAuditExecutionPolicy");
+    expect(gapTracker).toContain("staticDependencyAuditReadinessRequiredEvidence");
+    expect(gapTracker).toContain("staticDependencyAuditRequiredEvidence");
+    expect(gapTracker).toContain("staticDependencyAuditRequiredExternalEvidence");
+    expect(gapTracker).toContain("staticDependencyAuditLocalArtifacts");
+    expect(gapTracker).toContain("staticDependencyAuditExternalArtifacts");
+    expect(gapTracker).toContain("buildStaticDependencyAuditArtifactReview");
+  });
+
+  it("pins current static dependency audit runtime proof files for GAP-131", () => {
+    expect(staticDependencyAuditProofFiles).toEqual(
+      expect.arrayContaining([
+      "docs/workspace/README.md",
+      "apps/dashboard/package.json",
+      "apps/web/package.json",
+        "scripts/workspace/audit-workspace-imports.mjs",
+        "packages/workspace/package.json",
+        "packages/workspace/src/index.ts",
+        "docs/workspace/manifests/workspace-import-audit.json",
+        "apps/web/lib/staticDependencyAuditRuntime.ts",
+        "apps/web/tests/static-dependency-audit-runtime-static.test.ts",
+        "packages/db/prisma/migrations/20260609032200_add_static_dependency_audit_runs/migration.sql",
+        ".github/workflows/ci.yml"
+      ])
+    );
+    for (const file of staticDependencyAuditProofFiles) {
+      expect(readRepoFile(file).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps GAP-131 execution policy non-executing while separating runtime resolution proof", () => {
+    const plan = buildStaticDependencyAuditExecutionPlan();
+
+    expect(plan.localCommands).toBe(staticDependencyAuditLocalCommands);
+    expect(plan.externalCommands).toBe(staticDependencyAuditExternalCommands);
+    expect(plan.localArtifacts).toBe(staticDependencyAuditLocalArtifacts);
+    expect(plan.externalArtifacts).toBe(staticDependencyAuditExternalArtifacts);
+    expect(plan.localArtifacts).toEqual([
+      "coverage/static-dependency-audit-runtime.json",
+      "coverage/static-dependency-audit-output.txt",
+    ]);
+    expect(plan.externalArtifacts).toEqual([
+      "coverage/static-dependency-workspace-package-test.txt",
+      "coverage/static-dependency-workspace-package-typecheck.txt",
+      "coverage/static-dependency-install-output.txt",
+      "coverage/static-dependency-typecheck-output.txt",
+      "coverage/static-dependency-web-build-output.txt",
+      "coverage/static-dependency-dashboard-build-output.txt",
+      "coverage/static-dependency-ci-job.json",
+      "coverage/static-dependency-peer-version-review.json",
+      "test-results/static-dependency-audit-runtime",
+    ]);
+    expect(plan).toMatchObject({
+      workspaceImportAuditExecutionAllowed: false,
+      workspacePackageTestExecutionAllowed: false,
+      workspacePackageTypecheckExecutionAllowed: false,
+      dependencyInstallExecutionAllowed: false,
+      workspaceTypecheckExecutionAllowed: false,
+      webBuildExecutionAllowed: false,
+      dashboardBuildExecutionAllowed: false,
+      ciWorkspaceResolutionExecutionAllowed: false,
+      peerVersionReviewExecutionAllowed: false,
+      runtimeResolutionProofExecutionAllowed: false,
+      persistenceExecutionAllowed: false,
+    });
+    expect(plan.executionPolicy).toBe(staticDependencyAuditExecutionPolicy);
+    expect(plan.executionPolicy).toEqual({
+      codexMayClassifyStaticDependencyAudit: true,
+      packageRuntimeProofRequiredForClosure: true,
+      installTypecheckBuildEvidenceRequiredForClosure: true,
+      ciWorkspaceEvidenceRequiredForClosure: true,
+      peerVersionReviewRequiredForClosure: true,
+      runtimeResolutionProofRequiredForClosure: true,
+      providerDatabaseRequiredForPersistence: true,
+    });
+    expect(plan.requiredExternalEvidence).toBe(staticDependencyAuditRequiredExternalEvidence);
+  });
+
+  it("redacts static dependency audit artifacts before tracker or handoff use", () => {
+    const artifact = {
+      runId: "static_dep_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      registryUrl: "https://registry.npmjs.org/@inkroute/workspace",
+      installOutput: "resolved by engineer@example.com with token github_pat_1234567890ABCDEFGHIJKLMNOP",
+      peerReview: {
+        packageId: "@scope/private-package-01HZYXZYXZYXZYXZYXZYXZYXZ",
+      },
+      persistence: {
+        tenantId: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
+        databaseUrl: "postgres://inkroute:secret@example.neon.tech/inkroute",
+      },
+    };
+
+    expect(buildRedactedStaticDependencyAuditArtifact(artifact)).toEqual({
+      runId: "[REDACTED]",
+      registryUrl: "[REDACTED]",
+      installOutput: "resolved by [REDACTED] with token [REDACTED]",
+      peerReview: {
+        packageId: "[REDACTED]",
+      },
+      persistence: {
+        tenantId: "[REDACTED]",
+        databaseUrl: "[REDACTED]",
+      },
+    });
+
+    const review = buildStaticDependencyAuditArtifactReview(artifact);
+    expect(review.safeForTracker).toBe(true);
+    expect(review.requiredExternalEvidence).toBe(staticDependencyAuditRequiredExternalEvidence);
+    expect(review.redactions).toEqual(
+      expect.arrayContaining([
+        "runId",
+        "registryUrl",
+        "installOutput",
+        "peerReview.packageId",
+        "persistence.tenantId",
+        "persistence.databaseUrl",
+      ]),
+    );
   });
 });
+
+
+

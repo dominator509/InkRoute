@@ -12,21 +12,46 @@ function redactQuestionOptions(value: unknown): Record<string, unknown> | null {
   );
 }
 
+function normalizeFormAction(value: unknown): "archive_form_version" | null {
+  if (!value || typeof value !== "object") return null;
+  const action = (value as { action?: unknown }).action;
+  return action === "archive_form_version" ? action : null;
+}
+
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 export async function GET(request: NextRequest, { params }: { params: { formId: string } }) {
   const actor = resolveDashboardActor(request);
   try {
     assertPermission(actor, "form:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read forms." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read forms." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const searchParams = new URL(request.url).searchParams;
   const tenantId = searchParams.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query forms for another tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query forms for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
+            message: "Production dashboard form reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
+            gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
+          },
+          productionBoundary: { localDashboardReadFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     return NextResponse.json(
       {
         ok: true,
@@ -42,7 +67,7 @@ export async function GET(request: NextRequest, { params }: { params: { formId: 
         gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
         boundary: "Local fallback returns redacted demo form metadata only; database mode is required for live form detail reads.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   }
 
@@ -102,7 +127,7 @@ export async function GET(request: NextRequest, { params }: { params: { formId: 
     });
 
     if (!result.intakeForm && !result.consentForm) {
-      return NextResponse.json({ ok: false, error: { code: "FORM_NOT_FOUND", message: "Form was not found for this tenant." } }, { status: 404, headers: { "Cache-Control": "no-store" } });
+      return NextResponse.json({ ok: false, error: { code: "FORM_NOT_FOUND", message: "Form was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
     }
 
     const form = result.intakeForm
@@ -151,7 +176,7 @@ export async function GET(request: NextRequest, { params }: { params: { formId: 
         gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
         boundary: "Dashboard form detail reads are tenant-scoped, no-store, audited, and redact raw answers, consent body text, signatures, signer contact data, IP hashes, user agents, file asset ids, and medical acknowledgment payloads.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
@@ -163,10 +188,158 @@ export async function GET(request: NextRequest, { params }: { params: { formId: 
           error: { code: "DATABASE_UNAVAILABLE", message: "Form detail reads require the dashboard database connection." },
           gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
         },
-        { status: 503, headers: { "Cache-Control": "no-store" } },
+        { status: 503, headers: noStoreHeaders },
       );
     }
 
-    return NextResponse.json({ ok: false, error: { code: "FORM_DETAIL_READ_FAILED", message: "Form could not be loaded." } }, { status: 500 });
+    return NextResponse.json({ ok: false, error: { code: "FORM_DETAIL_READ_FAILED", message: "Form could not be loaded." } }, { status: 500, headers: noStoreHeaders });
+  }
+}
+
+export async function PATCH(request: NextRequest, { params }: { params: { formId: string } }) {
+  const actor = resolveDashboardActor(request);
+  try {
+    assertPermission(actor, "form:write");
+  } catch {
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to update forms." } }, { status: 403, headers: noStoreHeaders });
+  }
+
+  const searchParams = new URL(request.url).searchParams;
+  const tenantId = searchParams.get("tenantId") ?? actor.tenantId;
+  if (tenantId !== actor.tenantId) {
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot update forms for another tenant." } }, { status: 403, headers: noStoreHeaders });
+  }
+
+  const body = (await request.json().catch(() => null)) as unknown;
+  const action = normalizeFormAction(body);
+  if (!action) {
+    return NextResponse.json(
+      { ok: false, error: { code: "INVALID_ACTION", message: "Form action is missing or unsupported." } },
+      { status: 400, headers: noStoreHeaders },
+    );
+  }
+
+  const idempotencyKey = request.headers.get("idempotency-key") ?? "missing-idempotency-key";
+
+  if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          formId: params.formId,
+          action,
+          error: {
+            code: "PROVIDER_FORM_WRITE_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production form writes require DB-backed actor resolution, tenant-scoped persistence, audit logs, and reviewed legal-copy workflows; local fallback writes are disabled.",
+            gapIds: ["GAP-007", "GAP-013", "GAP-038", "GAP-040"],
+          },
+          productionBoundary: { localFormWriteFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId,
+        formId: params.formId,
+        action,
+        persistence: "local-contract",
+        gapIds: ["GAP-007", "GAP-013", "GAP-038", "GAP-040"],
+        boundary: "Local fallback validates the archive-form metadata contract; database mode is required for durable form writes.",
+      },
+      { status: 202, headers: noStoreHeaders },
+    );
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const intakeForm = await tx.intakeForm.findFirst({
+        where: { id: params.formId, tenantId },
+        select: { id: true, status: true },
+      });
+      const consentForm = intakeForm
+        ? null
+        : await tx.consentForm.findFirst({
+            where: { id: params.formId, tenantId },
+            select: { id: true, status: true },
+          });
+
+      if (!intakeForm && !consentForm) return { status: "not_found" as const };
+
+      if (intakeForm) {
+        await tx.intakeForm.update({
+          where: { id: intakeForm.id },
+          data: { status: "archived" },
+        });
+      } else {
+        await tx.consentForm.update({
+          where: { id: consentForm!.id },
+          data: { status: "archived" },
+        });
+      }
+
+      const audit = await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorUserId: actor.actorUserId,
+          action: "form:write:archive",
+          entityType: intakeForm ? "IntakeForm" : "ConsentForm",
+          entityId: params.formId,
+          metadata: {
+            source: "dashboard-api",
+            dashboardMutationAction: "archive_form_version",
+            idempotencyKey,
+            fromStatus: intakeForm?.status ?? consentForm!.status,
+            toStatus: "archived",
+            legalCopyChanged: false,
+            signatureRequestSent: false,
+            rawAnswersTouched: false,
+          },
+        },
+        select: { id: true },
+      });
+
+      return { status: "updated" as const, audit };
+    });
+
+    if (result.status === "not_found") {
+      return NextResponse.json({ ok: false, error: { code: "FORM_NOT_FOUND", message: "Form was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
+    }
+
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId,
+        formId: params.formId,
+        action,
+        persistence: "database",
+        auditId: result.audit.id,
+        gapIds: ["GAP-007", "GAP-013", "GAP-038", "GAP-040"],
+        boundary: "Form archive writes are tenant-scoped, RBAC-gated, audited, no-store, and do not modify legal copy, signatures, raw answers, or medical payloads.",
+      },
+      { headers: noStoreHeaders },
+    );
+  } catch (error) {
+    if (isDatabaseUnavailable(error)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          formId: params.formId,
+          error: { code: "DATABASE_UNAVAILABLE", message: "Form writes require the dashboard database connection." },
+          gapIds: ["GAP-007", "GAP-013", "GAP-038", "GAP-040"],
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
+    return NextResponse.json({ ok: false, error: { code: "FORM_DETAIL_WRITE_FAILED", message: "Form could not be updated." } }, { status: 500, headers: noStoreHeaders });
   }
 }

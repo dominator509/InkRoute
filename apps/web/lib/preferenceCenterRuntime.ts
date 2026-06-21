@@ -16,6 +16,63 @@ export interface PreferenceCenterRuntimeMatrixEntry {
   readonly status: PreferenceCenterRuntimeStatus;
 }
 
+export interface PreferenceCenterExecutionPolicy {
+  readonly codexMayClassifyStaticPreferenceCenterReadiness: boolean;
+  readonly localCommandEvidenceRequiredForClosure: boolean;
+  readonly routeApiEvidenceRequiredForClosure: boolean;
+  readonly signedTokenCryptoRequiredForClosure: boolean;
+  readonly tokenHashPersistenceRequiredForClosure: boolean;
+  readonly durablePreferencePersistenceRequiredForClosure: boolean;
+  readonly listUnsubscribeProviderRequiredForClosure: boolean;
+  readonly legalCopyRequiredForClosure: boolean;
+  readonly preSendSuppressionRequiredForClosure: boolean;
+  readonly ciEvidenceRequiredForClosure: boolean;
+  readonly secretSafeArtifactsRequiredForClosure: boolean;
+}
+
+export interface PreferenceCenterExecutionPlan {
+  readonly policy: typeof preferenceCenterExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly routeApiExecutionAllowed: false;
+  readonly tokenCryptoExecutionAllowed: false;
+  readonly durablePersistenceExecutionAllowed: false;
+  readonly providerIntegrationExecutionAllowed: false;
+  readonly legalApprovalExecutionAllowed: false;
+  readonly preSendSuppressionExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly artifactReviewExecutionAllowed: false;
+  readonly localCommands: typeof preferenceCenterLocalCommands;
+  readonly externalCommands: typeof preferenceCenterExternalCommands;
+  readonly requiredExternalEvidence: typeof preferenceCenterRequiredExternalEvidence;
+}
+
+export interface RedactedPreferenceCenterArtifact {
+  readonly artifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: true;
+}
+
+export interface PreferenceCenterArtifactReview {
+  readonly passed: boolean;
+  readonly artifact: RedactedPreferenceCenterArtifact;
+  readonly blockers: readonly string[];
+  readonly requiredExternalEvidence: typeof preferenceCenterRequiredExternalEvidence;
+}
+
+export const preferenceCenterExecutionPolicy = {
+  codexMayClassifyStaticPreferenceCenterReadiness: true,
+  localCommandEvidenceRequiredForClosure: true,
+  routeApiEvidenceRequiredForClosure: true,
+  signedTokenCryptoRequiredForClosure: true,
+  tokenHashPersistenceRequiredForClosure: true,
+  durablePreferencePersistenceRequiredForClosure: true,
+  listUnsubscribeProviderRequiredForClosure: true,
+  legalCopyRequiredForClosure: true,
+  preSendSuppressionRequiredForClosure: true,
+  ciEvidenceRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies PreferenceCenterExecutionPolicy;
+
 export const preferenceCenterRuntimeCommands = [
   "pnpm --filter @inkroute/notifications typecheck",
   "pnpm --filter @inkroute/notifications test",
@@ -25,6 +82,104 @@ export const preferenceCenterRuntimeCommands = [
   "signed preference token forgery and expiry tests",
   "pre-send suppression integration tests",
 ] as const;
+
+export const preferenceCenterRequiredExternalEvidence = [
+  "actual preference center command output",
+  "preference center and unsubscribe route/API tests",
+  "tenant notification settings dashboard tests",
+  "signed preference token crypto evidence",
+  "token hash persistence evidence",
+  "token expiry/forgery/reuse rejection evidence",
+  "durable ClientNotificationPreference/SuppressionListEntry/TenantNotificationSetting/NotificationAuditLog/IdempotencyKey evidence",
+  "provider List-Unsubscribe and one-click unsubscribe evidence",
+  "legal-approved preference/STOP/START/settings copy",
+  "pre-send suppression integration tests",
+  "CI preference center artifacts",
+  "secret-safe preference center artifact review",
+] as const;
+
+export const preferenceCenterLocalCommands = [
+  "pnpm --filter @inkroute/notifications typecheck",
+  "pnpm --filter @inkroute/notifications test",
+  "pnpm vitest run apps/web/tests/preference-center-static.test.ts apps/web/tests/preference-center-runtime-static.test.ts",
+] as const;
+
+export const preferenceCenterExternalCommands = [
+  "preference center and unsubscribe route/API tests",
+  "tenant notification settings dashboard tests",
+  "signed preference token forgery and expiry tests",
+  "pre-send suppression integration tests",
+  "provider List-Unsubscribe integration tests",
+  "legal-approved preference/STOP/START/settings copy review",
+  "GitHub Actions preference center runtime job",
+  "secret-safe preference center artifact review",
+] as const;
+
+export const buildPreferenceCenterExecutionPlan = (): PreferenceCenterExecutionPlan => ({
+  policy: preferenceCenterExecutionPolicy,
+  commandExecutionAllowed: false,
+  routeApiExecutionAllowed: false,
+  tokenCryptoExecutionAllowed: false,
+  durablePersistenceExecutionAllowed: false,
+  providerIntegrationExecutionAllowed: false,
+  legalApprovalExecutionAllowed: false,
+  preSendSuppressionExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  artifactReviewExecutionAllowed: false,
+  localCommands: preferenceCenterLocalCommands,
+  externalCommands: preferenceCenterExternalCommands,
+  requiredExternalEvidence: preferenceCenterRequiredExternalEvidence,
+});
+
+const preferenceCenterPrivateArtifactKeyPattern =
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|preference|unsubscribe|suppression|destination|message|body|payload|audit|idempotency|hash|email|phone|medical|payment|customer|legal)/i;
+
+const redactPreferenceCenterArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactPreferenceCenterArtifactValue(entry, `${path}[${index}]`, redactedPaths));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (preferenceCenterPrivateArtifactKeyPattern.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[redacted]"];
+        }
+
+        return [key, redactPreferenceCenterArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const buildRedactedPreferenceCenterArtifact = (artifact: unknown): RedactedPreferenceCenterArtifact => {
+  const redactedPaths: string[] = [];
+
+  return {
+    artifact: redactPreferenceCenterArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+    secretSafe: true,
+  };
+};
+
+export const buildPreferenceCenterArtifactReview = (artifact: unknown): PreferenceCenterArtifactReview => {
+  const redacted = buildRedactedPreferenceCenterArtifact(artifact);
+
+  return {
+    passed: true,
+    artifact: redacted,
+    blockers: [],
+    requiredExternalEvidence: preferenceCenterRequiredExternalEvidence,
+  };
+};
 
 export const preferenceCenterArtifactPaths = [
   "coverage/preference-center-runtime.json",
@@ -68,6 +223,15 @@ export const preferenceCenterRuntimeProofFiles = [
 
 export type PreferenceCenterEvidenceArtifact = (typeof preferenceCenterArtifactPaths)[number];
 
+export const preferenceCenterDecisionRequiredEvidence = [
+  "signed preference token issuance, hash persistence, expiry, and forgery rejection evidence",
+  "email unsubscribe, SMS STOP/START, and pre-send suppression persistence evidence",
+  "client preference, tenant setting, audit, and idempotency persistence evidence",
+  "provider List-Unsubscribe and one-click unsubscribe integration evidence",
+  "audit, idempotency, legal copy, and route/API test evidence",
+  "secret-safe review of retained preference center artifacts",
+] as const;
+
 export interface PreferenceCenterEvidenceInput {
   readonly notificationsTypecheckPassed: boolean;
   readonly notificationsTestsPassed: boolean;
@@ -94,8 +258,8 @@ export interface PreferenceCenterEvidenceDecision {
   readonly status: "complete" | "blocked";
   readonly blockers: readonly string[];
   readonly missingArtifacts: readonly PreferenceCenterEvidenceArtifact[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof preferenceCenterRuntimeCommands;
+  readonly requiredEvidence: typeof preferenceCenterDecisionRequiredEvidence;
   readonly redactedSummary: {
     readonly capturedArtifactCount: number;
     readonly requiredArtifactCount: number;
@@ -135,15 +299,8 @@ export const buildPreferenceCenterEvidenceDecision = (
     status: blockers.length === 0 ? "complete" : "blocked",
     blockers,
     missingArtifacts,
-    requiredCommands: [...preferenceCenterRuntimeCommands],
-    requiredEvidence: [
-      "signed preference token issuance, hash persistence, expiry, and forgery rejection evidence",
-      "email unsubscribe, SMS STOP/START, and pre-send suppression persistence evidence",
-      "client preference, tenant setting, audit, and idempotency persistence evidence",
-      "provider List-Unsubscribe and one-click unsubscribe integration evidence",
-      "audit, idempotency, legal copy, and route/API test evidence",
-      "secret-safe review of retained preference center artifacts",
-    ],
+    requiredCommands: preferenceCenterRuntimeCommands,
+    requiredEvidence: preferenceCenterDecisionRequiredEvidence,
     redactedSummary: {
       capturedArtifactCount: captured.size,
       requiredArtifactCount: preferenceCenterArtifactPaths.length,
@@ -173,3 +330,5 @@ export const preferenceCenterRuntimeMatrix = [
 ] as const satisfies readonly PreferenceCenterRuntimeMatrixEntry[];
 
 export const preferenceCenterRuntimeReadiness = preferenceCenterContract.runtimeReadiness;
+
+

@@ -1,4 +1,4 @@
-﻿import { demoPortfolioItems, inkrouteDemoTenant } from "@inkroute/config";
+import { demoPortfolioItems, inkrouteDemoTenant } from "@inkroute/config";
 import { prisma } from "@inkroute/db";
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -18,8 +18,10 @@ function numberValue(value: unknown): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 function json(payload: Record<string, unknown>, status = 200) {
-  return NextResponse.json(payload, { status, headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json(payload, { status, headers: noStoreHeaders });
 }
 
 export async function GET(request: NextRequest) {
@@ -69,6 +71,23 @@ export async function POST(request: NextRequest) {
 
   if (plan.blockers.length > 0) {
     return json({ ok: false, plan, blockers: plan.blockers, gapIds: ["GAP-077"] }, 422);
+  }
+
+  if (process.env.NODE_ENV === "production" && actor.source === "local-fallback") {
+    return json(
+      {
+        ok: false,
+        source: actor.source,
+        tenantId,
+        error: {
+          code: "PROVIDER_IMAGE_SEO_PERSISTENCE_NOT_CONFIGURED",
+          message: "Production image SEO processing requires DB-backed actor resolution plus FileAsset, PortfolioImage, and AuditLog persistence; dry-run fallback processing is disabled.",
+          gapIds: ["GAP-005", "GAP-077"],
+        },
+        productionBoundary: { localImageSeoDryRunFallbackDisabled: true },
+      },
+      503,
+    );
   }
 
   let persisted: { fileAssetId: string; portfolioImageId: string; auditId: string } | null = null;
@@ -153,6 +172,22 @@ export async function POST(request: NextRequest) {
         return { fileAssetId: fileAsset.id, portfolioImageId: portfolioImage.id, auditId: audit.id };
       });
     } catch (error) {
+      if (process.env.NODE_ENV === "production" && isDatabaseUnavailable(error)) {
+        return json(
+          {
+            ok: false,
+            source: actor.source,
+            tenantId,
+            error: {
+              code: "PROVIDER_IMAGE_SEO_PERSISTENCE_NOT_CONFIGURED",
+              message: "Production image SEO processing requires the dashboard database connection; dry-run fallback processing is disabled.",
+              gapIds: ["GAP-005", "GAP-077"],
+            },
+            productionBoundary: { localImageSeoDryRunFallbackDisabled: true },
+          },
+          503,
+        );
+      }
       if (!isDatabaseUnavailable(error)) throw error;
     }
   }

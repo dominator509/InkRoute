@@ -10,7 +10,7 @@ export function OfflineNotesScreen() {
     <MobileScreen
       eyebrow="Offline-first strategy"
       title="Weak-signal travel queue"
-      summary="Static queue model for notes, travel updates, and portfolio metadata created while traveling. Durable encrypted local storage and sync are not implemented yet."
+      summary="Offline queue contract for notes, travel updates, and portfolio metadata created while traveling. The app-side adapter, sync worker, idempotent replay, retry state, and redacted audit events are wired; encrypted device storage and reconnect smoke evidence remain runtime-gated."
     >
       <MobileCard title="Queue summary" detail={offlineQueueSummary.warning}>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>

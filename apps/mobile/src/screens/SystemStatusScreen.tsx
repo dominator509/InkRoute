@@ -28,10 +28,10 @@ export function SystemStatusScreen() {
     <MobileScreen
       eyebrow="Crash, release, and updates"
       title="Mobile runtime boundaries"
-      summary="This screen makes mobile operational gaps visible inside the app scaffold so Expo, Sentry, EAS, and fallback crash-report work can be handed off safely."
+      summary="This screen makes mobile operational gaps visible inside the app so Expo, Sentry, EAS, and fallback crash-report work can be handed off safely."
     >
 
-      <MobileCard title="Release candidate" eyebrow="Phase 12 scaffold">
+      <MobileCard title="Release candidate" eyebrow="Phase 12 contract">
         <Text style={{ color: "#fafaf9", fontWeight: "900" }}>{mobileReleaseCandidate.version}</Text>
         <Text style={{ color: "#d6d3d1" }}>{mobileReleaseCandidate.summary}</Text>
         <Text style={{ color: "#a8a29e", marginTop: 6 }}>Commit: {mobileReleaseCandidate.commitSha}</Text>
@@ -61,6 +61,7 @@ export function SystemStatusScreen() {
         <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
           <MobilePill label={mobileUpdateRuntimePreview.updatePlan.compatibility} tone={mobileUpdateRuntimePreview.updatePlan.compatibility === "safe" ? "good" : "warn"} />
           <MobilePill label={mobileUpdateRuntimePreview.readiness.status} tone="warn" />
+          <MobilePill label={mobileUpdateRuntimePreview.rollbackContract.status} tone="warn" />
           <MobilePill label="device receipt pending" tone="danger" />
           <MobilePill label="rollback republish pending" tone="danger" />
         </View>
@@ -91,9 +92,9 @@ export function SystemStatusScreen() {
       </MobileCard>
 
 
-      <MobileCard title="Security posture" eyebrow="Phase 13 scaffold">
+      <MobileCard title="Security posture" eyebrow="Phase 13 controls">
         <Text style={{ color: "#fafaf9", fontSize: 34, fontWeight: "900" }}>{mobileSecuritySummary.blockers} blockers</Text>
-        <Text style={{ color: "#d6d3d1" }}>{mobileSecuritySummary.total} controls tracked · {mobileSecuritySummary.scaffolded} scaffolded · {mobileSecuritySummary.legal} legal-review required</Text>
+        <Text style={{ color: "#d6d3d1" }}>{mobileSecuritySummary.total} controls tracked · {mobileSecuritySummary.localContracts} local runtime contracts · {mobileSecuritySummary.legal} legal-review required</Text>
         <MobilePill label={mobileSecuritySummary.productionReady ? "production ready" : "not production ready"} tone={mobileSecuritySummary.productionReady ? "good" : "danger"} />
       </MobileCard>
 
@@ -123,7 +124,7 @@ export function SystemStatusScreen() {
         ))}
       </MobileCard>
 
-      <MobileCard title="Crash report draft" eyebrow="Phase 11 scaffold">
+      <MobileCard title="Crash report draft" eyebrow="Phase 11 contract">
         <Text style={{ color: "#fafaf9", fontWeight: "900" }}>{mobileCrashReportDraft.redactedMessage}</Text>
         <Text style={{ color: "#d6d3d1" }}>Fingerprint: {mobileCrashReportDraft.fingerprint}</Text>
         <Text style={{ color: "#d6d3d1" }}>Redaction: {mobileCrashReportDraft.redactionLevel}</Text>
@@ -133,7 +134,7 @@ export function SystemStatusScreen() {
       <MobileCard title="Crash capture contract" eyebrow="GAP-046" detail={mobileCrashCapturePreview.boundary}>
         <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
           <MobilePill label={mobileCrashCapturePreview.readiness.status} tone="warn" />
-          <MobilePill label="fallback reporter wired" tone="good" />
+          <MobilePill label={mobileCrashCapturePreview.contract.localFallbackReady ? "fallback ready" : "fallback blocked"} tone={mobileCrashCapturePreview.contract.localFallbackReady ? "good" : "danger"} />
           <MobilePill label={`${mobileCrashCapturePreview.sentryPlan.requiredPackages.join(", ")} gated`} tone="warn" />
           <MobilePill label="forced crash proof pending" tone="danger" />
         </View>

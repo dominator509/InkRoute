@@ -1,14 +1,27 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildQualityGateDecisionRequiredEvidence,
   qualityGateGeneratedManifests,
   qualityGateRootScripts,
   qualityGateRuntimeArtifactPaths,
   qualityGateRuntimeCommands,
+  qualityGateRuntimeExternalArtifacts,
+  qualityGateRuntimeExternalCommands,
+  qualityGateRuntimeExecutionPolicy,
+  qualityGateRuntimeLocalArtifacts,
+  qualityGateRuntimeLocalCommands,
   qualityGateRuntimeMatrix,
+  qualityGateRuntimeProofFiles,
   qualityGateRuntimeReadiness,
+  qualityGateRuntimeRequiredExternalEvidence,
+  qualityGateRuntimeRequiredEvidence,
   qualityGateRunPersistenceContract,
+  buildQualityGateEvidenceDecision,
+  buildQualityGateRuntimeArtifactReview,
+  buildQualityGateRuntimeExecutionPlan,
+  buildRedactedQualityGateArtifact,
 } from "../lib/qualityGateRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -36,6 +49,7 @@ describe("quality gate runtime contract", () => {
       "pnpm quality:gates",
       "pnpm quality:all",
       "GitHub Actions CI quality job",
+      "capture CI quality reports/artifacts",
     ]);
     expect(qualityGateRootScripts).toContain("quality:all");
     expect(qualityGateGeneratedManifests).toContain("docs/quality/manifests/quality-gates.json");
@@ -74,14 +88,8 @@ describe("quality gate runtime contract", () => {
     expect(qualityGateRuntimeReadiness.missingRootScripts).toEqual([]);
     expect(qualityGateRuntimeReadiness.missingPackageScripts).toEqual([]);
     expect(qualityGateRuntimeReadiness.missingGeneratedManifests).toEqual([]);
-    expect(qualityGateRuntimeReadiness.requiredCommands).toEqual([...qualityGateRuntimeCommands]);
-    expect(qualityGateRuntimeReadiness.requiredEvidence).toEqual([
-      "@inkroute/quality package typecheck and test output.",
-      "quality:all output showing documentation, gap evidence, PR gap fixtures, governance, required checks, and gate summary passed.",
-      "Generated manifests for Markdown links, documentation consistency, documentation inventory, gap evidence, repository governance, required checks, and quality gates.",
-      "GitHub Actions quality job URL and status check evidence.",
-      "CI report/artifact labels for quality gate outputs or documented blocker if artifact upload is unavailable.",
-    ]);
+    expect(qualityGateRuntimeReadiness.requiredCommands).toBe(qualityGateRuntimeCommands);
+    expect(qualityGateRuntimeReadiness.requiredEvidence).toBe(qualityGateRuntimeRequiredEvidence);
     expect(qualityGateRuntimeReadiness.blockers).toEqual([
       "@inkroute/quality typecheck must pass.",
       "@inkroute/quality tests must pass.",
@@ -91,13 +99,143 @@ describe("quality gate runtime contract", () => {
     ]);
   });
 
+  it("blocks quality gate closure until commands, manifests, CI, artifacts, and persistence are proven", () => {
+    const decision = buildQualityGateEvidenceDecision({
+      packageTypecheckPassed: false,
+      packageTestsPassed: false,
+      qualityDocsPassed: true,
+      qualityGapsPassed: true,
+      qualityPrGapFixturesPassed: true,
+      qualityGovernancePassed: true,
+      qualityRequiredChecksPassed: false,
+      qualityGatesSummaryPassed: false,
+      qualityAllPassed: false,
+      ciQualityJobPassed: false,
+      ciArtifactsCaptured: false,
+      qualityGateRunPersisted: false,
+      capturedManifests: [
+        "docs/quality/manifests/markdown-link-audit.json",
+        "docs/quality/manifests/documentation-consistency-audit.json",
+        "docs/quality/manifests/documentation-inventory-audit.json",
+      ],
+      capturedArtifacts: [
+        "coverage/quality-gate-runtime.json",
+        "coverage/quality-docs-output.txt",
+        "coverage/quality-gaps-output.txt",
+      ],
+      completedCommands: ["pnpm quality:docs", "pnpm quality:gaps", "pnpm quality:pr-gap-fixtures"],
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.missingManifests).toEqual([
+      "docs/quality/manifests/gap-evidence-audit.json",
+      "docs/quality/manifests/pr-gap-diff-fixtures.json",
+      "docs/quality/manifests/repository-governance-audit.json",
+      "docs/quality/manifests/required-checks-audit.json",
+      "docs/quality/manifests/quality-gates.json",
+    ]);
+    expect(decision.missingArtifacts).toEqual([
+      "coverage/quality-package-typecheck.txt",
+      "coverage/quality-package-test.txt",
+      "coverage/quality-pr-gap-fixtures-output.txt",
+      "coverage/quality-governance-output.txt",
+      "coverage/quality-required-checks-output.txt",
+      "coverage/quality-gates-output.txt",
+      "coverage/quality-all-output.txt",
+      "coverage/quality-ci-job.json",
+      "test-results/quality-gate-runtime",
+    ]);
+    expect(decision.missingCommands).toEqual([
+      "pnpm --filter @inkroute/quality typecheck",
+      "pnpm --filter @inkroute/quality test",
+      "pnpm quality:governance",
+      "pnpm quality:required-checks",
+      "pnpm quality:gates",
+      "pnpm quality:all",
+      "GitHub Actions CI quality job",
+      "capture CI quality reports/artifacts",
+    ]);
+    expect(decision.requiredManifests).toBe(qualityGateGeneratedManifests);
+    expect(decision.requiredArtifacts).toBe(qualityGateRuntimeArtifactPaths);
+    expect(decision.requiredCommands).toBe(qualityGateRuntimeCommands);
+    expect(decision.requiredEvidence).toEqual(
+      buildQualityGateDecisionRequiredEvidence(qualityGateRuntimeReadiness.requiredEvidence),
+    );
+    expect(decision.requiredEvidence).toBe(qualityGateRuntimeRequiredEvidence);
+    expect(decision.blockers).toContain("@inkroute/quality typecheck must pass.");
+    expect(decision.blockers).toContain("QualityGateRun persistence row must be captured for durable auditability.");
+    expect(decision.blockers).toContain("Every required quality manifest must be captured.");
+  });
+
+  it("completes quality gate closure when package, scripts, manifests, CI, artifacts, and persistence are proven", () => {
+    const decision = buildQualityGateEvidenceDecision({
+      packageTypecheckPassed: true,
+      packageTestsPassed: true,
+      qualityDocsPassed: true,
+      qualityGapsPassed: true,
+      qualityPrGapFixturesPassed: true,
+      qualityGovernancePassed: true,
+      qualityRequiredChecksPassed: true,
+      qualityGatesSummaryPassed: true,
+      qualityAllPassed: true,
+      ciQualityJobPassed: true,
+      ciArtifactsCaptured: true,
+      qualityGateRunPersisted: true,
+      capturedManifests: qualityGateGeneratedManifests,
+      capturedArtifacts: qualityGateRuntimeArtifactPaths,
+      completedCommands: qualityGateRuntimeCommands,
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.missingManifests).toEqual([]);
+    expect(decision.missingArtifacts).toEqual([]);
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.blockers).toEqual([]);
+  });
+
   it("wires CI, manifest, tracker, and artifact capture without claiming runtime quality evidence is complete", () => {
     expect(ciWorkflow).toContain("Run Phase 17 quality gate runtime contracts");
     expect(ciWorkflow).toContain("quality-gate-runtime-static.test.ts");
     expect(ciWorkflow).toContain("quality-gate-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-quality-gate-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/qualityGateRuntime.ts");
-    expect(gapTracker).toContain("live package typecheck/test, quality:all, CI quality job, and artifact proof remain open");
+    expect(gapTracker).toContain("live package typecheck/test, quality:all, CI quality job, persisted run row, and CI artifact capture remain gated");
+    expect(gapTracker).toContain("GAP-126 is quality-gate-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("buildQualityGateDecisionRequiredEvidence");
+    expect(gapTracker).toContain("qualityGateRuntimeRequiredEvidence");
+    expect(gapTracker).toContain("buildQualityGateRuntimeExecutionPlan");
+    expect(gapTracker).toContain("qualityGateRuntimeExecutionPolicy");
+    expect(gapTracker).toContain("qualityGateRuntimeRequiredExternalEvidence");
+    expect(gapTracker).toContain("qualityGateRuntimeLocalArtifacts");
+    expect(gapTracker).toContain("qualityGateRuntimeExternalArtifacts");
+    expect(gapTracker).toContain("buildQualityGateRuntimeArtifactReview");
+  });
+
+  it("pins current quality gate runtime proof files for GAP-126", () => {
+    expect(qualityGateRuntimeProofFiles).toEqual(
+      expect.arrayContaining([
+      ".github/CODEOWNERS",
+      "docs/quality/README.md",
+      "scripts/quality/audit-doc-links.mjs",
+      "scripts/quality/audit-gap-tracker-diff.mjs",
+      "scripts/quality/print-quality-gates.mjs",
+      "scripts/quality/verify-pr-gap-diff-fixtures.mjs",
+      "scripts/quality/verify-repository-governance.mjs",
+      "scripts/quality/verify-required-checks.mjs",
+        "packages/quality/package.json",
+        "packages/quality/src/index.ts",
+        "packages/quality/tests/quality-gates.test.ts",
+        "scripts/quality/audit-gap-evidence.mjs",
+        "docs/quality/manifests/quality-gates.json",
+        "apps/web/lib/qualityGateRuntime.ts",
+        "apps/web/tests/quality-gate-runtime-static.test.ts",
+        "packages/db/prisma/migrations/20260609029000_add_quality_gate_runs/migration.sql",
+        ".github/workflows/ci.yml"
+      ])
+    );
+    for (const file of qualityGateRuntimeProofFiles) {
+      expect(readRepoFile(file).length).toBeGreaterThan(0);
+    }
   });
 
   it("pins durable QualityGateRun persistence for runtime quality evidence", () => {
@@ -131,4 +269,90 @@ describe("quality gate runtime contract", () => {
     expect(unitManifest).toContain("QualityGateRun Prisma model and app row contract");
     expect(gapTracker).toContain("packages/db/prisma/migrations/20260609029000_add_quality_gate_runs/migration.sql");
   });
+
+  it("keeps GAP-126 execution policy non-executing while separating local and external proof", () => {
+    const plan = buildQualityGateRuntimeExecutionPlan();
+
+    expect(plan.localCommands).toBe(qualityGateRuntimeLocalCommands);
+    expect(plan.externalCommands).toBe(qualityGateRuntimeExternalCommands);
+    expect(plan.localArtifacts).toBe(qualityGateRuntimeLocalArtifacts);
+    expect(plan.externalArtifacts).toBe(qualityGateRuntimeExternalArtifacts);
+    expect(plan.localArtifacts).toContain("coverage/quality-docs-output.txt");
+    expect(plan.externalArtifacts).toEqual([
+      "coverage/quality-gate-runtime.json",
+      "coverage/quality-package-typecheck.txt",
+      "coverage/quality-package-test.txt",
+      "coverage/quality-all-output.txt",
+      "coverage/quality-ci-job.json",
+      "test-results/quality-gate-runtime",
+    ]);
+    expect(plan).toMatchObject({
+      packageTypecheckExecutionAllowed: false,
+      packageTestExecutionAllowed: false,
+      qualityDocsExecutionAllowed: false,
+      qualityGapsExecutionAllowed: false,
+      prGapFixturesExecutionAllowed: false,
+      governanceExecutionAllowed: false,
+      requiredChecksExecutionAllowed: false,
+      gateSummaryExecutionAllowed: false,
+      qualityAllExecutionAllowed: false,
+      ciQualityJobExecutionAllowed: false,
+      persistenceExecutionAllowed: false,
+      ciArtifactCaptureExecutionAllowed: false,
+    });
+    expect(plan.executionPolicy).toBe(qualityGateRuntimeExecutionPolicy);
+    expect(plan.executionPolicy).toEqual({
+      codexMayClassifyStaticQualityGates: true,
+      packageRuntimeProofRequiredForClosure: true,
+      qualityAllRequiredForClosure: true,
+      ciQualityJobRequiredForClosure: true,
+      providerDatabaseRequiredForPersistence: true,
+      runtimeCommandEvidenceRequired: true,
+    });
+    expect(plan.requiredExternalEvidence).toBe(qualityGateRuntimeRequiredExternalEvidence);
+    expect(plan.requiredExternalEvidence).toContain("GitHub Actions CI quality job URL, conclusion, and artifact bundle.");
+    expect(plan.requiredExternalEvidence).toContain("Durable QualityGateRun persistence row captured from the target database.");
+  });
+
+  it("redacts quality gate runtime artifacts before tracker or handoff use", () => {
+    const artifact = {
+      runId: "qgrun_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/27171288295/job/80210677823",
+      packageTypecheckOutput: "completed for artist@example.com with token github_pat_1234567890ABCDEFGHIJKLMNOP",
+      persistence: {
+        tenantId: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
+        databaseUrl: "postgres://inkroute:secret@example.neon.tech/inkroute",
+      },
+      contacts: ["+1 (555) 867-5309"],
+    };
+
+    expect(buildRedactedQualityGateArtifact(artifact)).toEqual({
+      runId: "[REDACTED]",
+      ciRunUrl: "[REDACTED]",
+      packageTypecheckOutput: "completed for [REDACTED] with token [REDACTED]",
+      persistence: {
+        tenantId: "[REDACTED]",
+        databaseUrl: "[REDACTED]",
+      },
+      contacts: ["[REDACTED]"],
+    });
+
+    const review = buildQualityGateRuntimeArtifactReview(artifact);
+    expect(review.safeForTracker).toBe(true);
+    expect(review.requiredExternalEvidence).toBe(qualityGateRuntimeRequiredExternalEvidence);
+    expect(review.redactions).toEqual(
+      expect.arrayContaining([
+        "runId",
+        "ciRunUrl",
+        "packageTypecheckOutput",
+        "persistence.tenantId",
+        "persistence.databaseUrl",
+        "contacts[0]",
+      ]),
+    );
+    expect(review.requiredExternalEvidence).toContain("pnpm quality:all output captured after all quality gates run together.");
+  });
 });
+
+
+

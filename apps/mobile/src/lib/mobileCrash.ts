@@ -1,4 +1,5 @@
 import {
+  buildMobileCrashCaptureContract,
   buildMobileCrashRuntimeReadinessPlan,
   buildObservabilityReportDraft,
   buildSentrySdkConfigurationPlan,
@@ -30,8 +31,18 @@ export interface MobileCrashCaptureResult {
   sentryPlan: SentrySdkConfigurationPlan;
   readiness: MobileCrashRuntimeReadinessPlan;
   externalCaptureAttempted: boolean;
+  externalCaptureSucceeded: boolean;
+  externalCaptureErrorRedacted: string | null;
   fallbackPersisted: boolean;
   offlineBuffered: boolean;
+}
+
+function redactMobileCrashCaptureError(error: unknown): string {
+  if (error instanceof Error && error.name.trim()) {
+    return `External mobile crash capture failed with ${error.name}; provider response, payload, and credentials redacted.`;
+  }
+
+  return "External mobile crash capture failed; provider response, payload, and credentials redacted.";
 }
 
 export function buildMobileCrashReportDraft(
@@ -122,14 +133,24 @@ export async function captureMobileCrash(input: {
       sentryPlan,
       readiness,
       externalCaptureAttempted: false,
+      externalCaptureSucceeded: false,
+      externalCaptureErrorRedacted: null,
       fallbackPersisted: false,
       offlineBuffered: true,
     };
   }
 
   const canUseExternalCapture = sentryPlan.status === "ready" && report.redactionLevel !== "blocked_high_risk_payload";
+  let externalCaptureSucceeded = false;
+  let externalCaptureErrorRedacted: string | null = null;
+
   if (canUseExternalCapture) {
-    await input.adapter.captureSanitizedReport(report);
+    try {
+      await input.adapter.captureSanitizedReport(report);
+      externalCaptureSucceeded = true;
+    } catch (error) {
+      externalCaptureErrorRedacted = redactMobileCrashCaptureError(error);
+    }
   }
 
   await input.adapter.persistFallbackReport(report);
@@ -139,12 +160,23 @@ export async function captureMobileCrash(input: {
     sentryPlan,
     readiness,
     externalCaptureAttempted: canUseExternalCapture,
+    externalCaptureSucceeded,
+    externalCaptureErrorRedacted,
     fallbackPersisted: true,
     offlineBuffered: false,
   };
 }
 
 export const mobileCrashCapturePreview = {
+  contract: buildMobileCrashCaptureContract({
+    fallbackReporterConfigured: true,
+    offlineBufferConfigured: true,
+    beforeSendRedactionConfigured: true,
+    sourceMapsUploaded: false,
+    debugSymbolsUploaded: false,
+    forcedCrashProofCaptured: false,
+    providerPayloadNoPiiVerified: false,
+  }),
   report: buildMobileCrashReportDraft(
     new Error("Expo crash from artist@example.test with auth token demo-token and payment card 4242 4242 4242 4242"),
     {
@@ -174,5 +206,5 @@ export const mobileCrashCapturePreview = {
   }),
   readiness: buildMobileCrashReadinessPreview(),
   boundary:
-    "Mobile crash capture now has a sanitized fallback reporter contract; live Sentry SDK credentials, source maps, debug symbols, and forced simulator/device crash proof remain gated.",
+    "Mobile crash capture now has a package-backed sanitized fallback/offline-buffer contract; live Sentry SDK credentials, source maps, debug symbols, no-PII provider payload proof, and forced simulator/device crash proof remain gated.",
 };

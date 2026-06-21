@@ -1,8 +1,17 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
+  buildPaymentPersistenceArtifactReview,
+  buildPaymentPersistenceEvidenceDecision,
+  buildPaymentPersistenceExecutionPlan,
+  buildRedactedPaymentPersistenceArtifact,
   paymentPersistenceArtifactPaths,
+  paymentPersistenceEvidenceFlags,
+  paymentPersistenceExternalCommands,
+  paymentPersistenceLocalCommands,
+  paymentPersistenceRequiredExternalEvidence,
+  paymentPersistenceRuntimeProofFiles,
   paymentPersistenceRuntimeCommands,
   paymentPersistenceRuntimeMatrix,
   paymentPersistenceRuntimeReadiness,
@@ -21,6 +30,7 @@ describe("payment persistence runtime contract", () => {
   const persistenceSource = readWorkspaceFile("apps/dashboard/lib/paymentPersistence.ts");
   const persistenceStaticTest = readWorkspaceFile("apps/dashboard/tests/payment-persistence-static.test.ts");
   const dashboardPage = readWorkspaceFile("apps/dashboard/app/payments/page.tsx");
+  const paymentActionPanel = readWorkspaceFile("apps/dashboard/components/PaymentActionPanel.tsx");
   const paymentsRoute = readWorkspaceFile("apps/dashboard/app/api/payments/route.ts");
   const paymentDetailRoute = readWorkspaceFile("apps/dashboard/app/api/payments/[paymentId]/route.ts");
   const prismaSchema = readWorkspaceFile("packages/db/prisma/schema.prisma");
@@ -67,10 +77,23 @@ describe("payment persistence runtime contract", () => {
     expect(paymentsSource).toContain("buildPaymentPersistenceRuntimeReadinessPlan");
     expect(paymentsTests).toContain("buildPaymentPersistenceRuntimeReadinessPlan");
     expect(persistenceSource).toContain("TenantPaymentRepository");
+    expect(persistenceSource).toContain("createInMemoryTenantPaymentRepository");
     expect(persistenceSource).toContain("executePaymentLifecycleMutation");
     expect(persistenceSource).toContain("claimIdempotencyKey");
+    expect(persistenceSource).toContain("Idempotency key replay crossed tenant or action scope.");
+    expect(persistenceSource).toContain("runLifecycleTransaction");
+    expect(persistenceSource).toContain("findDashboardPayments");
+    expect(persistenceSource).toContain("decidePaymentLifecycleTransition");
+    expect(persistenceSource).toContain("PaymentLifecycleTransitionDecision");
+    expect(persistenceSource).toContain("invalid_transition");
+    expect(persistenceSource).toContain("idempotent_replay");
     expect(persistenceStaticTest).toContain("covers every required payment lifecycle action");
+    expect(persistenceStaticTest).toContain("guards invalid lifecycle transitions");
+    expect(persistenceStaticTest).toContain("provides a local tenant payment repository");
     expect(dashboardPage).toContain("Payment persistence contract");
+    expect(dashboardPage).toContain("PaymentActionPanel");
+    expect(paymentActionPanel).toContain('fetch(`/api/bookings/${bookingId}/state`');
+    expect(paymentActionPanel).toContain('action: "request_deposit"');
     expect(paymentsRoute).toContain("PaymentAuditLog");
     expect(paymentDetailRoute).toContain("PaymentAuditLog");
     expect(prismaSchema).toContain("model PaymentAuditLog");
@@ -79,17 +102,131 @@ describe("payment persistence runtime contract", () => {
   it("keeps transaction, idempotency, lifecycle persistence, audit, isolation, and integration blockers explicit", () => {
     expect(paymentPersistenceRuntimeReadiness.status).toBe("blocked");
     expect(paymentPersistenceRuntimeReadiness.missingScripts).toEqual([]);
-    expect(paymentPersistenceRuntimeReadiness.requiredCommands).toEqual([...paymentPersistenceRuntimeCommands]);
-    expect(paymentPersistenceRuntimeReadiness.requiredEvidence).toEqual(expect.arrayContaining([
-      "Prisma models and tenant-scoped payment repository/service implementation",
-      "deposit, provider-session, paid, and failed transition persistence test output",
-      "refund and dispute persistence test output",
-      "PaymentAuditLog and BookingStateEvent persistence evidence for every lifecycle mutation",
-      "seeded Postgres integration tests for tenant isolation and idempotent replay",
-    ]));
+    expect(paymentPersistenceRuntimeReadiness.requiredCommands).toBe(paymentPersistenceRuntimeCommands);
+    expect(paymentPersistenceRuntimeReadiness.requiredEvidence).toBe(paymentPersistenceEvidenceFlags);
     expect(paymentPersistenceRuntimeReadiness.blockers).toContain("Payment lifecycle mutations must run in database transactions.");
-    expect(paymentPersistenceRuntimeReadiness.blockers).toContain("Idempotency store must be implemented for provider sessions, webhooks, refunds, and retries.");
+    expect(paymentPersistenceRuntimeReadiness.blockers).not.toContain(
+      "Idempotency store must be implemented for provider sessions, webhooks, refunds, and retries.",
+    );
+    expect(paymentPersistenceRuntimeReadiness.blockers).not.toContain(
+      "Replay/idempotency tests must prove duplicate provider events and operation retries do not duplicate writes.",
+    );
     expect(paymentPersistenceRuntimeReadiness.blockers).toContain("Seeded Postgres integration tests must pass for payment persistence lifecycle.");
+  });
+
+  it("classifies GAP-051 as blocked until payment persistence evidence is complete", () => {
+    const decision = buildPaymentPersistenceEvidenceDecision({
+      commands: ["pnpm --filter @inkroute/payments typecheck"],
+      artifacts: ["coverage/payment-persistence-runtime.json"],
+      evidence: { paymentsTypecheckPassed: true },
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.missingCommands).toContain("payment persistence seeded Postgres integration tests");
+    expect(decision.missingArtifacts).toContain("coverage/payment-persistence-secret-safe-artifacts.json");
+    expect(decision.missingEvidence).toContain("secretSafeArtifactsCaptured");
+    expect(decision.blockers).toContain("Pinned payment persistence commands must be run and captured.");
+  });
+
+  it("classifies GAP-051 as complete when all payment persistence commands, artifacts, and evidence are present", () => {
+    const decision = buildPaymentPersistenceEvidenceDecision({
+      commands: paymentPersistenceRuntimeCommands,
+      artifacts: paymentPersistenceArtifactPaths,
+      evidence: Object.fromEntries(paymentPersistenceEvidenceFlags.map((flag) => [flag, true])),
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.missingArtifacts).toEqual([]);
+    expect(decision.missingEvidence).toEqual([]);
+    expect(decision.blockers).toEqual([]);
+  });
+
+  it("keeps GAP-051 execution policy non-executing and external evidence explicit", () => {
+    const plan = buildPaymentPersistenceExecutionPlan();
+
+    expect(plan.policy.codexMayClassifyStaticPaymentPersistenceReadiness).toBe(true);
+    expect(plan.policy.prismaTransactionRequiredForClosure).toBe(true);
+    expect(plan.policy.dbBackedIdempotencyRequiredForClosure).toBe(true);
+    expect(plan.policy.lifecyclePersistenceRequiredForClosure).toBe(true);
+    expect(plan.policy.auditPersistenceRequiredForClosure).toBe(true);
+    expect(plan.policy.seededPostgresRequiredForClosure).toBe(true);
+    expect(plan.policy.secretSafeArtifactsRequiredForClosure).toBe(true);
+    expect(plan.commandExecutionAllowed).toBe(false);
+    expect(plan.prismaExecutionAllowed).toBe(false);
+    expect(plan.databaseTransactionExecutionAllowed).toBe(false);
+    expect(plan.seededPostgresExecutionAllowed).toBe(false);
+    expect(plan.crossTenantMutationExecutionAllowed).toBe(false);
+    expect(plan.dashboardRouteExecutionAllowed).toBe(false);
+    expect(plan.ciExecutionAllowed).toBe(false);
+    expect(plan.localCommands).toBe(paymentPersistenceLocalCommands);
+    expect(plan.externalCommands).toBe(paymentPersistenceExternalCommands);
+    expect(plan.requiredExternalEvidence).toBe(paymentPersistenceRequiredExternalEvidence);
+    expect(plan.requiredExternalEvidence).toContain("secret-safe payment persistence artifact review");
+  });
+
+  it("redacts GAP-051 payment persistence artifacts before secret-safe review", () => {
+    const artifact = {
+      tenantId: "tenant_private",
+      databaseUrl: "postgres://private",
+      paymentCustomerEmail: "client@example.test",
+      idempotencyKey: "idem_private",
+      nested: {
+        bookingAuditPayload: "audit_private",
+        publicSummary: "payment persistence evidence captured",
+      },
+    };
+
+    const redacted = buildRedactedPaymentPersistenceArtifact(artifact);
+    expect(redacted.redactedPaths).toEqual([
+      "tenantId",
+      "databaseUrl",
+      "paymentCustomerEmail",
+      "idempotencyKey",
+      "nested.bookingAuditPayload",
+    ]);
+    expect(redacted.redactedArtifact).toMatchObject({
+      tenantId: "[REDACTED]",
+      databaseUrl: "[REDACTED]",
+      paymentCustomerEmail: "[REDACTED]",
+      idempotencyKey: "[REDACTED]",
+      nested: {
+        bookingAuditPayload: "[REDACTED]",
+        publicSummary: "payment persistence evidence captured",
+      },
+    });
+
+    const review = buildPaymentPersistenceArtifactReview({
+      publicSummary: "safe payment persistence evidence",
+      prismaTransactionLog: "transaction_private",
+    });
+    expect(review.secretSafe).toBe(true);
+    expect(review.redactedPaths).toEqual(["prismaTransactionLog"]);
+    expect(review.requiredExternalEvidence).toBe(paymentPersistenceRequiredExternalEvidence);
+    expect(review.requiredExternalEvidence).toContain("seeded Postgres integration tests");
+  });
+
+  it("pins current payment persistence proof files for GAP-051", () => {
+    expect(paymentPersistenceRuntimeProofFiles).toEqual(expect.arrayContaining([
+      "packages/db/package.json",
+      "packages/db/prisma/schema.prisma",
+      "packages/payments/package.json",
+      "packages/payments/src/index.ts",
+      "packages/payments/tests/deposit-policy.test.ts",
+      "apps/dashboard/lib/paymentPersistence.ts",
+      "apps/dashboard/lib/paymentPersistenceRuntime.ts",
+      "apps/dashboard/tests/payment-persistence-static.test.ts",
+      "apps/dashboard/tests/payment-persistence-runtime-static.test.ts",
+      "apps/dashboard/app/payments/page.tsx",
+      "apps/dashboard/components/PaymentActionPanel.tsx",
+      "apps/dashboard/app/api/payments/route.ts",
+      "apps/dashboard/app/api/payments/[paymentId]/route.ts",
+      "testing/manifests/unit-test-manifest.json",
+      ".github/workflows/ci.yml",
+    ]));
+    for (const file of paymentPersistenceRuntimeProofFiles) {
+      expect(readWorkspaceFile(file).length).toBeGreaterThan(0);
+    }
   });
 
   it("wires CI, manifest, tracker, and artifacts without claiming database execution readiness", () => {
@@ -98,7 +235,13 @@ describe("payment persistence runtime contract", () => {
     expect(ciWorkflow).toContain("payment-persistence-runtime-artifacts");
     expect(unitManifest).toContain("unit-payment-persistence-runtime-static");
     expect(gapTracker).toContain("apps/dashboard/lib/paymentPersistenceRuntime.ts");
-    expect(gapTracker).toContain("GAP-051 is payment-persistence-runtime-matrix wired");
+    expect(gapTracker).toContain("GAP-051 is payment-persistence-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("buildPaymentPersistenceExecutionPlan");
+    expect(gapTracker).toContain("paymentPersistenceExecutionPolicy");
+    expect(gapTracker).toContain("paymentPersistenceRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildRedactedPaymentPersistenceArtifact");
+    expect(gapTracker).toContain("buildPaymentPersistenceArtifactReview");
     expect(paymentPersistenceArtifactPaths).toContain("coverage/payment-persistence-secret-safe-artifacts.json");
   });
 });
+

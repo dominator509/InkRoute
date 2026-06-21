@@ -1,8 +1,10 @@
-import { buildStripeCheckoutSessionDraft, calculateDepositPolicy } from "@inkroute/payments";
+﻿import { buildStripeCheckoutSessionDraft, calculateDepositPolicy } from "@inkroute/payments";
 import { createDepositSession } from "@inkroute/payments";
 import { checkRateLimit, getBookingRequest, getClientIp, persistDepositSession, resolveTenant } from "../../../../../lib/localRuntimeState";
 import { buildStripeCheckoutRouteContract } from "../../../../../lib/stripeCheckout";
 import { NextResponse, type NextRequest } from "next/server";
+
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
 interface DepositSessionPreviewBody {
   bookingRequestId?: unknown;
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   const { tenantSlug } = await context.params;
   const resolvedTenant = resolveTenant(tenantSlug);
   if (!resolvedTenant) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_NOT_FOUND", message: "Deposit sessions are available only for local demo tenant slug." } }, { status: 404 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_NOT_FOUND", message: "Deposit sessions are available only for local demo tenant slug." } }, { status: 404, headers: noStoreHeaders });
   }
 
   let body: DepositSessionPreviewBody;
@@ -40,7 +42,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   } catch {
     return NextResponse.json(
       { ok: false, error: { code: "INVALID_JSON", message: "Request body must be valid JSON." } },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -57,7 +59,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           message: "bookingRequestId, successUrl, and cancelUrl are required for a deposit session preview.",
         },
       },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -110,7 +112,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
       },
       {
         status: 429,
-        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+        headers: { ...noStoreHeaders, "Retry-After": String(rateLimit.retryAfterSeconds) },
       },
     );
   }
@@ -125,7 +127,33 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           message: "No matching booking request exists in local runtime for this tenant. Persist the booking request first.",
         },
       },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
+    );
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "PROVIDER_CHECKOUT_NOT_CONFIGURED",
+          message: "Production deposit sessions require the Stripe provider checkout path; local mock checkout previews are disabled.",
+        },
+        data: {
+          productionBoundary: {
+            gapIds: ["GAP-004", "GAP-049", "GAP-050"],
+            mockCheckoutDisabled: true,
+            requiredBeforeEnablement: [
+              "Stripe SDK/API-version source contract kept pinned",
+              "STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET configured",
+              "Provider checkout session creation executed with DB-backed idempotency",
+              "Payment, Deposit, and PaymentAuditLog rows persisted through tenant-scoped transaction adapters",
+              "Stripe webhook reconciliation and replay protection verified",
+            ],
+          },
+        },
+      },
+      { status: 503, headers: noStoreHeaders },
     );
   }
 
@@ -181,10 +209,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
         productionBoundary: {
           gapIds: ["GAP-004", "GAP-049", "GAP-050"],
           requiredBeforeEnablement: [
-            "Stripe SDK dependency installed and pinned",
+            "Stripe SDK/API-version source contract kept pinned",
             "STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET configured",
             "Signed deposit token or authenticated dashboard action enforced",
-            "Tenant, booking, amount, and currency persisted before redirect",
+            "Tenant, booking, amount, and currency persisted through tenant-scoped transaction adapters before redirect",
             "Webhook reconciliation and idempotency tested",
           ],
         },
@@ -196,6 +224,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
         },
       },
     },
-    { status: 201 },
+    { status: 201, headers: noStoreHeaders },
   );
 }
+

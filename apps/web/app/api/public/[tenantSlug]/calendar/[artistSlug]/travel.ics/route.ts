@@ -4,10 +4,45 @@ import { evaluateSignedIcsFeedRequest } from "../../../../../../../lib/signedIcs
 
 export const dynamic = "force-dynamic";
 
+const privateNoStoreHeaders = { "Cache-Control": "private, no-store" } as const;
+
 export async function GET(request: Request, context: { params: Promise<{ tenantSlug: string; artistSlug: string }> }) {
   const { tenantSlug, artistSlug } = await context.params;
   if (tenantSlug !== inkrouteDemoTenant.slug || artistSlug !== inkrouteDemoArtist.slug) {
-    return Response.json({ ok: false, error: { code: "NOT_FOUND", message: "No demo travel calendar exists for this tenant or artist." } }, { status: 404 });
+    return Response.json(
+      { ok: false, error: { code: "NOT_FOUND", message: "No demo travel calendar exists for this tenant or artist." } },
+      { status: 404, headers: privateNoStoreHeaders },
+    );
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    return Response.json(
+      {
+        ok: false,
+        error: {
+          code: "PROVIDER_SIGNED_ICS_NOT_CONFIGURED",
+          message: "Production travel ICS feeds require durable signed-token persistence, revocation checks, access logs, and client-import proof; local demo feed tokens are disabled.",
+          gapIds: ["GAP-009", "GAP-055", "GAP-059"],
+        },
+        productionBoundary: {
+          localDemoSignedFeedDisabled: true,
+          requiredBeforeEnablement: [
+            "tenant/artist-scoped signed feed token persistence",
+            "revocation lookup and rejected-token route tests",
+            "durable access-log persistence",
+            "Apple, Google, and Outlook import smoke evidence",
+          ],
+        },
+      },
+      {
+        status: 503,
+        headers: {
+          ...privateNoStoreHeaders,
+          "X-InkRoute-Status": "signed-feed-provider-not-configured",
+          "X-InkRoute-Gaps": "GAP-009,GAP-055,GAP-059",
+        },
+      },
+    );
   }
 
   const token = new URL(request.url).searchParams.get("token") ?? undefined;

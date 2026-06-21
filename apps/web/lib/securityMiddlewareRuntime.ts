@@ -66,6 +66,25 @@ export const securityMiddlewareArtifactPaths = [
   "test-results/security-middleware-runtime",
 ] as const;
 
+export const securityMiddlewareRuntimeProofFiles = [
+  "packages/security/package.json",
+  "packages/security/src/index.ts",
+  "packages/security/tests/upload-policy.test.ts",
+  "apps/web/lib/securityMiddlewareRuntime.ts",
+  "apps/web/tests/security-middleware-runtime-static.test.ts",
+  "apps/web/middleware.ts",
+  "apps/dashboard/middleware.ts",
+  "apps/web/tests/security-runtime-middleware.test.ts",
+  "apps/web/tests/security-runtime-middleware-static.test.ts",
+  "apps/web/tests/dashboard-security-runtime-middleware-static.test.ts",
+  "apps/web/tests/e2e/security-runtime.spec.ts",
+  "apps/dashboard/tests/e2e/security-runtime.spec.ts",
+  "packages/db/prisma/schema.prisma",
+  "packages/db/prisma/migrations/20260609005000_add_security_middleware_evidence/migration.sql",
+  ".github/workflows/ci.yml",
+  "testing/manifests/unit-test-manifest.json",
+] as const;
+
 export const securityMiddlewareCommands = [
   "pnpm --filter @inkroute/security test",
   "pnpm vitest run apps/web/tests/security-runtime-middleware.test.ts apps/web/tests/security-runtime-middleware-static.test.ts apps/web/tests/dashboard-security-runtime-middleware-static.test.ts apps/web/tests/security-middleware-runtime-static.test.ts",
@@ -75,6 +94,233 @@ export const securityMiddlewareCommands = [
   "provider CSP connect-src smoke",
   "signed webhook CSRF bypass review",
 ] as const;
+
+export const securityMiddlewareLocalCommands = securityMiddlewareCommands.slice(0, 2);
+export const securityMiddlewareExternalCommands = securityMiddlewareCommands.slice(2);
+
+export const securityMiddlewareRequiredExternalEvidence = [
+  "Web and dashboard browser security header smoke proof",
+  "Production HTTPS HSTS proof",
+  "Provider CSP connect-src proof",
+  "Signed webhook CSRF bypass review proof",
+  "SecurityMiddlewareEvidence persistence proof",
+  "Runtime route integration proof",
+] as const;
+
+export type SecurityMiddlewareArtifact = (typeof securityMiddlewareArtifactPaths)[number];
+
+export const securityMiddlewareLocalArtifacts = [
+  "coverage/security-middleware-runtime.json",
+  "coverage/security-preview-local-hsts-suppression.json",
+  "coverage/security-csp-frame-base-form-invariants.json",
+  "coverage/security-csrf-attack-rejection.json",
+  "coverage/security-csrf-valid-session-binding.json",
+  "test-results/security-middleware-runtime",
+] as const satisfies readonly SecurityMiddlewareArtifact[];
+
+const securityMiddlewareLocalArtifactSet = new Set<SecurityMiddlewareArtifact>(
+  securityMiddlewareLocalArtifacts,
+);
+
+export const securityMiddlewareExternalArtifacts = securityMiddlewareArtifactPaths.filter(
+  (artifact) => !securityMiddlewareLocalArtifactSet.has(artifact),
+) as readonly SecurityMiddlewareArtifact[];
+
+export type SecurityMiddlewareCommand = (typeof securityMiddlewareCommands)[number];
+
+export type SecurityMiddlewareExecutionPolicy = {
+  localMiddlewareContractOnly: true;
+  browserSmokeRequiresExternalEvidence: true;
+  deploymentHstsRequiresExternalEvidence: true;
+  providerCspRequiresExternalEvidence: true;
+  signedWebhookReviewRequiresExternalEvidence: true;
+  persistenceRequiresExternalEvidence: true;
+  routeIntegrationRequiresExternalEvidence: true;
+  externalEvidenceRequired: typeof securityMiddlewareRequiredExternalEvidence;
+};
+
+export type SecurityMiddlewareEvidenceInput = {
+  packageSecurityHelpersPassed: boolean;
+  webHeaderBrowserSmokeCaptured: boolean;
+  dashboardHeaderBrowserSmokeCaptured: boolean;
+  productionHstsCaptured: boolean;
+  previewLocalHstsSuppressionCaptured: boolean;
+  providerCspConnectSrcCaptured: boolean;
+  cspFrameBaseFormInvariantCaptured: boolean;
+  csrfAttackRejectionCaptured: boolean;
+  csrfValidSessionBindingCaptured: boolean;
+  signedWebhookBypassReviewCaptured: boolean;
+  requiredCommandsRun: readonly SecurityMiddlewareCommand[];
+  capturedArtifacts: readonly SecurityMiddlewareArtifact[];
+};
+
+export type SecurityMiddlewareEvidenceDecision = {
+  status: "complete" | "blocked";
+  blockers: string[];
+  missingArtifacts: SecurityMiddlewareArtifact[];
+  requiredCommands: typeof securityMiddlewareCommands;
+  requiredEvidence: typeof securityMiddlewareArtifactPaths;
+  headerPolicy: {
+    hstsProductionOnly: true;
+    cspFrameBaseFormLocked: true;
+    csrfTokensRedacted: true;
+  };
+};
+
+export type SecurityMiddlewareExecutionPlan = {
+  status: "local-plan-ready";
+  policy: SecurityMiddlewareExecutionPolicy;
+  externalEvidenceRequired: typeof securityMiddlewareRequiredExternalEvidence;
+  browserSmokeExecutionAllowed: false;
+  deploymentHstsExecutionAllowed: false;
+  providerCspExecutionAllowed: false;
+  signedWebhookReviewExecutionAllowed: false;
+  persistenceExecutionAllowed: false;
+  routeIntegrationExecutionAllowed: false;
+  localCommands: typeof securityMiddlewareLocalCommands;
+  externalCommands: typeof securityMiddlewareExternalCommands;
+  localArtifacts: typeof securityMiddlewareLocalArtifacts;
+  externalArtifacts: typeof securityMiddlewareExternalArtifacts;
+  disabledReasons: readonly string[];
+};
+
+export const securityMiddlewareExecutionPolicy: SecurityMiddlewareExecutionPolicy = {
+  localMiddlewareContractOnly: true,
+  browserSmokeRequiresExternalEvidence: true,
+  deploymentHstsRequiresExternalEvidence: true,
+  providerCspRequiresExternalEvidence: true,
+  signedWebhookReviewRequiresExternalEvidence: true,
+  persistenceRequiresExternalEvidence: true,
+  routeIntegrationRequiresExternalEvidence: true,
+  externalEvidenceRequired: securityMiddlewareRequiredExternalEvidence,
+};
+
+export type SecurityMiddlewareArtifactReview = {
+  status: "redacted-review-ready";
+  redactedArtifact: unknown;
+  requiredArtifacts: typeof securityMiddlewareArtifactPaths;
+  retainedExternalGates: readonly string[];
+};
+
+const securityMiddlewareSensitivePatterns = [
+  /(csrf[_-]?token['":=\s]+)[^"',\s}]+/gi,
+  /(session[_-]?id['":=\s]+)[^"',\s}]+/gi,
+  /(cookie['":=\s]+)[^"',\n}]+/gi,
+  /(provider[_-]?signature['":=\s]+)[^"',\s}]+/gi,
+  /(artifact[_-]?object[_-]?key['":=\s]+)[^"',\s}]+/gi,
+  /(authorization:\s*bearer\s+)[A-Za-z0-9._-]+/gi,
+  /(secret['":=\s]+)[^"',\s}]+/gi,
+  /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
+  /\+?\d[\d\s().-]{7,}\d/g,
+] as const;
+
+export function buildRedactedSecurityMiddlewareArtifact(value: unknown): unknown {
+  if (typeof value === "string") {
+    return securityMiddlewareSensitivePatterns.reduce(
+      (redacted, pattern) => redacted.replace(pattern, (_match, prefix: string | undefined) => `${prefix ?? ""}[REDACTED]`),
+      value,
+    );
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => buildRedactedSecurityMiddlewareArtifact(entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        /email|phone|token|secret|authorization|credential|password|cookie|csrf|session|providerSignature|artifactObjectKey|rawBody|stack/i.test(key)
+          ? "[REDACTED]"
+          : buildRedactedSecurityMiddlewareArtifact(entry),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+export function buildSecurityMiddlewareExecutionPlan(): SecurityMiddlewareExecutionPlan {
+  return {
+    status: "local-plan-ready",
+    policy: securityMiddlewareExecutionPolicy,
+    externalEvidenceRequired: securityMiddlewareRequiredExternalEvidence,
+    browserSmokeExecutionAllowed: false,
+    deploymentHstsExecutionAllowed: false,
+    providerCspExecutionAllowed: false,
+    signedWebhookReviewExecutionAllowed: false,
+    persistenceExecutionAllowed: false,
+    routeIntegrationExecutionAllowed: false,
+    localCommands: securityMiddlewareLocalCommands,
+    externalCommands: securityMiddlewareExternalCommands,
+    localArtifacts: securityMiddlewareLocalArtifacts,
+    externalArtifacts: securityMiddlewareExternalArtifacts,
+    disabledReasons: [
+      "Browser security header smoke proof requires Playwright/browser execution.",
+      "Production HTTPS HSTS proof requires deployment-platform evidence.",
+      "Provider CSP connect-src proof requires provider-specific runtime smoke evidence.",
+      "Signed webhook CSRF bypass review requires signed callback integration evidence.",
+      "SecurityMiddlewareEvidence persistence proof requires provider-backed database execution.",
+      "Runtime route integration proof requires deployed or browser-backed route execution.",
+    ],
+  };
+}
+
+export function buildSecurityMiddlewareArtifactReview(rawArtifact: unknown): SecurityMiddlewareArtifactReview {
+  return {
+    status: "redacted-review-ready",
+    redactedArtifact: buildRedactedSecurityMiddlewareArtifact(rawArtifact),
+    requiredArtifacts: securityMiddlewareArtifactPaths,
+    retainedExternalGates: [
+      "Web and dashboard browser security header smoke proof",
+      "Production HTTPS HSTS proof",
+      "Provider CSP connect-src proof",
+      "Signed webhook CSRF bypass review proof",
+      "SecurityMiddlewareEvidence persistence proof",
+      "Runtime route integration proof",
+    ],
+  };
+}
+
+export function buildSecurityMiddlewareEvidenceDecision(
+  input: SecurityMiddlewareEvidenceInput,
+): SecurityMiddlewareEvidenceDecision {
+  const blockers = [
+    !input.packageSecurityHelpersPassed && "Run package security middleware helper tests.",
+    !input.webHeaderBrowserSmokeCaptured && "Capture web browser security header smoke proof.",
+    !input.dashboardHeaderBrowserSmokeCaptured && "Capture dashboard browser security header smoke proof.",
+    !input.productionHstsCaptured && "Capture production HTTPS HSTS proof.",
+    !input.previewLocalHstsSuppressionCaptured && "Capture preview/local HSTS suppression proof.",
+    !input.providerCspConnectSrcCaptured && "Capture provider CSP connect-src proof.",
+    !input.cspFrameBaseFormInvariantCaptured && "Capture CSP frame/base/form invariant proof.",
+    !input.csrfAttackRejectionCaptured && "Capture cookie-authenticated CSRF attack rejection proof.",
+    !input.csrfValidSessionBindingCaptured && "Capture valid CSRF/session-bound mutation allowance proof.",
+    !input.signedWebhookBypassReviewCaptured && "Capture signed webhook CSRF bypass review proof.",
+  ].filter(Boolean) as string[];
+
+  const missingArtifacts = securityMiddlewareArtifactPaths.filter(
+    (artifact) => !input.capturedArtifacts.includes(artifact),
+  );
+  const missingCommands = securityMiddlewareCommands.filter(
+    (command) => !input.requiredCommandsRun.includes(command),
+  );
+
+  return {
+    status: blockers.length === 0 && missingArtifacts.length === 0 && missingCommands.length === 0 ? "complete" : "blocked",
+    blockers: [
+      ...blockers,
+      ...missingCommands.map((command) => `Required command not recorded: ${command}`),
+    ],
+    missingArtifacts,
+    requiredCommands: securityMiddlewareCommands,
+    requiredEvidence: securityMiddlewareArtifactPaths,
+    headerPolicy: {
+      hstsProductionOnly: true,
+      cspFrameBaseFormLocked: true,
+      csrfTokensRedacted: true,
+    },
+  };
+}
 
 export function buildSecurityMiddlewareEvidencePersistenceContract(
   input: SecurityMiddlewareEvidencePersistenceInput,

@@ -133,6 +133,7 @@ export interface SeoImageDerivativePlan {
   format: SeoImageDerivativeFormat;
   objectKey: string;
   publicUrl?: string;
+  blurDataUrl: string;
   acl: SeoImageAcl;
   cacheControl: string;
 }
@@ -195,11 +196,40 @@ export interface SeoImagePipelineRuntimeReadinessInput {
 export interface SeoImagePipelineRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof seoImagePipelineRequiredCommands;
+  requiredEvidence: readonly SeoImagePipelineRequiredEvidence[];
+  requiredControls: typeof seoImagePipelineRequiredControls;
   blockers: readonly string[];
 }
+
+export const seoImagePipelineRequiredCommands = [
+  "pnpm --filter @inkroute/seo typecheck",
+  "pnpm --filter @inkroute/seo test",
+  "storage-backed upload/image processing tests",
+  "private original access denial tests",
+  "public derivative load tests",
+  "CDN cache header tests",
+  "Lighthouse image optimization audit",
+] as const;
+
+export const seoImagePipelineRequiredControls = [
+  "Keep original uploads private and strip EXIF before creating public derivatives.",
+  "Probe source dimensions and persist derivative width, format, object key, blur placeholder, cache policy, and ACL metadata.",
+  "Generate responsive WebP/AVIF/JPEG derivatives with immutable object keys.",
+  "Persist FileAsset and PortfolioImage records transactionally with tenant and portfolio item scope.",
+  "Serve only public derivatives through CDN cache headers; block direct public access to originals.",
+  "Prove image optimization with Lighthouse and storage/CDN integration tests.",
+] as const;
+
+export const seoImagePipelineRequiredEvidence = [
+  "storage-backed image processing worker and upload test evidence",
+  "dimension probe, EXIF stripping, responsive derivative, and blur placeholder evidence",
+  "FileAsset, PortfolioImage, and derivative metadata persistence evidence",
+  "private original and public derivative ACL/load test evidence",
+  "CDN cache header, immutable URL, and Lighthouse image audit evidence",
+] as const;
+
+export type SeoImagePipelineRequiredEvidence = typeof seoImagePipelineRequiredEvidence[number];
 
 export interface SeoRevalidationPlan {
   reason: string;
@@ -286,14 +316,42 @@ export interface SeoPublicationRuntimeReadinessInput {
   dashboardPublishFlowTestsPassed: boolean;
 }
 
+export const seoPublicationRuntimeRequiredControls = [
+      "Use buildSeoPublicationMutationPlan as the service contract before every database mutation.",
+      "Require authenticated owner or studio_manager actors for create, update, publish, archive, and redirect actions.",
+      "Scope every SeoCityPage, SeoStylePage, SeoRedirect, FAQ, review, image, audit, and revalidation write by tenant.",
+      "Commit SEO content, associations, audit logs, idempotency keys, and revalidation enqueueing through safe transaction boundaries.",
+      "Persist draft, published, archived, and redirect states with dashboard preview-to-publish and archive/redirect flows.",
+      "Prove tenant isolation, RBAC denial, audit writes, and revalidation jobs with integration tests.",
+] as const;
+
+export const seoPublicationRuntimeRequiredCommands = [
+      "pnpm --filter @inkroute/seo typecheck",
+      "pnpm --filter @inkroute/seo test",
+      "pnpm --filter @inkroute/dashboard build",
+      "SEO Prisma integration tests",
+      "SEO tenant isolation tests",
+      "dashboard SEO publish/edit/archive Playwright or route tests",
+] as const;
+
 export interface SeoPublicationRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof seoPublicationRuntimeRequiredCommands;
+  requiredEvidence: readonly SeoPublicationRuntimeRequiredEvidence[];
+  requiredControls: typeof seoPublicationRuntimeRequiredControls;
   blockers: readonly string[];
 }
+
+export const seoPublicationRuntimeRequiredEvidence = [
+      "Prisma migration and SEO repository implementation evidence",
+      "authenticated dashboard SEO CRUD, RBAC, preview, publish, archive, and redirect flow evidence",
+      "tenant-scoped transaction, audit, and idempotency evidence",
+      "SEO association, publish-state, and revalidation job persistence evidence",
+      "SEO Prisma integration, tenant isolation, and dashboard publish-flow test evidence",
+] as const;
+
+export type SeoPublicationRuntimeRequiredEvidence = typeof seoPublicationRuntimeRequiredEvidence[number];
 
 export interface CanonicalDomainRuntimeReadinessInput {
   packageScripts: Readonly<Record<string, string>>;
@@ -317,14 +375,43 @@ export interface CanonicalDomainRuntimeReadinessInput {
   deploymentDomainProofAvailable: boolean;
 }
 
+export const canonicalDomainRuntimeRequiredControls = [
+      "Resolve tenant canonical policy for every public request before rendering canonical metadata or sitemap output.",
+      "Reject or redirect unregistered hosts and enforce tenant primary-host canonical URLs.",
+      "Force HTTPS where tenant domain policy requires it.",
+      "Execute persisted tenant-scoped SeoRedirect records with their configured status codes.",
+      "Exclude draft, archived, private, and noindex content from sitemap output at runtime.",
+      "Assert noindex headers or metadata on private/noindex routes.",
+      "Prove deployment primary and allowed domains match tenant configuration.",
+] as const;
+
+export const canonicalDomainRuntimeRequiredCommands = [
+      "pnpm --filter @inkroute/seo typecheck",
+      "pnpm --filter @inkroute/seo test",
+      "pnpm --filter @inkroute/web build",
+      "custom-domain canonical/redirect route tests",
+      "runtime sitemap exclusion and noindex route tests",
+      "duplicate canonical runtime tests",
+] as const;
+
 export interface CanonicalDomainRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof canonicalDomainRuntimeRequiredCommands;
+  requiredEvidence: readonly CanonicalDomainRuntimeRequiredEvidence[];
+  requiredControls: typeof canonicalDomainRuntimeRequiredControls;
   blockers: readonly string[];
 }
+
+export const canonicalDomainRuntimeRequiredEvidence = [
+      "public middleware/route canonical policy and allowed-host validation evidence",
+      "tenant domain and SeoRedirect repository runtime evidence",
+      "HTTPS/canonical host redirect, status-code, and canonical tag evidence",
+      "sitemap exclusion, noindex, and duplicate canonical runtime test evidence",
+      "custom-domain route test and deployment-domain proof evidence",
+] as const;
+
+export type CanonicalDomainRuntimeRequiredEvidence = typeof canonicalDomainRuntimeRequiredEvidence[number];
 
 export interface StructuredDataCrawlQaReadinessInput {
   packageScripts: Readonly<Record<string, string>>;
@@ -348,11 +435,38 @@ export interface StructuredDataCrawlQaReadinessInput {
 export interface StructuredDataCrawlQaReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof structuredDataCrawlQaRequiredCommands;
+  requiredEvidence: readonly StructuredDataCrawlQaRequiredEvidence[];
+  requiredControls: typeof structuredDataCrawlQaRequiredControls;
   blockers: readonly string[];
 }
+
+export const structuredDataCrawlQaRequiredCommands = [
+  "pnpm --filter @inkroute/seo typecheck",
+  "pnpm --filter @inkroute/seo test",
+  "pnpm --filter @inkroute/web build",
+  "rendered public-page JSON-LD crawl",
+  "Google Rich Results-compatible structured-data validation",
+  "sitemap/canonical/robots/noindex crawl QA",
+] as const;
+
+export const structuredDataCrawlQaRequiredControls = [
+  "Extract JSON-LD from rendered public pages instead of relying only on helper snapshots.",
+  "Run Google Rich Results-compatible validation for supported schema types.",
+  "Review unsupported schema warnings and remove or document intentionally unsupported fields.",
+  "Replace demo schema content with production data or document remaining demo fields before launch.",
+  "Crawl sitemap, canonical URLs, robots, and noindex outputs together to catch indexing contradictions.",
+  "Attach crawl artifacts and structured-data validation reports to the launch closeout.",
+] as const;
+
+export const structuredDataCrawlQaRequiredEvidence = [
+  "rendered-page crawler, JSON-LD extraction, and public page inventory evidence",
+  "Google Rich Results-compatible validation and unsupported-schema review evidence",
+  "production/demo content, sitemap, canonical, robots, and noindex crawl evidence",
+  "crawl artifact capture and closeout attachment evidence",
+] as const;
+
+export type StructuredDataCrawlQaRequiredEvidence = typeof structuredDataCrawlQaRequiredEvidence[number];
 
 export interface TenantCanonicalDomain {
   tenantId: string;
@@ -488,14 +602,43 @@ export interface SearchConsoleRuntimeReadinessInput {
   idempotencyStoreAvailable: boolean;
 }
 
+export const searchConsoleRuntimeRequiredControls = [
+      "Execute Search Console operations only through credential-managed provider routes or jobs.",
+      "Persist tenant property ownership and verify tenant ownership before property, sitemap, import, or monitoring operations.",
+      "Submit sitemaps only for verified properties owned by the tenant.",
+      "Persist imported query/page rows tenant-safely with idempotency and audit logs.",
+      "Expose dashboard status for not-configured, tenant-mismatch, ready-for-provider, submitted, imported, and monitoring states.",
+      "Use approved fixtures or verified test-property executions before production SEO operations.",
+] as const;
+
+export const searchConsoleRuntimeRequiredCommands = [
+      "pnpm --filter @inkroute/seo typecheck",
+      "pnpm --filter @inkroute/seo test",
+      "Search Console provider route tests",
+      "Search Console background job tests",
+      "verified test-property sitemap submission smoke",
+      "Search Console query/page import fixture tests",
+      "dashboard Search Console status tests",
+] as const;
+
 export interface SearchConsoleRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof searchConsoleRuntimeRequiredCommands;
+  requiredEvidence: readonly SearchConsoleRuntimeRequiredEvidence[];
+  requiredControls: typeof searchConsoleRuntimeRequiredControls;
   blockers: readonly string[];
 }
+
+export const searchConsoleRuntimeRequiredEvidence = [
+      "credential-managed provider route/job execution evidence",
+      "tenant ownership persistence, ownership checks, and verified property proof evidence",
+      "verified-property sitemap submission evidence",
+      "query/page import, persisted rows, indexing monitoring, and dashboard status evidence",
+      "fixture/provider execution, audit, and idempotency evidence",
+] as const;
+
+export type SearchConsoleRuntimeRequiredEvidence = typeof searchConsoleRuntimeRequiredEvidence[number];
 
 export interface SeoAutomatedTestReadinessInput {
   packageScripts: Readonly<Record<string, string>>;
@@ -520,14 +663,33 @@ export interface SeoAutomatedTestReadinessInput {
   ciRunsSeoTestGate: boolean;
 }
 
+export const seoAutomatedTestReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/seo typecheck",
+      "pnpm --filter @inkroute/seo test",
+      "pnpm vitest run apps/web/tests/sitemap-route.test.ts",
+      "SEO preview route tests",
+      "sitemap preview route tests",
+      "CI SEO package and preview route test gate",
+] as const;
+
 export interface SeoAutomatedTestReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof seoAutomatedTestReadinessRequiredCommands;
+  requiredEvidence: readonly SeoAutomatedTestReadinessRequiredEvidence[];
   requiredSuites: readonly string[];
   blockers: readonly string[];
 }
+
+export const seoAutomatedTestReadinessRequiredEvidence = [
+      "route record, sitemap, metadata, and audit test output",
+      "content brief, internal-link, JSON-LD, and structured-data snapshot test output",
+      "image pipeline, canonical/redirect, and Search Console planner test output",
+      "web sitemap, SEO preview, and sitemap preview route test output",
+      "linked GAP-073/GAP-076 runtime evidence and CI SEO test-gate evidence",
+] as const;
+
+export type SeoAutomatedTestReadinessRequiredEvidence = typeof seoAutomatedTestReadinessRequiredEvidence[number];
 
 export interface SeoTechnicalAuditInput {
   baseUrl: string;
@@ -582,6 +744,22 @@ export interface PublicWebReadinessInput {
   realPortfolioAssetsConfigured: boolean;
 }
 
+export const publicWebReadinessRequiredControls = [
+      "Keep static-demo and local-runtime responses explicitly labeled until database persistence is wired.",
+      "Smoke every public page, public API route, provider webhook, sitemap, robots, and JSON-LD output before launch.",
+      "Replace placeholder portfolio/media assets with scanned FileAsset-backed derivatives.",
+      "Verify accessibility, mobile responsiveness, SEO metadata, sitemap, robots, and performance budgets.",
+      "Persist booking, payment, upload, notification, privacy, and observability records tenant-safely before production.",
+] as const;
+
+export const publicWebReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/web test",
+      "pnpm test:e2e --project=web-chromium",
+      "pnpm test:e2e --project=web-mobile",
+] as const;
+
 export interface PublicWebReadinessPlan {
   status: PublicWebReadinessStatus;
   surfaceCount: number;
@@ -591,8 +769,8 @@ export interface PublicWebReadinessPlan {
   providerBackedSurfaceCount: number;
   untestedSurfaces: readonly string[];
   placeholderAssetSurfaces: readonly string[];
-  requiredCommands: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof publicWebReadinessRequiredCommands;
+  requiredControls: typeof publicWebReadinessRequiredControls;
   blockers: readonly string[];
 }
 
@@ -619,13 +797,36 @@ export interface PublicWebLaunchEvidenceInput {
   launchArtifactsSecretSafe: boolean;
 }
 
+export const publicWebLaunchEvidenceRequiredCommands = [
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/web test",
+      "pnpm test:e2e --project=web-chromium",
+      "pnpm test:e2e --project=web-mobile",
+      "axe accessibility audit for public routes",
+      "Lighthouse performance audit for public launch routes",
+      "runtime sitemap/robots/JSON-LD/canonical validation",
+      "GitHub Actions public web launch evidence job",
+] as const;
+
 export interface PublicWebLaunchEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof publicWebLaunchEvidenceRequiredCommands;
+  requiredEvidence: readonly PublicWebLaunchEvidenceRequiredEvidence[];
   blockers: readonly string[];
 }
+
+export const publicWebLaunchEvidenceRequiredEvidence = [
+      "web typecheck, build, and route smoke output",
+      "desktop/mobile Playwright, accessibility, and Lighthouse/performance evidence",
+      "tenant-scoped persistence, provider-backed route, and production local-runtime fallback evidence",
+      "real scanned media derivative evidence and placeholder asset disposition",
+      "runtime sitemap, robots, rendered JSON-LD, and canonical validation evidence",
+      "legal-route review, CI, and secret-safe launch artifact evidence",
+] as const;
+
+export type PublicWebLaunchEvidenceRequiredEvidence = typeof publicWebLaunchEvidenceRequiredEvidence[number];
 
 export function normalizePath(path: string): string {
   const trimmed = path.trim();
@@ -875,6 +1076,13 @@ function imageDerivativeLabel(width: number): SeoImageDerivativePlan["label"] {
   return "open_graph";
 }
 
+function buildBlurPlaceholderDataUrl(item: PortfolioItem, width: number): string {
+  const seed = `${item.tenantId}:${item.id}:${item.freshness}:${width}`;
+  const hue = Array.from(seed).reduce((sum, char) => sum + char.charCodeAt(0), 0) % 360;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="10" viewBox="0 0 16 10"><rect width="16" height="10" fill="hsl(${hue} 28% 18%)"/><path d="M0 8C4 4 7 6 10 2c2 2 4 3 6 2v6H0z" fill="hsl(${(hue + 34) % 360} 34% 34%)" opacity=".72"/></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
 function trimSlashes(value: string): string {
   return value.replace(/^\/+|\/+$/g, "");
 }
@@ -902,6 +1110,7 @@ export function buildSeoImagePipelinePlan(input: SeoImagePipelineInput): SeoImag
         format,
         objectKey,
         ...(publicBase ? { publicUrl: `${publicBase}/${objectKey}` } : {}),
+        blurDataUrl: buildBlurPlaceholderDataUrl(input.item, width),
         acl: "public" as const,
         cacheControl,
       };
@@ -933,17 +1142,17 @@ export function buildSeoImagePipelineRuntimeReadinessPlan(input: SeoImagePipelin
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: SeoImagePipelineRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/seo package script is missing ${script}.`);
   if (!input.seoPackageTestsPassed) blockers.push("@inkroute/seo image pipeline tests must pass.");
   if (!input.seoPackageTypecheckPassed) blockers.push("@inkroute/seo typecheck must pass.");
-  if (!input.imageProcessingWorkerImplemented) blockers.push("Image processing worker must be implemented.");
+  if (!input.imageProcessingWorkerImplemented) blockers.push("Image processing worker evidence must be captured before image pipeline readiness.");
   if (!input.storageProviderConfigured) blockers.push("Storage provider must be configured for image pipeline jobs.");
-  if (!input.sourceDimensionProbeImplemented) blockers.push("Source image dimension probing must be implemented.");
-  if (!input.exifStrippingImplemented) blockers.push("EXIF stripping must be implemented before public derivative creation.");
-  if (!input.responsiveDerivativeGenerationImplemented) blockers.push("Responsive WebP/AVIF/JPEG derivative generation must be implemented.");
-  if (!input.blurPlaceholderGenerationImplemented) blockers.push("Blur placeholder generation must be implemented.");
+  if (!input.sourceDimensionProbeImplemented) blockers.push("Source image dimension probing evidence must be captured before image pipeline readiness.");
+  if (!input.exifStrippingImplemented) blockers.push("EXIF stripping evidence must be captured before public derivative creation readiness.");
+  if (!input.responsiveDerivativeGenerationImplemented) blockers.push("Responsive WebP/AVIF/JPEG derivative generation evidence must be captured before image pipeline readiness.");
+  if (!input.blurPlaceholderGenerationImplemented) blockers.push("Blur placeholder generation proof must be captured for storage-backed derivatives.");
   if (!input.fileAssetPersistenceAvailable) blockers.push("FileAsset persistence must be available for source and derivative records.");
   if (!input.portfolioImagePersistenceAvailable) blockers.push("PortfolioImage persistence must be available for SEO image metadata.");
   if (!input.derivativeMetadataPersistenceAvailable) blockers.push("Derivative metadata persistence must be available.");
@@ -958,42 +1167,30 @@ export function buildSeoImagePipelineRuntimeReadinessPlan(input: SeoImagePipelin
   if (!input.lighthouseImageAuditPassed) blockers.push("Lighthouse image optimization audit must pass.");
 
   if (!input.imageProcessingWorkerImplemented || !input.storageProviderConfigured || !input.uploadImageProcessingTestsPassed) {
-    requiredEvidence.push("storage-backed image processing worker and upload test evidence");
+    requiredEvidence.push(seoImagePipelineRequiredEvidence[0]);
   }
   if (!input.sourceDimensionProbeImplemented || !input.exifStrippingImplemented || !input.responsiveDerivativeGenerationImplemented || !input.blurPlaceholderGenerationImplemented) {
-    requiredEvidence.push("dimension probe, EXIF stripping, responsive derivative, and blur placeholder evidence");
+    requiredEvidence.push(seoImagePipelineRequiredEvidence[1]);
   }
   if (!input.fileAssetPersistenceAvailable || !input.portfolioImagePersistenceAvailable || !input.derivativeMetadataPersistenceAvailable) {
-    requiredEvidence.push("FileAsset, PortfolioImage, and derivative metadata persistence evidence");
+    requiredEvidence.push(seoImagePipelineRequiredEvidence[2]);
   }
   if (!input.privateOriginalAclEnforced || !input.publicDerivativeAclEnforced || !input.privateOriginalAccessTestsPassed || !input.publicDerivativeLoadTestsPassed) {
-    requiredEvidence.push("private original and public derivative ACL/load test evidence");
+    requiredEvidence.push(seoImagePipelineRequiredEvidence[3]);
   }
   if (!input.cdnCacheHeadersConfigured || !input.immutableDerivativeUrlsConfigured || !input.cdnHeaderTestsPassed || !input.lighthouseImageAuditPassed) {
-    requiredEvidence.push("CDN cache header, immutable URL, and Lighthouse image audit evidence");
+    requiredEvidence.push(seoImagePipelineRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/seo typecheck",
-      "pnpm --filter @inkroute/seo test",
-      "storage-backed upload/image processing tests",
-      "private original access denial tests",
-      "public derivative load tests",
-      "CDN cache header tests",
-      "Lighthouse image optimization audit",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Keep original uploads private and strip EXIF before creating public derivatives.",
-      "Probe source dimensions and persist derivative width, format, object key, blur placeholder, cache policy, and ACL metadata.",
-      "Generate responsive WebP/AVIF/JPEG derivatives with immutable object keys.",
-      "Persist FileAsset and PortfolioImage records transactionally with tenant and portfolio item scope.",
-      "Serve only public derivatives through CDN cache headers; block direct public access to originals.",
-      "Prove image optimization with Lighthouse and storage/CDN integration tests.",
-    ],
+    requiredCommands: seoImagePipelineRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === seoImagePipelineRequiredEvidence.length
+        ? seoImagePipelineRequiredEvidence
+        : requiredEvidence,
+    requiredControls: seoImagePipelineRequiredControls,
     blockers,
   };
 }
@@ -1350,10 +1547,9 @@ export function auditSeoTechnicalReadiness(input: SeoTechnicalAuditInput): SeoTe
         code: "CANONICAL_METADATA_MISMATCH",
         field: "canonicalUrl",
         message: `Metadata canonical fields do not agree for ${route.path}.`,
-        nextAction: "Regenerate metadata from the normalized route canonical path.",
       });
     }
-    if (metadata.robots.index !== (route.indexMode === "index")) {
+    if (metadata.robots.index !== (route.indexMode !== "noindex")) {
       addTechnicalFinding(findings, {
         code: "ROBOTS_INDEX_MISMATCH",
         field: "robots",
@@ -1374,20 +1570,12 @@ export function auditSeoTechnicalReadiness(input: SeoTechnicalAuditInput): SeoTe
 
     if (!isJsonLdGraph(graph)) {
       addTechnicalFinding(findings, {
-        code: "JSON_LD_GRAPH_MISSING",
-        field: "jsonLd",
-        message: "Composed JSON-LD output must use an @graph array.",
-        nextAction: "Wrap structured data items with composeJsonLdGraph before rendering.",
-      });
-      continue;
-    }
-    if (graph["@graph"].length === 0) {
-      addTechnicalFinding(findings, {
         code: "JSON_LD_GRAPH_EMPTY",
         field: "jsonLd",
-        message: "JSON-LD graph is empty.",
-        nextAction: "Include WebSite, WebPage, Person, Service, FAQ, Event, or ImageObject schema items where relevant.",
+        message: "JSON-LD graph must include at least one schema item.",
+        nextAction: "Render JSON-LD as a graph with schema.org items.",
       });
+      continue;
     }
     for (const item of graph["@graph"]) {
       if (!item || typeof item !== "object" || !("@type" in item)) {
@@ -1451,20 +1639,8 @@ export function buildPublicWebReadinessPlan(input: PublicWebReadinessInput): Pub
     providerBackedSurfaceCount,
     untestedSurfaces,
     placeholderAssetSurfaces,
-    requiredCommands: [
-      "pnpm --filter @inkroute/web typecheck",
-      "pnpm --filter @inkroute/web build",
-      "pnpm --filter @inkroute/web test",
-      "pnpm test:e2e --project=web-chromium",
-      "pnpm test:e2e --project=web-mobile",
-    ],
-    requiredControls: [
-      "Keep static-demo and local-runtime responses explicitly labeled until database persistence is wired.",
-      "Smoke every public page, public API route, provider webhook, sitemap, robots, and JSON-LD output before launch.",
-      "Replace placeholder portfolio/media assets with scanned FileAsset-backed derivatives.",
-      "Verify accessibility, mobile responsiveness, SEO metadata, sitemap, robots, and performance budgets.",
-      "Persist booking, payment, upload, notification, privacy, and observability records tenant-safely before production.",
-    ],
+    requiredCommands: publicWebReadinessRequiredCommands,
+    requiredControls: publicWebReadinessRequiredControls,
     blockers,
   };
 }
@@ -1575,14 +1751,14 @@ export function buildSeoPublicationRuntimeReadinessPlan(input: SeoPublicationRun
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: SeoPublicationRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/seo package script is missing ${script}.`);
   if (!input.seoPackageTestsPassed) blockers.push("@inkroute/seo publication tests must pass.");
   if (!input.seoPackageTypecheckPassed) blockers.push("@inkroute/seo typecheck must pass.");
-  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with SEO manager routes.");
-  if (!input.prismaModelsMigrated) blockers.push("SEO Prisma models must be migrated before dashboard publishing.");
-  if (!input.dashboardCrudRoutesImplemented) blockers.push("Dashboard SEO CRUD mutation routes must be implemented.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with SEO publication routes.");
+  if (!input.prismaModelsMigrated) blockers.push("SEO Prisma models must be migrated.");
+  if (!input.dashboardCrudRoutesImplemented) blockers.push("Dashboard SEO CRUD mutation route evidence must be captured before SEO publication readiness.");
   if (!input.authenticatedDashboardApiImplemented) blockers.push("SEO dashboard API routes must require authenticated actors.");
   if (!input.rbacEnforced) blockers.push("SEO publish/edit/archive/redirect actions must enforce owner or studio_manager RBAC.");
   if (!input.tenantIsolationEnforced) blockers.push("SEO repositories must enforce tenant isolation for reads and writes.");
@@ -1590,53 +1766,42 @@ export function buildSeoPublicationRuntimeReadinessPlan(input: SeoPublicationRun
   if (!input.seoCityPageRepositoryImplemented) blockers.push("SeoCityPage repository must be implemented.");
   if (!input.seoStylePageRepositoryImplemented) blockers.push("SeoStylePage repository must be implemented.");
   if (!input.seoRedirectRepositoryImplemented) blockers.push("SeoRedirect repository must be implemented.");
-  if (!input.faqReviewImageAssociationPersistenceAvailable) blockers.push("FAQ, review, and image SEO associations must persist tenant-safely.");
-  if (!input.publishStatePersistenceAvailable) blockers.push("SEO draft/published/archived state changes must persist.");
-  if (!input.auditLogPersistenceAvailable) blockers.push("SEO publication audit logs must persist.");
+  if (!input.faqReviewImageAssociationPersistenceAvailable) blockers.push("FAQ, review, and image association persistence must be available.");
+  if (!input.publishStatePersistenceAvailable) blockers.push("SEO publish-state persistence must be available.");
+  if (!input.auditLogPersistenceAvailable) blockers.push("SEO audit-log persistence must be available.");
   if (!input.revalidationJobPersistenceAvailable) blockers.push("SEO revalidation jobs must persist after publication commits.");
-  if (!input.idempotencyStoreAvailable) blockers.push("SEO publication idempotency store must be available.");
-  if (!input.previewToPublishFlowImplemented) blockers.push("Dashboard SEO preview-to-publish flow must be implemented.");
-  if (!input.archiveRedirectFlowImplemented) blockers.push("Dashboard SEO archive and redirect flow must be implemented.");
+  if (!input.idempotencyStoreAvailable) blockers.push("SEO idempotency store must be available.");
+  if (!input.previewToPublishFlowImplemented) blockers.push("Dashboard SEO preview-to-publish flow evidence must be captured before SEO publication readiness.");
+  if (!input.archiveRedirectFlowImplemented) blockers.push("Dashboard SEO archive and redirect flow evidence must be captured before SEO publication readiness.");
   if (!input.prismaIntegrationTestsPassed) blockers.push("SEO Prisma integration tests must pass.");
   if (!input.tenantIsolationTestsPassed) blockers.push("SEO tenant isolation tests must pass.");
   if (!input.dashboardPublishFlowTestsPassed) blockers.push("Dashboard SEO publish/edit/archive flow tests must pass.");
 
   if (!input.prismaModelsMigrated || !input.seoCityPageRepositoryImplemented || !input.seoStylePageRepositoryImplemented || !input.seoRedirectRepositoryImplemented) {
-    requiredEvidence.push("Prisma migration and SEO repository implementation evidence");
+    requiredEvidence.push(seoPublicationRuntimeRequiredEvidence[0]);
   }
   if (!input.dashboardCrudRoutesImplemented || !input.authenticatedDashboardApiImplemented || !input.rbacEnforced || !input.previewToPublishFlowImplemented || !input.archiveRedirectFlowImplemented) {
-    requiredEvidence.push("authenticated dashboard SEO CRUD, RBAC, preview, publish, archive, and redirect flow evidence");
+    requiredEvidence.push(seoPublicationRuntimeRequiredEvidence[1]);
   }
   if (!input.tenantIsolationEnforced || !input.prismaTransactionsConfigured || !input.auditLogPersistenceAvailable || !input.idempotencyStoreAvailable) {
-    requiredEvidence.push("tenant-scoped transaction, audit, and idempotency evidence");
+    requiredEvidence.push(seoPublicationRuntimeRequiredEvidence[2]);
   }
   if (!input.faqReviewImageAssociationPersistenceAvailable || !input.publishStatePersistenceAvailable || !input.revalidationJobPersistenceAvailable) {
-    requiredEvidence.push("SEO association, publish-state, and revalidation job persistence evidence");
+    requiredEvidence.push(seoPublicationRuntimeRequiredEvidence[3]);
   }
   if (!input.prismaIntegrationTestsPassed || !input.tenantIsolationTestsPassed || !input.dashboardPublishFlowTestsPassed) {
-    requiredEvidence.push("SEO Prisma integration, tenant isolation, and dashboard publish-flow test evidence");
+    requiredEvidence.push(seoPublicationRuntimeRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/seo typecheck",
-      "pnpm --filter @inkroute/seo test",
-      "pnpm --filter @inkroute/dashboard build",
-      "SEO Prisma integration tests",
-      "SEO tenant isolation tests",
-      "dashboard SEO publish/edit/archive Playwright or route tests",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Use buildSeoPublicationMutationPlan as the service contract before every database mutation.",
-      "Require authenticated owner or studio_manager actors for create, update, publish, archive, and redirect actions.",
-      "Scope every SeoCityPage, SeoStylePage, SeoRedirect, FAQ, review, image, audit, and revalidation write by tenant.",
-      "Commit SEO content, associations, audit logs, idempotency keys, and revalidation enqueueing through safe transaction boundaries.",
-      "Persist draft, published, archived, and redirect states with dashboard preview-to-publish and archive/redirect flows.",
-      "Prove tenant isolation, RBAC denial, audit writes, and revalidation jobs with integration tests.",
-    ],
+    requiredCommands: seoPublicationRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === seoPublicationRuntimeRequiredEvidence.length
+        ? seoPublicationRuntimeRequiredEvidence
+        : requiredEvidence,
+    requiredControls: seoPublicationRuntimeRequiredControls,
     blockers,
   };
 }
@@ -1645,65 +1810,53 @@ export function buildCanonicalDomainRuntimeReadinessPlan(input: CanonicalDomainR
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: CanonicalDomainRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/seo package script is missing ${script}.`);
   if (!input.seoPackageTestsPassed) blockers.push("@inkroute/seo canonical/domain tests must pass.");
   if (!input.seoPackageTypecheckPassed) blockers.push("@inkroute/seo typecheck must pass.");
   if (!input.webBuildPassed) blockers.push("@inkroute/web build must pass with canonical middleware/routes.");
-  if (!input.middlewareImplemented) blockers.push("Public canonical/domain middleware or route handler must be implemented.");
-  if (!input.tenantDomainRepositoryImplemented) blockers.push("Tenant domain repository must be implemented.");
-  if (!input.seoRedirectRepositoryImplemented) blockers.push("SeoRedirect repository must be implemented.");
-  if (!input.canonicalPolicyWiredToPublicRoutes) blockers.push("Tenant canonical policy must be wired into public routes.");
-  if (!input.allowedHostValidationEnforced) blockers.push("Allowed-host validation must be enforced before canonical output.");
-  if (!input.httpsRedirectEnforced) blockers.push("HTTPS redirects must be enforced for tenant domains.");
+  if (!input.middlewareImplemented) blockers.push("Public canonical/domain middleware or route handler evidence must be captured before canonical-domain readiness.");
+  if (!input.tenantDomainRepositoryImplemented) blockers.push("TenantDomain repository runtime evidence must be captured before canonical-domain readiness.");
+  if (!input.seoRedirectRepositoryImplemented) blockers.push("SeoRedirect repository runtime evidence must be captured before canonical-domain readiness.");
+  if (!input.canonicalPolicyWiredToPublicRoutes) blockers.push("Tenant canonical policy must be wired to public routes.");
+  if (!input.allowedHostValidationEnforced) blockers.push("Allowed-host validation must be enforced.");
+  if (!input.httpsRedirectEnforced) blockers.push("HTTPS redirects must be enforced where required.");
   if (!input.canonicalHostRedirectEnforced) blockers.push("Canonical host redirects must be enforced.");
   if (!input.persistedRedirectsExecuted) blockers.push("Persisted SeoRedirect records must execute at runtime.");
   if (!input.redirectStatusCodesPreserved) blockers.push("SEO redirect status codes must be preserved at runtime.");
   if (!input.draftArchiveNoindexSitemapExclusionRuntimeVerified) blockers.push("Runtime sitemap must exclude draft, archived, private, and noindex content.");
   if (!input.noindexHeadersOrMetaRuntimeVerified) blockers.push("Noindex headers or metadata must be asserted for private/noindex routes.");
   if (!input.canonicalTagsUseTenantPrimaryHost) blockers.push("Canonical tags must use the tenant primary host.");
-  if (!input.customDomainRouteTestsPassed) blockers.push("Custom-domain route tests must pass.");
+  if (!input.customDomainRouteTestsPassed) blockers.push("Custom-domain canonical and redirect route tests must pass.");
   if (!input.duplicateCanonicalRuntimeTestsPassed) blockers.push("Duplicate canonical runtime tests must pass.");
   if (!input.deploymentDomainProofAvailable) blockers.push("Deployment-domain proof must show configured tenant primary and allowed hosts.");
 
   if (!input.middlewareImplemented || !input.canonicalPolicyWiredToPublicRoutes || !input.allowedHostValidationEnforced) {
-    requiredEvidence.push("public middleware/route canonical policy and allowed-host validation evidence");
+    requiredEvidence.push(canonicalDomainRuntimeRequiredEvidence[0]);
   }
   if (!input.tenantDomainRepositoryImplemented || !input.seoRedirectRepositoryImplemented || !input.persistedRedirectsExecuted) {
-    requiredEvidence.push("tenant domain and SeoRedirect repository runtime evidence");
+    requiredEvidence.push(canonicalDomainRuntimeRequiredEvidence[1]);
   }
   if (!input.httpsRedirectEnforced || !input.canonicalHostRedirectEnforced || !input.redirectStatusCodesPreserved || !input.canonicalTagsUseTenantPrimaryHost) {
-    requiredEvidence.push("HTTPS/canonical host redirect, status-code, and canonical tag evidence");
+    requiredEvidence.push(canonicalDomainRuntimeRequiredEvidence[2]);
   }
   if (!input.draftArchiveNoindexSitemapExclusionRuntimeVerified || !input.noindexHeadersOrMetaRuntimeVerified || !input.duplicateCanonicalRuntimeTestsPassed) {
-    requiredEvidence.push("sitemap exclusion, noindex, and duplicate canonical runtime test evidence");
+    requiredEvidence.push(canonicalDomainRuntimeRequiredEvidence[3]);
   }
   if (!input.customDomainRouteTestsPassed || !input.deploymentDomainProofAvailable) {
-    requiredEvidence.push("custom-domain route test and deployment-domain proof evidence");
+    requiredEvidence.push(canonicalDomainRuntimeRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/seo typecheck",
-      "pnpm --filter @inkroute/seo test",
-      "pnpm --filter @inkroute/web build",
-      "custom-domain canonical/redirect route tests",
-      "runtime sitemap exclusion and noindex route tests",
-      "duplicate canonical runtime tests",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Resolve tenant canonical policy for every public request before rendering canonical metadata or sitemap output.",
-      "Reject or redirect unregistered hosts and enforce tenant primary-host canonical URLs.",
-      "Force HTTPS where tenant domain policy requires it.",
-      "Execute persisted tenant-scoped SeoRedirect records with their configured status codes.",
-      "Exclude draft, archived, private, and noindex content from sitemap output at runtime.",
-      "Assert noindex headers or metadata on private/noindex routes.",
-      "Prove deployment primary and allowed domains match tenant configuration.",
-    ],
+    requiredCommands: canonicalDomainRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === canonicalDomainRuntimeRequiredEvidence.length
+        ? canonicalDomainRuntimeRequiredEvidence
+        : requiredEvidence,
+    requiredControls: canonicalDomainRuntimeRequiredControls,
     blockers,
   };
 }
@@ -1712,7 +1865,7 @@ export function buildStructuredDataCrawlQaReadinessPlan(input: StructuredDataCra
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: StructuredDataCrawlQaRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/seo package script is missing ${script}.`);
   if (!input.seoPackageTestsPassed) blockers.push("@inkroute/seo structured-data tests must pass.");
@@ -1732,38 +1885,27 @@ export function buildStructuredDataCrawlQaReadinessPlan(input: StructuredDataCra
   if (!input.closeoutEvidenceAttached) blockers.push("Structured-data crawl and rich-results evidence must be attached to closeout.");
 
   if (!input.renderedPageCrawlerConfigured || !input.renderedJsonLdExtractionImplemented || !input.publicPageInventoryConfigured) {
-    requiredEvidence.push("rendered-page crawler, JSON-LD extraction, and public page inventory evidence");
+    requiredEvidence.push(structuredDataCrawlQaRequiredEvidence[0]);
   }
   if (!input.googleRichResultsCompatibleChecksPassed || !input.structuredDataCriticalErrorsAbsent || !input.unsupportedSchemaWarningsReviewed) {
-    requiredEvidence.push("Google Rich Results-compatible validation and unsupported-schema review evidence");
+    requiredEvidence.push(structuredDataCrawlQaRequiredEvidence[1]);
   }
   if (!input.demoContentReplacedOrDocumented || !input.sitemapCanonicalCrawlPassed || !input.canonicalUrlConsistencyVerified || !input.robotsNoindexCrawlVerified) {
-    requiredEvidence.push("production/demo content, sitemap, canonical, robots, and noindex crawl evidence");
+    requiredEvidence.push(structuredDataCrawlQaRequiredEvidence[2]);
   }
   if (!input.crawlArtifactsCaptured || !input.closeoutEvidenceAttached) {
-    requiredEvidence.push("crawl artifact capture and closeout attachment evidence");
+    requiredEvidence.push(structuredDataCrawlQaRequiredEvidence[3]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/seo typecheck",
-      "pnpm --filter @inkroute/seo test",
-      "pnpm --filter @inkroute/web build",
-      "rendered public-page JSON-LD crawl",
-      "Google Rich Results-compatible structured-data validation",
-      "sitemap/canonical/robots/noindex crawl QA",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Extract JSON-LD from rendered public pages instead of relying only on helper snapshots.",
-      "Run Google Rich Results-compatible validation for supported schema types.",
-      "Review unsupported schema warnings and remove or document intentionally unsupported fields.",
-      "Replace demo schema content with production data or document remaining demo fields before launch.",
-      "Crawl sitemap, canonical URLs, robots, and noindex outputs together to catch indexing contradictions.",
-      "Attach crawl artifacts and structured-data validation reports to the launch closeout.",
-    ],
+    requiredCommands: structuredDataCrawlQaRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === structuredDataCrawlQaRequiredEvidence.length
+        ? structuredDataCrawlQaRequiredEvidence
+        : requiredEvidence,
+    requiredControls: structuredDataCrawlQaRequiredControls,
     blockers,
   };
 }
@@ -1772,13 +1914,13 @@ export function buildSearchConsoleRuntimeReadinessPlan(input: SearchConsoleRunti
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: SearchConsoleRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/seo package script is missing ${script}.`);
   if (!input.seoPackageTestsPassed) blockers.push("@inkroute/seo Search Console tests must pass.");
   if (!input.seoPackageTypecheckPassed) blockers.push("@inkroute/seo typecheck must pass.");
-  if (!input.providerRoutesImplemented) blockers.push("Search Console provider routes must be implemented.");
-  if (!input.backgroundJobsImplemented) blockers.push("Search Console background jobs must be implemented.");
+  if (!input.providerRoutesImplemented) blockers.push("Search Console provider route evidence must be captured before Search Console readiness.");
+  if (!input.backgroundJobsImplemented) blockers.push("Search Console background job evidence must be captured before Search Console readiness.");
   if (!input.credentialsConfigured) blockers.push("Google Search Console credentials must be configured in a secret store.");
   if (!input.OAuthOrServiceAccountFlowImplemented) blockers.push("OAuth or service-account execution flow must be implemented.");
   if (!input.tenantOwnershipPersistenceAvailable) blockers.push("Tenant Search Console property ownership persistence must be available.");
@@ -1789,49 +1931,37 @@ export function buildSearchConsoleRuntimeReadinessPlan(input: SearchConsoleRunti
   if (!input.queryPageImportImplemented) blockers.push("Search Console query/page import must be implemented.");
   if (!input.importedRowsPersisted) blockers.push("Imported query/page rows must persist tenant-safely.");
   if (!input.indexingMonitoringImplemented) blockers.push("Search Console indexing monitoring must be implemented.");
-  if (!input.dashboardStatusImplemented) blockers.push("Dashboard Search Console import/monitoring status must be implemented.");
+  if (!input.dashboardStatusImplemented) blockers.push("Dashboard Search Console import/monitoring status evidence must be captured before Search Console readiness.");
   if (!input.approvedFixtureTestsPassed) blockers.push("Approved Search Console fixture tests must pass.");
   if (!input.providerSandboxOrTestPropertyPassed) blockers.push("Provider sandbox or verified test-property execution must pass.");
-  if (!input.auditLogPersistenceAvailable) blockers.push("Search Console provider audit logs must persist.");
+  if (!input.auditLogPersistenceAvailable) blockers.push("Search Console operation audit-log persistence must be available.");
   if (!input.idempotencyStoreAvailable) blockers.push("Search Console operation idempotency store must be available.");
 
   if (!input.providerRoutesImplemented || !input.backgroundJobsImplemented || !input.OAuthOrServiceAccountFlowImplemented || !input.credentialsConfigured) {
-    requiredEvidence.push("credential-managed provider route/job execution evidence");
+    requiredEvidence.push(searchConsoleRuntimeRequiredEvidence[0]);
   }
   if (!input.tenantOwnershipPersistenceAvailable || !input.tenantOwnershipChecksEnforced || !input.verifiedPropertyProofAvailable) {
-    requiredEvidence.push("tenant ownership persistence, ownership checks, and verified property proof evidence");
+    requiredEvidence.push(searchConsoleRuntimeRequiredEvidence[1]);
   }
   if (!input.sitemapSubmissionImplemented || !input.sitemapSubmittedForVerifiedProperty) {
-    requiredEvidence.push("verified-property sitemap submission evidence");
+    requiredEvidence.push(searchConsoleRuntimeRequiredEvidence[2]);
   }
   if (!input.queryPageImportImplemented || !input.importedRowsPersisted || !input.indexingMonitoringImplemented || !input.dashboardStatusImplemented) {
-    requiredEvidence.push("query/page import, persisted rows, indexing monitoring, and dashboard status evidence");
+    requiredEvidence.push(searchConsoleRuntimeRequiredEvidence[3]);
   }
   if (!input.approvedFixtureTestsPassed || !input.providerSandboxOrTestPropertyPassed || !input.auditLogPersistenceAvailable || !input.idempotencyStoreAvailable) {
-    requiredEvidence.push("fixture/provider execution, audit, and idempotency evidence");
+    requiredEvidence.push(searchConsoleRuntimeRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/seo typecheck",
-      "pnpm --filter @inkroute/seo test",
-      "Search Console provider route tests",
-      "Search Console background job tests",
-      "verified test-property sitemap submission smoke",
-      "Search Console query/page import fixture tests",
-      "dashboard Search Console status tests",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Execute Search Console operations only through credential-managed provider routes or jobs.",
-      "Persist tenant property ownership and verify tenant ownership before property, sitemap, import, or monitoring operations.",
-      "Submit sitemaps only for verified properties owned by the tenant.",
-      "Persist imported query/page rows tenant-safely with idempotency and audit logs.",
-      "Expose dashboard status for not-configured, tenant-mismatch, ready-for-provider, submitted, imported, and monitoring states.",
-      "Use approved fixtures or verified test-property executions before production SEO operations.",
-    ],
+    requiredCommands: searchConsoleRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === searchConsoleRuntimeRequiredEvidence.length
+        ? searchConsoleRuntimeRequiredEvidence
+        : requiredEvidence,
+    requiredControls: searchConsoleRuntimeRequiredControls,
     blockers,
   };
 }
@@ -1840,7 +1970,7 @@ export function buildSeoAutomatedTestReadinessPlan(input: SeoAutomatedTestReadin
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: SeoAutomatedTestReadinessRequiredEvidence[] = [];
   const requiredSuites = [
     "SEO route record and canonical normalization tests",
     "sitemap generation and indexing filter tests",
@@ -1876,33 +2006,30 @@ export function buildSeoAutomatedTestReadinessPlan(input: SeoAutomatedTestReadin
   if (!input.ciRunsSeoTestGate) blockers.push("CI must run the SEO package and preview route test gate.");
 
   if (!input.routeRecordTestsPassed || !input.sitemapGenerationTestsPassed || !input.metadataDraftTestsPassed || !input.auditTestsPassed) {
-    requiredEvidence.push("route record, sitemap, metadata, and audit test output");
+    requiredEvidence.push(seoAutomatedTestReadinessRequiredEvidence[0]);
   }
   if (!input.contentBriefTestsPassed || !input.internalLinkTestsPassed || !input.jsonLdGraphTestsPassed || !input.structuredDataSnapshotTestsPassed) {
-    requiredEvidence.push("content brief, internal-link, JSON-LD, and structured-data snapshot test output");
+    requiredEvidence.push(seoAutomatedTestReadinessRequiredEvidence[1]);
   }
   if (!input.imagePipelineTestsPassed || !input.canonicalRedirectTestsPassed || !input.searchConsolePlanTestsPassed) {
-    requiredEvidence.push("image pipeline, canonical/redirect, and Search Console planner test output");
+    requiredEvidence.push(seoAutomatedTestReadinessRequiredEvidence[2]);
   }
   if (!input.webSitemapRouteTestsPassed || !input.seoPreviewRouteTestsPassed || !input.sitemapPreviewRouteTestsPassed) {
-    requiredEvidence.push("web sitemap, SEO preview, and sitemap preview route test output");
+    requiredEvidence.push(seoAutomatedTestReadinessRequiredEvidence[3]);
   }
   if (!input.runtimeBuildEvidenceCoveredByGap076 || !input.crawlEvidenceCoveredByGap073 || !input.ciRunsSeoTestGate) {
-    requiredEvidence.push("linked GAP-073/GAP-076 runtime evidence and CI SEO test-gate evidence");
+    requiredEvidence.push(seoAutomatedTestReadinessRequiredEvidence[4]);
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === seoAutomatedTestReadinessRequiredEvidence.length
+      ? seoAutomatedTestReadinessRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/seo typecheck",
-      "pnpm --filter @inkroute/seo test",
-      "pnpm vitest run apps/web/tests/sitemap-route.test.ts",
-      "SEO preview route tests",
-      "sitemap preview route tests",
-      "CI SEO package and preview route test gate",
-    ],
-    requiredEvidence,
+    requiredCommands: seoAutomatedTestReadinessRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     requiredSuites,
     blockers,
   };
@@ -1914,7 +2041,7 @@ export function buildPublicWebLaunchEvidencePlan(
   const requiredScripts = ["typecheck", "build", "test"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: PublicWebLaunchEvidenceRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/web package script is missing ${script}.`);
   if (!input.webTypecheckPassed) blockers.push("@inkroute/web typecheck must pass.");
@@ -1938,39 +2065,33 @@ export function buildPublicWebLaunchEvidencePlan(
   if (!input.launchArtifactsSecretSafe) blockers.push("Public web launch artifacts must be redacted and free of secrets or client-private data.");
 
   if (!input.webTypecheckPassed || !input.webBuildPassed || !input.webRouteSmokePassed) {
-    requiredEvidence.push("web typecheck, build, and route smoke output");
+    requiredEvidence.push(publicWebLaunchEvidenceRequiredEvidence[0]);
   }
   if (!input.webPlaywrightDesktopPassed || !input.webPlaywrightMobilePassed || !input.accessibilityAuditPassed || !input.lighthousePerformancePassed) {
-    requiredEvidence.push("desktop/mobile Playwright, accessibility, and Lighthouse/performance evidence");
+    requiredEvidence.push(publicWebLaunchEvidenceRequiredEvidence[1]);
   }
   if (!input.apiRoutesUseTenantScopedPersistence || !input.providerBackedRoutesVerified || !input.localRuntimeFallbackDisabledForProduction) {
-    requiredEvidence.push("tenant-scoped persistence, provider-backed route, and production local-runtime fallback evidence");
+    requiredEvidence.push(publicWebLaunchEvidenceRequiredEvidence[2]);
   }
   if (!input.realPortfolioDerivativesConfigured || !input.placeholderAssetsRemovedOrDocumented) {
-    requiredEvidence.push("real scanned media derivative evidence and placeholder asset disposition");
+    requiredEvidence.push(publicWebLaunchEvidenceRequiredEvidence[3]);
   }
   if (!input.sitemapRuntimeVerified || !input.robotsRuntimeVerified || !input.jsonLdRuntimeVerified || !input.canonicalRuntimeVerified) {
-    requiredEvidence.push("runtime sitemap, robots, rendered JSON-LD, and canonical validation evidence");
+    requiredEvidence.push(publicWebLaunchEvidenceRequiredEvidence[4]);
   }
   if (!input.privacyAndLegalRoutesReviewed || !input.ciEvidenceCaptured || !input.launchArtifactsSecretSafe) {
-    requiredEvidence.push("legal-route review, CI, and secret-safe launch artifact evidence");
+    requiredEvidence.push(publicWebLaunchEvidenceRequiredEvidence[5]);
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === publicWebLaunchEvidenceRequiredEvidence.length
+      ? publicWebLaunchEvidenceRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/web typecheck",
-      "pnpm --filter @inkroute/web build",
-      "pnpm --filter @inkroute/web test",
-      "pnpm test:e2e --project=web-chromium",
-      "pnpm test:e2e --project=web-mobile",
-      "axe accessibility audit for public routes",
-      "Lighthouse performance audit for public launch routes",
-      "runtime sitemap/robots/JSON-LD/canonical validation",
-      "GitHub Actions public web launch evidence job",
-    ],
-    requiredEvidence,
+    requiredCommands: publicWebLaunchEvidenceRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
@@ -2262,11 +2383,44 @@ export interface SeoA11yPerformanceAuditEvidenceInput {
 export interface SeoA11yPerformanceAuditEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredControls: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof seoA11yPerformanceAuditRequiredCommands;
+  requiredControls: typeof seoA11yPerformanceAuditRequiredControls;
+  requiredEvidence: readonly SeoA11yPerformanceAuditRequiredEvidence[];
   blockers: readonly string[];
 }
+
+export const seoA11yPerformanceAuditRequiredCommands = [
+  "pnpm --filter @inkroute/seo typecheck",
+  "pnpm --filter @inkroute/seo test",
+  "pnpm --filter @inkroute/web typecheck",
+  "pnpm --filter @inkroute/web build",
+  "browser crawl for public Phase 10 routes",
+  "schema validator for rendered JSON-LD",
+  "sitemap and canonical browser checks",
+  "axe accessibility audit for public routes",
+  "Lighthouse/Core Web Vitals audit",
+  "mobile visual QA sweep",
+  "GitHub Actions SEO accessibility performance evidence job",
+] as const;
+
+export const seoA11yPerformanceAuditRequiredControls = [
+  "Audit rendered routes, not only package-level metadata helpers.",
+  "Validate JSON-LD, sitemap, canonical URLs, and internal links against browser-visible output.",
+  "Fix heading order, focus state, landmark, label, contrast, and form accessibility issues before launch.",
+  "Capture Lighthouse and Core Web Vitals evidence for launch-critical desktop and mobile routes.",
+  "Keep audit artifacts redacted and free of client-private, medical, payment, provider, and private file data.",
+] as const;
+
+export const seoA11yPerformanceAuditRequiredEvidence = [
+  "web typecheck and production build evidence",
+  "browser crawl, sitemap/canonical, schema validator, and structured-data snapshot evidence",
+  "axe accessibility audit output plus heading/focus/contrast fix evidence",
+  "Lighthouse and Core Web Vitals evidence for launch-critical routes",
+  "mobile visual QA screenshots or transcript evidence",
+  "CI artifact bundle with redaction/secret-safety proof",
+] as const;
+
+export type SeoA11yPerformanceAuditRequiredEvidence = typeof seoA11yPerformanceAuditRequiredEvidence[number];
 
 export function buildSeoA11yPerformanceAuditEvidencePlan(
   input: SeoA11yPerformanceAuditEvidenceInput,
@@ -2274,7 +2428,7 @@ export function buildSeoA11yPerformanceAuditEvidencePlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: SeoA11yPerformanceAuditRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/seo package script is missing ${script}.`);
   if (!input.seoTestsPassed) blockers.push("@inkroute/seo tests must pass before SEO/accessibility/performance audit evidence can close.");
@@ -2294,48 +2448,34 @@ export function buildSeoA11yPerformanceAuditEvidencePlan(
   if (!input.secretSafeArtifactsCaptured) blockers.push("SEO/accessibility/performance artifacts must be redacted and free of secrets, client-private data, raw medical notes, private file URLs, and provider tokens.");
 
   if (!input.webTypecheckPassed || !input.webBuildPassed) {
-    requiredEvidence.push("web typecheck and production build evidence");
+    requiredEvidence.push(seoA11yPerformanceAuditRequiredEvidence[0]);
   }
   if (!input.browserCrawlPassed || !input.sitemapCanonicalChecksPassed || !input.schemaValidatorPassed || !input.structuredDataSnapshotsCaptured) {
-    requiredEvidence.push("browser crawl, sitemap/canonical, schema validator, and structured-data snapshot evidence");
+    requiredEvidence.push(seoA11yPerformanceAuditRequiredEvidence[1]);
   }
   if (!input.axeAuditPassed || !input.headingFocusContrastIssuesFixed) {
-    requiredEvidence.push("axe accessibility audit output plus heading/focus/contrast fix evidence");
+    requiredEvidence.push(seoA11yPerformanceAuditRequiredEvidence[2]);
   }
   if (!input.lighthouseAuditPassed || !input.coreWebVitalsCaptured) {
-    requiredEvidence.push("Lighthouse and Core Web Vitals evidence for launch-critical routes");
+    requiredEvidence.push(seoA11yPerformanceAuditRequiredEvidence[3]);
   }
   if (!input.mobileVisualQaPassed) {
-    requiredEvidence.push("mobile visual QA screenshots or transcript evidence");
+    requiredEvidence.push(seoA11yPerformanceAuditRequiredEvidence[4]);
   }
   if (!input.ciArtifactsCaptured || !input.secretSafeArtifactsCaptured) {
-    requiredEvidence.push("CI artifact bundle with redaction/secret-safety proof");
+    requiredEvidence.push(seoA11yPerformanceAuditRequiredEvidence[5]);
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === seoA11yPerformanceAuditRequiredEvidence.length
+      ? seoA11yPerformanceAuditRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/seo typecheck",
-      "pnpm --filter @inkroute/seo test",
-      "pnpm --filter @inkroute/web typecheck",
-      "pnpm --filter @inkroute/web build",
-      "browser crawl for public Phase 10 routes",
-      "schema validator for rendered JSON-LD",
-      "sitemap and canonical browser checks",
-      "axe accessibility audit for public routes",
-      "Lighthouse/Core Web Vitals audit",
-      "mobile visual QA sweep",
-      "GitHub Actions SEO accessibility performance evidence job",
-    ],
-    requiredControls: [
-      "Audit rendered routes, not only package-level metadata helpers.",
-      "Validate JSON-LD, sitemap, canonical URLs, and internal links against browser-visible output.",
-      "Fix heading order, focus state, landmark, label, contrast, and form accessibility issues before launch.",
-      "Capture Lighthouse and Core Web Vitals evidence for launch-critical desktop and mobile routes.",
-      "Keep audit artifacts redacted and free of client-private, medical, payment, provider, and private file data.",
-    ],
-    requiredEvidence,
+    requiredCommands: seoA11yPerformanceAuditRequiredCommands,
+    requiredControls: seoA11yPerformanceAuditRequiredControls,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }

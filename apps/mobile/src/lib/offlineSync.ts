@@ -1,11 +1,12 @@
 import {
   buildOfflineIdempotencyKey,
+  buildOfflineSyncAuditEvent,
   planOfflineSync,
   type OfflineQueueItem,
-  type OfflineSyncDecision,
+  type OfflineSyncAuditEvent,
   type OfflineSyncPlan,
 } from "@inkroute/mobile-support";
-import { mobileApiFetch, type MobileApiSession } from "./mobileApiClient";
+import { mobileApiFetch, type MobileApiClientRequest, type MobileApiResponseEnvelope, type MobileApiSession } from "./mobileApiClient";
 import { offlineQueueItems } from "./mobileDemo";
 
 export interface OfflineStoreAdapter {
@@ -16,19 +17,16 @@ export interface OfflineStoreAdapter {
   appendAudit(event: OfflineSyncAuditEvent): Promise<void>;
 }
 
-export interface OfflineSyncAuditEvent {
-  itemId: string;
-  decision: OfflineSyncDecision["status"];
-  idempotencyKey: string;
-  sensitive: boolean;
-  occurredAt: string;
-  redactedDetail: string;
-}
+export type OfflineSyncTransport = (
+  session: MobileApiSession,
+  request: MobileApiClientRequest,
+) => Promise<MobileApiResponseEnvelope<unknown>>;
 
 export interface OfflineSyncRunResult {
   plan: OfflineSyncPlan;
   auditEvents: readonly OfflineSyncAuditEvent[];
   syncedItemIds: readonly string[];
+  failedItemIds: readonly string[];
   blockedItemIds: readonly string[];
 }
 
@@ -51,18 +49,18 @@ export function createMemoryOfflineStore(seed: readonly OfflineQueueItem[] = off
   };
 }
 
-export function buildOfflineSyncAuditEvent(
+export function buildOfflineSyncTransportFailureAuditEvent(
   item: OfflineQueueItem,
-  decision: OfflineSyncDecision,
+  idempotencyKey: string,
   occurredAt: string,
 ): OfflineSyncAuditEvent {
   return {
     itemId: item.id,
-    decision: decision.status,
-    idempotencyKey: decision.idempotencyKey,
+    decision: "transport_failed",
+    idempotencyKey,
     sensitive: item.sensitive,
     occurredAt,
-    redactedDetail: item.sensitive ? "Sensitive offline payload redacted." : "Offline sync decision recorded.",
+    redactedDetail: "Offline sync transport failed. Payload, response body, and credentials redacted.",
   };
 }
 
@@ -78,8 +76,10 @@ export async function runOfflineSyncOnce(input: {
   store: OfflineStoreAdapter;
   session: MobileApiSession;
   generatedAt: string;
+  transport?: OfflineSyncTransport;
 }): Promise<OfflineSyncRunResult> {
   const items = await input.store.loadQueue();
+  const transport = input.transport ?? mobileApiFetch<unknown>;
   const plan = planOfflineSync({
     items,
     generatedAt: input.generatedAt,
@@ -87,6 +87,7 @@ export async function runOfflineSyncOnce(input: {
   });
   const auditEvents: OfflineSyncAuditEvent[] = [];
   const syncedItemIds: string[] = [];
+  const failedItemIds: string[] = [];
   const blockedItemIds: string[] = [];
 
   const nextItems = await Promise.all(items.map(async (item) => {
@@ -102,20 +103,33 @@ export async function runOfflineSyncOnce(input: {
       return item;
     }
 
-    await mobileApiFetch(input.session, {
-      domain: mobileDomainForOfflineItem(item),
-      method: "PATCH",
-      path: `/api/mobile/offline/${encodeURIComponent(item.kind)}/${encodeURIComponent(item.entityId ?? item.id)}`,
-      requestId: `offline-${item.id}`,
-      idempotencyKey: buildOfflineIdempotencyKey(item),
-      body: {
-        itemId: item.id,
-        kind: item.kind,
-        entityId: item.entityId,
-        localVersion: item.localVersion,
-        createdAt: item.createdAt,
-      },
-    });
+    try {
+      await transport(input.session, {
+        domain: mobileDomainForOfflineItem(item),
+        method: "PATCH",
+        path: `/api/mobile/offline/${encodeURIComponent(item.kind)}/${encodeURIComponent(item.entityId ?? item.id)}`,
+        requestId: `offline-${item.id}`,
+        idempotencyKey: buildOfflineIdempotencyKey(item),
+        body: {
+          itemId: item.id,
+          kind: item.kind,
+          entityId: item.entityId,
+          localVersion: item.localVersion,
+          createdAt: item.createdAt,
+        },
+      });
+    } catch {
+      const failureAuditEvent = buildOfflineSyncTransportFailureAuditEvent(item, decision.idempotencyKey, input.generatedAt);
+      auditEvents.push(failureAuditEvent);
+      await input.store.appendAudit(failureAuditEvent);
+      failedItemIds.push(item.id);
+      return {
+        ...item,
+        status: "failed" as const,
+        lastAttemptAt: input.generatedAt,
+        retryCount: item.retryCount + 1,
+      };
+    }
 
     syncedItemIds.push(item.id);
     return {
@@ -132,6 +146,7 @@ export async function runOfflineSyncOnce(input: {
     plan,
     auditEvents,
     syncedItemIds,
+    failedItemIds,
     blockedItemIds,
   };
 }

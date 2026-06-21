@@ -11,7 +11,9 @@ describe("dashboard feature-flag route contract", () => {
     expect(routeSource).toContain('code: "FORBIDDEN"');
     expect(routeSource).toContain("tenantId !== actor.tenantId");
     expect(routeSource).toContain('code: "TENANT_MISMATCH"');
-    expect(routeSource).toContain('"Cache-Control": "no-store"');
+    expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(routeSource).toContain("headers: noStoreHeaders");
+    expect(routeSource).not.toContain('headers: { "Cache-Control": "no-store" }');
   });
 
   it("loads DB and default flag definitions through audited tenant-scoped reads", () => {
@@ -32,6 +34,11 @@ describe("dashboard feature-flag route contract", () => {
     expect(routeSource).toContain('action: "feature_flag:update"');
     expect(routeSource).toContain("previousEnabled");
     expect(routeSource).toContain("previousScope");
+    expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(routeSource).toContain("{ status: 201, headers: noStoreHeaders }");
+    expect(routeSource).toContain("{ status: 409, headers: noStoreHeaders }");
+    expect(routeSource).toContain("{ status: 503, headers: noStoreHeaders }");
+    expect(routeSource).toContain("{ status: 500, headers: noStoreHeaders }");
   });
 
   it("documents release and feature-flag read APIs on the dashboard page", () => {

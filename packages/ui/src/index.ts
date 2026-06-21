@@ -5,8 +5,17 @@ export { Dialog, DialogPanel, DialogTitle } from "./dialog";
 export { Field, FieldError, FieldHint, FieldLabel } from "./field";
 export { Input } from "./input";
 export { NavBar, NavItem } from "./nav";
-export { buildUiPackageAdoptionEvidencePlan } from "./readiness";
-export type { UiPackageAdoptionEvidenceInput, UiPackageAdoptionEvidencePlan } from "./readiness";
+export {
+  buildUiPackageAdoptionEvidencePlan,
+  uiPackageAdoptionRequiredEvidence,
+  uiPackageAdoptionRequiredCommands,
+  uiPackageAdoptionRequiredControls,
+} from "./readiness";
+export type {
+  UiPackageAdoptionEvidenceInput,
+  UiPackageAdoptionEvidencePlan,
+  UiPackageAdoptionRequiredEvidence,
+} from "./readiness";
 export { SectionHeader, Surface } from "./surface";
 export { Textarea } from "./textarea";
 export { inkrouteTheme } from "./tokens";

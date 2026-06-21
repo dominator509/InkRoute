@@ -43,6 +43,18 @@ export interface AvailabilityRepository {
   }): Promise<void>;
 }
 
+export interface InMemoryAvailabilityRepositoryState {
+  readonly authorizedActorKeys: Set<string>;
+  readonly idempotencyKeys: Map<string, { readonly tenantId: string; readonly action: AvailabilityPersistenceAction; readonly requestId: string }>;
+  readonly persistedConflictIds: Map<string, readonly string[]>;
+  readonly existingHoldIds: Map<string, readonly string[]>;
+  readonly transactions: {
+    readonly tenantId: string;
+    readonly action: AvailabilityPersistenceAction;
+    readonly writes: readonly AvailabilityPersistenceWrite[];
+  }[];
+}
+
 export interface AvailabilityMutationResult {
   status: "ready" | "blocked" | "duplicate";
   plan: AvailabilityPersistencePlan;
@@ -118,6 +130,79 @@ export function buildDashboardAvailabilityPersistenceContract(): DashboardAvaila
     supportedActions,
     samplePlans: buildSampleAvailabilityPlans(),
     readiness: buildDashboardAvailabilityReadiness(),
+  };
+}
+
+function buildAvailabilityAccessKey(input: {
+  readonly tenantId: string;
+  readonly artistId: string;
+  readonly actorId: string;
+  readonly action: AvailabilityPersistenceAction;
+}): string {
+  return `${input.tenantId}:${input.artistId}:${input.actorId}:${input.action}`;
+}
+
+function buildAvailabilityLookupKey(input: {
+  readonly tenantId: string;
+  readonly artistId: string;
+  readonly startsAt: string;
+  readonly endsAt: string;
+}): string {
+  return `${input.tenantId}:${input.artistId}:${input.startsAt}:${input.endsAt}`;
+}
+
+function buildAvailabilityIdempotencyKey(input: { readonly tenantId: string; readonly key: string }): string {
+  return `${input.tenantId}:${input.key}`;
+}
+
+export function createInMemoryAvailabilityRepository(
+  state: InMemoryAvailabilityRepositoryState = {
+    authorizedActorKeys: new Set(),
+    idempotencyKeys: new Map(),
+    persistedConflictIds: new Map(),
+    existingHoldIds: new Map(),
+    transactions: [],
+  },
+): AvailabilityRepository & { readonly state: InMemoryAvailabilityRepositoryState } {
+  return {
+    state,
+    async assertTenantArtistAccess(input) {
+      if (!state.authorizedActorKeys.has(buildAvailabilityAccessKey(input))) {
+        throw new Error("AVAILABILITY_TENANT_ARTIST_ACCESS_DENIED");
+      }
+    },
+    async claimIdempotencyKey(input) {
+      const key = buildAvailabilityIdempotencyKey(input);
+      const existing = state.idempotencyKeys.get(key);
+
+      if (!existing) {
+        state.idempotencyKeys.set(key, {
+          tenantId: input.tenantId,
+          action: input.action,
+          requestId: input.requestId,
+        });
+        return "claimed";
+      }
+
+      if (existing.action === input.action && existing.requestId === input.requestId) {
+        return "duplicate";
+      }
+
+      throw new Error("AVAILABILITY_IDEMPOTENCY_KEY_CONFLICT");
+    },
+    async findPersistedConflictIds(input) {
+      return state.persistedConflictIds.get(buildAvailabilityLookupKey(input)) ?? [];
+    },
+    async findExistingHoldIds(input) {
+      return state.existingHoldIds.get(buildAvailabilityLookupKey(input)) ?? [];
+    },
+    async runAvailabilityTransaction(input) {
+      state.transactions.push({
+        tenantId: input.tenantId,
+        action: input.action,
+        writes: input.writes,
+      });
+    },
   };
 }
 

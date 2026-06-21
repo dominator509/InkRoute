@@ -1,6 +1,8 @@
 import { buildDeliveryPlan, renderTemplate, type ClientConsentSnapshot, type NotificationTemplateKey } from "@inkroute/notifications";
 import { NextResponse, type NextRequest } from "next/server";
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 const previewKeys: NotificationTemplateKey[] = [
   "booking_request_received",
   "booking_request_accepted",
@@ -26,6 +28,29 @@ const demoConsent: ClientConsentSnapshot = {
 
 export async function GET(_request: NextRequest, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "PROVIDER_NOTIFICATION_PREVIEWS_NOT_CONFIGURED",
+          message: "Production notification previews require provider-backed templates, consent persistence, and delivery queue evidence; static preview payloads are disabled.",
+          gapIds: ["GAP-010", "GAP-061", "GAP-062", "GAP-063", "GAP-064", "GAP-065"],
+        },
+        productionBoundary: {
+          staticNotificationPreviewDisabled: true,
+          requiredBeforeEnablement: [
+            "tenant-scoped template persistence",
+            "consent and suppression persistence",
+            "provider delivery queue handoff",
+            "sandbox/device send evidence",
+          ],
+        },
+      },
+      { status: 503, headers: noStoreHeaders },
+    );
+  }
+
   const contextPreview = {
     artistName: "Mara Vale",
     clientName: "Preview client",
@@ -48,8 +73,8 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ te
       productionBoundary: {
         status: "provider-gated",
         gapIds: ["GAP-061", "GAP-062", "GAP-063", "GAP-064", "GAP-065"],
-        note: "This route returns static render/consent previews only. It does not queue or send notifications.",
+        note: "This route renders template and consent delivery-plan previews while provider dispatch, durable queue writes, and live sends remain evidence-gated.",
       },
     },
-  });
+  }, { headers: noStoreHeaders });
 }

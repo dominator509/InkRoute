@@ -1,4 +1,4 @@
-import { buildMobileCrashRuntimeReadinessPlan } from "@inkroute/observability";
+﻿import { buildMobileCrashRuntimeReadinessPlan } from "@inkroute/observability";
 
 export type MobileCrashRuntimeStatus =
   | "wired"
@@ -45,6 +45,136 @@ export const mobileCrashArtifactPaths = [
   "coverage/mobile-crash-no-pii-provider-payload.json",
   "coverage/mobile-crash-secret-safe-artifacts.json",
   "test-results/mobile-crash-runtime",
+] as const;
+
+export const mobileCrashRuntimeProofFiles = [
+  "apps/mobile/package.json",
+  "apps/mobile/src/lib/mobileCrash.ts",
+  "apps/mobile/src/lib/mobileCrashRuntime.ts",
+  "apps/mobile/src/screens/SystemStatusScreen.tsx",
+  "apps/mobile/tests/mobile-crash-static.test.ts",
+  "apps/mobile/tests/mobile-crash-runtime-static.test.ts",
+  "packages/observability/package.json",
+  "packages/observability/src/index.ts",
+  "packages/observability/tests/redaction-report.test.ts",
+  "testing/manifests/unit-test-manifest.json",
+  ".github/workflows/ci.yml",
+] as const;
+
+export const mobileCrashEvidenceFlags = [
+  "observabilityTypecheckPassed",
+  "observabilityTestsPassed",
+  "mobileTypecheckPassed",
+  "sentryExpoSdkConfigured",
+  "fallbackReporterWired",
+  "releaseEasTagsConfigured",
+  "beforeSendRedactionVerified",
+  "piiRedactionTestsPassed",
+  "sourceMapsUploaded",
+  "debugSymbolsUploaded",
+  "simulatorForcedCrashCaptured",
+  "deviceForcedCrashCaptured",
+  "errorReportPersistenceVerified",
+  "dashboardTriageSyncVerified",
+  "offlineCrashBufferingVerified",
+  "noPiiProviderPayloadVerified",
+  "ciEvidenceCaptured",
+  "secretSafeArtifactsCaptured",
+] as const;
+
+export type MobileCrashEvidenceFlag = (typeof mobileCrashEvidenceFlags)[number];
+
+export interface MobileCrashExecutionPolicy {
+  readonly codexMayClassifyStaticMobileCrashReadiness: true;
+  readonly sentryCredentialsRequiredForClosure: true;
+  readonly sourceMapDebugSymbolRequiredForClosure: true;
+  readonly forcedCrashRequiredForClosure: true;
+  readonly errorReportPersistenceRequiredForClosure: true;
+  readonly noPiiProviderPayloadRequiredForClosure: true;
+  readonly secretSafeArtifactsRequiredForClosure: true;
+}
+
+export interface MobileCrashExecutionPlan {
+  readonly policy: typeof mobileCrashExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly sentryExecutionAllowed: false;
+  readonly sourceMapUploadExecutionAllowed: false;
+  readonly forcedCrashExecutionAllowed: false;
+  readonly persistenceExecutionAllowed: false;
+  readonly dashboardExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly localCommands: typeof mobileCrashLocalCommands;
+  readonly externalCommands: typeof mobileCrashExternalCommands;
+  readonly requiredExternalEvidence: typeof mobileCrashRequiredExternalEvidence;
+}
+
+export interface MobileCrashArtifactReview {
+  readonly artifact: unknown;
+  readonly redactedArtifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: boolean;
+  readonly requiredExternalEvidence: typeof mobileCrashRequiredExternalEvidence;
+}
+
+export interface MobileCrashEvidenceInput {
+  readonly commands?: readonly string[];
+  readonly artifacts?: readonly string[];
+  readonly evidence?: Partial<Record<MobileCrashEvidenceFlag, boolean>>;
+}
+
+export interface MobileCrashEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly requiredCommands: typeof mobileCrashRuntimeCommands;
+  readonly missingCommands: readonly string[];
+  readonly requiredArtifacts: typeof mobileCrashArtifactPaths;
+  readonly missingArtifacts: readonly string[];
+  readonly requiredEvidence: typeof mobileCrashEvidenceFlags;
+  readonly missingEvidence: readonly MobileCrashEvidenceFlag[];
+  readonly blockers: readonly string[];
+}
+
+export const mobileCrashExecutionPolicy = {
+  codexMayClassifyStaticMobileCrashReadiness: true,
+  sentryCredentialsRequiredForClosure: true,
+  sourceMapDebugSymbolRequiredForClosure: true,
+  forcedCrashRequiredForClosure: true,
+  errorReportPersistenceRequiredForClosure: true,
+  noPiiProviderPayloadRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies MobileCrashExecutionPolicy;
+
+export const mobileCrashRequiredExternalEvidence = [
+  "Sentry Expo SDK credential/configuration evidence",
+  "source-map upload evidence",
+  "React Native debug-symbol upload evidence",
+  "forced simulator crash capture evidence",
+  "forced physical-device crash capture evidence",
+  "sanitized ErrorReport persistence proof",
+  "dashboard triage sync proof",
+  "offline crash buffering proof",
+  "no-PII provider payload proof",
+  "mobile crash typecheck output",
+  "CI mobile crash evidence",
+  "secret-safe mobile crash artifact review",
+] as const;
+
+export const mobileCrashLocalCommands = [
+  "pnpm --filter @inkroute/observability typecheck",
+  "pnpm --filter @inkroute/observability test",
+  "static mobile crash redaction-first reporter review",
+  "static mobile crash fallback persistence review",
+] as const;
+
+export const mobileCrashExternalCommands = [
+  "pnpm --filter @inkroute/mobile typecheck",
+  "configure Sentry Expo SDK credentials",
+  "upload Expo source maps and React Native debug symbols",
+  "Expo simulator forced crash smoke test",
+  "Expo physical-device forced crash smoke test",
+  "sanitized ErrorReport persistence proof",
+  "dashboard triage sync proof",
+  "offline crash buffering proof",
+  "GitHub Actions mobile crash evidence job",
 ] as const;
 
 export const mobileCrashRuntimeMatrix = [
@@ -166,3 +296,99 @@ export const mobileCrashRuntimeReadiness = buildMobileCrashRuntimeReadinessPlan(
   offlineCrashBufferingVerified: false,
   noPiiProviderPayloadVerified: false,
 });
+
+const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
+  const actualSet = new Set(actual ?? []);
+  return required.filter((entry) => !actualSet.has(entry));
+};
+
+const sensitiveMobileCrashArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|sentry|dsn|auth|source.?map|debug.?symbol|device|crash|stack|error|report|dashboard|triage|payload|email|phone|medical|payment|tattoo)/i;
+
+const redactMobileCrashArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactMobileCrashArtifactValue(entry, `${path}.${index}`, redactedPaths));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (sensitiveMobileCrashArtifactKey.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[REDACTED]"];
+        }
+        return [key, redactMobileCrashArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const buildMobileCrashExecutionPlan = (): MobileCrashExecutionPlan => ({
+  policy: mobileCrashExecutionPolicy,
+  commandExecutionAllowed: false,
+  sentryExecutionAllowed: false,
+  sourceMapUploadExecutionAllowed: false,
+  forcedCrashExecutionAllowed: false,
+  persistenceExecutionAllowed: false,
+  dashboardExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  localCommands: mobileCrashLocalCommands,
+  externalCommands: mobileCrashExternalCommands,
+  requiredExternalEvidence: mobileCrashRequiredExternalEvidence,
+});
+
+export const buildRedactedMobileCrashArtifact = (artifact: unknown): Pick<MobileCrashArtifactReview, "redactedArtifact" | "redactedPaths"> => {
+  const redactedPaths: string[] = [];
+  return {
+    redactedArtifact: redactMobileCrashArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+  };
+};
+
+export const buildMobileCrashArtifactReview = (artifact: unknown): MobileCrashArtifactReview => {
+  const redacted = buildRedactedMobileCrashArtifact(artifact);
+  return {
+    artifact,
+    redactedArtifact: redacted.redactedArtifact,
+    redactedPaths: redacted.redactedPaths,
+    secretSafe: redacted.redactedPaths.length > 0,
+    requiredExternalEvidence: mobileCrashRequiredExternalEvidence,
+  };
+};
+
+export const buildMobileCrashEvidenceDecision = (
+  input: MobileCrashEvidenceInput = {},
+): MobileCrashEvidenceDecision => {
+  const missingCommands = missingFrom(input.commands, mobileCrashRuntimeCommands);
+  const missingArtifacts = missingFrom(input.artifacts, mobileCrashArtifactPaths);
+  const missingEvidence = mobileCrashEvidenceFlags.filter((flag) => input.evidence?.[flag] !== true);
+  const blockers = [
+    missingCommands.length > 0 ? "Pinned mobile crash commands must be run and captured." : "",
+    missingArtifacts.length > 0
+      ? "Mobile crash artifacts must be retained with Sentry, symbolication, forced crash, privacy, CI, and secret-safe evidence."
+      : "",
+    missingEvidence.length > 0
+      ? "Sentry/fallback wiring, source maps, debug symbols, forced crashes, persistence, dashboard sync, privacy, offline buffering, CI, and secret-safe evidence must pass."
+      : "",
+  ].filter(Boolean);
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    requiredCommands: mobileCrashRuntimeCommands,
+    missingCommands,
+    requiredArtifacts: mobileCrashArtifactPaths,
+    missingArtifacts,
+    requiredEvidence: mobileCrashEvidenceFlags,
+    missingEvidence,
+    blockers,
+  };
+};
+
+
+

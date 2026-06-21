@@ -1,11 +1,25 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildRedactedSeedRuntimeExecutionArtifact,
+  buildSeedRuntimeExecutionEvidenceDecision,
+  buildSeedRuntimeExecutionArtifactReview,
+  buildSeedRuntimeExecutionPlan,
+  buildSeedRuntimeExecutionRunData,
+  persistSeedRuntimeExecutionRun,
   seedRuntimeExecutionArtifactPaths,
   seedRuntimeExecutionCommands,
+  seedRuntimeExecutionEvidenceFlags,
+  seedRuntimeExecutionExternalArtifacts,
+  seedRuntimeExecutionExternalCommands,
+  seedRuntimeExecutionLocalArtifacts,
+  seedRuntimeExecutionLocalCommands,
   seedRuntimeExecutionMatrix,
+  seedRuntimeExecutionPolicy,
+  seedRuntimeExecutionProofFiles,
   seedRuntimeExecutionReadiness,
+  seedRuntimeExecutionRequiredExternalEvidence,
   seedRuntimeExecutionRunPersistenceContract,
 } from "../lib/seedRuntimeExecution";
 
@@ -17,6 +31,7 @@ describe("seed runtime execution contract", () => {
   const seed = readRepoFile("packages/db/prisma/seed.ts");
   const seedReadiness = readRepoFile("packages/db/prisma/seed-readiness.json");
   const seedVerifier = readRepoFile("scripts/db/verify-seed-readiness.mjs");
+  const seedRuntimeEvidenceWriter = readRepoFile("scripts/db/write-seed-runtime-evidence.mjs");
   const seedDocs = readRepoFile("docs/db/SEED_READINESS.md");
   const integrationReadiness = readRepoFile("packages/db/src/integration-readiness.ts");
   const dbTests = readRepoFile("packages/db/tests/db-integration-plan.test.ts");
@@ -29,11 +44,14 @@ describe("seed runtime execution contract", () => {
   it("pins seed runtime commands, matrix rows, and artifact paths", () => {
     expect(seedRuntimeExecutionCommands).toEqual([
       "pnpm db:verify-seed",
+      "pnpm db:seed-runtime-evidence",
+      "provision non-production Postgres and configure DATABASE_URL",
       "pnpm --filter @inkroute/db db:validate",
       "pnpm --filter @inkroute/db db:generate",
       "pnpm --filter @inkroute/db db:migrate",
       "pnpm --filter @inkroute/db db:seed",
       "seeded demo tenant query smoke",
+      "seeded workflow, payment, file, message, SEO, release, flag, and audit query smoke",
       "web/API seeded-data smoke",
       "dashboard seeded-data smoke",
       "GitHub Actions seed execution evidence job",
@@ -55,7 +73,9 @@ describe("seed runtime execution contract", () => {
 
   it("keeps seed scripts, fake-data contract, verifier, docs, helper, and tests wired", () => {
     expect(rootPackageJson).toContain('"db:verify-seed"');
-    for (const scriptName of ["db:validate", "db:generate", "db:migrate", "db:seed", "db:verify-seed"]) {
+    expect(rootPackageJson).toContain('"db:seed-runtime-evidence"');
+    expect(dbPackageJson).toContain('"db:seed-runtime-evidence"');
+    for (const scriptName of ["db:validate", "db:generate", "db:migrate", "db:seed", "db:verify-seed", "db:seed-runtime-evidence"]) {
       expect(dbPackageJson).toContain(`"${scriptName}"`);
     }
     for (const requiredSeed of [
@@ -75,6 +95,12 @@ describe("seed runtime execution contract", () => {
     expect(seed).toContain("Use fake data only");
     expect(seedReadiness).toContain("fake");
     expect(seedVerifier).toContain("seed-readiness.json");
+    expect(seedRuntimeEvidenceWriter).toContain("coverage/seed-runtime-execution.json");
+    expect(seedRuntimeEvidenceWriter).toContain("coverage/seed-ci-clean-checkout-evidence.json");
+    expect(seedRuntimeEvidenceWriter).toContain("coverage/seed-fake-data-legal-placeholder-proof.json");
+    expect(seedRuntimeEvidenceWriter).toContain("coverage/seed-production-provider-ban.json");
+    expect(seedRuntimeEvidenceWriter).toContain("coverage/seed-command-transcript-redacted.log");
+    expect(seedRuntimeEvidenceWriter).toContain("productionProviderCredentialsUsed: false");
     expect(seedDocs).toContain("Seed readiness");
     expect(integrationReadiness).toContain("buildSeedRuntimeExecutionEvidencePlan");
     expect(dbTests).toContain("buildSeedRuntimeExecutionEvidencePlan");
@@ -83,22 +109,24 @@ describe("seed runtime execution contract", () => {
   it("keeps seed execution blocked until dev database, migrations, seed run, queries, smokes, and evidence exist", () => {
     expect(seedRuntimeExecutionReadiness.status).toBe("blocked");
     expect(seedRuntimeExecutionReadiness.missingScripts).toEqual([]);
-    expect(seedRuntimeExecutionReadiness.requiredCommands).toEqual([...seedRuntimeExecutionCommands]);
-    expect(seedRuntimeExecutionReadiness.requiredEvidence).toEqual([
-      "seed readiness, fake-data, legal-placeholder, and production-provider ban evidence",
-      "non-production Postgres, DATABASE_URL, Prisma generate, migration, and seed command evidence",
-      "seeded tenant, membership, workflow, payment/file/message, SEO/release/flag, and audit-log query evidence",
-      "web/API and dashboard seeded-data smoke evidence",
-      "captured command transcript and CI or clean-checkout seed evidence",
-    ]);
+    expect(seedRuntimeExecutionReadiness.requiredCommands).toBe(seedRuntimeExecutionCommands);
+    expect(seedRuntimeExecutionReadiness.requiredEvidence).toBe(seedRuntimeExecutionEvidenceFlags);
+    expect(seedRuntimeExecutionReadiness.missingEvidence).not.toContain("seedReadinessVerifierPassed");
+    expect(seedRuntimeExecutionReadiness.missingEvidence).not.toContain("fakeDataOnlyVerified");
+    expect(seedRuntimeExecutionReadiness.missingEvidence).not.toContain("noProductionProviderCredentialsUsed");
+    expect(seedRuntimeExecutionReadiness.missingEvidence).not.toContain("commandEvidenceCaptured");
+    expect(seedRuntimeExecutionReadiness.missingEvidence).not.toContain("ciOrCleanCheckoutEvidenceCaptured");
     expect(seedRuntimeExecutionReadiness.blockers).toContain(
       "A non-production Postgres database must be provisioned for seed execution.",
     );
     expect(seedRuntimeExecutionReadiness.blockers).toContain(
       "Seeded demo tenant must be readable after seed execution.",
     );
-    expect(seedRuntimeExecutionReadiness.blockers).toContain(
+    expect(seedRuntimeExecutionReadiness.blockers).not.toContain(
       "Seed execution must not use production provider credentials or live provider endpoints.",
+    );
+    expect(seedRuntimeExecutionReadiness.blockers).not.toContain(
+      "CI or clean-checkout seed execution evidence must be captured.",
     );
   });
 
@@ -130,6 +158,106 @@ describe("seed runtime execution contract", () => {
     expect(seedRuntimeExecutionRunMigration).toContain('"commandMatrix" JSONB NOT NULL');
     expect(seedRuntimeExecutionRunMigration).toContain('"artifactManifest" JSONB NOT NULL');
     expect(seedRuntimeExecutionRunMigration).toContain('"SeedRuntimeExecutionRun_tenantId_runId_key"');
+    expect(buildSeedRuntimeExecutionRunData).toBeTypeOf("function");
+    expect(persistSeedRuntimeExecutionRun).toBeTypeOf("function");
+    expect(readRepoFile("apps/web/lib/seedRuntimeExecution.ts")).toContain("repository.seedRuntimeExecutionRun.upsert");
+  });
+
+  it("blocks seed runtime completion when database, seed query, smoke, or safe-evidence proof is missing", () => {
+    const decision = buildSeedRuntimeExecutionEvidenceDecision({
+      commands: ["pnpm db:verify-seed"],
+      artifacts: ["coverage/seed-readiness-verifier-output.txt"],
+      evidence: {
+        seedReadinessVerifierPassed: true,
+        fakeDataOnlyVerified: true,
+      },
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.missingCommands).toContain("pnpm --filter @inkroute/db db:seed");
+    expect(decision.missingArtifacts).toContain("coverage/seed-ci-clean-checkout-evidence.json");
+    expect(decision.missingEvidence).toContain("postgresProvisioned");
+    expect(decision.missingEvidence).toContain("noProductionProviderCredentialsUsed");
+    expect(decision.blockers).toContain("A non-production Postgres database must be provisioned for seed execution.");
+    expect(decision.blockers).toContain(
+      "Seed execution must not use production provider credentials or live provider endpoints.",
+    );
+  });
+
+  it("completes seed runtime execution only when every command, artifact, and evidence flag is present", () => {
+    const completeEvidence = Object.fromEntries(seedRuntimeExecutionEvidenceFlags.map((flag) => [flag, true]));
+    const decision = buildSeedRuntimeExecutionEvidenceDecision({
+      commands: seedRuntimeExecutionCommands,
+      artifacts: seedRuntimeExecutionArtifactPaths,
+      evidence: completeEvidence,
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.missingArtifacts).toEqual([]);
+    expect(decision.missingEvidence).toEqual([]);
+    expect(decision.requiredEvidence).toBe(seedRuntimeExecutionEvidenceFlags);
+  });
+
+  it("keeps seed runtime execution classified, redacted, and database-gated", () => {
+    const executionPlan = buildSeedRuntimeExecutionPlan();
+    expect(executionPlan.localCommands).toBe(seedRuntimeExecutionLocalCommands);
+    expect(executionPlan.localCommands).toEqual(["pnpm db:verify-seed", "pnpm db:seed-runtime-evidence"]);
+    expect(executionPlan.externalCommands).toBe(seedRuntimeExecutionExternalCommands);
+    expect(executionPlan.localArtifacts).toBe(seedRuntimeExecutionLocalArtifacts);
+    expect(executionPlan.externalArtifacts).toBe(seedRuntimeExecutionExternalArtifacts);
+    expect(executionPlan.externalCommands).toContain("provision non-production Postgres and configure DATABASE_URL");
+    expect(executionPlan.externalCommands).toContain("pnpm --filter @inkroute/db db:seed");
+    expect(executionPlan.localArtifacts).toContain("coverage/seed-command-transcript-redacted.log");
+    expect(executionPlan.externalArtifacts).toContain("coverage/seed-database-url-redacted.json");
+    expect(executionPlan.externalArtifacts).toContain("test-results/seed-runtime-execution");
+    expect(executionPlan.commandExecutionAllowed).toBe(false);
+    expect(executionPlan.databaseExecutionAllowed).toBe(false);
+    expect(executionPlan.providerPersistenceExecutionAllowed).toBe(false);
+    expect(executionPlan.ciExecutionAllowed).toBe(false);
+    expect(executionPlan.executionPolicy).toBe(seedRuntimeExecutionPolicy);
+    expect(executionPlan.executionPolicy).toEqual({
+      codexMayClassifyStaticSeedReadiness: true,
+      nonProductionDatabaseRequiredForClosure: true,
+      databaseUrlRequiredForClosure: true,
+      providerDatabaseRequiredForPersistence: true,
+      secretSafeArtifactsRequiredForClosure: true,
+    });
+    expect(executionPlan.requiredExternalEvidence).toBe(seedRuntimeExecutionRequiredExternalEvidence);
+    expect(executionPlan.requiredExternalEvidence).toContain(
+      "Provider-backed SeedRuntimeExecutionRun persistence row captured through persistSeedRuntimeExecutionRun.",
+    );
+
+    const artifact = {
+      databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
+      seededTenantId: "tenant_seed_1234567890abcdefghijklmnopqrstuvwxyz",
+      clientEmail: "client@example.com",
+      clientPhone: "+1 555 222 1212",
+      commandTranscript: "DATABASE_URL=postgres://inkroute:secret@db.example.com:5432/inkroute pnpm db:seed",
+      nested: {
+        providerToken: "github_pat_abcdefghijklmnopqrstuvwxyz123456",
+        publicSummary: "seed runtime evidence captured",
+      },
+    };
+    const redactedOnly = buildRedactedSeedRuntimeExecutionArtifact(artifact);
+    const review = buildSeedRuntimeExecutionArtifactReview(artifact);
+    const serialized = JSON.stringify(review.artifact);
+
+    expect(JSON.stringify(redactedOnly)).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
+    expect(serialized).not.toContain("tenant_seed_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(serialized).not.toContain("client@example.com");
+    expect(serialized).not.toContain("+1 555 222 1212");
+    expect(serialized).not.toContain("github_pat_abcdefghijklmnopqrstuvwxyz123456");
+    expect(review.redactions).toEqual([
+      "databaseUrl",
+      "seededTenantId",
+      "clientEmail",
+      "clientPhone",
+      "commandTranscript",
+      "nested.providerToken",
+    ]);
+    expect(review.safeForTracker).toBe(true);
+    expect(review.requiredExternalEvidence).toBe(seedRuntimeExecutionRequiredExternalEvidence);
   });
 
   it("wires CI, manifest, tracker, and artifacts without claiming live seed execution readiness", () => {
@@ -141,6 +269,26 @@ describe("seed runtime execution contract", () => {
     expect(unitManifest).toContain("SeedRuntimeExecutionRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/seedRuntimeExecution.ts");
     expect(gapTracker).toContain("SeedRuntimeExecutionRun Prisma model and app row contract");
-    expect(gapTracker).toContain("live non-production Postgres provisioning, DATABASE_URL, Prisma generate/migrate, seed command, seeded-domain queries, web/API and dashboard smokes, command transcript, and CI or clean-checkout evidence remain open");
+    expect(gapTracker).toContain("SeedRuntimeExecutionRun upsert seam is source-wired");
+    expect(gapTracker).toContain("GAP-018 is seed-runtime-execution-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("proof inventory");
+    expect(gapTracker).toContain("buildSeedRuntimeExecutionPlan");
+    expect(gapTracker).toContain("seedRuntimeExecutionLocalCommands/seedRuntimeExecutionExternalCommands");
+    expect(gapTracker).toContain("seedRuntimeExecutionPolicy");
+    expect(gapTracker).toContain("seedRuntimeExecutionRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildRedactedSeedRuntimeExecutionArtifact");
+    expect(gapTracker).toContain("buildSeedRuntimeExecutionArtifactReview");
+  });
+
+  it("pins current seed runtime execution proof files for GAP-018", () => {
+    expect(seedRuntimeExecutionProofFiles).toContain("packages/db/package.json");
+    expect(seedRuntimeExecutionProofFiles).toContain("scripts/db/write-seed-runtime-evidence.mjs");
+    expect(seedRuntimeExecutionProofFiles).toContain("apps/web/lib/seedRuntimeExecution.ts");
+    expect(seedRuntimeExecutionProofFiles).toContain("apps/web/tests/seed-runtime-execution-static.test.ts");
+    for (const proofFile of seedRuntimeExecutionProofFiles) {
+      expect(readRepoFile(proofFile).length).toBeGreaterThan(0);
+    }
   });
 });
+
+

@@ -1,6 +1,8 @@
-import { inkrouteDemoTenant } from "@inkroute/config";
+﻿import { inkrouteDemoTenant } from "@inkroute/config";
 import { interpretStripeWebhook, verifyStripeWebhookSignature } from "@inkroute/payments";
 import { NextResponse, type NextRequest } from "next/server";
+
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 import { persistWebhookEvent } from "../../../../lib/localRuntimeState";
 import { buildStripeWebhookRouteContract } from "../../../../lib/stripeWebhook";
 
@@ -42,7 +44,7 @@ export async function POST(request: NextRequest) {
           message: "Stripe webhook requests must include the Stripe-Signature header.",
         },
       },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -70,7 +72,7 @@ export async function POST(request: NextRequest) {
             },
           },
         },
-        { status: 400 },
+        { status: 400, headers: noStoreHeaders },
       );
     }
   }
@@ -82,7 +84,7 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json(
       { ok: false, error: { code: "INVALID_WEBHOOK_JSON", message: "Webhook body must be valid JSON before Stripe signature verification is wired." } },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -95,6 +97,29 @@ export async function POST(request: NextRequest) {
     eventId,
   });
   const tenantSlug = getTenantSlugFromPayload(payload);
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "PROVIDER_STRIPE_WEBHOOK_RECONCILIATION_NOT_CONFIGURED",
+          message: "Production Stripe webhooks require durable replay protection plus tenant-scoped Deposit, Payment, BookingStateEvent, and PaymentAuditLog reconciliation; local runtime webhook persistence is disabled.",
+          gapIds: ["GAP-004", "GAP-049", "GAP-050", "GAP-051"],
+        },
+        data: {
+          eventId,
+          tenantSlug,
+          interpretation,
+          productionBoundary: {
+            localStripeWebhookPersistenceDisabled: true,
+            requiresDurableReplayProtection: true,
+            gapIds: ["GAP-004", "GAP-049", "GAP-050", "GAP-051"],
+          },
+        },
+      },
+      { status: 503, headers: noStoreHeaders },
+    );
+  }
   const storedWebhook = persistWebhookEvent(tenantSlug, {
     source: "stripe",
     eventType: parsedEventType,
@@ -150,6 +175,7 @@ export async function POST(request: NextRequest) {
         },
       },
     },
-    { status: 200 },
+    { status: 200, headers: noStoreHeaders },
   );
 }
+

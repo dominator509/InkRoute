@@ -257,7 +257,7 @@ export function buildReferenceUploadContract(tenantSlug: string, bookingRequestI
       "Production should require authenticated user OR protected upload token and provider signature on intent creation.",
       isDbScope
         ? "Production should persist signed intent contract + queue message before upload is accepted."
-        : "Local runtime should persist intent stub and return signedUploadUrl/intent contract fields from local runtime state.",
+        : "Local runtime should persist intent contract and return signedUploadUrl/intent contract fields from local runtime state.",
     ],
     gapIds: ["GAP-005", "GAP-021", "GAP-033", "GAP-096", "GAP-097"],
   };
@@ -267,7 +267,7 @@ function buildNotificationQueueContract(input: BookingInput) {
   return {
     queued: true,
     consumer: "notification-worker",
-    contract: "notification-queue-stub",
+    contract: "notification-queue-local-contract",
     trigger: "booking_request_submitted",
     templateKeys: ["booking_request_received"],
     channels: ["email", "sms", "push", "in_app"],
@@ -288,7 +288,7 @@ function buildDepositQueueContract(input: BookingInput) {
     queued: false,
     status: "blocked",
     consumer: "checkout/session-worker",
-    contract: "deposit-policy-evaluation-stub",
+    contract: "deposit-policy-evaluation-local-contract",
     trigger: "booking_request_submitted",
     requiredBeforeEnablement: [
       "Artist/client policy acceptance and deposit policy snapshot persistence",
@@ -309,7 +309,7 @@ function buildCalendarQueueContract(input: BookingInput) {
     queued: false,
     status: "blocked",
     consumer: "calendar-sync-worker",
-    contract: "calendar-hold-stub",
+    contract: "calendar-hold-local-contract",
     trigger: "booking_request_submitted",
     requiredBeforeEnablement: [
       "Calendar hold creation under transaction",
@@ -377,12 +377,42 @@ export interface BookingFlowRuntimeEvidenceInput {
   secretSafeArtifactsCaptured: boolean;
 }
 
+export const bookingFlowRuntimeRequiredCommands = [
+  "pnpm install",
+  "pnpm db:generate",
+  "pnpm --filter @inkroute/web typecheck",
+  "pnpm --filter @inkroute/web build",
+  "pnpm --filter @inkroute/web test -- booking-requests-contract",
+  "Playwright booking page smoke for /booking",
+  "Playwright booking confirmation smoke for /booking/confirmation",
+  "Next public booking API route runtime smoke",
+  "dev-DB booking transaction smoke",
+] as const;
+
+export const bookingFlowRuntimeRequiredControls = [
+  "Verify booking and confirmation pages in a real Next runtime, not only package helpers.",
+  "Exercise public booking API route request handling with DB and local-runtime scopes.",
+  "Preserve explicit provider-gated reference upload, deposit, notification, and calendar boundaries.",
+  "Keep local-runtime fallback tenant-scoped and visibly non-production.",
+  "Redact medical notes, payment data, provider tokens, private file URLs, and raw client PII from runtime artifacts.",
+] as const;
+
+export const bookingFlowRuntimeRequiredEvidence = [
+  "dependency install and generated Prisma Client evidence",
+  "web typecheck/build and client/server boundary evidence",
+  "booking API contract and Next route runtime smoke evidence",
+  "booking and confirmation browser smoke evidence",
+  "local fallback, database runtime, and provider-gated boundary evidence",
+  "CI artifact bundle with redaction/secret-safety proof",
+] as const;
+export type BookingFlowRuntimeRequiredEvidence = (typeof bookingFlowRuntimeRequiredEvidence)[number];
+
 export interface BookingFlowRuntimeEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredControls: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof bookingFlowRuntimeRequiredCommands;
+  requiredControls: typeof bookingFlowRuntimeRequiredControls;
+  requiredEvidence: readonly BookingFlowRuntimeRequiredEvidence[] | typeof bookingFlowRuntimeRequiredEvidence;
   blockers: readonly string[];
 }
 
@@ -392,7 +422,7 @@ export function buildBookingFlowRuntimeEvidencePlan(
   const requiredScripts = ["typecheck", "build", "test"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: BookingFlowRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/web package script is missing ${script}.`);
   if (!input.dependenciesInstalled) blockers.push("Workspace dependencies must be installed with a committed lockfile before booking runtime evidence can close.");
@@ -428,29 +458,17 @@ export function buildBookingFlowRuntimeEvidencePlan(
   if (!input.ciArtifactsCaptured || !input.secretSafeArtifactsCaptured) {
     requiredEvidence.push("CI artifact bundle with redaction/secret-safety proof");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === bookingFlowRuntimeRequiredEvidence.length
+      ? bookingFlowRuntimeRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm install",
-      "pnpm db:generate",
-      "pnpm --filter @inkroute/web typecheck",
-      "pnpm --filter @inkroute/web build",
-      "pnpm --filter @inkroute/web test -- booking-requests-contract",
-      "Playwright booking page smoke for /booking",
-      "Playwright booking confirmation smoke for /booking/confirmation",
-      "Next public booking API route runtime smoke",
-      "dev-DB booking transaction smoke",
-    ],
-    requiredControls: [
-      "Verify booking and confirmation pages in a real Next runtime, not only package helpers.",
-      "Exercise public booking API route request handling with DB and local-runtime scopes.",
-      "Preserve explicit provider-gated reference upload, deposit, notification, and calendar boundaries.",
-      "Keep local-runtime fallback tenant-scoped and visibly non-production.",
-      "Redact medical notes, payment data, provider tokens, private file URLs, and raw client PII from runtime artifacts.",
-    ],
-    requiredEvidence,
+    requiredCommands: bookingFlowRuntimeRequiredCommands,
+    requiredControls: bookingFlowRuntimeRequiredControls,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }

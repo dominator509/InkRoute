@@ -58,6 +58,32 @@ export interface TravelPublishRepository {
   }): Promise<void>;
 }
 
+export interface InMemoryTravelPublishRepositoryState {
+  readonly authorizedActorKeys: Set<string>;
+  readonly previousStops: Map<string, TravelStop>;
+  readonly waitlistClientIds: Map<string, readonly string[]>;
+  readonly idempotencyKeys: Map<string, { readonly tenantId: string; readonly action: TravelPublishMutationAction; readonly requestId: string }>;
+  readonly transactions: {
+    readonly tenantId: string;
+    readonly action: TravelPublishMutationAction;
+    readonly writes: readonly TravelPublishMutationWrite[];
+    readonly revalidationTags: readonly string[];
+  }[];
+  readonly postCommitEffects: {
+    readonly tenantId: string;
+    readonly action: TravelPublishMutationAction;
+    readonly revalidationTags: readonly string[];
+    readonly notificationJobCount: number;
+  }[];
+  readonly rollbacks: {
+    readonly tenantId: string;
+    readonly action: TravelPublishMutationAction;
+    readonly reason: string;
+    readonly plan: TravelPublishMutationPlan;
+  }[];
+  failPostCommitEffects: boolean;
+}
+
 export interface TravelPublishMutationResult {
   status: "ready" | "blocked" | "duplicate" | "rolled_back";
   plan: TravelPublishMutationPlan;
@@ -128,6 +154,86 @@ export function buildDashboardTravelPublishContract(): DashboardTravelPublishCon
     supportedActions,
     samplePlans: buildSampleTravelPublishPlans(),
     readiness: buildDashboardTravelPublishReadiness(),
+  };
+}
+
+function buildTravelPublishAccessKey(input: {
+  readonly tenantId: string;
+  readonly artistId: string;
+  readonly actorId: string;
+  readonly action: TravelPublishMutationAction;
+}): string {
+  return `${input.tenantId}:${input.artistId}:${input.actorId}:${input.action}`;
+}
+
+function buildTravelStopKey(input: { readonly tenantId: string; readonly artistId: string; readonly stopId: string }): string {
+  return `${input.tenantId}:${input.artistId}:${input.stopId}`;
+}
+
+function buildTravelWaitlistKey(input: { readonly tenantId: string; readonly city: string; readonly region: string; readonly country: string }): string {
+  return `${input.tenantId}:${input.city}:${input.region}:${input.country}`;
+}
+
+function buildTravelIdempotencyKey(input: { readonly tenantId: string; readonly key: string }): string {
+  return `${input.tenantId}:${input.key}`;
+}
+
+export function createInMemoryTravelPublishRepository(
+  state: InMemoryTravelPublishRepositoryState = {
+    authorizedActorKeys: new Set(),
+    previousStops: new Map(),
+    waitlistClientIds: new Map(),
+    idempotencyKeys: new Map(),
+    transactions: [],
+    postCommitEffects: [],
+    rollbacks: [],
+    failPostCommitEffects: false,
+  },
+): TravelPublishRepository & { readonly state: InMemoryTravelPublishRepositoryState } {
+  return {
+    state,
+    async assertTenantArtistAccess(input) {
+      if (!state.authorizedActorKeys.has(buildTravelPublishAccessKey(input))) {
+        throw new Error("TRAVEL_PUBLISH_TENANT_ARTIST_ACCESS_DENIED");
+      }
+    },
+    async loadPreviousStop(input) {
+      return state.previousStops.get(buildTravelStopKey(input)) ?? null;
+    },
+    async findConsentedWaitlistClientIds(input) {
+      return state.waitlistClientIds.get(buildTravelWaitlistKey(input)) ?? [];
+    },
+    async claimIdempotencyKey(input) {
+      const key = buildTravelIdempotencyKey(input);
+      const existing = state.idempotencyKeys.get(key);
+
+      if (!existing) {
+        state.idempotencyKeys.set(key, {
+          tenantId: input.tenantId,
+          action: input.action,
+          requestId: input.requestId,
+        });
+        return "claimed";
+      }
+
+      if (existing.action === input.action && existing.requestId === input.requestId) {
+        return "duplicate";
+      }
+
+      throw new Error("TRAVEL_PUBLISH_IDEMPOTENCY_KEY_CONFLICT");
+    },
+    async runTravelPublishTransaction(input) {
+      state.transactions.push(input);
+    },
+    async enqueuePostCommitEffects(input) {
+      if (state.failPostCommitEffects) {
+        throw new Error("TRAVEL_PUBLISH_POST_COMMIT_EFFECT_FAILED");
+      }
+      state.postCommitEffects.push(input);
+    },
+    async rollbackFailedPublish(input) {
+      state.rollbacks.push(input);
+    },
   };
 }
 

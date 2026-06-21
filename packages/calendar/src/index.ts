@@ -163,7 +163,7 @@ export interface AvailabilityPersistencePlan {
   requiresTransaction: true;
   idempotencyKey: string | null;
   writes: readonly AvailabilityPersistenceWrite[];
-  requiredControls: readonly string[];
+  requiredControls: typeof availabilityPersistenceRequiredControls;
   blockers: readonly string[];
 }
 
@@ -191,8 +191,8 @@ export interface AvailabilityRuntimeReadinessInput {
 export interface AvailabilityRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof availabilityRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly AvailabilityRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -249,7 +249,7 @@ export interface GoogleCalendarProviderSyncPlan {
   idempotencyKey: string | null;
   writes: readonly GoogleCalendarSyncWrite[];
   nextAction: string;
-  requiredControls: readonly string[];
+  requiredControls: typeof googleCalendarProviderSyncRequiredControls;
   blockers: readonly string[];
 }
 
@@ -280,8 +280,8 @@ export interface GoogleCalendarRuntimeReadinessInput {
 export interface GoogleCalendarRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof googleCalendarRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly GoogleCalendarRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -324,7 +324,7 @@ export interface TimezoneRecurrenceQaPlan {
   coveredTimezones: readonly string[];
   coveredChecks: readonly TimezoneQaCheck[];
   findings: readonly TimezoneRecurrenceQaFinding[];
-  requiredControls: readonly string[];
+  requiredControls: typeof timezoneRecurrenceQaRequiredControls;
   blockers: readonly string[];
 }
 
@@ -351,8 +351,8 @@ export interface TimezoneRuntimeReadinessInput {
 export interface TimezoneRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof timezoneRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly TimezoneRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -397,7 +397,7 @@ export interface TravelPublishMutationPlan {
   revalidationTags: readonly string[];
   notificationJobCount: number;
   writes: readonly TravelPublishMutationWrite[];
-  requiredControls: readonly string[];
+  requiredControls: typeof travelPublishMutationRequiredControls;
   rollbackPlan: readonly string[];
   blockers: readonly string[];
 }
@@ -427,8 +427,8 @@ export interface TravelPublishRuntimeReadinessInput {
 export interface TravelPublishRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof travelPublishRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly TravelPublishRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -453,8 +453,8 @@ export interface CalendarRuntimeReadinessInput {
 export interface CalendarRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof calendarRuntimeReadinessRequiredCommands;
+  requiredControls: typeof calendarRuntimeReadinessRequiredControls;
   blockers: readonly string[];
 }
 
@@ -477,8 +477,8 @@ export interface CalendarAutomatedTestReadinessInput {
 export interface CalendarAutomatedTestReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof calendarAutomatedTestReadinessRequiredCommands;
+  requiredEvidence: readonly CalendarAutomatedTestReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -512,8 +512,8 @@ export interface CalendarLaunchEvidenceInput {
 export interface CalendarLaunchEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof calendarLaunchEvidenceRequiredCommands;
+  requiredEvidence: readonly CalendarLaunchEvidenceRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -540,8 +540,8 @@ export interface SignedIcsFeedRuntimeReadinessInput {
 export interface SignedIcsFeedRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof signedIcsFeedRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly SignedIcsFeedRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -617,6 +617,14 @@ export function auditCalendarTimezones(input: {
     findings,
   };
 }
+
+export const timezoneRecurrenceQaRequiredControls = [
+      "Use one explicit timezone strategy consistently at route, persistence, provider, and render boundaries.",
+      "Store canonical UTC instants plus IANA timezone identifiers for appointments, holds, travel, and availability.",
+      "Test DST spring-forward and fall-back boundaries before expanding recurring availability.",
+      "Render Los Angeles, Arizona, and New York examples through internal, Google, and ICS outputs.",
+      "Keep all-day travel windows timezone-aware and avoid converting them to floating local times.",
+    ] as const;
 
 export function buildTimezoneRecurrenceQaPlan(input: TimezoneRecurrenceQaPlanInput): TimezoneRecurrenceQaPlan {
   const findings: TimezoneRecurrenceQaFinding[] = [];
@@ -707,22 +715,35 @@ export function buildTimezoneRecurrenceQaPlan(input: TimezoneRecurrenceQaPlanInp
     coveredTimezones,
     coveredChecks,
     findings,
-    requiredControls: [
-      "Use one explicit timezone strategy consistently at route, persistence, provider, and render boundaries.",
-      "Store canonical UTC instants plus IANA timezone identifiers for appointments, holds, travel, and availability.",
-      "Test DST spring-forward and fall-back boundaries before expanding recurring availability.",
-      "Render Los Angeles, Arizona, and New York examples through internal, Google, and ICS outputs.",
-      "Keep all-day travel windows timezone-aware and avoid converting them to floating local times.",
-    ],
+    requiredControls: timezoneRecurrenceQaRequiredControls,
     blockers,
   };
 }
+
+export const timezoneRuntimeReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "timezone route/persistence boundary tests",
+      "stored recurrence expansion integration tests",
+      "Google Calendar timezone render smoke",
+      "ICS timezone import/render smoke",
+    ] as const;
+
+export const timezoneRuntimeReadinessRequiredEvidence = [
+      "documented Temporal/date-library strategy with route, persistence, provider, and render usage",
+      "route and persistence tests proving valid IANA timezone enforcement and UTC+timezone storage",
+      "DST, recurrence expansion, and all-day travel-window test output",
+      "cross-city internal, Google, and ICS provider render smoke-test artifacts",
+      "seeded persistence-boundary tests for stored availability, appointments, travel windows, and recurrence expansion",
+    ] as const;
+
+export type TimezoneRuntimeReadinessRequiredEvidence = (typeof timezoneRuntimeReadinessRequiredEvidence)[number];
 
 export function buildTimezoneRuntimeReadinessPlan(input: TimezoneRuntimeReadinessInput): TimezoneRuntimeReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: TimezoneRuntimeReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/calendar package script is missing ${script}.`);
   if (!input.calendarTestsPassed) blockers.push("@inkroute/calendar timezone tests must pass.");
@@ -743,36 +764,49 @@ export function buildTimezoneRuntimeReadinessPlan(input: TimezoneRuntimeReadines
   if (!input.seededPersistenceBoundaryTestsPassed) blockers.push("Seeded persistence-boundary tests must prove timezone validation and recurrence expansion against stored data.");
 
   if (!input.timezoneStrategySelected || !input.temporalOrDateLibraryImplemented) {
-    requiredEvidence.push("documented Temporal/date-library strategy with route, persistence, provider, and render usage");
+    requiredEvidence.push(timezoneRuntimeReadinessRequiredEvidence[0]);
   }
   if (!input.routeIanaValidationEnforced || !input.persistenceIanaValidationEnforced || !input.storedUtcAndTimezoneVerified) {
-    requiredEvidence.push("route and persistence tests proving valid IANA timezone enforcement and UTC+timezone storage");
+    requiredEvidence.push(timezoneRuntimeReadinessRequiredEvidence[1]);
   }
   if (!input.dstSpringForwardTested || !input.dstFallBackTested || !input.recurringAvailabilityExpansionTested || !input.allDayTravelWindowTested) {
-    requiredEvidence.push("DST, recurrence expansion, and all-day travel-window test output");
+    requiredEvidence.push(timezoneRuntimeReadinessRequiredEvidence[2]);
   }
   if (!input.crossCityRenderingTested || !input.providerRenderSmokeTested || !input.googleProviderTimezoneSmokeTested || !input.icsProviderTimezoneSmokeTested) {
-    requiredEvidence.push("cross-city internal, Google, and ICS provider render smoke-test artifacts");
+    requiredEvidence.push(timezoneRuntimeReadinessRequiredEvidence[3]);
   }
   if (!input.seededPersistenceBoundaryTestsPassed) {
-    requiredEvidence.push("seeded persistence-boundary tests for stored availability, appointments, travel windows, and recurrence expansion");
+    requiredEvidence.push(timezoneRuntimeReadinessRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/calendar typecheck",
-      "pnpm --filter @inkroute/calendar test",
-      "timezone route/persistence boundary tests",
-      "stored recurrence expansion integration tests",
-      "Google Calendar timezone render smoke",
-      "ICS timezone import/render smoke",
-    ],
+    requiredCommands: timezoneRuntimeReadinessRequiredCommands,
     requiredEvidence,
     blockers,
   };
 }
+
+export const calendarRuntimeReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "pnpm db:generate",
+      "pnpm db:migrate",
+      "pnpm test:unit -- packages/db/tests/tenant-scope.test.ts",
+      "Google Calendar test-mode event create/update/delete smoke",
+      "Signed ICS feed valid/revoked/expired token smoke",
+    ] as const;
+
+export const calendarRuntimeReadinessRequiredControls = [
+      "Persist availability windows, holds, appointments, travel blocks, sync state, and audit logs in tenant-scoped transactions.",
+      "Claim idempotency keys before creating slot holds, appointments, provider events, or sync-state writes.",
+      "Encrypt provider refresh tokens and never expose Google tokens to clients.",
+      "Recover from Google invalid sync tokens by running full resync before incremental sync resumes.",
+      "Validate signed ICS feed token hash, tenant/artist scope, expiry, and revocation before returning private feeds.",
+      "Run DST, recurrence, provider render, and all-day travel timezone QA before launch.",
+      "Emit dashboard/mobile/public revalidation events after committed travel and scheduling mutations.",
+    ] as const;
 
 export function buildCalendarRuntimeReadinessPlan(input: CalendarRuntimeReadinessInput): CalendarRuntimeReadinessPlan {
   const requiredScripts = ["build", "typecheck", "test"];
@@ -785,7 +819,7 @@ export function buildCalendarRuntimeReadinessPlan(input: CalendarRuntimeReadines
   if (!input.databaseRepositoriesConfigured) blockers.push("Tenant-scoped calendar repositories are not configured.");
   if (!input.postgresIntegrationVerified) blockers.push("Postgres integration tests have not verified availability windows, holds, appointments, and audit writes.");
   if (!input.tenantIsolationVerified) blockers.push("Calendar tenant isolation has not been verified against cross-tenant reads and mutations.");
-  if (!input.availabilityTransactionsConfigured) blockers.push("Availability mutations are not wired to transactional persistence and idempotency enforcement.");
+  if (!input.availabilityTransactionsConfigured) blockers.push("Availability mutations require transactional persistence and idempotency enforcement.");
   if (!input.googleOauthConfigured) blockers.push("Google OAuth client, redirect URI, and scopes are not configured.");
   if (!input.encryptedProviderTokensConfigured) blockers.push("Google refresh tokens are not encrypted before persistence.");
   if (!input.googleWorkerEnabled) blockers.push("Google Calendar provider sync worker is not enabled.");
@@ -798,27 +832,32 @@ export function buildCalendarRuntimeReadinessPlan(input: CalendarRuntimeReadines
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/calendar typecheck",
-      "pnpm --filter @inkroute/calendar test",
-      "pnpm db:generate",
-      "pnpm db:migrate",
-      "pnpm test:unit -- packages/db/tests/tenant-scope.test.ts",
-      "Google Calendar test-mode event create/update/delete smoke",
-      "Signed ICS feed valid/revoked/expired token smoke",
-    ],
-    requiredControls: [
-      "Persist availability windows, holds, appointments, travel blocks, sync state, and audit logs in tenant-scoped transactions.",
-      "Claim idempotency keys before creating slot holds, appointments, provider events, or sync-state writes.",
-      "Encrypt provider refresh tokens and never expose Google tokens to clients.",
-      "Recover from Google invalid sync tokens by running full resync before incremental sync resumes.",
-      "Validate signed ICS feed token hash, tenant/artist scope, expiry, and revocation before returning private feeds.",
-      "Run DST, recurrence, provider render, and all-day travel timezone QA before launch.",
-      "Emit dashboard/mobile/public revalidation events after committed travel and scheduling mutations.",
-    ],
+    requiredCommands: calendarRuntimeReadinessRequiredCommands,
+    requiredControls: calendarRuntimeReadinessRequiredControls,
     blockers,
   };
 }
+
+export const calendarAutomatedTestReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "pnpm vitest run apps/web/tests/ics-feed-route.test.ts",
+      "pnpm vitest run apps/web/tests/availability-preview-route.test.ts",
+      "calendar Postgres integration tests",
+      "Google test-calendar provider tests",
+      "Playwright dashboard/public travel calendar smoke",
+    ] as const;
+
+export const calendarAutomatedTestReadinessRequiredEvidence = [
+      "calendar helper and public route test output",
+      "Postgres integration output for availability persistence, concurrent holds, audit logs, and signed-feed revocation",
+      "Google test-calendar provider integration transcript",
+      "DST/recurrence provider matrix output for internal, Google, and ICS render paths",
+      "Playwright dashboard calendar and public travel smoke-test artifacts",
+      "CI calendar test job configuration and retained artifacts",
+    ] as const;
+
+export type CalendarAutomatedTestReadinessRequiredEvidence = (typeof calendarAutomatedTestReadinessRequiredEvidence)[number];
 
 export function buildCalendarAutomatedTestReadinessPlan(
   input: CalendarAutomatedTestReadinessInput,
@@ -826,7 +865,7 @@ export function buildCalendarAutomatedTestReadinessPlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: CalendarAutomatedTestReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/calendar package script is missing ${script}.`);
   if (!input.calendarHelperTestsPassed) blockers.push("@inkroute/calendar helper/planning tests must pass.");
@@ -843,34 +882,26 @@ export function buildCalendarAutomatedTestReadinessPlan(
   if (!input.artifactsCaptured) blockers.push("Calendar test artifacts must capture DB logs, Google provider transcripts, Playwright traces, and ICS import output.");
 
   if (!input.calendarHelperTestsPassed || !input.signedIcsRouteTestsPassed || !input.availabilityPreviewRouteTestsPassed) {
-    requiredEvidence.push("calendar helper and public route test output");
+    requiredEvidence.push(calendarAutomatedTestReadinessRequiredEvidence[0]);
   }
   if (!input.postgresIntegrationTestsPassed || !input.concurrentHoldRaceTestsPassed || !input.signedIcsRevocationDbTestsPassed) {
-    requiredEvidence.push("Postgres integration output for availability persistence, concurrent holds, audit logs, and signed-feed revocation");
+    requiredEvidence.push(calendarAutomatedTestReadinessRequiredEvidence[1]);
   }
-  if (!input.googleProviderTestsPassed) requiredEvidence.push("Google test-calendar provider integration transcript");
+  if (!input.googleProviderTestsPassed) requiredEvidence.push(calendarAutomatedTestReadinessRequiredEvidence[2]);
   if (!input.timezoneProviderMatrixTestsPassed) {
-    requiredEvidence.push("DST/recurrence provider matrix output for internal, Google, and ICS render paths");
+    requiredEvidence.push(calendarAutomatedTestReadinessRequiredEvidence[3]);
   }
   if (!input.dashboardCalendarPlaywrightPassed || !input.publicTravelPlaywrightPassed) {
-    requiredEvidence.push("Playwright dashboard calendar and public travel smoke-test artifacts");
+    requiredEvidence.push(calendarAutomatedTestReadinessRequiredEvidence[4]);
   }
   if (!input.ciCalendarTestJobConfigured || !input.artifactsCaptured) {
-    requiredEvidence.push("CI calendar test job configuration and retained artifacts");
+    requiredEvidence.push(calendarAutomatedTestReadinessRequiredEvidence[5]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/calendar typecheck",
-      "pnpm --filter @inkroute/calendar test",
-      "pnpm vitest run apps/web/tests/ics-feed-route.test.ts",
-      "pnpm vitest run apps/web/tests/availability-preview-route.test.ts",
-      "calendar Postgres integration tests",
-      "Google test-calendar provider tests",
-      "Playwright dashboard/public travel calendar smoke",
-    ],
+    requiredCommands: calendarAutomatedTestReadinessRequiredCommands,
     requiredEvidence,
     blockers,
   };
@@ -1098,6 +1129,15 @@ function googleCalendarSyncWriteModels(action: GoogleCalendarSyncAction): Google
   }
 }
 
+export const googleCalendarProviderSyncRequiredControls = [
+      "Authorize tenant and artist ownership before using stored Google provider credentials.",
+      "Encrypt refresh tokens before persistence and never return provider tokens to clients.",
+      "Claim idempotency key before provider mutations or sync-state writes.",
+      "On Google 410 invalid sync token, stop incremental sync and run full resync.",
+      "Renew push channels before expiration and validate webhook resource/channel ids before processing notifications.",
+      "Persist redacted CalendarAuditLog for every provider call, retry, failure, and recovery path.",
+    ] as const;
+
 export function buildGoogleCalendarProviderSyncPlan(input: GoogleCalendarSyncPlanInput): GoogleCalendarProviderSyncPlan {
   const blockers: string[] = [];
 
@@ -1176,23 +1216,37 @@ export function buildGoogleCalendarProviderSyncPlan(input: GoogleCalendarSyncPla
     nextAction: input.action === "incremental_sync" && input.syncTokenInvalid
       ? "Run full_resync, replace the stored sync token, and audit the invalid-token recovery."
       : "Execute provider call through the Google Calendar worker, then persist redacted provider state and audit outcome.",
-    requiredControls: [
-      "Authorize tenant and artist ownership before using stored Google provider credentials.",
-      "Encrypt refresh tokens before persistence and never return provider tokens to clients.",
-      "Claim idempotency key before provider mutations or sync-state writes.",
-      "On Google 410 invalid sync token, stop incremental sync and run full resync.",
-      "Renew push channels before expiration and validate webhook resource/channel ids before processing notifications.",
-      "Persist redacted CalendarAuditLog for every provider call, retry, failure, and recovery path.",
-    ],
+    requiredControls: googleCalendarProviderSyncRequiredControls,
     blockers,
   };
 }
+
+export const googleCalendarRuntimeReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "Google OAuth callback smoke test",
+      "Google FreeBusy test-calendar smoke",
+      "Google event insert/update/delete smoke",
+      "Google invalid sync-token full-resync smoke",
+      "Google push channel renewal/webhook smoke",
+    ] as const;
+
+export const googleCalendarRuntimeReadinessRequiredEvidence = [
+      "Google SDK/client setup plus OAuth app, scopes, and callback route evidence",
+      "encrypted token repository, provider worker, and CalendarAuditLog persistence evidence",
+      "Google test calendar FreeBusy and event insert/update/delete smoke-test output",
+      "full sync, incremental sync-token persistence, and invalid-token recovery evidence",
+      "Google push channel renewal and webhook handler test output",
+      "retry/idempotency, tenant-isolation, and Google test-calendar artifact evidence",
+    ] as const;
+
+export type GoogleCalendarRuntimeReadinessRequiredEvidence = (typeof googleCalendarRuntimeReadinessRequiredEvidence)[number];
 
 export function buildGoogleCalendarRuntimeReadinessPlan(input: GoogleCalendarRuntimeReadinessInput): GoogleCalendarRuntimeReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: GoogleCalendarRuntimeReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/calendar package script is missing ${script}.`);
   if (!input.calendarTestsPassed) blockers.push("@inkroute/calendar Google sync tests must pass.");
@@ -1217,36 +1271,28 @@ export function buildGoogleCalendarRuntimeReadinessPlan(input: GoogleCalendarRun
   if (!input.googleTestCalendarEvidenceAttached) blockers.push("Google test calendar evidence must be attached for OAuth, freebusy, event sync, push, and recovery flows.");
 
   if (!input.googleSdkInstalled || !input.oauthAppConfigured || !input.oauthCallbackRouteImplemented || !input.requiredScopesConfigured) {
-    requiredEvidence.push("Google SDK/client setup plus OAuth app, scopes, and callback route evidence");
+    requiredEvidence.push(googleCalendarRuntimeReadinessRequiredEvidence[0]);
   }
   if (!input.encryptedTokenRepositoryImplemented || !input.providerWorkerImplemented || !input.calendarAuditLogPersistenceConfigured) {
-    requiredEvidence.push("encrypted token repository, provider worker, and CalendarAuditLog persistence evidence");
+    requiredEvidence.push(googleCalendarRuntimeReadinessRequiredEvidence[1]);
   }
   if (!input.freebusySmokeTested || !input.eventInsertUpdateDeleteSmokeTested) {
-    requiredEvidence.push("Google test calendar FreeBusy and event insert/update/delete smoke-test output");
+    requiredEvidence.push(googleCalendarRuntimeReadinessRequiredEvidence[2]);
   }
   if (!input.fullSyncImplemented || !input.incrementalSyncTokenPersisted || !input.invalidSyncTokenFullResyncTested) {
-    requiredEvidence.push("full sync, incremental sync-token persistence, and invalid-token recovery evidence");
+    requiredEvidence.push(googleCalendarRuntimeReadinessRequiredEvidence[3]);
   }
   if (!input.pushChannelRenewalImplemented || !input.pushWebhookHandlerImplemented) {
-    requiredEvidence.push("Google push channel renewal and webhook handler test output");
+    requiredEvidence.push(googleCalendarRuntimeReadinessRequiredEvidence[4]);
   }
   if (!input.retryBackoffConfigured || !input.idempotencyStoreConfigured || !input.tenantIsolationTestsPassed || !input.googleTestCalendarEvidenceAttached) {
-    requiredEvidence.push("retry/idempotency, tenant-isolation, and Google test-calendar artifact evidence");
+    requiredEvidence.push(googleCalendarRuntimeReadinessRequiredEvidence[5]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/calendar typecheck",
-      "pnpm --filter @inkroute/calendar test",
-      "Google OAuth callback smoke test",
-      "Google FreeBusy test-calendar smoke",
-      "Google event insert/update/delete smoke",
-      "Google invalid sync-token full-resync smoke",
-      "Google push channel renewal/webhook smoke",
-    ],
+    requiredCommands: googleCalendarRuntimeReadinessRequiredCommands,
     requiredEvidence,
     blockers,
   };
@@ -1290,6 +1336,15 @@ function travelPublishMutationWriteModels(action: TravelPublishMutationAction): 
     "IdempotencyKey",
   ];
 }
+
+export const travelPublishMutationRequiredControls = [
+      "Execute travel publish writes in one tenant-scoped transaction before cache revalidation.",
+      "Write TravelAuditLog with actor, previous snapshot, changed fields, and rollback reason when applicable.",
+      "Queue waitlist notifications only for clients with explicit matching city/travel consent.",
+      "Emit web, dashboard, and mobile sync events after the travel stop mutation commits.",
+      "Revalidate public travel, city, artist, tenant, sitemap, and schema cache tags after commit.",
+      "Rollback public state and queued provider actions if any provider mutation fails before publish completion.",
+    ] as const;
 
 export function buildTravelPublishMutationPlan(input: TravelPublishMutationPlanInput): TravelPublishMutationPlan {
   const blockers: string[] = [];
@@ -1366,14 +1421,7 @@ export function buildTravelPublishMutationPlan(input: TravelPublishMutationPlanI
     revalidationTags: publishPlan.revalidationTags,
     notificationJobCount: notifyClientIds.length,
     writes,
-    requiredControls: [
-      "Execute travel publish writes in one tenant-scoped transaction before cache revalidation.",
-      "Write TravelAuditLog with actor, previous snapshot, changed fields, and rollback reason when applicable.",
-      "Queue waitlist notifications only for clients with explicit matching city/travel consent.",
-      "Emit web, dashboard, and mobile sync events after the travel stop mutation commits.",
-      "Revalidate public travel, city, artist, tenant, sitemap, and schema cache tags after commit.",
-      "Rollback public state and queued provider actions if any provider mutation fails before publish completion.",
-    ],
+    requiredControls: travelPublishMutationRequiredControls,
     rollbackPlan: [
       "Restore previous TravelStop snapshot when provider or revalidation steps fail.",
       "Cancel unsent waitlist NotificationJob rows created by the failed publish.",
@@ -1384,18 +1432,39 @@ export function buildTravelPublishMutationPlan(input: TravelPublishMutationPlanI
   };
 }
 
+export const travelPublishRuntimeReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/web typecheck",
+      "travel publish repository integration tests",
+      "Nomad Mode dashboard-to-public E2E smoke",
+      "travel publish failed-provider rollback tests",
+    ] as const;
+
+export const travelPublishRuntimeReadinessRequiredEvidence = [
+      "authorized dashboard travel mutation route and cross-tenant denial tests",
+      "persisted travel repository, public data API, and post-commit revalidation evidence",
+      "city waitlist matching and consent-filtered notification queue execution evidence",
+      "mobile, dashboard, and web sync-event transport evidence",
+      "TravelAuditLog persistence plus failed-provider rollback executor test output",
+      "dashboard-to-public Nomad Mode publish E2E artifact with waitlist and rollback coverage",
+    ] as const;
+
+export type TravelPublishRuntimeReadinessRequiredEvidence = (typeof travelPublishRuntimeReadinessRequiredEvidence)[number];
+
 export function buildTravelPublishRuntimeReadinessPlan(input: TravelPublishRuntimeReadinessInput): TravelPublishRuntimeReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: TravelPublishRuntimeReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/calendar package script is missing ${script}.`);
   if (!input.calendarTestsPassed) blockers.push("@inkroute/calendar travel publish tests must pass.");
   if (!input.calendarTypecheckPassed) blockers.push("@inkroute/calendar typecheck must pass.");
-  if (!input.dashboardMutationRouteImplemented) blockers.push("Dashboard travel publish/update/unpublish/rollback mutation route must be implemented.");
+  if (!input.dashboardMutationRouteImplemented) blockers.push("Dashboard travel publish/update/unpublish/rollback mutation route evidence must be captured before travel publish readiness.");
   if (!input.dashboardAuthorizationEnforced) blockers.push("Dashboard travel publish mutations must enforce tenant, artist, and role authorization.");
-  if (!input.persistedTravelRepositoryImplemented) blockers.push("Tenant-scoped persisted TravelStop/PublicTravelPage repository must be implemented.");
+  if (!input.persistedTravelRepositoryImplemented) blockers.push("Tenant-scoped persisted TravelStop/PublicTravelPage repository execution evidence must be captured before travel publish readiness.");
   if (!input.publicDataApiImplemented) blockers.push("Public travel data API must read committed travel publish state.");
   if (!input.cacheRevalidationCalledAfterCommit) blockers.push("Public page, city, artist, sitemap, and schema cache revalidation must run after commit.");
   if (!input.cityWaitlistMatchingImplemented) blockers.push("City waitlist matching must select eligible clients for changed travel stops.");
@@ -1405,42 +1474,34 @@ export function buildTravelPublishRuntimeReadinessPlan(input: TravelPublishRunti
   if (!input.dashboardSyncTransportImplemented) blockers.push("Dashboard sync transport must reflect committed travel changes.");
   if (!input.webSyncEventPersistenceConfigured) blockers.push("Web revalidation/sync events must be persisted after travel mutations.");
   if (!input.auditLogPersistenceConfigured) blockers.push("TravelAuditLog persistence must be configured for publish/update/unpublish/rollback actions.");
-  if (!input.rollbackExecutorImplemented) blockers.push("Travel publish rollback executor must be implemented.");
+  if (!input.rollbackExecutorImplemented) blockers.push("Travel publish rollback executor evidence must be captured before travel publish readiness.");
   if (!input.failedProviderRollbackTested) blockers.push("Failed provider action rollback tests must pass.");
   if (!input.tenantIsolationTestsPassed) blockers.push("Cross-tenant travel publish mutation tests must be denied.");
   if (!input.e2eTravelPublishFlowPassed) blockers.push("End-to-end travel publish flow must prove dashboard edits update public site and waitlist jobs.");
 
   if (!input.dashboardMutationRouteImplemented || !input.dashboardAuthorizationEnforced || !input.tenantIsolationTestsPassed) {
-    requiredEvidence.push("authorized dashboard travel mutation route and cross-tenant denial tests");
+    requiredEvidence.push(travelPublishRuntimeReadinessRequiredEvidence[0]);
   }
   if (!input.persistedTravelRepositoryImplemented || !input.publicDataApiImplemented || !input.cacheRevalidationCalledAfterCommit) {
-    requiredEvidence.push("persisted travel repository, public data API, and post-commit revalidation evidence");
+    requiredEvidence.push(travelPublishRuntimeReadinessRequiredEvidence[1]);
   }
   if (!input.cityWaitlistMatchingImplemented || !input.consentFilteredNotificationQueueImplemented || !input.notificationProviderQueueTested) {
-    requiredEvidence.push("city waitlist matching and consent-filtered notification queue execution evidence");
+    requiredEvidence.push(travelPublishRuntimeReadinessRequiredEvidence[2]);
   }
   if (!input.mobileSyncTransportImplemented || !input.dashboardSyncTransportImplemented || !input.webSyncEventPersistenceConfigured) {
-    requiredEvidence.push("mobile, dashboard, and web sync-event transport evidence");
+    requiredEvidence.push(travelPublishRuntimeReadinessRequiredEvidence[3]);
   }
   if (!input.auditLogPersistenceConfigured || !input.rollbackExecutorImplemented || !input.failedProviderRollbackTested) {
-    requiredEvidence.push("TravelAuditLog persistence plus failed-provider rollback executor test output");
+    requiredEvidence.push(travelPublishRuntimeReadinessRequiredEvidence[4]);
   }
   if (!input.e2eTravelPublishFlowPassed) {
-    requiredEvidence.push("dashboard-to-public Nomad Mode publish E2E artifact with waitlist and rollback coverage");
+    requiredEvidence.push(travelPublishRuntimeReadinessRequiredEvidence[5]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/calendar typecheck",
-      "pnpm --filter @inkroute/calendar test",
-      "pnpm --filter @inkroute/dashboard typecheck",
-      "pnpm --filter @inkroute/web typecheck",
-      "travel publish repository integration tests",
-      "Nomad Mode dashboard-to-public E2E smoke",
-      "travel publish failed-provider rollback tests",
-    ],
+    requiredCommands: travelPublishRuntimeReadinessRequiredCommands,
     requiredEvidence,
     blockers,
   };
@@ -1456,16 +1517,41 @@ export function buildSignedIcsFeedDraft(input: { tenantSlug: string; artistSlug:
   };
 }
 
+export const calendarLaunchEvidenceRequiredCommands = [
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "availability Postgres integration tests",
+      "concurrent slot hold race-condition tests",
+      "Google Calendar OAuth/freebusy/event-sync smoke tests",
+      "signed ICS token DB and route tests",
+      "Apple/Google/Outlook ICS import smoke tests",
+      "timezone DST and provider render matrix QA",
+      "dashboard/public travel calendar smoke tests",
+      "GitHub Actions calendar launch evidence job",
+    ] as const;
+
+export const calendarLaunchEvidenceRequiredEvidence = [
+      "calendar package typecheck and unit/helper test output",
+      "tenant-scoped availability repository, Postgres integration, race-condition, and tenant-isolation evidence",
+      "Google OAuth, encrypted token, worker, FreeBusy, event sync, and push/incremental recovery evidence",
+      "signed ICS token persistence, route access, and client import smoke evidence",
+      "timezone/DST/recurrence and provider render matrix QA evidence",
+      "travel publish persistence, cache revalidation, dashboard smoke, and public travel smoke evidence",
+      "CI calendar job and secret-safe artifact evidence",
+    ] as const;
+
+export type CalendarLaunchEvidenceRequiredEvidence = (typeof calendarLaunchEvidenceRequiredEvidence)[number];
+
 export function buildCalendarLaunchEvidencePlan(input: CalendarLaunchEvidenceInput): CalendarLaunchEvidencePlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: CalendarLaunchEvidenceRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/calendar package script is missing ${script}.`);
   if (!input.calendarTypecheckPassed) blockers.push("@inkroute/calendar typecheck must pass.");
   if (!input.calendarTestsPassed) blockers.push("@inkroute/calendar tests must pass.");
-  if (!input.availabilityRepositoriesImplemented) blockers.push("Tenant-scoped availability/calendar repositories must be implemented.");
+  if (!input.availabilityRepositoriesImplemented) blockers.push("Tenant-scoped availability/calendar repository evidence must be captured before calendar launch readiness.");
   if (!input.availabilityPostgresIntegrationPassed) blockers.push("Postgres availability integration tests must pass.");
   if (!input.concurrentHoldRaceTestsPassed) blockers.push("Concurrent slot hold race-condition tests must pass.");
   if (!input.tenantIsolationTestsPassed) blockers.push("Calendar tenant-isolation tests must pass.");
@@ -1488,42 +1574,31 @@ export function buildCalendarLaunchEvidencePlan(input: CalendarLaunchEvidenceInp
   if (!input.calendarArtifactsSecretSafe) blockers.push("Calendar artifacts must be redacted and free of provider tokens, client data, or private calendar details.");
 
   if (!input.calendarTypecheckPassed || !input.calendarTestsPassed) {
-    requiredEvidence.push("calendar package typecheck and unit/helper test output");
+    requiredEvidence.push(calendarLaunchEvidenceRequiredEvidence[0]);
   }
   if (!input.availabilityRepositoriesImplemented || !input.availabilityPostgresIntegrationPassed || !input.concurrentHoldRaceTestsPassed || !input.tenantIsolationTestsPassed) {
-    requiredEvidence.push("tenant-scoped availability repository, Postgres integration, race-condition, and tenant-isolation evidence");
+    requiredEvidence.push(calendarLaunchEvidenceRequiredEvidence[1]);
   }
   if (!input.googleOauthConfigured || !input.googleEncryptedTokensConfigured || !input.googleWorkerEnabled || !input.googleFreebusySmokePassed || !input.googleEventSyncSmokePassed || !input.googlePushOrIncrementalSyncVerified) {
-    requiredEvidence.push("Google OAuth, encrypted token, worker, FreeBusy, event sync, and push/incremental recovery evidence");
+    requiredEvidence.push(calendarLaunchEvidenceRequiredEvidence[2]);
   }
   if (!input.signedIcsTokenPersistenceConfigured || !input.signedIcsAccessSmokePassed || !input.signedIcsClientImportSmokePassed) {
-    requiredEvidence.push("signed ICS token persistence, route access, and client import smoke evidence");
+    requiredEvidence.push(calendarLaunchEvidenceRequiredEvidence[3]);
   }
   if (!input.timezoneDstQaPassed || !input.providerRenderMatrixPassed) {
-    requiredEvidence.push("timezone/DST/recurrence and provider render matrix QA evidence");
+    requiredEvidence.push(calendarLaunchEvidenceRequiredEvidence[4]);
   }
   if (!input.travelPublishPersistencePassed || !input.cacheRevalidationVerified || !input.dashboardCalendarSmokePassed || !input.publicTravelSmokePassed) {
-    requiredEvidence.push("travel publish persistence, cache revalidation, dashboard smoke, and public travel smoke evidence");
+    requiredEvidence.push(calendarLaunchEvidenceRequiredEvidence[5]);
   }
   if (!input.ciEvidenceCaptured || !input.calendarArtifactsSecretSafe) {
-    requiredEvidence.push("CI calendar job and secret-safe artifact evidence");
+    requiredEvidence.push(calendarLaunchEvidenceRequiredEvidence[6]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/calendar typecheck",
-      "pnpm --filter @inkroute/calendar test",
-      "availability Postgres integration tests",
-      "concurrent slot hold race-condition tests",
-      "Google Calendar OAuth/freebusy/event-sync smoke tests",
-      "signed ICS token DB and route tests",
-      "Apple/Google/Outlook ICS import smoke tests",
-      "timezone DST and provider render matrix QA",
-      "dashboard/public travel calendar smoke tests",
-      "GitHub Actions calendar launch evidence job",
-    ],
+    requiredCommands: calendarLaunchEvidenceRequiredCommands,
     requiredEvidence,
     blockers,
   };
@@ -1603,13 +1678,31 @@ export function evaluateSignedIcsFeedAccess(input: {
   };
 }
 
+export const signedIcsFeedRuntimeReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm vitest run apps/web/tests/ics-feed-route.test.ts",
+      "signed ICS token DB integration tests",
+      "Apple/Google/Outlook ICS import smoke tests",
+    ] as const;
+
+export const signedIcsFeedRuntimeReadinessRequiredEvidence = [
+      "tenant-scoped signed-feed token creation, hashed persistence, expiry, and rotation evidence",
+      "revocation UI/API evidence and revoked-token route rejection test output",
+      "tenant/artist scope enforcement, durable access-log persistence, and private cache-header route tests",
+      "Apple, Google, and Outlook calendar import smoke-test artifacts",
+    ] as const;
+
+export type SignedIcsFeedRuntimeReadinessRequiredEvidence = (typeof signedIcsFeedRuntimeReadinessRequiredEvidence)[number];
+
 export function buildSignedIcsFeedRuntimeReadinessPlan(
   input: SignedIcsFeedRuntimeReadinessInput,
 ): SignedIcsFeedRuntimeReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: SignedIcsFeedRuntimeReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/calendar package script is missing ${script}.`);
   if (!input.calendarTestsPassed) blockers.push("@inkroute/calendar signed ICS tests must pass.");
@@ -1619,8 +1712,8 @@ export function buildSignedIcsFeedRuntimeReadinessPlan(
   if (!input.tokenCreationImplemented) blockers.push("Signed feed-token creation must be implemented.");
   if (!input.hashedTokenPersistenceConfigured) blockers.push("Hashed signed-feed token persistence must be configured.");
   if (!input.expiryRotationPersistenceConfigured) blockers.push("Signed feed-token expiry and rotation persistence must be configured.");
-  if (!input.revocationUiImplemented) blockers.push("Feed-token revocation UI must be implemented.");
-  if (!input.revocationApiImplemented) blockers.push("Feed-token revocation API must be implemented.");
+  if (!input.revocationUiImplemented) blockers.push("Feed-token revocation UI/API proof must be captured before signed ICS feed readiness.");
+  if (!input.revocationApiImplemented) blockers.push("Feed-token revocation API proof must be captured before signed ICS feed readiness.");
   if (!input.revokedTokenRouteRejectionTested) blockers.push("Route tests must reject revoked tokens loaded from durable storage.");
   if (!input.tenantArtistScopeEnforced) blockers.push("ICS feed route must enforce tenant and artist token scope.");
   if (!input.durableAccessLogPersistenceConfigured) blockers.push("Durable ICS feed access-log persistence must be configured.");
@@ -1630,30 +1723,27 @@ export function buildSignedIcsFeedRuntimeReadinessPlan(
   if (!input.outlookCalendarImportTested) blockers.push("Outlook Calendar import smoke test must pass.");
 
   if (!input.tokenCreationImplemented || !input.hashedTokenPersistenceConfigured || !input.expiryRotationPersistenceConfigured) {
-    requiredEvidence.push("tenant-scoped signed-feed token creation, hashed persistence, expiry, and rotation evidence");
+    requiredEvidence.push(signedIcsFeedRuntimeReadinessRequiredEvidence[0]);
   }
   if (!input.revocationUiImplemented || !input.revocationApiImplemented || !input.revokedTokenRouteRejectionTested) {
-    requiredEvidence.push("revocation UI/API evidence and revoked-token route rejection test output");
+    requiredEvidence.push(signedIcsFeedRuntimeReadinessRequiredEvidence[1]);
   }
   if (!input.tenantArtistScopeEnforced || !input.durableAccessLogPersistenceConfigured || !input.privateCacheHeadersVerified) {
-    requiredEvidence.push("tenant/artist scope enforcement, durable access-log persistence, and private cache-header route tests");
+    requiredEvidence.push(signedIcsFeedRuntimeReadinessRequiredEvidence[2]);
   }
   if (!input.appleCalendarImportTested || !input.googleCalendarImportTested || !input.outlookCalendarImportTested) {
-    requiredEvidence.push("Apple, Google, and Outlook calendar import smoke-test artifacts");
+    requiredEvidence.push(signedIcsFeedRuntimeReadinessRequiredEvidence[3]);
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === signedIcsFeedRuntimeReadinessRequiredEvidence.length
+      ? signedIcsFeedRuntimeReadinessRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/calendar typecheck",
-      "pnpm --filter @inkroute/calendar test",
-      "pnpm --filter @inkroute/web typecheck",
-      "pnpm vitest run apps/web/tests/ics-feed-route.test.ts",
-      "signed ICS token DB integration tests",
-      "Apple/Google/Outlook ICS import smoke tests",
-    ],
-    requiredEvidence,
+    requiredCommands: signedIcsFeedRuntimeReadinessRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
@@ -1670,6 +1760,14 @@ function availabilityPersistenceWriteModels(action: AvailabilityPersistenceActio
       return ["AvailabilityHold", "CalendarAuditLog", "IdempotencyKey"];
   }
 }
+
+export const availabilityPersistenceRequiredControls = [
+      "Execute availability mutations in one tenant-scoped database transaction.",
+      "Claim the idempotency key before creating holds or appointments.",
+      "Reject cross-tenant booking, window, hold, and appointment ids before writes.",
+      "Lock the tenant/artist/time range or use an equivalent exclusion constraint before inserting slot holds.",
+      "Write CalendarAuditLog for every window, hold, appointment, and release mutation.",
+    ] as const;
 
 export function buildAvailabilityPersistencePlan(input: AvailabilityPersistencePlanInput): AvailabilityPersistencePlan {
   const blockers: string[] = [];
@@ -1740,28 +1838,41 @@ export function buildAvailabilityPersistencePlan(input: AvailabilityPersistenceP
     requiresTransaction: true,
     idempotencyKey: input.idempotencyKey?.trim() ? input.idempotencyKey : null,
     writes,
-    requiredControls: [
-      "Execute availability mutations in one tenant-scoped database transaction.",
-      "Claim the idempotency key before creating holds or appointments.",
-      "Reject cross-tenant booking, window, hold, and appointment ids before writes.",
-      "Lock the tenant/artist/time range or use an equivalent exclusion constraint before inserting slot holds.",
-      "Write CalendarAuditLog for every window, hold, appointment, and release mutation.",
-    ],
+    requiredControls: availabilityPersistenceRequiredControls,
     blockers,
   };
 }
+
+export const availabilityRuntimeReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "pnpm --filter @inkroute/db prisma validate",
+      "availability persistence seeded Postgres integration tests",
+      "concurrent slot hold race-condition tests",
+      "dashboard/API availability repository tests",
+    ] as const;
+
+export const availabilityRuntimeReadinessRequiredEvidence = [
+      "Prisma availability models plus dashboard/API repository wiring evidence",
+      "transactional availability window, hold, appointment confirmation, and release test output",
+      "persisted conflict detection and concurrent hold rejection evidence",
+      "CalendarAuditLog and IdempotencyKey persistence evidence for every availability mutation",
+      "seeded Postgres tenant isolation and availability lifecycle integration test output",
+    ] as const;
+
+export type AvailabilityRuntimeReadinessRequiredEvidence = (typeof availabilityRuntimeReadinessRequiredEvidence)[number];
 
 export function buildAvailabilityRuntimeReadinessPlan(input: AvailabilityRuntimeReadinessInput): AvailabilityRuntimeReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: AvailabilityRuntimeReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/calendar package script is missing ${script}.`);
   if (!input.calendarTestsPassed) blockers.push("@inkroute/calendar availability tests must pass.");
   if (!input.calendarTypecheckPassed) blockers.push("@inkroute/calendar typecheck must pass.");
   if (!input.dbSchemaIncludesAvailabilityModels) blockers.push("Prisma schema must include AvailabilityWindow, AvailabilityHold, Appointment, CalendarAuditLog, and IdempotencyKey models.");
-  if (!input.repositoriesImplemented) blockers.push("Tenant-scoped availability repositories/services must be implemented.");
+  if (!input.repositoriesImplemented) blockers.push("Tenant-scoped availability repository/service evidence must be captured before availability persistence readiness.");
   if (!input.tenantScopedQueriesEnforced) blockers.push("Availability repositories must enforce tenant scope on every read and write.");
   if (!input.transactionalWindowCreationImplemented) blockers.push("Availability window creation must run in a tenant-scoped transaction.");
   if (!input.transactionalSlotHoldImplemented) blockers.push("Slot hold creation must run in a tenant-scoped transaction.");
@@ -1777,33 +1888,30 @@ export function buildAvailabilityRuntimeReadinessPlan(input: AvailabilityRuntime
   if (!input.dashboardAndApiUseRepository) blockers.push("Dashboard and API availability surfaces must use the tenant-scoped repository/service layer.");
 
   if (!input.dbSchemaIncludesAvailabilityModels || !input.repositoriesImplemented || !input.dashboardAndApiUseRepository) {
-    requiredEvidence.push("Prisma availability models plus dashboard/API repository wiring evidence");
+    requiredEvidence.push(availabilityRuntimeReadinessRequiredEvidence[0]);
   }
   if (!input.transactionalWindowCreationImplemented || !input.transactionalSlotHoldImplemented || !input.appointmentConfirmationImplemented || !input.holdReleaseImplemented) {
-    requiredEvidence.push("transactional availability window, hold, appointment confirmation, and release test output");
+    requiredEvidence.push(availabilityRuntimeReadinessRequiredEvidence[1]);
   }
   if (!input.conflictDetectionAgainstPersistedRows || !input.concurrentHoldProtectionConfigured || !input.overlappingSlotDbRejectionTested) {
-    requiredEvidence.push("persisted conflict detection and concurrent hold rejection evidence");
+    requiredEvidence.push(availabilityRuntimeReadinessRequiredEvidence[2]);
   }
   if (!input.auditLogPersistenceConfigured || !input.idempotencyStoreConfigured) {
-    requiredEvidence.push("CalendarAuditLog and IdempotencyKey persistence evidence for every availability mutation");
+    requiredEvidence.push(availabilityRuntimeReadinessRequiredEvidence[3]);
   }
   if (!input.crossTenantIsolationTestsPassed || !input.seededPostgresIntegrationTestsPassed) {
-    requiredEvidence.push("seeded Postgres tenant isolation and availability lifecycle integration test output");
+    requiredEvidence.push(availabilityRuntimeReadinessRequiredEvidence[4]);
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === availabilityRuntimeReadinessRequiredEvidence.length
+      ? availabilityRuntimeReadinessRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/calendar typecheck",
-      "pnpm --filter @inkroute/calendar test",
-      "pnpm --filter @inkroute/db prisma validate",
-      "availability persistence seeded Postgres integration tests",
-      "concurrent slot hold race-condition tests",
-      "dashboard/API availability repository tests",
-    ],
-    requiredEvidence,
+    requiredCommands: availabilityRuntimeReadinessRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }

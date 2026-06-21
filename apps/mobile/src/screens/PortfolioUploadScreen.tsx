@@ -10,11 +10,12 @@ export function PortfolioUploadScreen() {
     <MobileScreen
       eyebrow="Portfolio CMS"
       title="Upload and organize work"
-      summary="Static mobile upload flow for captions, style tags, healed/fresh labels, placement, city metadata, and SEO alt text. Storage remains scaffolded only."
+      summary="Mobile upload contract flow for captions, style tags, healed/fresh labels, placement, city metadata, SEO alt text, object keys, and signed provider storage gates."
     >
       <MobileCard title={portfolioUploadDraft.title} eyebrow="Draft metadata" detail={portfolioUploadDraft.storageBoundary}>
         <Text style={{ color: "#d6d3d1" }}>{portfolioUploadDraft.caption}</Text>
         <Text style={{ color: "#a8a29e", marginTop: 6 }}>{portfolioUploadDraft.altText}</Text>
+        <Text style={{ color: "#a8a29e", marginTop: 6 }}>Object key contract: {portfolioUploadDraft.objectKey}</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
           {portfolioUploadDraft.styleTags.map((tag) => <MobilePill key={tag} label={tag} />)}
           <MobilePill label={portfolioUploadDraft.freshness} tone="warn" />

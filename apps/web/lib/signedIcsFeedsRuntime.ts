@@ -1,4 +1,4 @@
-import { buildSignedIcsFeedRuntimeReadinessPlan } from "@inkroute/calendar";
+﻿import { buildSignedIcsFeedRuntimeReadinessPlan } from "@inkroute/calendar";
 
 export type SignedIcsFeedRuntimeStatus =
   | "wired"
@@ -25,6 +25,21 @@ export const signedIcsFeedRuntimeCommands = [
   "Apple/Google/Outlook ICS import smoke tests",
 ] as const;
 
+export const signedIcsFeedLocalCommands = [
+  "pnpm --filter @inkroute/calendar typecheck",
+  "pnpm --filter @inkroute/calendar test",
+  "pnpm vitest run apps/web/tests/ics-feed-route.test.ts",
+  "static signed-feed repository and private cache contract review",
+] as const;
+
+export const signedIcsFeedExternalCommands = [
+  "pnpm --filter @inkroute/web typecheck",
+  "signed ICS token DB integration tests",
+  "Apple/Google/Outlook ICS import smoke tests",
+  "revocation dashboard UI/API proof",
+  "GitHub Actions signed ICS feed evidence job",
+] as const;
+
 export const signedIcsFeedArtifactPaths = [
   "coverage/signed-ics-feed-runtime.json",
   "coverage/signed-ics-feed-calendar-typecheck.txt",
@@ -46,6 +61,219 @@ export const signedIcsFeedArtifactPaths = [
   "coverage/signed-ics-feed-secret-safe-artifacts.json",
   "test-results/signed-ics-feed-runtime",
 ] as const;
+
+export const signedIcsFeedRuntimeProofFiles = [
+  "apps/web/package.json",
+  "packages/calendar/package.json",
+  "packages/calendar/src/index.ts",
+  "packages/calendar/tests/availability-conflicts.test.ts",
+  "apps/web/lib/signedIcsFeeds.ts",
+  "apps/web/lib/signedIcsFeedsRuntime.ts",
+  "apps/web/tests/signed-ics-feed-static.test.ts",
+  "apps/web/tests/signed-ics-feed-runtime-static.test.ts",
+  "apps/web/tests/ics-feed-route.test.ts",
+  "apps/web/app/api/public/[tenantSlug]/calendar/[artistSlug]/travel.ics/route.ts",
+  "testing/manifests/unit-test-manifest.json",
+  ".github/workflows/ci.yml",
+] as const;
+
+export type SignedIcsFeedEvidenceArtifact = (typeof signedIcsFeedArtifactPaths)[number];
+
+export interface SignedIcsFeedExecutionPolicy {
+  readonly codexMayClassifyStaticSignedIcsReadiness: true;
+  readonly durableTokenPersistenceRequiredForClosure: true;
+  readonly revocationUiApiRequiredForClosure: true;
+  readonly revokedRouteRejectionRequiredForClosure: true;
+  readonly accessLogPersistenceRequiredForClosure: true;
+  readonly calendarClientImportRequiredForClosure: true;
+  readonly secretSafeArtifactsRequiredForClosure: true;
+}
+
+export interface SignedIcsFeedExecutionPlan {
+  readonly policy: typeof signedIcsFeedExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly databaseExecutionAllowed: false;
+  readonly revocationUiExecutionAllowed: false;
+  readonly routeExecutionAllowed: false;
+  readonly calendarClientExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly localCommands: typeof signedIcsFeedLocalCommands;
+  readonly externalCommands: typeof signedIcsFeedExternalCommands;
+  readonly requiredExternalEvidence: typeof signedIcsFeedRequiredExternalEvidence;
+}
+
+export interface SignedIcsFeedArtifactReview {
+  readonly artifact: unknown;
+  readonly redactedArtifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: boolean;
+  readonly requiredExternalEvidence: typeof signedIcsFeedRequiredExternalEvidence;
+}
+
+export interface SignedIcsFeedEvidenceInput {
+  readonly calendarTypecheckPassed: boolean;
+  readonly calendarTestsPassed: boolean;
+  readonly webTypecheckPassed: boolean;
+  readonly routeTestsPassed: boolean;
+  readonly tokenCreateHashVerified: boolean;
+  readonly tokenPersistenceVerified: boolean;
+  readonly expiryRotationVerified: boolean;
+  readonly revocationUiVerified: boolean;
+  readonly revocationApiVerified: boolean;
+  readonly revokedRouteRejectionVerified: boolean;
+  readonly tenantArtistScopeVerified: boolean;
+  readonly accessLogPersistenceVerified: boolean;
+  readonly privateCacheHeadersVerified: boolean;
+  readonly appleImportSmokePassed: boolean;
+  readonly googleImportSmokePassed: boolean;
+  readonly outlookImportSmokePassed: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly SignedIcsFeedEvidenceArtifact[];
+}
+
+export interface SignedIcsFeedEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly SignedIcsFeedEvidenceArtifact[];
+  readonly requiredCommands: typeof signedIcsFeedRuntimeCommands;
+  readonly requiredEvidence: typeof signedIcsFeedDecisionRequiredEvidence;
+  readonly redactedSummary: {
+    readonly capturedArtifactCount: number;
+    readonly requiredArtifactCount: number;
+  };
+}
+
+export const signedIcsFeedExecutionPolicy = {
+  codexMayClassifyStaticSignedIcsReadiness: true,
+  durableTokenPersistenceRequiredForClosure: true,
+  revocationUiApiRequiredForClosure: true,
+  revokedRouteRejectionRequiredForClosure: true,
+  accessLogPersistenceRequiredForClosure: true,
+  calendarClientImportRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies SignedIcsFeedExecutionPolicy;
+
+export const signedIcsFeedRequiredExternalEvidence = [
+  "durable Prisma token table/repository execution proof",
+  "revocation dashboard UI proof",
+  "revocation API proof",
+  "revoked-token DB route rejection tests",
+  "signed feed access-log persistence proof",
+  "Apple Calendar import smoke artifact",
+  "Google Calendar import smoke artifact",
+  "Outlook Calendar import smoke artifact",
+  "CI signed ICS feed evidence",
+  "secret-safe signed ICS feed artifact review",
+] as const;
+
+const sensitiveSignedIcsFeedArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|calendar|ics|feed|artist|hash|revocation|access.?log|apple|google|outlook|import|email|phone|medical|payment|customer)/i;
+
+const redactSignedIcsFeedArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactSignedIcsFeedArtifactValue(entry, `${path}.${index}`, redactedPaths));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (sensitiveSignedIcsFeedArtifactKey.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[REDACTED]"];
+        }
+        return [key, redactSignedIcsFeedArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const buildSignedIcsFeedExecutionPlan = (): SignedIcsFeedExecutionPlan => ({
+  policy: signedIcsFeedExecutionPolicy,
+  commandExecutionAllowed: false,
+  databaseExecutionAllowed: false,
+  revocationUiExecutionAllowed: false,
+  routeExecutionAllowed: false,
+  calendarClientExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  localCommands: signedIcsFeedLocalCommands,
+  externalCommands: signedIcsFeedExternalCommands,
+  requiredExternalEvidence: signedIcsFeedRequiredExternalEvidence,
+});
+
+export const buildRedactedSignedIcsFeedArtifact = (artifact: unknown): Pick<SignedIcsFeedArtifactReview, "redactedArtifact" | "redactedPaths"> => {
+  const redactedPaths: string[] = [];
+  return {
+    redactedArtifact: redactSignedIcsFeedArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+  };
+};
+
+export const buildSignedIcsFeedArtifactReview = (artifact: unknown): SignedIcsFeedArtifactReview => {
+  const redacted = buildRedactedSignedIcsFeedArtifact(artifact);
+  return {
+    artifact,
+    redactedArtifact: redacted.redactedArtifact,
+    redactedPaths: redacted.redactedPaths,
+    secretSafe: redacted.redactedPaths.length > 0,
+    requiredExternalEvidence: signedIcsFeedRequiredExternalEvidence,
+  };
+};
+
+export const signedIcsFeedDecisionRequiredEvidence = [
+  "calendar/web command output and signed ICS route test output",
+  "hashed token creation, durable persistence, expiry, and rotation evidence",
+  "revocation UI/API evidence and revoked-token route rejection test output",
+  "tenant/artist scope and durable access-log persistence evidence",
+  "Apple, Google, and Outlook calendar import smoke-test artifacts",
+  "secret-safe review of retained signed ICS artifacts",
+] as const;
+
+export const buildSignedIcsFeedEvidenceDecision = (
+  input: SignedIcsFeedEvidenceInput,
+): SignedIcsFeedEvidenceDecision => {
+  const captured = new Set(input.capturedArtifacts);
+  const missingArtifacts = signedIcsFeedArtifactPaths.filter((artifact) => !captured.has(artifact));
+  const blockers = [
+    ...(!input.calendarTypecheckPassed ? ["Calendar package typecheck evidence is missing."] : []),
+    ...(!input.calendarTestsPassed ? ["Calendar package test evidence is missing."] : []),
+    ...(!input.webTypecheckPassed ? ["Web package typecheck evidence is missing."] : []),
+    ...(!input.routeTestsPassed ? ["Signed ICS route test evidence is missing."] : []),
+    ...(!input.tokenCreateHashVerified ? ["Signed feed token creation/hash evidence is missing."] : []),
+    ...(!input.tokenPersistenceVerified ? ["Durable signed feed token persistence evidence is missing."] : []),
+    ...(!input.expiryRotationVerified ? ["Token expiry and rotation persistence evidence is missing."] : []),
+    ...(!input.revocationUiVerified ? ["Feed-token revocation UI evidence is missing."] : []),
+    ...(!input.revocationApiVerified ? ["Feed-token revocation API evidence is missing."] : []),
+    ...(!input.revokedRouteRejectionVerified
+      ? ["Revoked-token route rejection from durable storage evidence is missing."]
+      : []),
+    ...(!input.tenantArtistScopeVerified ? ["Tenant/artist scoped token lookup evidence is missing."] : []),
+    ...(!input.accessLogPersistenceVerified ? ["Durable signed feed access-log evidence is missing."] : []),
+    ...(!input.privateCacheHeadersVerified ? ["Signed ICS private cache-header evidence is missing."] : []),
+    ...(!input.appleImportSmokePassed ? ["Apple Calendar ICS import smoke evidence is missing."] : []),
+    ...(!input.googleImportSmokePassed ? ["Google Calendar ICS import smoke evidence is missing."] : []),
+    ...(!input.outlookImportSmokePassed ? ["Outlook Calendar ICS import smoke evidence is missing."] : []),
+    ...(!input.secretSafeArtifactReviewPassed ? ["Secret-safe signed ICS artifact review evidence is missing."] : []),
+    ...(missingArtifacts.length > 0 ? ["All signed ICS feed artifacts must be captured."] : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: signedIcsFeedRuntimeCommands,
+    requiredEvidence: signedIcsFeedDecisionRequiredEvidence,
+    redactedSummary: {
+      capturedArtifactCount: captured.size,
+      requiredArtifactCount: signedIcsFeedArtifactPaths.length,
+    },
+  };
+};
 
 export const signedIcsFeedRuntimeMatrix = [
   {
@@ -174,3 +402,5 @@ export const signedIcsFeedRuntimeReadiness = buildSignedIcsFeedRuntimeReadinessP
   googleCalendarImportTested: false,
   outlookCalendarImportTested: false,
 });
+
+

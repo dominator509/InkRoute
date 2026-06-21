@@ -4,14 +4,22 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildAbuseMonitoringDecision,
+  buildErrorReportIngestArtifactReview,
+  buildErrorReportIngestEvidenceDecision,
+  buildErrorReportIngestExecutionPlan,
   buildProviderForwardingDecision,
+  buildRedactedErrorReportIngestArtifact,
   buildRequestCorrelation,
   enforceErrorReportBotProtection,
   errorReportBotHeaders,
+  errorReportIngestDecisionRequiredEvidence,
   errorReportIngestArtifactPaths,
+  errorReportIngestExecutionPolicy,
+  errorReportIngestHardeningProofFiles,
   errorReportIngestHardeningCommands,
   errorReportIngestHardeningContract,
   errorReportIngestHardeningMatrix,
+  errorReportIngestRequiredExternalEvidence,
 } from "../lib/errorReportIngestHardening";
 
 const routeSource = readFileSync(join(process.cwd(), "apps/web/app/api/public/[tenantSlug]/error-reports/route.ts"), "utf8");
@@ -19,6 +27,7 @@ const dashboardRouteSource = readFileSync(join(process.cwd(), "apps/dashboard/ap
 const ciWorkflow = readFileSync(join(process.cwd(), ".github/workflows/ci.yml"), "utf8");
 const unitManifest = readFileSync(join(process.cwd(), "testing/manifests/unit-test-manifest.json"), "utf8");
 const gapTracker = readFileSync(join(process.cwd(), "GAP_TRACKER.md"), "utf8");
+const prismaSchema = readFileSync(join(process.cwd(), "packages/db/prisma/schema.prisma"), "utf8");
 
 describe("GAP-081 error-report ingest hardening", () => {
   it("propagates request IDs and trace context through public ingest", () => {
@@ -40,6 +49,20 @@ describe("GAP-081 error-report ingest hardening", () => {
     expect(routeSource).toContain("buildAbuseMonitoringDecision");
   });
 
+  it("persists database-path abuse and rate-limit decisions through AbuseEvent", () => {
+    expect(prismaSchema).toContain("model AbuseEvent");
+    expect(prismaSchema).toContain("limiterProvider        String?");
+    expect(prismaSchema).toContain("limiterDecision        String");
+    expect(prismaSchema).toContain("botChallengeRequired   Boolean");
+    expect(prismaSchema).toContain("redactedMetadata       Json?");
+    expect(routeSource).toContain("tx.abuseEvent.create");
+    expect(routeSource).toContain('routePattern: "/api/public/[tenantSlug]/error-reports"');
+    expect(routeSource).toContain('limiterProvider: "local-runtime-fallback"');
+    expect(routeSource).toContain('limiterDecision: rateLimit.allowed ? "allowed" : "blocked"');
+    expect(routeSource).toContain("botChallengeRequired: botProtection.status !== \"verified\"");
+    expect(routeSource).toContain("abuseEventId");
+  });
+
   it("keeps provider forwarding credential gated and redacted only", () => {
     const blocked = buildProviderForwardingDecision({ requestId: "req_1" });
     const ready = buildProviderForwardingDecision({ requestId: "req_1", env: { SENTRY_DSN: "dsn", SENTRY_WEBHOOK_SECRET: "secret" } as NodeJS.ProcessEnv });
@@ -55,6 +78,8 @@ describe("GAP-081 error-report ingest hardening", () => {
     expect(dashboardRouteSource).toContain('assertPermission(actor, "error:write")');
     expect(dashboardRouteSource).toContain("redactedMetadata");
     expect(dashboardRouteSource).toContain('"Cache-Control": "no-store"');
+    expect(dashboardRouteSource).toContain("noStoreHeaders");
+    expect(dashboardRouteSource).toContain("{ status: 201, headers: noStoreHeaders }");
   });
 
   it("pins the error-report ingest hardening command and artifact matrix", () => {
@@ -83,6 +108,104 @@ describe("GAP-081 error-report ingest hardening", () => {
     ]);
   });
 
+  it("builds a local execution plan without distributed provider, live Postgres, or forwarding", () => {
+    const plan = buildErrorReportIngestExecutionPlan();
+
+    expect(plan.id).toBe("gap-081-error-report-ingest-hardening");
+    expect(plan.distributedRateLimitProviderAllowed).toBe(false);
+    expect(plan.livePostgresAllowed).toBe(false);
+    expect(plan.providerForwardingAllowed).toBe(false);
+    expect(plan.policy).toBe(errorReportIngestExecutionPolicy);
+    expect(plan.policy).toEqual({
+      executeDistributedRateLimitProvider: false,
+      executeLivePostgresFixtures: false,
+      executeProviderForwarding: false,
+      executeProviderReplay: false,
+      executePersistenceNoPiiAudit: false,
+      executeCi: false,
+    });
+    expect(plan.requiredCommands).toBe(errorReportIngestHardeningCommands);
+    expect(plan.requiredArtifacts).toBe(errorReportIngestArtifactPaths);
+    expect(plan.localContractArtifacts).toEqual(
+      expect.arrayContaining([
+        "coverage/error-report-route-static-contracts.json",
+        "coverage/error-report-bot-protection.json",
+        "coverage/error-report-request-correlation.json",
+      ]),
+    );
+    expect(plan.providerArtifacts).toEqual(
+      expect.arrayContaining([
+        "coverage/error-report-distributed-rate-limit.json",
+        "coverage/error-report-provider-forwarding-redacted.json",
+        "coverage/error-report-provider-replay-no-pii-redacted.json",
+      ]),
+    );
+    expect(plan.databaseArtifacts).toEqual(["coverage/error-report-postgres-tenant-isolation.json"]);
+    expect(plan.privacyArtifacts).toEqual(["coverage/error-report-redacted-persistence-no-pii.json"]);
+    expect(plan.secretSafeArtifactPath).toBe("coverage/error-report-secret-safe-artifacts.json");
+    expect(plan.externalEvidenceRequired).toBe(errorReportIngestRequiredExternalEvidence);
+    expect(plan.externalEvidenceRequired).toEqual([
+      "distributed rate-limit provider execution",
+      "live Postgres ErrorReport and AbuseEvent tenant-isolation fixtures",
+      "redacted provider forwarding proof",
+      "provider forwarding replay/no-PII smoke",
+      "redacted persistence no-PII audit, CI evidence, and secret-safe artifacts",
+    ]);
+  });
+
+  it("redacts error-report ingest artifacts before persistence", () => {
+    const rawArtifact = {
+      requestId: "req_123",
+      traceparent: "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+      provider: {
+        authorization: "Bearer sentry-forwarding-token",
+        replayBody: "client tester@example.com phone +1 555 010 6666 ip 10.1.2.3",
+      },
+      persistence: {
+        rawBody: "stack trace with private booking note",
+        tenantId: "tenant_1",
+      },
+      decision: "blocked_missing_credentials",
+    };
+
+    const redacted = buildRedactedErrorReportIngestArtifact(rawArtifact);
+    const review = buildErrorReportIngestArtifactReview("error-report-provider-forwarding", rawArtifact);
+    const serialized = JSON.stringify(review.redactedArtifact);
+
+    expect(JSON.stringify(redacted)).not.toContain("sentry-forwarding-token");
+    expect(serialized).not.toContain("tester@example.com");
+    expect(serialized).not.toContain("+1 555 010 6666");
+    expect(serialized).not.toContain("10.1.2.3");
+    expect(serialized).not.toContain("private booking note");
+    expect(serialized).toContain("blocked_missing_credentials");
+    expect(review.safeToPersist).toBe(true);
+    expect(review.unsafeFindings).toEqual([]);
+    expect(review.requiredArtifactPath).toBe("coverage/error-report-secret-safe-artifacts.json");
+  });
+
+  it("pins current error-report ingest hardening proof files for GAP-081", () => {
+    expect(errorReportIngestHardeningProofFiles).toEqual(
+      expect.arrayContaining([
+      "packages/observability/package.json",
+        "apps/web/lib/errorReportIngestHardening.ts",
+        "apps/web/app/api/public/[tenantSlug]/error-reports/route.ts",
+        "apps/dashboard/app/api/error-reports/route.ts",
+        "apps/dashboard/tests/error-report-route-static.test.ts",
+        "apps/web/tests/error-report-ingest-hardening-static.test.ts",
+        "apps/web/tests/observability-routes.test.ts",
+        "packages/db/prisma/schema.prisma",
+        "packages/observability/src/index.ts",
+        "packages/observability/tests/redaction-report.test.ts",
+        "packages/validators/src/observability.ts",
+        ".github/workflows/ci.yml",
+        "testing/manifests/unit-test-manifest.json",
+      ]),
+    );
+    for (const file of errorReportIngestHardeningProofFiles) {
+      expect(readFileSync(join(process.cwd(), file), "utf8").length).toBeGreaterThan(0);
+    }
+  });
+
   it("tracks remaining live Postgres, distributed rate limit, and no-PII proof blockers", () => {
     expect(errorReportIngestHardeningContract.status).toBe("blocked");
     expect(errorReportIngestHardeningContract.requiredEvidence).toEqual(
@@ -98,12 +221,66 @@ describe("GAP-081 error-report ingest hardening", () => {
     expect(errorReportIngestArtifactPaths).toContain("test-results/error-report-ingest");
   });
 
+  it("classifies GAP-081 error-report ingest evidence as blocked until every hardening artifact is captured", () => {
+    const blocked = buildErrorReportIngestEvidenceDecision({
+      observabilityTypecheckPassed: true,
+      observabilityTestsPassed: true,
+      routeStaticContractsPassed: true,
+      botProtectionVerified: true,
+      requestCorrelationVerified: true,
+      distributedRateLimitVerified: false,
+      postgresTenantIsolationVerified: false,
+      providerForwardingVerified: false,
+      providerReplayNoPiiVerified: false,
+      redactedPersistenceNoPiiVerified: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactReviewPassed: false,
+      capturedArtifacts: ["coverage/error-report-ingest-hardening.json"],
+    });
+
+    expect(blocked.status).toBe("blocked");
+    expect(blocked.blockers).toEqual(
+      expect.arrayContaining([
+        "Distributed error-report rate-limit provider evidence is required.",
+        "Live Postgres ErrorReport tenant-isolation evidence is required.",
+        "Redacted provider forwarding evidence is required.",
+        "Provider forwarding replay/no-PII evidence is required.",
+        "Redacted persistence no-PII artifact audit evidence is required.",
+      ]),
+    );
+    expect(blocked.missingArtifacts).toContain("coverage/error-report-distributed-rate-limit.json");
+    expect(blocked.requiredCommands).toBe(errorReportIngestHardeningCommands);
+    expect(blocked.requiredEvidence).toBe(errorReportIngestDecisionRequiredEvidence);
+
+    const complete = buildErrorReportIngestEvidenceDecision({
+      observabilityTypecheckPassed: true,
+      observabilityTestsPassed: true,
+      routeStaticContractsPassed: true,
+      botProtectionVerified: true,
+      requestCorrelationVerified: true,
+      distributedRateLimitVerified: true,
+      postgresTenantIsolationVerified: true,
+      providerForwardingVerified: true,
+      providerReplayNoPiiVerified: true,
+      redactedPersistenceNoPiiVerified: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactReviewPassed: true,
+      capturedArtifacts: errorReportIngestArtifactPaths,
+    });
+
+    expect(complete.status).toBe("complete");
+    expect(complete.blockers).toEqual([]);
+    expect(complete.missingArtifacts).toEqual([]);
+    expect(complete.redactedSummary).toContain("CI-safe redacted artifacts captured");
+  });
+
   it("keeps CI, manifest, and tracker evidence tied to GAP-081", () => {
     expect(ciWorkflow).toContain("Run Phase 11 error-report ingest hardening contracts");
     expect(ciWorkflow).toContain("error-report-ingest-hardening-static.test.ts");
     expect(ciWorkflow).toContain("error-report-ingest-hardening-artifacts");
     expect(ciWorkflow).toContain("coverage/error-report-ci-evidence.json");
     expect(unitManifest).toContain("errorReportIngestHardeningMatrix");
-    expect(gapTracker).toContain("GAP-081 is error-report-ingest-hardening-matrix wired");
+    expect(gapTracker).toContain("errorReportIngestDecisionRequiredEvidence");
+    expect(gapTracker).toContain("Error-report ingest evidence classifier wired and runtime-matrix gated");
   });
 });

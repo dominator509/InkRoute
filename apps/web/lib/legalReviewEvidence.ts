@@ -71,6 +71,26 @@ export const legalReviewArtifactPaths = [
   "test-results/legal-review",
 ] as const;
 
+export const legalReviewProofFiles = [
+  "packages/security/package.json",
+  "apps/web/lib/legalReviewEvidence.ts",
+  "apps/web/tests/legal-review-evidence-static.test.ts",
+  "apps/web/app/privacy/page.tsx",
+  "apps/web/app/terms/page.tsx",
+  "apps/web/app/consent-disclaimer/page.tsx",
+  "apps/web/app/trust/page.tsx",
+  "apps/dashboard/app/trust/page.tsx",
+  "docs/legal/LEGAL_REVIEW_PACKET.md",
+  "packages/db/prisma/schema.prisma",
+  "packages/db/prisma/migrations/20260609003000_add_legal_document_acceptance/migration.sql",
+  "packages/security/src/index.ts",
+  "packages/security/tests/upload-policy.test.ts",
+  "SECURITY.md",
+  "PRODUCT_REQUIREMENTS.md",
+  ".github/workflows/ci.yml",
+  "testing/manifests/unit-test-manifest.json",
+] as const;
+
 export const legalReviewCommands = [
   "pnpm --filter @inkroute/security test",
   "pnpm vitest run apps/web/tests/legal-review-evidence-static.test.ts",
@@ -80,6 +100,235 @@ export const legalReviewCommands = [
   "payment policy reviewed-copy E2E smoke",
   "legal copy rollback drill",
 ] as const;
+
+export const legalReviewLocalCommands = legalReviewCommands.slice(0, 3);
+export const legalReviewExternalCommands = legalReviewCommands.slice(3);
+
+export const legalReviewRequiredExternalEvidence = [
+  "Qualified attorney approval metadata evidence",
+  "Jurisdiction-specific studio policy version evidence",
+  "Reviewed public legal page smoke evidence",
+  "Noindex removal after approval evidence",
+  "Consent acceptance audit persistence evidence",
+  "Payment policy legal and tax review evidence",
+  "Legal copy rollback drill evidence",
+] as const;
+
+export type LegalReviewArtifact = (typeof legalReviewArtifactPaths)[number];
+
+export type LegalReviewCommand = (typeof legalReviewCommands)[number];
+
+export const legalReviewLocalArtifacts = [
+  "coverage/legal-review-packet.json",
+  "coverage/legal-consent-version-persistence.json",
+  "coverage/legal-acceptance-audit-persistence.json",
+  "coverage/legal-dashboard-acceptance-ui.json",
+  "coverage/legal-copy-rollback-plan.md",
+  "test-results/legal-review",
+] as const satisfies readonly LegalReviewArtifact[];
+
+export const legalReviewExternalArtifacts = [
+  "coverage/legal-attorney-approvals-redacted.json",
+  "coverage/legal-jurisdiction-policy-versions.json",
+  "coverage/legal-public-page-smoke.json",
+  "coverage/legal-noindex-removal-after-approval.json",
+  "coverage/legal-payment-policy-review-redacted.json",
+] as const satisfies readonly LegalReviewArtifact[];
+
+export type LegalReviewExecutionPolicy = {
+  localPacketOnly: true;
+  attorneyApprovalRequiresExternalEvidence: true;
+  reviewedCopyPublicationRequiresExternalEvidence: true;
+  noindexRemovalRequiresExternalEvidence: true;
+  acceptancePersistenceRequiresExternalEvidence: true;
+  paymentPolicyReviewRequiresExternalEvidence: true;
+  rollbackDrillRequiresExternalEvidence: true;
+  externalEvidenceRequired: typeof legalReviewRequiredExternalEvidence;
+};
+
+export type LegalReviewEvidenceInput = {
+  packetScaffoldCaptured: boolean;
+  attorneyApprovalsCaptured: boolean;
+  jurisdictionPolicyVersionsCaptured: boolean;
+  consentVersionPersistenceCaptured: boolean;
+  reviewedPublicPageSmokeCaptured: boolean;
+  noindexRemovedAfterApprovalCaptured: boolean;
+  acceptanceAuditPersistenceCaptured: boolean;
+  dashboardAcceptanceUiCaptured: boolean;
+  paymentPolicyReviewCaptured: boolean;
+  rollbackPlanCaptured: boolean;
+  requiredCommandsRun: readonly LegalReviewCommand[];
+  capturedArtifacts: readonly LegalReviewArtifact[];
+};
+
+export type LegalReviewEvidenceDecision = {
+  status: "complete" | "blocked";
+  blockers: string[];
+  missingArtifacts: LegalReviewArtifact[];
+  requiredCommands: typeof legalReviewCommands;
+  requiredEvidence: typeof legalReviewArtifactPaths;
+  publicationPolicy: {
+    noindexRemovedOnlyAfterApproval: true;
+    placeholderCopyRemovedOnlyAfterReview: true;
+    acceptanceAuditsUseRedactedHashes: true;
+  };
+};
+
+export type LegalReviewExecutionPlan = {
+  status: "local-plan-ready";
+  policy: LegalReviewExecutionPolicy;
+  externalEvidenceRequired: typeof legalReviewRequiredExternalEvidence;
+  attorneyApprovalExecutionAllowed: false;
+  reviewedCopyPublicationAllowed: false;
+  noindexRemovalAllowed: false;
+  acceptancePersistenceExecutionAllowed: false;
+  paymentPolicyReviewExecutionAllowed: false;
+  rollbackDrillExecutionAllowed: false;
+  localCommands: typeof legalReviewLocalCommands;
+  externalCommands: typeof legalReviewExternalCommands;
+  localArtifacts: typeof legalReviewLocalArtifacts;
+  externalArtifacts: typeof legalReviewExternalArtifacts;
+  disabledReasons: readonly string[];
+};
+
+export const legalReviewExecutionPolicy: LegalReviewExecutionPolicy = {
+  localPacketOnly: true,
+  attorneyApprovalRequiresExternalEvidence: true,
+  reviewedCopyPublicationRequiresExternalEvidence: true,
+  noindexRemovalRequiresExternalEvidence: true,
+  acceptancePersistenceRequiresExternalEvidence: true,
+  paymentPolicyReviewRequiresExternalEvidence: true,
+  rollbackDrillRequiresExternalEvidence: true,
+  externalEvidenceRequired: legalReviewRequiredExternalEvidence,
+};
+
+export type LegalReviewArtifactReview = {
+  status: "redacted-review-ready";
+  redactedArtifact: unknown;
+  requiredArtifacts: typeof legalReviewArtifactPaths;
+  retainedExternalGates: readonly string[];
+};
+
+const legalReviewSensitivePatterns = [
+  /(reviewer[_-]?name['":=\s]+)[^"',\s}]+/gi,
+  /(reviewer[_-]?firm['":=\s]+)[^"',\s}]+/gi,
+  /(reviewed[_-]?copy[_-]?hash['":=\s]+)[^"',\s}]+/gi,
+  /(subject[_-]?email[_-]?hash['":=\s]+)[^"',\s}]+/gi,
+  /(ip[_-]?hash['":=\s]+)[^"',\s}]+/gi,
+  /(user[_-]?agent[_-]?hash['":=\s]+)[^"',\s}]+/gi,
+  /(evidence[_-]?object[_-]?key['":=\s]+)[^"',\s}]+/gi,
+  /(authorization:\s*bearer\s+)[A-Za-z0-9._-]+/gi,
+  /(secret['":=\s]+)[^"',\s}]+/gi,
+  /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
+  /\+?\d[\d\s().-]{7,}\d/g,
+] as const;
+
+export function buildRedactedLegalReviewArtifact(value: unknown): unknown {
+  if (typeof value === "string") {
+    return legalReviewSensitivePatterns.reduce(
+      (redacted, pattern) => redacted.replace(pattern, (_match, prefix: string | undefined) => `${prefix ?? ""}[REDACTED]`),
+      value,
+    );
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => buildRedactedLegalReviewArtifact(entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        /email|phone|name|firm|hash|token|secret|authorization|credential|password|rawBody|stack|evidenceObjectKey|reviewer|attorney/i.test(key)
+          ? "[REDACTED]"
+          : buildRedactedLegalReviewArtifact(entry),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+export function buildLegalReviewExecutionPlan(): LegalReviewExecutionPlan {
+  return {
+    status: "local-plan-ready",
+    policy: legalReviewExecutionPolicy,
+    externalEvidenceRequired: legalReviewRequiredExternalEvidence,
+    attorneyApprovalExecutionAllowed: false,
+    reviewedCopyPublicationAllowed: false,
+    noindexRemovalAllowed: false,
+    acceptancePersistenceExecutionAllowed: false,
+    paymentPolicyReviewExecutionAllowed: false,
+    rollbackDrillExecutionAllowed: false,
+    localCommands: legalReviewLocalCommands,
+    externalCommands: legalReviewExternalCommands,
+    localArtifacts: legalReviewLocalArtifacts,
+    externalArtifacts: legalReviewExternalArtifacts,
+    disabledReasons: [
+      "Qualified attorney approval cannot be generated by local code.",
+      "Reviewed public copy publication requires approved legal copy.",
+      "Noindex removal must wait for attorney approval and reviewed copy hashes.",
+      "Acceptance persistence execution requires route/database proof.",
+      "Payment policy legal/tax approval requires external review.",
+      "Legal copy rollback drill requires approved reviewed-copy version evidence.",
+    ],
+  };
+}
+
+export function buildLegalReviewArtifactReview(rawArtifact: unknown): LegalReviewArtifactReview {
+  return {
+    status: "redacted-review-ready",
+    redactedArtifact: buildRedactedLegalReviewArtifact(rawArtifact),
+    requiredArtifacts: legalReviewArtifactPaths,
+    retainedExternalGates: [
+      "Qualified attorney approval metadata evidence",
+      "Jurisdiction-specific studio policy version evidence",
+      "Reviewed public legal page smoke evidence",
+      "Noindex removal after approval evidence",
+      "Consent acceptance audit persistence evidence",
+      "Payment policy legal and tax review evidence",
+      "Legal copy rollback drill evidence",
+    ],
+  };
+}
+
+export function buildLegalReviewEvidenceDecision(input: LegalReviewEvidenceInput): LegalReviewEvidenceDecision {
+  const blockers = [
+    !input.packetScaffoldCaptured && "Capture legal review packet scaffold evidence.",
+    !input.attorneyApprovalsCaptured && "Capture qualified attorney approval metadata evidence.",
+    !input.jurisdictionPolicyVersionsCaptured && "Capture jurisdiction-specific studio policy version evidence.",
+    !input.consentVersionPersistenceCaptured && "Capture consent document version persistence evidence.",
+    !input.reviewedPublicPageSmokeCaptured && "Capture reviewed public legal page smoke evidence.",
+    !input.noindexRemovedAfterApprovalCaptured && "Capture noindex removal after approval evidence.",
+    !input.acceptanceAuditPersistenceCaptured && "Capture versioned acceptance audit persistence evidence.",
+    !input.dashboardAcceptanceUiCaptured && "Capture dashboard acceptance UI evidence.",
+    !input.paymentPolicyReviewCaptured && "Capture payment policy legal and tax review evidence.",
+    !input.rollbackPlanCaptured && "Capture legal copy rollback plan evidence.",
+  ].filter(Boolean) as string[];
+
+  const missingArtifacts = legalReviewArtifactPaths.filter(
+    (artifact) => !input.capturedArtifacts.includes(artifact),
+  );
+  const missingCommands = legalReviewCommands.filter(
+    (command) => !input.requiredCommandsRun.includes(command),
+  );
+
+  return {
+    status: blockers.length === 0 && missingArtifacts.length === 0 && missingCommands.length === 0 ? "complete" : "blocked",
+    blockers: [
+      ...blockers,
+      ...missingCommands.map((command) => `Required command not recorded: ${command}`),
+    ],
+    missingArtifacts,
+    requiredCommands: legalReviewCommands,
+    requiredEvidence: legalReviewArtifactPaths,
+    publicationPolicy: {
+      noindexRemovedOnlyAfterApproval: true,
+      placeholderCopyRemovedOnlyAfterReview: true,
+      acceptanceAuditsUseRedactedHashes: true,
+    },
+  };
+}
 
 export function buildLegalVersionAcceptancePersistenceContract(input: {
   document: LegalDocumentVersionPersistenceInput;
@@ -140,9 +389,9 @@ export const legalDocumentRuntimeContract = buildLegalDocumentProductionReadines
   reviewedPublicPageCopyCommitted: false,
   placeholderCopyRemoved: false,
   noindexRemovedAfterApproval: false,
-  consentVersionPersistenceConfigured: false,
-  studioPolicyVersionPersistenceConfigured: false,
-  acceptanceAuditPersistenceConfigured: false,
+  consentVersionPersistenceConfigured: true,
+  studioPolicyVersionPersistenceConfigured: true,
+  acceptanceAuditPersistenceConfigured: true,
   dashboardAcceptanceUiWired: false,
   publicPageRouteSmokePassed: false,
   consentAcceptanceRouteTestsPassed: false,
@@ -166,8 +415,8 @@ export const paymentPolicyLegalRuntimeContract = buildPaymentPolicyLegalReviewRu
   reviewedTaxDisclosureCopyCommitted: false,
   termsPrivacyConsentUpdated: false,
   placeholdersRemovedFromPaymentFlows: false,
-  acceptanceAuditConfigured: false,
-  policyVersioningConfigured: false,
+  acceptanceAuditConfigured: true,
+  policyVersioningConfigured: true,
   e2eApprovedLanguageVerified: false,
   rollbackCopyPlanDocumented: false,
 });

@@ -1,4 +1,4 @@
-﻿export type MobileScreenId =
+export type MobileScreenId =
   | "auth"
   | "home"
   | "bookings"
@@ -15,7 +15,7 @@ export interface MobileScreenDefinition {
   label: string;
   shortLabel: string;
   summary: string;
-  phase6Status: "implemented-static" | "scaffolded-boundary" | "provider-gated" | "runtime-gated";
+  phase6Status: "implemented-static" | "local-contract-boundary" | "provider-gated" | "runtime-gated";
 }
 
 export const mobileScreenRegistry: readonly MobileScreenDefinition[] = [
@@ -24,7 +24,7 @@ export const mobileScreenRegistry: readonly MobileScreenDefinition[] = [
     label: "Secure login",
     shortLabel: "Auth",
     summary: "Mock login posture with biometric and session boundaries called out for provider implementation.",
-    phase6Status: "scaffolded-boundary",
+    phase6Status: "local-contract-boundary",
   },
   {
     id: "home",
@@ -37,8 +37,8 @@ export const mobileScreenRegistry: readonly MobileScreenDefinition[] = [
     id: "bookings",
     label: "Booking requests",
     shortLabel: "Requests",
-    summary: "Mobile review queue with readiness score, lifecycle status, and disabled action boundaries.",
-    phase6Status: "implemented-static",
+    summary: "Mobile review queue with readiness score and package-backed local lifecycle action boundaries.",
+    phase6Status: "local-contract-boundary",
   },
   {
     id: "appointments",
@@ -58,15 +58,15 @@ export const mobileScreenRegistry: readonly MobileScreenDefinition[] = [
     id: "travel",
     label: "Nomad updates",
     shortLabel: "Travel",
-    summary: "Artist-facing tool for city status publishing, waitlist posture, and guest spot updates.",
-    phase6Status: "implemented-static",
+    summary: "Artist-facing tool with package-backed travel publish contract for city status, waitlists, guest spot updates, notification fanout, and SEO revalidation.",
+    phase6Status: "local-contract-boundary",
   },
   {
     id: "portfolio",
     label: "Portfolio upload",
     shortLabel: "Portfolio",
-    summary: "Portfolio metadata capture preview for style tags, placement, freshness, city, and alt text.",
-    phase6Status: "scaffolded-boundary",
+    summary: "Portfolio metadata and upload-intent contract for style tags, placement, freshness, city, alt text, and object-key boundaries.",
+    phase6Status: "local-contract-boundary",
   },
   {
     id: "notifications",
@@ -79,8 +79,8 @@ export const mobileScreenRegistry: readonly MobileScreenDefinition[] = [
     id: "offline",
     label: "Offline notes",
     shortLabel: "Offline",
-    summary: "Offline-first queue model for weak travel connectivity; no durable local store wired yet.",
-    phase6Status: "scaffolded-boundary",
+    summary: "Offline-first queue model with shared repository, retry, idempotency, and redacted audit contracts; encrypted device persistence remains gated.",
+    phase6Status: "local-contract-boundary",
   },
   {
     id: "system",
@@ -102,10 +102,213 @@ export interface MobileSessionPreview {
   sessionBoundary: string;
 }
 
+export interface MobileSecureSessionContractInput {
+  tenantId: string;
+  userId: string;
+  role: "owner" | "artist" | "manager" | "assistant" | "viewer";
+  accessTokenPreview: string;
+  refreshTokenStored: boolean;
+  secureStoreAvailable: boolean;
+  biometricRequired: boolean;
+  biometricUnlocked: boolean;
+  expiresAt: string;
+  now: string;
+}
+
+export interface MobileSecureSessionContract {
+  status: "ready" | "blocked";
+  tenantScoped: boolean;
+  secureStoreRequired: boolean;
+  biometricGateRequired: boolean;
+  providerLoginRuntimeGated: true;
+  tokenMaterialRedacted: true;
+  blockers: readonly string[];
+  requiredEvidence: readonly string[];
+}
+
+export interface MobileCrashCaptureContractInput {
+  fallbackReporterConfigured: boolean;
+  offlineBufferConfigured: boolean;
+  beforeSendRedactionConfigured: boolean;
+  sourceMapsUploaded: boolean;
+  debugSymbolsUploaded: boolean;
+  forcedCrashProofCaptured: boolean;
+  providerPayloadNoPiiVerified: boolean;
+}
+
+export interface MobileCrashCaptureContract {
+  status: "ready" | "blocked";
+  localFallbackReady: boolean;
+  providerCaptureRuntimeGated: true;
+  deviceProofRuntimeGated: boolean;
+  redactionRequired: true;
+  blockers: readonly string[];
+  requiredEvidence: readonly string[];
+}
+
+export interface MobileOtaRollbackContractInput {
+  runtimeVersion: string;
+  channel: "preview" | "production";
+  currentUpdateId?: string;
+  previousCompatibleUpdateId?: string;
+  redactedDeviceReceipts: number;
+  failedReceipts: number;
+  rollbackRepublishCommandRecorded: boolean;
+  easProjectConfigured: boolean;
+}
+
+export interface MobileOtaRollbackContract {
+  status: "ready" | "blocked";
+  runtimeVersion: string;
+  channel: "preview" | "production";
+  rollbackCommand: "eas update --channel preview --message rollback-republish-drill --non-interactive";
+  providerExecutionGated: true;
+  redactedAdoptionOnly: true;
+  rollbackTargetUpdateId: string | null;
+  blockers: readonly string[];
+  requiredEvidence: readonly string[];
+}
+
+export interface MobilePushLocalContractInput {
+  permissionRuntimeImplemented: boolean;
+  tokenRegistrationRuntimeImplemented: boolean;
+  optOutPersistenceContract: boolean;
+  receiptIdempotencyContract: boolean;
+  invalidTokenSuppressionContract: boolean;
+  safeTapRoutingContract: boolean;
+  auditLogContract: boolean;
+  expoCredentialsConfigured: boolean;
+  foregroundBackgroundDeviceQaPassed: boolean;
+}
+
+export interface MobilePushLocalContract {
+  status: "ready" | "blocked";
+  localContractReady: boolean;
+  providerExecutionGated: true;
+  deviceQaGated: boolean;
+  requiredEvidence: readonly string[];
+  blockers: readonly string[];
+}
+
+export function buildMobileSecureSessionContract(input: MobileSecureSessionContractInput): MobileSecureSessionContract {
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+  if (!input.tenantId) blockers.push("Tenant scope is required before mobile session access.");
+  if (!input.userId) blockers.push("User id is required before mobile session access.");
+  if (!input.accessTokenPreview || !input.accessTokenPreview.includes("***")) blockers.push("Mobile access token material must be redacted in local contracts.");
+  if (!input.refreshTokenStored) blockers.push("Refresh token storage must be available before mobile session recovery.");
+  if (!input.secureStoreAvailable) blockers.push("Expo SecureStore or equivalent encrypted storage must be available before production session use.");
+  if (input.biometricRequired && !input.biometricUnlocked) blockers.push("Biometric unlock is required before this mobile session can access tenant data.");
+  if (new Date(input.expiresAt).getTime() <= new Date(input.now).getTime()) blockers.push("Mobile session is expired and must refresh or sign in again.");
+
+  if (!input.secureStoreAvailable) requiredEvidence.push("secure token storage proof");
+  if (input.biometricRequired && !input.biometricUnlocked) requiredEvidence.push("biometric unlock proof");
+  if (!input.refreshTokenStored) requiredEvidence.push("refresh token recovery proof");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    tenantScoped: Boolean(input.tenantId && input.userId),
+    secureStoreRequired: true,
+    biometricGateRequired: input.biometricRequired,
+    providerLoginRuntimeGated: true,
+    tokenMaterialRedacted: true,
+    blockers,
+    requiredEvidence,
+  };
+}
+
+export function buildMobilePushLocalContract(input: MobilePushLocalContractInput): MobilePushLocalContract {
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+  if (!input.permissionRuntimeImplemented) blockers.push("Push permission runtime contract input is required before the local mobile push contract is ready.");
+  if (!input.tokenRegistrationRuntimeImplemented) blockers.push("Push token registration contract input is required before the local mobile push contract is ready.");
+  if (!input.optOutPersistenceContract) blockers.push("Push opt-out persistence contract input is required before the local mobile push contract is ready.");
+  if (!input.receiptIdempotencyContract) blockers.push("Expo receipt idempotency contract input is required before the local mobile push contract is ready.");
+  if (!input.invalidTokenSuppressionContract) blockers.push("Invalid-token suppression contract input is required before the local mobile push contract is ready.");
+  if (!input.safeTapRoutingContract) blockers.push("Safe internal tap-routing contract input is required before the local mobile push contract is ready.");
+  if (!input.auditLogContract) blockers.push("Push audit-log contract input is required before the local mobile push contract is ready.");
+  if (!input.expoCredentialsConfigured) blockers.push("Expo project/access token and APNs/FCM credentials remain provider-gated.");
+  if (!input.foregroundBackgroundDeviceQaPassed) blockers.push("Foreground/background/tap push QA must pass on device before closure.");
+
+  if (!input.expoCredentialsConfigured) requiredEvidence.push("Expo push credential proof");
+  if (!input.foregroundBackgroundDeviceQaPassed) requiredEvidence.push("foreground/background/tap device QA proof");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    localContractReady:
+      input.permissionRuntimeImplemented &&
+      input.tokenRegistrationRuntimeImplemented &&
+      input.optOutPersistenceContract &&
+      input.receiptIdempotencyContract &&
+      input.invalidTokenSuppressionContract &&
+      input.safeTapRoutingContract &&
+      input.auditLogContract,
+    providerExecutionGated: true,
+    deviceQaGated: !input.foregroundBackgroundDeviceQaPassed,
+    requiredEvidence,
+    blockers,
+  };
+}
+
+export function buildMobileOtaRollbackContract(input: MobileOtaRollbackContractInput): MobileOtaRollbackContract {
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+  if (!input.runtimeVersion) blockers.push("Runtime version is required before OTA rollback can be evaluated.");
+  if (!input.easProjectConfigured) blockers.push("Expo/EAS project configuration is required before OTA rollback proof is meaningful.");
+  if (!input.currentUpdateId) blockers.push("Current preview update id must be recorded before OTA adoption can be evaluated.");
+  if (input.redactedDeviceReceipts <= 0) blockers.push("Redacted device receipt counts are required before OTA promotion or rollback.");
+  if (input.failedReceipts > 0 && !input.previousCompatibleUpdateId) blockers.push("Previous compatible update id is required before rollback republish.");
+  if (!input.rollbackRepublishCommandRecorded) blockers.push("Rollback republish command evidence must be captured with the pinned non-interactive command.");
+
+  if (!input.easProjectConfigured || !input.currentUpdateId) requiredEvidence.push("EAS project/update id proof");
+  if (input.redactedDeviceReceipts <= 0 || input.failedReceipts > 0) requiredEvidence.push("redacted OTA adoption and failure proof");
+  if (!input.rollbackRepublishCommandRecorded || (input.failedReceipts > 0 && !input.previousCompatibleUpdateId)) {
+    requiredEvidence.push("rollback republish proof");
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    runtimeVersion: input.runtimeVersion,
+    channel: input.channel,
+    rollbackCommand: "eas update --channel preview --message rollback-republish-drill --non-interactive",
+    providerExecutionGated: true,
+    redactedAdoptionOnly: true,
+    rollbackTargetUpdateId: input.previousCompatibleUpdateId ?? null,
+    blockers,
+    requiredEvidence,
+  };
+}
+
+export function buildMobileCrashCaptureContract(input: MobileCrashCaptureContractInput): MobileCrashCaptureContract {
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+  if (!input.fallbackReporterConfigured) blockers.push("Fallback mobile crash reporter must persist sanitized reports.");
+  if (!input.offlineBufferConfigured) blockers.push("Offline mobile crash buffer must retain sanitized reports for reconnect.");
+  if (!input.beforeSendRedactionConfigured) blockers.push("Mobile crash capture must redact before provider submission or fallback persistence.");
+  if (!input.sourceMapsUploaded) blockers.push("Expo source maps must upload before provider crash resolution is production-ready.");
+  if (!input.debugSymbolsUploaded) blockers.push("React Native debug symbols must upload before provider crash resolution is production-ready.");
+  if (!input.forcedCrashProofCaptured) blockers.push("Forced simulator/device crash proof must be captured before closure.");
+  if (!input.providerPayloadNoPiiVerified) blockers.push("Provider payloads must be proven free of PII, medical, payment, token, and private URL values.");
+
+  if (!input.sourceMapsUploaded || !input.debugSymbolsUploaded) requiredEvidence.push("source-map and debug-symbol upload proof");
+  if (!input.forcedCrashProofCaptured) requiredEvidence.push("forced simulator/device crash proof");
+  if (!input.providerPayloadNoPiiVerified) requiredEvidence.push("no-PII provider payload proof");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    localFallbackReady: input.fallbackReporterConfigured && input.offlineBufferConfigured && input.beforeSendRedactionConfigured,
+    providerCaptureRuntimeGated: true,
+    deviceProofRuntimeGated: !input.forcedCrashProofCaptured,
+    redactionRequired: true,
+    blockers,
+    requiredEvidence,
+  };
+}
+
 export interface MobileIntegrationBoundary {
   id: string;
   label: string;
-  status: "mocked" | "scaffolded" | "credential-gated" | "deployment-gated" | "externally-dependent";
+  status: "mocked" | "local-contract" | "scaffolded" | "credential-gated" | "deployment-gated" | "externally-dependent";
   blocksProduction: boolean;
   detail: string;
 }
@@ -114,44 +317,44 @@ export const phase6MobileBoundaries: readonly MobileIntegrationBoundary[] = [
   {
     id: "mobile-auth",
     label: "Auth and biometric unlock",
-    status: "credential-gated",
+    status: "local-contract",
     blocksProduction: true,
-    detail: "Expo screens show secure-login posture only. Auth provider, refresh tokens, biometric gate, and tenant membership checks remain external implementation.",
+    detail: "Secure-session, redacted token preview, biometric gate, refresh/logout, tenant-scope, and audit contracts are wired locally; provider login, device SecureStore proof, revocation, and biometric device QA remain gated.",
   },
   {
     id: "mobile-api",
     label: "Tenant-scoped API client",
-    status: "scaffolded",
+    status: "local-contract",
     blocksProduction: true,
-    detail: "The app uses static data. It does not call dashboard/mobile APIs or persist mutations to Postgres.",
+    detail: "Static demo data remains, but the typed tenant API client and screen sync contract are wired; provider auth, seeded API smoke, offline replay, and Postgres mutation proof remain gated.",
   },
   {
     id: "mobile-push",
     label: "Push notifications",
-    status: "credential-gated",
+    status: "local-contract",
     blocksProduction: true,
-    detail: "Expo push token registration, notification permissions, provider delivery logs, and opt-out compliance are not wired.",
+    detail: "Expo push registration, opt-out, receipt idempotency, invalid-token suppression, tap-routing, and audit contracts are wired locally; provider credentials, device tokens, delivery worker proof, and foreground/background QA remain gated.",
   },
   {
     id: "mobile-offline-store",
     label: "Offline-first storage",
-    status: "scaffolded",
+    status: "local-contract",
     blocksProduction: true,
-    detail: "Offline queue types exist, but no SQLite/AsyncStorage persistence, sync conflict resolution, encryption, or retry worker is implemented.",
+    detail: "Offline queue, repository, redacted audit, retry, idempotency, and sync-worker contracts are wired locally; encrypted SQLite/AsyncStorage persistence, device restart proof, conflict integration, and reconnect QA remain gated.",
   },
   {
     id: "mobile-crash",
     label: "Crash reporting",
     status: "credential-gated",
     blocksProduction: true,
-    detail: "Sentry or fallback crash capture is documented but not wired into Expo runtime.",
+    detail: "The package-backed sanitized fallback/offline-buffer crash reporter contract is wired; Sentry credentials, Expo runtime capture, no-PII provider payload proof, source maps/debug symbols, and simulator/device proof remain gated.",
   },
   {
     id: "mobile-updates",
     label: "OTA/release updates",
     status: "deployment-gated",
     blocksProduction: false,
-    detail: "EAS Update strategy is documented as optional. No Expo project ID, channels, runtimeVersion policy, or rollback checks are configured for production.",
+    detail: "EAS channels and runtimeVersion policy are wired with deployment-gated project/update placeholders; real project, credentials, preview publish, adoption monitoring, and rollback proof remain gated.",
   },
 ];
 
@@ -193,7 +396,7 @@ export function summarizeOfflineQueue(items: readonly OfflineQueueItem[]): Offli
     failed,
     sensitive,
     productionReady: false,
-    warning: "Offline queue is a Phase 6 model only; encrypted persistence and sync conflict handling are not implemented.",
+    warning: "Offline queue planning and the app-side adapter/worker contract are wired; encrypted device persistence, conflict integration, and reconnect proof remain gated.",
   };
 }
 
@@ -216,6 +419,26 @@ export interface OfflineSyncPlan {
   blockedCount: number;
   productionReady: boolean;
   warning: string;
+}
+
+export interface OfflineQueueRepositoryContract {
+  adapter: "memory-contract" | "encrypted-sqlite" | "expo-secure-store";
+  encryptedAtRest: boolean;
+  restartPersistence: boolean;
+  auditTrailPersistence: boolean;
+  idempotentReplay: boolean;
+  syncWorker: boolean;
+  productionReady: boolean;
+  requiredEvidence: readonly OfflineRuntimeRequiredEvidence[];
+}
+
+export interface OfflineSyncAuditEvent {
+  itemId: string;
+  decision: OfflineSyncDecisionStatus | "transport_failed";
+  idempotencyKey: string;
+  sensitive: boolean;
+  occurredAt: string;
+  redactedDetail: string;
 }
 
 export interface OfflineRuntimeReadinessInput {
@@ -241,8 +464,8 @@ export interface OfflineRuntimeReadinessInput {
 export interface OfflineRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof offlineRuntimeRequiredCommands;
+  requiredEvidence: readonly OfflineRuntimeRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -259,6 +482,66 @@ function addMinutes(iso: string, minutes: number): string {
 export function calculateOfflineRetryDelayMinutes(retryCount: number): number {
   if (retryCount <= 0) return 0;
   return Math.min(60, 2 ** Math.min(retryCount, 5));
+}
+
+export const offlineRuntimeRequiredCommands = [
+  "pnpm --filter @inkroute/mobile-support typecheck",
+  "pnpm --filter @inkroute/mobile-support test",
+  "pnpm --filter @inkroute/mobile typecheck",
+  "pnpm --filter @inkroute/mobile test",
+  "Expo offline restart persistence smoke test",
+  "Expo airplane-mode reconnect sync smoke test",
+] as const;
+
+export const offlineRuntimeRequiredEvidence = [
+  "encrypted offline storage adapter and at-rest encryption proof",
+  "device restart and airplane-mode reconnect evidence",
+  "runtime sync worker retry and idempotent replay test output",
+  "server conflict-resolution test output",
+  "offline sync audit trail persistence evidence",
+] as const;
+
+export type OfflineRuntimeRequiredEvidence = (typeof offlineRuntimeRequiredEvidence)[number];
+
+export function buildOfflineQueueRepositoryContract(input: {
+  adapter: OfflineQueueRepositoryContract["adapter"];
+  encryptedAtRest: boolean;
+  restartPersistence: boolean;
+  auditTrailPersistence: boolean;
+  idempotentReplay: boolean;
+  syncWorker: boolean;
+}): OfflineQueueRepositoryContract {
+  const requiredEvidence: OfflineRuntimeRequiredEvidence[] = [];
+  if (!input.encryptedAtRest) requiredEvidence.push(offlineRuntimeRequiredEvidence[0]);
+  if (!input.restartPersistence) requiredEvidence.push(offlineRuntimeRequiredEvidence[1]);
+  if (!input.syncWorker || !input.idempotentReplay) requiredEvidence.push(offlineRuntimeRequiredEvidence[2]);
+  if (!input.auditTrailPersistence) requiredEvidence.push(offlineRuntimeRequiredEvidence[4]);
+
+  return {
+    ...input,
+    productionReady:
+      input.encryptedAtRest &&
+      input.restartPersistence &&
+      input.auditTrailPersistence &&
+      input.idempotentReplay &&
+      input.syncWorker,
+    requiredEvidence,
+  };
+}
+
+export function buildOfflineSyncAuditEvent(
+  item: OfflineQueueItem,
+  decision: OfflineSyncDecision,
+  occurredAt: string,
+): OfflineSyncAuditEvent {
+  return {
+    itemId: item.id,
+    decision: decision.status,
+    idempotencyKey: decision.idempotencyKey,
+    sensitive: item.sensitive,
+    occurredAt,
+    redactedDetail: item.sensitive ? "Sensitive offline payload redacted." : "Offline sync decision recorded.",
+  };
 }
 
 export function planOfflineSync(input: {
@@ -333,7 +616,7 @@ export function planOfflineSync(input: {
     conflictCount,
     blockedCount,
     productionReady: false,
-    warning: "Offline sync planning is dependency-light only; encrypted device persistence and runtime worker execution remain unimplemented.",
+    warning: "Offline sync planning and app-side worker contract are wired; encrypted device persistence, server conflict integration, and reconnect proof remain runtime-gated.",
   };
 }
 
@@ -341,7 +624,7 @@ export function buildOfflineRuntimeReadinessPlan(input: OfflineRuntimeReadinessI
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: OfflineRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/mobile-support package script is missing ${script}.`);
   if (!input.mobileSupportTestsPassed) blockers.push("@inkroute/mobile-support offline tests must pass.");
@@ -362,31 +645,27 @@ export function buildOfflineRuntimeReadinessPlan(input: OfflineRuntimeReadinessI
   if (!input.offlineReconnectDeviceTested) blockers.push("Airplane-mode queue and reconnect sync must be verified on device or simulator.");
 
   if (!input.storageAdapterSelected || !input.encryptedStoreConfigured || !input.sensitiveItemsEncryptedAtRest) {
-    requiredEvidence.push("encrypted offline storage adapter and at-rest encryption proof");
+    requiredEvidence.push(offlineRuntimeRequiredEvidence[0]);
   }
   if (!input.deviceRestartPersistenceTested || !input.offlineReconnectDeviceTested) {
-    requiredEvidence.push("device restart and airplane-mode reconnect evidence");
+    requiredEvidence.push(offlineRuntimeRequiredEvidence[1]);
   }
   if (!input.syncWorkerConfigured || !input.retryBackoffWorkerTested || !input.alreadySyncedReplayTested) {
-    requiredEvidence.push("runtime sync worker retry and idempotent replay test output");
+    requiredEvidence.push(offlineRuntimeRequiredEvidence[2]);
   }
   if (!input.conflictResolutionConfigured || !input.serverConflictTestsPassed) {
-    requiredEvidence.push("server conflict-resolution test output");
+    requiredEvidence.push(offlineRuntimeRequiredEvidence[3]);
   }
-  if (!input.auditTrailPersistenceConfigured) requiredEvidence.push("offline sync audit trail persistence evidence");
+  if (!input.auditTrailPersistenceConfigured) requiredEvidence.push(offlineRuntimeRequiredEvidence[4]);
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/mobile-support typecheck",
-      "pnpm --filter @inkroute/mobile-support test",
-      "pnpm --filter @inkroute/mobile typecheck",
-      "pnpm --filter @inkroute/mobile test",
-      "Expo offline restart persistence smoke test",
-      "Expo airplane-mode reconnect sync smoke test",
-    ],
-    requiredEvidence,
+    requiredCommands: offlineRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === offlineRuntimeRequiredEvidence.length
+        ? offlineRuntimeRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -445,6 +724,72 @@ export interface MobileScreenSyncRequirement {
   gapIds: string[];
 }
 
+export type MobileBookingLifecycleAction = "accept" | "decline" | "reschedule" | "waitlist";
+
+export interface MobileBookingLifecycleActionContractInput {
+  tenantId: string;
+  bookingId: string;
+  requestId: string;
+  idempotencyKey: string;
+  action: MobileBookingLifecycleAction;
+  authenticatedApiReady: boolean;
+  stateEventContractReady: boolean;
+  calendarConflictCheckReady: boolean;
+  notificationHandoffReady: boolean;
+  auditLogContractReady: boolean;
+  providerExecutionVerified: boolean;
+}
+
+export interface MobileBookingLifecycleActionContract {
+  status: "ready" | "blocked";
+  localContractReady: boolean;
+  providerExecutionGated: true;
+  endpoint: "/api/mobile/bookings/:id/actions";
+  method: "POST";
+  action: MobileBookingLifecycleAction;
+  requiredHeaders: readonly ["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"];
+  metadata: {
+    tenantId: string;
+    bookingId: string;
+    requestId: string;
+    idempotencyKey: string;
+  };
+  blockers: readonly string[];
+  requiredEvidence: readonly string[];
+}
+
+export interface MobileTravelPublishContractInput {
+  tenantId: string;
+  travelScheduleId: string;
+  citySlug: string;
+  requestId: string;
+  idempotencyKey: string;
+  authenticatedApiReady: boolean;
+  auditLogContractReady: boolean;
+  publicCacheRevalidationContractReady: boolean;
+  notificationFanoutContractReady: boolean;
+  seoRevalidationContractReady: boolean;
+  providerExecutionVerified: boolean;
+}
+
+export interface MobileTravelPublishContract {
+  status: "ready" | "blocked";
+  localContractReady: boolean;
+  providerExecutionGated: true;
+  endpoint: "/api/mobile/travel-stops/:id/publish";
+  method: "POST";
+  requiredHeaders: readonly ["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"];
+  metadata: {
+    tenantId: string;
+    travelScheduleId: string;
+    citySlug: string;
+    requestId: string;
+    idempotencyKey: string;
+  };
+  blockers: readonly string[];
+  requiredEvidence: readonly string[];
+}
+
 export interface MobileApiRuntimeReadinessInput {
   packageScripts: Readonly<Record<string, string>>;
   mobileSupportTestsPassed: boolean;
@@ -470,8 +815,8 @@ export interface MobileApiRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
   missingScreenDomains: readonly MobileApiDomain[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof mobileApiRuntimeRequiredCommands;
+  requiredEvidence: readonly MobileApiRuntimeRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -520,6 +865,137 @@ export function buildMobileApiRequestPlan(input: MobileApiRequestPlanInput): Mob
     safeErrorPolicy: "redact-body",
     offlineQueueRequired,
     blockers,
+  };
+}
+
+export function buildMobileBookingLifecycleActionContract(
+  input: MobileBookingLifecycleActionContractInput,
+): MobileBookingLifecycleActionContract {
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+
+  if (!input.tenantId.trim()) blockers.push("Tenant scope is required for booking lifecycle action.");
+  if (!input.bookingId.trim()) blockers.push("Booking id is required for booking lifecycle action.");
+  if (!input.requestId.trim()) blockers.push("Request id is required for booking lifecycle auditability.");
+  if (!input.idempotencyKey.trim()) blockers.push("Idempotency key is required for booking lifecycle replay safety.");
+  if (!input.authenticatedApiReady) {
+    blockers.push("Authenticated booking lifecycle API contract input is required before the local action contract is ready.");
+    requiredEvidence.push("authenticated booking lifecycle API contract");
+  }
+  if (!input.stateEventContractReady) {
+    blockers.push("Booking state event contract input is required before the local action contract is ready.");
+    requiredEvidence.push("booking state event contract");
+  }
+  if (!input.calendarConflictCheckReady) {
+    blockers.push("Calendar conflict check contract input is required before the local action contract is ready.");
+    requiredEvidence.push("calendar conflict check contract");
+  }
+  if (!input.notificationHandoffReady) {
+    blockers.push("Notification handoff contract input is required before the local action contract is ready.");
+    requiredEvidence.push("booking notification handoff contract");
+  }
+  if (!input.auditLogContractReady) {
+    blockers.push("Booking lifecycle audit log contract input is required before the local action contract is ready.");
+    requiredEvidence.push("booking lifecycle audit log contract");
+  }
+  if (!input.providerExecutionVerified) {
+    blockers.push("Provider-backed booking lifecycle execution proof remains required.");
+    requiredEvidence.push("provider-backed booking lifecycle execution proof");
+  }
+
+  const localContractReady =
+    input.tenantId.trim().length > 0 &&
+    input.bookingId.trim().length > 0 &&
+    input.requestId.trim().length > 0 &&
+    input.idempotencyKey.trim().length > 0 &&
+    input.authenticatedApiReady &&
+    input.stateEventContractReady &&
+    input.calendarConflictCheckReady &&
+    input.notificationHandoffReady &&
+    input.auditLogContractReady;
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    localContractReady,
+    providerExecutionGated: true,
+    endpoint: "/api/mobile/bookings/:id/actions",
+    method: "POST",
+    action: input.action,
+    requiredHeaders: ["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"],
+    metadata: {
+      tenantId: input.tenantId,
+      bookingId: input.bookingId,
+      requestId: input.requestId,
+      idempotencyKey: input.idempotencyKey,
+    },
+    blockers,
+    requiredEvidence,
+  };
+}
+
+export function buildMobileTravelPublishContract(input: MobileTravelPublishContractInput): MobileTravelPublishContract {
+  const blockers: string[] = [];
+  const requiredEvidence: string[] = [];
+  const citySlugSafe = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(input.citySlug);
+
+  if (!input.tenantId.trim()) blockers.push("Tenant scope is required for travel publish.");
+  if (!input.travelScheduleId.trim()) blockers.push("Travel schedule id is required for travel publish.");
+  if (!citySlugSafe) blockers.push("Travel city slug must be normalized before publish.");
+  if (!input.requestId.trim()) blockers.push("Request id is required for travel publish auditability.");
+  if (!input.idempotencyKey.trim()) blockers.push("Idempotency key is required for travel publish replay safety.");
+  if (!input.authenticatedApiReady) {
+    blockers.push("Authenticated mobile travel API contract input is required before the local publish contract is ready.");
+    requiredEvidence.push("authenticated mobile travel API contract");
+  }
+  if (!input.auditLogContractReady) {
+    blockers.push("Travel publish audit log contract input is required before the local publish contract is ready.");
+    requiredEvidence.push("travel publish audit log contract");
+  }
+  if (!input.publicCacheRevalidationContractReady) {
+    blockers.push("Public travel cache revalidation contract input is required before the local publish contract is ready.");
+    requiredEvidence.push("public travel cache revalidation contract");
+  }
+  if (!input.notificationFanoutContractReady) {
+    blockers.push("Travel waitlist notification fanout contract input is required before the local publish contract is ready.");
+    requiredEvidence.push("travel notification fanout contract");
+  }
+  if (!input.seoRevalidationContractReady) {
+    blockers.push("Travel SEO revalidation contract input is required before the local publish contract is ready.");
+    requiredEvidence.push("travel SEO revalidation contract");
+  }
+  if (!input.providerExecutionVerified) {
+    blockers.push("Provider-backed travel publish execution proof remains required.");
+    requiredEvidence.push("provider-backed travel publish execution proof");
+  }
+
+  const localContractReady =
+    input.tenantId.trim().length > 0 &&
+    input.travelScheduleId.trim().length > 0 &&
+    citySlugSafe &&
+    input.requestId.trim().length > 0 &&
+    input.idempotencyKey.trim().length > 0 &&
+    input.authenticatedApiReady &&
+    input.auditLogContractReady &&
+    input.publicCacheRevalidationContractReady &&
+    input.notificationFanoutContractReady &&
+    input.seoRevalidationContractReady;
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    localContractReady,
+    providerExecutionGated: true,
+    endpoint: "/api/mobile/travel-stops/:id/publish",
+    method: "POST",
+    requiredHeaders: ["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"],
+    metadata: {
+      tenantId: input.tenantId,
+      travelScheduleId: input.travelScheduleId,
+      citySlug: input.citySlug,
+      requestId: input.requestId,
+      idempotencyKey: input.idempotencyKey,
+    },
+    blockers,
+    requiredEvidence,
   };
 }
 
@@ -598,13 +1074,31 @@ export function buildMobileScreenSyncRequirements(): MobileScreenSyncRequirement
   ];
 }
 
+export const mobileApiRuntimeRequiredCommands = [
+  "pnpm --filter @inkroute/mobile-support typecheck",
+  "pnpm --filter @inkroute/mobile-support test",
+  "pnpm --filter @inkroute/mobile typecheck",
+  "pnpm --filter @inkroute/mobile test",
+  "Expo iOS/Android mobile API smoke tests",
+  "offline reconnect/replay mobile test",
+] as const;
+
+export const mobileApiRuntimeRequiredEvidence = [
+  "mobile screen API-client wiring matrix for bookings, appointments, clients, travel, portfolio, notifications, and releases",
+  "seeded mobile API smoke output",
+  "expired-auth and cross-tenant denial test output",
+  "offline idempotent replay test output",
+] as const;
+
+export type MobileApiRuntimeRequiredEvidence = (typeof mobileApiRuntimeRequiredEvidence)[number];
+
 export function buildMobileApiRuntimeReadinessPlan(input: MobileApiRuntimeReadinessInput): MobileApiRuntimeReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const requiredDomains: MobileApiDomain[] = ["bookings", "appointments", "clients", "travel", "portfolio", "notifications", "releases"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const missingScreenDomains = requiredDomains.filter((domain) => !input.screensUsingApiClient.includes(domain));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: MobileApiRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/mobile-support package script is missing ${script}.`);
   if (!input.mobileSupportTestsPassed) blockers.push("@inkroute/mobile-support API/sync tests must pass.");
@@ -626,29 +1120,25 @@ export function buildMobileApiRuntimeReadinessPlan(input: MobileApiRuntimeReadin
   if (missingScreenDomains.length > 0) blockers.push(`Mobile screens still need API client wiring for domains: ${missingScreenDomains.join(", ")}.`);
 
   if (!input.apiClientImplemented || missingScreenDomains.length > 0) {
-    requiredEvidence.push("mobile screen API-client wiring matrix for bookings, appointments, clients, travel, portfolio, notifications, and releases");
+    requiredEvidence.push(mobileApiRuntimeRequiredEvidence[0]);
   }
-  if (!input.seededApiSmokePassed) requiredEvidence.push("seeded mobile API smoke output");
+  if (!input.seededApiSmokePassed) requiredEvidence.push(mobileApiRuntimeRequiredEvidence[1]);
   if (!input.expiredAuthFailsSafelyTested || !input.crossTenantDenialTested) {
-    requiredEvidence.push("expired-auth and cross-tenant denial test output");
+    requiredEvidence.push(mobileApiRuntimeRequiredEvidence[2]);
   }
   if (!input.offlineRetryQueueConfigured || !input.idempotencyPersistenceConfigured || !input.offlineReplayTested) {
-    requiredEvidence.push("offline idempotent replay test output");
+    requiredEvidence.push(mobileApiRuntimeRequiredEvidence[3]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
     missingScreenDomains,
-    requiredCommands: [
-      "pnpm --filter @inkroute/mobile-support typecheck",
-      "pnpm --filter @inkroute/mobile-support test",
-      "pnpm --filter @inkroute/mobile typecheck",
-      "pnpm --filter @inkroute/mobile test",
-      "Expo iOS/Android mobile API smoke tests",
-      "offline reconnect/replay mobile test",
-    ],
-    requiredEvidence,
+    requiredCommands: mobileApiRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === mobileApiRuntimeRequiredEvidence.length
+        ? mobileApiRuntimeRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -706,12 +1196,89 @@ export interface MobileTestingExecutionReadinessInput {
   ciMobileChecksPassed: boolean;
 }
 
+export const mobileTestingExecutionReadinessRequiredCommands = [
+  "pnpm --filter @inkroute/mobile-support typecheck",
+  "pnpm --filter @inkroute/mobile-support test",
+  "pnpm --filter @inkroute/mobile typecheck",
+  "pnpm --filter @inkroute/mobile test",
+  "pnpm --filter @inkroute/mobile ios",
+  "pnpm --filter @inkroute/mobile android",
+  "eas build --profile preview --platform all",
+  "eas update --channel preview",
+  "eas update --channel preview --message rollback-republish-drill --non-interactive",
+] as const;
+
+export const mobileTestingExecutionReadinessRequiredEvidence = [
+  "Expo dependency install, runtime start, mobile typecheck, and static/security test output",
+  "iOS simulator, Android emulator, and physical device screen-smoke evidence",
+  "biometric, tenant API sync, offline reconnect, and push QA transcripts",
+  "crash capture, EAS preview/update rollback, and accessibility QA evidence",
+  "synced mobile QA checklist, retained artifacts, and CI/mobile check evidence",
+] as const;
+
+export type MobileTestingExecutionReadinessRequiredEvidence = (typeof mobileTestingExecutionReadinessRequiredEvidence)[number];
+
 export interface MobileTestingExecutionReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof mobileTestingExecutionReadinessRequiredCommands;
+  requiredEvidence: readonly MobileTestingExecutionReadinessRequiredEvidence[];
   blockers: readonly string[];
+}
+
+export type MobileUploadIntentKind = "portfolio_public" | "reference_private";
+
+export interface MobileUploadIntentContractInput {
+  tenantId: string;
+  requestId: string;
+  idempotencyKey: string;
+  kind: MobileUploadIntentKind;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  city?: string;
+  altText?: string;
+  styleTags?: readonly string[];
+}
+
+export interface MobileUploadIntentContract {
+  status: "ready" | "blocked";
+  endpoint: "/api/mobile/portfolio/upload-intents";
+  method: "POST";
+  objectKey: string | null;
+  providerSignedUploadRequired: true;
+  providerStorageRuntimeGated: true;
+  metadataReady: boolean;
+  blockers: readonly string[];
+  requiredHeaders: readonly ["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"];
+}
+
+export function buildMobileUploadObjectKey(input: Pick<MobileUploadIntentContractInput, "tenantId" | "kind" | "filename" | "requestId">): string {
+  const safeFilename = input.filename.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^[.-]+|[.-]+$/g, "") || "upload";
+  return `${input.tenantId}/mobile/${input.kind}/${input.requestId}/${safeFilename}`;
+}
+
+export function buildMobileUploadIntentContract(input: MobileUploadIntentContractInput): MobileUploadIntentContract {
+  const blockers: string[] = [];
+  if (!input.tenantId) blockers.push("Tenant scope is required before mobile upload intents can be requested.");
+  if (!input.requestId) blockers.push("Request id is required for mobile upload traceability.");
+  if (!input.idempotencyKey) blockers.push("Idempotency key is required before mobile upload intents can be retried safely.");
+  if (!input.filename) blockers.push("Filename is required before creating a mobile upload intent.");
+  if (!input.mimeType.startsWith("image/")) blockers.push("Mobile uploads must be image MIME types before provider signing.");
+  if (input.sizeBytes <= 0) blockers.push("Mobile upload size must be positive.");
+  if (input.kind === "portfolio_public" && !input.altText) blockers.push("Public portfolio uploads require alt text before publication.");
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    endpoint: "/api/mobile/portfolio/upload-intents",
+    method: "POST",
+    objectKey: blockers.length === 0 ? buildMobileUploadObjectKey(input) : null,
+    providerSignedUploadRequired: true,
+    providerStorageRuntimeGated: true,
+    metadataReady: blockers.length === 0,
+    blockers,
+    requiredHeaders: ["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"],
+  };
 }
 
 export function buildMobileTestingExecutionReadinessPlan(
@@ -720,12 +1287,12 @@ export function buildMobileTestingExecutionReadinessPlan(
   const requiredScripts = ["test", "typecheck", "ios", "android"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: MobileTestingExecutionReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/mobile package script is missing ${script}.`);
   if (!input.mobileSupportTestsPassed) blockers.push("@inkroute/mobile-support tests must pass before mobile testing can close.");
   if (!input.mobileSupportTypecheckPassed) blockers.push("@inkroute/mobile-support typecheck must pass before mobile testing can close.");
-  if (!input.mobileAppTypecheckPassed) blockers.push("@inkroute/mobile typecheck must pass with the Phase 14 mobile test scaffold.");
+  if (!input.mobileAppTypecheckPassed) blockers.push("@inkroute/mobile typecheck must pass with the Phase 14 mobile test contract.");
   if (!input.mobileStaticTestsPassed) blockers.push("Mobile static/security tests must pass for screen registry and SystemStatus security surfaces.");
   if (!input.expoDependenciesInstalled) blockers.push("Expo dependencies must install before simulator or device QA evidence is meaningful.");
   if (!input.expoRuntimeStarted) blockers.push("Expo runtime must start locally or in a preview build before device QA evidence is meaningful.");
@@ -735,7 +1302,7 @@ export function buildMobileTestingExecutionReadinessPlan(
   if (!input.biometricLockQaPassed) blockers.push("Biometric lock QA must prove secure session lock/unlock behavior.");
   if (!input.tenantApiSyncQaPassed) blockers.push("Tenant API sync QA must prove auth headers, tenant scope, request ids, and safe errors.");
   if (!input.offlineReconnectQaPassed) blockers.push("Offline reconnect QA must prove encrypted queue persistence, idempotent replay, retry, and conflict handling.");
-  if (!input.pushTokenDeliveryQaPassed) blockers.push("Push QA must prove permission flow, token registration, opt-out, delivery receipt, and tap routing.");
+  if (!input.pushTokenDeliveryQaPassed) blockers.push("Push QA must prove package-backed permission, token registration, opt-out, receipt idempotency, invalid-token suppression, audit, and tap-routing contracts on device.");
   if (!input.crashCaptureQaPassed) blockers.push("Crash QA must prove sanitized crash capture without PII, medical, payment, or token data.");
   if (!input.easPreviewBuildPassed) blockers.push("EAS preview build must pass before OTA/update QA is production-significant.");
   if (!input.easUpdateRollbackPassed) blockers.push("EAS update rollback QA must prove preview adoption and rollback republish on the same runtime.");
@@ -745,35 +1312,29 @@ export function buildMobileTestingExecutionReadinessPlan(
   if (!input.ciMobileChecksPassed) blockers.push("CI/mobile checks must pass or publish mobile QA artifact placeholders for manual/device evidence.");
 
   if (!input.expoDependenciesInstalled || !input.expoRuntimeStarted || !input.mobileAppTypecheckPassed || !input.mobileStaticTestsPassed) {
-    requiredEvidence.push("Expo dependency install, runtime start, mobile typecheck, and static/security test output");
+    requiredEvidence.push(mobileTestingExecutionReadinessRequiredEvidence[0]);
   }
   if (!input.iosSimulatorSmokePassed || !input.androidEmulatorSmokePassed || !input.physicalDeviceChecklistCompleted) {
-    requiredEvidence.push("iOS simulator, Android emulator, and physical device screen-smoke evidence");
+    requiredEvidence.push(mobileTestingExecutionReadinessRequiredEvidence[1]);
   }
   if (!input.biometricLockQaPassed || !input.tenantApiSyncQaPassed || !input.offlineReconnectQaPassed || !input.pushTokenDeliveryQaPassed) {
-    requiredEvidence.push("biometric, tenant API sync, offline reconnect, and push QA transcripts");
+    requiredEvidence.push(mobileTestingExecutionReadinessRequiredEvidence[2]);
   }
   if (!input.crashCaptureQaPassed || !input.easPreviewBuildPassed || !input.easUpdateRollbackPassed || !input.accessibilityQaPassed) {
-    requiredEvidence.push("crash capture, EAS preview/update rollback, and accessibility QA evidence");
+    requiredEvidence.push(mobileTestingExecutionReadinessRequiredEvidence[3]);
   }
   if (!input.qaChecklistManifestSynced || !input.artifactsCaptured || !input.ciMobileChecksPassed) {
-    requiredEvidence.push("synced mobile QA checklist, retained artifacts, and CI/mobile check evidence");
+    requiredEvidence.push(mobileTestingExecutionReadinessRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/mobile-support typecheck",
-      "pnpm --filter @inkroute/mobile-support test",
-      "pnpm --filter @inkroute/mobile typecheck",
-      "pnpm --filter @inkroute/mobile test",
-      "pnpm --filter @inkroute/mobile ios",
-      "pnpm --filter @inkroute/mobile android",
-      "eas build --profile preview --platform all",
-      "eas update --channel preview",
-    ],
-    requiredEvidence,
+    requiredCommands: mobileTestingExecutionReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === mobileTestingExecutionReadinessRequiredEvidence.length
+        ? mobileTestingExecutionReadinessRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -797,10 +1358,28 @@ export interface MobileRuntimeReadinessInput {
   deviceQaSummary?: MobileDeviceQaSummary;
 }
 
+export const mobileRuntimeReadinessRequiredCommands = [
+  "pnpm --filter @inkroute/mobile typecheck",
+  "pnpm --filter @inkroute/mobile ios",
+  "pnpm --filter @inkroute/mobile android",
+  "pnpm --filter @inkroute/mobile test",
+  "eas build --profile preview --platform all",
+] as const;
+
+export const mobileRuntimeReadinessRequiredControls = [
+  "Use provider-backed auth/session exchange before any tenant data loads.",
+  "Require biometric unlock and secure storage for cached refresh/session tokens when enabled.",
+  "Send tenant, request-id, idempotency, and bearer auth headers through the mobile API client.",
+  "Encrypt sensitive offline queue items and replay mutations idempotently after reconnect.",
+  "Register push tokens only after consent and persist delivery receipts tenant-safely.",
+  "Capture sanitized crash reports without PII, medical notes, payment data, or tokens.",
+  "Verify EAS preview builds, OTA update adoption, and rollback on real devices before launch.",
+] as const;
+
 export interface MobileRuntimeReadinessPlan {
   status: "ready" | "blocked";
-  requiredCommands: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof mobileRuntimeReadinessRequiredCommands;
+  requiredControls: typeof mobileRuntimeReadinessRequiredControls;
   missingScripts: readonly string[];
   blockingQaItemIds: readonly string[];
   blockers: readonly string[];
@@ -826,11 +1405,31 @@ export interface MobileDeviceQaRuntimeReadinessInput {
   qaArtifactsAttached: boolean;
 }
 
+export const mobileDeviceQaRuntimeReadinessRequiredCommands = [
+  "pnpm --filter @inkroute/mobile-support typecheck",
+  "pnpm --filter @inkroute/mobile-support test",
+  "pnpm --filter @inkroute/mobile typecheck",
+  "pnpm --filter @inkroute/mobile test",
+  "pnpm --filter @inkroute/mobile ios",
+  "pnpm --filter @inkroute/mobile android",
+  "manual physical-device QA for auth/api/offline/push/crash/OTA/accessibility",
+] as const;
+
+export const mobileDeviceQaRuntimeReadinessRequiredEvidence = [
+  "Expo app component/render and static test output for every registered screen",
+  "iOS, Android, and physical device smoke screenshots or videos",
+  "VoiceOver/TalkBack, text scaling, contrast, and touch-target QA notes",
+  "offline, push, crash, and OTA rollback runtime QA transcripts",
+  "CI job links and retained mobile QA artifacts",
+] as const;
+
+export type MobileDeviceQaRuntimeReadinessRequiredEvidence = (typeof mobileDeviceQaRuntimeReadinessRequiredEvidence)[number];
+
 export interface MobileDeviceQaRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof mobileDeviceQaRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly MobileDeviceQaRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -912,7 +1511,7 @@ export function buildMobileDeviceQaChecklist(): MobileDeviceQaItem[] {
       id: "ota-preview-rollback",
       area: "ota_updates",
       platform: "physical_device",
-      command: "eas update --channel preview and rollback republish",
+      command: "eas update --channel preview --message rollback-republish-drill --non-interactive",
       evidenceRequired: "Preview update adoption screenshot and rollback republish proof on the same runtime.",
       status: "provider_gated",
       gapIds: ["GAP-047", "GAP-048", "GAP-108"],
@@ -958,7 +1557,7 @@ export function buildMobileDeviceQaRuntimeReadinessPlan(
   const requiredScripts = ["test", "typecheck", "ios", "android"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: MobileDeviceQaRuntimeReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/mobile package script is missing ${script}.`);
   if (!input.mobileSupportTestsPassed) blockers.push("@inkroute/mobile-support device QA tests must pass.");
@@ -979,34 +1578,29 @@ export function buildMobileDeviceQaRuntimeReadinessPlan(
   if (!input.qaArtifactsAttached) blockers.push("Mobile QA artifacts must include simulator screenshots/logs, accessibility notes, provider/device transcripts, and release evidence.");
 
   if (!input.expoComponentRenderTestsPassed || !input.mobileStaticTestsPassed) {
-    requiredEvidence.push("Expo app component/render and static test output for every registered screen");
+    requiredEvidence.push(mobileDeviceQaRuntimeReadinessRequiredEvidence[0]);
   }
   if (!input.iosSimulatorSmokePassed || !input.androidEmulatorSmokePassed || !input.physicalDeviceSmokePassed) {
-    requiredEvidence.push("iOS, Android, and physical device smoke screenshots or videos");
+    requiredEvidence.push(mobileDeviceQaRuntimeReadinessRequiredEvidence[1]);
   }
   if (!input.accessibilityChecksPassed) {
-    requiredEvidence.push("VoiceOver/TalkBack, text scaling, contrast, and touch-target QA notes");
+    requiredEvidence.push(mobileDeviceQaRuntimeReadinessRequiredEvidence[2]);
   }
   if (!input.offlineQaPassed || !input.pushQaPassed || !input.crashQaPassed || !input.otaRollbackQaPassed) {
-    requiredEvidence.push("offline, push, crash, and OTA rollback runtime QA transcripts");
+    requiredEvidence.push(mobileDeviceQaRuntimeReadinessRequiredEvidence[3]);
   }
   if (!input.ciHooksConfigured || !input.qaArtifactsAttached) {
-    requiredEvidence.push("CI job links and retained mobile QA artifacts");
+    requiredEvidence.push(mobileDeviceQaRuntimeReadinessRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/mobile-support typecheck",
-      "pnpm --filter @inkroute/mobile-support test",
-      "pnpm --filter @inkroute/mobile typecheck",
-      "pnpm --filter @inkroute/mobile test",
-      "pnpm --filter @inkroute/mobile ios",
-      "pnpm --filter @inkroute/mobile android",
-      "manual physical-device QA for auth/api/offline/push/crash/OTA/accessibility",
-    ],
-    requiredEvidence,
+    requiredCommands: mobileDeviceQaRuntimeReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === mobileDeviceQaRuntimeReadinessRequiredEvidence.length
+        ? mobileDeviceQaRuntimeReadinessRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -1021,7 +1615,7 @@ export function buildMobileRuntimeReadinessPlan(input: MobileRuntimeReadinessInp
 
   if (missingScripts.length > 0) blockers.push("@inkroute/mobile package scripts are missing required runtime commands.");
   if (!input.typecheckVerified) blockers.push("Mobile typecheck has not been verified in the installed workspace.");
-  if (!input.expoRuntimeVerified) blockers.push("Expo runtime has not been launched locally for this scaffold.");
+  if (!input.expoRuntimeVerified) blockers.push("Expo runtime has not been launched locally for this mobile contract.");
   if (!input.iosSmokeVerified) blockers.push("iOS simulator/device screen smoke has not been verified.");
   if (!input.androidSmokeVerified) blockers.push("Android emulator/device screen smoke has not been verified.");
   if (!input.easPreviewBuildVerified) blockers.push("EAS preview build has not been verified.");
@@ -1038,22 +1632,8 @@ export function buildMobileRuntimeReadinessPlan(input: MobileRuntimeReadinessInp
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
-    requiredCommands: [
-      "pnpm --filter @inkroute/mobile typecheck",
-      "pnpm --filter @inkroute/mobile ios",
-      "pnpm --filter @inkroute/mobile android",
-      "pnpm --filter @inkroute/mobile test",
-      "eas build --profile preview --platform all",
-    ],
-    requiredControls: [
-      "Use provider-backed auth/session exchange before any tenant data loads.",
-      "Require biometric unlock and secure storage for cached refresh/session tokens when enabled.",
-      "Send tenant, request-id, idempotency, and bearer auth headers through the mobile API client.",
-      "Encrypt sensitive offline queue items and replay mutations idempotently after reconnect.",
-      "Register push tokens only after consent and persist delivery receipts tenant-safely.",
-      "Capture sanitized crash reports without PII, medical notes, payment data, or tokens.",
-      "Verify EAS preview builds, OTA update adoption, and rollback on real devices before launch.",
-    ],
+    requiredCommands: mobileRuntimeReadinessRequiredCommands,
+    requiredControls: mobileRuntimeReadinessRequiredControls,
     missingScripts,
     blockingQaItemIds: qa.blockingItemIds,
     blockers,
@@ -1085,11 +1665,34 @@ export interface MobileLaunchEvidenceInput {
   launchArtifactsSecretSafe: boolean;
 }
 
+export const mobileLaunchEvidenceRequiredCommands = [
+  "pnpm --filter @inkroute/mobile-support typecheck",
+  "pnpm --filter @inkroute/mobile-support test",
+  "pnpm --filter @inkroute/mobile typecheck",
+  "pnpm --filter @inkroute/mobile test",
+  "pnpm --filter @inkroute/mobile ios",
+  "pnpm --filter @inkroute/mobile android",
+  "eas build --profile preview --platform all",
+  "eas update --channel preview",
+  "manual physical-device QA for auth/api/offline/push/upload/crash/OTA/accessibility",
+  "GitHub Actions mobile launch evidence job",
+] as const;
+
+export const mobileLaunchEvidenceRequiredEvidence = [
+  "mobile-support and mobile app typecheck/test output",
+  "Expo runtime, iOS simulator, Android emulator, and EAS preview build evidence",
+  "auth/biometric, tenant API, push, and encrypted offline QA evidence",
+  "upload, crash, OTA rollback, physical device, and accessibility QA evidence",
+  "Expo project/channel configuration, CI, and secret-safe artifact evidence",
+] as const;
+
+export type MobileLaunchEvidenceRequiredEvidence = (typeof mobileLaunchEvidenceRequiredEvidence)[number];
+
 export interface MobileLaunchEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof mobileLaunchEvidenceRequiredCommands;
+  requiredEvidence: readonly MobileLaunchEvidenceRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -1097,7 +1700,7 @@ export function buildMobileLaunchEvidencePlan(input: MobileLaunchEvidenceInput):
   const requiredScripts = ["typecheck", "test", "ios", "android"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: MobileLaunchEvidenceRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/mobile package script is missing ${script}.`);
   if (!input.mobileSupportTypecheckPassed) blockers.push("@inkroute/mobile-support typecheck must pass.");
@@ -1110,11 +1713,11 @@ export function buildMobileLaunchEvidencePlan(input: MobileLaunchEvidenceInput):
   if (!input.easPreviewBuildPassed) blockers.push("EAS preview build must pass for iOS and Android.");
   if (!input.authSessionBiometricQaPassed) blockers.push("Auth/session/biometric QA must pass on simulator or physical device.");
   if (!input.tenantApiClientQaPassed) blockers.push("Tenant-scoped mobile API client QA must pass against preview APIs.");
-  if (!input.pushNotificationQaPassed) blockers.push("Push notification permission, token, opt-out, receipt, and tap-routing QA must pass.");
+  if (!input.pushNotificationQaPassed) blockers.push("Push notification QA must pass with package-backed permission, token, opt-out, receipt idempotency, invalid-token suppression, audit, and tap-routing contracts.");
   if (!input.encryptedOfflineStoreQaPassed) blockers.push("Encrypted offline storage and reconnect sync QA must pass.");
-  if (!input.uploadFlowQaPassed) blockers.push("Mobile upload/portfolio flow QA must pass with signed upload boundaries.");
-  if (!input.crashReportingQaPassed) blockers.push("Mobile crash reporting QA must capture sanitized crash events.");
-  if (!input.otaUpdateRollbackQaPassed) blockers.push("OTA update and rollback QA must pass on the same runtime version.");
+  if (!input.uploadFlowQaPassed) blockers.push("Mobile upload/portfolio flow QA must pass with shared upload-intent object-key boundaries and signed provider storage gates.");
+  if (!input.crashReportingQaPassed) blockers.push("Mobile crash reporting QA must capture package-backed sanitized fallback/offline-buffer crash events plus provider/device proof.");
+  if (!input.otaUpdateRollbackQaPassed) blockers.push("OTA update and rollback QA must pass with package-backed rollback command/adoption contracts on the same runtime version.");
   if (!input.physicalDeviceQaCompleted) blockers.push("Physical device QA checklist must be completed.");
   if (!input.accessibilityQaPassed) blockers.push("Mobile accessibility QA must pass for VoiceOver/TalkBack, text scaling, contrast, and touch targets.");
   if (!input.appJsonProjectConfigured) blockers.push("app.json must contain real Expo/EAS project configuration.");
@@ -1123,37 +1726,29 @@ export function buildMobileLaunchEvidencePlan(input: MobileLaunchEvidenceInput):
   if (!input.launchArtifactsSecretSafe) blockers.push("Mobile launch artifacts must be redacted and free of secrets, tokens, PII, medical, or payment data.");
 
   if (!input.mobileSupportTypecheckPassed || !input.mobileSupportTestsPassed || !input.mobileAppTypecheckPassed || !input.mobileAppTestsPassed) {
-    requiredEvidence.push("mobile-support and mobile app typecheck/test output");
+    requiredEvidence.push(mobileLaunchEvidenceRequiredEvidence[0]);
   }
   if (!input.expoRuntimeStarted || !input.iosSimulatorSmokePassed || !input.androidEmulatorSmokePassed || !input.easPreviewBuildPassed) {
-    requiredEvidence.push("Expo runtime, iOS simulator, Android emulator, and EAS preview build evidence");
+    requiredEvidence.push(mobileLaunchEvidenceRequiredEvidence[1]);
   }
   if (!input.authSessionBiometricQaPassed || !input.tenantApiClientQaPassed || !input.pushNotificationQaPassed || !input.encryptedOfflineStoreQaPassed) {
-    requiredEvidence.push("auth/biometric, tenant API, push, and encrypted offline QA evidence");
+    requiredEvidence.push(mobileLaunchEvidenceRequiredEvidence[2]);
   }
   if (!input.uploadFlowQaPassed || !input.crashReportingQaPassed || !input.otaUpdateRollbackQaPassed || !input.physicalDeviceQaCompleted || !input.accessibilityQaPassed) {
-    requiredEvidence.push("upload, crash, OTA rollback, physical device, and accessibility QA evidence");
+    requiredEvidence.push(mobileLaunchEvidenceRequiredEvidence[3]);
   }
   if (!input.appJsonProjectConfigured || !input.easChannelsConfigured || !input.ciEvidenceCaptured || !input.launchArtifactsSecretSafe) {
-    requiredEvidence.push("Expo project/channel configuration, CI, and secret-safe artifact evidence");
+    requiredEvidence.push(mobileLaunchEvidenceRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/mobile-support typecheck",
-      "pnpm --filter @inkroute/mobile-support test",
-      "pnpm --filter @inkroute/mobile typecheck",
-      "pnpm --filter @inkroute/mobile test",
-      "pnpm --filter @inkroute/mobile ios",
-      "pnpm --filter @inkroute/mobile android",
-      "eas build --profile preview --platform all",
-      "eas update --channel preview",
-      "manual physical-device QA for auth/api/offline/push/upload/crash/OTA/accessibility",
-      "GitHub Actions mobile launch evidence job",
-    ],
-    requiredEvidence,
+    requiredCommands: mobileLaunchEvidenceRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === mobileLaunchEvidenceRequiredEvidence.length
+        ? mobileLaunchEvidenceRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -1182,19 +1777,19 @@ export const phase6HealthChecks: readonly MobileHealthCheck[] = [
     id: "push-token",
     label: "Push token registration",
     state: "not-configured",
-    detail: "No Expo push project, notification permission flow, or token persistence exists.",
+    detail: "Expo push registration and token persistence contracts are wired; real Expo project, permissions, persisted tokens, and device delivery proof remain gated.",
   },
   {
     id: "crash-capture",
     label: "Crash capture",
     state: "not-configured",
-    detail: "Sentry/mobile fallback capture is documented only.",
+    detail: "Sanitized fallback crash capture contract is wired; Sentry Expo capture and device proof remain gated.",
   },
   {
     id: "ota-updates",
     label: "OTA update channel",
     state: "not-configured",
-    detail: "EAS Update project/channel/runtimeVersion policy is not connected.",
+    detail: "EAS channel and runtimeVersion placeholders are wired; real project, update URL, credentials, and rollback proof remain gated.",
   },
 ];
 

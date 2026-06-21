@@ -7,6 +7,11 @@ import {
   getPortfolioImageDerivative,
   inkrouteDemoTenant,
   normalizeTenantSlug,
+  portfolioImagePerformanceRequiredCommands,
+  portfolioImagePerformanceRequiredControls,
+  portfolioImagePerformanceRequiredEvidence,
+  publicContentRuntimeRequiredCommands,
+  publicContentRuntimeRequiredEvidence,
 } from "../src/index";
 
 describe("public content bundle", () => {
@@ -37,6 +42,7 @@ describe("public content bundle", () => {
     expect(bundle?.portfolioItems).toHaveLength(demoPortfolioItems.filter((item) => item.isPublic !== false).length);
     expect(bundle?.portfolioItems.every((item) => item.slug && item.imageUrl && item.altText)).toBe(true);
     expect(bundle?.portfolioItems.every((item) => item.image.width > 0 && item.image.height > 0)).toBe(true);
+    expect(bundle?.portfolioItems.every((item) => item.image.blurDataUrl.startsWith("data:image/svg+xml;utf8,"))).toBe(true);
     expect(bundle?.portfolioItems.every((item) => item.image.storageVisibility === "public_derivative")).toBe(true);
     expect(bundle?.portfolioItems.every((item) => item.image.privateOriginalAvailable === false)).toBe(true);
     expect(bundle?.portfolioItems[0]).not.toHaveProperty("id");
@@ -55,10 +61,12 @@ describe("public content bundle", () => {
       height: 1500,
       aspectRatio: "4:5",
       altText: item.altText,
+      blurDataUrl: expect.stringContaining("data:image/svg+xml;utf8,"),
       storageVisibility: "public_derivative",
       privateOriginalAvailable: false,
     });
     expect(derivative.cacheControl).toContain("stale-while-revalidate");
+    expect(derivative.blurDataUrl).toContain("svg");
     expect(JSON.stringify(derivative)).not.toContain("tenant_private");
     expect(JSON.stringify(derivative)).not.toContain("client_private");
   });
@@ -85,20 +93,12 @@ describe("public content bundle", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "portfolio image browser rendering smoke",
-      "private original/reference access-denial tests",
-      "Lighthouse image/performance audit",
-    ]));
-    expect(plan.requiredControls).toContain("Serve only public derivative objects from public portfolio cards.");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "real public derivative assets or storage-backed fixture manifest",
-      "optimized image component, derivative metadata, blur placeholder, and EXIF-stripping proof",
-      "private original/reference separation and public-access denial transcript",
-      "web typecheck/build, browser rendering, Lighthouse, and CI artifact evidence",
-    ]));
+    expect(plan.requiredCommands).toBe(portfolioImagePerformanceRequiredCommands);
+    expect(plan.requiredControls).toBe(portfolioImagePerformanceRequiredControls);
+    expect(plan.requiredEvidence).toBe(portfolioImagePerformanceRequiredEvidence);
     expect(plan.blockers).toEqual(expect.arrayContaining([
       "Portfolio rendering must migrate to next/image or document an approved equivalent optimization path.",
+      "Blur placeholders must be present in shared public derivative metadata before rendered portfolio image proof can close.",
       "Private original/reference access-denial tests must pass.",
       "Lighthouse image/performance audit must pass or document accepted image-specific exceptions.",
     ]));
@@ -165,20 +165,10 @@ describe("public content bundle", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "public content seeded DB/API redaction tests",
-      "public content browser HTML redaction smoke",
-      "public content cache revalidation smoke",
-    ]));
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "persistent tenant/domain resolver plus public repository route wiring map",
-      "seeded DB or CMS public content read transcript",
-      "public API JSON and rendered HTML private-field redaction proof",
-      "public content cache revalidation configuration and invalidation smoke output",
-      "web typecheck/build, browser smoke, and CI artifact evidence",
-    ]));
+    expect(plan.requiredCommands).toBe(publicContentRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(publicContentRuntimeRequiredEvidence);
     expect(plan.blockers).toEqual(expect.arrayContaining([
-      "Tenant/domain resolver must be backed by persisted tenant records instead of static demo-only matching.",
+      "Tenant/domain resolver must graduate from the local demo resolver contract to persisted tenant records.",
       "Public API JSON must be proven free of tenant IDs, artist IDs, attribution keys, private object keys, plan/status fields, and non-public portfolio records.",
       "Browser smoke evidence must cover portfolio, travel, FAQ, testimonials, city, and style pages.",
     ]));
@@ -209,5 +199,6 @@ describe("public content bundle", () => {
       requiredEvidence: [],
       blockers: [],
     });
+    expect(plan.requiredCommands).toBe(publicContentRuntimeRequiredCommands);
   });
 });

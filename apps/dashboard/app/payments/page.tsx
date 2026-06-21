@@ -1,7 +1,7 @@
-﻿import { DashboardPageHeader } from "../../components/DashboardPageHeader";
-import { DisabledActionPanel } from "../../components/DisabledActionPanel";
+import { DashboardPageHeader } from "../../components/DashboardPageHeader";
 import { IntegrationBoundaryCard } from "../../components/IntegrationBoundaryCard";
 import { MetricCard } from "../../components/MetricCard";
+import { PaymentActionPanel } from "../../components/PaymentActionPanel";
 import { StatusPill } from "../../components/StatusPill";
 import { dashboardPaymentPersistenceContract } from "../../lib/paymentPersistence";
 import { dashboardPaymentOperationsContract } from "../../lib/paymentOperations";
@@ -27,7 +27,7 @@ export default function PaymentsPage() {
         <MetricCard label="Deposit exposure" value={centsToUsd(totalDepositExposure)} detail="Calculated by @inkroute/payments" />
         <MetricCard label="High-risk requests" value={String(highRiskCount)} detail="Manual review when score is high" />
         <MetricCard label="Policy version" value="phase7-demo-v1" detail="Persist as policySnapshot before production" />
-        <MetricCard label="Webhook mode" value="Boundary" detail="Signature verification not wired" />
+        <MetricCard label="Webhook mode" value="Boundary" detail="Local verifier wired; endpoint-secret proof pending" />
       </section>
 
       <section className="card table-card">
@@ -38,8 +38,8 @@ export default function PaymentsPage() {
           <div className="table-row five" key={payment.id}>
             <span><strong>{payment.clientName}</strong><small>{payment.bookingId}</small></span>
             <span>{centsToUsd(payment.amountCents)}<small>Due {new Date(payment.dueAt).toLocaleDateString()}</small></span>
-            <span><StatusPill label={`${payment.decision} Â· ${payment.riskScore}`} tone={payment.riskScore >= 70 ? "danger" : "warning"} /><small>{payment.policyVersion}</small></span>
-            <span><StatusPill label={payment.status} tone={payment.status === "paid" ? "success" : "warning"} /><small>Refund: {payment.refundDecision} Â· no-show: {payment.noShowDecision}</small></span>
+            <span><StatusPill label={`${payment.decision} · ${payment.riskScore}`} tone={payment.riskScore >= 70 ? "danger" : "warning"} /><small>{payment.policyVersion}</small></span>
+            <span><StatusPill label={payment.status} tone={payment.status === "paid" ? "success" : "warning"} /><small>Refund: {payment.refundDecision} · no-show: {payment.noShowDecision}</small></span>
             <span><strong>{payment.receiptNumber}</strong><small>{payment.checkoutClientReferenceId}</small><small>{payment.checkoutIdempotencyKey}</small></span>
           </div>
         ))}
@@ -54,7 +54,7 @@ export default function PaymentsPage() {
             {dashboardPaymentPersistenceContract.lifecyclePlans.map((plan) => (
               <div className="stacked-item" key={plan.action}>
                 <strong>{plan.action}</strong>
-                <span>{plan.targetStatus} Â· {plan.auditAction}</span>
+                <span>{plan.targetStatus} · {plan.auditAction}</span>
                 <small>{plan.writes.map((write) => write.model).join(", ")}</small>
               </div>
             ))}
@@ -62,13 +62,13 @@ export default function PaymentsPage() {
           <StatusPill label={dashboardPaymentPersistenceContract.readiness.status} tone="warning" />
         </div>
         <div className="card">
-          <p className="eyebrow">Webhook interpretation scaffold</p>
-          <h2>Stripe events mapped before SDK wiring</h2>
+          <p className="eyebrow">Webhook interpretation boundary</p>
+          <h2>Stripe events mapped behind signature verification</h2>
           <div className="stacked-list">
             {dashboardWebhookPreview.map((event) => (
               <div className="stacked-item" key={event.eventType}>
                 <strong>{event.eventType}</strong>
-                <span>{event.action} â†’ {event.targetStatus}</span>
+                <span>{event.action} → {event.targetStatus}</span>
                 <small>{event.note}</small>
               </div>
             ))}
@@ -98,11 +98,7 @@ export default function PaymentsPage() {
           tenant-denial tests, and dashboard E2E artifacts are attached.
         </p>
       </section>
-      <DisabledActionPanel
-        title="Stripe actions"
-        description="Payment reads now have redacted dashboard APIs with AuditLog and PaymentAuditLog rows. Checkout/session creation, webhook reconciliation, refund processing, no-show forfeiture, receipts, and tax exports still require Stripe credentials, idempotency, and production policy review."
-        actions={["Create deposit session", "Record manual payment", "Refund deposit", "Forfeit no-show deposit", "Export tax report"]}
-      />
+      <PaymentActionPanel bookingId={dashboardProjectedPayments[0]?.bookingId ?? "booking_demo_deposit"} />
     </main>
   );
 }

@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { defaultFeatureFlags, evaluateFeatureFlags, type FeatureFlagDefinition } from "@inkroute/releases";
 import { featureFlagPatchInputSchema } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
@@ -13,6 +13,7 @@ type FeatureFlagChannel = "development" | "preview" | "staging" | "production" |
 type DbFeatureScope = "global" | "tenant" | "user";
 
 const allowedChannels = new Set<FeatureFlagChannel>(["development", "preview", "staging", "production", "mobile-preview", "mobile-production"]);
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 const providerGatedFeature: Partial<Record<string, string>> = {
   "sms_notifications.enabled": "SMS provider credentials must be configured before enabling this flag.",
   "mobile.ota_updates.enabled": "EAS project/token context must be configured before enabling this flag.",
@@ -206,13 +207,13 @@ export async function GET(request: NextRequest) {
   try {
     membershipLookup = await assertPermissionWithTenantMembership(actor, "release:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read feature flags." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read feature flags." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const params = new URL(request.url).searchParams;
   const tenantId = params.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query feature flags for another tenant." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query feature flags for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const environment = normalizeEnvironment(params.get("environment"));
@@ -220,6 +221,23 @@ export async function GET(request: NextRequest) {
   const context = buildDecisionContext(membershipLookup.actorRole, tenantId, environment, role);
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_FEATURE_FLAG_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production feature-flag reads require DB-backed actor resolution and persisted tenant-scoped flag definitions; local fallback defaults are disabled.",
+            gapIds: ["GAP-088", "GAP-090", "GAP-093"],
+          },
+          productionBoundary: { localFeatureFlagFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     const decisions = evaluateFeatureFlags(defaultFeatureFlags, context);
     return NextResponse.json(
       {
@@ -240,7 +258,7 @@ export async function GET(request: NextRequest) {
         boundary: "Local fallback mode: flag overrides are not persisted and use package defaults.",
         gapIds: ["GAP-088", "GAP-090", "GAP-093"],
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   }
 
@@ -286,11 +304,27 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-088", "GAP-090", "GAP-093"],
         boundary: "Feature flag reads are tenant-scoped, no-store, audit-logged, and include DB overrides plus release-aware decision output.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   } catch (error) {
     if (!isDatabaseUnavailable(error)) {
       throw error;
+    }
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_FEATURE_FLAG_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production feature-flag reads require the dashboard database connection; default fallback decisions are disabled.",
+            gapIds: ["GAP-088", "GAP-090", "GAP-093"],
+          },
+          productionBoundary: { localFeatureFlagFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
     }
     const definitions = [...defaultFeatureFlags];
     const fallbackContext = buildDecisionContext(membershipLookup.actorRole, tenantId, environment, role);
@@ -315,7 +349,7 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-088", "GAP-090", "GAP-093"],
         boundary: "Database fallback used; DB overrides unavailable in this response.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   }
 }
@@ -326,21 +360,21 @@ export async function POST(request: NextRequest) {
   try {
     membershipLookup = await assertPermissionWithTenantMembership(actor, "settings:write");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to modify feature flags." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to modify feature flags." } }, { status: 403, headers: noStoreHeaders });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Feature flag body must be valid JSON." } }, { status: 400 });
+    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Feature flag body must be valid JSON." } }, { status: 400, headers: noStoreHeaders });
   }
 
   const parsed = featureFlagPatchInputSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: { code: "VALIDATION_FAILED", message: "Feature flag payload did not pass schema.", issues: parsed.error.flatten() } },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -348,14 +382,14 @@ export async function POST(request: NextRequest) {
   const expectedVersionHeader = request.headers.get("x-feature-flag-expected-version");
   const tenantId = input.tenantId ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot update feature flags for a different tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot update feature flags for a different tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const providerBlocking = isAllowedToEnableFlag(input.key);
   if (input.enabled && providerBlocking && actor.source !== "local-fallback") {
     const hasCredentials = Boolean(process.env.SENDGRID_API_KEY || process.env.SMS_PROVIDER_ENABLED || process.env.EAS_TOKEN);
     if (!hasCredentials) {
-      return NextResponse.json({ ok: false, error: { code: "PROVIDER_CREDENTIALS_REQUIRED", message: providerBlocking } }, { status: 409 });
+      return NextResponse.json({ ok: false, error: { code: "PROVIDER_CREDENTIALS_REQUIRED", message: providerBlocking } }, { status: 409, headers: noStoreHeaders });
     }
   }
 
@@ -363,6 +397,23 @@ export async function POST(request: NextRequest) {
   const persistedRules = rules as FeatureFlagRulesInput;
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_FEATURE_FLAG_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production feature-flag writes require DB-backed actor resolution and persisted tenant-scoped feature flags; local fallback mutations are disabled.",
+            gapIds: ["GAP-088", "GAP-090", "GAP-093"],
+          },
+          productionBoundary: { localFeatureFlagFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     return NextResponse.json(
       {
         ok: true,
@@ -383,7 +434,7 @@ export async function POST(request: NextRequest) {
         warning: "Local fallback mode: flag mutation is not persisted in database mode.",
         gapIds: ["GAP-088", "GAP-090", "GAP-093"],
       },
-      { status: 201 },
+      { status: 201, headers: noStoreHeaders },
     );
   }
 
@@ -469,16 +520,30 @@ export async function POST(request: NextRequest) {
         : null,
       gapIds: ["GAP-088", "GAP-090", "GAP-093"],
       boundary: "Feature-flag writes now persist with RBAC and audit metadata.",
-    }, { status: 201 });
+    }, { status: 201, headers: noStoreHeaders });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "FEATURE_FLAG_CONCURRENCY_CONFLICT") {
       return NextResponse.json(
         { ok: false, error: { code: "FEATURE_FLAG_CONCURRENCY_CONFLICT", message: "Feature flag changed before approval/orchestration." }, concurrency: (error as { concurrency?: unknown }).concurrency },
-        { status: 409 },
+        { status: 409, headers: noStoreHeaders },
       );
     }
 
     if (isDatabaseUnavailable(error)) {
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json({
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_FEATURE_FLAG_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production feature-flag writes require the dashboard database connection; local fallback mutations are disabled.",
+            gapIds: ["GAP-088", "GAP-090", "GAP-093"],
+          },
+          productionBoundary: { localFeatureFlagFallbackDisabled: true },
+        }, { status: 503, headers: noStoreHeaders });
+      }
+
       return NextResponse.json({
         ok: true,
         source: actor.source,
@@ -494,10 +559,10 @@ export async function POST(request: NextRequest) {
         warning: "Database unavailable; mutation not persisted.",
         invalidation: buildFeatureFlagRuntimeInvalidationMetadata({ tenantId, key: input.key }),
         gapIds: ["GAP-088", "GAP-090", "GAP-093"],
-      }, { status: 201 });
+      }, { status: 201, headers: noStoreHeaders });
     }
 
-    return NextResponse.json({ ok: false, error: { code: "FEATURE_FLAG_MUTATION_FAILED", message: "Feature flag could not be persisted." } }, { status: 500 });
+    return NextResponse.json({ ok: false, error: { code: "FEATURE_FLAG_MUTATION_FAILED", message: "Feature flag could not be persisted." } }, { status: 500, headers: noStoreHeaders });
   }
 }
 

@@ -67,6 +67,7 @@ type DeploymentPostPayload = {
 };
 
 const deploymentGapIds = ["GAP-014", "GAP-015", "GAP-089", "GAP-114", "GAP-115"];
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
 const operationPolicies: Record<DeploymentReadinessMutationInput["operation"], DeploymentOperationPolicy> = {
   "readiness-review": {
@@ -209,18 +210,35 @@ export async function GET(request: NextRequest) {
   try {
     assertPermission(actor, "release:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read deployment readiness." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read deployment readiness." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const params = new URL(request.url).searchParams;
   const tenantId = params.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query deployment readiness for another tenant." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query deployment readiness for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const environment = buildEnvironmentSnapshot("production");
   if (actor.source === "local-fallback") {
-    return NextResponse.json(buildPayload(actor, environment), { headers: { "Cache-Control": "no-store" } });
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_DEPLOYMENT_READINESS_NOT_CONFIGURED",
+            message: "Production deployment readiness reads require DB-backed actor resolution and auditable control-plane persistence; local fallback snapshots are disabled.",
+            gapIds: deploymentGapIds,
+          },
+          productionBoundary: { localDeploymentReadinessFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
+    return NextResponse.json(buildPayload(actor, environment), { headers: noStoreHeaders });
   }
 
   try {
@@ -244,13 +262,30 @@ export async function GET(request: NextRequest) {
       select: { id: true },
     });
 
-    return NextResponse.json({ ...buildPayload(actor, environment), auditId: audit.id }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ...buildPayload(actor, environment), auditId: audit.id }, { headers: noStoreHeaders });
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
-      return NextResponse.json({ ...buildPayload(actor, environment), warning: "Database unavailable; deployment readiness read audit was not persisted." }, { headers: { "Cache-Control": "no-store" } });
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json(
+          {
+            ok: false,
+            source: actor.source,
+            tenantId,
+            error: {
+              code: "PROVIDER_DEPLOYMENT_READINESS_NOT_CONFIGURED",
+              message: "Production deployment readiness reads require the dashboard database connection; audit-free fallback snapshots are disabled.",
+              gapIds: deploymentGapIds,
+            },
+            productionBoundary: { localDeploymentReadinessFallbackDisabled: true },
+          },
+          { status: 503, headers: noStoreHeaders },
+        );
+      }
+
+      return NextResponse.json({ ...buildPayload(actor, environment), warning: "Database unavailable; deployment readiness read audit was not persisted." }, { headers: noStoreHeaders });
     }
 
-    return NextResponse.json({ ok: false, error: { code: "DEPLOYMENT_READINESS_READ_FAILED", message: "Deployment readiness could not be loaded." } }, { status: 500, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "DEPLOYMENT_READINESS_READ_FAILED", message: "Deployment readiness could not be loaded." } }, { status: 500, headers: noStoreHeaders });
   }
 }
 
@@ -259,14 +294,14 @@ export async function POST(request: NextRequest) {
   try {
     assertPermission(actor, "release:write");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to trigger deployment operations." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to trigger deployment operations." } }, { status: 403, headers: noStoreHeaders });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Deployment readiness body must be valid JSON." } }, { status: 400, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Deployment readiness body must be valid JSON." } }, { status: 400, headers: noStoreHeaders });
   }
 
   const parsed = deploymentReadinessMutationSchema.safeParse(body);
@@ -280,7 +315,7 @@ export async function POST(request: NextRequest) {
           issues: parsed.error.flatten(),
         },
       },
-      { status: 400, headers: { "Cache-Control": "no-store" } },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -289,7 +324,24 @@ export async function POST(request: NextRequest) {
   const environment = buildEnvironmentSnapshot(input.targetEnvironment);
 
   if (actor.source === "local-fallback") {
-    return NextResponse.json(buildPostSuccessPayload(actor, input, undefined, environment), { status: policy.statusCode, headers: { "Cache-Control": "no-store" } });
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId: actor.tenantId,
+          error: {
+            code: "PROVIDER_DEPLOYMENT_READINESS_NOT_CONFIGURED",
+            message: "Production deployment readiness writes require DB-backed actor resolution and auditable control-plane persistence; local fallback requests are disabled.",
+            gapIds: deploymentGapIds,
+          },
+          productionBoundary: { localDeploymentReadinessFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
+    return NextResponse.json(buildPostSuccessPayload(actor, input, undefined, environment), { status: policy.statusCode, headers: noStoreHeaders });
   }
 
   try {
@@ -328,13 +380,30 @@ export async function POST(request: NextRequest) {
     });
 
     const payload = buildPostSuccessPayload(actor, input, audit.id, environment);
-    return NextResponse.json(payload, { status: policy.statusCode, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(payload, { status: policy.statusCode, headers: noStoreHeaders });
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
-      return NextResponse.json(buildPostSuccessPayload(actor, input, undefined, environment), { status: 200, headers: { "Cache-Control": "no-store" } });
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json(
+          {
+            ok: false,
+            source: actor.source,
+            tenantId: actor.tenantId,
+            error: {
+              code: "PROVIDER_DEPLOYMENT_READINESS_NOT_CONFIGURED",
+              message: "Production deployment readiness writes require the dashboard database connection; audit-free fallback requests are disabled.",
+              gapIds: deploymentGapIds,
+            },
+            productionBoundary: { localDeploymentReadinessFallbackDisabled: true },
+          },
+          { status: 503, headers: noStoreHeaders },
+        );
+      }
+
+      return NextResponse.json(buildPostSuccessPayload(actor, input, undefined, environment), { status: 200, headers: noStoreHeaders });
     }
 
-    return NextResponse.json({ ok: false, error: { code: "DEPLOYMENT_READINESS_FAILED", message: "Could not persist deployment readiness request." } }, { status: 500, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "DEPLOYMENT_READINESS_FAILED", message: "Could not persist deployment readiness request." } }, { status: 500, headers: noStoreHeaders });
   }
 }
 

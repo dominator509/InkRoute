@@ -1,6 +1,6 @@
-﻿import { rolePermissions } from "@inkroute/auth";
+import { rolePermissions } from "@inkroute/auth";
 import { DashboardPageHeader } from "../../components/DashboardPageHeader";
-import { DisabledActionPanel } from "../../components/DisabledActionPanel";
+import { SettingsActionPanel } from "../../components/SettingsActionPanel";
 import { StatusPill } from "../../components/StatusPill";
 import { dashboardFeatureFlags, dashboardShellContext } from "../../lib/demo";
 
@@ -66,12 +66,7 @@ export default function SettingsPage() {
           <p>Provider send plans now have explicit destination suppression gates; production still needs durable preference, suppression, token, audit, and idempotency stores before enabling live mutations.</p>
         </div>
       </section>
-
-      <DisabledActionPanel
-        title="Settings actions"
-        description="Settings reads now use a credential-safe tenant API with AuditLog rows. Saving settings still requires mutation APIs, provider secret handling, audit logs, and validation."
-        actions={["Invite member", "Create custom role", "Connect provider", "Save policies"]}
-      />
+      <SettingsActionPanel />
     </main>
   );
 }

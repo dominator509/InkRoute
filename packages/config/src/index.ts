@@ -368,7 +368,7 @@ export const aftercareSteps = [
 
 export const dashboardMetrics: DashboardMetric[] = [
   { label: "Open requests", value: "18", detail: "+6 this week" },
-  { label: "Deposits pending", value: "$2.4k", detail: "Stripe not connected" },
+  { label: "Deposits pending", value: "$2.4k", detail: "Stripe provider proof gated" },
   { label: "Next city", value: "Seattle", detail: "July 10-15" },
   { label: "Readiness avg", value: "82%", detail: "Demo score" },
 ];
@@ -473,7 +473,7 @@ export const bookingIntegrationBoundaries = [
   {
     label: "Deposit step",
     status: "Credential-gated",
-    detail: "Stripe Checkout/Payment Intents, webhooks, refunds, no-show policy enforcement, and receipt delivery are not wired in this environment.",
+    detail: "Stripe Checkout/Payment Intent writes, refunds, no-show policy enforcement, and receipt delivery remain credential-gated; local webhook interpretation and signature-verification boundaries are wired.",
   },
   {
     label: "Notifications",
@@ -525,6 +525,7 @@ export interface PublicPortfolioImageDerivative {
   height: number;
   aspectRatio: `${number}:${number}`;
   altText: string;
+  blurDataUrl: string;
   storageVisibility: "public_derivative";
   privateOriginalAvailable: false;
   sizes: string;
@@ -639,11 +640,17 @@ const portfolioImageDerivatives: Record<string, Omit<PublicPortfolioImageDerivat
   },
 };
 
+function buildPortfolioDerivativeBlurDataUrl(title: string): string {
+  const safeTitle = title.replace(/[<&>"]/g, "").slice(0, 42);
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='32' height='40' viewBox='0 0 32 40'><rect width='32' height='40' fill='#17120f'/><path d='M4 31 C13 24 11 15 23 8' stroke='#b07c55' stroke-width='3' fill='none' stroke-linecap='round'/><text x='4' y='36' fill='#f7efe6' font-size='3' font-family='serif'>${safeTitle}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
 export function normalizeTenantSlug(slug: string): string {
   return decodeURIComponent(slug).trim().toLowerCase();
 }
 
-export function getPortfolioImageDerivative(item: Pick<PortfolioItem, "slug" | "imageUrl" | "altText">): PublicPortfolioImageDerivative {
+export function getPortfolioImageDerivative(item: Pick<PortfolioItem, "slug" | "title" | "imageUrl" | "altText">): PublicPortfolioImageDerivative {
   const derivative = portfolioImageDerivatives[item.slug] ?? {
     src: item.imageUrl,
     width: 1200,
@@ -658,6 +665,7 @@ export function getPortfolioImageDerivative(item: Pick<PortfolioItem, "slug" | "
   return {
     ...derivative,
     altText: item.altText,
+    blurDataUrl: buildPortfolioDerivativeBlurDataUrl(item.title),
   };
 }
 
@@ -745,8 +753,8 @@ export interface PublicContentRuntimeEvidenceInput {
 export interface PublicContentRuntimeEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof publicContentRuntimeRequiredCommands;
+  requiredEvidence: readonly PublicContentRuntimeRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -772,11 +780,58 @@ export interface PortfolioImagePerformanceEvidenceInput {
 export interface PortfolioImagePerformanceEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredControls: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof portfolioImagePerformanceRequiredCommands;
+  requiredControls: typeof portfolioImagePerformanceRequiredControls;
+  requiredEvidence: readonly PortfolioImagePerformanceRequiredEvidence[];
   blockers: readonly string[];
 }
+
+export const portfolioImagePerformanceRequiredCommands = [
+  "pnpm --filter @inkroute/config typecheck",
+  "pnpm --filter @inkroute/config test",
+  "pnpm --filter @inkroute/web typecheck",
+  "pnpm --filter @inkroute/web build",
+  "portfolio image browser rendering smoke",
+  "private original/reference access-denial tests",
+  "Lighthouse image/performance audit",
+] as const;
+
+export const portfolioImagePerformanceRequiredControls = [
+  "Serve only public derivative objects from public portfolio cards.",
+  "Keep private originals and booking reference files unavailable to anonymous public routes.",
+  "Preserve width, height, aspect ratio, alt text, responsive sizes, and cache policy for every rendered portfolio image.",
+  "Strip EXIF/private metadata before derivative publication.",
+  "Capture browser and Lighthouse evidence before marking image performance launch-ready.",
+] as const;
+
+export const publicContentRuntimeRequiredCommands = [
+  "pnpm --filter @inkroute/config typecheck",
+  "pnpm --filter @inkroute/config test",
+  "pnpm --filter @inkroute/web typecheck",
+  "pnpm --filter @inkroute/web build",
+  "public content seeded DB/API redaction tests",
+  "public content browser HTML redaction smoke",
+  "public content cache revalidation smoke",
+] as const;
+
+export const publicContentRuntimeRequiredEvidence = [
+  "persistent tenant/domain resolver plus public repository route wiring map",
+  "seeded DB or CMS public content read transcript",
+  "public API JSON and rendered HTML private-field redaction proof",
+  "public content cache revalidation configuration and invalidation smoke output",
+  "web typecheck/build, browser smoke, and CI artifact evidence",
+] as const;
+
+export type PublicContentRuntimeRequiredEvidence = (typeof publicContentRuntimeRequiredEvidence)[number];
+
+export const portfolioImagePerformanceRequiredEvidence = [
+  "real public derivative assets or storage-backed fixture manifest",
+  "optimized image component, derivative metadata, blur placeholder, and EXIF-stripping proof",
+  "private original/reference separation and public-access denial transcript",
+  "web typecheck/build, browser rendering, Lighthouse, and CI artifact evidence",
+] as const;
+
+export type PortfolioImagePerformanceRequiredEvidence = (typeof portfolioImagePerformanceRequiredEvidence)[number];
 
 export function buildPublicContentRuntimeEvidencePlan(
   input: PublicContentRuntimeEvidenceInput,
@@ -784,14 +839,14 @@ export function buildPublicContentRuntimeEvidencePlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: PublicContentRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/config package script is missing ${script}.`);
   if (!input.configTestsPassed) blockers.push("@inkroute/config public content tests must pass.");
   if (!input.configTypecheckPassed) blockers.push("@inkroute/config typecheck must pass in an installed workspace.");
   if (!input.webTypecheckPassed) blockers.push("@inkroute/web typecheck must pass with public content imports and route wiring.");
   if (!input.webBuildPassed) blockers.push("@inkroute/web build must pass with public content pages, APIs, metadata, and sitemap output.");
-  if (!input.tenantDomainResolverBackedByPersistence) blockers.push("Tenant/domain resolver must be backed by persisted tenant records instead of static demo-only matching.");
+  if (!input.tenantDomainResolverBackedByPersistence) blockers.push("Tenant/domain resolver must graduate from the local demo resolver contract to persisted tenant records.");
   if (!input.publicRepositoryReadsConfigured) blockers.push("Public content repository reads must cover tenant, artist, portfolio, travel, FAQ, testimonial, city, and style data.");
   if (!input.publicRoutesUseRepositoryBundle) blockers.push("Public routes and APIs must consume the repository-backed public content bundle.");
   if (!input.cmsOrDatabaseSeedVerified) blockers.push("Seeded database or CMS fixtures must prove public content reads can run outside static demo arrays.");
@@ -803,34 +858,29 @@ export function buildPublicContentRuntimeEvidencePlan(
   if (!input.ciEvidenceCaptured) blockers.push("CI evidence must capture public content route/API redaction and cache-revalidation checks.");
 
   if (!input.tenantDomainResolverBackedByPersistence || !input.publicRepositoryReadsConfigured || !input.publicRoutesUseRepositoryBundle) {
-    requiredEvidence.push("persistent tenant/domain resolver plus public repository route wiring map");
+    requiredEvidence.push(publicContentRuntimeRequiredEvidence[0]);
   }
   if (!input.cmsOrDatabaseSeedVerified) {
-    requiredEvidence.push("seeded DB or CMS public content read transcript");
+    requiredEvidence.push(publicContentRuntimeRequiredEvidence[1]);
   }
   if (!input.apiJsonRedactionVerified || !input.renderedHtmlRedactionVerified || !input.privatePortfolioExcluded) {
-    requiredEvidence.push("public API JSON and rendered HTML private-field redaction proof");
+    requiredEvidence.push(publicContentRuntimeRequiredEvidence[2]);
   }
   if (!input.cacheRevalidationConfigured) {
-    requiredEvidence.push("public content cache revalidation configuration and invalidation smoke output");
+    requiredEvidence.push(publicContentRuntimeRequiredEvidence[3]);
   }
   if (!input.webTypecheckPassed || !input.webBuildPassed || !input.browserSmokePassed || !input.ciEvidenceCaptured) {
-    requiredEvidence.push("web typecheck/build, browser smoke, and CI artifact evidence");
+    requiredEvidence.push(publicContentRuntimeRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/config typecheck",
-      "pnpm --filter @inkroute/config test",
-      "pnpm --filter @inkroute/web typecheck",
-      "pnpm --filter @inkroute/web build",
-      "public content seeded DB/API redaction tests",
-      "public content browser HTML redaction smoke",
-      "public content cache revalidation smoke",
-    ],
-    requiredEvidence,
+    requiredCommands: publicContentRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === publicContentRuntimeRequiredEvidence.length
+        ? publicContentRuntimeRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -841,7 +891,7 @@ export function buildPortfolioImagePerformanceEvidencePlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: PortfolioImagePerformanceRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/config package script is missing ${script}.`);
   if (!input.configTestsPassed) blockers.push("@inkroute/config public content and image metadata tests must pass.");
@@ -852,7 +902,7 @@ export function buildPortfolioImagePerformanceEvidencePlan(
   if (!input.storageBackedDerivativeFixturesAvailable) blockers.push("Storage-backed derivative fixtures must prove public derivatives resolve independently from private originals.");
   if (!input.nextImageMigrationCompleted) blockers.push("Portfolio rendering must migrate to next/image or document an approved equivalent optimization path.");
   if (!input.derivativeDimensionsVerified) blockers.push("Derivative dimensions, aspect ratio, alt text, sizes, and cache policy must be verified for every public portfolio item.");
-  if (!input.blurPlaceholdersGenerated) blockers.push("Blur placeholders or an approved no-placeholder policy must be generated for public derivatives.");
+  if (!input.blurPlaceholdersGenerated) blockers.push("Blur placeholders must be present in shared public derivative metadata before rendered portfolio image proof can close.");
   if (!input.exifStrippingVerified) blockers.push("Derivative generation must prove EXIF and private metadata stripping.");
   if (!input.privateOriginalsSeparated) blockers.push("Private original/reference files must be stored separately from public derivatives.");
   if (!input.privateOriginalAccessDenied) blockers.push("Private original/reference access-denial tests must pass.");
@@ -861,38 +911,27 @@ export function buildPortfolioImagePerformanceEvidencePlan(
   if (!input.ciArtifactsCaptured) blockers.push("CI artifacts must capture image rendering, private-denial, and performance evidence.");
 
   if (!input.realPublicDerivativeAssetsAvailable || !input.storageBackedDerivativeFixturesAvailable) {
-    requiredEvidence.push("real public derivative assets or storage-backed fixture manifest");
+    requiredEvidence.push(portfolioImagePerformanceRequiredEvidence[0]);
   }
   if (!input.nextImageMigrationCompleted || !input.derivativeDimensionsVerified || !input.blurPlaceholdersGenerated || !input.exifStrippingVerified) {
-    requiredEvidence.push("optimized image component, derivative metadata, blur placeholder, and EXIF-stripping proof");
+    requiredEvidence.push(portfolioImagePerformanceRequiredEvidence[1]);
   }
   if (!input.privateOriginalsSeparated || !input.privateOriginalAccessDenied) {
-    requiredEvidence.push("private original/reference separation and public-access denial transcript");
+    requiredEvidence.push(portfolioImagePerformanceRequiredEvidence[2]);
   }
   if (!input.webTypecheckPassed || !input.webBuildPassed || !input.browserRenderingVerified || !input.lighthouseImageAuditPassed || !input.ciArtifactsCaptured) {
-    requiredEvidence.push("web typecheck/build, browser rendering, Lighthouse, and CI artifact evidence");
+    requiredEvidence.push(portfolioImagePerformanceRequiredEvidence[3]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/config typecheck",
-      "pnpm --filter @inkroute/config test",
-      "pnpm --filter @inkroute/web typecheck",
-      "pnpm --filter @inkroute/web build",
-      "portfolio image browser rendering smoke",
-      "private original/reference access-denial tests",
-      "Lighthouse image/performance audit",
-    ],
-    requiredControls: [
-      "Serve only public derivative objects from public portfolio cards.",
-      "Keep private originals and booking reference files unavailable to anonymous public routes.",
-      "Preserve width, height, aspect ratio, alt text, responsive sizes, and cache policy for every rendered portfolio image.",
-      "Strip EXIF/private metadata before derivative publication.",
-      "Capture browser and Lighthouse evidence before marking image performance launch-ready.",
-    ],
-    requiredEvidence,
+    requiredCommands: portfolioImagePerformanceRequiredCommands,
+    requiredControls: portfolioImagePerformanceRequiredControls,
+    requiredEvidence:
+      requiredEvidence.length === portfolioImagePerformanceRequiredEvidence.length
+        ? portfolioImagePerformanceRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -1005,10 +1044,27 @@ export interface DashboardDataRuntimeReadinessPlan {
   missingScripts: readonly string[];
   missingRepositoryLoaders: readonly DashboardDataCollection[];
   missingRouteWiring: readonly DashboardDataCollection[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof dashboardDataRuntimeRequiredCommands;
+  requiredEvidence: readonly DashboardDataRuntimeRequiredEvidence[];
   blockers: readonly string[];
 }
+
+export const dashboardDataRuntimeRequiredCommands = [
+  "pnpm --filter @inkroute/config typecheck",
+  "pnpm --filter @inkroute/config test",
+  "pnpm --filter @inkroute/dashboard typecheck",
+  "pnpm --filter @inkroute/dashboard build",
+  "pnpm --filter @inkroute/dashboard test -- dashboard-data",
+] as const;
+
+export const dashboardDataRuntimeRequiredEvidence = [
+  "repository-loader coverage map for bookings, clients, appointments, payments, portfolio, travel, SEO, templates, errors, releases, and settings",
+  "seeded database dashboard route smoke output",
+  "tenant isolation and redaction test output for dashboard repositories/APIs",
+  "dashboard typecheck and build logs",
+] as const;
+
+export type DashboardDataRuntimeRequiredEvidence = (typeof dashboardDataRuntimeRequiredEvidence)[number];
 
 export function buildDashboardDataRuntimeReadinessPlan(
   input: DashboardDataRuntimeReadinessInput,
@@ -1018,7 +1074,7 @@ export function buildDashboardDataRuntimeReadinessPlan(
   const missingRepositoryLoaders = findMissingDashboardCollections(input.repositoryLoadersConfigured);
   const missingRouteWiring = findMissingDashboardCollections(input.dashboardRoutesUsingRepositories);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: DashboardDataRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/config package script is missing ${script}.`);
   if (!input.configTestsPassed) blockers.push("@inkroute/config dashboard data tests must pass.");
@@ -1036,14 +1092,14 @@ export function buildDashboardDataRuntimeReadinessPlan(
   if (!input.demoStaticImportsRemoved) blockers.push("Dashboard route data dependencies must no longer read static demo arrays for production surfaces.");
 
   if (missingRepositoryLoaders.length > 0 || missingRouteWiring.length > 0) {
-    requiredEvidence.push("repository-loader coverage map for bookings, clients, appointments, payments, portfolio, travel, SEO, templates, errors, releases, and settings");
+    requiredEvidence.push(dashboardDataRuntimeRequiredEvidence[0]);
   }
-  if (!input.seededDatabaseVerified) requiredEvidence.push("seeded database dashboard route smoke output");
+  if (!input.seededDatabaseVerified) requiredEvidence.push(dashboardDataRuntimeRequiredEvidence[1]);
   if (!input.tenantIsolationTestsPassed || !input.redactionTestsPassed) {
-    requiredEvidence.push("tenant isolation and redaction test output for dashboard repositories/APIs");
+    requiredEvidence.push(dashboardDataRuntimeRequiredEvidence[2]);
   }
   if (!input.dashboardTypecheckPassed || !input.dashboardBuildPassed) {
-    requiredEvidence.push("dashboard typecheck and build logs");
+    requiredEvidence.push(dashboardDataRuntimeRequiredEvidence[3]);
   }
 
   return {
@@ -1051,14 +1107,11 @@ export function buildDashboardDataRuntimeReadinessPlan(
     missingScripts,
     missingRepositoryLoaders,
     missingRouteWiring,
-    requiredCommands: [
-      "pnpm --filter @inkroute/config typecheck",
-      "pnpm --filter @inkroute/config test",
-      "pnpm --filter @inkroute/dashboard typecheck",
-      "pnpm --filter @inkroute/dashboard build",
-      "pnpm --filter @inkroute/dashboard test -- dashboard-data",
-    ],
-    requiredEvidence,
+    requiredCommands: dashboardDataRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === dashboardDataRuntimeRequiredEvidence.length
+        ? dashboardDataRuntimeRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -1089,11 +1142,42 @@ export interface DashboardRepositoryRouteEvidencePlan {
   missingPrismaLoaders: readonly DashboardDataCollection[];
   missingRouteWiring: readonly DashboardDataCollection[];
   remainingStaticDemoImports: readonly DashboardDataCollection[];
-  requiredCommands: readonly string[];
-  requiredControls: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof dashboardRepositoryRouteRequiredCommands;
+  requiredControls: typeof dashboardRepositoryRouteRequiredControls;
+  requiredEvidence: readonly DashboardRepositoryRouteRequiredEvidence[];
   blockers: readonly string[];
 }
+
+export const dashboardRepositoryRouteRequiredCommands = [
+  "pnpm --filter @inkroute/config typecheck",
+  "pnpm --filter @inkroute/config test",
+  "pnpm --filter @inkroute/dashboard typecheck",
+  "pnpm --filter @inkroute/dashboard build",
+  "seeded database dashboard route smoke",
+  "dashboard repository/API tenant-isolation tests",
+  "dashboard repository/API RBAC and redaction tests",
+  "dashboard sensitive-read AuditLog persistence tests",
+  "GitHub Actions dashboard data repository evidence job",
+] as const;
+
+export const dashboardRepositoryRouteRequiredControls = [
+  "Load dashboard data through tenant-scoped Prisma repositories before projection.",
+  "Apply RBAC guards before repository reads and dashboard serialization.",
+  "Redact client, medical, payment, provider, object-key, and private-note fields before returning dashboard data.",
+  "Use no-store caching for protected dashboard data responses.",
+  "Remove production dashboard dependencies on static demo arrays for repository-backed collections.",
+  "Redact secrets, raw PII, medical notes, payment data, provider tokens, and private object keys from evidence artifacts.",
+] as const;
+
+export const dashboardRepositoryRouteRequiredEvidence = [
+  "Prisma loader, route wiring, and static-demo import removal matrix for all dashboard collections",
+  "seeded database dashboard route smoke plus repository/API test output",
+  "tenant isolation, RBAC guard, and redaction test output",
+  "no-store cache and sensitive-read AuditLog evidence",
+  "dashboard typecheck/build, CI, and secret-safe artifact evidence",
+] as const;
+
+export type DashboardRepositoryRouteRequiredEvidence = (typeof dashboardRepositoryRouteRequiredEvidence)[number];
 
 export function buildDashboardRepositoryRouteEvidencePlan(
   input: DashboardRepositoryRouteEvidenceInput,
@@ -1104,7 +1188,7 @@ export function buildDashboardRepositoryRouteEvidencePlan(
   const missingRouteWiring = findMissingDashboardCollections(input.dashboardRoutesWired);
   const remainingStaticDemoImports = findMissingDashboardCollections(input.staticDemoImportsRemoved);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: DashboardRepositoryRouteRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/config package script is missing ${script}.`);
   if (!input.configTestsPassed) blockers.push("@inkroute/config dashboard data tests must pass before repository route evidence can close.");
@@ -1112,7 +1196,7 @@ export function buildDashboardRepositoryRouteEvidencePlan(
   if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass with Prisma dashboard loaders.");
   if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with repository-backed dashboard routes.");
   if (missingPrismaLoaders.length > 0) blockers.push(`Prisma dashboard loaders are missing for: ${missingPrismaLoaders.join(", ")}.`);
-  if (missingRouteWiring.length > 0) blockers.push(`Dashboard routes are not wired to repository loaders for: ${missingRouteWiring.join(", ")}.`);
+  if (missingRouteWiring.length > 0) blockers.push(`Repository-backed dashboard route wiring is required for: ${missingRouteWiring.join(", ")}.`);
   if (remainingStaticDemoImports.length > 0) blockers.push(`Production dashboard static-demo imports remain for: ${remainingStaticDemoImports.join(", ")}.`);
   if (!input.seededDatabaseSmokePassed) blockers.push("Seeded database dashboard route smoke must pass.");
   if (!input.repositoryApiTestsPassed) blockers.push("Repository/API tests must pass for dashboard data loaders.");
@@ -1125,19 +1209,19 @@ export function buildDashboardRepositoryRouteEvidencePlan(
   if (!input.secretSafeArtifactsCaptured) blockers.push("Dashboard data artifacts must be redacted and free of secrets, raw PII, medical notes, payment data, provider tokens, and private object keys.");
 
   if (missingPrismaLoaders.length > 0 || missingRouteWiring.length > 0 || remainingStaticDemoImports.length > 0) {
-    requiredEvidence.push("Prisma loader, route wiring, and static-demo import removal matrix for all dashboard collections");
+    requiredEvidence.push(dashboardRepositoryRouteRequiredEvidence[0]);
   }
   if (!input.seededDatabaseSmokePassed || !input.repositoryApiTestsPassed) {
-    requiredEvidence.push("seeded database dashboard route smoke plus repository/API test output");
+    requiredEvidence.push(dashboardRepositoryRouteRequiredEvidence[1]);
   }
   if (!input.tenantIsolationTestsPassed || !input.rbacGuardTestsPassed || !input.redactionTestsPassed) {
-    requiredEvidence.push("tenant isolation, RBAC guard, and redaction test output");
+    requiredEvidence.push(dashboardRepositoryRouteRequiredEvidence[2]);
   }
   if (!input.noStoreCacheVerified || !input.sensitiveReadAuditLogsPersisted) {
-    requiredEvidence.push("no-store cache and sensitive-read AuditLog evidence");
+    requiredEvidence.push(dashboardRepositoryRouteRequiredEvidence[3]);
   }
   if (!input.dashboardTypecheckPassed || !input.dashboardBuildPassed || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
-    requiredEvidence.push("dashboard typecheck/build, CI, and secret-safe artifact evidence");
+    requiredEvidence.push(dashboardRepositoryRouteRequiredEvidence[4]);
   }
 
   return {
@@ -1146,26 +1230,12 @@ export function buildDashboardRepositoryRouteEvidencePlan(
     missingPrismaLoaders,
     missingRouteWiring,
     remainingStaticDemoImports,
-    requiredCommands: [
-      "pnpm --filter @inkroute/config typecheck",
-      "pnpm --filter @inkroute/config test",
-      "pnpm --filter @inkroute/dashboard typecheck",
-      "pnpm --filter @inkroute/dashboard build",
-      "seeded database dashboard route smoke",
-      "dashboard repository/API tenant-isolation tests",
-      "dashboard repository/API RBAC and redaction tests",
-      "dashboard sensitive-read AuditLog persistence tests",
-      "GitHub Actions dashboard data repository evidence job",
-    ],
-    requiredControls: [
-      "Load dashboard data through tenant-scoped Prisma repositories before projection.",
-      "Apply RBAC guards before repository reads and dashboard serialization.",
-      "Redact client, medical, payment, provider, object-key, and private-note fields before returning dashboard data.",
-      "Use no-store caching for protected dashboard data responses.",
-      "Remove production dashboard dependencies on static demo arrays for repository-backed collections.",
-      "Redact secrets, raw PII, medical notes, payment data, provider tokens, and private object keys from evidence artifacts.",
-    ],
-    requiredEvidence,
+    requiredCommands: dashboardRepositoryRouteRequiredCommands,
+    requiredControls: dashboardRepositoryRouteRequiredControls,
+    requiredEvidence:
+      requiredEvidence.length === dashboardRepositoryRouteRequiredEvidence.length
+        ? dashboardRepositoryRouteRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }

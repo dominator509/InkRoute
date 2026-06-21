@@ -786,10 +786,164 @@ export interface PrGapEvidenceEnforcementReadinessPlan {
   readonly missingScripts: readonly string[];
   readonly missingCiTerms: readonly string[];
   readonly missingFixtures: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof requiredPrGapEvidenceEnforcementCommands;
+  readonly requiredEvidence: typeof prGapEvidenceEnforcementReadinessRequiredEvidence;
   readonly blockers: readonly string[];
 }
+
+export const requiredPrGapEvidenceEnforcementArtifacts = [
+  "docs/quality/manifests/gap-evidence-audit.json",
+  "docs/quality/manifests/pr-gap-diff-fixtures.json",
+  "PrGapEvidenceEnforcementRun persistence row",
+  "redacted branch protection settings evidence",
+  "live failing PR merge-block evidence",
+  "live passing PR evidence",
+  "secret-safe PR gap enforcement log review",
+] as const;
+
+export const requiredPrGapEvidenceEnforcementCommands = [
+  "pnpm quality:pr-gap-fixtures",
+  "pnpm quality:pr-gaps",
+  "pnpm quality:all",
+  "GitHub Actions CI quality job",
+  "branch protection required-check audit",
+  "capture PrGapEvidenceEnforcementRun persistence row",
+  "capture live failing PR merge-block evidence",
+  "capture live passing PR evidence",
+  "perform secret-safe PR gap enforcement log review",
+] as const;
+
+export const prGapEvidenceEnforcementReadinessRequiredEvidence = [
+  "Positive fixture output proving evidence-backed GAP_TRACKER.md changes pass.",
+  "Negative fixture output proving evidence-free closed rows or production blocker downgrades fail.",
+  "PR-context audit output including shallow checkout or merge-parent fallback behavior.",
+  "Live failing PR or check-run evidence for a gap row changed without evidence.",
+  "Live passing PR or check-run evidence for a gap row changed with evidence.",
+  "Branch protection settings proving the CI quality job is required before merge.",
+  "Secret-safe log review for PR gap enforcement output.",
+] as const;
+
+export type PrGapEvidenceEnforcementArtifact = (typeof requiredPrGapEvidenceEnforcementArtifacts)[number];
+export type PrGapEvidenceEnforcementCommand = (typeof requiredPrGapEvidenceEnforcementCommands)[number];
+
+export interface PrGapEvidenceEnforcementEvidenceInput extends PrGapEvidenceEnforcementReadinessInput {
+  readonly capturedArtifacts: readonly PrGapEvidenceEnforcementArtifact[];
+  readonly completedCommands: readonly PrGapEvidenceEnforcementCommand[];
+  readonly prGapEvidenceRunPersisted: boolean;
+  readonly mergeBlockProofCaptured: boolean;
+}
+
+export interface PrGapEvidenceEnforcementEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly readinessPlan: PrGapEvidenceEnforcementReadinessPlan;
+  readonly missingArtifacts: readonly PrGapEvidenceEnforcementArtifact[];
+  readonly missingCommands: readonly PrGapEvidenceEnforcementCommand[];
+  readonly requiredArtifacts: typeof requiredPrGapEvidenceEnforcementArtifacts;
+  readonly requiredCommands: typeof requiredPrGapEvidenceEnforcementCommands;
+  readonly requiredEvidence: PrGapEvidenceEnforcementExecutionRequiredEvidence;
+  readonly blockers: readonly string[];
+}
+
+export interface PrGapEvidenceEnforcementExecutionPlan {
+  readonly localCommands: typeof prGapEvidenceEnforcementLocalCommands;
+  readonly externalCommands: typeof prGapEvidenceEnforcementExternalCommands;
+  readonly localArtifacts: typeof prGapEvidenceEnforcementLocalArtifacts;
+  readonly externalArtifacts: typeof prGapEvidenceEnforcementExternalArtifacts;
+  readonly fixtureVerificationExecutionAllowed: false;
+  readonly prGapAuditExecutionAllowed: false;
+  readonly qualityAllExecutionAllowed: false;
+  readonly ciQualityExecutionAllowed: false;
+  readonly branchProtectionAuditExecutionAllowed: false;
+  readonly persistenceExecutionAllowed: false;
+  readonly liveFailingPrExecutionAllowed: false;
+  readonly livePassingPrExecutionAllowed: false;
+  readonly secretSafeLogReviewExecutionAllowed: false;
+  readonly executionPolicy: PrGapEvidenceEnforcementExecutionPolicy;
+  readonly externalEvidenceRequired: typeof prGapEvidenceEnforcementRequiredExternalEvidence;
+}
+
+export interface PrGapEvidenceEnforcementArtifactReview {
+  readonly artifactPath: PrGapEvidenceEnforcementArtifact | string;
+  readonly redactedArtifact: unknown;
+  readonly redactions: readonly string[];
+  readonly containsUnredactedSensitiveValues: false;
+  readonly externalEvidenceRequired: typeof prGapEvidenceEnforcementRequiredExternalEvidence;
+}
+
+export type PrGapEvidenceEnforcementExecutionRequiredEvidence = readonly [
+  ...typeof prGapEvidenceEnforcementReadinessRequiredEvidence,
+  "Durable PrGapEvidenceEnforcementRun row containing fixture, PR audit, branch protection, live PR, and merge-block proof.",
+  "Artifact manifest proving all required evidence was captured without secrets.",
+];
+
+export function buildPrGapEvidenceEnforcementExecutionRequiredEvidence(
+  readinessEvidence: typeof prGapEvidenceEnforcementReadinessRequiredEvidence,
+): PrGapEvidenceEnforcementExecutionRequiredEvidence {
+  return [
+    ...readinessEvidence,
+    "Durable PrGapEvidenceEnforcementRun row containing fixture, PR audit, branch protection, live PR, and merge-block proof.",
+    "Artifact manifest proving all required evidence was captured without secrets.",
+  ];
+}
+
+export const prGapEvidenceEnforcementRequiredExternalEvidence = [
+  "Live failing PR merge-block and live passing PR evidence must be captured from GitHub with PR URLs, run URLs, tokens, and actors redacted.",
+  "Branch-protection evidence must prove required quality checks without exposing repository settings tokens or provider identifiers.",
+  "Durable PrGapEvidenceEnforcementRun persistence must execute only in an approved provider-backed database.",
+  "Secret-safe log review must redact check-run logs, command output, environment values, customer data, and provider IDs before retention.",
+] as const;
+
+export const prGapEvidenceEnforcementLocalCommands = [
+  "pnpm quality:pr-gap-fixtures",
+  "pnpm quality:pr-gaps",
+] as const satisfies readonly PrGapEvidenceEnforcementCommand[];
+
+export const prGapEvidenceEnforcementExternalCommands = requiredPrGapEvidenceEnforcementCommands.filter(
+  (command) =>
+    command !== "pnpm quality:pr-gap-fixtures" &&
+    command !== "pnpm quality:pr-gaps",
+);
+
+export const prGapEvidenceEnforcementLocalArtifacts = [
+  "docs/quality/manifests/gap-evidence-audit.json",
+  "docs/quality/manifests/pr-gap-diff-fixtures.json",
+] as const satisfies readonly PrGapEvidenceEnforcementArtifact[];
+
+export const prGapEvidenceEnforcementExternalArtifacts = requiredPrGapEvidenceEnforcementArtifacts.filter(
+  (artifact) =>
+    artifact !== "docs/quality/manifests/gap-evidence-audit.json" &&
+    artifact !== "docs/quality/manifests/pr-gap-diff-fixtures.json",
+);
+
+export type PrGapEvidenceEnforcementExecutionPolicy = {
+  readonly codexMayClassifyLocalFixtures: true;
+  readonly livePrMergeBlockRequiredForClosure: true;
+  readonly branchProtectionEvidenceRequired: true;
+  readonly durablePersistenceRowRequired: true;
+  readonly secretSafeLogsRequired: true;
+  readonly localFixturesDoNotProveLiveEnforcement: true;
+};
+
+export const prGapEvidenceEnforcementExecutionPolicy: PrGapEvidenceEnforcementExecutionPolicy = {
+  codexMayClassifyLocalFixtures: true,
+  livePrMergeBlockRequiredForClosure: true,
+  branchProtectionEvidenceRequired: true,
+  durablePersistenceRowRequired: true,
+  secretSafeLogsRequired: true,
+  localFixturesDoNotProveLiveEnforcement: true,
+};
+
+const sensitivePrGapEvidenceKeyPattern =
+  /(token|secret|password|authorization|cookie|env|provider|projectId|branchProtection|pullRequest|prUrl|checkRun|artifactUrl|ciRunUrl|tenantId|userId|runId|email|phone|log|payload)/i;
+
+const sensitivePrGapEvidenceStringPatterns: readonly [RegExp, string][] = [
+  [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
+  [/https?:\/\/[^\s"'<>]+/gi, "[REDACTED_URL]"],
+  [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
+  [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
+  [/\b(?:ghp|gho|ghu|ghs|sk|pk|rk|whsec)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
+  [/\b(?:tenant|user|project|provider|artifact|run|pr|branch|check)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+];
 
 export interface PrGapEvidenceEnforcementRunPersistenceContract {
   readonly prismaModel: "PrGapEvidenceEnforcementRun";
@@ -910,23 +1064,121 @@ export function buildPrGapEvidenceEnforcementReadinessPlan(
     missingScripts,
     missingCiTerms,
     missingFixtures,
-    requiredCommands: [
-      "pnpm quality:pr-gap-fixtures",
-      "pnpm quality:pr-gaps",
-      "pnpm quality:all",
-      "GitHub Actions CI quality job",
-      "branch protection required-check audit",
-    ],
-    requiredEvidence: [
-      "Positive fixture output proving evidence-backed GAP_TRACKER.md changes pass.",
-      "Negative fixture output proving evidence-free closed rows or production blocker downgrades fail.",
-      "PR-context audit output including shallow checkout or merge-parent fallback behavior.",
-      "Live failing PR or check-run evidence for a gap row changed without evidence.",
-      "Live passing PR or check-run evidence for a gap row changed with evidence.",
-      "Branch protection settings proving the CI quality job is required before merge.",
-      "Secret-safe log review for PR gap enforcement output.",
-    ],
+    requiredCommands: requiredPrGapEvidenceEnforcementCommands,
+    requiredEvidence: prGapEvidenceEnforcementReadinessRequiredEvidence,
     blockers,
+  };
+}
+
+export function buildPrGapEvidenceEnforcementEvidenceDecision(
+  input: PrGapEvidenceEnforcementEvidenceInput,
+): PrGapEvidenceEnforcementEvidenceDecision {
+  const readinessPlan = buildPrGapEvidenceEnforcementReadinessPlan(input);
+  const capturedArtifacts = new Set(input.capturedArtifacts);
+  const completedCommands = new Set(input.completedCommands);
+  const missingArtifacts = requiredPrGapEvidenceEnforcementArtifacts.filter((artifact) => !capturedArtifacts.has(artifact));
+  const missingCommands = requiredPrGapEvidenceEnforcementCommands.filter((command) => !completedCommands.has(command));
+  const blockers = [...readinessPlan.blockers];
+
+  if (!input.prGapEvidenceRunPersisted) {
+    blockers.push("PrGapEvidenceEnforcementRun persistence row must be captured for durable auditability.");
+  }
+  if (!input.mergeBlockProofCaptured) {
+    blockers.push("Live merge-block proof must show evidence-free gap changes cannot merge.");
+  }
+  if (missingArtifacts.length > 0) {
+    blockers.push("Every required PR gap evidence enforcement artifact must be captured.");
+  }
+  if (missingCommands.length > 0) {
+    blockers.push("Every required PR gap evidence enforcement command must be completed.");
+  }
+
+  return {
+    status: blockers.length === 0 && missingArtifacts.length === 0 && missingCommands.length === 0 ? "complete" : "blocked",
+    readinessPlan,
+    missingArtifacts,
+    missingCommands,
+    requiredArtifacts: requiredPrGapEvidenceEnforcementArtifacts,
+    requiredCommands: requiredPrGapEvidenceEnforcementCommands,
+    requiredEvidence: buildPrGapEvidenceEnforcementExecutionRequiredEvidence(readinessPlan.requiredEvidence),
+    blockers,
+  };
+}
+
+export function buildPrGapEvidenceEnforcementExecutionPlan(): PrGapEvidenceEnforcementExecutionPlan {
+  return {
+    localCommands: prGapEvidenceEnforcementLocalCommands,
+    externalCommands: prGapEvidenceEnforcementExternalCommands,
+    localArtifacts: prGapEvidenceEnforcementLocalArtifacts,
+    externalArtifacts: prGapEvidenceEnforcementExternalArtifacts,
+    fixtureVerificationExecutionAllowed: false,
+    prGapAuditExecutionAllowed: false,
+    qualityAllExecutionAllowed: false,
+    ciQualityExecutionAllowed: false,
+    branchProtectionAuditExecutionAllowed: false,
+    persistenceExecutionAllowed: false,
+    liveFailingPrExecutionAllowed: false,
+    livePassingPrExecutionAllowed: false,
+    secretSafeLogReviewExecutionAllowed: false,
+    executionPolicy: prGapEvidenceEnforcementExecutionPolicy,
+    externalEvidenceRequired: prGapEvidenceEnforcementRequiredExternalEvidence,
+  };
+}
+
+function redactPrGapEvidenceString(value: string, redactions: Set<string>): string {
+  return sensitivePrGapEvidenceStringPatterns.reduce((current, [pattern, replacement]) => {
+    pattern.lastIndex = 0;
+    if (pattern.test(current)) {
+      redactions.add(replacement);
+    }
+    pattern.lastIndex = 0;
+    return current.replace(pattern, replacement);
+  }, value);
+}
+
+function redactPrGapEvidenceValue(value: unknown, redactions: Set<string>, key?: string): unknown {
+  if (key && sensitivePrGapEvidenceKeyPattern.test(key)) {
+    redactions.add(key);
+    return `[REDACTED_${key.replace(/[^A-Za-z0-9]/g, "_").toUpperCase()}]`;
+  }
+
+  if (typeof value === "string") {
+    return redactPrGapEvidenceString(value, redactions);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactPrGapEvidenceValue(entry, redactions));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([entryKey, entryValue]) => [
+        entryKey,
+        redactPrGapEvidenceValue(entryValue, redactions, entryKey),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+export function buildRedactedPrGapEvidenceEnforcementArtifact(artifact: unknown): unknown {
+  return redactPrGapEvidenceValue(artifact, new Set<string>());
+}
+
+export function buildPrGapEvidenceEnforcementArtifactReview(
+  artifactPath: PrGapEvidenceEnforcementArtifact | string,
+  artifact: unknown,
+): PrGapEvidenceEnforcementArtifactReview {
+  const redactions = new Set<string>();
+  const redactedArtifact = redactPrGapEvidenceValue(artifact, redactions);
+
+  return {
+    artifactPath,
+    redactedArtifact,
+    redactions: [...redactions].sort(),
+    containsUnredactedSensitiveValues: false,
+    externalEvidenceRequired: prGapEvidenceEnforcementRequiredExternalEvidence,
   };
 }
 
@@ -949,13 +1201,34 @@ export interface DocumentationAuditRuntimeReadinessInput {
   readonly appInventoryCheckPassed: boolean;
 }
 
+export const documentationAuditRuntimeRequiredCommands = [
+  "pnpm quality:docs",
+  "node scripts/quality/audit-doc-links.mjs",
+  "node scripts/quality/verify-documentation-consistency.mjs",
+  "node scripts/quality/verify-documentation-inventory.mjs",
+  "GitHub Actions CI quality job",
+  "provider readiness evidence review",
+  "legal readiness evidence review",
+  "stale provider status proof review",
+] as const;
+
+export const documentationAuditRuntimeRequiredEvidence = [
+  "Markdown link/path audit output with no missing relative links or repo path references.",
+  "Documentation consistency audit output with resolved API route references and qualified provider/legal readiness language.",
+  "Documentation inventory audit output proving documented app/package roots match workspace members.",
+  "CI evidence for pnpm quality:docs.",
+  "Provider proof or blocked/gated language for provider readiness claims.",
+  "Legal review proof or pending/gated language for legal readiness claims.",
+  "Stale provider status review evidence before closing GAP-124.",
+] as const;
+
 export interface DocumentationAuditRuntimeReadinessPlan {
   readonly status: "ready" | "blocked";
   readonly missingScripts: readonly string[];
   readonly missingReports: readonly string[];
   readonly failedAuditAreas: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof documentationAuditRuntimeRequiredCommands;
+  readonly requiredEvidence: typeof documentationAuditRuntimeRequiredEvidence;
   readonly blockers: readonly string[];
 }
 
@@ -964,6 +1237,11 @@ const requiredDocumentationAuditReports = [
   "docs/quality/manifests/markdown-link-audit.json",
   "docs/quality/manifests/documentation-consistency-audit.json",
   "docs/quality/manifests/documentation-inventory-audit.json",
+] as const;
+const requiredDocumentationAuditScriptGroups = [
+  ["audit-doc-links.mjs", "quality:doc-links"],
+  ["verify-documentation-consistency.mjs", "quality:doc-consistency"],
+  ["verify-documentation-inventory.mjs", "quality:doc-inventory"],
 ] as const;
 
 export function buildDocumentationAuditRuntimeReadinessPlan(
@@ -981,7 +1259,10 @@ export function buildDocumentationAuditRuntimeReadinessPlan(
   if (missingScripts.length > 0) {
     blockers.push("Root quality:docs script must be wired.");
   }
-  if (!qualityDocsScript.includes("audit-doc-links.mjs") || !qualityDocsScript.includes("verify-documentation-consistency.mjs") || !qualityDocsScript.includes("verify-documentation-inventory.mjs")) {
+  const qualityDocsRunsRequiredAudits = requiredDocumentationAuditScriptGroups.every((tokens) =>
+    tokens.some((token) => qualityDocsScript.includes(token)),
+  );
+  if (!qualityDocsRunsRequiredAudits) {
     blockers.push("quality:docs must run markdown links, documentation consistency, and documentation inventory audits.");
   }
   if (missingReports.length > 0) {
@@ -1014,23 +1295,8 @@ export function buildDocumentationAuditRuntimeReadinessPlan(
     missingScripts,
     missingReports,
     failedAuditAreas,
-    requiredCommands: [
-      "pnpm quality:docs",
-      "node scripts/quality/audit-doc-links.mjs",
-      "node scripts/quality/verify-documentation-consistency.mjs",
-      "node scripts/quality/verify-documentation-inventory.mjs",
-      "GitHub Actions CI quality job",
-      "provider/legal evidence review",
-    ],
-    requiredEvidence: [
-      "Markdown link/path audit output with no missing relative links or repo path references.",
-      "Documentation consistency audit output with resolved API route references and qualified provider/legal readiness language.",
-      "Documentation inventory audit output proving documented app/package roots match workspace members.",
-      "CI evidence for pnpm quality:docs.",
-      "Provider proof or blocked/gated language for provider readiness claims.",
-      "Legal review proof or pending/gated language for legal readiness claims.",
-      "Stale provider status review evidence before closing GAP-124.",
-    ],
+    requiredCommands: documentationAuditRuntimeRequiredCommands,
+    requiredEvidence: documentationAuditRuntimeRequiredEvidence,
     blockers,
   };
 }
@@ -1052,12 +1318,33 @@ export interface RepositoryGovernanceRuntimeReadinessInput {
   readonly redactedSettingsEvidenceCaptured: boolean;
 }
 
+export const repositoryGovernanceRuntimeRequiredCommands = [
+  "pnpm quality:governance",
+  "pnpm quality:all",
+  "gh branch protection or repository rules audit",
+  "GitHub required status checks review",
+  "GitHub CODEOWNERS review enforcement test PR",
+  "GitHub secret scanning settings review",
+  "GitHub Dependabot/security alerts settings review",
+  "GitHub merge rules settings review",
+] as const;
+
+export const repositoryGovernanceRuntimeRequiredEvidence = [
+  "Repository governance audit output with required files, CODEOWNERS, PR/issue templates, and CI terms passing.",
+  "Redacted branch protection settings proving required checks and review rules are active.",
+  "Required status check list including CI quality and PR gap-diff enforcement.",
+  "CODEOWNERS review enforcement proof on a protected surface change.",
+  "Secret scanning and Dependabot/security alert settings proof.",
+  "Merge queue, required linear history, or equivalent merge-rule proof.",
+  "Test PR evidence proving enforcement without exposing secrets.",
+] as const;
+
 export interface RepositoryGovernanceRuntimeReadinessPlan {
   readonly status: "ready" | "blocked";
   readonly missingSourcePrerequisites: readonly string[];
   readonly missingExternalSettings: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof repositoryGovernanceRuntimeRequiredCommands;
+  readonly requiredEvidence: typeof repositoryGovernanceRuntimeRequiredEvidence;
   readonly blockers: readonly string[];
 }
 
@@ -1118,23 +1405,8 @@ export function buildRepositoryGovernanceRuntimeReadinessPlan(
     status: blockers.length === 0 ? "ready" : "blocked",
     missingSourcePrerequisites,
     missingExternalSettings,
-    requiredCommands: [
-      "pnpm quality:governance",
-      "pnpm quality:all",
-      "gh branch protection or repository rules audit",
-      "GitHub required status checks review",
-      "GitHub CODEOWNERS review enforcement test PR",
-      "GitHub secret scanning/security alerts settings review",
-    ],
-    requiredEvidence: [
-      "Repository governance audit output with required files, CODEOWNERS, PR/issue templates, and CI terms passing.",
-      "Redacted branch protection settings proving required checks and review rules are active.",
-      "Required status check list including CI quality and PR gap-diff enforcement.",
-      "CODEOWNERS review enforcement proof on a protected surface change.",
-      "Secret scanning and Dependabot/security alert settings proof.",
-      "Merge queue, required linear history, or equivalent merge-rule proof.",
-      "Test PR evidence proving enforcement without exposing secrets.",
-    ],
+    requiredCommands: repositoryGovernanceRuntimeRequiredCommands,
+    requiredEvidence: repositoryGovernanceRuntimeRequiredEvidence,
     blockers,
   };
 }
@@ -1158,13 +1430,35 @@ export interface QualityGateRuntimeReadinessInput {
   readonly ciArtifactsCaptured: boolean;
 }
 
+export const qualityGateRuntimeRequiredCommands = [
+  "pnpm --filter @inkroute/quality typecheck",
+  "pnpm --filter @inkroute/quality test",
+  "pnpm quality:docs",
+  "pnpm quality:gaps",
+  "pnpm quality:pr-gap-fixtures",
+  "pnpm quality:governance",
+  "pnpm quality:required-checks",
+  "pnpm quality:gates",
+  "pnpm quality:all",
+  "GitHub Actions CI quality job",
+  "capture CI quality reports/artifacts",
+] as const;
+
+export const qualityGateRuntimeRequiredEvidence = [
+  "@inkroute/quality package typecheck and test output.",
+  "quality:all output showing documentation, gap evidence, PR gap fixtures, governance, required checks, and gate summary passed.",
+  "Generated manifests for Markdown links, documentation consistency, documentation inventory, gap evidence, repository governance, required checks, and quality gates.",
+  "GitHub Actions quality job URL and status check evidence.",
+  "CI report/artifact labels for quality gate outputs or documented blocker if artifact upload is unavailable.",
+] as const;
+
 export interface QualityGateRuntimeReadinessPlan {
   readonly status: "ready" | "blocked";
   readonly missingRootScripts: readonly string[];
   readonly missingPackageScripts: readonly string[];
   readonly missingGeneratedManifests: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof qualityGateRuntimeRequiredCommands;
+  readonly requiredEvidence: typeof qualityGateRuntimeRequiredEvidence;
   readonly blockers: readonly string[];
 }
 
@@ -1242,25 +1536,8 @@ export function buildQualityGateRuntimeReadinessPlan(
     missingRootScripts,
     missingPackageScripts,
     missingGeneratedManifests,
-    requiredCommands: [
-      "pnpm --filter @inkroute/quality typecheck",
-      "pnpm --filter @inkroute/quality test",
-      "pnpm quality:docs",
-      "pnpm quality:gaps",
-      "pnpm quality:pr-gap-fixtures",
-      "pnpm quality:governance",
-      "pnpm quality:required-checks",
-      "pnpm quality:gates",
-      "pnpm quality:all",
-      "GitHub Actions CI quality job",
-    ],
-    requiredEvidence: [
-      "@inkroute/quality package typecheck and test output.",
-      "quality:all output showing documentation, gap evidence, PR gap fixtures, governance, required checks, and gate summary passed.",
-      "Generated manifests for Markdown links, documentation consistency, documentation inventory, gap evidence, repository governance, required checks, and quality gates.",
-      "GitHub Actions quality job URL and status check evidence.",
-      "CI report/artifact labels for quality gate outputs or documented blocker if artifact upload is unavailable.",
-    ],
+    requiredCommands: qualityGateRuntimeRequiredCommands,
+    requiredEvidence: qualityGateRuntimeRequiredEvidence,
     blockers,
   };
 }
@@ -1279,12 +1556,29 @@ export interface LegalReviewRuntimeReadinessInput {
   readonly productionLaunchBlockedUntilApproval: boolean;
 }
 
+export const legalReviewRuntimeRequiredCommands = [
+  "pnpm legal:verify-review",
+  "pnpm quality:gates",
+  "pnpm quality:all",
+  "GitHub Actions CI quality job",
+  "qualified counsel review outside the repository",
+] as const;
+
+export const legalReviewRuntimeRequiredEvidence = [
+  "Legal review audit output showing every required item approved.",
+  "Redacted evidence labels for privacy, terms, consent, medical, payments/refunds, SMS/notifications, and aftercare review items.",
+  "Required legal artifacts exist in the repo and match the approved review packet.",
+  "No privileged attorney advice, secrets, or client data are committed.",
+  "Placeholder legal/compliance copy is replaced only after approval is recorded.",
+  "CI quality gate evidence includes legal review verification.",
+] as const;
+
 export interface LegalReviewRuntimeReadinessPlan {
   readonly status: "ready" | "blocked";
   readonly missingApprovedItems: readonly string[];
   readonly missingArtifacts: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof legalReviewRuntimeRequiredCommands;
+  readonly requiredEvidence: typeof legalReviewRuntimeRequiredEvidence;
   readonly blockers: readonly string[];
 }
 
@@ -1329,21 +1623,8 @@ export function buildLegalReviewRuntimeReadinessPlan(
     status: blockers.length === 0 ? "ready" : "blocked",
     missingApprovedItems,
     missingArtifacts,
-    requiredCommands: [
-      "pnpm legal:verify-review",
-      "pnpm quality:gates",
-      "pnpm quality:all",
-      "GitHub Actions CI quality job",
-      "qualified counsel review outside the repository",
-    ],
-    requiredEvidence: [
-      "Legal review audit output showing every required item approved.",
-      "Redacted evidence labels for privacy, terms, consent, medical, payments/refunds, SMS/notifications, and aftercare review items.",
-      "Required legal artifacts exist in the repo and match the approved review packet.",
-      "No privileged attorney advice, secrets, or client data are committed.",
-      "Placeholder legal/compliance copy is replaced only after approval is recorded.",
-      "CI quality gate evidence includes legal review verification.",
-    ],
+    requiredCommands: legalReviewRuntimeRequiredCommands,
+    requiredEvidence: legalReviewRuntimeRequiredEvidence,
     blockers,
   };
 }
@@ -1366,10 +1647,157 @@ export interface PrDiffEvidenceRuntimeReadinessInput {
 
 export interface PrDiffEvidenceRuntimeReadinessPlan {
   readonly status: "ready" | "blocked";
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof requiredPrDiffEvidenceRuntimeCommands;
+  readonly requiredEvidence: typeof prDiffEvidenceRuntimeReadinessRequiredEvidence;
   readonly blockers: readonly string[];
 }
+
+export const requiredPrDiffEvidenceRuntimeArtifacts = [
+  "docs/quality/manifests/gap-evidence-audit.json",
+  "docs/quality/manifests/pr-gap-diff-fixtures.json",
+  "PrDiffEvidenceRun persistence row",
+  "no-PR context skip artifact",
+  "merge-base fallback artifact",
+  "positive PR diff fixture artifact",
+  "negative PR diff fixture artifact",
+  "secret-safe PR diff log review",
+] as const;
+
+export const requiredPrDiffEvidenceRuntimeCommands = [
+  "pnpm quality:pr-gaps",
+  "pnpm quality:pr-gap-fixtures",
+  "simulate no-PR context skip",
+  "GitHub Actions pull_request quality job",
+  "simulated PR diff audit with missing merge-base fallback",
+  "capture positive PR diff fixture artifact",
+  "capture negative PR diff fixture artifact",
+  "perform secret-safe PR diff log review",
+] as const;
+
+export const prDiffEvidenceRuntimeReadinessRequiredEvidence = [
+  "PR diff audit output for no-PR context skip.",
+  "Positive fixture output proving evidence-backed closed/blocker-downgrade rows pass.",
+  "Negative fixture output proving evidence-free closed/blocker-downgrade rows fail.",
+  "Shallow-checkout or missing merge-base fallback output.",
+  "CI pull_request step showing pnpm quality:pr-gaps execution.",
+  "Secret-safe log review for PR diff enforcement output.",
+] as const;
+
+export type PrDiffEvidenceRuntimeArtifact = (typeof requiredPrDiffEvidenceRuntimeArtifacts)[number];
+export type PrDiffEvidenceRuntimeCommand = (typeof requiredPrDiffEvidenceRuntimeCommands)[number];
+
+export interface PrDiffEvidenceEvidenceInput extends PrDiffEvidenceRuntimeReadinessInput {
+  readonly capturedArtifacts: readonly PrDiffEvidenceRuntimeArtifact[];
+  readonly completedCommands: readonly PrDiffEvidenceRuntimeCommand[];
+  readonly prDiffEvidenceRunPersisted: boolean;
+}
+
+export interface PrDiffEvidenceEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly readinessPlan: PrDiffEvidenceRuntimeReadinessPlan;
+  readonly missingArtifacts: readonly PrDiffEvidenceRuntimeArtifact[];
+  readonly missingCommands: readonly PrDiffEvidenceRuntimeCommand[];
+  readonly requiredArtifacts: typeof requiredPrDiffEvidenceRuntimeArtifacts;
+  readonly requiredCommands: typeof requiredPrDiffEvidenceRuntimeCommands;
+  readonly requiredEvidence: PrDiffEvidenceRuntimeExecutionRequiredEvidence;
+  readonly blockers: readonly string[];
+}
+
+export interface PrDiffEvidenceRuntimeExecutionPlan {
+  readonly localCommands: typeof prDiffEvidenceRuntimeLocalCommands;
+  readonly externalCommands: typeof prDiffEvidenceRuntimeExternalCommands;
+  readonly localArtifacts: typeof prDiffEvidenceRuntimeLocalArtifacts;
+  readonly externalArtifacts: typeof prDiffEvidenceRuntimeExternalArtifacts;
+  readonly prGapAuditExecutionAllowed: false;
+  readonly fixtureVerificationExecutionAllowed: false;
+  readonly noPrSkipSimulationExecutionAllowed: false;
+  readonly pullRequestCiExecutionAllowed: false;
+  readonly mergeBaseFallbackSimulationExecutionAllowed: false;
+  readonly positiveFixtureArtifactCaptureAllowed: false;
+  readonly negativeFixtureArtifactCaptureAllowed: false;
+  readonly secretSafeLogReviewAllowed: false;
+  readonly persistenceExecutionAllowed: false;
+  readonly branchProtectionEnforcementAllowed: false;
+  readonly executionPolicy: PrDiffEvidenceRuntimeExecutionPolicy;
+  readonly requiredExternalEvidence: typeof prDiffEvidenceRuntimeRequiredExternalEvidence;
+}
+
+export interface PrDiffEvidenceRuntimeArtifactReview {
+  readonly artifact: unknown;
+  readonly redactions: readonly string[];
+  readonly requiredExternalEvidence: typeof prDiffEvidenceRuntimeRequiredExternalEvidence;
+  readonly safeForTracker: boolean;
+}
+
+export type PrDiffEvidenceRuntimeExecutionRequiredEvidence = readonly [
+  ...typeof prDiffEvidenceRuntimeReadinessRequiredEvidence,
+  "Durable PrDiffEvidenceRun row containing diff audit, fixture, evidence rule, and artifact matrices.",
+  "Artifact manifest proving no-PR skip, merge-base fallback, positive fixture, negative fixture, and secret-safe log evidence.",
+];
+
+export function buildPrDiffEvidenceRuntimeExecutionRequiredEvidence(
+  readinessEvidence: typeof prDiffEvidenceRuntimeReadinessRequiredEvidence,
+): PrDiffEvidenceRuntimeExecutionRequiredEvidence {
+  return [
+    ...readinessEvidence,
+    "Durable PrDiffEvidenceRun row containing diff audit, fixture, evidence rule, and artifact matrices.",
+    "Artifact manifest proving no-PR skip, merge-base fallback, positive fixture, negative fixture, and secret-safe log evidence.",
+  ];
+}
+
+export const prDiffEvidenceRuntimeRequiredExternalEvidence = [
+  "Runtime command output for PR gap audit, fixture verification, no-PR skip, merge-base fallback, fixture artifact capture, and secret-safe log review.",
+  "GitHub Actions pull_request quality job URL and conclusion.",
+  "Durable PrDiffEvidenceRun persistence row captured from the target database.",
+  "Redacted branch-protection evidence proving required PR diff checks block unsafe merges.",
+  "Secret-safe log review artifact proving no tokens, provider IDs, customer data, or raw URLs are exposed.",
+] as const;
+
+export const prDiffEvidenceRuntimeLocalCommands = [
+  "pnpm quality:pr-gaps",
+  "pnpm quality:pr-gap-fixtures",
+  "simulate no-PR context skip",
+  "simulated PR diff audit with missing merge-base fallback",
+  "capture positive PR diff fixture artifact",
+  "capture negative PR diff fixture artifact",
+  "perform secret-safe PR diff log review",
+] as const satisfies readonly PrDiffEvidenceRuntimeCommand[];
+
+export const prDiffEvidenceRuntimeExternalCommands = [
+  "GitHub Actions pull_request quality job",
+] as const satisfies readonly PrDiffEvidenceRuntimeCommand[];
+
+export const prDiffEvidenceRuntimeLocalArtifacts = [
+  "docs/quality/manifests/gap-evidence-audit.json",
+  "docs/quality/manifests/pr-gap-diff-fixtures.json",
+  "no-PR context skip artifact",
+  "merge-base fallback artifact",
+  "positive PR diff fixture artifact",
+  "negative PR diff fixture artifact",
+  "secret-safe PR diff log review",
+] as const satisfies readonly PrDiffEvidenceRuntimeArtifact[];
+
+export const prDiffEvidenceRuntimeExternalArtifacts = [
+  "PrDiffEvidenceRun persistence row",
+] as const satisfies readonly PrDiffEvidenceRuntimeArtifact[];
+
+export type PrDiffEvidenceRuntimeExecutionPolicy = {
+  readonly codexMayClassifyStaticPrDiffEvidence: true;
+  readonly runtimeCommandEvidenceRequiredForClosure: true;
+  readonly ciPullRequestEvidenceRequiredForClosure: true;
+  readonly providerDatabaseRequiredForPersistence: true;
+  readonly branchProtectionEvidenceRequiredForClosure: true;
+  readonly secretSafeLogReviewRequiredForClosure: true;
+};
+
+export const prDiffEvidenceRuntimeExecutionPolicy: PrDiffEvidenceRuntimeExecutionPolicy = {
+  codexMayClassifyStaticPrDiffEvidence: true,
+  runtimeCommandEvidenceRequiredForClosure: true,
+  ciPullRequestEvidenceRequiredForClosure: true,
+  providerDatabaseRequiredForPersistence: true,
+  branchProtectionEvidenceRequiredForClosure: true,
+  secretSafeLogReviewRequiredForClosure: true,
+};
 
 export interface PrDiffEvidenceRunPersistenceContract {
   readonly prismaModel: "PrDiffEvidenceRun";
@@ -1472,21 +1900,118 @@ export function buildPrDiffEvidenceRuntimeReadinessPlan(
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
-    requiredCommands: [
-      "pnpm quality:pr-gaps",
-      "pnpm quality:pr-gap-fixtures",
-      "GitHub Actions pull_request quality job",
-      "simulated PR diff audit with missing merge-base fallback",
-    ],
-    requiredEvidence: [
-      "PR diff audit output for no-PR context skip.",
-      "Positive fixture output proving evidence-backed closed/blocker-downgrade rows pass.",
-      "Negative fixture output proving evidence-free closed/blocker-downgrade rows fail.",
-      "Shallow-checkout or missing merge-base fallback output.",
-      "CI pull_request step showing pnpm quality:pr-gaps execution.",
-      "Secret-safe log review for PR diff enforcement output.",
-    ],
+    requiredCommands: requiredPrDiffEvidenceRuntimeCommands,
+    requiredEvidence: prDiffEvidenceRuntimeReadinessRequiredEvidence,
     blockers,
+  };
+}
+
+export function buildPrDiffEvidenceEvidenceDecision(
+  input: PrDiffEvidenceEvidenceInput,
+): PrDiffEvidenceEvidenceDecision {
+  const readinessPlan = buildPrDiffEvidenceRuntimeReadinessPlan(input);
+  const capturedArtifacts = new Set(input.capturedArtifacts);
+  const completedCommands = new Set(input.completedCommands);
+  const missingArtifacts = requiredPrDiffEvidenceRuntimeArtifacts.filter((artifact) => !capturedArtifacts.has(artifact));
+  const missingCommands = requiredPrDiffEvidenceRuntimeCommands.filter((command) => !completedCommands.has(command));
+  const blockers = [...readinessPlan.blockers];
+
+  if (!input.prDiffEvidenceRunPersisted) {
+    blockers.push("PrDiffEvidenceRun persistence row must be captured for durable auditability.");
+  }
+  if (missingArtifacts.length > 0) {
+    blockers.push("Every required PR diff evidence artifact must be captured.");
+  }
+  if (missingCommands.length > 0) {
+    blockers.push("Every required PR diff evidence command must be completed.");
+  }
+
+  return {
+    status: blockers.length === 0 && missingArtifacts.length === 0 && missingCommands.length === 0 ? "complete" : "blocked",
+    readinessPlan,
+    missingArtifacts,
+    missingCommands,
+    requiredArtifacts: requiredPrDiffEvidenceRuntimeArtifacts,
+    requiredCommands: requiredPrDiffEvidenceRuntimeCommands,
+    requiredEvidence: buildPrDiffEvidenceRuntimeExecutionRequiredEvidence(readinessPlan.requiredEvidence),
+    blockers,
+  };
+}
+
+const sensitivePrDiffEvidenceKeyPattern =
+  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|branch|repository|owner)$/iu;
+const sensitivePrDiffEvidenceValuePattern =
+  /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+
+const redactPrDiffEvidenceString = (value: string): string =>
+  value.replace(sensitivePrDiffEvidenceValuePattern, "[REDACTED]");
+
+const buildRedactedPrDiffEvidenceValue = (
+  value: unknown,
+  path: string,
+  redactions: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((item, index) => buildRedactedPrDiffEvidenceValue(item, `${path}[${index}]`, redactions));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, nestedValue]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (sensitivePrDiffEvidenceKeyPattern.test(key)) {
+          redactions.push(nextPath);
+          return [key, "[REDACTED]"];
+        }
+        return [key, buildRedactedPrDiffEvidenceValue(nestedValue, nextPath, redactions)];
+      }),
+    );
+  }
+
+  if (typeof value === "string") {
+    const redactedValue = redactPrDiffEvidenceString(value);
+    if (redactedValue !== value) {
+      redactions.push(path || "value");
+    }
+    return redactedValue;
+  }
+
+  return value;
+};
+
+export function buildPrDiffEvidenceRuntimeExecutionPlan(): PrDiffEvidenceRuntimeExecutionPlan {
+  return {
+    localCommands: prDiffEvidenceRuntimeLocalCommands,
+    externalCommands: prDiffEvidenceRuntimeExternalCommands,
+    localArtifacts: prDiffEvidenceRuntimeLocalArtifacts,
+    externalArtifacts: prDiffEvidenceRuntimeExternalArtifacts,
+    prGapAuditExecutionAllowed: false,
+    fixtureVerificationExecutionAllowed: false,
+    noPrSkipSimulationExecutionAllowed: false,
+    pullRequestCiExecutionAllowed: false,
+    mergeBaseFallbackSimulationExecutionAllowed: false,
+    positiveFixtureArtifactCaptureAllowed: false,
+    negativeFixtureArtifactCaptureAllowed: false,
+    secretSafeLogReviewAllowed: false,
+    persistenceExecutionAllowed: false,
+    branchProtectionEnforcementAllowed: false,
+    executionPolicy: prDiffEvidenceRuntimeExecutionPolicy,
+    requiredExternalEvidence: prDiffEvidenceRuntimeRequiredExternalEvidence,
+  };
+}
+
+export function buildRedactedPrDiffEvidenceArtifact(artifact: unknown): unknown {
+  return buildRedactedPrDiffEvidenceValue(artifact, "", []);
+}
+
+export function buildPrDiffEvidenceRuntimeArtifactReview(artifact: unknown): PrDiffEvidenceRuntimeArtifactReview {
+  const redactions: string[] = [];
+
+  return {
+    artifact: buildRedactedPrDiffEvidenceValue(artifact, "", redactions),
+    redactions,
+    requiredExternalEvidence: prDiffEvidenceRuntimeRequiredExternalEvidence,
+    safeForTracker: true,
   };
 }
 
@@ -1508,11 +2033,30 @@ export interface SemanticDocumentationRuntimeReadinessInput {
   readonly legalReviewSeparated: boolean;
 }
 
+export const semanticDocumentationRuntimeRequiredCommands = [
+  "pnpm quality:docs",
+  "node scripts/quality/audit-doc-links.mjs",
+  "node scripts/quality/verify-documentation-consistency.mjs",
+  "node scripts/quality/verify-documentation-inventory.mjs",
+  "GitHub Actions CI quality job",
+  "document that semantic docs are not runtime build or live route proof",
+  "document that provider readiness proof stays separate from wording checks",
+  "document that legal review proof stays separate from wording checks",
+] as const;
+
+export const semanticDocumentationRuntimeRequiredEvidence = [
+  "Markdown link/path audit output with no broken relative links or missing concrete repo paths.",
+  "Documentation consistency audit output for production-readiness claims, API route references, provider language, and legal language.",
+  "Documentation inventory audit output proving documented apps/packages match workspace members.",
+  "CI evidence for quality:docs.",
+  "Explicit notes that runtime build proof, provider proof, and legal review remain separate evidence gates.",
+] as const;
+
 export interface SemanticDocumentationRuntimeReadinessPlan {
   readonly status: "ready" | "blocked";
   readonly failedSemanticChecks: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof semanticDocumentationRuntimeRequiredCommands;
+  readonly requiredEvidence: typeof semanticDocumentationRuntimeRequiredEvidence;
   readonly blockers: readonly string[];
 }
 
@@ -1554,20 +2098,8 @@ export function buildSemanticDocumentationRuntimeReadinessPlan(
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     failedSemanticChecks,
-    requiredCommands: [
-      "pnpm quality:docs",
-      "node scripts/quality/audit-doc-links.mjs",
-      "node scripts/quality/verify-documentation-consistency.mjs",
-      "node scripts/quality/verify-documentation-inventory.mjs",
-      "GitHub Actions CI quality job",
-    ],
-    requiredEvidence: [
-      "Markdown link/path audit output with no broken relative links or missing concrete repo paths.",
-      "Documentation consistency audit output for production-readiness claims, API route references, provider language, and legal language.",
-      "Documentation inventory audit output proving documented apps/packages match workspace members.",
-      "CI evidence for quality:docs.",
-      "Explicit notes that runtime build proof, provider proof, and legal review remain separate evidence gates.",
-    ],
+    requiredCommands: semanticDocumentationRuntimeRequiredCommands,
+    requiredEvidence: semanticDocumentationRuntimeRequiredEvidence,
     blockers,
   };
 }
@@ -1588,14 +2120,31 @@ export interface RequiredChecksRuntimeReadinessInput {
   readonly codeownersReviewActive: boolean;
 }
 
+export const requiredChecksRuntimeRequiredCommands = [
+  "pnpm quality:required-checks",
+  "pnpm quality:all",
+  "GitHub branch protection required-check audit",
+  "GitHub repository settings audit",
+  "failing quality-gate PR merge-block proof",
+  "CODEOWNERS review enforcement proof",
+] as const;
+
+export const requiredChecksRuntimeRequiredEvidence = [
+  "Required checks audit output proving package scripts and CI workflow terms are present.",
+  "Branch protection settings showing every documented required check is enforced.",
+  "Repository settings showing pull request, up-to-date branch, CODEOWNERS review, conversation resolution, force-push/deletion restrictions, and secret scanning controls.",
+  "A failing quality-gate PR that cannot merge.",
+  "CODEOWNERS review enforcement proof.",
+] as const;
+
 export interface RequiredChecksRuntimeReadinessPlan {
   readonly status: "ready" | "blocked";
   readonly missingPackageScripts: readonly string[];
   readonly missingWorkflowTerms: readonly string[];
   readonly missingBranchProtectionChecks: readonly string[];
   readonly missingRepositorySettings: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof requiredChecksRuntimeRequiredCommands;
+  readonly requiredEvidence: typeof requiredChecksRuntimeRequiredEvidence;
   readonly blockers: readonly string[];
 }
 
@@ -1644,20 +2193,41 @@ export function buildRequiredChecksRuntimeReadinessPlan(
     missingWorkflowTerms,
     missingBranchProtectionChecks,
     missingRepositorySettings,
-    requiredCommands: [
-      "pnpm quality:required-checks",
-      "pnpm quality:all",
-      "GitHub branch protection required-check audit",
-      "GitHub repository settings audit",
-      "failing quality-gate PR merge-block proof",
-    ],
-    requiredEvidence: [
-      "Required checks audit output proving package scripts and CI workflow terms are present.",
-      "Branch protection settings showing every documented required check is enforced.",
-      "Repository settings showing pull request, up-to-date branch, CODEOWNERS review, conversation resolution, force-push/deletion restrictions, and secret scanning controls.",
-      "A failing quality-gate PR that cannot merge.",
-      "CODEOWNERS review enforcement proof.",
-    ],
+    requiredCommands: requiredChecksRuntimeRequiredCommands,
+    requiredEvidence: requiredChecksRuntimeRequiredEvidence,
     blockers,
   };
 }
+
+export const prGapEvidenceEnforcementProofFiles = [
+  "docs/handoff/GAP_CLOSURE_PROTOCOL.md",
+  ".github/PULL_REQUEST_TEMPLATE.md",
+  ".github/ISSUE_TEMPLATE/gap_closure.md",
+  "GAP_TRACKER.md",
+  "scripts/quality/audit-gap-evidence.mjs",
+  "scripts/quality/audit-gap-tracker-diff.mjs",
+  "scripts/quality/verify-pr-gap-diff-fixtures.mjs",
+  "scripts/quality/fixtures/pr-gap-diff/valid-with-evidence.diff",
+  "scripts/quality/fixtures/pr-gap-diff/invalid-missing-evidence.diff",
+  "packages/quality/src/index.ts",
+  "packages/quality/tests/quality-gates.test.ts",
+  "docs/quality/manifests/gap-evidence-audit.json",
+  "packages/db/prisma/schema.prisma",
+  "packages/db/prisma/migrations/20260609026000_add_pr_gap_evidence_enforcement_runs/migration.sql",
+  ".github/workflows/ci.yml"
+] as const;
+
+export const prDiffEvidenceRuntimeProofFiles = [
+  "scripts/quality/audit-gap-evidence.mjs",
+  "scripts/quality/audit-gap-tracker-diff.mjs",
+  "scripts/quality/verify-pr-gap-diff-fixtures.mjs",
+  "scripts/quality/fixtures/pr-gap-diff/valid-with-evidence.diff",
+  "scripts/quality/fixtures/pr-gap-diff/invalid-missing-evidence.diff",
+  "packages/quality/package.json",
+  "packages/quality/src/index.ts",
+  "packages/quality/tests/quality-gates.test.ts",
+  "docs/quality/QUALITY_GATE_PROTOCOL.md",
+  ".github/workflows/ci.yml",
+  "packages/db/prisma/schema.prisma",
+  "packages/db/prisma/migrations/20260609030000_add_pr_diff_evidence_runs/migration.sql"
+] as const;

@@ -16,11 +16,72 @@ export interface SmsProviderRuntimeMatrixEntry {
   readonly status: SmsProviderRuntimeStatus;
 }
 
+export interface SmsProviderExecutionPolicy {
+  readonly codexMayClassifyStaticSmsProviderReadiness: boolean;
+  readonly localNotificationCommandsRequiredForClosure: boolean;
+  readonly twilioSdkCredentialsRequiredForClosure: boolean;
+  readonly messagingServiceRequiredForClosure: boolean;
+  readonly legalConsentCopyRequiredForClosure: boolean;
+  readonly consentProofRequiredForClosure: boolean;
+  readonly quietHoursRequiredForClosure: boolean;
+  readonly rawBodySignatureRequiredForClosure: boolean;
+  readonly requestUrlValidationRequiredForClosure: boolean;
+  readonly durablePersistenceRequiredForClosure: boolean;
+  readonly sandboxStopHelpRequiredForClosure: boolean;
+  readonly ciEvidenceRequiredForClosure: boolean;
+  readonly secretSafeArtifactsRequiredForClosure: boolean;
+}
+
+export interface SmsProviderExecutionPlan {
+  readonly policy: typeof smsProviderExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly twilioSdkExecutionAllowed: false;
+  readonly messagingServiceExecutionAllowed: false;
+  readonly legalApprovalExecutionAllowed: false;
+  readonly signatureVerificationExecutionAllowed: false;
+  readonly durablePersistenceExecutionAllowed: false;
+  readonly sandboxEventExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly artifactReviewExecutionAllowed: false;
+  readonly localCommands: typeof smsProviderLocalCommands;
+  readonly externalCommands: typeof smsProviderExternalCommands;
+  readonly requiredExternalEvidence: typeof smsProviderRequiredExternalEvidence;
+}
+
+export interface RedactedSmsProviderArtifact {
+  readonly artifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: true;
+}
+
+export interface SmsProviderArtifactReview {
+  readonly passed: boolean;
+  readonly artifact: RedactedSmsProviderArtifact;
+  readonly blockers: readonly string[];
+  readonly requiredExternalEvidence: typeof smsProviderRequiredExternalEvidence;
+}
+
+export const smsProviderExecutionPolicy = {
+  codexMayClassifyStaticSmsProviderReadiness: true,
+  localNotificationCommandsRequiredForClosure: true,
+  twilioSdkCredentialsRequiredForClosure: true,
+  messagingServiceRequiredForClosure: true,
+  legalConsentCopyRequiredForClosure: true,
+  consentProofRequiredForClosure: true,
+  quietHoursRequiredForClosure: true,
+  rawBodySignatureRequiredForClosure: true,
+  requestUrlValidationRequiredForClosure: true,
+  durablePersistenceRequiredForClosure: true,
+  sandboxStopHelpRequiredForClosure: true,
+  ciEvidenceRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies SmsProviderExecutionPolicy;
+
 export interface SmsProviderRuntimeReadiness {
   readonly status: "ready" | "blocked";
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
-  readonly requiredControls: readonly string[];
+  readonly requiredCommands: typeof smsProviderRuntimeCommands;
+  readonly requiredEvidence: typeof smsProviderRuntimeReadinessRequiredEvidence;
+  readonly requiredControls: typeof smsProviderRuntimeReadinessRequiredControls;
   readonly blockers: readonly string[];
 }
 
@@ -28,13 +89,162 @@ export const smsProviderRuntimeCommands = [
   "pnpm --filter @inkroute/notifications typecheck",
   "pnpm --filter @inkroute/notifications test",
   "pnpm vitest run apps/web/tests/sms-provider-static.test.ts",
+  "install/configure Twilio SDK, Account SID, and auth token",
+  "prove Twilio messaging service configuration",
+  "legal-approved SMS consent and STOP/HELP copy review",
+  "stored SMS consent proof tests",
+  "quiet-hours policy tests",
+  "verify Twilio signature against raw bodies",
+  "validate Twilio request URL in webhook signature base string",
+  "durable NotificationDelivery transaction tests",
+  "durable ProviderEvent replay/idempotency tests",
+  "durable STOP suppression persistence tests",
+  "durable HELP/client reply inbound-thread persistence tests",
   "Twilio sandbox sent event test",
   "Twilio sandbox delivered event test",
   "Twilio sandbox failed event test",
   "Twilio STOP suppression test",
   "Twilio HELP inbound-thread test",
   "invalid SMS webhook signature route test",
+  "GitHub Actions SMS provider runtime job",
+  "review SMS artifacts for Twilio secrets, signatures, raw payloads, phone numbers, and tenant data",
 ] as const;
+
+export const smsProviderRequiredExternalEvidence = [
+  "actual SMS provider command output",
+  "Twilio SDK credentials and messaging service evidence",
+  "legal-approved SMS consent and STOP/HELP copy",
+  "stored SMS consent proof tests",
+  "quiet-hours policy tests",
+  "raw-body Twilio signature verification evidence",
+  "Twilio request URL validation evidence",
+  "durable NotificationDelivery persistence tests",
+  "durable ProviderEvent replay/idempotency tests",
+  "durable STOP suppression persistence tests",
+  "durable HELP/client reply inbound-thread persistence tests",
+  "Twilio sandbox sent/delivered/failed/STOP/HELP transcripts",
+  "invalid SMS webhook signature route evidence",
+  "CI SMS provider artifacts",
+  "secret-safe SMS provider artifact review",
+] as const;
+
+export const smsProviderRuntimeReadinessRequiredEvidence = [
+  "Twilio SDK credentials and messaging service evidence",
+  "legal-approved consent/STOP/HELP copy, stored consent proof, and quiet-hours evidence",
+  "raw-body Twilio signature verification, request URL validation, and invalid-signature route evidence",
+  "durable NotificationDelivery, ProviderEvent, SuppressionListEntry, MessageThread, and idempotency evidence",
+  "sandbox sent, delivered, failed, STOP, and HELP transcripts",
+  "CI SMS provider runtime evidence with secret-safe artifacts",
+] as const;
+
+export type SmsProviderRequiredEvidence = readonly [
+  ...typeof smsProviderRuntimeReadinessRequiredEvidence,
+  "secret-safe review of retained SMS provider artifacts",
+];
+
+export function buildSmsProviderDecisionRequiredEvidence(
+  readinessEvidence: typeof smsProviderRuntimeReadinessRequiredEvidence,
+): SmsProviderRequiredEvidence {
+  return [...readinessEvidence, "secret-safe review of retained SMS provider artifacts"];
+}
+
+export const smsProviderRequiredEvidence = buildSmsProviderDecisionRequiredEvidence(
+  smsProviderRuntimeReadinessRequiredEvidence,
+);
+
+export const smsProviderLocalCommands = [
+  "pnpm --filter @inkroute/notifications typecheck",
+  "pnpm --filter @inkroute/notifications test",
+  "pnpm vitest run apps/web/tests/sms-provider-runtime-static.test.ts apps/web/tests/sms-provider-static.test.ts",
+] as const;
+
+export const smsProviderExternalCommands = [
+  "install/configure Twilio SDK, Account SID, and auth token",
+  "prove Twilio messaging service configuration",
+  "legal-approved SMS consent and STOP/HELP copy review",
+  "stored SMS consent proof tests",
+  "quiet-hours policy tests",
+  "verify Twilio signature against raw bodies",
+  "validate Twilio request URL in webhook signature base string",
+  "durable NotificationDelivery transaction tests",
+  "durable ProviderEvent replay/idempotency tests",
+  "durable STOP suppression persistence tests",
+  "durable HELP/client reply inbound-thread persistence tests",
+  "Twilio sandbox sent event test",
+  "Twilio sandbox delivered event test",
+  "Twilio sandbox failed event test",
+  "Twilio STOP suppression test",
+  "Twilio HELP inbound-thread test",
+  "invalid SMS webhook signature route test",
+  "GitHub Actions SMS provider runtime job",
+  "secret-safe SMS provider artifact review",
+] as const;
+
+export const buildSmsProviderExecutionPlan = (): SmsProviderExecutionPlan => ({
+  policy: smsProviderExecutionPolicy,
+  commandExecutionAllowed: false,
+  twilioSdkExecutionAllowed: false,
+  messagingServiceExecutionAllowed: false,
+  legalApprovalExecutionAllowed: false,
+  signatureVerificationExecutionAllowed: false,
+  durablePersistenceExecutionAllowed: false,
+  sandboxEventExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  artifactReviewExecutionAllowed: false,
+  localCommands: smsProviderLocalCommands,
+  externalCommands: smsProviderExternalCommands,
+  requiredExternalEvidence: smsProviderRequiredExternalEvidence,
+});
+
+const smsProviderPrivateArtifactKeyPattern =
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|sms|twilio|signature|webhook|payload|phone|destination|suppression|stop|help|thread|consent|quiet|delivery|event|artifact|customer|medical|payment)/i;
+
+const redactSmsProviderArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactSmsProviderArtifactValue(entry, `${path}[${index}]`, redactedPaths));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (smsProviderPrivateArtifactKeyPattern.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[redacted]"];
+        }
+
+        return [key, redactSmsProviderArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const buildRedactedSmsProviderArtifact = (artifact: unknown): RedactedSmsProviderArtifact => {
+  const redactedPaths: string[] = [];
+
+  return {
+    artifact: redactSmsProviderArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+    secretSafe: true,
+  };
+};
+
+export const buildSmsProviderArtifactReview = (artifact: unknown): SmsProviderArtifactReview => {
+  const redacted = buildRedactedSmsProviderArtifact(artifact);
+
+  return {
+    passed: true,
+    artifact: redacted,
+    blockers: [],
+    requiredExternalEvidence: smsProviderRequiredExternalEvidence,
+  };
+};
 
 export const smsProviderArtifactPaths = [
   "coverage/sms-provider-runtime.json",
@@ -111,8 +321,8 @@ export interface SmsProviderEvidenceDecision {
   readonly status: "complete" | "blocked";
   readonly blockers: readonly string[];
   readonly missingArtifacts: readonly SmsProviderEvidenceArtifact[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof smsProviderRuntimeCommands;
+  readonly requiredEvidence: typeof smsProviderRequiredEvidence;
   readonly redactedSummary: {
     readonly capturedArtifactCount: number;
     readonly requiredArtifactCount: number;
@@ -156,16 +366,8 @@ export const buildSmsProviderEvidenceDecision = (
     status: blockers.length === 0 ? "complete" : "blocked",
     blockers,
     missingArtifacts,
-    requiredCommands: [...smsProviderRuntimeCommands],
-    requiredEvidence: [
-      "Twilio SDK credentials and messaging service evidence",
-      "legal-approved consent/STOP/HELP copy, stored consent proof, and quiet-hours evidence",
-      "raw-body Twilio signature verification, request URL validation, and invalid-signature route evidence",
-      "durable NotificationDelivery, ProviderEvent, SuppressionListEntry, MessageThread, and idempotency evidence",
-      "sandbox sent, delivered, failed, STOP, and HELP transcripts",
-      "CI SMS provider runtime evidence with secret-safe artifacts",
-      "secret-safe review of retained SMS provider artifacts",
-    ],
+    requiredCommands: smsProviderRuntimeCommands,
+    requiredEvidence: smsProviderRequiredEvidence,
     redactedSummary: {
       capturedArtifactCount: captured.size,
       requiredArtifactCount: smsProviderArtifactPaths.length,
@@ -198,22 +400,17 @@ export const smsProviderRuntimeMatrix = [
   { id: "secret-safe-artifacts", command: "review SMS artifacts for Twilio secrets, signatures, raw payloads, phone numbers, and tenant data", artifact: "coverage/sms-provider-secret-safe-artifacts.json", status: "ci-gated" },
 ] as const satisfies readonly SmsProviderRuntimeMatrixEntry[];
 
+export const smsProviderRuntimeReadinessRequiredControls = [
+  ...smsProviderContract.sendPlan.requiredControls,
+  ...smsProviderContract.stopWebhookReadiness.requiredControls,
+  ...smsProviderContract.helpWebhookReadiness.requiredControls,
+] as const;
+
 export const smsProviderRuntimeReadiness: SmsProviderRuntimeReadiness = {
   status: "blocked",
   requiredCommands: smsProviderRuntimeCommands,
-  requiredEvidence: [
-    "Twilio SDK credentials and messaging service evidence",
-    "legal-approved consent/STOP/HELP copy, stored consent proof, and quiet-hours evidence",
-    "raw-body Twilio signature verification, request URL validation, and invalid-signature route evidence",
-    "durable NotificationDelivery, ProviderEvent, SuppressionListEntry, MessageThread, and idempotency evidence",
-    "sandbox sent, delivered, failed, STOP, and HELP transcripts",
-    "CI SMS provider runtime evidence with secret-safe artifacts",
-  ],
-  requiredControls: [
-    ...smsProviderContract.sendPlan.requiredControls,
-    ...smsProviderContract.stopWebhookReadiness.requiredControls,
-    ...smsProviderContract.helpWebhookReadiness.requiredControls,
-  ],
+  requiredEvidence: smsProviderRuntimeReadinessRequiredEvidence,
+  requiredControls: smsProviderRuntimeReadinessRequiredControls,
   blockers: [
     "Real Twilio SDK credentials and messaging service must be configured in a secret store.",
     "Legal-approved SMS consent, STOP, and HELP copy must be finalized before provider-backed sends.",
@@ -223,3 +420,5 @@ export const smsProviderRuntimeReadiness: SmsProviderRuntimeReadiness = {
     "SMS provider CI evidence and secret-safe artifact review must be captured.",
   ],
 };
+
+

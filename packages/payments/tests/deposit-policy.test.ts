@@ -16,6 +16,21 @@ import {
   evaluateRefundPolicy,
   generateReceiptNumber,
   interpretStripeWebhook,
+  liveStripePaymentsReadinessRequiredCommands,
+  liveStripePaymentsReadinessRequiredEvidence,
+  paymentAutomatedTestReadinessRequiredEvidence,
+  paymentAutomatedTestReadinessRequiredCommands,
+  paymentLifecyclePersistenceRequiredControls,
+  paymentOperationsRuntimeRequiredEvidence,
+  paymentOperationsRuntimeRequiredCommands,
+  paymentOperationsWorkflowRequiredControls,
+  paymentPersistenceRuntimeRequiredEvidence,
+  paymentPersistenceRuntimeRequiredCommands,
+  stripeCheckoutExecutionRequiredControls,
+  stripeCheckoutRouteRuntimeRequiredCommands,
+  stripeCheckoutRouteRuntimeRequiredEvidence,
+  stripeWebhookRuntimeRequiredEvidence,
+  stripeWebhookRuntimeRequiredCommands,
   verifyStripeWebhookSignature,
 } from "../src/index";
 import { createHmac } from "node:crypto";
@@ -112,7 +127,7 @@ describe("payment policy engine", () => {
     expect(readiness.status).toBe("ready");
     expect(readiness.canCallStripe).toBe(true);
     expect(readiness.draft.idempotencyKey).toBe("deposit:tenant_demo:booking_demo:15000:usd");
-    expect(readiness.requiredControls).toContain("Return only Stripe-hosted checkout URL to the browser; never return secret keys or raw provider payloads.");
+    expect(readiness.requiredControls).toBe(stripeCheckoutExecutionRequiredControls);
     expect(readiness.blockers).toEqual([]);
   });
 
@@ -142,19 +157,8 @@ describe("payment policy engine", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "pnpm --filter @inkroute/payments typecheck",
-      "pnpm --filter @inkroute/web typecheck",
-      "pnpm test:unit -- apps/web/tests/payment-routes.test.ts",
-      "stripe trigger checkout.session.completed",
-    ]));
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "Stripe Checkout client route wiring with secret-backed test-mode configuration",
-      "accepted-booking or signed-token authorization tests for valid, invalid, and expired deposit access",
-      "tenant-scoped transaction evidence for Deposit, Payment, PaymentAuditLog, and IdempotencyKey writes",
-      "safe redirect allowlist and browser response redaction test output",
-      "Stripe test-mode Checkout and verified webhook reconciliation transcript",
-    ]));
+    expect(plan.requiredCommands).toBe(stripeCheckoutRouteRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(stripeCheckoutRouteRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("Deposit-session route must call the Stripe Checkout client instead of returning only a local preview.");
     expect(plan.blockers).toContain("Browser response must expose only the hosted Checkout URL and redacted local ids.");
     expect(plan.blockers).toContain("Stripe test-mode Checkout session creation must be verified with provider evidence.");
@@ -306,20 +310,8 @@ describe("payment policy engine", () => {
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
     expect(plan.missingSupportedEvents).toEqual(["checkout.session.expired", "charge.refunded", "charge.dispute.created"]);
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "pnpm --filter @inkroute/payments typecheck",
-      "pnpm test:unit -- apps/web/tests/payment-routes.test.ts",
-      "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
-      "stripe trigger checkout.session.completed",
-      "stripe trigger charge.refunded",
-    ]));
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "Stripe SDK constructEvent raw-body verification evidence with STRIPE_WEBHOOK_SECRET",
-      "persistent event-id replay protection and tenant-scoped transaction evidence",
-      "supported event reconciliation tests for success, failure, expiration, refund, dispute, and mismatch cases",
-      "Deposit, Payment, Refund, BookingStateEvent, and PaymentAuditLog persistence evidence",
-      "Stripe CLI replay transcript for supported events, invalid signature, and replay denial",
-    ]));
+    expect(plan.requiredCommands).toBe(stripeWebhookRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(stripeWebhookRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("Webhook route must use Stripe constructEvent with the raw request body.");
     expect(plan.blockers).toContain("Stripe event replay protection must persist provider event ids.");
     expect(plan.blockers).toContain("Stripe CLI replay tests must verify success, failure, expiration, refund, dispute, invalid signature, and replay behavior.");
@@ -352,7 +344,7 @@ describe("payment policy engine", () => {
       providerSessionId: "cs_test_001",
       bookingRequestId: "booking_demo",
     });
-    expect(plan.requiredControls).toContain("Execute all writes in one tenant-scoped database transaction.");
+    expect(plan.requiredControls).toBe(paymentLifecyclePersistenceRequiredControls);
     expect(plan.blockers).toEqual([]);
   });
 
@@ -382,20 +374,10 @@ describe("payment policy engine", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "pnpm --filter @inkroute/payments typecheck",
-      "pnpm --filter @inkroute/db prisma validate",
-      "payment persistence seeded Postgres integration tests",
-      "dashboard payment repository route/action tests",
-    ]));
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "Prisma models and tenant-scoped payment repository/service implementation",
-      "deposit, provider-session, paid, and failed transition persistence test output",
-      "refund and dispute persistence test output",
-      "PaymentAuditLog and BookingStateEvent persistence evidence for every lifecycle mutation",
-      "seeded Postgres integration tests for tenant isolation and idempotent replay",
-    ]));
-    expect(plan.blockers).toContain("Tenant-scoped payment repositories/services must be implemented.");
+    expect(plan.requiredCommands).toBe(paymentPersistenceRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(paymentPersistenceRuntimeRequiredEvidence);
+    expect(plan.blockers).toContain("Tenant-scoped payment repository/service evidence must be captured before payment persistence readiness.");
+    expect(plan.blockers).not.toContain("Tenant-scoped payment repositories/services must be implemented.");
     expect(plan.blockers).toContain("Every payment lifecycle mutation must persist a PaymentAuditLog row.");
     expect(plan.blockers).toContain("Seeded Postgres integration tests must pass for payment persistence lifecycle.");
   });
@@ -497,6 +479,7 @@ describe("payment policy engine", () => {
       refundAmountCents: 12500,
       actorId: "artist_001",
     });
+    expect(plan.requiredControls).toBe(paymentOperationsWorkflowRequiredControls);
     expect(plan.blockers).toEqual([]);
   });
 
@@ -653,22 +636,15 @@ describe("payment policy engine", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "pnpm --filter @inkroute/payments typecheck",
-      "pnpm --filter @inkroute/dashboard typecheck",
-      "stripe refunds.create test-mode smoke",
-      "dashboard payment operations E2E smoke",
-    ]));
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "authorized dashboard/server actions with cross-tenant denial tests",
-      "Stripe test-mode refund transcript and persisted Refund/PaymentAuditLog records",
-      "no-show forfeiture action evidence with BookingStateEvent and PaymentAuditLog rows",
-      "dispute evidence files and Stripe test-mode dispute sync transcript",
-      "generated and delivered receipt evidence with redacted client/payment data",
-      "accounting export file, redaction proof, and tax/accounting review approval",
-      "idempotency, audit-log, and dashboard E2E evidence for all payment operations",
-    ]));
+    expect(plan.requiredCommands).toBe(paymentOperationsRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(paymentOperationsRuntimeRequiredEvidence);
+    expect(plan.blockers).toContain("Dashboard/server payment operation action evidence must be captured before payment operations readiness.");
     expect(plan.blockers).toContain("Stripe test-mode refund execution must be verified.");
+    expect(plan.blockers).toContain("No-show forfeiture action evidence must be captured before payment operations readiness.");
+    expect(plan.blockers).toContain("Accounting export workflow evidence must be captured before payment operations readiness.");
+    expect(plan.blockers).not.toContain("Dashboard/server payment operation actions must be implemented.");
+    expect(plan.blockers).not.toContain("No-show forfeiture action must be implemented.");
+    expect(plan.blockers).not.toContain("Accounting export workflow must be implemented.");
     expect(plan.blockers).toContain("Tax/accounting review must approve export fields and retention policy.");
     expect(plan.blockers).toContain("Dashboard E2E evidence must cover refund, no-show, dispute, receipt, and export flows.");
   });
@@ -692,20 +668,8 @@ describe("payment policy engine", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "pnpm --filter @inkroute/payments test",
-      "pnpm vitest run apps/web/tests/payment-routes.test.ts",
-      "payment DB reconciliation integration tests",
-      "Stripe CLI payment lifecycle tests",
-      "Playwright booking-to-paid payment E2E flow",
-    ]));
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "payment helper, route-boundary, and Stripe signature test output",
-      "Stripe CLI lifecycle transcript for checkout success/failure/expiration/refund/dispute/replay",
-      "seeded DB reconciliation, tenant isolation, and idempotent replay test output",
-      "Playwright/dashboard E2E evidence for booking-to-paid, refund/no-show/dispute, receipt, and export flows",
-      "CI payment test job configuration and retained artifacts",
-    ]));
+    expect(plan.requiredCommands).toBe(paymentAutomatedTestReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(paymentAutomatedTestReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Stripe CLI lifecycle tests must cover checkout completed, failed payment, expired checkout, refund, dispute, invalid signature, and replay.");
     expect(plan.blockers).toContain("Booking-to-paid Playwright/E2E flow must pass.");
     expect(plan.blockers).toContain("Payment test artifacts must capture Stripe CLI logs, DB reconciliation output, and E2E screenshots/traces.");
@@ -736,15 +700,8 @@ describe("payment policy engine", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toContain("Stripe CLI checkout/payment/refund/dispute/replay lifecycle tests");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "Stripe SDK pin plus redacted secret/webhook/API-version configuration evidence.",
-      "Real Checkout session creation with persisted provider session and DB-backed idempotency evidence.",
-      "Raw-body webhook verification, replay protection, and supported lifecycle event evidence.",
-      "Tenant-scoped transactional reconciliation and cross-tenant denial evidence.",
-      "Refund execution and dispute workflow evidence or explicit blocked-operation audit evidence.",
-      "Stripe CLI, booking-to-paid E2E, CI, and secret-safe artifact evidence.",
-    ]));
+    expect(plan.requiredCommands).toBe(liveStripePaymentsReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(liveStripePaymentsReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Deposit session route must create real Stripe Checkout sessions in provider-backed mode.");
     expect(plan.blockers).toContain("Payment/refund/dispute reconciliation must run in tenant-scoped database transactions.");
     expect(plan.blockers).toContain("Payment artifacts must be redacted and free of Stripe secrets or client-private data.");

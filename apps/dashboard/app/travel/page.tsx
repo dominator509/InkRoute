@@ -1,7 +1,7 @@
 import { demoTravelStops } from "@inkroute/config";
 import { DashboardPageHeader } from "../../components/DashboardPageHeader";
-import { DisabledActionPanel } from "../../components/DisabledActionPanel";
 import { StatusPill } from "../../components/StatusPill";
+import { TravelPublishActionPanel } from "../../components/TravelPublishActionPanel";
 import { dashboardProjectedBookingRows, dashboardTravelPublishPlans } from "../../lib/demo";
 
 export default function TravelScheduleManagerPage() {
@@ -67,11 +67,7 @@ export default function TravelScheduleManagerPage() {
         </article>
       </section>
 
-      <DisabledActionPanel
-        title="Travel publishing actions"
-        description="Travel reads now use redacted dashboard APIs with AuditLog rows. City updates still need mutation APIs that persist to Postgres, update waitlists, create calendar blocks, queue provider sync, and trigger public site cache revalidation."
-        actions={["Add city", "Publish guest spot", "Open waitlist", "Generate availability", "Trigger public revalidation", "Queue calendar sync"]}
-      />
+      <TravelPublishActionPanel />
     </main>
   );
 }

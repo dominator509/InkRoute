@@ -1,5 +1,5 @@
-﻿import { DashboardPageHeader } from "../../components/DashboardPageHeader";
-import { DisabledActionPanel } from "../../components/DisabledActionPanel";
+import { DashboardPageHeader } from "../../components/DashboardPageHeader";
+import { MessageActionPanel } from "../../components/MessageActionPanel";
 import { IntegrationBoundaryCard } from "../../components/IntegrationBoundaryCard";
 import { StatusPill } from "../../components/StatusPill";
 import { dashboardRedactedDeliveryLogDrafts, dashboardRedactedMessageThreadDrafts, dashboardRedactedProviderWebhookPreviews } from "../../lib/demo";
@@ -29,7 +29,7 @@ export default function MessagesPage() {
             {dashboardRedactedMessageThreadDrafts.map((thread) => (
               <div className="stacked-item" key={thread.subject}>
                 <strong>{thread.subject}</strong>
-                <span>{thread.channel} Â· {thread.direction} Â· {thread.status}</span>
+                <span>{thread.channel} - {thread.direction} - {thread.status}</span>
                 <p>{thread.bodyPreview}</p>
                 <small>{thread.piiRedactionNote}</small>
               </div>
@@ -44,7 +44,7 @@ export default function MessagesPage() {
             {dashboardRedactedDeliveryLogDrafts.map((log) => (
               <div className="stacked-item" key={log.idempotencyKey}>
                 <strong>{log.notificationType.replace(/_/g, " ")}</strong>
-                <span>{log.provider} Â· {log.channel} Â· {log.destinationHash}</span>
+                <span>{log.provider} - {log.channel} - {log.destinationHash}</span>
                 <StatusPill label={log.status} tone={toneForStatus(log.status)} />
                 <small>{log.redactionSummary}</small>
               </div>
@@ -111,11 +111,7 @@ export default function MessagesPage() {
         gapIds={["GAP-064", "GAP-066", "GAP-067", "GAP-068"]}
       />
 
-      <DisabledActionPanel
-        title="Message actions"
-        description="Thread reads now have authenticated redacted APIs. Sending, replying, assigning threads, marking read/unread, and syncing provider delivery state still require mutation APIs and provider workers."
-        actions={["Reply to client", "Assign thread", "Queue follow-up", "Mark read", "Sync delivery status", "Export message audit"]}
-      />
+      <MessageActionPanel />
     </main>
   );
 }

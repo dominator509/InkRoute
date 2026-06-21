@@ -63,6 +63,38 @@ describe("provider webhook route boundaries", () => {
     expect(payload.data.productionBoundary.requiredBeforeEnablement.join(" ")).toContain("suppression");
   });
 
+  it("fail-closes production email webhooks before local runtime persistence", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      const response = await receiveEmailWebhook(
+        new NextRequest("https://local.test/api/webhooks/email", {
+          method: "POST",
+          headers: { "svix-signature": "sig_test" },
+          body: JSON.stringify({
+            type: "email.bounced",
+            tenantSlug: "inkroute-demo",
+            id: "evt_email_prod_blocked",
+          }),
+        }),
+      );
+      const payload = (await response.json()) as {
+        ok: boolean;
+        error: { code: string };
+        data: { productionBoundary: { localEmailWebhookPersistenceDisabled: boolean; requiresDurableProviderEventPersistence: boolean } };
+      };
+
+      expect(response.status).toBe(503);
+      expect(payload.ok).toBe(false);
+      expect(payload.error.code).toBe("PROVIDER_EMAIL_WEBHOOK_RECONCILIATION_NOT_CONFIGURED");
+      expect(payload.data.productionBoundary.localEmailWebhookPersistenceDisabled).toBe(true);
+      expect(payload.data.productionBoundary.requiresDurableProviderEventPersistence).toBe(true);
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
   it("rejects SMS webhooks without signature-like headers or valid JSON", async () => {
     const missingSignature = await receiveSmsWebhook(
       new NextRequest("https://local.test/api/webhooks/sms", {
@@ -136,5 +168,37 @@ describe("provider webhook route boundaries", () => {
       shouldUpdateDeliveryLog: true,
     });
     expect(helpPayload.data.interpretation.notes.join(" ")).toContain("Inbound SMS should create");
+  });
+
+  it("fail-closes production SMS webhooks before local runtime persistence", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      const response = await receiveSmsWebhook(
+        new NextRequest("https://local.test/api/webhooks/sms", {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-twilio-signature": "sig_test" },
+          body: JSON.stringify({
+            MessageStatus: "message.received",
+            Body: "STOP",
+            tenantSlug: "inkroute-demo",
+          }),
+        }),
+      );
+      const payload = (await response.json()) as {
+        ok: boolean;
+        error: { code: string };
+        data: { productionBoundary: { localSmsWebhookPersistenceDisabled: boolean; requiresDurableProviderEventPersistence: boolean } };
+      };
+
+      expect(response.status).toBe(503);
+      expect(payload.ok).toBe(false);
+      expect(payload.error.code).toBe("PROVIDER_SMS_WEBHOOK_RECONCILIATION_NOT_CONFIGURED");
+      expect(payload.data.productionBoundary.localSmsWebhookPersistenceDisabled).toBe(true);
+      expect(payload.data.productionBoundary.requiresDurableProviderEventPersistence).toBe(true);
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
   });
 });

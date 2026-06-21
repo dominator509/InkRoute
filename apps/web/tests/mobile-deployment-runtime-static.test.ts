@@ -2,10 +2,23 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildMobileDeploymentRuntimeArtifactReview,
+  buildMobileDeploymentRunData,
+  buildMobileDeploymentRuntimeEvidenceDecision,
+  buildMobileDeploymentRuntimeExecutionPlan,
+  buildRedactedMobileDeploymentArtifact,
+  persistMobileDeploymentRun,
   mobileDeploymentRuntimeArtifactPaths,
   mobileDeploymentRuntimeCommands,
+  mobileDeploymentRuntimeExternalArtifacts,
+  mobileDeploymentRuntimeExternalCommands,
+  mobileDeploymentRuntimeExecutionPolicy,
+  mobileDeploymentRuntimeLocalArtifacts,
+  mobileDeploymentRuntimeLocalCommands,
   mobileDeploymentRuntimeMatrix,
+  mobileDeploymentRuntimeProofFiles,
   mobileDeploymentRuntimeReadiness,
+  mobileDeploymentRuntimeRequiredExternalEvidence,
   mobileDeploymentRunPersistenceContract
 } from "../lib/mobileDeploymentRuntime";
 
@@ -28,22 +41,36 @@ describe("GAP-116 mobile deployment runtime wiring", () => {
     expect(mobileDeploymentRuntimeCommands).toEqual([
       "pnpm deploy:verify-mobile",
       "eas build --profile development",
-      "eas build --profile preview --platform all",
-      "eas build --profile production --platform all",
+      "eas build --profile preview --platform ios",
+      "eas build --profile preview --platform android",
+      "eas build --profile production --platform ios",
+      "eas build --profile production --platform android",
       "eas update --channel preview",
       "mobile device QA checklist",
       "mobile push token smoke",
       "mobile synthetic crash capture",
-      "OTA rollback rehearsal"
+      "OTA rollback rehearsal",
+      "verify native signing credentials outside source control",
+      "review App Store Connect and Google Play readiness labels",
+      "record redacted mobile build artifact labels",
+      "capture CI mobile deployment artifacts"
     ]);
     expect(mobileDeploymentRuntimeMatrix.map((entry) => entry.id)).toEqual([
       "deployment-evidence-verifier",
       "development-build",
-      "preview-ios-android-build",
-      "production-ios-android-build",
-      "device-push-crash-qa",
-      "ota-runtime-policy",
-      "native-credentials-store-readiness",
+      "preview-ios-build",
+      "preview-android-build",
+      "production-ios-build",
+      "production-android-build",
+      "device-qa",
+      "push-token-smoke",
+      "sentry-crash-capture",
+      "ota-preview-publish",
+      "ota-rollback-rehearsal",
+      "runtime-policy-parity",
+      "native-credentials",
+      "store-readiness",
+      "redacted-build-artifacts",
       "ci-mobile-deployment-artifacts"
     ]);
     expect(mobileDeploymentRuntimeArtifactPaths).toEqual(
@@ -51,6 +78,8 @@ describe("GAP-116 mobile deployment runtime wiring", () => {
         "coverage/mobile-deployment-runtime.json",
         "coverage/mobile-eas-preview-build-redacted.json",
         "coverage/mobile-eas-production-build-redacted.json",
+        "coverage/mobile-ios-build-redacted.json",
+        "coverage/mobile-android-build-redacted.json",
         "coverage/mobile-device-qa-checklist-redacted.json",
         "coverage/mobile-push-token-smoke-redacted.json",
         "coverage/mobile-sentry-crash-capture-redacted.json",
@@ -87,7 +116,7 @@ describe("GAP-116 mobile deployment runtime wiring", () => {
     expect(mobileDeploymentRuntimeReadiness.missingQaEvidence).toEqual(
       expect.arrayContaining(["device-qa", "push-token", "crash-capture", "ota-rollback", "store-readiness"])
     );
-    expect(mobileDeploymentRuntimeReadiness.requiredCommands).toEqual(mobileDeploymentRuntimeCommands);
+    expect(mobileDeploymentRuntimeReadiness.requiredCommands).toBe(mobileDeploymentRuntimeCommands);
     expect(mobileDeploymentRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "Development, preview, and production EAS build artifact labels for iOS and Android where required.",
@@ -117,10 +146,77 @@ describe("GAP-116 mobile deployment runtime wiring", () => {
     expect(ciWorkflow).toContain("test-results/mobile-deployment-runtime");
     expect(unitManifest).toContain("unit-web-mobile-deployment-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/mobileDeploymentRuntime.ts");
-    expect(gapTracker).toContain("live EAS/native credential/mobile store proof remains open");
+    expect(gapTracker).toContain("Mobile deployment evidence classifier wired and EAS/native proof gated");
+    expect(gapTracker).toContain("GAP-116 is mobile-deployment-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("mobileDeploymentRuntimeLocalArtifacts");
+    expect(gapTracker).toContain("mobileDeploymentRuntimeExternalArtifacts");
+  });
+
+  it("pins current mobile deployment runtime proof files for GAP-116", () => {
+    expect(mobileDeploymentRuntimeProofFiles).toEqual(
+      expect.arrayContaining([
+      "packages/deployment/src/index.ts",
+      "packages/releases/src/index.ts",
+        "apps/web/lib/mobileDeploymentRuntime.ts",
+        "apps/web/tests/mobile-deployment-runtime-static.test.ts",
+        "apps/mobile/eas.json",
+        "deployment/manifests/mobile-deployment-evidence.json",
+        "deployment/scripts/verify-mobile-deployment.mjs",
+        "packages/db/prisma/migrations/20260609019000_add_mobile_deployment_runs/migration.sql",
+        ".github/workflows/ci.yml",
+      ]),
+    );
+    for (const file of mobileDeploymentRuntimeProofFiles) {
+      expect(read(file).length).toBeGreaterThan(0);
+    }
   });
 
   it("pins durable MobileDeploymentRun persistence for EAS/native/mobile-store proof", () => {
+    const runData = buildMobileDeploymentRunData({
+      tenantId: "tenant_static",
+      runId: "mobile_deployment_static",
+      commitSha: "abc123",
+      status: "blocked",
+      buildProfileMatrix: [{ profile: "preview", status: "not_built" }],
+      qaEvidenceMatrix: [{ id: "device-qa", status: "pending" }],
+      artifactManifest: ["coverage/mobile-deployment-runtime.json"],
+      verifierPassed: true,
+      easDevelopmentBuildPassed: false,
+      easPreviewIosBuildPassed: false,
+      easPreviewAndroidBuildPassed: false,
+      easProductionIosBuildPassed: false,
+      easProductionAndroidBuildPassed: false,
+      easChannelsConfigured: false,
+      nativeCredentialsConfigured: false,
+      pushCredentialsConfigured: false,
+      deviceQaPassed: false,
+      pushTokenSmokePassed: false,
+      sentryCrashCapturePassed: false,
+      otaPreviewPublishPassed: false,
+      otaRollbackRehearsed: false,
+      runtimePolicyParityVerified: true,
+      storeReadinessReviewed: false,
+      redactedBuildArtifactsRecorded: false,
+      ciMobileDeploymentArtifactsCaptured: false,
+      requiredCommandsRun: ["pnpm deploy:verify-mobile"],
+      capturedArtifacts: ["coverage/mobile-deployment-runtime.json", "coverage/mobile-runtime-policy.json"],
+      redactedBuildArtifactPath: "coverage/mobile-eas-preview-build-redacted.json",
+      deviceQaArtifactPath: "coverage/mobile-device-qa-checklist-redacted.json",
+      otaRollbackArtifactPath: "coverage/mobile-ota-rollback-redacted.json",
+      storeReadinessArtifactPath: "coverage/mobile-store-readiness-redacted.json",
+      ciRunUrl: "https://github.example/redacted/mobile-deployment",
+    });
+
+    expect(runData).toMatchObject({
+      tenantId: "tenant_static",
+      runId: "mobile_deployment_static",
+      status: "blocked",
+      verifierPassed: true,
+      runtimePolicyParityVerified: true,
+      otaRollbackArtifactPath: "coverage/mobile-ota-rollback-redacted.json",
+    });
+    expect(persistMobileDeploymentRun).toBeTypeOf("function");
+    expect(String(persistMobileDeploymentRun)).toContain("repository.mobileDeploymentRun.upsert");
     expect(mobileDeploymentRunPersistenceContract.prismaModel).toBe("MobileDeploymentRun");
     expect(mobileDeploymentRunPersistenceContract.tenantRelation).toBe("mobileDeploymentRuns");
     expect(mobileDeploymentRunPersistenceContract.uniqueKey).toEqual(["tenantId", "runId"]);
@@ -153,5 +249,222 @@ describe("GAP-116 mobile deployment runtime wiring", () => {
     expect(prismaMigration).toContain('"otaRollbackArtifactPath" TEXT');
     expect(unitManifest).toContain("MobileDeploymentRun Prisma model and app row contract");
     expect(gapTracker).toContain("packages/db/prisma/migrations/20260609019000_add_mobile_deployment_runs/migration.sql");
+    expect(gapTracker).toContain("persistMobileDeploymentRun upsert seam");
+  });
+
+  it("classifies GAP-116 evidence as blocked until EAS, native, device, OTA, store, and CI proof is captured", () => {
+    const blockedDecision = buildMobileDeploymentRuntimeEvidenceDecision({
+      verifierPassed: true,
+      easDevelopmentBuildPassed: false,
+      easPreviewIosBuildPassed: false,
+      easPreviewAndroidBuildPassed: false,
+      easProductionIosBuildPassed: false,
+      easProductionAndroidBuildPassed: false,
+      easChannelsConfigured: false,
+      nativeCredentialsConfigured: false,
+      pushCredentialsConfigured: false,
+      deviceQaPassed: false,
+      pushTokenSmokePassed: false,
+      sentryCrashCapturePassed: false,
+      otaPreviewPublishPassed: false,
+      otaRollbackRehearsed: false,
+      runtimePolicyParityVerified: true,
+      storeReadinessReviewed: false,
+      redactedBuildArtifactsRecorded: false,
+      ciMobileDeploymentArtifactsCaptured: false,
+      requiredCommandsRun: mobileDeploymentRuntimeCommands.filter(
+        (command) =>
+          command !== "eas build --profile preview --platform ios" &&
+          command !== "eas build --profile preview --platform android" &&
+          command !== "eas build --profile production --platform ios" &&
+          command !== "mobile device QA checklist" &&
+          command !== "OTA rollback rehearsal" &&
+          command !== "verify native signing credentials outside source control" &&
+          command !== "capture CI mobile deployment artifacts",
+      ),
+      capturedArtifacts: [
+        "coverage/mobile-deployment-runtime.json",
+        "coverage/mobile-deployment-verifier.json",
+        "coverage/mobile-runtime-policy.json",
+        "test-results/mobile-deployment-runtime"
+      ],
+    });
+
+    expect(blockedDecision.status).toBe("blocked");
+    expect(blockedDecision.blockers).toEqual(
+      expect.arrayContaining([
+        "Capture EAS development build proof.",
+        "Capture EAS preview iOS build proof.",
+        "Capture EAS production Android build proof.",
+        "Configure EAS development, preview, and production channels.",
+        "Capture native signing credential proof.",
+        "Complete mobile device QA.",
+        "Capture OTA rollback rehearsal proof.",
+        "Capture mobile store readiness review proof.",
+        "Capture CI mobile deployment artifacts.",
+        "Required command not recorded: eas build --profile preview --platform ios",
+        "Required command not recorded: eas build --profile preview --platform android",
+        "Required command not recorded: eas build --profile production --platform ios",
+        "Required command not recorded: mobile device QA checklist",
+        "Required command not recorded: OTA rollback rehearsal",
+        "Required command not recorded: verify native signing credentials outside source control",
+        "Required command not recorded: capture CI mobile deployment artifacts",
+      ]),
+    );
+    expect(blockedDecision.missingArtifacts).toEqual(
+      expect.arrayContaining([
+        "coverage/mobile-eas-development-build-redacted.json",
+        "coverage/mobile-eas-preview-build-redacted.json",
+        "coverage/mobile-eas-production-build-redacted.json",
+        "coverage/mobile-device-qa-checklist-redacted.json",
+        "coverage/mobile-ota-rollback-redacted.json",
+        "coverage/mobile-deployment-ci-run-redacted.json",
+      ]),
+    );
+    expect(blockedDecision.mobileDeploymentPolicy).toEqual({
+      nativeCredentialsRequired: true,
+      otaRollbackProofRequired: true,
+      redactedBuildArtifactsOnly: true,
+    });
+
+    const completeDecision = buildMobileDeploymentRuntimeEvidenceDecision({
+      verifierPassed: true,
+      easDevelopmentBuildPassed: true,
+      easPreviewIosBuildPassed: true,
+      easPreviewAndroidBuildPassed: true,
+      easProductionIosBuildPassed: true,
+      easProductionAndroidBuildPassed: true,
+      easChannelsConfigured: true,
+      nativeCredentialsConfigured: true,
+      pushCredentialsConfigured: true,
+      deviceQaPassed: true,
+      pushTokenSmokePassed: true,
+      sentryCrashCapturePassed: true,
+      otaPreviewPublishPassed: true,
+      otaRollbackRehearsed: true,
+      runtimePolicyParityVerified: true,
+      storeReadinessReviewed: true,
+      redactedBuildArtifactsRecorded: true,
+      ciMobileDeploymentArtifactsCaptured: true,
+      requiredCommandsRun: mobileDeploymentRuntimeCommands,
+      capturedArtifacts: mobileDeploymentRuntimeArtifactPaths,
+    });
+
+    expect(completeDecision.status).toBe("complete");
+    expect(completeDecision.blockers).toEqual([]);
+    expect(completeDecision.missingArtifacts).toEqual([]);
+    expect(completeDecision.requiredCommands).toBe(mobileDeploymentRuntimeCommands);
+    expect(completeDecision.requiredEvidence).toBe(mobileDeploymentRuntimeArtifactPaths);
+  });
+
+  it("keeps mobile deployment execution disabled while splitting local labels from EAS/device/store proof", () => {
+    const plan = buildMobileDeploymentRuntimeExecutionPlan();
+
+    expect(plan.localCommands).toBe(mobileDeploymentRuntimeLocalCommands);
+    expect(plan.externalCommands).toBe(mobileDeploymentRuntimeExternalCommands);
+    expect(plan.localArtifacts).toBe(mobileDeploymentRuntimeLocalArtifacts);
+    expect(plan.externalArtifacts).toBe(mobileDeploymentRuntimeExternalArtifacts);
+    expect(plan.localArtifacts).toEqual(
+      expect.arrayContaining([
+        "coverage/mobile-deployment-runtime.json",
+        "coverage/mobile-deployment-verifier.json",
+        "coverage/mobile-runtime-policy.json",
+        "test-results/mobile-deployment-runtime",
+      ]),
+    );
+    expect(plan.externalArtifacts).toEqual(
+      expect.arrayContaining([
+        "coverage/mobile-eas-development-build-redacted.json",
+        "coverage/mobile-eas-preview-build-redacted.json",
+        "coverage/mobile-eas-production-build-redacted.json",
+        "coverage/mobile-ios-build-redacted.json",
+        "coverage/mobile-android-build-redacted.json",
+        "coverage/mobile-device-qa-checklist-redacted.json",
+        "coverage/mobile-push-token-smoke-redacted.json",
+        "coverage/mobile-sentry-crash-capture-redacted.json",
+        "coverage/mobile-ota-rollback-redacted.json",
+        "coverage/mobile-native-credentials-redacted.json",
+        "coverage/mobile-store-readiness-redacted.json",
+        "coverage/mobile-deployment-ci-run-redacted.json",
+      ]),
+    );
+    expect(plan.verifierExecutionAllowed).toBe(false);
+    expect(plan.easBuildExecutionAllowed).toBe(false);
+    expect(plan.easUpdateExecutionAllowed).toBe(false);
+    expect(plan.deviceQaExecutionAllowed).toBe(false);
+    expect(plan.pushTokenExecutionAllowed).toBe(false);
+    expect(plan.crashCaptureExecutionAllowed).toBe(false);
+    expect(plan.otaRollbackExecutionAllowed).toBe(false);
+    expect(plan.nativeCredentialExecutionAllowed).toBe(false);
+    expect(plan.storeReadinessExecutionAllowed).toBe(false);
+    expect(plan.ciArtifactExecutionAllowed).toBe(false);
+    expect(plan.persistenceExecutionAllowed).toBe(false);
+    expect(plan.executionPolicy).toBe(mobileDeploymentRuntimeExecutionPolicy);
+    expect(plan.executionPolicy).toEqual({
+      codexMayClassifyRuntimePolicyAndLabels: true,
+      easProjectRequiredForBuilds: true,
+      physicalOrEmulatedDeviceRequiredForQa: true,
+      nativeCredentialsMustStayOutsideSourceControl: true,
+      storeConsolesRequiredForReadiness: true,
+      providerDatabaseRequiredForPersistence: true,
+    });
+  });
+
+  it("redacts mobile deployment artifacts before review or persistence", () => {
+    const rawArtifact = {
+      easProjectId: "eas_project_abc123",
+      buildUrl: "https://expo.dev/accounts/inkroute/projects/mobile/builds/build_123",
+      installUrl: "https://expo.dev/artifacts/eas/build-secret.apk",
+      otaUrl: "https://u.expo.dev/update/ota_secret",
+      sentryDsn: "https://secret@sentry.io/project_456",
+      deviceUdid: "00008030-001C195E0A91802E",
+      pushToken: "ExponentPushToken[secret]",
+      nativeCredential: "ios_distribution_certificate_secret",
+      storeReadiness: { appStoreEmail: "owner@example.com", phone: "+1 555 777 1212" },
+      nested: {
+        authorization: "Bearer mobile-deployment-token",
+        tenantId: "tenant_demo",
+      },
+    };
+    const redacted = buildRedactedMobileDeploymentArtifact(rawArtifact);
+    const review = buildMobileDeploymentRuntimeArtifactReview("coverage/mobile-deployment-ci-run-redacted.json", rawArtifact);
+    const serialized = JSON.stringify(review);
+
+    expect(JSON.stringify(redacted)).not.toContain("eas_project_abc123");
+    expect(serialized).not.toContain("expo.dev");
+    expect(serialized).not.toContain("u.expo.dev");
+    expect(serialized).not.toContain("sentry.io");
+    expect(serialized).not.toContain("00008030");
+    expect(serialized).not.toContain("ExponentPushToken");
+    expect(serialized).not.toContain("ios_distribution_certificate_secret");
+    expect(serialized).not.toContain("owner@example.com");
+    expect(serialized).not.toContain("+1 555 777 1212");
+    expect(serialized).not.toContain("Bearer mobile-deployment-token");
+    expect(serialized).not.toContain("tenant_demo");
+    expect(review.containsUnredactedSensitiveValues).toBe(false);
+    expect(review.redactions).toEqual(
+      expect.arrayContaining([
+        "authorization",
+        "buildUrl",
+        "deviceUdid",
+        "easProjectId",
+        "installUrl",
+        "nativeCredential",
+        "otaUrl",
+        "pushToken",
+        "sentryDsn",
+        "storeReadiness",
+      ]),
+    );
+    expect(review.externalEvidenceRequired).toBe(mobileDeploymentRuntimeRequiredExternalEvidence);
+    expect(review.externalEvidenceRequired).toEqual(
+      expect.arrayContaining([
+        "EAS build, OTA update, and rollback artifacts must be captured outside Codex with build URLs, tokens, and project IDs redacted.",
+        "Native signing credentials, push credentials, device identifiers, and store-console proof must never be committed.",
+        "Device QA, push token, and crash-capture artifacts must redact device IDs, user data, Sentry project labels, and contact data.",
+        "MobileDeploymentRun persistence must execute only against an approved provider-backed database.",
+      ]),
+    );
   });
 });
+

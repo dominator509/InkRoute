@@ -1,4 +1,4 @@
-import {
+﻿import {
   buildSeoAutomatedTestReadinessPlan,
   type SeoAutomatedTestReadinessPlan,
 } from "@inkroute/seo";
@@ -95,6 +95,15 @@ export const seoAutomatedGateCommands = [
   "pnpm vitest run apps/web/tests/seo-automated-tests-static.test.ts apps/web/tests/sitemap-route.test.ts apps/web/tests/canonical-domain-runtime-static.test.ts apps/web/tests/structured-data-crawl-qa-static.test.ts apps/web/tests/phase10-seo-runtime-build-static.test.ts apps/dashboard/tests/search-console-route-static.test.ts apps/dashboard/tests/image-seo-pipeline-static.test.ts",
 ] as const;
 
+export const seoAutomatedRequiredExternalEvidence = [
+  "SEO package test and typecheck command output",
+  "route/static contract command output",
+  "linked GAP-073 crawl evidence",
+  "linked GAP-076 runtime/build evidence",
+  "GitHub Actions SEO automated gate evidence",
+  "produced secret-safe artifact bundle",
+] as const;
+
 export const seoAutomatedArtifactPaths = [
   "coverage/seo-automated-test-gate.json",
   "coverage/seo-automated-seo-package-test.txt",
@@ -110,6 +119,199 @@ export const seoAutomatedArtifactPaths = [
   "coverage/search-console-provider-route.json",
   "test-results/seo-automated",
 ] as const;
+
+export const seoAutomatedProofFiles = [
+  "packages/seo/package.json",
+  "packages/seo/src/index.ts",
+  "packages/seo/tests/seo-engine.test.ts",
+  "apps/web/lib/seoAutomatedTests.ts",
+  "apps/web/tests/seo-automated-tests-static.test.ts",
+  "apps/web/app/sitemap.ts",
+  "apps/web/tests/sitemap-route.test.ts",
+  "apps/web/app/api/public/[tenantSlug]/seo-preview/route.ts",
+  "apps/web/app/api/public/[tenantSlug]/sitemap-preview/route.ts",
+  "apps/web/tests/canonical-domain-runtime-static.test.ts",
+  "apps/web/tests/structured-data-crawl-qa-static.test.ts",
+  "apps/web/tests/phase10-seo-runtime-build-static.test.ts",
+  "apps/dashboard/tests/search-console-route-static.test.ts",
+  "apps/dashboard/tests/image-seo-pipeline-static.test.ts",
+  ".github/workflows/ci.yml",
+  "testing/manifests/unit-test-manifest.json",
+] as const;
+
+export type SeoAutomatedEvidenceArtifact = (typeof seoAutomatedArtifactPaths)[number];
+
+export interface SeoAutomatedExecutionPlan {
+  readonly id: "gap-078-seo-automated-test-gate";
+  readonly ciExecutionAllowed: false;
+  readonly providerExecutionAllowed: false;
+  readonly policy: SeoAutomatedExecutionPolicy;
+  readonly source: "local-software-plan";
+  readonly requiredCommands: typeof seoAutomatedGateCommands;
+  readonly requiredArtifacts: typeof seoAutomatedArtifactPaths;
+  readonly localSuiteIds: readonly SeoAutomatedSuiteId[];
+  readonly linkedGapArtifacts: readonly SeoAutomatedEvidenceArtifact[];
+  readonly ciArtifacts: readonly SeoAutomatedEvidenceArtifact[];
+  readonly secretSafeArtifactPath: SeoAutomatedEvidenceArtifact;
+  readonly externalEvidenceRequired: typeof seoAutomatedRequiredExternalEvidence;
+}
+
+export interface SeoAutomatedExecutionPolicy {
+  readonly executeSeoPackageTests: false;
+  readonly executeRouteStaticTests: false;
+  readonly executeLinkedGap073Crawl: false;
+  readonly executeLinkedGap076RuntimeBuild: false;
+  readonly executeCi: false;
+  readonly executeProviderAdjacentChecks: false;
+}
+
+export interface SeoAutomatedArtifactReview {
+  readonly artifactName: string;
+  readonly safeToPersist: boolean;
+  readonly redactedArtifact: unknown;
+  readonly unsafeFindings: readonly string[];
+  readonly requiredArtifactPath: SeoAutomatedEvidenceArtifact;
+}
+
+const seoAutomatedSensitiveKeyPattern =
+  /(?:authorization|clientsecret|credential|cookie|email|password|phone|private|secret|token|trace|workflowtoken)/i;
+const seoAutomatedEmailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+const seoAutomatedPhonePattern = /\+?\d[\d ().-]{7,}\d/g;
+const seoAutomatedTokenPattern = /\b(?:bearer|ghp|github_pat|sk|ya29)[A-Za-z0-9._:-]{8,}\b/gi;
+
+function redactSeoAutomatedValue(value: unknown, key = ""): unknown {
+  if (value === null || value === undefined) {
+    return value;
+  }
+
+  if (seoAutomatedSensitiveKeyPattern.test(key)) {
+    return "[REDACTED]";
+  }
+
+  if (typeof value === "string") {
+    return value
+      .replace(seoAutomatedEmailPattern, "[REDACTED_EMAIL]")
+      .replace(seoAutomatedPhonePattern, "[REDACTED_PHONE]")
+      .replace(seoAutomatedTokenPattern, "[REDACTED_TOKEN]");
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactSeoAutomatedValue(entry));
+  }
+
+  if (typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([entryKey, entryValue]) => [entryKey, redactSeoAutomatedValue(entryValue, entryKey)]),
+    );
+  }
+
+  return value;
+}
+
+export function buildRedactedSeoAutomatedArtifact(artifact: unknown): unknown {
+  return redactSeoAutomatedValue(artifact);
+}
+
+export const seoAutomatedExecutionPolicy: SeoAutomatedExecutionPolicy = {
+  executeSeoPackageTests: false,
+  executeRouteStaticTests: false,
+  executeLinkedGap073Crawl: false,
+  executeLinkedGap076RuntimeBuild: false,
+  executeCi: false,
+  executeProviderAdjacentChecks: false,
+};
+
+export function buildSeoAutomatedExecutionPlan(): SeoAutomatedExecutionPlan {
+  return {
+    id: "gap-078-seo-automated-test-gate",
+    ciExecutionAllowed: false,
+    providerExecutionAllowed: false,
+    policy: seoAutomatedExecutionPolicy,
+    source: "local-software-plan",
+    requiredCommands: seoAutomatedGateCommands,
+    requiredArtifacts: seoAutomatedArtifactPaths,
+    localSuiteIds: seoAutomatedSuites.map((suite) => suite.id),
+    linkedGapArtifacts: ["coverage/seo-automated-linked-gap073-crawl.json", "coverage/seo-automated-linked-gap076-runtime-build.json"],
+    ciArtifacts: ["coverage/seo-automated-ci-evidence.json"],
+    secretSafeArtifactPath: "coverage/seo-automated-secret-safe-artifacts.json",
+    externalEvidenceRequired: seoAutomatedRequiredExternalEvidence,
+  };
+}
+
+export function buildSeoAutomatedArtifactReview(
+  artifactName: string,
+  artifact: unknown,
+  requiredArtifactPath: SeoAutomatedEvidenceArtifact = "coverage/seo-automated-secret-safe-artifacts.json",
+): SeoAutomatedArtifactReview {
+  const redactedArtifact = buildRedactedSeoAutomatedArtifact(artifact);
+  const serialized = JSON.stringify(redactedArtifact);
+  const unsafeFindings = [
+    seoAutomatedEmailPattern.test(serialized) ? "email" : null,
+    seoAutomatedPhonePattern.test(serialized) ? "phone" : null,
+    seoAutomatedTokenPattern.test(serialized) ? "provider-token" : null,
+  ].filter((finding): finding is string => finding !== null);
+
+  return {
+    artifactName,
+    safeToPersist: unsafeFindings.length === 0,
+    redactedArtifact,
+    unsafeFindings,
+    requiredArtifactPath,
+  };
+}
+
+export interface SeoAutomatedEvidenceInput {
+  readonly seoPackageTestsPassed: boolean;
+  readonly seoPackageTypecheckPassed: boolean;
+  readonly routeContractsPassed: boolean;
+  readonly linkedGap073CrawlEvidenceCaptured: boolean;
+  readonly linkedGap076RuntimeBuildEvidenceCaptured: boolean;
+  readonly ciEvidenceCaptured: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly SeoAutomatedEvidenceArtifact[];
+}
+
+export const seoAutomatedDecisionRequiredEvidence = [
+  "SEO package test and typecheck artifacts",
+  "SEO automated route/static contract artifact",
+  "linked GAP-073 crawl and GAP-076 runtime/build artifacts",
+  "CI evidence and redacted secret-safe artifact review",
+] as const;
+
+export interface SeoAutomatedEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly SeoAutomatedEvidenceArtifact[];
+  readonly requiredCommands: typeof seoAutomatedGateCommands;
+  readonly requiredEvidence: typeof seoAutomatedDecisionRequiredEvidence;
+  readonly redactedSummary: string;
+}
+
+export function buildSeoAutomatedEvidenceDecision(input: SeoAutomatedEvidenceInput): SeoAutomatedEvidenceDecision {
+  const blockers = [
+    !input.seoPackageTestsPassed ? "SEO package test evidence is required." : null,
+    !input.seoPackageTypecheckPassed ? "SEO package typecheck evidence is required." : null,
+    !input.routeContractsPassed ? "SEO automated route/static contract evidence is required." : null,
+    !input.linkedGap073CrawlEvidenceCaptured ? "Linked GAP-073 structured-data crawl evidence is required." : null,
+    !input.linkedGap076RuntimeBuildEvidenceCaptured ? "Linked GAP-076 runtime/build evidence is required." : null,
+    !input.ciEvidenceCaptured ? "CI SEO automated test gate evidence is required." : null,
+    !input.secretSafeArtifactReviewPassed ? "Secret-safe artifact review evidence is required." : null,
+  ].filter((blocker): blocker is string => blocker !== null);
+  const capturedArtifacts = new Set(input.capturedArtifacts);
+  const missingArtifacts = seoAutomatedArtifactPaths.filter((artifact) => !capturedArtifacts.has(artifact));
+
+  return {
+    status: blockers.length === 0 && missingArtifacts.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: seoAutomatedGateCommands,
+    requiredEvidence: seoAutomatedDecisionRequiredEvidence,
+    redactedSummary:
+      blockers.length === 0 && missingArtifacts.length === 0
+        ? "GAP-078 SEO automated test evidence is complete with CI-safe artifacts captured."
+        : "GAP-078 SEO automated test evidence remains blocked until package, route, linked runtime, CI, and redaction artifacts are captured.",
+  };
+}
 
 export const seoAutomatedGateMatrix: readonly SeoAutomatedGateMatrixEntry[] = [
   { id: "seo-package-tests", command: "pnpm --filter @inkroute/seo test", artifact: "coverage/seo-automated-seo-package-test.txt", status: "execution-gated" },
@@ -147,3 +349,5 @@ export function buildSeoAutomatedTestContract(): SeoAutomatedTestReadinessPlan {
 }
 
 export const seoAutomatedTestContract = buildSeoAutomatedTestContract();
+
+

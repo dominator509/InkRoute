@@ -2,8 +2,16 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildPreferenceCenterArtifactReview,
   buildPreferenceCenterEvidenceDecision,
+  buildPreferenceCenterExecutionPlan,
+  buildRedactedPreferenceCenterArtifact,
+  preferenceCenterDecisionRequiredEvidence,
+  preferenceCenterExternalCommands,
+  preferenceCenterExecutionPolicy,
   preferenceCenterArtifactPaths,
+  preferenceCenterLocalCommands,
+  preferenceCenterRequiredExternalEvidence,
   preferenceCenterRuntimeCommands,
   preferenceCenterRuntimeMatrix,
   preferenceCenterRuntimeProofFiles,
@@ -63,25 +71,115 @@ describe("preference center runtime contract", () => {
     expect(notificationsSource).toContain("buildPreferenceCenterRuntimeReadinessPlan");
     expect(notificationsSource).toContain("buildPreferenceMutationPlan");
     expect(preferenceSource).toContain("executePreferenceMutation");
+    expect(preferenceSource).toContain("createInMemoryPreferenceRepository");
+    expect(preferenceSource).toContain("buildRedactedPreferenceMetadata");
     expect(preferenceSource).toContain("buildPreferenceTokenHash");
     expect(preferenceSource).toContain("List-Unsubscribe");
     expect(preferenceSource).toContain("persistPreferenceAudit");
     expect(preferencePage).toContain("Notification preferences");
     expect(settingsPage).toContain("Tenant notification settings");
     expect(staticTest).toContain("raw-token avoidance");
+    expect(staticTest).toContain("redacts nested preference metadata");
+    expect(staticTest).toContain("executes a local preference repository contract");
   });
 
   it("keeps token crypto, persistence, provider headers, legal copy, integration, CI, and artifact blockers explicit", () => {
     expect(preferenceCenterRuntimeReadiness.status).toBe("blocked");
     expect(preferenceCenterRuntimeReadiness.missingScripts).toEqual([]);
-    expect(preferenceCenterRuntimeReadiness.requiredEvidence).toEqual(expect.arrayContaining([
-      "signed preference token issuance, hash persistence, expiry, and forgery rejection evidence",
-      "email unsubscribe, SMS STOP/START, and pre-send suppression persistence evidence",
-      "audit, idempotency, legal copy, and route/API test evidence",
-    ]));
+    expect(preferenceCenterRuntimeReadiness.requiredEvidence).toBe(preferenceCenterDecisionRequiredEvidence);
     expect(preferenceCenterRuntimeReadiness.blockers).toContain("Preference token hashes must be persisted instead of raw tokens.");
     expect(preferenceCenterRuntimeReadiness.blockers).toContain("Forged, expired, tenant-mismatched, and reused preference tokens must be rejected by tests.");
     expect(preferenceCenterRuntimeReadiness.blockers).toContain("Preference, unsubscribe, SMS STOP/START, and tenant settings copy must be legal-approved.");
+  });
+
+  it("pins the non-executing GAP-067 preference center execution policy", () => {
+    const plan = buildPreferenceCenterExecutionPlan();
+
+    expect(preferenceCenterExecutionPolicy).toEqual({
+      codexMayClassifyStaticPreferenceCenterReadiness: true,
+      localCommandEvidenceRequiredForClosure: true,
+      routeApiEvidenceRequiredForClosure: true,
+      signedTokenCryptoRequiredForClosure: true,
+      tokenHashPersistenceRequiredForClosure: true,
+      durablePreferencePersistenceRequiredForClosure: true,
+      listUnsubscribeProviderRequiredForClosure: true,
+      legalCopyRequiredForClosure: true,
+      preSendSuppressionRequiredForClosure: true,
+      ciEvidenceRequiredForClosure: true,
+      secretSafeArtifactsRequiredForClosure: true,
+    });
+    expect(plan.policy).toBe(preferenceCenterExecutionPolicy);
+    expect(plan.commandExecutionAllowed).toBe(false);
+    expect(plan.routeApiExecutionAllowed).toBe(false);
+    expect(plan.tokenCryptoExecutionAllowed).toBe(false);
+    expect(plan.durablePersistenceExecutionAllowed).toBe(false);
+    expect(plan.providerIntegrationExecutionAllowed).toBe(false);
+    expect(plan.legalApprovalExecutionAllowed).toBe(false);
+    expect(plan.preSendSuppressionExecutionAllowed).toBe(false);
+    expect(plan.ciExecutionAllowed).toBe(false);
+    expect(plan.artifactReviewExecutionAllowed).toBe(false);
+    expect(plan.localCommands).toBe(preferenceCenterLocalCommands);
+    expect(plan.externalCommands).toBe(preferenceCenterExternalCommands);
+    expect(plan.requiredExternalEvidence).toBe(preferenceCenterRequiredExternalEvidence);
+    expect(preferenceCenterRequiredExternalEvidence).toEqual([
+      "actual preference center command output",
+      "preference center and unsubscribe route/API tests",
+      "tenant notification settings dashboard tests",
+      "signed preference token crypto evidence",
+      "token hash persistence evidence",
+      "token expiry/forgery/reuse rejection evidence",
+      "durable ClientNotificationPreference/SuppressionListEntry/TenantNotificationSetting/NotificationAuditLog/IdempotencyKey evidence",
+      "provider List-Unsubscribe and one-click unsubscribe evidence",
+      "legal-approved preference/STOP/START/settings copy",
+      "pre-send suppression integration tests",
+      "CI preference center artifacts",
+      "secret-safe preference center artifact review",
+    ]);
+  });
+
+  it("pins recursive preference center artifact redaction and review", () => {
+    const redacted = buildRedactedPreferenceCenterArtifact({
+      tenantId: "tenant_private",
+      preferenceTokenHash: "hash_private",
+      unsubscribeDestinationEmail: "client@example.test",
+      legalCopyApprovalUrl: "https://private/legal",
+      publicSummary: "preference center evidence captured",
+      nested: {
+        suppressionPhoneNumber: "+15555550100",
+        publicStatus: "suppressed",
+      },
+    });
+
+    expect(redacted.secretSafe).toBe(true);
+    expect(redacted.redactedPaths).toEqual([
+      "tenantId",
+      "preferenceTokenHash",
+      "unsubscribeDestinationEmail",
+      "legalCopyApprovalUrl",
+      "nested.suppressionPhoneNumber",
+    ]);
+    expect(redacted.artifact).toEqual({
+      tenantId: "[redacted]",
+      preferenceTokenHash: "[redacted]",
+      unsubscribeDestinationEmail: "[redacted]",
+      legalCopyApprovalUrl: "[redacted]",
+      publicSummary: "preference center evidence captured",
+      nested: {
+        suppressionPhoneNumber: "[redacted]",
+        publicStatus: "suppressed",
+      },
+    });
+
+    const review = buildPreferenceCenterArtifactReview({
+      publicSummary: "safe preference center artifact",
+      rawUnsubscribeToken: "token_private",
+    });
+
+    expect(review.passed).toBe(true);
+    expect(review.blockers).toEqual([]);
+    expect(review.artifact.secretSafe).toBe(true);
+    expect(review.artifact.redactedPaths).toEqual(["rawUnsubscribeToken"]);
+    expect(review.requiredExternalEvidence).toBe(preferenceCenterRequiredExternalEvidence);
   });
 
   it("classifies preference center evidence before GAP-067 can close", () => {
@@ -121,8 +219,8 @@ describe("preference center runtime contract", () => {
     expect(blockedDecision.blockers).toContain("Secret-safe preference center artifact review evidence is missing.");
     expect(blockedDecision.missingArtifacts).toContain("coverage/preference-center-token-crypto.json");
     expect(blockedDecision.missingArtifacts).toContain("coverage/preference-center-secret-safe-artifacts.json");
-    expect(blockedDecision.requiredCommands).toEqual([...preferenceCenterRuntimeCommands]);
-    expect(blockedDecision.requiredEvidence).toContain("secret-safe review of retained preference center artifacts");
+    expect(blockedDecision.requiredCommands).toBe(preferenceCenterRuntimeCommands);
+    expect(blockedDecision.requiredEvidence).toBe(preferenceCenterDecisionRequiredEvidence);
     expect(blockedDecision.redactedSummary).toEqual({
       capturedArtifactCount: 4,
       requiredArtifactCount: preferenceCenterArtifactPaths.length,
@@ -162,7 +260,24 @@ describe("preference center runtime contract", () => {
     expect(unitManifest).toContain("unit-preference-center-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/preferenceCenterRuntime.ts");
     expect(gapTracker).toContain("preference center evidence classifier");
-    expect(gapTracker).toContain("GAP-067 is preference-center-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("buildPreferenceCenterExecutionPlan");
+    expect(gapTracker).toContain("preferenceCenterDecisionRequiredEvidence");
+    expect(gapTracker).toContain("preferenceCenterExecutionPolicy");
+    expect(gapTracker).toContain("preferenceCenterRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildRedactedPreferenceCenterArtifact");
+    expect(gapTracker).toContain("buildPreferenceCenterArtifactReview");
+    expect(gapTracker).toContain("non-executing preference center execution policy");
+    expect(gapTracker).toContain("local in-memory preference repository contract");
+    expect(gapTracker).toContain("preference metadata sanitizer");
+    expect(gapTracker).toContain("GAP-067 is preference-center-runtime-matrix wired with preference center evidence classifier");
+    expect(notificationsSource).toContain("Client preference center page evidence must be captured before preference readiness.");
+    expect(notificationsSource).toContain("One-click email unsubscribe page evidence must be captured before preference readiness.");
+    expect(notificationsSource).toContain("Preference mutation API route evidence must be captured before preference readiness.");
+    expect(notificationsSource).toContain("Tenant channel settings dashboard UI evidence must be captured before preference readiness.");
+    expect(notificationsSource).not.toContain("Client preference center page must be implemented.");
+    expect(notificationsSource).not.toContain("One-click email unsubscribe page must be implemented.");
+    expect(notificationsSource).not.toContain("Preference mutation API routes must be implemented.");
+    expect(notificationsSource).not.toContain("Tenant channel settings dashboard UI must be implemented.");
     expect(preferenceCenterArtifactPaths).toContain("coverage/preference-center-secret-safe-artifacts.json");
   });
 
@@ -188,3 +303,4 @@ describe("preference center runtime contract", () => {
     }
   });
 });
+

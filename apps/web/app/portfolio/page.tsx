@@ -21,7 +21,7 @@ export default function PortfolioPage() {
         <div className="container narrow">
           <p className="eyebrow">Portfolio CMS preview</p>
           <h1>Work organized by style, placement, freshness, and city.</h1>
-          <p>The Phase 3 gallery uses demo metadata and CSS image placeholders. Real upload/storage, image optimization, and CMS publishing remain gap-tracked.</p>
+          <p>The Phase 3 gallery uses demo metadata, Next/Image cards, and public derivative fixtures while private originals, provider storage, image optimization proof, and CMS publishing remain gap-tracked.</p>
           <div className="filter-row" aria-label="Demo portfolio filters">
             {filters.map((filter) => <span className="tag" key={filter}>{filter}</span>)}
           </div>

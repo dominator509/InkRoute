@@ -31,6 +31,7 @@ describe("notification and messaging route boundaries", () => {
     };
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(payload.ok).toBe(true);
     expect(payload.data).toMatchObject({
       tenantSlug: "inkroute-demo",
@@ -47,6 +48,32 @@ describe("notification and messaging route boundaries", () => {
     expect(payload.data.productionBoundary.note).toContain("does not queue or send");
   });
 
+  it("fail-closes production notification previews instead of returning static render payloads", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      const response = await previewNotifications(new NextRequest("https://local.test/api/public/inkroute-demo/notification-previews"), {
+        params: Promise.resolve({ tenantSlug: "inkroute-demo" }),
+      });
+      const payload = (await response.json()) as {
+        ok: boolean;
+        error: { code: string; gapIds: string[] };
+        productionBoundary: { staticNotificationPreviewDisabled: boolean };
+      };
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(payload.ok).toBe(false);
+      expect(payload.error.code).toBe("PROVIDER_NOTIFICATION_PREVIEWS_NOT_CONFIGURED");
+      expect(payload.error.gapIds).toContain("GAP-010");
+      expect(payload.error.gapIds).toContain("GAP-065");
+      expect(payload.productionBoundary.staticNotificationPreviewDisabled).toBe(true);
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
   it("rejects malformed public message submissions before tenant persistence", async () => {
     const invalidJson = await createMessage(messageRequest("{", "203.0.113.69"), {
       params: Promise.resolve({ tenantSlug: "inkroute-demo" }),
@@ -56,11 +83,13 @@ describe("notification and messaging route boundaries", () => {
     });
 
     expect(invalidJson.status).toBe(400);
+    expect(invalidJson.headers.get("Cache-Control")).toBe("no-store");
     await expect(invalidJson.json()).resolves.toMatchObject({
       ok: false,
       error: { code: "INVALID_JSON" },
     });
     expect(missingFields.status).toBe(400);
+    expect(missingFields.headers.get("Cache-Control")).toBe("no-store");
     await expect(missingFields.json()).resolves.toMatchObject({
       ok: false,
       error: { code: "VALIDATION_FAILED" },
@@ -73,6 +102,7 @@ describe("notification and messaging route boundaries", () => {
     });
 
     expect(response.status).toBe(404);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     await expect(response.json()).resolves.toMatchObject({
       ok: false,
       error: { code: "TENANT_NOT_FOUND" },
@@ -104,6 +134,7 @@ describe("notification and messaging route boundaries", () => {
     };
 
     expect(response.status).toBe(201);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(payload.ok).toBe(true);
     expect(payload.data.tenantSlug).toBe("inkroute-demo");
     expect(payload.data.id).toMatch(/^message_/);
@@ -120,5 +151,58 @@ describe("notification and messaging route boundaries", () => {
       savedInLocalRuntime: true,
       gapIds: ["GAP-009", "GAP-061", "GAP-064", "GAP-066"],
     });
+  });
+
+  it("fail-closes production public messages instead of saving local runtime messages", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      const response = await createMessage(
+        messageRequest(
+          {
+            subject: "Production message",
+            body: "This should wait for database-backed message persistence.",
+            bookingRequestId: "booking_message_route_test",
+          },
+          "203.0.113.73",
+        ),
+        { params: Promise.resolve({ tenantSlug: "inkroute-demo" }) },
+      );
+      const payload = (await response.json()) as {
+        ok: boolean;
+        error: { code: string; gapIds: string[] };
+        productionBoundary: { localMessagePersistenceDisabled: boolean };
+      };
+
+      expect(response.status).toBe(503);
+      expect(payload.ok).toBe(false);
+      expect(payload.error.code).toBe("PROVIDER_MESSAGE_PERSISTENCE_NOT_CONFIGURED");
+      expect(payload.error.gapIds).toContain("GAP-010");
+      expect(payload.error.gapIds).toContain("GAP-064");
+      expect(payload.productionBoundary.localMessagePersistenceDisabled).toBe(true);
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
+  it("pins public message rate-limit responses as no-store with Retry-After", async () => {
+    const routeSource = await import("node:fs").then((fs) =>
+      fs.readFileSync("apps/web/app/api/public/[tenantSlug]/messages/route.ts", "utf8"),
+    );
+
+    expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(routeSource).toContain('{ ...noStoreHeaders, "Retry-After": String(rateLimit.retryAfterSeconds) }');
+  });
+
+  it("pins notification preview responses as no-store on every branch", async () => {
+    const routeSource = await import("node:fs").then((fs) =>
+      fs.readFileSync("apps/web/app/api/public/[tenantSlug]/notification-previews/route.ts", "utf8"),
+    );
+
+    expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(routeSource).toContain("{ status: 503, headers: noStoreHeaders }");
+    expect(routeSource).toContain("}, { headers: noStoreHeaders });");
+    expect(routeSource).not.toContain('headers: { "Cache-Control": "no-store" }');
   });
 });

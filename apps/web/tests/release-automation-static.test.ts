@@ -34,8 +34,9 @@ describe("Phase 12 release automation static coverage", () => {
     expect(flagsRoute).toContain("cacheKey");
   });
 
-  it("keeps dashboard release page wired to release gates, flags, rollback, workflow, and disabled actions", () => {
+  it("keeps dashboard release page wired to release gates, flags, rollback, workflow, and gated actions", () => {
     const releasesPage = readWorkspaceFile("apps/dashboard/app/releases/page.tsx");
+    const releaseActionPanel = readWorkspaceFile("apps/dashboard/components/ReleaseActionPanel.tsx");
     const releaseDemo = readWorkspaceFile("apps/dashboard/lib/releaseDemo.ts");
 
     expect(releasesPage).toContain("Release gates");
@@ -43,7 +44,10 @@ describe("Phase 12 release automation static coverage", () => {
     expect(releasesPage).toContain("EAS Update preview");
     expect(releasesPage).toContain("Rollback draft");
     expect(releasesPage).toContain("CI/CD guardrail plan");
-    expect(releasesPage).toContain("DisabledActionPanel");
+    expect(releasesPage).toContain("ReleaseActionPanel");
+    expect(releaseActionPanel).toContain('fetch("/api/releases"');
+    expect(releaseActionPanel).toContain("Create release draft");
+    expect(releaseActionPanel).toContain("provider proof remain gated");
     expect(releaseDemo).toContain("releaseWorkflowPlan");
     expect(releaseDemo).toContain("providerRuntimeGatePreview");
     expect(releaseDemo).toContain("releaseAuditDrafts");

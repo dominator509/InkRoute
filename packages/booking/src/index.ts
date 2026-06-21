@@ -648,15 +648,32 @@ export interface DashboardMutationRuntimeReadinessInput {
   userFeedbackStatesCovered: boolean;
 }
 
+export const dashboardMutationRuntimeRequiredCommands = [
+      "pnpm --filter @inkroute/booking typecheck",
+      "pnpm --filter @inkroute/booking test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/dashboard test -- dashboard-mutations",
+] as const;
+
 export interface DashboardMutationRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
   missingServerRoutes: readonly DashboardMutationAction[];
   missingRouteTests: readonly DashboardMutationAction[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof dashboardMutationRuntimeRequiredCommands;
+  requiredEvidence: readonly DashboardMutationRuntimeRequiredEvidence[];
   blockers: readonly string[];
 }
+
+export const dashboardMutationRuntimeRequiredEvidence = [
+      "server route/action and route-test matrix for every dashboard mutation action",
+      "transaction, idempotency, and AuditLog persistence evidence for dashboard writes",
+      "tenant isolation and RBAC denial test output for dashboard mutations",
+      "provider rollback/retry test output for Stripe, storage, notifications, calendar, and release actions",
+] as const;
+
+export type DashboardMutationRuntimeRequiredEvidence = (typeof dashboardMutationRuntimeRequiredEvidence)[number];
 
 export interface DomainEventAuditReadinessInput {
   packageScripts: Readonly<Record<string, string>>;
@@ -675,11 +692,29 @@ export interface DomainEventAuditReadinessInput {
   databaseIntegrationTestsPassed: boolean;
 }
 
+export const domainEventAuditReadinessRequiredControls = [
+      "Execute BookingRequest, BookingStateEvent, AuditLog, Payment, Deposit, Refund, PaymentAuditLog, and IdempotencyKey writes inside tenant-scoped transactions.",
+      "Reject lifecycle mutations before persistence when tenant scope, actor, idempotency key, current status, provider id, or amount is invalid.",
+      "Persist audit/event rows for both success and failure paths before returning a client-visible state change.",
+      "Use idempotency keys for dashboard actions, provider webhooks, payment lifecycle updates, and rollback attempts.",
+      "Make invalid state transitions impossible through the service layer, not just through UI disabled states.",
+      "Attach provider failure rollback records before retrying or surfacing deposit/calendar/upload/notification failures.",
+] as const;
+
+export const domainEventAuditReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/booking typecheck",
+      "pnpm --filter @inkroute/booking test",
+      "pnpm --filter @inkroute/payments test",
+      "booking/payment lifecycle Prisma transaction integration tests",
+      "idempotency replay integration tests",
+      "provider failure rollback integration tests",
+] as const;
+
 export interface DomainEventAuditReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof domainEventAuditReadinessRequiredCommands;
+  requiredControls: typeof domainEventAuditReadinessRequiredControls;
   blockers: readonly string[];
 }
 
@@ -706,12 +741,43 @@ export interface DomainEventAuditTransactionEvidenceInput {
   secretSafeArtifactsCaptured: boolean;
 }
 
+export const domainEventAuditTransactionRequiredControls = [
+      "Commit state mutation, domain event, audit row, payment audit row, and idempotency key in the same tenant-scoped transaction.",
+      "Reject invalid lifecycle transitions, missing tenant scope, missing actor, and duplicate idempotency keys before side effects.",
+      "Return original mutation results for idempotency replays without duplicate BookingStateEvent, AuditLog, PaymentAuditLog, or provider rollback writes.",
+      "Record provider rollback/failure audit rows before retrying or exposing provider failure states.",
+      "Redact client, medical, payment, provider, and private URL data from transaction evidence artifacts.",
+] as const;
+
+export const domainEventAuditTransactionRequiredCommands = [
+      "pnpm --filter @inkroute/booking typecheck",
+      "pnpm --filter @inkroute/booking test",
+      "pnpm --filter @inkroute/payments typecheck",
+      "pnpm --filter @inkroute/payments test",
+      "booking/payment lifecycle Prisma transaction integration tests",
+      "booking/payment idempotency replay integration tests",
+      "provider failure rollback integration tests",
+      "cross-tenant lifecycle mutation denial tests",
+      "GitHub Actions domain event/audit transaction evidence job",
+] as const;
+
+export const domainEventAuditTransactionRequiredEvidence = [
+      "booking/payment package test and typecheck evidence",
+      "Prisma transaction service and tenant-scoped repository evidence",
+      "atomic booking/payment state, event, audit, and payment-audit persistence evidence",
+      "idempotency persistence and replay original-result evidence",
+      "provider rollback, invalid-transition denial, and cross-tenant denial evidence",
+      "database integration, CI, and secret-safe artifact evidence",
+] as const;
+
+export type DomainEventAuditTransactionRequiredEvidence = (typeof domainEventAuditTransactionRequiredEvidence)[number];
+
 export interface DomainEventAuditTransactionEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof domainEventAuditTransactionRequiredCommands;
+  requiredEvidence: readonly DomainEventAuditTransactionRequiredEvidence[];
+  requiredControls: typeof domainEventAuditTransactionRequiredControls;
   blockers: readonly string[];
 }
 
@@ -903,12 +969,11 @@ export function buildDashboardMutationRuntimeReadinessPlan(
   const missingServerRoutes = requiredActions.filter((action) => !input.actionsWithServerRoutes.includes(action));
   const missingRouteTests = requiredActions.filter((action) => !input.actionsWithRouteTests.includes(action));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: DashboardMutationRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/booking package script is missing ${script}.`);
-  if (!input.bookingTestsPassed) blockers.push("@inkroute/booking dashboard mutation tests must pass.");
-  if (!input.bookingTypecheckPassed) blockers.push("@inkroute/booking typecheck must pass in an installed workspace.");
-  if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass with mutation routes/actions wired.");
+  if (!input.bookingTestsPassed) blockers.push("@inkroute/booking tests must pass before dashboard mutation runtime readiness can close.");
+  if (!input.bookingTypecheckPassed) blockers.push("@inkroute/booking typecheck must pass before dashboard mutation runtime readiness can close.");
   if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with mutation routes/actions wired.");
   if (missingServerRoutes.length > 0) blockers.push(`Dashboard mutation server routes/actions are missing for: ${missingServerRoutes.join(", ")}.`);
   if (missingRouteTests.length > 0) blockers.push(`Dashboard mutation route/API tests are missing for: ${missingRouteTests.join(", ")}.`);
@@ -918,33 +983,30 @@ export function buildDashboardMutationRuntimeReadinessPlan(
   if (!input.idempotencyStoreConfigured) blockers.push("Dashboard mutations must persist and enforce idempotency keys.");
   if (!input.auditLogPersistenceConfigured) blockers.push("Dashboard mutations must persist AuditLog records for sensitive changes.");
   if (!input.providerRollbackTestsPassed) blockers.push("Provider-backed dashboard actions must prove rollback/retry behavior.");
-  if (!input.disabledPlaceholdersRemoved) blockers.push("Disabled dashboard action placeholders must be replaced by gated actions before runtime readiness.");
+  if (!input.disabledPlaceholdersRemoved) blockers.push("Dashboard mutation surfaces must expose gated action UI and explicit feedback states before runtime readiness.");
   if (!input.userFeedbackStatesCovered) blockers.push("Dashboard mutation UI must cover loading, success, denial, provider-failure, and retry states.");
 
   if (missingServerRoutes.length > 0 || missingRouteTests.length > 0) {
-    requiredEvidence.push("server route/action and route-test matrix for every dashboard mutation action");
+    requiredEvidence.push(dashboardMutationRuntimeRequiredEvidence[0]);
   }
   if (!input.prismaTransactionsConfigured || !input.auditLogPersistenceConfigured || !input.idempotencyStoreConfigured) {
-    requiredEvidence.push("transaction, idempotency, and AuditLog persistence evidence for dashboard writes");
+    requiredEvidence.push(dashboardMutationRuntimeRequiredEvidence[1]);
   }
   if (!input.tenantIsolationTestsPassed || !input.rbacDenialTestsPassed) {
-    requiredEvidence.push("tenant isolation and RBAC denial test output for dashboard mutations");
+    requiredEvidence.push(dashboardMutationRuntimeRequiredEvidence[2]);
   }
-  if (!input.providerRollbackTestsPassed) requiredEvidence.push("provider rollback/retry test output for Stripe, storage, notifications, calendar, and release actions");
+  if (!input.providerRollbackTestsPassed) requiredEvidence.push(dashboardMutationRuntimeRequiredEvidence[3]);
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
     missingServerRoutes,
     missingRouteTests,
-    requiredCommands: [
-      "pnpm --filter @inkroute/booking typecheck",
-      "pnpm --filter @inkroute/booking test",
-      "pnpm --filter @inkroute/dashboard typecheck",
-      "pnpm --filter @inkroute/dashboard build",
-      "pnpm --filter @inkroute/dashboard test -- dashboard-mutations",
-    ],
-    requiredEvidence,
+    requiredCommands: dashboardMutationRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === dashboardMutationRuntimeRequiredEvidence.length
+        ? dashboardMutationRuntimeRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -972,64 +1034,15 @@ export interface BookingContactRuntimeEvidenceInput {
   secretSafeArtifactsCaptured: boolean;
 }
 
-export interface BookingContactRuntimeEvidencePlan {
-  status: "ready" | "blocked";
-  missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredControls: readonly string[];
-  requiredEvidence: readonly string[];
-  blockers: readonly string[];
-}
+export const bookingContactRuntimeRequiredControls = [
+      "Persist booking/contact submissions before creating upload, deposit, notification, or calendar handoff work.",
+      "Keep provider work idempotent, audit logged, tenant scoped, and retryable.",
+      "Preserve no-live-payment behavior until Stripe sandbox credentials and reviewed deposit copy are configured.",
+      "Render confirmation states from persisted workflow data instead of optimistic client-only state.",
+      "Redact medical notes, payment data, provider tokens, private file URLs, and raw client PII from evidence artifacts.",
+] as const;
 
-export function buildBookingContactRuntimeEvidencePlan(
-  input: BookingContactRuntimeEvidenceInput,
-): BookingContactRuntimeEvidencePlan {
-  const requiredScripts = ["test", "typecheck"];
-  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
-  const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
-
-  for (const script of missingScripts) blockers.push(`@inkroute/booking package script is missing ${script}.`);
-  if (!input.bookingTestsPassed) blockers.push("@inkroute/booking tests must pass before booking/contact runtime evidence can close.");
-  if (!input.bookingTypecheckPassed) blockers.push("@inkroute/booking typecheck must pass before booking/contact runtime evidence can close.");
-  if (!input.webTypecheckPassed) blockers.push("@inkroute/web typecheck must pass with booking route, booking UI, confirmation UI, and contact form wiring.");
-  if (!input.webBuildPassed) blockers.push("@inkroute/web build must pass with booking and contact flows.");
-  if (!input.bookingRouteUsesPostSubmitPlan) blockers.push("Public booking route must use the package post-submit handoff plan after persistence.");
-  if (!input.confirmationUiUsesWorkflowState) blockers.push("Booking confirmation UI must render persisted workflow state for upload, deposit, notification, and calendar handoffs.");
-  if (!input.contactFormPersistenceConfigured) blockers.push("Contact form submissions must persist through a tenant-scoped pathway with audit metadata.");
-  if (!input.databasePersistenceIntegrationPassed) blockers.push("Database integration evidence must prove booking/contact persistence and transaction behavior.");
-  if (!input.tenantIsolationIntegrationPassed) blockers.push("Booking/contact integration tests must reject cross-tenant submissions and workflow reads.");
-  if (!input.referenceUploadHandoffGated) blockers.push("Reference upload handoff must remain provider-gated until signed URL/storage execution is configured.");
-  if (!input.depositHandoffGated) blockers.push("Deposit handoff must preserve the no-live-payment boundary until Stripe test credentials and sandbox evidence exist.");
-  if (!input.notificationHandoffGated) blockers.push("Notification handoff must stay queued/provider-gated until sandbox delivery evidence exists.");
-  if (!input.calendarHandoffGated) blockers.push("Calendar handoff must stay tentative/provider-gated until calendar sandbox evidence exists.");
-  if (!input.noLivePaymentBoundaryPreserved) blockers.push("No-live-payment boundary must be preserved in public booking UI, API responses, and provider handoff plans.");
-  if (!input.browserE2ePassed) blockers.push("Browser E2E must cover booking submission, confirmation state, contact submission, validation errors, and provider-gated handoffs.");
-  if (!input.apiE2ePassed) blockers.push("API E2E must cover booking/contact happy path, validation failures, anti-bot controls, rate limits, and tenant scope.");
-  if (!input.providerSandboxEvidenceCaptured) blockers.push("Provider sandbox evidence must cover storage upload, Stripe deposit, notification, and calendar handoff boundaries or execution.");
-  if (!input.ciEvidenceCaptured) blockers.push("CI evidence for booking/contact runtime flows must be captured.");
-  if (!input.secretSafeArtifactsCaptured) blockers.push("Booking/contact artifacts must be redacted and free of secrets, raw medical notes, payment data, provider tokens, and private file URLs.");
-
-  if (!input.bookingRouteUsesPostSubmitPlan || !input.confirmationUiUsesWorkflowState || !input.contactFormPersistenceConfigured) {
-    requiredEvidence.push("public route, confirmation UI, and contact persistence wiring evidence");
-  }
-  if (!input.databasePersistenceIntegrationPassed || !input.tenantIsolationIntegrationPassed) {
-    requiredEvidence.push("tenant-scoped booking/contact database integration evidence");
-  }
-  if (!input.referenceUploadHandoffGated || !input.depositHandoffGated || !input.notificationHandoffGated || !input.calendarHandoffGated || !input.noLivePaymentBoundaryPreserved) {
-    requiredEvidence.push("provider-gated upload, deposit, notification, calendar, and no-live-payment boundary evidence");
-  }
-  if (!input.browserE2ePassed || !input.apiE2ePassed || !input.providerSandboxEvidenceCaptured) {
-    requiredEvidence.push("browser E2E, API E2E, and provider sandbox transcript evidence");
-  }
-  if (!input.webTypecheckPassed || !input.webBuildPassed || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
-    requiredEvidence.push("web typecheck/build, CI, and secret-safe artifact evidence");
-  }
-
-  return {
-    status: blockers.length === 0 ? "ready" : "blocked",
-    missingScripts,
-    requiredCommands: [
+export const bookingContactRuntimeRequiredCommands = [
       "pnpm --filter @inkroute/booking typecheck",
       "pnpm --filter @inkroute/booking test",
       "pnpm --filter @inkroute/web typecheck",
@@ -1038,15 +1051,81 @@ export function buildBookingContactRuntimeEvidencePlan(
       "booking/contact browser E2E tests",
       "provider sandbox handoff boundary tests",
       "GitHub Actions booking/contact runtime evidence job",
-    ],
-    requiredControls: [
-      "Persist booking/contact submissions before creating upload, deposit, notification, or calendar handoff work.",
-      "Keep provider work idempotent, audit logged, tenant scoped, and retryable.",
-      "Preserve no-live-payment behavior until Stripe sandbox credentials and reviewed deposit copy are configured.",
-      "Render confirmation states from persisted workflow data instead of optimistic client-only state.",
-      "Redact medical notes, payment data, provider tokens, private file URLs, and raw client PII from evidence artifacts.",
-    ],
-    requiredEvidence,
+] as const;
+
+export interface BookingContactRuntimeEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: typeof bookingContactRuntimeRequiredCommands;
+  requiredControls: typeof bookingContactRuntimeRequiredControls;
+  requiredEvidence: readonly BookingContactRuntimeRequiredEvidence[];
+  blockers: readonly string[];
+}
+
+export const bookingContactRuntimeRequiredEvidence = [
+      "public route, confirmation UI, and contact persistence wiring evidence",
+      "tenant-scoped booking/contact database integration evidence",
+      "provider-gated upload, deposit, notification, calendar, and no-live-payment boundary evidence",
+      "browser E2E, API E2E, and provider sandbox transcript evidence",
+      "web typecheck/build, CI, and secret-safe artifact evidence",
+] as const;
+
+export type BookingContactRuntimeRequiredEvidence = (typeof bookingContactRuntimeRequiredEvidence)[number];
+
+export function buildBookingContactRuntimeEvidencePlan(
+  input: BookingContactRuntimeEvidenceInput,
+): BookingContactRuntimeEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: BookingContactRuntimeRequiredEvidence[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/booking package script is missing ${script}.`);
+  if (!input.bookingTestsPassed) blockers.push("@inkroute/booking tests must pass before booking/contact runtime evidence can close.");
+  if (!input.bookingTypecheckPassed) blockers.push("@inkroute/booking typecheck must pass before booking/contact runtime evidence can close.");
+  if (!input.webTypecheckPassed) blockers.push("@inkroute/web typecheck must pass with booking route, booking UI, confirmation UI, and contact form wiring.");
+  if (!input.webBuildPassed) blockers.push("@inkroute/web build must pass with booking and contact flows.");
+  if (!input.bookingRouteUsesPostSubmitPlan) blockers.push("Public booking route must use the package post-submit handoff plan after persistence.");
+  if (!input.confirmationUiUsesWorkflowState) blockers.push("Booking confirmation UI must render persisted workflow state for upload, deposit, notification, and calendar handoffs.");
+  if (!input.contactFormPersistenceConfigured) blockers.push("Contact form persistence must be configured for submissions and workflow reads.");
+  if (!input.databasePersistenceIntegrationPassed) blockers.push("Booking/contact database persistence integration tests must pass.");
+  if (!input.tenantIsolationIntegrationPassed) blockers.push("Booking/contact tenant-isolation integration tests must pass.");
+  if (!input.referenceUploadHandoffGated) blockers.push("Reference upload handoff must remain provider-gated until signed URL/storage execution is configured.");
+  if (!input.depositHandoffGated) blockers.push("Deposit handoff must preserve the no-live-payment boundary until Stripe test credentials and sandbox evidence exist.");
+  if (!input.notificationHandoffGated) blockers.push("Notification handoff must stay queued/provider-gated until sandbox delivery evidence exists.");
+  if (!input.calendarHandoffGated) blockers.push("Calendar handoff must stay tentative/provider-gated until calendar sandbox evidence exists.");
+  if (!input.noLivePaymentBoundaryPreserved) blockers.push("Booking/contact runtime must preserve the no-live-payment boundary until Stripe evidence exists.");
+  if (!input.browserE2ePassed) blockers.push("Booking/contact browser E2E evidence must pass.");
+  if (!input.apiE2ePassed) blockers.push("Booking/contact API E2E evidence must pass.");
+  if (!input.providerSandboxEvidenceCaptured) blockers.push("Provider sandbox evidence must cover storage upload, Stripe deposit, notification, and calendar handoff boundaries or execution.");
+  if (!input.ciEvidenceCaptured) blockers.push("CI evidence for booking/contact runtime flows must be captured.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Booking/contact artifacts must be redacted and free of secrets, raw medical notes, payment data, provider tokens, and private file URLs.");
+
+  if (!input.bookingRouteUsesPostSubmitPlan || !input.confirmationUiUsesWorkflowState || !input.contactFormPersistenceConfigured) {
+    requiredEvidence.push(bookingContactRuntimeRequiredEvidence[0]);
+  }
+  if (!input.databasePersistenceIntegrationPassed || !input.tenantIsolationIntegrationPassed) {
+    requiredEvidence.push(bookingContactRuntimeRequiredEvidence[1]);
+  }
+  if (!input.referenceUploadHandoffGated || !input.depositHandoffGated || !input.notificationHandoffGated || !input.calendarHandoffGated || !input.noLivePaymentBoundaryPreserved) {
+    requiredEvidence.push(bookingContactRuntimeRequiredEvidence[2]);
+  }
+  if (!input.browserE2ePassed || !input.apiE2ePassed || !input.providerSandboxEvidenceCaptured) {
+    requiredEvidence.push(bookingContactRuntimeRequiredEvidence[3]);
+  }
+  if (!input.webTypecheckPassed || !input.webBuildPassed || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
+    requiredEvidence.push(bookingContactRuntimeRequiredEvidence[4]);
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: bookingContactRuntimeRequiredCommands,
+    requiredControls: bookingContactRuntimeRequiredControls,
+    requiredEvidence:
+      requiredEvidence.length === bookingContactRuntimeRequiredEvidence.length
+        ? bookingContactRuntimeRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -1074,64 +1153,16 @@ export interface BookingProviderHandoffRuntimeEvidenceInput {
   secretSafeArtifactsCaptured: boolean;
 }
 
-export interface BookingProviderHandoffRuntimeEvidencePlan {
-  status: "ready" | "blocked";
-  missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredControls: readonly string[];
-  requiredEvidence: readonly string[];
-  blockers: readonly string[];
-}
+export const bookingProviderHandoffRuntimeRequiredControls = [
+      "Create Stripe deposit sessions only after accepted booking state and policy approval.",
+      "Execute upload, deposit, notification, and calendar handoffs from persisted tenant-scoped workers.",
+      "Persist audit payloads and idempotency keys before invoking external providers.",
+      "Retry only retryable provider failures and queue non-retryable failures for operator review.",
+      "Rollback or void provider artifacts before exposing failed handoff states to users.",
+      "Redact provider tokens, payment data, private URLs, raw client PII, and medical notes from artifacts.",
+] as const;
 
-export function buildBookingProviderHandoffRuntimeEvidencePlan(
-  input: BookingProviderHandoffRuntimeEvidenceInput,
-): BookingProviderHandoffRuntimeEvidencePlan {
-  const requiredScripts = ["test", "typecheck"];
-  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
-  const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
-
-  for (const script of missingScripts) blockers.push(`@inkroute/booking package script is missing ${script}.`);
-  if (!input.bookingTestsPassed) blockers.push("@inkroute/booking tests must pass before provider handoff evidence can close.");
-  if (!input.bookingTypecheckPassed) blockers.push("@inkroute/booking typecheck must pass before provider handoff evidence can close.");
-  if (!input.paymentsTestsPassed) blockers.push("@inkroute/payments tests must pass before Stripe handoff evidence can close.");
-  if (!input.notificationsTestsPassed) blockers.push("@inkroute/notifications tests must pass before notification handoff evidence can close.");
-  if (!input.calendarTestsPassed) blockers.push("@inkroute/calendar tests must pass before calendar handoff evidence can close.");
-  if (!input.acceptedBookingGateEnforced) blockers.push("Deposit and calendar handoffs must run only after an accepted booking state.");
-  if (!input.persistedWorkerQueueConfigured) blockers.push("Provider handoffs must execute from a persisted worker queue with tenant scope.");
-  if (!input.referenceUploadWorkerExecuted) blockers.push("Reference upload worker execution evidence must exist before provider handoff readiness closes.");
-  if (!input.stripeDepositSessionSandboxPassed) blockers.push("Stripe deposit session sandbox test must pass without live-payment mode.");
-  if (!input.notificationQueueDeliverySandboxPassed) blockers.push("Notification queue delivery sandbox test must pass for email/SMS/push or documented channel subset.");
-  if (!input.calendarHoldSandboxPassed) blockers.push("Calendar hold sandbox test must pass with tentative hold creation and cleanup.");
-  if (!input.auditPayloadsPersisted) blockers.push("Audit payloads must persist for upload, deposit, notification, calendar, retry, rollback, and operator-review events.");
-  if (!input.retryPolicyVerified) blockers.push("Retry policy must be verified for retryable provider failures.");
-  if (!input.rollbackPathsVerified) blockers.push("Rollback paths must be verified for failed Stripe, calendar, upload, and notification handoffs.");
-  if (!input.operatorReviewQueueConfigured) blockers.push("Operator-review queue must capture non-retryable provider failures.");
-  if (!input.providerIdempotencyConfigured) blockers.push("Provider handoffs must enforce idempotency across retries, worker restarts, and webhook replays.");
-  if (!input.providerSandboxEvidenceCaptured) blockers.push("Provider sandbox evidence must include Stripe, notification, calendar, and upload handoff transcripts.");
-  if (!input.ciEvidenceCaptured) blockers.push("CI evidence for provider handoff execution must be captured.");
-  if (!input.secretSafeArtifactsCaptured) blockers.push("Provider handoff artifacts must be redacted and free of secrets, provider tokens, payment data, private URLs, and raw client PII.");
-
-  if (!input.acceptedBookingGateEnforced || !input.persistedWorkerQueueConfigured || !input.providerIdempotencyConfigured) {
-    requiredEvidence.push("accepted-booking gate, persisted worker queue, and provider idempotency evidence");
-  }
-  if (!input.referenceUploadWorkerExecuted || !input.stripeDepositSessionSandboxPassed || !input.notificationQueueDeliverySandboxPassed || !input.calendarHoldSandboxPassed) {
-    requiredEvidence.push("reference upload, Stripe, notification, and calendar sandbox execution evidence");
-  }
-  if (!input.auditPayloadsPersisted || !input.retryPolicyVerified || !input.rollbackPathsVerified || !input.operatorReviewQueueConfigured) {
-    requiredEvidence.push("audit persistence, retry, rollback, and operator-review queue evidence");
-  }
-  if (!input.bookingTestsPassed || !input.bookingTypecheckPassed || !input.paymentsTestsPassed || !input.notificationsTestsPassed || !input.calendarTestsPassed) {
-    requiredEvidence.push("booking, payments, notifications, and calendar package test/typecheck evidence");
-  }
-  if (!input.providerSandboxEvidenceCaptured || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
-    requiredEvidence.push("provider sandbox, CI, and secret-safe artifact evidence");
-  }
-
-  return {
-    status: blockers.length === 0 ? "ready" : "blocked",
-    missingScripts,
-    requiredCommands: [
+export const bookingProviderHandoffRuntimeRequiredCommands = [
       "pnpm --filter @inkroute/booking typecheck",
       "pnpm --filter @inkroute/booking test",
       "pnpm --filter @inkroute/payments test",
@@ -1143,16 +1174,81 @@ export function buildBookingProviderHandoffRuntimeEvidencePlan(
       "persisted provider worker execution tests",
       "provider rollback/retry integration tests",
       "GitHub Actions provider handoff evidence job",
-    ],
-    requiredControls: [
-      "Create Stripe deposit sessions only after accepted booking state and policy approval.",
-      "Execute upload, deposit, notification, and calendar handoffs from persisted tenant-scoped workers.",
-      "Persist audit payloads and idempotency keys before invoking external providers.",
-      "Retry only retryable provider failures and queue non-retryable failures for operator review.",
-      "Rollback or void provider artifacts before exposing failed handoff states to users.",
-      "Redact provider tokens, payment data, private URLs, raw client PII, and medical notes from artifacts.",
-    ],
-    requiredEvidence,
+] as const;
+
+export interface BookingProviderHandoffRuntimeEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: typeof bookingProviderHandoffRuntimeRequiredCommands;
+  requiredControls: typeof bookingProviderHandoffRuntimeRequiredControls;
+  requiredEvidence: readonly BookingProviderHandoffRuntimeRequiredEvidence[];
+  blockers: readonly string[];
+}
+
+export const bookingProviderHandoffRuntimeRequiredEvidence = [
+      "accepted-booking gate, persisted worker queue, and provider idempotency evidence",
+      "reference upload, Stripe, notification, and calendar sandbox execution evidence",
+      "audit persistence, retry, rollback, and operator-review queue evidence",
+      "booking, payments, notifications, and calendar package test/typecheck evidence",
+      "provider sandbox, CI, and secret-safe artifact evidence",
+] as const;
+
+export type BookingProviderHandoffRuntimeRequiredEvidence = (typeof bookingProviderHandoffRuntimeRequiredEvidence)[number];
+
+export function buildBookingProviderHandoffRuntimeEvidencePlan(
+  input: BookingProviderHandoffRuntimeEvidenceInput,
+): BookingProviderHandoffRuntimeEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: BookingProviderHandoffRuntimeRequiredEvidence[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/booking package script is missing ${script}.`);
+  if (!input.bookingTestsPassed) blockers.push("@inkroute/booking tests must pass before provider handoff evidence can close.");
+  if (!input.bookingTypecheckPassed) blockers.push("@inkroute/booking typecheck must pass before provider handoff evidence can close.");
+  if (!input.paymentsTestsPassed) blockers.push("@inkroute/payments tests must pass before Stripe handoff evidence can close.");
+  if (!input.notificationsTestsPassed) blockers.push("@inkroute/notifications tests must pass before notification handoff evidence can close.");
+  if (!input.calendarTestsPassed) blockers.push("@inkroute/calendar tests must pass before calendar handoff evidence can close.");
+  if (!input.acceptedBookingGateEnforced) blockers.push("Provider handoffs must only execute after accepted booking state and policy approval.");
+  if (!input.persistedWorkerQueueConfigured) blockers.push("Persisted provider worker queue must be configured before provider handoff execution can close.");
+  if (!input.providerIdempotencyConfigured) blockers.push("Provider handoffs must enforce idempotency across retries, worker restarts, and webhook replays.");
+  if (!input.referenceUploadWorkerExecuted) blockers.push("Reference upload worker execution evidence must be captured.");
+  if (!input.stripeDepositSessionSandboxPassed) blockers.push("Stripe deposit session sandbox test must pass without live-payment mode.");
+  if (!input.notificationQueueDeliverySandboxPassed) blockers.push("Notification queue delivery sandbox test must pass for email/SMS/push or documented channel subset.");
+  if (!input.calendarHoldSandboxPassed) blockers.push("Calendar hold sandbox test must pass with tentative hold creation and cleanup.");
+  if (!input.auditPayloadsPersisted) blockers.push("Audit payloads must persist for upload, deposit, notification, calendar, retry, rollback, and operator-review events.");
+  if (!input.retryPolicyVerified) blockers.push("Retry policy must be verified for retryable provider failures.");
+  if (!input.rollbackPathsVerified) blockers.push("Rollback paths must be verified for failed Stripe, calendar, upload, and notification handoffs.");
+  if (!input.operatorReviewQueueConfigured) blockers.push("Operator review queue must capture provider handoff failures before manual retry or rollback.");
+  if (!input.providerSandboxEvidenceCaptured) blockers.push("Provider sandbox evidence must cover storage upload, Stripe deposit, notification, and calendar handoff execution.");
+  if (!input.ciEvidenceCaptured) blockers.push("CI evidence for booking provider handoff runtime must be captured.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Booking provider handoff artifacts must be redacted and free of secrets, provider tokens, payment data, private URLs, and raw client PII.");
+
+  if (!input.acceptedBookingGateEnforced || !input.persistedWorkerQueueConfigured || !input.providerIdempotencyConfigured) {
+    requiredEvidence.push(bookingProviderHandoffRuntimeRequiredEvidence[0]);
+  }
+  if (!input.referenceUploadWorkerExecuted || !input.stripeDepositSessionSandboxPassed || !input.notificationQueueDeliverySandboxPassed || !input.calendarHoldSandboxPassed) {
+    requiredEvidence.push(bookingProviderHandoffRuntimeRequiredEvidence[1]);
+  }
+  if (!input.auditPayloadsPersisted || !input.retryPolicyVerified || !input.rollbackPathsVerified || !input.operatorReviewQueueConfigured) {
+    requiredEvidence.push(bookingProviderHandoffRuntimeRequiredEvidence[2]);
+  }
+  if (!input.bookingTestsPassed || !input.bookingTypecheckPassed || !input.paymentsTestsPassed || !input.notificationsTestsPassed || !input.calendarTestsPassed) {
+    requiredEvidence.push(bookingProviderHandoffRuntimeRequiredEvidence[3]);
+  }
+  if (!input.providerSandboxEvidenceCaptured || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
+    requiredEvidence.push(bookingProviderHandoffRuntimeRequiredEvidence[4]);
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: bookingProviderHandoffRuntimeRequiredCommands,
+    requiredControls: bookingProviderHandoffRuntimeRequiredControls,
+    requiredEvidence:
+      requiredEvidence.length === bookingProviderHandoffRuntimeRequiredEvidence.length
+        ? bookingProviderHandoffRuntimeRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -1178,17 +1274,50 @@ export interface DashboardMutationExecutionEvidenceInput {
   secretSafeArtifactsCaptured: boolean;
 }
 
+export const dashboardMutationExecutionRequiredControls = [
+      "Use buildDashboardMutationPlan before every server action or API mutation side effect.",
+      "Execute dashboard write models in tenant-scoped Prisma transactions.",
+      "Persist idempotency keys and redacted AuditLog rows before provider side effects.",
+      "Enforce RBAC and tenant scope before lifecycle, upload, payment, notification, calendar, travel, portfolio, release, or settings writes.",
+      "Expose gated UI actions with explicit loading/success/denial/failure/retry states.",
+      "Redact secrets, provider tokens, raw PII, medical notes, payment data, and private file URLs from artifacts.",
+] as const;
+
+export const dashboardMutationExecutionRequiredCommands = [
+      "pnpm --filter @inkroute/booking typecheck",
+      "pnpm --filter @inkroute/booking test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/dashboard build",
+      "dashboard mutation server-action/API route tests",
+      "dashboard mutation Prisma transaction tests",
+      "dashboard mutation tenant-isolation and RBAC tests",
+      "provider mutation rollback/retry tests",
+      "dashboard mutation UI feedback-state tests",
+      "GitHub Actions dashboard mutation execution evidence job",
+] as const;
+
 export interface DashboardMutationExecutionEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
   missingServerActions: readonly DashboardMutationAction[];
   missingApiRoutes: readonly DashboardMutationAction[];
   missingRouteTests: readonly DashboardMutationAction[];
-  requiredCommands: readonly string[];
-  requiredControls: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof dashboardMutationExecutionRequiredCommands;
+  requiredControls: typeof dashboardMutationExecutionRequiredControls;
+  requiredEvidence: readonly DashboardMutationExecutionRequiredEvidence[];
   blockers: readonly string[];
 }
+
+export const dashboardMutationExecutionRequiredEvidence = [
+      "server action, API route, and route-test matrix for every dashboard mutation",
+      "Prisma transaction, idempotency, and AuditLog persistence evidence",
+      "tenant-isolation and RBAC-denial mutation test evidence",
+      "provider rollback/retry evidence for storage, Stripe, notification, calendar, release, and settings actions",
+      "gated mutation UI replacement plus loading/success/denial/failure/retry state evidence",
+      "dashboard typecheck/build, CI, and secret-safe artifact evidence",
+] as const;
+
+export type DashboardMutationExecutionRequiredEvidence = (typeof dashboardMutationExecutionRequiredEvidence)[number];
 
 export function buildDashboardMutationExecutionEvidencePlan(
   input: DashboardMutationExecutionEvidenceInput,
@@ -1216,44 +1345,44 @@ export function buildDashboardMutationExecutionEvidencePlan(
   const missingApiRoutes = requiredActions.filter((action) => !input.apiRoutesImplemented.includes(action));
   const missingRouteTests = requiredActions.filter((action) => !input.routeTestsPassed.includes(action));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: DashboardMutationExecutionRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/booking package script is missing ${script}.`);
   if (!input.bookingTestsPassed) blockers.push("@inkroute/booking tests must pass before dashboard mutation execution evidence can close.");
   if (!input.bookingTypecheckPassed) blockers.push("@inkroute/booking typecheck must pass before dashboard mutation execution evidence can close.");
-  if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass with mutation server actions/API routes.");
-  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with mutation UI and route wiring.");
-  if (missingServerActions.length > 0) blockers.push(`Dashboard server actions are missing for: ${missingServerActions.join(", ")}.`);
-  if (missingApiRoutes.length > 0) blockers.push(`Dashboard API routes are missing for: ${missingApiRoutes.join(", ")}.`);
+  if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass with mutation routes/actions wired.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with mutation routes/actions wired.");
+  if (missingServerActions.length > 0) blockers.push(`Dashboard mutation server actions are missing for: ${missingServerActions.join(", ")}.`);
+  if (missingApiRoutes.length > 0) blockers.push(`Dashboard mutation API routes are missing for: ${missingApiRoutes.join(", ")}.`);
   if (missingRouteTests.length > 0) blockers.push(`Dashboard mutation route/API tests are missing for: ${missingRouteTests.join(", ")}.`);
   if (!input.prismaTransactionsPassed) blockers.push("Dashboard mutations must prove tenant-scoped Prisma transaction execution.");
   if (!input.idempotencyPersistencePassed) blockers.push("Dashboard mutations must persist and enforce idempotency keys.");
   if (!input.auditLogPersistencePassed) blockers.push("Dashboard mutations must persist redacted AuditLog rows.");
   if (!input.tenantIsolationTestsPassed) blockers.push("Dashboard mutation tests must reject cross-tenant writes.");
   if (!input.rbacDenialTestsPassed) blockers.push("Dashboard mutation tests must reject actors without required permissions.");
-  if (!input.providerRollbackTestsPassed) blockers.push("Provider mutation rollback/retry tests must pass.");
-  if (!input.disabledPlaceholdersRemoved) blockers.push("Disabled dashboard placeholders must be replaced with gated mutation UI.");
-  if (!input.uiFeedbackStatesPassed) blockers.push("Mutation UI must cover loading, success, denial, provider failure, retry, and operator-review states.");
+  if (!input.providerRollbackTestsPassed) blockers.push("Provider-backed dashboard actions must prove rollback/retry behavior.");
+  if (!input.disabledPlaceholdersRemoved) blockers.push("Dashboard mutation surfaces must expose gated action UI and explicit feedback states before execution readiness.");
+  if (!input.uiFeedbackStatesPassed) blockers.push("Dashboard mutation UI must cover loading, success, denial, provider-failure, and retry states.");
   if (!input.ciEvidenceCaptured) blockers.push("CI evidence for dashboard mutation execution must be captured.");
-  if (!input.secretSafeArtifactsCaptured) blockers.push("Dashboard mutation artifacts must be redacted and free of secrets, provider tokens, raw PII, medical notes, payment data, and private file URLs.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Dashboard mutation artifacts must be redacted and free of secrets, raw PII, medical notes, payment data, and private file URLs.");
 
   if (missingServerActions.length > 0 || missingApiRoutes.length > 0 || missingRouteTests.length > 0) {
-    requiredEvidence.push("server action, API route, and route-test matrix for every dashboard mutation");
+    requiredEvidence.push(dashboardMutationExecutionRequiredEvidence[0]);
   }
   if (!input.prismaTransactionsPassed || !input.idempotencyPersistencePassed || !input.auditLogPersistencePassed) {
-    requiredEvidence.push("Prisma transaction, idempotency, and AuditLog persistence evidence");
+    requiredEvidence.push(dashboardMutationExecutionRequiredEvidence[1]);
   }
   if (!input.tenantIsolationTestsPassed || !input.rbacDenialTestsPassed) {
-    requiredEvidence.push("tenant-isolation and RBAC-denial mutation test evidence");
+    requiredEvidence.push(dashboardMutationExecutionRequiredEvidence[2]);
   }
   if (!input.providerRollbackTestsPassed) {
-    requiredEvidence.push("provider rollback/retry evidence for storage, Stripe, notification, calendar, release, and settings actions");
+    requiredEvidence.push(dashboardMutationExecutionRequiredEvidence[3]);
   }
   if (!input.disabledPlaceholdersRemoved || !input.uiFeedbackStatesPassed) {
-    requiredEvidence.push("gated mutation UI replacement plus loading/success/denial/failure/retry state evidence");
+    requiredEvidence.push(dashboardMutationExecutionRequiredEvidence[4]);
   }
   if (!input.dashboardTypecheckPassed || !input.dashboardBuildPassed || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
-    requiredEvidence.push("dashboard typecheck/build, CI, and secret-safe artifact evidence");
+    requiredEvidence.push(dashboardMutationExecutionRequiredEvidence[5]);
   }
 
   return {
@@ -1262,27 +1391,12 @@ export function buildDashboardMutationExecutionEvidencePlan(
     missingServerActions,
     missingApiRoutes,
     missingRouteTests,
-    requiredCommands: [
-      "pnpm --filter @inkroute/booking typecheck",
-      "pnpm --filter @inkroute/booking test",
-      "pnpm --filter @inkroute/dashboard typecheck",
-      "pnpm --filter @inkroute/dashboard build",
-      "dashboard mutation server-action/API route tests",
-      "dashboard mutation Prisma transaction tests",
-      "dashboard mutation tenant-isolation and RBAC tests",
-      "provider mutation rollback/retry tests",
-      "dashboard mutation UI feedback-state tests",
-      "GitHub Actions dashboard mutation execution evidence job",
-    ],
-    requiredControls: [
-      "Use buildDashboardMutationPlan before every server action or API mutation side effect.",
-      "Execute dashboard write models in tenant-scoped Prisma transactions.",
-      "Persist idempotency keys and redacted AuditLog rows before provider side effects.",
-      "Enforce RBAC and tenant scope before lifecycle, upload, payment, notification, calendar, travel, portfolio, release, or settings writes.",
-      "Replace disabled placeholders with gated UI actions and explicit loading/success/denial/failure/retry states.",
-      "Redact secrets, provider tokens, raw PII, medical notes, payment data, and private file URLs from artifacts.",
-    ],
-    requiredEvidence,
+    requiredCommands: dashboardMutationExecutionRequiredCommands,
+    requiredControls: dashboardMutationExecutionRequiredControls,
+    requiredEvidence:
+      requiredEvidence.length === dashboardMutationExecutionRequiredEvidence.length
+        ? dashboardMutationExecutionRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -1293,39 +1407,20 @@ export function buildDomainEventAuditReadinessPlan(input: DomainEventAuditReadin
   const blockers: string[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/booking package script is missing ${script}.`);
-  if (!input.bookingPackageTestsPassed) blockers.push("Booking package lifecycle tests must pass.");
   if (!input.bookingPackageTypecheckPassed) blockers.push("Booking package typecheck must pass in an installed workspace.");
   if (!input.paymentPackageTestsPassed) blockers.push("Payment package lifecycle/audit tests must pass.");
   if (!input.bookingTransitionPlansCovered) blockers.push("Booking transitions must produce BookingRequest, BookingStateEvent, and AuditLog write plans.");
   if (!input.paymentLifecyclePlansCovered) blockers.push("Payment lifecycle transitions must produce Payment/Deposit/Refund, BookingStateEvent when applicable, PaymentAuditLog, and IdempotencyKey write plans.");
   if (!input.prismaTransactionServicesConfigured) blockers.push("Prisma service layer must execute state changes and event/audit writes in one transaction.");
   if (!input.tenantScopedRepositoriesConfigured) blockers.push("Tenant-scoped repositories must enforce tenantId on every lifecycle read/write.");
-  if (!input.idempotencyStoreConfigured) blockers.push("Idempotency store must reject replayed booking/payment lifecycle mutations.");
-  if (!input.auditLogPersistenceConfigured) blockers.push("AuditLog persistence must cover every sensitive booking/dashboard lifecycle mutation.");
-  if (!input.bookingStateEventPersistenceConfigured) blockers.push("BookingStateEvent persistence must be required for every booking status change.");
-  if (!input.paymentAuditLogPersistenceConfigured) blockers.push("PaymentAuditLog persistence must be required for every payment/deposit/refund lifecycle change.");
-  if (!input.rollbackFailurePlansConfigured) blockers.push("Provider failure rollback plans must be wired for deposit, upload, notification, calendar, and release actions.");
+  if (!input.idempotencyStoreConfigured) blockers.push("Idempotency store must persist replay keys for lifecycle and provider actions.");
   if (!input.databaseIntegrationTestsPassed) blockers.push("Database integration tests must prove state mutation, event row, audit row, idempotency, and rollback behavior atomically.");
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/booking typecheck",
-      "pnpm --filter @inkroute/booking test",
-      "pnpm --filter @inkroute/payments test",
-      "booking/payment lifecycle Prisma transaction integration tests",
-      "idempotency replay integration tests",
-      "provider failure rollback integration tests",
-    ],
-    requiredControls: [
-      "Execute BookingRequest, BookingStateEvent, AuditLog, Payment, Deposit, Refund, PaymentAuditLog, and IdempotencyKey writes inside tenant-scoped transactions.",
-      "Reject lifecycle mutations before persistence when tenant scope, actor, idempotency key, current status, provider id, or amount is invalid.",
-      "Persist audit/event rows for both success and failure paths before returning a client-visible state change.",
-      "Use idempotency keys for dashboard actions, provider webhooks, payment lifecycle updates, and rollback attempts.",
-      "Make invalid state transitions impossible through the service layer, not just through UI disabled states.",
-      "Attach provider failure rollback records before retrying or surfacing deposit/calendar/upload/notification failures.",
-    ],
+    requiredCommands: domainEventAuditReadinessRequiredCommands,
+    requiredControls: domainEventAuditReadinessRequiredControls,
     blockers,
   };
 }
@@ -1336,7 +1431,7 @@ export function buildDomainEventAuditTransactionEvidencePlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: DomainEventAuditTransactionRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/booking package script is missing ${script}.`);
   if (!input.bookingTestsPassed) blockers.push("@inkroute/booking tests must pass before transaction evidence is ready.");
@@ -1360,46 +1455,33 @@ export function buildDomainEventAuditTransactionEvidencePlan(
   if (!input.secretSafeArtifactsCaptured) blockers.push("Domain event/audit artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.");
 
   if (!input.bookingTestsPassed || !input.bookingTypecheckPassed || !input.paymentTestsPassed || !input.paymentTypecheckPassed) {
-    requiredEvidence.push("booking/payment package test and typecheck evidence");
+    requiredEvidence.push(domainEventAuditTransactionRequiredEvidence[0]);
   }
   if (!input.prismaTransactionServicesImplemented || !input.tenantScopedRepositoriesImplemented) {
-    requiredEvidence.push("Prisma transaction service and tenant-scoped repository evidence");
+    requiredEvidence.push(domainEventAuditTransactionRequiredEvidence[1]);
   }
   if (!input.bookingStateMutationAtomicityPassed || !input.paymentStateMutationAtomicityPassed || !input.bookingStateEventRowsPersisted || !input.auditLogRowsPersisted || !input.paymentAuditLogRowsPersisted) {
-    requiredEvidence.push("atomic booking/payment state, event, audit, and payment-audit persistence evidence");
+    requiredEvidence.push(domainEventAuditTransactionRequiredEvidence[2]);
   }
   if (!input.idempotencyPersistenceEnforced || !input.replayedMutationReturnsOriginalResult) {
-    requiredEvidence.push("idempotency persistence and replay original-result evidence");
+    requiredEvidence.push(domainEventAuditTransactionRequiredEvidence[3]);
   }
   if (!input.providerRollbackIntegrationPassed || !input.invalidTransitionDenialPassed || !input.crossTenantMutationDenialPassed) {
-    requiredEvidence.push("provider rollback, invalid-transition denial, and cross-tenant denial evidence");
+    requiredEvidence.push(domainEventAuditTransactionRequiredEvidence[4]);
   }
   if (!input.databaseIntegrationEvidenceCaptured || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
-    requiredEvidence.push("database integration, CI, and secret-safe artifact evidence");
+    requiredEvidence.push(domainEventAuditTransactionRequiredEvidence[5]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/booking typecheck",
-      "pnpm --filter @inkroute/booking test",
-      "pnpm --filter @inkroute/payments typecheck",
-      "pnpm --filter @inkroute/payments test",
-      "booking/payment lifecycle Prisma transaction integration tests",
-      "booking/payment idempotency replay integration tests",
-      "provider failure rollback integration tests",
-      "cross-tenant lifecycle mutation denial tests",
-      "GitHub Actions domain event/audit transaction evidence job",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Commit state mutation, domain event, audit row, payment audit row, and idempotency key in the same tenant-scoped transaction.",
-      "Reject invalid lifecycle transitions, missing tenant scope, missing actor, and duplicate idempotency keys before side effects.",
-      "Return original mutation results for idempotency replays without duplicate BookingStateEvent, AuditLog, PaymentAuditLog, or provider rollback writes.",
-      "Record provider rollback/failure audit rows before retrying or exposing provider failure states.",
-      "Redact client, medical, payment, provider, and private URL data from transaction evidence artifacts.",
-    ],
+    requiredCommands: domainEventAuditTransactionRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === domainEventAuditTransactionRequiredEvidence.length
+        ? domainEventAuditTransactionRequiredEvidence
+        : requiredEvidence,
+    requiredControls: domainEventAuditTransactionRequiredControls,
     blockers,
   };
 }

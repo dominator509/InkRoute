@@ -54,6 +54,11 @@ export interface SignedIcsFeedContract {
   requiredRepositoryMethods: readonly (keyof SignedIcsFeedRepository)[];
 }
 
+export interface InMemorySignedIcsFeedRepositoryState {
+  readonly tokenRecords: Map<string, SignedIcsFeedTokenRecord>;
+  readonly accessLogs: SignedIcsFeedAccessLogInput[];
+}
+
 export const localDemoFeedToken = "inkroute-demo-travel-feed-token";
 
 export const localDemoFeedTokenRecord: SignedIcsFeedTokenRecord = {
@@ -131,6 +136,64 @@ export function planSignedIcsFeedTokenRevocation(input: {
     artistSlug: input.artistSlug,
     expiresAt: input.revokedAt,
     auditAction: "revoked",
+  };
+}
+
+function buildSignedIcsFeedRepositoryKey(input: {
+  readonly tenantSlug: string;
+  readonly artistSlug: string;
+  readonly tokenHash: string;
+}): string {
+  return `${input.tenantSlug}:${input.artistSlug}:${input.tokenHash}`;
+}
+
+export function createInMemorySignedIcsFeedRepository(
+  state: InMemorySignedIcsFeedRepositoryState = {
+    tokenRecords: new Map(),
+    accessLogs: [],
+  },
+): SignedIcsFeedRepository & { readonly state: InMemorySignedIcsFeedRepositoryState } {
+  return {
+    state,
+    async createToken(input) {
+      const record = {
+        tokenHash: input.tokenHash,
+        tenantSlug: input.tenantSlug,
+        artistSlug: input.artistSlug,
+        expiresAt: input.expiresAt,
+      };
+      state.tokenRecords.set(buildSignedIcsFeedRepositoryKey(input), record);
+      return record;
+    },
+    async rotateToken(input) {
+      state.tokenRecords.delete(
+        buildSignedIcsFeedRepositoryKey({
+          tenantSlug: input.tenantSlug,
+          artistSlug: input.artistSlug,
+          tokenHash: input.previousTokenHash,
+        }),
+      );
+      return this.createToken(input);
+    },
+    async revokeToken(input) {
+      const key = buildSignedIcsFeedRepositoryKey(input);
+      const existing = state.tokenRecords.get(key);
+      const record = {
+        tokenHash: input.tokenHash,
+        tenantSlug: input.tenantSlug,
+        artistSlug: input.artistSlug,
+        expiresAt: input.revokedAt,
+        revokedAt: input.revokedAt,
+      };
+      state.tokenRecords.set(key, record);
+      return existing ? record : record;
+    },
+    async findTokenRecord(input) {
+      return state.tokenRecords.get(buildSignedIcsFeedRepositoryKey(input)) ?? null;
+    },
+    async persistAccessLog(input) {
+      state.accessLogs.push(input);
+    },
   };
 }
 

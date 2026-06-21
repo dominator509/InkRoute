@@ -365,8 +365,8 @@ export interface AgentExecutionLedgerReadinessPlan {
   readonly duplicateExecutionTaskIds: readonly string[];
   readonly incompleteExecutionTaskIds: readonly string[];
   readonly unsafeEvidenceFields: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof agentExecutionLedgerRequiredCommands;
+  readonly requiredEvidence: typeof agentExecutionLedgerRequiredEvidence;
   readonly blockers: readonly string[];
 }
 
@@ -383,6 +383,30 @@ const unsafeAgentExecutionEvidencePatterns = [
 function containsUnsafeAgentExecutionEvidence(value: string): boolean {
   return unsafeAgentExecutionEvidencePatterns.some((pattern) => pattern.test(value));
 }
+
+export const agentExecutionLedgerRequiredCommands = [
+  "pnpm handoff:verify-ledger",
+  "pnpm handoff:audit",
+  "pnpm handoff:verify-docs",
+  "pnpm handoff:next",
+  "agent task command plans from docs/handoff/manifests/agent-execution-queue.json",
+  "capture redacted agent command transcripts",
+  "record agent changed-files matrix",
+  "capture provider evidence labels",
+  "record remaining gaps and risks",
+  "complete agent execution secret-safety review",
+  "update GAP_TRACKER rows with execution evidence",
+  "external Codex/Jules/Claude/local execution result import",
+  "capture CI agent execution ledger artifacts",
+] as const;
+
+export const agentExecutionLedgerRequiredEvidence = [
+  "Completed redacted ledger entry for every Phase 16 queue task.",
+  "Commands run, changed files, evidence artifacts, remaining gaps, and risks for each agent execution.",
+  "Secret-safe review status for every completed execution.",
+  "Updated GAP_TRACKER rows with exact evidence and unresolved blockers.",
+  "Handoff audit output and imported external agent result labels.",
+] as const;
 
 export function buildAgentExecutionLedgerReadinessPlan(
   input: AgentExecutionLedgerReadinessInput,
@@ -486,20 +510,8 @@ export function buildAgentExecutionLedgerReadinessPlan(
     duplicateExecutionTaskIds,
     incompleteExecutionTaskIds,
     unsafeEvidenceFields,
-    requiredCommands: [
-      "pnpm handoff:verify-ledger",
-      "pnpm handoff:audit",
-      "pnpm handoff:verify-docs",
-      "pnpm handoff:next",
-      "agent task command plans from docs/handoff/manifests/agent-execution-queue.json",
-    ],
-    requiredEvidence: [
-      "Completed redacted ledger entry for every Phase 16 queue task.",
-      "Commands run, changed files, evidence artifacts, remaining gaps, and risks for each agent execution.",
-      "Secret-safe review status for every completed execution.",
-      "Updated GAP_TRACKER rows with exact evidence and unresolved blockers.",
-      "Handoff audit output and imported external agent result labels.",
-    ],
+    requiredCommands: agentExecutionLedgerRequiredCommands,
+    requiredEvidence: agentExecutionLedgerRequiredEvidence,
     blockers,
   };
 }
@@ -535,10 +547,31 @@ export interface HandoffToolingRuntimeReadinessPlan {
   readonly missingDocs: readonly string[];
   readonly missingCiEvidence: readonly string[];
   readonly missingPackageScripts: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof handoffToolingRuntimeRequiredCommands;
+  readonly requiredEvidence: typeof handoffToolingRuntimeRequiredEvidence;
   readonly blockers: readonly string[];
 }
+
+export const handoffToolingRuntimeRequiredCommands = [
+  "pnpm install",
+  "pnpm --filter @inkroute/handoff typecheck",
+  "pnpm --filter @inkroute/handoff test",
+  "pnpm handoff:verify-docs",
+  "pnpm handoff:audit",
+  "pnpm handoff:next",
+  "pnpm handoff:verify-ledger",
+  "pnpm handoff:verify-tooling",
+  "pnpm handoff:verify-task-sync",
+  "pnpm handoff:all",
+] as const;
+
+export const handoffToolingRuntimeRequiredEvidence = [
+  "Dependency install output and @inkroute/handoff typecheck/test output.",
+  "Handoff docs audit, gap audit, next-task queue, ledger verification, tooling verification, and aggregate handoff output.",
+  "Existing handoff docs, scripts, manifests, queue, and ledger artifacts.",
+  "CI workflow evidence naming Phase 16 handoff manifest/tooling checks.",
+  "Report artifacts or explicit documented blocker if CI artifact capture is unavailable.",
+] as const;
 
 export function buildHandoffToolingRuntimeReadinessPlan(
   input: HandoffToolingRuntimeReadinessInput,
@@ -555,7 +588,7 @@ export function buildHandoffToolingRuntimeReadinessPlan(
   const blockers: string[] = [];
 
   if (missingRootScripts.length > 0) {
-    blockers.push("Root handoff scripts must be wired in package.json.");
+    blockers.push(`Root handoff scripts missing from package.json: ${missingRootScripts.join(", ")}.`);
   }
   if (!String(input.rootScripts["handoff:all"] ?? "").includes("handoff:verify-tooling")) {
     blockers.push("handoff:all must include handoff:verify-tooling.");
@@ -611,24 +644,8 @@ export function buildHandoffToolingRuntimeReadinessPlan(
     missingDocs,
     missingCiEvidence,
     missingPackageScripts,
-    requiredCommands: [
-      "pnpm install",
-      "pnpm --filter @inkroute/handoff typecheck",
-      "pnpm --filter @inkroute/handoff test",
-      "pnpm handoff:verify-docs",
-      "pnpm handoff:audit",
-      "pnpm handoff:next",
-      "pnpm handoff:verify-ledger",
-      "pnpm handoff:verify-tooling",
-      "pnpm handoff:all",
-    ],
-    requiredEvidence: [
-      "Dependency install output and @inkroute/handoff typecheck/test output.",
-      "Handoff docs audit, gap audit, next-task queue, ledger verification, tooling verification, and aggregate handoff output.",
-      "Existing handoff docs, scripts, manifests, queue, and ledger artifacts.",
-      "CI workflow evidence naming Phase 16 handoff manifest/tooling checks.",
-      "Report artifacts or explicit documented blocker if CI artifact capture is unavailable.",
-    ],
+    requiredCommands: handoffToolingRuntimeRequiredCommands,
+    requiredEvidence: handoffToolingRuntimeRequiredEvidence,
     blockers,
   };
 }
@@ -665,8 +682,8 @@ export interface AgentTaskTrackingReadinessPlan {
   readonly unknownIssueTaskIds: readonly string[];
   readonly incompleteIssueTaskIds: readonly string[];
   readonly unsafeTrackingFields: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof agentTaskTrackingRequiredCommands;
+  readonly requiredEvidence: typeof agentTaskTrackingRequiredEvidence;
   readonly blockers: readonly string[];
 }
 
@@ -682,6 +699,27 @@ const unsafeAgentTaskTrackingPatterns = [
 function containsUnsafeAgentTaskTrackingField(value: string): boolean {
   return unsafeAgentTaskTrackingPatterns.some((pattern) => pattern.test(value));
 }
+
+export const agentTaskTrackingRequiredCommands = [
+  "pnpm handoff:verify-task-sync",
+  "gh issue create or GitHub issue automation",
+  "GitHub Project item sync",
+  "link redacted issue/project labels from handoff docs",
+  "link tracking evidence from GAP_TRACKER rows",
+  "trace status updates between queue, issues/projects, ledger, and gap tracker",
+  "pnpm handoff:verify-ledger",
+  "pnpm handoff:audit",
+  "capture CI agent task tracking artifacts",
+] as const;
+
+export const agentTaskTrackingRequiredEvidence = [
+  "One redacted issue label or URL for every queued agent task.",
+  "Project item labels or documented blocker for every tracked task.",
+  "Labels for agent-task, gap-tracked, verification-required, target, and priority.",
+  "Gap IDs and acceptance evidence fields on every issue.",
+  "Handoff docs and GAP_TRACKER.md links to tracking evidence.",
+  "Traceable status updates from issue/project state into the execution ledger.",
+] as const;
 
 export function buildAgentTaskTrackingReadinessPlan(
   input: AgentTaskTrackingReadinessInput,
@@ -790,21 +828,8 @@ export function buildAgentTaskTrackingReadinessPlan(
     unknownIssueTaskIds,
     incompleteIssueTaskIds,
     unsafeTrackingFields,
-    requiredCommands: [
-      "pnpm handoff:verify-task-sync",
-      "gh issue create or GitHub issue automation",
-      "GitHub Project item sync",
-      "pnpm handoff:verify-ledger",
-      "pnpm handoff:audit",
-    ],
-    requiredEvidence: [
-      "One redacted issue label or URL for every queued agent task.",
-      "Project item labels or documented blocker for every tracked task.",
-      "Labels for agent-task, gap-tracked, verification-required, target, and priority.",
-      "Gap IDs and acceptance evidence fields on every issue.",
-      "Handoff docs and GAP_TRACKER.md links to tracking evidence.",
-      "Traceable status updates from issue/project state into the execution ledger.",
-    ],
+    requiredCommands: agentTaskTrackingRequiredCommands,
+    requiredEvidence: agentTaskTrackingRequiredEvidence,
     blockers,
   };
 }

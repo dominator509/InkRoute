@@ -21,8 +21,8 @@ export interface ValidatorRuntimeReadinessInput {
 export interface ValidatorRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof validatorRuntimeReadinessRequiredCommands;
+  requiredEvidence: typeof validatorRuntimeReadinessRequiredEvidence;
   blockers: readonly string[];
 }
 
@@ -50,11 +50,57 @@ export interface ValidatorLaunchAdoptionEvidenceInput {
 export interface ValidatorLaunchAdoptionEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof validatorLaunchAdoptionRequiredCommands;
+  requiredEvidence: readonly ValidatorLaunchAdoptionRequiredEvidence[];
+  requiredControls: typeof validatorLaunchAdoptionRequiredControls;
   blockers: readonly string[];
 }
+
+export const validatorRuntimeReadinessRequiredCommands = [
+  "pnpm --filter @inkroute/validators typecheck",
+  "pnpm --filter @inkroute/validators test",
+  "pnpm test:unit -- packages/validators/tests/schemas.test.ts",
+  "route contract tests proving shared validators reject malformed public/dashboard/provider payloads",
+  "security contract tests proving sensitive accepted fields are redacted or encryption-gated before persistence",
+] as const;
+
+export const validatorRuntimeReadinessRequiredEvidence = [
+  "Installed-workspace typecheck output for @inkroute/validators.",
+  "Package-level Vitest output covering happy/error paths for every exported schema module.",
+  "Route contract tests showing API handlers import and use shared schemas instead of ad-hoc parsing.",
+  "Tenant/auth/form edge-case fixtures for missing tenant scope, unauthorized role, malformed permissions, and invalid dynamic form answers.",
+  "Sensitive-field alignment evidence linking accepted medical, consent, contact, payment, webhook, and metadata fields to security policies.",
+] as const;
+
+export const validatorLaunchAdoptionRequiredCommands = [
+  "pnpm --filter @inkroute/validators typecheck",
+  "pnpm --filter @inkroute/validators test",
+  "validator route adoption static scan",
+  "public/dashboard malformed payload route tests",
+  "webhook/provider payload normalization route tests",
+  "tenant/auth scope validator route tests",
+  "sensitive-field redaction/encryption contract tests",
+  "GitHub Actions validator launch evidence job",
+] as const;
+
+export const validatorLaunchAdoptionRequiredControls = [
+  "Reject malformed public, dashboard, webhook, provider, and mobile payloads before side effects.",
+  "Keep tenant, role, permission, and cross-tenant validation centralized in shared schemas.",
+  "Align accepted medical, consent, contact, payment, provider, and metadata fields with redaction/encryption policy before persistence.",
+  "Publish only redacted validator reports and route test artifacts.",
+] as const;
+
+export const validatorLaunchAdoptionRequiredEvidence = [
+  "validator package typecheck and test command evidence",
+  "schema-domain happy/error and tenant/auth/form edge-case coverage evidence",
+  "public, dashboard, webhook, and provider route shared-schema adoption evidence",
+  "malformed-payload and tenant-scope route contract evidence",
+  "sensitive-field redaction and encryption-gate security evidence",
+  "CI validator launch evidence and secret-safe artifact proof",
+] as const;
+
+export type ValidatorLaunchAdoptionRequiredEvidence =
+  (typeof validatorLaunchAdoptionRequiredEvidence)[number];
 
 export function buildValidatorRuntimeReadinessPlan(input: ValidatorRuntimeReadinessInput): ValidatorRuntimeReadinessPlan {
   const requiredScripts = ["typecheck", "test"];
@@ -82,20 +128,8 @@ export function buildValidatorRuntimeReadinessPlan(input: ValidatorRuntimeReadin
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/validators typecheck",
-      "pnpm --filter @inkroute/validators test",
-      "pnpm test:unit -- packages/validators/tests/schemas.test.ts",
-      "route contract tests proving shared validators reject malformed public/dashboard/provider payloads",
-      "security contract tests proving sensitive accepted fields are redacted or encryption-gated before persistence",
-    ],
-    requiredEvidence: [
-      "Installed-workspace typecheck output for @inkroute/validators.",
-      "Package-level Vitest output covering happy/error paths for every exported schema module.",
-      "Route contract tests showing API handlers import and use shared schemas instead of ad-hoc parsing.",
-      "Tenant/auth/form edge-case fixtures for missing tenant scope, unauthorized role, malformed permissions, and invalid dynamic form answers.",
-      "Sensitive-field alignment evidence linking accepted medical, consent, contact, payment, webhook, and metadata fields to security policies.",
-    ],
+    requiredCommands: validatorRuntimeReadinessRequiredCommands,
+    requiredEvidence: validatorRuntimeReadinessRequiredEvidence,
     blockers,
   };
 }
@@ -106,7 +140,7 @@ export function buildValidatorLaunchAdoptionEvidencePlan(
   const requiredScripts = ["typecheck", "test"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: ValidatorLaunchAdoptionRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/validators ${script} script.`);
   if (!input.validatorsTypecheckPassed) blockers.push("@inkroute/validators typecheck must pass before validator launch adoption is ready.");
@@ -128,44 +162,33 @@ export function buildValidatorLaunchAdoptionEvidencePlan(
   if (!input.secretSafeArtifactsCaptured) blockers.push("Validator test artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.");
 
   if (!input.validatorsTypecheckPassed || !input.validatorsTestsPassed) {
-    requiredEvidence.push("validator package typecheck and test command evidence");
+    requiredEvidence.push(validatorLaunchAdoptionRequiredEvidence[0]);
   }
   if (!input.bookingTravelPortfolioPaymentCovered || !input.peopleConsentFormsSeoCovered || !input.messagingObservabilityReleaseCovered || !input.tenancyAuthEdgeCasesCovered || !input.dynamicFormEdgeCasesCovered) {
-    requiredEvidence.push("schema-domain happy/error and tenant/auth/form edge-case coverage evidence");
+    requiredEvidence.push(validatorLaunchAdoptionRequiredEvidence[1]);
   }
   if (!input.publicRoutesUseSharedSchemas || !input.dashboardRoutesUseSharedSchemas || !input.webhookRoutesUseSharedSchemas || !input.providerPayloadRoutesUseSharedSchemas) {
-    requiredEvidence.push("public, dashboard, webhook, and provider route shared-schema adoption evidence");
+    requiredEvidence.push(validatorLaunchAdoptionRequiredEvidence[2]);
   }
   if (!input.malformedPayloadRouteTestsPassed || !input.tenantScopeRouteTestsPassed) {
-    requiredEvidence.push("malformed-payload and tenant-scope route contract evidence");
+    requiredEvidence.push(validatorLaunchAdoptionRequiredEvidence[3]);
   }
   if (!input.sensitiveFieldsSecurityAligned || !input.redactionEncryptionPolicyTestsPassed) {
-    requiredEvidence.push("sensitive-field redaction and encryption-gate security evidence");
+    requiredEvidence.push(validatorLaunchAdoptionRequiredEvidence[4]);
   }
   if (!input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
-    requiredEvidence.push("CI validator launch evidence and secret-safe artifact proof");
+    requiredEvidence.push(validatorLaunchAdoptionRequiredEvidence[5]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/validators typecheck",
-      "pnpm --filter @inkroute/validators test",
-      "validator route adoption static scan",
-      "public/dashboard malformed payload route tests",
-      "webhook/provider payload normalization route tests",
-      "tenant/auth scope validator route tests",
-      "sensitive-field redaction/encryption contract tests",
-      "GitHub Actions validator launch evidence job",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Reject malformed public, dashboard, webhook, provider, and mobile payloads before side effects.",
-      "Keep tenant, role, permission, and cross-tenant validation centralized in shared schemas.",
-      "Align accepted medical, consent, contact, payment, provider, and metadata fields with redaction/encryption policy before persistence.",
-      "Publish only redacted validator reports and route test artifacts.",
-    ],
+    requiredCommands: validatorLaunchAdoptionRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === validatorLaunchAdoptionRequiredEvidence.length
+        ? validatorLaunchAdoptionRequiredEvidence
+        : requiredEvidence,
+    requiredControls: validatorLaunchAdoptionRequiredControls,
     blockers,
   };
 }

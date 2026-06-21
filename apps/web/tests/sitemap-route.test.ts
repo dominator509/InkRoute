@@ -32,6 +32,7 @@ describe("SEO app routes", () => {
     };
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(payload.ok).toBe(true);
     expect(payload.tenantSlug).toBe(tenantSlug);
     expect(payload.status).toBe("static_demo_not_database_backed");
@@ -39,6 +40,56 @@ describe("SEO app routes", () => {
     expect(payload.sitemap.noindexCount).toBeGreaterThan(0);
     expect(payload.productionBoundary).toContain("tenant SEO rows");
     expect(payload.sitemap.entries.some((entry) => entry.url.includes("/booking/deposit-preview"))).toBe(false);
+  });
+
+  it("fail-closes production sitemap preview instead of returning static demo metadata", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      const response = await getSitemapPreview(new Request("https://inkroute.example/api/public/inkroute-demo/sitemap-preview"), {
+        params: Promise.resolve({ tenantSlug: "inkroute-demo" }),
+      });
+      const payload = (await response.json()) as {
+        ok: boolean;
+        error: { code: string };
+        productionBoundary: { staticDemoPreviewDisabled: boolean; gapIds: string[] };
+      };
+
+      expect(response.status).toBe(503);
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      expect(payload.ok).toBe(false);
+      expect(payload.error.code).toBe("PROVIDER_PUBLIC_CONTENT_NOT_CONFIGURED");
+      expect(payload.productionBoundary.staticDemoPreviewDisabled).toBe(true);
+      expect(payload.productionBoundary.gapIds).toContain("GAP-006");
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
+  it("fail-closes production SEO preview instead of returning static demo metadata", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      const response = await getSeoPreview(new Request("https://inkroute.example/api/public/inkroute-demo/seo-preview"), {
+        params: Promise.resolve({ tenantSlug: "inkroute-demo" }),
+      });
+      const payload = (await response.json()) as {
+        ok: boolean;
+        error: { code: string };
+        productionBoundary: { staticDemoPreviewDisabled: boolean; gapIds: string[] };
+      };
+
+      expect(response.status).toBe(503);
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      expect(payload.ok).toBe(false);
+      expect(payload.error.code).toBe("PROVIDER_PUBLIC_CONTENT_NOT_CONFIGURED");
+      expect(payload.productionBoundary.staticDemoPreviewDisabled).toBe(true);
+      expect(payload.productionBoundary.gapIds).toContain("GAP-006");
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
   });
 
   it("returns SEO preview payload with production gap hints", async () => {
@@ -56,6 +107,7 @@ describe("SEO app routes", () => {
     };
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(payload.ok).toBe(true);
     expect(payload.tenantSlug).toBe(tenantSlug);
     expect(payload.status).toBe("static_demo_not_database_backed");

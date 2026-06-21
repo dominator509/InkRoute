@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const routeSource = readFileSync(join(process.cwd(), "apps/dashboard/app/api/deployment/readiness/route.ts"), "utf8");
 const pageSource = readFileSync(join(process.cwd(), "apps/dashboard/app/deployment/page.tsx"), "utf8");
+const actionPanelSource = readFileSync(join(process.cwd(), "apps/dashboard/components/DeploymentReadinessActionPanel.tsx"), "utf8");
 
 describe("dashboard deployment readiness route static contract", () => {
   it("guards readiness reads with RBAC, tenant scope, and no-store responses", () => {
@@ -11,7 +12,9 @@ describe("dashboard deployment readiness route static contract", () => {
     expect(routeSource).toContain('code: "FORBIDDEN"');
     expect(routeSource).toContain("tenantId !== actor.tenantId");
     expect(routeSource).toContain('code: "TENANT_MISMATCH"');
-    expect(routeSource).toContain('"Cache-Control": "no-store"');
+    expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(routeSource).toContain("headers: noStoreHeaders");
+    expect(routeSource).not.toContain('headers: { "Cache-Control": "no-store" }');
   });
 
   it("audit-logs DB-backed readiness reads without exposing secret values", () => {
@@ -35,7 +38,16 @@ describe("dashboard deployment readiness route static contract", () => {
   });
 
   it("documents the no-store readiness API seam on the dashboard page", () => {
+    expect(pageSource).toContain("deployment readiness control room");
+    expect(pageSource).toContain("script contract");
     expect(pageSource).toContain("no-store tenant-scoped readiness API");
-    expect(pageSource).toContain("All live deployment actions remain disabled");
+    expect(pageSource).toContain("DeploymentReadinessActionPanel");
+    expect(pageSource).not.toContain("deployment readiness scaffold");
+    expect(pageSource).not.toContain('label="scaffolded"');
+    expect(pageSource).not.toContain("Deployment actions disabled");
+    expect(actionPanelSource).toContain('fetch("/api/deployment/readiness"');
+    expect(actionPanelSource).toContain('"readiness-review"');
+    expect(actionPanelSource).toContain("Request readiness review");
+    expect(actionPanelSource).toContain("provider deploys, migrations, EAS updates, Sentry uploads, and rollback execution remain gated");
   });
 });

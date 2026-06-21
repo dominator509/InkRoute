@@ -48,7 +48,7 @@ export interface ProviderBoundary {
   id: string;
   provider: "sentry" | "opentelemetry" | "self_hosted" | "github" | "slack";
   surface: ErrorSurface | "all";
-  status: "scaffolded" | "credential-gated" | "deployment-gated" | "externally-dependent";
+  status: "local-contract" | "scaffolded" | "credential-gated" | "deployment-gated" | "externally-dependent";
   blocksProduction: boolean;
   requiredEnv: readonly string[];
   implementationFiles: readonly string[];
@@ -112,9 +112,9 @@ export interface AlertRuntimeDeliveryReadinessInput {
 export interface AlertRuntimeDeliveryReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof alertRuntimeDeliveryRequiredCommands;
+  requiredEvidence: readonly AlertRuntimeDeliveryRequiredEvidence[];
+  requiredControls: typeof alertRuntimeDeliveryRequiredControls;
   blockers: readonly string[];
 }
 
@@ -190,9 +190,9 @@ export interface OpenTelemetryRuntimeReadinessInput {
 export interface OpenTelemetryRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof openTelemetryRuntimeRequiredCommands;
+  requiredEvidence: readonly OpenTelemetryRuntimeRequiredEvidence[];
+  requiredControls: typeof openTelemetryRuntimeRequiredControls;
   blockers: readonly string[];
 }
 
@@ -200,7 +200,7 @@ export interface AgenticBugFixStep {
   order: number;
   title: string;
   owner: "system" | "human" | "codex" | "jules" | "claude_code";
-  status: "manual" | "scaffolded" | "blocked";
+  status: "manual" | "local-contract" | "scaffolded" | "blocked";
   instruction: string;
 }
 
@@ -266,9 +266,9 @@ export interface GithubIssueRuntimeDispatchInput {
 export interface GithubIssueRuntimeDispatchPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof githubIssueRuntimeDispatchRequiredCommands;
+  requiredEvidence: readonly GithubIssueRuntimeDispatchRequiredEvidence[];
+  requiredControls: typeof githubIssueRuntimeDispatchRequiredControls;
   blockers: readonly string[];
 }
 
@@ -291,11 +291,37 @@ export interface ObservabilityAutomatedCoverageReadinessInput {
 export interface ObservabilityAutomatedCoverageReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof observabilityAutomatedCoverageRequiredCommands;
+  requiredEvidence: readonly ObservabilityAutomatedCoverageRequiredEvidence[];
+  requiredControls: typeof observabilityAutomatedCoverageRequiredControls;
   blockers: readonly string[];
 }
+
+export const observabilityAutomatedCoverageRequiredCommands = [
+  "pnpm --filter @inkroute/observability test",
+  "pnpm vitest run apps/web/tests/observability-routes.test.ts apps/web/tests/observability-ui-static.test.ts",
+  "pnpm --filter @inkroute/web typecheck",
+  "Playwright dashboard observability triage smoke",
+  "mobile simulator crash-report UI smoke",
+  "mobile physical-device crash-report proof",
+] as const;
+
+export const observabilityAutomatedCoverageRequiredControls = [
+  "Keep package helper tests, route tests, static UI checks, browser smoke tests, and mobile UI tests in the same Phase 11 closeout matrix.",
+  "Render global-error boundaries rather than relying only on static source checks before closure.",
+  "Exercise dashboard triage in a browser context with sanitized reports only.",
+  "Cover mobile crash-report UI in simulator and physical-device evidence before closure.",
+  "Attach CI screenshots, logs, and artifacts for route, UI, browser, and mobile observability coverage.",
+] as const;
+
+export const observabilityAutomatedCoverageRequiredEvidence = [
+  "package, route, UI static, and web typecheck evidence",
+  "rendered global-error, dashboard errors smoke, and Playwright triage evidence",
+  "mobile simulator and physical-device crash-report UI evidence",
+  "Sentry webhook signature and public ingest persistence coverage evidence",
+  "CI screenshots, logs, and artifact evidence",
+] as const;
+export type ObservabilityAutomatedCoverageRequiredEvidence = (typeof observabilityAutomatedCoverageRequiredEvidence)[number];
 
 export interface ReleaseIncidentLinkageInput {
   releaseId: string;
@@ -357,8 +383,8 @@ export interface ReleaseIncidentRuntimeReadinessInput {
 export interface ReleaseIncidentRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof releaseIncidentRuntimeRequiredCommands;
+  requiredEvidence: readonly ReleaseIncidentRuntimeRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -389,8 +415,8 @@ export interface ObservabilityRuntimeReadinessInput {
 export interface ObservabilityRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof observabilityRuntimeReadinessRequiredCommands;
+  requiredControls: typeof observabilityRuntimeReadinessRequiredControls;
   blockers: readonly string[];
 }
 
@@ -422,11 +448,42 @@ export interface ObservabilityRuntimeVerificationInput {
 export interface ObservabilityRuntimeVerificationPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof observabilityRuntimeVerificationRequiredCommands;
+  requiredEvidence: readonly ObservabilityRuntimeVerificationRequiredEvidence[];
+  requiredControls: typeof observabilityRuntimeVerificationRequiredControls;
   blockers: readonly string[];
 }
+
+export const observabilityRuntimeVerificationRequiredCommands = [
+  "pnpm --filter @inkroute/observability typecheck",
+  "pnpm --filter @inkroute/observability test",
+  "pnpm --filter @inkroute/web build",
+  "pnpm --filter @inkroute/dashboard build",
+  "pnpm --filter @inkroute/mobile typecheck",
+  "pnpm vitest run apps/web/tests/observability-routes.test.ts",
+  "browser forced web/dashboard error smoke",
+  "API/webhook forced error smoke",
+  "Expo simulator/device forced error smoke",
+  "Sentry/provider live runtime proof",
+] as const;
+
+export const observabilityRuntimeVerificationRequiredControls = [
+  "Use safe synthetic errors only; never trigger destructive or production-impacting failures.",
+  "Verify fallback UX for public web, dashboard, API, webhook, and mobile surfaces under real runtime.",
+  "Capture screenshots, route envelopes, and sanitized logs for forced-error closeout evidence.",
+  "Persist only sanitized ErrorReport summaries and prove dashboard triage reads the sanitized records.",
+  "Prove live Sentry/provider capture after SDK configuration, with source/release tags and no raw PII.",
+  "Attach runtime screenshots, logs, provider event links, and redaction proof before closing the gap.",
+] as const;
+
+export const observabilityRuntimeVerificationRequiredEvidence = [
+  "browser forced-error fallback UX screenshot evidence",
+  "mobile simulator/device forced-error UX evidence",
+  "API/webhook forced-error envelope, sanitized log, and local persistence evidence",
+  "dashboard triage and no-PII leakage evidence",
+  "Sentry/provider runtime proof and attached closeout evidence",
+] as const;
+export type ObservabilityRuntimeVerificationRequiredEvidence = (typeof observabilityRuntimeVerificationRequiredEvidence)[number];
 
 const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const phonePattern = /(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)\d{3}[-.\s]?\d{4}/g;
@@ -619,7 +676,7 @@ export const observabilityProviderBoundaries: readonly ProviderBoundary[] = [
     id: "fallback-error-route",
     provider: "self_hosted",
     surface: "all",
-    status: "scaffolded",
+    status: "local-contract",
     blocksProduction: true,
     requiredEnv: ["ERROR_REPORT_INGEST_SECRET", "DATABASE_URL"],
     implementationFiles: ["apps/web/app/api/public/[tenantSlug]/error-reports/route.ts", "packages/db/prisma/schema.prisma"],
@@ -707,11 +764,38 @@ export function buildAlertEscalationPlan(input: AlertEscalationInput): AlertEsca
   };
 }
 
+export const alertRuntimeDeliveryRequiredCommands = [
+  "pnpm --filter @inkroute/observability typecheck",
+  "pnpm --filter @inkroute/observability test",
+  "alert worker retry/dead-letter smoke",
+  "on-call schedule and quiet-hours policy smoke",
+  "live synthetic critical pager delivery",
+  "live synthetic high-severity Slack delivery",
+] as const;
+
+export const alertRuntimeDeliveryRequiredControls = [
+  "Load Slack, email, and pager credentials from secrets only.",
+  "Deliver alerts through a durable worker with retry, backoff, and dead-letter handling.",
+  "Use on-call schedules and quiet-hours policy before choosing external delivery.",
+  "Persist acknowledgement state so escalations are auditable and resumable.",
+  "Send sanitized external payloads only and suppress blocked high-risk payloads to dashboard triage.",
+  "Capture live synthetic critical/high provider delivery evidence before closing the gap.",
+] as const;
+
+export const alertRuntimeDeliveryRequiredEvidence = [
+  "Slack, email, and pager provider credential evidence",
+  "durable alert worker retry/backoff and dead-letter evidence",
+  "on-call schedule, quiet-hours policy, and acknowledgement-state evidence",
+  "sanitized payload and dashboard-only suppression evidence",
+  "live synthetic critical pager and high-severity Slack delivery evidence",
+] as const;
+export type AlertRuntimeDeliveryRequiredEvidence = (typeof alertRuntimeDeliveryRequiredEvidence)[number];
+
 export function buildAlertRuntimeDeliveryReadinessPlan(input: AlertRuntimeDeliveryReadinessInput): AlertRuntimeDeliveryReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: AlertRuntimeDeliveryRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/observability ${script} script.`);
   if (!input.observabilityTestsPassed) blockers.push("@inkroute/observability alert delivery tests must pass.");
@@ -749,23 +833,12 @@ export function buildAlertRuntimeDeliveryReadinessPlan(input: AlertRuntimeDelive
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/observability typecheck",
-      "pnpm --filter @inkroute/observability test",
-      "alert worker retry/dead-letter smoke",
-      "on-call schedule and quiet-hours policy smoke",
-      "live synthetic critical pager delivery",
-      "live synthetic high-severity Slack delivery",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Load Slack, email, and pager credentials from secrets only.",
-      "Deliver alerts through a durable worker with retry, backoff, and dead-letter handling.",
-      "Use on-call schedules and quiet-hours policy before choosing external delivery.",
-      "Persist acknowledgement state so escalations are auditable and resumable.",
-      "Send sanitized external payloads only and suppress blocked high-risk payloads to dashboard triage.",
-      "Capture live synthetic critical/high provider delivery evidence before closing the gap.",
-    ],
+    requiredCommands: alertRuntimeDeliveryRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === alertRuntimeDeliveryRequiredEvidence.length
+        ? alertRuntimeDeliveryRequiredEvidence
+        : requiredEvidence,
+    requiredControls: alertRuntimeDeliveryRequiredControls,
     blockers,
   };
 }
@@ -776,7 +849,7 @@ export function buildAgenticBugFixWorkflow(report: ObservabilityReportDraft): re
       order: 1,
       title: "Classify and redact",
       owner: "system",
-      status: "scaffolded",
+      status: "local-contract",
       instruction: `Confirm severity ${report.severity}, fingerprint ${report.fingerprint}, and redaction level ${report.redactionLevel}. Do not expose raw PII, medical notes, payment data, cookies, or tokens.`,
     },
     {
@@ -836,7 +909,7 @@ export function buildGithubIssueDraft(report: ObservabilityReportDraft): GithubI
     labels,
     body,
     blocked: true,
-    blockedReason: "GitHub issue creation is scaffolded only until repo token, project labels, and privacy review are configured.",
+    blockedReason: "GitHub issue creation is provider-gated until repo token, project labels, assignees, privacy template, and human approval are configured.",
   };
 }
 
@@ -889,11 +962,38 @@ export function buildGithubIssueAutomationPlan(input: GithubIssueAutomationInput
   };
 }
 
+export const githubIssueRuntimeDispatchRequiredCommands = [
+  "pnpm --filter @inkroute/observability typecheck",
+  "pnpm --filter @inkroute/observability test",
+  "dashboard GitHub issue approval action smoke",
+  "GitHub issue create API smoke",
+  "ErrorReport issue-link persistence smoke",
+  "live synthetic GitHub issue creation proof",
+] as const;
+
+export const githubIssueRuntimeDispatchRequiredControls = [
+  "Dispatch GitHub issues only from sanitized createIssueRequest payloads after explicit human approval.",
+  "Store human approval audit metadata before calling the GitHub API.",
+  "Persist issue URL/number back to ErrorReport records and reflect status in dashboard triage.",
+  "Keep blocked high-risk payloads dashboard-only with no external GitHub dispatch.",
+  "Use secret-backed GitHub tokens and configured repo/labels/assignees/templates only.",
+  "Capture live synthetic issue creation evidence before closing the gap.",
+] as const;
+
+export const githubIssueRuntimeDispatchRequiredEvidence = [
+  "GitHub token, repository, labels, assignees, and privacy template evidence",
+  "dashboard approval UI, human approval audit, and GitHub API dispatch evidence",
+  "ErrorReport issue-link persistence and dashboard status sync evidence",
+  "high-risk dashboard-only blocking and sanitized issue body evidence",
+  "live synthetic GitHub issue creation evidence",
+] as const;
+export type GithubIssueRuntimeDispatchRequiredEvidence = (typeof githubIssueRuntimeDispatchRequiredEvidence)[number];
+
 export function buildGithubIssueRuntimeDispatchPlan(input: GithubIssueRuntimeDispatchInput): GithubIssueRuntimeDispatchPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: GithubIssueRuntimeDispatchRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/observability ${script} script.`);
   if (!input.observabilityTestsPassed) blockers.push("@inkroute/observability GitHub issue automation tests must pass.");
@@ -903,9 +1003,9 @@ export function buildGithubIssueRuntimeDispatchPlan(input: GithubIssueRuntimeDis
   if (!input.labelsConfigured) blockers.push("Required GitHub labels must exist before live issue dispatch.");
   if (!input.assigneesConfigured) blockers.push("Required GitHub triage assignees must be configured before live issue dispatch.");
   if (!input.privacyTemplateConfigured) blockers.push("Privacy-safe GitHub issue template must be configured before live dispatch.");
-  if (!input.dashboardApprovalUiWired) blockers.push("Dashboard approval UI/actions must be wired before GitHub issue dispatch.");
+  if (!input.dashboardApprovalUiWired) blockers.push("Rendered dashboard approval UI/action evidence must be captured before GitHub issue dispatch.");
   if (!input.humanApprovalAuditStored) blockers.push("Human approval audit trail must be stored before GitHub issue dispatch.");
-  if (!input.githubApiCreateIssueWired) blockers.push("GitHub API issue creation must be wired behind human approval.");
+  if (!input.githubApiCreateIssueWired) blockers.push("GitHub create-issue provider adapter smoke evidence must be captured behind human approval.");
   if (!input.reportIssueLinkPersistenceConfigured) blockers.push("Created issue URL/number must persist back to ErrorReport records.");
   if (!input.dashboardStatusSyncConfigured) blockers.push("Dashboard issue status/link sync must be configured after dispatch.");
   if (!input.highRiskDashboardOnlyBlockingVerified) blockers.push("Blocked high-risk payloads must remain dashboard-only and never dispatch to GitHub.");
@@ -931,23 +1031,12 @@ export function buildGithubIssueRuntimeDispatchPlan(input: GithubIssueRuntimeDis
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/observability typecheck",
-      "pnpm --filter @inkroute/observability test",
-      "dashboard GitHub issue approval action smoke",
-      "GitHub issue create API smoke",
-      "ErrorReport issue-link persistence smoke",
-      "live synthetic GitHub issue creation proof",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Dispatch GitHub issues only from sanitized createIssueRequest payloads after explicit human approval.",
-      "Store human approval audit metadata before calling the GitHub API.",
-      "Persist issue URL/number back to ErrorReport records and reflect status in dashboard triage.",
-      "Keep blocked high-risk payloads dashboard-only with no external GitHub dispatch.",
-      "Use secret-backed GitHub tokens and configured repo/labels/assignees/templates only.",
-      "Capture live synthetic issue creation evidence before closing the gap.",
-    ],
+    requiredCommands: githubIssueRuntimeDispatchRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === githubIssueRuntimeDispatchRequiredEvidence.length
+        ? githubIssueRuntimeDispatchRequiredEvidence
+        : requiredEvidence,
+    requiredControls: githubIssueRuntimeDispatchRequiredControls,
     blockers,
   };
 }
@@ -956,7 +1045,7 @@ export function buildObservabilityAutomatedCoverageReadinessPlan(input: Observab
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: ObservabilityAutomatedCoverageRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/observability ${script} script.`);
   if (!input.observabilityPackageTestsPassed) blockers.push("@inkroute/observability helper tests must pass.");
@@ -987,26 +1076,17 @@ export function buildObservabilityAutomatedCoverageReadinessPlan(input: Observab
   if (!input.ciArtifactsCaptured) {
     requiredEvidence.push("CI screenshots, logs, and artifact evidence");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === observabilityAutomatedCoverageRequiredEvidence.length
+      ? observabilityAutomatedCoverageRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/observability test",
-      "pnpm vitest run apps/web/tests/observability-routes.test.ts apps/web/tests/observability-ui-static.test.ts",
-      "pnpm --filter @inkroute/web typecheck",
-      "Playwright dashboard observability triage smoke",
-      "mobile simulator crash-report UI smoke",
-      "mobile physical-device crash-report proof",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Keep package helper tests, route tests, static UI checks, browser smoke tests, and mobile UI tests in the same Phase 11 closeout matrix.",
-      "Render global-error boundaries rather than relying only on static source checks before closure.",
-      "Exercise dashboard triage in a browser context with sanitized reports only.",
-      "Cover mobile crash-report UI in simulator and physical-device evidence before closure.",
-      "Attach CI screenshots, logs, and artifacts for route, UI, browser, and mobile observability coverage.",
-    ],
+    requiredCommands: observabilityAutomatedCoverageRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
+    requiredControls: observabilityAutomatedCoverageRequiredControls,
     blockers,
   };
 }
@@ -1088,11 +1168,29 @@ export function buildReleaseIncidentLinkagePlan(input: ReleaseIncidentLinkageInp
   };
 }
 
+export const releaseIncidentRuntimeRequiredCommands = [
+  "pnpm --filter @inkroute/observability typecheck",
+  "pnpm --filter @inkroute/observability test",
+  "Sentry release/source-map correlation smoke",
+  "ErrorReport ReleaseRecord linkage persistence smoke",
+  "tenant incident provider creation smoke",
+  "rollback communication handoff persistence smoke",
+  "dashboard release incident filter smoke",
+] as const;
+
+export const releaseIncidentRuntimeRequiredEvidence = [
+  "Sentry release tag, source-map/debug-symbol, and live release evidence",
+  "ErrorReport, ReleaseRecord, incident link, and rollback communication persistence evidence",
+  "tenant incident provider configuration, creation, and live provider evidence",
+  "tenant owner, dashboard filter, tenant isolation, and sanitized payload evidence",
+] as const;
+export type ReleaseIncidentRuntimeRequiredEvidence = (typeof releaseIncidentRuntimeRequiredEvidence)[number];
+
 export function buildReleaseIncidentRuntimeReadinessPlan(input: ReleaseIncidentRuntimeReadinessInput): ReleaseIncidentRuntimeReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: ReleaseIncidentRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/observability ${script} script.`);
   if (!input.observabilityTestsPassed) blockers.push("@inkroute/observability release incident linkage tests must pass.");
@@ -1127,16 +1225,11 @@ export function buildReleaseIncidentRuntimeReadinessPlan(input: ReleaseIncidentR
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/observability typecheck",
-      "pnpm --filter @inkroute/observability test",
-      "Sentry release/source-map correlation smoke",
-      "ErrorReport ReleaseRecord linkage persistence smoke",
-      "tenant incident provider creation smoke",
-      "rollback communication handoff persistence smoke",
-      "dashboard release incident filter smoke",
-    ],
-    requiredEvidence,
+    requiredCommands: releaseIncidentRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === releaseIncidentRuntimeRequiredEvidence.length
+        ? releaseIncidentRuntimeRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -1167,10 +1260,10 @@ export const demoErrorReports: readonly ObservabilityReportDraft[] = [
     source: "web",
     runtime: "server",
     environment: "development",
-    message: "Booking API returns 501 after validation for ari@example.test",
+    message: "Booking API local fallback is exercised while provider-backed persistence evidence remains gated",
     route: "/api/public/inkroute-demo/booking-requests",
     release: "phase4-demo",
-    metadata: { email: "ari@example.test", reason: "Persistence boundary intentionally not implemented" },
+    metadata: { email: "ari@example.test", reason: "Local fallback is covered; provider-backed tenant persistence proof remains gated" },
     tags: { phase: "4", feature: "booking" },
   }, "2026-06-01T20:00:00-07:00"),
   buildObservabilityReportDraft({
@@ -1189,7 +1282,7 @@ export const demoErrorReports: readonly ObservabilityReportDraft[] = [
     source: "mobile",
     runtime: "react-native",
     environment: "development",
-    message: "Mobile crash reporting is not connected to Expo runtime",
+    message: "Mobile fallback crash reporting is wired; live Expo/Sentry capture remains gated",
     route: "apps/mobile/SystemStatusScreen",
     release: "phase6-mobile",
     metadata: { device: "simulator not executed", pushToken: "ExponentPushToken[demo-token]" },
@@ -1264,9 +1357,9 @@ export interface SentrySdkRuntimeImplementationInput {
 export interface SentrySdkRuntimeImplementationPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof sentrySdkRuntimeRequiredCommands;
+  requiredEvidence: readonly SentrySdkRuntimeRequiredEvidence[];
+  requiredControls: typeof sentrySdkRuntimeRequiredControls;
   blockers: readonly string[];
 }
 
@@ -1293,9 +1386,9 @@ export interface ErrorReportIngestHardeningInput {
 export interface ErrorReportIngestHardeningPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof errorReportIngestHardeningRequiredCommands;
+  requiredEvidence: readonly ErrorReportIngestHardeningRequiredEvidence[];
+  requiredControls: typeof errorReportIngestHardeningRequiredControls;
   blockers: readonly string[];
 }
 
@@ -1319,9 +1412,9 @@ export interface ProviderWebhookReconciliationInput {
 export interface ProviderWebhookReconciliationPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof providerWebhookReconciliationRequiredCommands;
+  requiredEvidence: readonly ProviderWebhookReconciliationRequiredEvidence[];
+  requiredControls: typeof providerWebhookReconciliationRequiredControls;
   blockers: readonly string[];
 }
 
@@ -1349,8 +1442,8 @@ export interface MobileCrashRuntimeReadinessInput {
 export interface MobileCrashRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof mobileCrashRuntimeRequiredCommands;
+  requiredEvidence: readonly MobileCrashRuntimeRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -1426,11 +1519,38 @@ export function buildTelemetryPipelinePlan(input: TelemetryPipelineInput): Telem
   };
 }
 
+export const openTelemetryRuntimeRequiredCommands = [
+  "pnpm --filter @inkroute/observability typecheck",
+  "pnpm --filter @inkroute/observability test",
+  "OpenTelemetry middleware propagation smoke",
+  "ErrorReport trace correlation smoke",
+  "blocked_high_risk_payload telemetry suppression smoke",
+  "live OTLP trace/log backend ingestion proof",
+] as const;
+
+export const openTelemetryRuntimeRequiredControls = [
+  "Install OpenTelemetry SDK and OTLP exporter packages before enabling external telemetry export.",
+  "Propagate request IDs and trace context through web, dashboard, API, worker, and provider callback paths.",
+  "Attach request ID, trace ID, fingerprint, and stackHash to redacted ErrorReport persistence only.",
+  "Emit structured logs through privacy-safe middleware that uses redactMetadata before export.",
+  "Suppress blocked_high_risk_payload events from all external OTLP sinks.",
+  "Capture live backend traces/logs and no-PII evidence before closing the gap.",
+] as const;
+
+export const openTelemetryRuntimeRequiredEvidence = [
+  "OpenTelemetry SDK, OTLP exporter, endpoint, service metadata, and sampling evidence",
+  "web, dashboard, API, and worker instrumentation middleware evidence",
+  "request ID, trace context, ErrorReport correlation, and structured logging evidence",
+  "blocked high-risk export suppression and no-PII telemetry evidence",
+  "live OTLP trace and structured log backend ingestion evidence",
+] as const;
+export type OpenTelemetryRuntimeRequiredEvidence = (typeof openTelemetryRuntimeRequiredEvidence)[number];
+
 export function buildOpenTelemetryRuntimeReadinessPlan(input: OpenTelemetryRuntimeReadinessInput): OpenTelemetryRuntimeReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: OpenTelemetryRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/observability ${script} script.`);
   if (!input.observabilityTestsPassed) blockers.push("@inkroute/observability telemetry tests must pass.");
@@ -1472,23 +1592,12 @@ export function buildOpenTelemetryRuntimeReadinessPlan(input: OpenTelemetryRunti
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/observability typecheck",
-      "pnpm --filter @inkroute/observability test",
-      "OpenTelemetry middleware propagation smoke",
-      "ErrorReport trace correlation smoke",
-      "blocked_high_risk_payload telemetry suppression smoke",
-      "live OTLP trace/log backend ingestion proof",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Install OpenTelemetry SDK and OTLP exporter packages before enabling external telemetry export.",
-      "Propagate request IDs and trace context through web, dashboard, API, worker, and provider callback paths.",
-      "Attach request ID, trace ID, fingerprint, and stackHash to redacted ErrorReport persistence only.",
-      "Emit structured logs through privacy-safe middleware that uses redactMetadata before export.",
-      "Suppress blocked_high_risk_payload events from all external OTLP sinks.",
-      "Capture live backend traces/logs and no-PII evidence before closing the gap.",
-    ],
+    requiredCommands: openTelemetryRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === openTelemetryRuntimeRequiredEvidence.length
+        ? openTelemetryRuntimeRequiredEvidence
+        : requiredEvidence,
+    requiredControls: openTelemetryRuntimeRequiredControls,
     blockers,
   };
 }
@@ -1532,11 +1641,41 @@ export function buildSentrySdkConfigurationPlan(input: SentrySdkConfigurationInp
   };
 }
 
+export const sentrySdkRuntimeRequiredCommands = [
+  "pnpm --filter @inkroute/observability typecheck",
+  "pnpm --filter @inkroute/observability test",
+  "pnpm --filter @inkroute/web build",
+  "pnpm --filter @inkroute/dashboard build",
+  "pnpm --filter @inkroute/mobile typecheck",
+  "Sentry web synthetic capture smoke",
+  "Sentry dashboard synthetic capture smoke",
+  "Sentry mobile synthetic capture smoke",
+  "Sentry source-map/debug-symbol resolution check",
+] as const;
+
+export const sentrySdkRuntimeRequiredControls = [
+  "Install and configure Sentry SDKs separately for public web, dashboard, and Expo mobile surfaces.",
+  "Run beforeSend redaction and tenant-safe tag filtering before every provider submission.",
+  "Upload web/dashboard source maps, Expo source maps, and React Native debug symbols from CI with secret-backed credentials.",
+  "Tag Sentry events with release, environment, surface, route, and tenant-safe identifiers only.",
+  "Verify live synthetic captures and source resolution for web, dashboard, and mobile before launch.",
+  "Capture provider issue links/screenshots proving no raw PII, medical, payment, token, or private URL payload leakage.",
+] as const;
+
+export const sentrySdkRuntimeRequiredEvidence = [
+  "Sentry package installation evidence for web, dashboard, and mobile",
+  "Sentry instrumentation and config file evidence across app surfaces",
+  "Sentry credential and CI secret configuration evidence",
+  "source-map, debug-symbol, and CI release artifact upload evidence",
+  "live synthetic capture, provider issue, and no-PII payload evidence",
+] as const;
+export type SentrySdkRuntimeRequiredEvidence = (typeof sentrySdkRuntimeRequiredEvidence)[number];
+
 export function buildSentrySdkRuntimeImplementationPlan(input: SentrySdkRuntimeImplementationInput): SentrySdkRuntimeImplementationPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: SentrySdkRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/observability ${script} script.`);
   if (!input.observabilityTestsPassed) blockers.push("@inkroute/observability Sentry SDK tests must pass.");
@@ -1544,9 +1683,9 @@ export function buildSentrySdkRuntimeImplementationPlan(input: SentrySdkRuntimeI
   if (!input.webSentryPackageInstalled) blockers.push("@sentry/nextjs must be installed for the public web app.");
   if (!input.dashboardSentryPackageInstalled) blockers.push("@sentry/nextjs must be installed for the dashboard app.");
   if (!input.mobileSentryPackageInstalled) blockers.push("@sentry/react-native must be installed for the Expo mobile app.");
-  if (!input.webInstrumentationFilesImplemented) blockers.push("Public web Sentry instrumentation/config files must be implemented.");
-  if (!input.dashboardInstrumentationFilesImplemented) blockers.push("Dashboard Sentry instrumentation/config files must be implemented.");
-  if (!input.mobileInstrumentationFilesImplemented) blockers.push("Mobile Sentry/Expo instrumentation files must be implemented.");
+  if (!input.webInstrumentationFilesImplemented) blockers.push("Public web Sentry instrumentation/config file evidence must be captured before Sentry SDK readiness.");
+  if (!input.dashboardInstrumentationFilesImplemented) blockers.push("Dashboard Sentry instrumentation/config file evidence must be captured before Sentry SDK readiness.");
+  if (!input.mobileInstrumentationFilesImplemented) blockers.push("Mobile Sentry/Expo instrumentation file evidence must be captured before Sentry SDK readiness.");
   if (!input.sentryDsnConfigured) blockers.push("Sentry DSN must be configured for web, dashboard, and mobile surfaces.");
   if (!input.sentryAuthTokenConfigured) blockers.push("SENTRY_AUTH_TOKEN must be configured in CI secrets.");
   if (!input.sentryOrgConfigured) blockers.push("SENTRY_ORG must be configured in CI secrets.");
@@ -1583,35 +1722,48 @@ export function buildSentrySdkRuntimeImplementationPlan(input: SentrySdkRuntimeI
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/observability typecheck",
-      "pnpm --filter @inkroute/observability test",
-      "pnpm --filter @inkroute/web build",
-      "pnpm --filter @inkroute/dashboard build",
-      "pnpm --filter @inkroute/mobile typecheck",
-      "Sentry web synthetic capture smoke",
-      "Sentry dashboard synthetic capture smoke",
-      "Sentry mobile synthetic capture smoke",
-      "Sentry source-map/debug-symbol resolution check",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Install and configure Sentry SDKs separately for public web, dashboard, and Expo mobile surfaces.",
-      "Run beforeSend redaction and tenant-safe tag filtering before every provider submission.",
-      "Upload web/dashboard source maps, Expo source maps, and React Native debug symbols from CI with secret-backed credentials.",
-      "Tag Sentry events with release, environment, surface, route, and tenant-safe identifiers only.",
-      "Verify live synthetic captures and source resolution for web, dashboard, and mobile before launch.",
-      "Capture provider issue links/screenshots proving no raw PII, medical, payment, token, or private URL payload leakage.",
-    ],
+    requiredCommands: sentrySdkRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === sentrySdkRuntimeRequiredEvidence.length
+        ? sentrySdkRuntimeRequiredEvidence
+        : requiredEvidence,
+    requiredControls: sentrySdkRuntimeRequiredControls,
     blockers,
   };
 }
+
+export const errorReportIngestHardeningRequiredCommands = [
+  "pnpm vitest run apps/web/tests/observability-routes.test.ts",
+  "pnpm --filter @inkroute/web typecheck",
+  "public error-report ingest bot-protection smoke",
+  "distributed rate-limit abuse smoke",
+  "live Postgres tenant-isolation ingest proof",
+  "provider forwarding redaction and replay smoke",
+] as const;
+
+export const errorReportIngestHardeningRequiredControls = [
+  "Resolve tenant scope and validate request shape before persistence, audit writes, or provider forwarding.",
+  "Use production bot protection plus durable distributed rate limiting for public ingest endpoints.",
+  "Persist only redacted ErrorReport rows and AuditLog metadata; keep raw provider payloads out of storage.",
+  "Propagate request IDs through ingest, dashboard triage, audit records, and provider forwarding.",
+  "Gate provider forwarding and webhooks with credentials, replay protection, tenant boundaries, and redaction checks.",
+  "Prove dashboard RBAC and live Postgres tenant isolation before closing the gap.",
+] as const;
+
+export const errorReportIngestHardeningRequiredEvidence = [
+  "public ingest tenant, validation, bot-protection, and distributed rate-limit evidence",
+  "redacted ErrorReport, AuditLog, and local fallback persistence evidence",
+  "dashboard RBAC and live Postgres tenant-isolation evidence",
+  "provider forwarding, webhook signature, replay, and no-PII payload evidence",
+  "abuse monitoring, request ID, and trace propagation evidence",
+] as const;
+export type ErrorReportIngestHardeningRequiredEvidence = (typeof errorReportIngestHardeningRequiredEvidence)[number];
 
 export function buildErrorReportIngestHardeningPlan(input: ErrorReportIngestHardeningInput): ErrorReportIngestHardeningPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: ErrorReportIngestHardeningRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/web ${script} script.`);
   if (!input.routeTestsPassed) blockers.push("Public error-report ingest and dashboard route tests must pass.");
@@ -1650,32 +1802,47 @@ export function buildErrorReportIngestHardeningPlan(input: ErrorReportIngestHard
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm vitest run apps/web/tests/observability-routes.test.ts",
-      "pnpm --filter @inkroute/web typecheck",
-      "public error-report ingest bot-protection smoke",
-      "distributed rate-limit abuse smoke",
-      "live Postgres tenant-isolation ingest proof",
-      "provider forwarding redaction and replay smoke",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Resolve tenant scope and validate request shape before persistence, audit writes, or provider forwarding.",
-      "Use production bot protection plus durable distributed rate limiting for public ingest endpoints.",
-      "Persist only redacted ErrorReport rows and AuditLog metadata; keep raw provider payloads out of storage.",
-      "Propagate request IDs through ingest, dashboard triage, audit records, and provider forwarding.",
-      "Gate provider forwarding and webhooks with credentials, replay protection, tenant boundaries, and redaction checks.",
-      "Prove dashboard RBAC and live Postgres tenant isolation before closing the gap.",
-    ],
+    requiredCommands: errorReportIngestHardeningRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === errorReportIngestHardeningRequiredEvidence.length
+        ? errorReportIngestHardeningRequiredEvidence
+        : requiredEvidence,
+    requiredControls: errorReportIngestHardeningRequiredControls,
     blockers,
   };
 }
+
+export const providerWebhookReconciliationRequiredCommands = [
+  "pnpm vitest run apps/web/tests/observability-routes.test.ts",
+  "pnpm --filter @inkroute/web typecheck",
+  "Sentry webhook valid signature smoke",
+  "Sentry webhook replay/idempotency smoke",
+  "provider action ErrorReport reconciliation smoke",
+  "live Sentry webhook delivery proof",
+] as const;
+
+export const providerWebhookReconciliationRequiredControls = [
+  "Reject unsigned, invalidly signed, replayed, or uncredentialed provider webhook deliveries before reconciliation.",
+  "Persist provider deliveries durably with unique idempotency keys before mutating ErrorReport state.",
+  "Resolve tenant ownership for provider issues before status reconciliation.",
+  "Mutate ErrorReport status and reconciliation audit logs in a single transaction boundary.",
+  "Store sanitized provider payload summaries only; keep raw provider payloads out of tenant-visible surfaces.",
+  "Capture live Sentry delivery and replay evidence before closing the gap.",
+] as const;
+
+export const providerWebhookReconciliationRequiredEvidence = [
+  "webhook secret, signature, timing-safe comparison, and replay-protection evidence",
+  "durable provider-delivery persistence and idempotency constraint evidence",
+  "tenant ownership lookup, ErrorReport status mutation, and reconciliation audit evidence",
+  "sanitized provider payload and live Sentry webhook replay evidence",
+] as const;
+export type ProviderWebhookReconciliationRequiredEvidence = (typeof providerWebhookReconciliationRequiredEvidence)[number];
 
 export function buildProviderWebhookReconciliationPlan(input: ProviderWebhookReconciliationInput): ProviderWebhookReconciliationPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: ProviderWebhookReconciliationRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/web ${script} script.`);
   if (!input.routeTestsPassed) blockers.push("Sentry webhook route tests must pass.");
@@ -1708,32 +1875,39 @@ export function buildProviderWebhookReconciliationPlan(input: ProviderWebhookRec
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm vitest run apps/web/tests/observability-routes.test.ts",
-      "pnpm --filter @inkroute/web typecheck",
-      "Sentry webhook valid signature smoke",
-      "Sentry webhook replay/idempotency smoke",
-      "provider action ErrorReport reconciliation smoke",
-      "live Sentry webhook delivery proof",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Reject unsigned, invalidly signed, replayed, or uncredentialed provider webhook deliveries before reconciliation.",
-      "Persist provider deliveries durably with unique idempotency keys before mutating ErrorReport state.",
-      "Resolve tenant ownership for provider issues before status reconciliation.",
-      "Mutate ErrorReport status and reconciliation audit logs in a single transaction boundary.",
-      "Store sanitized provider payload summaries only; keep raw provider payloads out of tenant-visible surfaces.",
-      "Capture live Sentry delivery and replay evidence before closing the gap.",
-    ],
+    requiredCommands: providerWebhookReconciliationRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === providerWebhookReconciliationRequiredEvidence.length
+        ? providerWebhookReconciliationRequiredEvidence
+        : requiredEvidence,
+    requiredControls: providerWebhookReconciliationRequiredControls,
     blockers,
   };
 }
+
+export const mobileCrashRuntimeRequiredCommands = [
+  "pnpm --filter @inkroute/observability typecheck",
+  "pnpm --filter @inkroute/observability test",
+  "pnpm --filter @inkroute/mobile typecheck",
+  "Expo simulator forced crash smoke test",
+  "Expo physical-device forced crash smoke test",
+  "Sentry source-map/debug-symbol resolution check",
+] as const;
+
+export const mobileCrashRuntimeRequiredEvidence = [
+  "mobile crash capture SDK or fallback reporter configuration evidence",
+  "Expo source-map and React Native debug-symbol upload evidence",
+  "forced simulator and device crash capture evidence",
+  "sanitized ErrorReport persistence and dashboard triage evidence",
+  "mobile crash privacy redaction and offline buffering evidence",
+] as const;
+export type MobileCrashRuntimeRequiredEvidence = (typeof mobileCrashRuntimeRequiredEvidence)[number];
 
 export function buildMobileCrashRuntimeReadinessPlan(input: MobileCrashRuntimeReadinessInput): MobileCrashRuntimeReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: MobileCrashRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/observability ${script} script.`);
   if (!input.observabilityTestsPassed) blockers.push("@inkroute/observability mobile crash tests must pass.");
@@ -1762,19 +1936,16 @@ export function buildMobileCrashRuntimeReadinessPlan(input: MobileCrashRuntimeRe
   if (!input.piiRedactionTestsPassed || !input.noPiiProviderPayloadVerified || !input.offlineCrashBufferingVerified) {
     requiredEvidence.push("mobile crash privacy redaction and offline buffering evidence");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === mobileCrashRuntimeRequiredEvidence.length
+      ? mobileCrashRuntimeRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/observability typecheck",
-      "pnpm --filter @inkroute/observability test",
-      "pnpm --filter @inkroute/mobile typecheck",
-      "Expo simulator forced crash smoke test",
-      "Expo physical-device forced crash smoke test",
-      "Sentry source-map/debug-symbol resolution check",
-    ],
-    requiredEvidence,
+    requiredCommands: mobileCrashRuntimeRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
@@ -1783,7 +1954,7 @@ export function buildObservabilityRuntimeVerificationPlan(input: ObservabilityRu
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: ObservabilityRuntimeVerificationRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/observability ${script} script.`);
   if (!input.packageTestsPassed) blockers.push("@inkroute/observability runtime verification tests must pass.");
@@ -1827,27 +1998,12 @@ export function buildObservabilityRuntimeVerificationPlan(input: ObservabilityRu
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/observability typecheck",
-      "pnpm --filter @inkroute/observability test",
-      "pnpm --filter @inkroute/web build",
-      "pnpm --filter @inkroute/dashboard build",
-      "pnpm --filter @inkroute/mobile typecheck",
-      "pnpm vitest run apps/web/tests/observability-routes.test.ts",
-      "browser forced web/dashboard error smoke",
-      "API/webhook forced error smoke",
-      "Expo simulator/device forced error smoke",
-      "Sentry/provider live runtime proof",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Use safe synthetic errors only; never trigger destructive or production-impacting failures.",
-      "Verify fallback UX for public web, dashboard, API, webhook, and mobile surfaces under real runtime.",
-      "Capture screenshots, route envelopes, and sanitized logs for forced-error closeout evidence.",
-      "Persist only sanitized ErrorReport summaries and prove dashboard triage reads the sanitized records.",
-      "Prove live Sentry/provider capture after SDK configuration, with source/release tags and no raw PII.",
-      "Attach runtime screenshots, logs, provider event links, and redaction proof before closing the gap.",
-    ],
+    requiredCommands: observabilityRuntimeVerificationRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === observabilityRuntimeVerificationRequiredEvidence.length
+        ? observabilityRuntimeVerificationRequiredEvidence
+        : requiredEvidence,
+    requiredControls: observabilityRuntimeVerificationRequiredControls,
     blockers,
   };
 }
@@ -1884,17 +2040,52 @@ export interface ObservabilityLaunchEvidenceInput {
 export interface ObservabilityLaunchEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof observabilityLaunchRequiredCommands;
+  requiredEvidence: readonly ObservabilityLaunchRequiredEvidence[];
+  requiredControls: typeof observabilityLaunchRequiredControls;
   blockers: readonly string[];
 }
+
+export const observabilityLaunchRequiredCommands = [
+  "pnpm --filter @inkroute/observability typecheck",
+  "pnpm --filter @inkroute/observability test",
+  "pnpm --filter @inkroute/web build",
+  "pnpm --filter @inkroute/dashboard build",
+  "pnpm --filter @inkroute/mobile typecheck",
+  "forced web/dashboard/API/webhook Sentry capture smoke",
+  "forced Expo mobile crash capture smoke",
+  "source-map and debug-symbol resolution check",
+  "tenant-isolated ErrorReport dashboard triage test",
+  "Sentry/provider webhook signature replay test",
+  "GitHub Actions observability launch evidence job",
+] as const;
+
+export const observabilityLaunchRequiredControls = [
+  "Run redaction before external capture, persistence, alert routing, issue handoff, telemetry export, or dashboard display.",
+  "Tag events with tenant-safe release, environment, route, request ID, trace ID, and surface metadata only.",
+  "Upload source maps and debug symbols from CI with secret-backed credentials and redacted artifacts.",
+  "Persist only sanitized ErrorReport summaries and enforce tenant isolation for dashboard triage reads.",
+  "Verify provider webhook signatures and replay protection before reconciling Sentry issue actions.",
+  "Route high-risk payloads to dashboard-only review instead of external alerts or issue handoff.",
+] as const;
+
+export const observabilityLaunchRequiredEvidence = [
+  "Sentry web/dashboard/mobile SDK and OpenTelemetry exporter configuration evidence",
+  "source-map and mobile debug-symbol upload/resolution evidence",
+  "forced web, dashboard, API, webhook, and mobile capture evidence",
+  "sanitized ErrorReport persistence and tenant-isolated dashboard triage evidence",
+  "Sentry/provider webhook signature and replay evidence",
+  "alert routing and release incident linkage evidence",
+  "redaction, no-PII, and secret-safe artifact evidence",
+  "GitHub Actions observability launch evidence",
+] as const;
+export type ObservabilityLaunchRequiredEvidence = (typeof observabilityLaunchRequiredEvidence)[number];
 
 export function buildObservabilityLaunchEvidencePlan(input: ObservabilityLaunchEvidenceInput): ObservabilityLaunchEvidencePlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: ObservabilityLaunchRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/observability ${script} script.`);
   if (!input.observabilityTypecheckPassed) blockers.push("@inkroute/observability typecheck must pass before observability launch.");
@@ -1943,31 +2134,35 @@ export function buildObservabilityLaunchEvidencePlan(input: ObservabilityLaunchE
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/observability typecheck",
-      "pnpm --filter @inkroute/observability test",
-      "pnpm --filter @inkroute/web build",
-      "pnpm --filter @inkroute/dashboard build",
-      "pnpm --filter @inkroute/mobile typecheck",
-      "forced web/dashboard/API/webhook Sentry capture smoke",
-      "forced Expo mobile crash capture smoke",
-      "source-map and debug-symbol resolution check",
-      "tenant-isolated ErrorReport dashboard triage test",
-      "Sentry/provider webhook signature replay test",
-      "GitHub Actions observability launch evidence job",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Run redaction before external capture, persistence, alert routing, issue handoff, telemetry export, or dashboard display.",
-      "Tag events with tenant-safe release, environment, route, request ID, trace ID, and surface metadata only.",
-      "Upload source maps and debug symbols from CI with secret-backed credentials and redacted artifacts.",
-      "Persist only sanitized ErrorReport summaries and enforce tenant isolation for dashboard triage reads.",
-      "Verify provider webhook signatures and replay protection before reconciling Sentry issue actions.",
-      "Route high-risk payloads to dashboard-only review instead of external alerts or issue handoff.",
-    ],
+    requiredCommands: observabilityLaunchRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === observabilityLaunchRequiredEvidence.length
+        ? observabilityLaunchRequiredEvidence
+        : requiredEvidence,
+    requiredControls: observabilityLaunchRequiredControls,
     blockers,
   };
 }
+
+export const observabilityRuntimeReadinessRequiredCommands = [
+  "pnpm --filter @inkroute/observability typecheck",
+  "pnpm --filter @inkroute/observability test",
+  "forced web/dashboard/API Sentry capture smoke",
+  "forced Expo mobile crash capture smoke",
+  "source-map and debug-symbol resolution checks",
+  "tenant-isolated ErrorReport persistence integration tests",
+  "Sentry/provider webhook signature and replay tests",
+] as const;
+
+export const observabilityRuntimeReadinessRequiredControls = [
+  "Run redactSensitiveText and redactMetadata before external capture, persistence, alerting, issue creation, or telemetry export.",
+  "Tag events with release, environment, surface, route, request ID, trace ID, and tenant-safe identifiers only.",
+  "Upload web/dashboard source maps and mobile debug symbols from CI using secret-backed Sentry credentials.",
+  "Persist only sanitized ErrorReport summaries and keep raw provider payloads out of dashboard triage.",
+  "Verify provider webhook signatures and replay protection before reconciling Sentry or incident events.",
+  "Route high-risk payloads to dashboard-only review instead of Slack, pager, GitHub, or OTLP export.",
+  "Keep request ID and trace context propagation consistent across routes, workers, provider callbacks, and mobile crash reports.",
+] as const;
 
 export function buildObservabilityRuntimeReadinessPlan(input: ObservabilityRuntimeReadinessInput): ObservabilityRuntimeReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
@@ -1999,24 +2194,8 @@ export function buildObservabilityRuntimeReadinessPlan(input: ObservabilityRunti
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/observability typecheck",
-      "pnpm --filter @inkroute/observability test",
-      "forced web/dashboard/API Sentry capture smoke",
-      "forced Expo mobile crash capture smoke",
-      "source-map and debug-symbol resolution checks",
-      "tenant-isolated ErrorReport persistence integration tests",
-      "Sentry/provider webhook signature and replay tests",
-    ],
-    requiredControls: [
-      "Run redactSensitiveText and redactMetadata before external capture, persistence, alerting, issue creation, or telemetry export.",
-      "Tag events with release, environment, surface, route, request ID, trace ID, and tenant-safe identifiers only.",
-      "Upload web/dashboard source maps and mobile debug symbols from CI using secret-backed Sentry credentials.",
-      "Persist only sanitized ErrorReport summaries and keep raw provider payloads out of dashboard triage.",
-      "Verify provider webhook signatures and replay protection before reconciling Sentry or incident events.",
-      "Route high-risk payloads to dashboard-only review instead of Slack, pager, GitHub, or OTLP export.",
-      "Keep request ID and trace context propagation consistent across routes, workers, provider callbacks, and mobile crash reports.",
-    ],
+    requiredCommands: observabilityRuntimeReadinessRequiredCommands,
+    requiredControls: observabilityRuntimeReadinessRequiredControls,
     blockers,
   };
 }

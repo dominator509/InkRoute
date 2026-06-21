@@ -26,10 +26,10 @@ export default function BookingRequestPage() {
             <h2>What this flow qualifies</h2>
             <ol className="check-list numbered">
               {bookingIntakePreview.map((item) => <li key={item}>{item}</li>)}
-            </ol>
-            <div className="form-boundary-note">
-              <strong>Still scaffolded:</strong> no booking request is saved, no deposit is collected, no file is uploaded, and no notification is sent from this preview.
-            </div>
+          </ol>
+          <div className="form-boundary-note">
+              <strong>Provider boundaries:</strong> final-step submit now exercises the tenant booking API. Deposits, file uploads, notifications, calendar holds, and production local fallback remain evidence-gated.
+          </div>
           </aside>
           <div className="booking-lifecycle-card">
             <p className="eyebrow">Client path</p>

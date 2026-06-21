@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   bookingFlowSteps,
   calculateTattooReadinessScore,
@@ -20,12 +20,20 @@ import {
   bookingStyleOptions,
   demoPortfolioItems,
   demoTravelStops,
+  inkrouteDemoArtist,
+  inkrouteDemoTenant,
 } from "@inkroute/config";
 import type { BodyPlacement, TattooStyle } from "@inkroute/types";
 import { formatDateRange } from "../../lib/format";
 
 const stepOrder = bookingFlowSteps.map((step) => step.id);
 const finalStepId: BookingFlowStepId = "confirmation";
+
+type BookingSubmitState =
+  | { status: "idle" }
+  | { status: "submitting" }
+  | { status: "submitted"; bookingRequestId: string; source: string }
+  | { status: "failed"; message: string };
 
 function clampStep(index: number) {
   return Math.max(0, Math.min(index, bookingFlowSteps.length - 1));
@@ -41,6 +49,7 @@ export function BookingFlowClient() {
   const [stepIndex, setStepIndex] = useState(0);
   const [draft, setDraft] = useState<BookingDraft>(emptyBookingDraft);
   const [previewSubmitted, setPreviewSubmitted] = useState(false);
+  const [submitState, setSubmitState] = useState<BookingSubmitState>({ status: "idle" });
 
   const activeStep = (bookingFlowSteps[clampStep(stepIndex)] as BookingFlowStep) ?? bookingFlowSteps[0];
   const readiness = useMemo(() => calculateTattooReadinessScore(draft), [draft]);
@@ -50,6 +59,7 @@ export function BookingFlowClient() {
   const setField = <K extends keyof BookingDraft>(key: K, value: BookingDraft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
     setPreviewSubmitted(false);
+    setSubmitState({ status: "idle" });
   };
 
   const goToStep = (nextIndex: number) => setStepIndex(clampStep(nextIndex));
@@ -64,6 +74,55 @@ export function BookingFlowClient() {
       uploadStatus: "local_only",
     }));
     setField("referenceImages", localOnlyFiles);
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (activeStep.id !== finalStepId || submitState.status === "submitting") return;
+
+    setSubmitState({ status: "submitting" });
+    let response: Response;
+    let payload: { data?: { bookingRequest?: { id?: string }; source?: string }; error?: { message?: string } } | null = null;
+    try {
+      response = await fetch(`/api/public/${inkrouteDemoTenant.slug}/booking-requests`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          artistId: inkrouteDemoArtist.id,
+          travelCityId: selectedTravelStop?.id,
+          clientName: draft.clientName,
+          clientEmail: draft.clientEmail,
+          clientPhone: draft.clientPhone || undefined,
+          preferredCity: selectedTravelStop ? `${selectedTravelStop.city}, ${selectedTravelStop.region}` : draft.preferredCitySlug,
+          preferredDate: selectedTravelStop?.startsAt,
+          style: draft.style,
+          placement: draft.placement,
+          sizeEstimate: draft.sizeEstimate,
+          ideaSummary: draft.ideaSummary,
+          medicalNotes: draft.medicalNotes || undefined,
+          policyAccepted: draft.policyAccepted && draft.ageAcknowledged && draft.privacyAcknowledged && draft.depositBoundaryAcknowledged,
+          portfolioAttributionId: draft.portfolioAttributionId,
+          utmSource: "booking-flow-client",
+          utmMedium: "web",
+          utmCampaign: "phase-4-runtime",
+        }),
+      });
+      payload = await response.json().catch(() => null) as { data?: { bookingRequest?: { id?: string }; source?: string }; error?: { message?: string } } | null;
+    } catch {
+      setSubmitState({ status: "failed", message: "Booking request submission could not reach the tenant API runtime." });
+      return;
+    }
+
+    if (!response.ok) {
+      setSubmitState({ status: "failed", message: payload?.error?.message ?? "Booking request submission failed validation or persistence." });
+      return;
+    }
+
+    setSubmitState({
+      status: "submitted",
+      bookingRequestId: payload?.data?.bookingRequest?.id ?? "pending",
+      source: payload?.data?.source ?? "unknown",
+    });
   };
 
   const renderStep = () => {
@@ -172,11 +231,11 @@ export function BookingFlowClient() {
             </select>
           </label>
           <label>
-            Reference images, local preview only
+            Reference images, local metadata
             <input type="file" accept="image/*" multiple onChange={handleReferenceFiles} />
           </label>
           <div className="form-boundary-note">
-            <strong>Upload boundary:</strong> files selected here are not uploaded or stored. Phase 5/API work must replace this with signed private uploads, file scanning, and storage access controls.
+            <strong>Upload boundary:</strong> files selected here stay as local metadata in this booking form. The secure-upload intent route and local validation controls are wired, while provider-backed signed private uploads, file scanning, and storage access proof remain evidence-gated.
           </div>
           {draft.referenceImages.length > 0 ? (
             <ul className="booking-file-list" aria-label="Selected local reference image metadata">
@@ -212,7 +271,7 @@ export function BookingFlowClient() {
             <textarea
               value={draft.medicalNotes}
               onChange={(event) => setField("medicalNotes", event.target.value)}
-              placeholder="Sensitive notes must be encrypted/redacted after persistence is implemented. Do not enter real medical data in this demo."
+              placeholder="Sensitive notes are encrypted for persisted DB writes and redacted in local fallback. Avoid real medical data until production proof is captured."
             />
           </label>
           <div className="booking-checkbox-grid">
@@ -264,8 +323,8 @@ export function BookingFlowClient() {
       <div className="booking-step-panel confirmation-panel">
         <div className="booking-highlight-card strong">
           <p className="eyebrow">Confirmation preview</p>
-          <h3>{previewSubmitted ? "Preview generated" : "Ready for a non-persistent preview"}</h3>
-          <p>This does not create a booking, upload files, send messages, reserve time, or collect money. It shows the client-facing confirmation experience Phase 4 expects after a real API submission.</p>
+          <h3>{previewSubmitted ? "Preview generated" : "Ready for API-backed submission"}</h3>
+          <p>The final submit posts the intake JSON to the tenant-scoped booking API. Reference files remain local metadata only, and provider uploads, messages, calendar holds, deposits, and payments remain blocked behind their evidence gates.</p>
         </div>
         <dl className="booking-summary-list">
           <div><dt>City</dt><dd>{selectedTravelStop ? `${selectedTravelStop.city}, ${selectedTravelStop.region}` : "Not selected"}</dd></div>
@@ -278,6 +337,16 @@ export function BookingFlowClient() {
           <div><dt>Readiness</dt><dd>{readiness.percentage}% · {readiness.label}</dd></div>
         </dl>
         <button className="button" type="button" onClick={() => setPreviewSubmitted(true)}>Generate confirmation preview</button>
+        {submitState.status === "submitted" ? (
+          <div className="form-boundary-note success">
+            <strong>Booking request submitted:</strong> {submitState.bookingRequestId} via {submitState.source}. Provider handoffs remain evidence-gated.
+          </div>
+        ) : null}
+        {submitState.status === "failed" ? (
+          <div className="form-boundary-note danger">
+            <strong>Submission blocked:</strong> {submitState.message}
+          </div>
+        ) : null}
         {previewSubmitted ? (
           <div className="booking-next-steps">
             <h4>What the real confirmation should do later</h4>
@@ -330,12 +399,17 @@ export function BookingFlowClient() {
         <div className="booking-required-fields">
           {activeStep.requiredFields.length > 0 ? `Required now: ${activeStep.requiredFields.join(", ")}` : "No additional fields required on this preview step."}
         </div>
-        <form className="demo-form booking-form live-preview" onSubmit={(event) => event.preventDefault()}>
+        <form className="demo-form booking-form live-preview" onSubmit={handleSubmit}>
           {renderStep()}
           <div className="booking-nav-actions">
             <button className="button secondary" type="button" onClick={() => goToStep(stepIndex - 1)} disabled={stepIndex === 0}>Back</button>
             {activeStep.id === finalStepId ? (
-              <a className="button secondary" href="/booking/confirmation">Open static confirmation page</a>
+              <>
+                <button className="button" type="submit" disabled={submitState.status === "submitting"}>
+                  {submitState.status === "submitting" ? "Submitting..." : "Submit booking request"}
+                </button>
+                <a className="button secondary" href="/booking/confirmation">Open static confirmation page</a>
+              </>
             ) : (
               <button className="button" type="button" onClick={() => goToStep(stepIndex + 1)}>Continue</button>
             )}

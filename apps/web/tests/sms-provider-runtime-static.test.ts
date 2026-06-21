@@ -2,12 +2,23 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildRedactedSmsProviderArtifact,
+  buildSmsProviderArtifactReview,
+  buildSmsProviderDecisionRequiredEvidence,
   buildSmsProviderEvidenceDecision,
+  buildSmsProviderExecutionPlan,
+  smsProviderExternalCommands,
+  smsProviderExecutionPolicy,
   smsProviderArtifactPaths,
+  smsProviderLocalCommands,
+  smsProviderRequiredExternalEvidence,
   smsProviderRuntimeCommands,
   smsProviderRuntimeMatrix,
   smsProviderRuntimeProofFiles,
   smsProviderRuntimeReadiness,
+  smsProviderRuntimeReadinessRequiredControls,
+  smsProviderRuntimeReadinessRequiredEvidence,
+  smsProviderRequiredEvidence,
 } from "../lib/smsProviderRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -27,12 +38,25 @@ describe("SMS provider runtime contract", () => {
       "pnpm --filter @inkroute/notifications typecheck",
       "pnpm --filter @inkroute/notifications test",
       "pnpm vitest run apps/web/tests/sms-provider-static.test.ts",
+      "install/configure Twilio SDK, Account SID, and auth token",
+      "prove Twilio messaging service configuration",
+      "legal-approved SMS consent and STOP/HELP copy review",
+      "stored SMS consent proof tests",
+      "quiet-hours policy tests",
+      "verify Twilio signature against raw bodies",
+      "validate Twilio request URL in webhook signature base string",
+      "durable NotificationDelivery transaction tests",
+      "durable ProviderEvent replay/idempotency tests",
+      "durable STOP suppression persistence tests",
+      "durable HELP/client reply inbound-thread persistence tests",
       "Twilio sandbox sent event test",
       "Twilio sandbox delivered event test",
       "Twilio sandbox failed event test",
       "Twilio STOP suppression test",
       "Twilio HELP inbound-thread test",
       "invalid SMS webhook signature route test",
+      "GitHub Actions SMS provider runtime job",
+      "review SMS artifacts for Twilio secrets, signatures, raw payloads, phone numbers, and tenant data",
     ]);
     expect(smsProviderRuntimeMatrix.map((entry) => entry.id)).toEqual([
       "notifications-typecheck",
@@ -89,21 +113,126 @@ describe("SMS provider runtime contract", () => {
     expect(notificationsSource).toContain("buildSmsProviderSendPlan");
     expect(notificationsSource).toContain("buildSmsWebhookRuntimeReadinessPlan");
     expect(providerSource).toContain("executeSmsProviderSend");
+    expect(providerSource).toContain("createInMemorySmsProviderRepository");
+    expect(providerSource).toContain("sanitizeSmsProviderSendResult");
+    expect(providerSource).toContain("buildRedactedSmsWebhookPayload");
     expect(providerSource).toContain("persistInboundThread");
     expect(providerSource).toContain("buildSmsProviderReconciliation");
     expect(routeSource).toContain("buildSmsWebhookReadinessFromPayload");
     expect(routeSource).toContain("x-twilio-signature");
+    expect(routeSource).toContain("PROVIDER_SMS_WEBHOOK_RECONCILIATION_NOT_CONFIGURED");
+    expect(routeSource).toContain("localSmsWebhookPersistenceDisabled");
     expect(staticTest).toContain("requires Twilio send controls");
+    expect(staticTest).toContain("sanitizes nested SMS provider send and webhook payloads");
+    expect(staticTest).toContain("executes a local SMS provider repository contract");
+    expect(staticTest).toContain("blocks local SMS sends when consent proof is missing or destination is suppressed");
   });
 
   it("keeps Twilio, compliance, signature, persistence, sandbox, CI, and artifact blockers explicit", () => {
     expect(smsProviderRuntimeReadiness.status).toBe("blocked");
-    expect(smsProviderRuntimeReadiness.requiredCommands).toEqual([...smsProviderRuntimeCommands]);
-    expect(smsProviderRuntimeReadiness.requiredEvidence).toContain("Twilio SDK credentials and messaging service evidence");
-    expect(smsProviderRuntimeReadiness.requiredEvidence).toContain("legal-approved consent/STOP/HELP copy, stored consent proof, and quiet-hours evidence");
+    expect(smsProviderRuntimeReadiness.requiredCommands).toBe(smsProviderRuntimeCommands);
+    expect(smsProviderRuntimeReadiness.requiredEvidence).toBe(smsProviderRuntimeReadinessRequiredEvidence);
+    expect(smsProviderRuntimeReadiness.requiredControls).toBe(smsProviderRuntimeReadinessRequiredControls);
     expect(smsProviderRuntimeReadiness.blockers).toContain("Real Twilio SDK credentials and messaging service must be configured in a secret store.");
     expect(smsProviderRuntimeReadiness.blockers).toContain("SMS webhook route must verify Twilio signatures cryptographically against raw bodies and request URLs.");
     expect(smsProviderRuntimeReadiness.blockers).toContain("Sent, delivered, failed, STOP, and HELP provider flows must be tested against the sandbox.");
+  });
+
+  it("pins the non-executing GAP-062 SMS provider execution policy", () => {
+    const plan = buildSmsProviderExecutionPlan();
+
+    expect(smsProviderExecutionPolicy).toEqual({
+      codexMayClassifyStaticSmsProviderReadiness: true,
+      localNotificationCommandsRequiredForClosure: true,
+      twilioSdkCredentialsRequiredForClosure: true,
+      messagingServiceRequiredForClosure: true,
+      legalConsentCopyRequiredForClosure: true,
+      consentProofRequiredForClosure: true,
+      quietHoursRequiredForClosure: true,
+      rawBodySignatureRequiredForClosure: true,
+      requestUrlValidationRequiredForClosure: true,
+      durablePersistenceRequiredForClosure: true,
+      sandboxStopHelpRequiredForClosure: true,
+      ciEvidenceRequiredForClosure: true,
+      secretSafeArtifactsRequiredForClosure: true,
+    });
+    expect(plan.policy).toBe(smsProviderExecutionPolicy);
+    expect(plan.requiredExternalEvidence).toBe(smsProviderRequiredExternalEvidence);
+    expect(plan.commandExecutionAllowed).toBe(false);
+    expect(plan.twilioSdkExecutionAllowed).toBe(false);
+    expect(plan.messagingServiceExecutionAllowed).toBe(false);
+    expect(plan.legalApprovalExecutionAllowed).toBe(false);
+    expect(plan.signatureVerificationExecutionAllowed).toBe(false);
+    expect(plan.durablePersistenceExecutionAllowed).toBe(false);
+    expect(plan.sandboxEventExecutionAllowed).toBe(false);
+    expect(plan.ciExecutionAllowed).toBe(false);
+    expect(plan.artifactReviewExecutionAllowed).toBe(false);
+    expect(plan.localCommands).toBe(smsProviderLocalCommands);
+    expect(plan.externalCommands).toBe(smsProviderExternalCommands);
+    expect(plan.requiredExternalEvidence).toBe(smsProviderRequiredExternalEvidence);
+    expect(smsProviderRequiredExternalEvidence).toEqual([
+      "actual SMS provider command output",
+      "Twilio SDK credentials and messaging service evidence",
+      "legal-approved SMS consent and STOP/HELP copy",
+      "stored SMS consent proof tests",
+      "quiet-hours policy tests",
+      "raw-body Twilio signature verification evidence",
+      "Twilio request URL validation evidence",
+      "durable NotificationDelivery persistence tests",
+      "durable ProviderEvent replay/idempotency tests",
+      "durable STOP suppression persistence tests",
+      "durable HELP/client reply inbound-thread persistence tests",
+      "Twilio sandbox sent/delivered/failed/STOP/HELP transcripts",
+      "invalid SMS webhook signature route evidence",
+      "CI SMS provider artifacts",
+      "secret-safe SMS provider artifact review",
+    ]);
+  });
+
+  it("pins recursive SMS provider artifact redaction and review", () => {
+    const redacted = buildRedactedSmsProviderArtifact({
+      twilioAuthToken: "twilio-secret",
+      destinationPhone: "+15555550100",
+      smsConsentSnapshot: "private consent",
+      rawWebhookPayload: "From=%2B15555550100",
+      publicSummary: "SMS provider evidence captured",
+      nested: {
+        helpInboundThreadUrl: "https://private/thread",
+        publicStatus: "help-handled",
+      },
+    });
+
+    expect(redacted.secretSafe).toBe(true);
+    expect(redacted.redactedPaths).toEqual([
+      "twilioAuthToken",
+      "destinationPhone",
+      "smsConsentSnapshot",
+      "rawWebhookPayload",
+      "nested.helpInboundThreadUrl",
+    ]);
+    expect(redacted.artifact).toEqual({
+      twilioAuthToken: "[redacted]",
+      destinationPhone: "[redacted]",
+      smsConsentSnapshot: "[redacted]",
+      rawWebhookPayload: "[redacted]",
+      publicSummary: "SMS provider evidence captured",
+      nested: {
+        helpInboundThreadUrl: "[redacted]",
+        publicStatus: "help-handled",
+      },
+    });
+
+    const review = buildSmsProviderArtifactReview({
+      publicSummary: "safe SMS provider artifact",
+      stopSuppressionPhoneNumber: "+15555550100",
+    });
+
+    expect(review.passed).toBe(true);
+    expect(review.blockers).toEqual([]);
+    expect(review.artifact.secretSafe).toBe(true);
+    expect(review.artifact.redactedPaths).toEqual(["stopSuppressionPhoneNumber"]);
+    expect(review.requiredExternalEvidence).toBe(smsProviderRequiredExternalEvidence);
+    expect(review.requiredExternalEvidence).toBe(smsProviderRequiredExternalEvidence);
   });
 
   it("classifies SMS provider evidence before GAP-062 can close", () => {
@@ -147,8 +276,11 @@ describe("SMS provider runtime contract", () => {
     expect(blockedDecision.blockers).toContain("Secret-safe SMS provider artifact review evidence is missing.");
     expect(blockedDecision.missingArtifacts).toContain("coverage/sms-provider-twilio-sdk.json");
     expect(blockedDecision.missingArtifacts).toContain("coverage/sms-provider-secret-safe-artifacts.json");
-    expect(blockedDecision.requiredCommands).toEqual([...smsProviderRuntimeCommands]);
-    expect(blockedDecision.requiredEvidence).toContain("secret-safe review of retained SMS provider artifacts");
+    expect(blockedDecision.requiredCommands).toBe(smsProviderRuntimeCommands);
+    expect(blockedDecision.requiredEvidence).toEqual(
+      buildSmsProviderDecisionRequiredEvidence(smsProviderRuntimeReadinessRequiredEvidence),
+    );
+    expect(blockedDecision.requiredEvidence).toBe(smsProviderRequiredEvidence);
     expect(blockedDecision.redactedSummary).toEqual({
       capturedArtifactCount: 4,
       requiredArtifactCount: smsProviderArtifactPaths.length,
@@ -192,7 +324,18 @@ describe("SMS provider runtime contract", () => {
     expect(unitManifest).toContain("unit-sms-provider-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/smsProviderRuntime.ts");
     expect(gapTracker).toContain("SMS provider evidence classifier");
-    expect(gapTracker).toContain("GAP-062 is sms-provider-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("smsProviderRuntimeReadinessRequiredControls");
+    expect(gapTracker).toContain("smsProviderRequiredEvidence");
+    expect(gapTracker).toContain("buildSmsProviderExecutionPlan");
+    expect(gapTracker).toContain("smsProviderExecutionPolicy");
+    expect(gapTracker).toContain("smsProviderRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildRedactedSmsProviderArtifact");
+    expect(gapTracker).toContain("buildSmsProviderArtifactReview");
+    expect(gapTracker).toContain("non-executing SMS provider execution policy");
+    expect(gapTracker).toContain("local in-memory SMS provider repository contract");
+    expect(gapTracker).toContain("SMS provider payload sanitizer");
+    expect(gapTracker).toContain("GAP-062 is sms-provider-runtime-matrix wired with SMS provider evidence classifier");
     expect(smsProviderArtifactPaths).toContain("coverage/sms-provider-secret-safe-artifacts.json");
   });
 });
+

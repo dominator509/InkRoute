@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildCicdDeploymentAutomationReadinessPlan, buildGithubReleaseWorkflowPlan } from "../src/index";
+import {
+  buildCicdDeploymentAutomationReadinessPlan,
+  buildGithubReleaseWorkflowPlan,
+  cicdDeploymentAutomationReadinessRequiredCommands,
+  cicdDeploymentAutomationReadinessRequiredEvidence,
+} from "../src/index";
 
 const root = resolve(__dirname, "../../..");
 
@@ -86,8 +91,8 @@ describe("release governance workflow scaffold", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
-    expect(plan.requiredCommands).toContain("release-governance workflow_dispatch dry run");
-    expect(plan.requiredCommands).toContain("Sentry/Search Console release step smoke");
+    expect(plan.requiredCommands).toBe(cicdDeploymentAutomationReadinessRequiredCommands);
+    
   });
 
   it("blocks CI/CD deployment automation until protected environments, secrets, deploy jobs, release gates, CI result writes, and live proof exist", () => {
@@ -112,6 +117,27 @@ describe("release governance workflow scaffold", () => {
       noSecretLiteralsVerified: true,
       liveWorkflowDispatchProofCaptured: false,
     });
+    const allMissingEvidencePlan = buildCicdDeploymentAutomationReadinessPlan({
+      packageScripts: [],
+      releasesTestsPassed: false,
+      releasesTypecheckPassed: false,
+      workflowSourceTestsPassed: false,
+      protectedGithubEnvironmentsConfigured: false,
+      githubSecretsConfigured: false,
+      previewDeployJobEnabled: false,
+      stagingDeployJobEnabled: false,
+      productionDeployJobEnabled: false,
+      vercelDeployConfigured: false,
+      prismaDryRunConfigured: false,
+      prismaMigrateDeployConfigured: false,
+      easUpdatePublishConfigured: false,
+      sentryArtifactUploadConfigured: false,
+      searchConsoleSubmissionConfigured: false,
+      ciPrerequisiteChecksRequired: false,
+      releaseRecordCiResultWritesConfigured: false,
+      noSecretLiteralsVerified: false,
+      liveWorkflowDispatchProofCaptured: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
@@ -121,6 +147,7 @@ describe("release governance workflow scaffold", () => {
       "Prisma, EAS, Sentry, and Search Console deployment gate evidence",
       "ReleaseRecord CI result write and live workflow dispatch evidence",
     ]);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(cicdDeploymentAutomationReadinessRequiredEvidence);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "Missing @inkroute/releases typecheck script.",

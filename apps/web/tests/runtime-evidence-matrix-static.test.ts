@@ -1,13 +1,27 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   runtimeEvidenceArtifactPaths,
   runtimeEvidenceCommands,
+  runtimeEvidenceExternalArtifacts,
+  runtimeEvidenceExternalCommands,
+  runtimeEvidenceExecutionPolicy,
+  runtimeEvidenceLocalArtifacts,
+  runtimeEvidenceLocalCommands,
   runtimeEvidenceMatrix,
+  runtimeEvidenceProofFiles,
   runtimeEvidenceReadiness,
+  runtimeEvidenceReadinessRequiredEvidence,
+  runtimeEvidenceRequiredEvidence,
+  runtimeEvidenceRequiredExternalEvidence,
   runtimeEvidenceRequirementIds,
   runtimeEvidenceRunPersistenceContract,
+  buildRedactedRuntimeEvidenceArtifact,
+  buildRuntimeEvidenceArtifactReview,
+  buildRuntimeEvidenceDecision,
+  buildRuntimeEvidenceDecisionRequiredEvidence,
+  buildRuntimeEvidenceExecutionPlan,
 } from "../lib/runtimeEvidenceMatrix";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -38,6 +52,7 @@ describe("runtime evidence matrix contract", () => {
       "pnpm --filter @inkroute/web build",
       "pnpm --filter @inkroute/dashboard build",
       "GitHub Actions Phase 18 workspace runtime readiness job",
+      "runtime evidence report keeps production blockers visible",
     ]);
     expect(runtimeEvidenceRequirementIds).toEqual([
       "dependency-install",
@@ -109,8 +124,62 @@ describe("runtime evidence matrix contract", () => {
     expect(runtimeEvidenceReadiness.status).toBe("blocked");
     expect(runtimeEvidenceReadiness.missingEvidenceIds).toEqual([...runtimeEvidenceRequirementIds]);
     expect(runtimeEvidenceReadiness.nonPassingEvidenceIds).toEqual([]);
-    expect(runtimeEvidenceReadiness.requiredCommands).toEqual([
-      "pnpm install",
+    expect(runtimeEvidenceReadiness.requiredCommands).toBe(runtimeEvidenceCommands);
+    expect(runtimeEvidenceReadiness.requiredEvidence).toBe(runtimeEvidenceReadinessRequiredEvidence);
+    expect(runtimeEvidenceReadiness.blockers).toContain("Runtime evidence is missing for pnpm install.");
+    expect(runtimeEvidenceReadiness.blockers).toContain("Runtime evidence audit must pass before runtime readiness can be claimed.");
+  });
+
+  it("blocks runtime evidence closure until commands, redacted labels, CI, persistence, artifacts, and requirements are proven", () => {
+    const decision = buildRuntimeEvidenceDecision({
+      installEvidenceCaptured: false,
+      runtimeEvidenceCommandPassed: false,
+      workspaceAllPassed: false,
+      handoffAllPassed: false,
+      qualityAllPassed: false,
+      typecheckPassed: false,
+      unitTestsPassed: false,
+      webBuildEvidenceCaptured: false,
+      dashboardBuildEvidenceCaptured: false,
+      ciRuntimeReadinessPassed: false,
+      ciEvidenceCaptured: false,
+      runtimeEvidenceAuditPassed: false,
+      redactedEvidenceLabelsCaptured: false,
+      productionBlockersVisible: true,
+      runtimeEvidenceRunPersisted: false,
+      passedRequirementIds: ["dependency-install"],
+      capturedArtifacts: [
+        "coverage/runtime-evidence-matrix.json",
+        "coverage/runtime-evidence-production-blockers.json",
+      ],
+      completedCommands: ["pnpm install"],
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.missingRequirementIds).toEqual([
+      "workspace-runtime-evidence",
+      "workspace-all",
+      "handoff-all",
+      "quality-all",
+      "typecheck",
+      "unit-tests",
+      "web-build",
+      "dashboard-build",
+    ]);
+    expect(decision.missingArtifacts).toEqual([
+      "coverage/runtime-evidence-install-output.txt",
+      "coverage/runtime-evidence-workspace-output.txt",
+      "coverage/runtime-evidence-workspace-all-output.txt",
+      "coverage/runtime-evidence-handoff-all-output.txt",
+      "coverage/runtime-evidence-quality-all-output.txt",
+      "coverage/runtime-evidence-typecheck-output.txt",
+      "coverage/runtime-evidence-unit-output.txt",
+      "coverage/runtime-evidence-web-build-output.txt",
+      "coverage/runtime-evidence-dashboard-build-output.txt",
+      "coverage/runtime-evidence-ci-job.json",
+      "test-results/runtime-evidence-matrix",
+    ]);
+    expect(decision.missingCommands).toEqual([
       "pnpm workspace:runtime-evidence",
       "pnpm workspace:all",
       "pnpm handoff:all",
@@ -119,19 +188,48 @@ describe("runtime evidence matrix contract", () => {
       "pnpm test:unit",
       "pnpm --filter @inkroute/web build",
       "pnpm --filter @inkroute/dashboard build",
-      "pnpm workspace:runtime-evidence",
-      "pnpm workspace:all",
       "GitHub Actions Phase 18 workspace runtime readiness job",
+      "runtime evidence report keeps production blockers visible",
     ]);
-    expect(runtimeEvidenceReadiness.requiredEvidence).toEqual([
-      "Each required runtime command has a passed record with a redacted evidence label.",
-      "runtime-evidence-audit.json reports pass.",
-      "workspace:runtime-evidence and workspace:all command output are captured.",
-      "GitHub Actions evidence is captured without secrets or private customer data.",
-      "Production blockers remain visible in readiness evidence until resolved.",
-    ]);
-    expect(runtimeEvidenceReadiness.blockers).toContain("Runtime evidence is missing for pnpm install.");
-    expect(runtimeEvidenceReadiness.blockers).toContain("Runtime evidence audit must pass before runtime readiness can be claimed.");
+    expect(decision.requiredRequirementIds).toBe(runtimeEvidenceRequirementIds);
+    expect(decision.requiredArtifacts).toBe(runtimeEvidenceArtifactPaths);
+    expect(decision.requiredCommands).toBe(runtimeEvidenceCommands);
+    expect(decision.requiredEvidence).toEqual(
+      buildRuntimeEvidenceDecisionRequiredEvidence(runtimeEvidenceReadinessRequiredEvidence),
+    );
+    expect(decision.requiredEvidence).toBe(runtimeEvidenceRequiredEvidence);
+    expect(decision.blockers).toContain("Runtime evidence is missing for pnpm install.");
+    expect(decision.blockers).toContain("RuntimeEvidenceRun persistence row must be captured for durable auditability.");
+    expect(decision.blockers).toContain("Every required runtime evidence requirement must have passing evidence.");
+  });
+
+  it("completes runtime evidence closure when all command, redacted-label, CI, persistence, artifact, and requirement proof exists", () => {
+    const decision = buildRuntimeEvidenceDecision({
+      installEvidenceCaptured: true,
+      runtimeEvidenceCommandPassed: true,
+      workspaceAllPassed: true,
+      handoffAllPassed: true,
+      qualityAllPassed: true,
+      typecheckPassed: true,
+      unitTestsPassed: true,
+      webBuildEvidenceCaptured: true,
+      dashboardBuildEvidenceCaptured: true,
+      ciRuntimeReadinessPassed: true,
+      ciEvidenceCaptured: true,
+      runtimeEvidenceAuditPassed: true,
+      redactedEvidenceLabelsCaptured: true,
+      productionBlockersVisible: true,
+      runtimeEvidenceRunPersisted: true,
+      passedRequirementIds: runtimeEvidenceRequirementIds,
+      capturedArtifacts: runtimeEvidenceArtifactPaths,
+      completedCommands: runtimeEvidenceCommands,
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.missingRequirementIds).toEqual([]);
+    expect(decision.missingArtifacts).toEqual([]);
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.blockers).toEqual([]);
   });
 
   it("wires CI, manifest, tracker, and artifacts without claiming command evidence is complete", () => {
@@ -142,6 +240,121 @@ describe("runtime evidence matrix contract", () => {
     expect(unitManifest).toContain("RuntimeEvidenceRun Prisma model and app row contract");
     expect(gapTracker).toContain("RuntimeEvidenceRun");
     expect(gapTracker).toContain("apps/web/lib/runtimeEvidenceMatrix.ts");
-    expect(gapTracker).toContain("live install, workspace, handoff, quality, typecheck, unit, build, CI, and redacted evidence proof remain open");
+    expect(gapTracker).toContain("live install, workspace, handoff, quality, typecheck, unit, build, CI, redacted evidence labels, persisted run rows, and artifact proof remain gated with production blockers visible");
+    expect(gapTracker).toContain("GAP-132 is runtime-evidence-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("buildRuntimeEvidenceExecutionPlan");
+    expect(gapTracker).toContain("runtimeEvidenceExecutionPolicy");
+    expect(gapTracker).toContain("buildRuntimeEvidenceDecisionRequiredEvidence");
+    expect(gapTracker).toContain("runtimeEvidenceRequiredEvidence");
+    expect(gapTracker).toContain("runtimeEvidenceRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildRuntimeEvidenceArtifactReview");
+  });
+
+  it("pins current runtime evidence matrix proof files for GAP-132", () => {
+    expect(runtimeEvidenceProofFiles).toEqual(
+      expect.arrayContaining([
+      "docs/workspace/README.md",
+      "docs/workspace/WORKSPACE_AUDIT_PROTOCOL.md",
+      "docs/workspace/manifests/runtime-evidence-audit.json",
+      "docs/workspace/manifests/runtime-readiness.json",
+      "packages/quality/src/index.ts",
+      "packages/quality/tests/quality-gates.test.ts",
+      "packages/workspace/src/index.ts",
+      "scripts/quality/print-quality-gates.mjs",
+      "apps/dashboard/package.json",
+      "apps/web/package.json",
+        "scripts/workspace/print-runtime-readiness.mjs",
+        "scripts/workspace/verify-runtime-evidence.mjs",
+        "docs/workspace/manifests/runtime-evidence.json",
+        "apps/web/lib/runtimeEvidenceMatrix.ts",
+        "apps/web/tests/runtime-evidence-matrix-static.test.ts",
+        "packages/db/prisma/migrations/20260609032300_add_runtime_evidence_runs/migration.sql",
+        ".github/workflows/ci.yml"
+      ])
+    );
+    for (const file of runtimeEvidenceProofFiles) {
+      expect(readRepoFile(file).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps GAP-132 execution policy non-executing while separating runtime command evidence", () => {
+    const plan = buildRuntimeEvidenceExecutionPlan();
+
+    expect(plan.localCommands).toBe(runtimeEvidenceLocalCommands);
+    expect(plan.externalCommands).toBe(runtimeEvidenceExternalCommands);
+    expect(plan.localArtifacts).toBe(runtimeEvidenceLocalArtifacts);
+    expect(plan.externalArtifacts).toBe(runtimeEvidenceExternalArtifacts);
+    expect(plan.localArtifacts).toEqual(["coverage/runtime-evidence-production-blockers.json"]);
+    expect(plan.externalArtifacts).toContain("coverage/runtime-evidence-ci-job.json");
+    expect(plan.externalArtifacts).toContain("test-results/runtime-evidence-matrix");
+    expect(plan).toMatchObject({
+      installExecutionAllowed: false,
+      workspaceRuntimeEvidenceExecutionAllowed: false,
+      workspaceAllExecutionAllowed: false,
+      handoffAllExecutionAllowed: false,
+      qualityAllExecutionAllowed: false,
+      typecheckExecutionAllowed: false,
+      unitTestExecutionAllowed: false,
+      webBuildExecutionAllowed: false,
+      dashboardBuildExecutionAllowed: false,
+      ciRuntimeReadinessExecutionAllowed: false,
+      productionBlockerVisibilityExecutionAllowed: false,
+      persistenceExecutionAllowed: false,
+    });
+    expect(plan.executionPolicy).toBe(runtimeEvidenceExecutionPolicy);
+    expect(plan.executionPolicy).toEqual({
+      codexMayClassifyStaticRuntimeEvidence: true,
+      commandEvidenceRequiredForClosure: true,
+      redactedEvidenceLabelsRequiredForClosure: true,
+      ciRuntimeReadinessRequiredForClosure: true,
+      productionBlockerVisibilityRequiredForClosure: true,
+      providerDatabaseRequiredForPersistence: true,
+    });
+    expect(plan.requiredExternalEvidence).toBe(runtimeEvidenceRequiredExternalEvidence);
+    expect(plan.requiredExternalEvidence).toContain(
+      "Redacted command evidence for install, workspace, handoff, quality, typecheck, unit, and build commands.",
+    );
+    expect(plan.requiredExternalEvidence).toContain("Durable RuntimeEvidenceRun persistence row captured from the target database.");
+  });
+
+  it("redacts runtime evidence artifacts before tracker or handoff use", () => {
+    const artifact = {
+      runId: "runtime_evidence_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/27171288295",
+      evidenceLabel: "passed by engineer@example.com with token github_pat_1234567890ABCDEFGHIJKLMNOP",
+      persistence: {
+        tenantId: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
+        databaseUrl: "postgres://inkroute:secret@example.neon.tech/inkroute",
+      },
+      contactPhone: "+1 (555) 867-5309",
+    };
+
+    expect(buildRedactedRuntimeEvidenceArtifact(artifact)).toEqual({
+      runId: "[REDACTED]",
+      ciRunUrl: "[REDACTED]",
+      evidenceLabel: "[REDACTED]",
+      persistence: {
+        tenantId: "[REDACTED]",
+        databaseUrl: "[REDACTED]",
+      },
+      contactPhone: "[REDACTED]",
+    });
+
+    const review = buildRuntimeEvidenceArtifactReview(artifact);
+    expect(review.safeForTracker).toBe(true);
+    expect(review.requiredExternalEvidence).toBe(runtimeEvidenceRequiredExternalEvidence);
+    expect(review.redactions).toEqual(
+      expect.arrayContaining([
+        "runId",
+        "ciRunUrl",
+        "evidenceLabel",
+        "persistence.tenantId",
+        "persistence.databaseUrl",
+        "contactPhone",
+      ]),
+    );
+    expect(review.requiredExternalEvidence).toContain("Production blockers remain visible in runtime evidence until resolved.");
   });
 });
+
+

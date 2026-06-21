@@ -2,12 +2,23 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildEmailProviderArtifactReview,
+  buildEmailProviderDecisionRequiredEvidence,
   buildEmailProviderEvidenceDecision,
+  buildEmailProviderExecutionPlan,
+  buildRedactedEmailProviderArtifact,
+  emailProviderExternalCommands,
+  emailProviderExecutionPolicy,
   emailProviderArtifactPaths,
+  emailProviderLocalCommands,
+  emailProviderRequiredExternalEvidence,
   emailProviderRuntimeCommands,
   emailProviderRuntimeMatrix,
   emailProviderRuntimeProofFiles,
   emailProviderRuntimeReadiness,
+  emailProviderRuntimeReadinessRequiredControls,
+  emailProviderRuntimeReadinessRequiredEvidence,
+  emailProviderRequiredEvidence,
 } from "../lib/emailProviderRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -27,11 +38,19 @@ describe("email provider runtime contract", () => {
       "pnpm --filter @inkroute/notifications typecheck",
       "pnpm --filter @inkroute/notifications test",
       "pnpm vitest run apps/web/tests/email-provider-static.test.ts",
+      "install/configure Resend SDK and sandbox API key",
+      "prove verified sender/domain without exposing DNS secrets",
+      "verify Resend/Svix signature against raw webhook bodies",
+      "durable NotificationDelivery transaction tests",
+      "durable ProviderEvent replay/idempotency tests",
+      "durable bounce/complaint/unsubscribe suppression tests",
       "Resend sandbox delivered event test",
       "Resend sandbox bounced event test",
       "Resend sandbox complained event test",
       "Resend unsubscribe suppression test",
       "invalid email webhook signature route test",
+      "GitHub Actions email provider runtime job",
+      "review email artifacts for API keys, signatures, raw payloads, destinations, and tenant data",
     ]);
     expect(emailProviderRuntimeMatrix.map((entry) => entry.id)).toEqual([
       "notifications-typecheck",
@@ -81,21 +100,120 @@ describe("email provider runtime contract", () => {
     expect(notificationsSource).toContain("buildEmailProviderSendPlan");
     expect(notificationsSource).toContain("buildEmailWebhookRuntimeReadinessPlan");
     expect(providerSource).toContain("executeEmailProviderSend");
+    expect(providerSource).toContain("createInMemoryEmailProviderRepository");
+    expect(providerSource).toContain("sanitizeEmailProviderSendResult");
+    expect(providerSource).toContain("buildRedactedEmailWebhookPayload");
     expect(providerSource).toContain("persistWebhookReconciliation");
     expect(providerSource).toContain("buildEmailProviderReconciliation");
     expect(routeSource).toContain("buildEmailWebhookReadinessFromPayload");
     expect(routeSource).toContain("resend-signature");
+    expect(routeSource).toContain("PROVIDER_EMAIL_WEBHOOK_RECONCILIATION_NOT_CONFIGURED");
+    expect(routeSource).toContain("localEmailWebhookPersistenceDisabled");
     expect(staticTest).toContain("requires Resend send controls");
+    expect(staticTest).toContain("sanitizes nested email provider send and webhook payloads");
+    expect(staticTest).toContain("executes a local email provider repository contract");
+    expect(staticTest).toContain("blocks local email sends when the destination is suppressed");
   });
 
   it("keeps Resend, signature, persistence, sandbox, CI, and artifact blockers explicit", () => {
     expect(emailProviderRuntimeReadiness.status).toBe("blocked");
-    expect(emailProviderRuntimeReadiness.requiredCommands).toEqual([...emailProviderRuntimeCommands]);
-    expect(emailProviderRuntimeReadiness.requiredEvidence).toContain("Resend SDK/API key and verified sender/domain evidence");
-    expect(emailProviderRuntimeReadiness.requiredEvidence).toContain("raw-body Resend/Svix signature verification and invalid-signature route evidence");
+    expect(emailProviderRuntimeReadiness.requiredCommands).toBe(emailProviderRuntimeCommands);
+    expect(emailProviderRuntimeReadiness.requiredEvidence).toBe(emailProviderRuntimeReadinessRequiredEvidence);
+    expect(emailProviderRuntimeReadiness.requiredControls).toBe(emailProviderRuntimeReadinessRequiredControls);
     expect(emailProviderRuntimeReadiness.blockers).toContain("Real Resend SDK/API key must be configured in a secret store before provider-backed sends.");
     expect(emailProviderRuntimeReadiness.blockers).toContain("Email webhook route must verify Resend/Svix signatures cryptographically against raw bodies.");
     expect(emailProviderRuntimeReadiness.blockers).toContain("Delivered, bounced, complained, and unsubscribe provider events must be tested against the sandbox.");
+  });
+
+  it("pins the non-executing GAP-061 email provider execution policy", () => {
+    const plan = buildEmailProviderExecutionPlan();
+
+    expect(emailProviderExecutionPolicy).toEqual({
+      codexMayClassifyStaticEmailProviderReadiness: true,
+      localNotificationCommandsRequiredForClosure: true,
+      resendSdkApiKeyRequiredForClosure: true,
+      verifiedSenderDomainRequiredForClosure: true,
+      rawBodySignatureRequiredForClosure: true,
+      durablePersistenceRequiredForClosure: true,
+      sandboxEventsRequiredForClosure: true,
+      invalidSignatureRouteRequiredForClosure: true,
+      ciEvidenceRequiredForClosure: true,
+      secretSafeArtifactsRequiredForClosure: true,
+    });
+    expect(plan.policy).toBe(emailProviderExecutionPolicy);
+    expect(plan.requiredExternalEvidence).toBe(emailProviderRequiredExternalEvidence);
+    expect(plan.commandExecutionAllowed).toBe(false);
+    expect(plan.resendSdkExecutionAllowed).toBe(false);
+    expect(plan.domainVerificationExecutionAllowed).toBe(false);
+    expect(plan.signatureVerificationExecutionAllowed).toBe(false);
+    expect(plan.durablePersistenceExecutionAllowed).toBe(false);
+    expect(plan.sandboxEventExecutionAllowed).toBe(false);
+    expect(plan.invalidSignatureExecutionAllowed).toBe(false);
+    expect(plan.ciExecutionAllowed).toBe(false);
+    expect(plan.artifactReviewExecutionAllowed).toBe(false);
+    expect(plan.localCommands).toBe(emailProviderLocalCommands);
+    expect(plan.externalCommands).toBe(emailProviderExternalCommands);
+    expect(plan.requiredExternalEvidence).toBe(emailProviderRequiredExternalEvidence);
+    expect(emailProviderRequiredExternalEvidence).toEqual([
+      "actual email provider command output",
+      "Resend SDK/API key readiness evidence",
+      "verified sender/domain evidence",
+      "raw-body Resend/Svix signature verification evidence",
+      "durable NotificationDelivery persistence tests",
+      "durable ProviderEvent replay/idempotency tests",
+      "durable suppression persistence tests",
+      "Resend sandbox delivered/bounced/complained event transcripts",
+      "unsubscribe suppression evidence",
+      "invalid email webhook signature route evidence",
+      "CI email provider artifacts",
+      "secret-safe email provider artifact review",
+    ]);
+  });
+
+  it("pins recursive email provider artifact redaction and review", () => {
+    const redacted = buildRedactedEmailProviderArtifact({
+      resendApiKey: "provider-key",
+      verifiedSenderDomain: "mail.example.test",
+      destinationEmail: "client@example.test",
+      rawWebhookPayload: "{\"private\":true}",
+      publicSummary: "email provider evidence captured",
+      nested: {
+        svixSignature: "signature",
+        publicStatus: "delivered",
+      },
+    });
+
+    expect(redacted.secretSafe).toBe(true);
+    expect(redacted.redactedPaths).toEqual([
+      "resendApiKey",
+      "verifiedSenderDomain",
+      "destinationEmail",
+      "rawWebhookPayload",
+      "nested.svixSignature",
+    ]);
+    expect(redacted.artifact).toEqual({
+      resendApiKey: "[redacted]",
+      verifiedSenderDomain: "[redacted]",
+      destinationEmail: "[redacted]",
+      rawWebhookPayload: "[redacted]",
+      publicSummary: "email provider evidence captured",
+      nested: {
+        svixSignature: "[redacted]",
+        publicStatus: "delivered",
+      },
+    });
+
+    const review = buildEmailProviderArtifactReview({
+      publicSummary: "safe email provider artifact",
+      providerEventPayloadUrl: "https://private/provider-event.json",
+    });
+
+    expect(review.passed).toBe(true);
+    expect(review.blockers).toEqual([]);
+    expect(review.artifact.secretSafe).toBe(true);
+    expect(review.artifact.redactedPaths).toEqual(["providerEventPayloadUrl"]);
+    expect(review.requiredExternalEvidence).toBe(emailProviderRequiredExternalEvidence);
+    expect(review.requiredExternalEvidence).toBe(emailProviderRequiredExternalEvidence);
   });
 
   it("classifies email provider evidence before GAP-061 can close", () => {
@@ -133,8 +251,11 @@ describe("email provider runtime contract", () => {
     expect(blockedDecision.blockers).toContain("Secret-safe email provider artifact review evidence is missing.");
     expect(blockedDecision.missingArtifacts).toContain("coverage/email-provider-resend-sdk.json");
     expect(blockedDecision.missingArtifacts).toContain("coverage/email-provider-secret-safe-artifacts.json");
-    expect(blockedDecision.requiredCommands).toEqual([...emailProviderRuntimeCommands]);
-    expect(blockedDecision.requiredEvidence).toContain("secret-safe review of retained email provider artifacts");
+    expect(blockedDecision.requiredCommands).toBe(emailProviderRuntimeCommands);
+    expect(blockedDecision.requiredEvidence).toEqual(
+      buildEmailProviderDecisionRequiredEvidence(emailProviderRuntimeReadinessRequiredEvidence),
+    );
+    expect(blockedDecision.requiredEvidence).toBe(emailProviderRequiredEvidence);
     expect(blockedDecision.redactedSummary).toEqual({
       capturedArtifactCount: 4,
       requiredArtifactCount: emailProviderArtifactPaths.length,
@@ -172,7 +293,18 @@ describe("email provider runtime contract", () => {
     expect(unitManifest).toContain("unit-email-provider-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/emailProviderRuntime.ts");
     expect(gapTracker).toContain("email provider evidence classifier");
-    expect(gapTracker).toContain("GAP-061 is email-provider-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("emailProviderRuntimeReadinessRequiredControls");
+    expect(gapTracker).toContain("emailProviderRequiredEvidence");
+    expect(gapTracker).toContain("buildEmailProviderExecutionPlan");
+    expect(gapTracker).toContain("emailProviderExecutionPolicy");
+    expect(gapTracker).toContain("emailProviderRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildRedactedEmailProviderArtifact");
+    expect(gapTracker).toContain("buildEmailProviderArtifactReview");
+    expect(gapTracker).toContain("non-executing email provider execution policy");
+    expect(gapTracker).toContain("local in-memory email provider repository contract");
+    expect(gapTracker).toContain("email provider payload sanitizer");
+    expect(gapTracker).toContain("GAP-061 is email-provider-runtime-matrix wired with email provider evidence classifier");
     expect(emailProviderArtifactPaths).toContain("coverage/email-provider-secret-safe-artifacts.json");
   });
 });
+

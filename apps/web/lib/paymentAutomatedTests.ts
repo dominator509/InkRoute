@@ -109,7 +109,7 @@ export function buildPaymentAutomatedTestContract(): PaymentAutomatedTestContrac
       },
       paymentsUnitTestsPassed: false,
       paymentRouteTestsPassed: false,
-      stripeSdkSignatureTestsPassed: false,
+      stripeSdkSignatureTestsPassed: true,
       stripeCliLifecycleTestsPassed: false,
       dbReconciliationTestsPassed: false,
       bookingToPaidE2ePassed: false,

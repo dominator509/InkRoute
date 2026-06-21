@@ -1,10 +1,13 @@
-﻿import { DashboardPageHeader } from "../../components/DashboardPageHeader";
-import { DisabledActionPanel } from "../../components/DisabledActionPanel";
+import { DashboardPageHeader } from "../../components/DashboardPageHeader";
 import { IntegrationBoundaryCard } from "../../components/IntegrationBoundaryCard";
+import { NotificationSchedulerActionPanel } from "../../components/NotificationSchedulerActionPanel";
 import { StatusPill } from "../../components/StatusPill";
-import { dashboardNotificationSchedulerContract } from "../../lib/notificationScheduler";`nimport {`n  dashboardNotificationAutomationSequence,
+import { dashboardNotificationSchedulerContract } from "../../lib/notificationScheduler";
+import {
+  dashboardNotificationAutomationSequence,
   dashboardNotificationPlans,
-  dashboardProviderBoundaryMatrix,`n  dashboardRedactedProviderSendDrafts,
+  dashboardProviderBoundaryMatrix,
+  dashboardRedactedProviderSendDrafts,
   dashboardTemplates,
 } from "../../lib/demo";
 
@@ -142,15 +145,10 @@ export default function TemplatesPage() {
       <IntegrationBoundaryCard
         title="Notification provider boundary"
         status="Credential-gated"
-        description="Phase 9 renders templates and delivery plans only. Production still needs provider SDKs, verified webhooks, queue workers, suppression lists, delivery logs, token registration, audit logging, and SMS/legal review."
+        description="Phase 9 exposes the tenant-scoped redacted template API, queue/delivery summaries, and local scheduler action contract. Production still needs provider SDKs, verified webhooks, durable queue workers, suppression lists, delivery logs, token registration, audit logging, and SMS/legal review evidence."
         gapIds={["GAP-061", "GAP-062", "GAP-063", "GAP-064", "GAP-065", "GAP-066"]}
       />
-
-      <DisabledActionPanel
-        title="Notification actions"
-        description="GET /api/templates now exposes coded template metadata plus redacted queue/delivery summaries. Template saving, test sends, scheduled delivery, queue retries, suppression changes, and provider delivery reconciliation still require write APIs and provider credentials."
-        actions={["Save template", "Send test email", "Send SMS preview", "Queue aftercare sequence", "Register push token", "Sync provider status"]}
-      />
+      <NotificationSchedulerActionPanel />
     </main>
   );
 }

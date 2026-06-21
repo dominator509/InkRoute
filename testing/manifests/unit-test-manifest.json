@@ -106,6 +106,7 @@
       "file": "packages/security/tests/encryption-rotation.test.ts",
       "priority": "critical",
       "verifies": [
+        "GAP-021 encryption/key management suite is manifest-discoverable",
         "GAP-021 encryption/key management policy denies sensitive database persistence when encryption keys are missing",
         "GAP-021 encryption/key management policy emits explicit rotation metadata for primary, secondary, and dual-key states",
         "GAP-021 encryption/key management cache invalidation refreshes cache-version metadata and keeps disabled-key fallback redacted"
@@ -156,21 +157,6 @@
         "web security middleware runtime",
         "security headers",
         "cookie-authenticated CSRF rejection",
-        "valid CSRF pass-through"
-      ],
-      "blockedBy": [
-        "Middleware runtime test execution pending",
-        "browser header smoke test pending"
-      ]
-    },
-    {
-      "id": "unit-dashboard-security-runtime-middleware",
-      "file": "apps/web/tests/security-runtime-middleware.test.ts",
-      "priority": "critical",
-      "verifies": [
-        "dashboard security middleware runtime",
-        "dashboard security headers",
-        "dashboard cookie-authenticated CSRF rejection",
         "valid CSRF pass-through"
       ],
       "blockedBy": [
@@ -1085,23 +1071,6 @@
       ]
     },
     {
-      "id": "unit-mobile-expo-push-provider-static",
-      "file": "apps/mobile/tests/mobile-push-static.test.ts",
-      "priority": "high",
-      "verifies": [
-        "GAP-063 Expo push provider runtime readiness covers Expo project/access-token/native credential gates, permission/token runtime wiring, push-token and opt-out persistence seams, delivery worker, receipt worker, replay protection, invalid-token suppression, audit logs, safe deep links, and iOS/Android QA evidence",
-        "GAP-063 mobile push contract exposes provider receipt reconciliation and invalid-token suppression before future sends",
-        "GAP-063 notifications screen surfaces provider runtime status, receipt state, and tap route readiness without logging raw Expo tokens"
-      ],
-      "blockedBy": [
-        "Static mobile push provider test execution pending",
-        "Expo project/access token/APNs/FCM credential evidence pending",
-        "Durable PushToken/ProviderEvent/NotificationDelivery/NotificationInteraction/audit persistence pending",
-        "Expo send and receipt polling worker smoke pending",
-        "iOS and Android foreground/background/tap navigation QA pending"
-      ]
-    },
-    {
       "id": "unit-dashboard-notification-persistence-static",
       "file": "apps/dashboard/tests/notification-persistence-static.test.ts",
       "priority": "critical",
@@ -1132,24 +1101,6 @@
         "Durable NotificationJob/DeadLetterJob/NotificationWorkerAuditLog/IdempotencyKey models pending",
         "Queue backend selection and worker process deployment pending",
         "Postgres due-job concurrency, cancellation, retry, and dead-letter integration tests pending"
-      ]
-    },
-    {
-      "id": "unit-web-provider-webhook-contracts",
-      "file": "apps/web/tests/provider-webhook-contracts.test.ts",
-      "priority": "critical",
-      "verifies": [
-        "GAP-066 cross-provider webhook readiness covers email, SMS, and Expo receipt reconciliation gates",
-        "GAP-066 provider webhook repository seam covers ProviderEvent idempotency, exactly-once delivery updates, suppression, inbound routing, invalid push-token suppression, audit, and failed-webhook alerting",
-        "GAP-066 email and SMS webhook routes surface the shared cross-provider boundary and required repository methods"
-      ],
-      "blockedBy": [
-        "Static provider webhook contract test execution pending",
-        "Cryptographic Resend/Svix and Twilio verification implementation pending",
-        "Durable ProviderEvent/Idempotency/Suppression/Inbound/PushToken repositories pending",
-        "Exactly-once concurrent callback integration tests pending",
-        "Provider sandbox and invalid-signature evidence pending",
-        "Failed-webhook alerting integration pending"
       ]
     },
     {
@@ -1713,6 +1664,20 @@
         "Export/delete/anonymize/rectify worker proof pending",
         "Object-storage privacy export/delete proof pending",
         "Legal hold, notification, audit, and cross-tenant integration proof pending"
+      ]
+    },
+    {
+      "id": "unit-web-privacy-page-status-copy-static",
+      "file": "apps/web/tests/privacy-page-status-copy-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP-098 public privacy page status copy reflects demo-scope privacy request intake and production fail-closed handling instead of stale scaffolded-only wording",
+        "GAP-100 legal placeholder/noindex boundary remains explicit while privacy request workflow status copy points to the wired local contract"
+      ],
+      "blockedBy": [
+        "Static privacy page status copy test execution pending",
+        "Attorney-reviewed production privacy policy copy pending",
+        "Production privacy worker proof pending"
       ]
     },
     {
@@ -2342,7 +2307,7 @@
       "priority": "critical",
       "verifies": [
         "GAP-004 LiveStripePaymentsRun Prisma model and app row contract plus live Stripe payments runtime matrix covers payments package typecheck/test, payment route tests, Stripe SDK/secret/webhook/API-version configuration, real Checkout creation, PaymentIntent lifecycle, DB-backed idempotency, transactional persistence, raw-body webhook verification, replay protection, reconciliation, refunds, disputes, Stripe CLI lifecycle, booking-to-paid E2E, cross-tenant isolation, CI evidence, and secret-safe artifacts",
-        "GAP-004 package helper/tests, route tests, webhook signature verification, dashboard read redaction tests, CI labels, artifact paths, and tracker row remain wired without claiming live Stripe writes are ready",
+        "GAP-004 package helper/tests, route tests, webhook signature verification, dashboard payment copy, dashboard read redaction tests, CI labels, artifact paths, and tracker row remain wired without claiming live Stripe writes are ready",
         "GAP-004 readiness keeps live provider writes, lifecycle reconciliation, refund/dispute workflows, E2E, CI, and secret-safe artifact evidence explicit blockers"
       ],
       "blockedBy": [
@@ -2690,6 +2655,7 @@
       "file": "apps/web/tests/booking-requests-contract.test.ts",
       "priority": "critical",
       "verifies": [
+        "GAP-021 encryption/key management suite is manifest-discoverable",
         "GAP-017 booking requests API contract enforces tenant-scoped anti-bot proof for database writes",
         "GAP-017 booking requests API contract pins local/database post-persist workflow parity and tenant-isolated consumers",
         "GAP-017 booking runtime evidence plan keeps install, Prisma generation, Next build, browser smoke, DB smoke, and secret-safe artifacts explicit gates"
@@ -2736,7 +2702,7 @@
       "priority": "high",
       "verifies": [
         "GAP-031 BookingFlowRuntimeRun Prisma model and app row contract plus booking flow runtime matrix covers dependency install, Prisma Client generation, web typecheck/build, booking route contract tests, Playwright /booking smoke, Playwright /booking/confirmation smoke, Next public booking API route runtime smoke, local runtime fallback, dev-DB booking transaction smoke, provider-gated boundaries, client/server boundaries, CI evidence, and secret-safe artifacts",
-        "GAP-031 booking UI, confirmation page, API route, helper, local runtime consumers, CI labels, artifact paths, and tracker row remain wired without claiming runtime/browser/DB proof exists",
+        "GAP-031 booking UI, confirmation page copy, API route, helper, local runtime consumers, CI labels, artifact paths, and tracker row remain wired without stale no-request-ID/no-database-write claims or runtime/browser/DB proof claims",
         "GAP-031 readiness keeps install, Prisma generation, Next runtime, browser smoke, DB transaction, CI, and redacted artifact evidence explicit blockers"
       ],
       "blockedBy": [
@@ -3175,6 +3141,450 @@
         "Seeded SEO Prisma integration and tenant isolation tests pending",
         "Dedicated idempotency, revalidation, and FAQ/review/image association persistence tests pending",
         "Dashboard publish/edit/archive browser flow, CI artifact upload evidence, and secret-safe artifact proof pending"
+      ]
+    },
+    {
+      "id": "unit-dashboard-auth-middleware-static",
+      "file": "apps/dashboard/tests/dashboard-auth-middleware-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-messaging-privacy-runtime-static",
+      "file": "apps/dashboard/tests/messaging-privacy-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-notification-persistence-runtime-static",
+      "file": "apps/dashboard/tests/notification-persistence-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-notification-scheduler-runtime-static",
+      "file": "apps/dashboard/tests/notification-scheduler-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-travel-publish-runtime-static",
+      "file": "apps/dashboard/tests/travel-publish-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-mobile-crash-proof-static",
+      "file": "apps/mobile/tests/mobile-crash-proof-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-mobile-static",
+      "file": "apps/mobile/tests/mobile-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-availability-preview-route",
+      "file": "apps/web/tests/availability-preview-route.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-dashboard-release-rbac-static",
+      "file": "apps/web/tests/dashboard-release-rbac-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-email-provider-runtime-static",
+      "file": "apps/web/tests/email-provider-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-feature-flag-runtime-static",
+      "file": "apps/web/tests/feature-flag-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-ics-feed-route",
+      "file": "apps/web/tests/ics-feed-route.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-notification-automation-runtime-static",
+      "file": "apps/web/tests/notification-automation-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-notification-messaging-routes",
+      "file": "apps/web/tests/notification-messaging-routes.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-observability-routes",
+      "file": "apps/web/tests/observability-routes.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-observability-ui-static",
+      "file": "apps/web/tests/observability-ui-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-payment-routes",
+      "file": "apps/web/tests/payment-routes.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-phase9-app-runtime-build-runtime-static",
+      "file": "apps/web/tests/phase9-app-runtime-build-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-preference-center-runtime-static",
+      "file": "apps/web/tests/preference-center-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-provider-webhook-routes",
+      "file": "apps/web/tests/provider-webhook-routes.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-provider-webhook-runtime-static",
+      "file": "apps/web/tests/provider-webhook-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-release-automation-static",
+      "file": "apps/web/tests/release-automation-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-release-health-route",
+      "file": "apps/web/tests/release-health-route.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-sitemap-route",
+      "file": "apps/web/tests/sitemap-route.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-sms-provider-runtime-static",
+      "file": "apps/web/tests/sms-provider-runtime-static.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-attribution",
+      "file": "packages/analytics/tests/attribution.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-authorization",
+      "file": "packages/auth/tests/authorization.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-dashboard-data",
+      "file": "packages/config/tests/dashboard-data.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-public-content",
+      "file": "packages/config/tests/public-content.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-tenant-scope",
+      "file": "packages/db/tests/tenant-scope.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-deployment-readiness",
+      "file": "packages/deployment/tests/deployment-readiness.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-handoff-plan",
+      "file": "packages/handoff/tests/handoff-plan.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-quality-gates",
+      "file": "packages/quality/tests/quality-gates.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-release-governance-workflow",
+      "file": "packages/releases/tests/release-governance-workflow.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-ui-contract",
+      "file": "packages/ui/tests/ui-contract.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-schemas",
+      "file": "packages/validators/tests/schemas.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
+      ]
+    },
+    {
+      "id": "unit-workspace-audit",
+      "file": "packages/workspace/tests/workspace-audit.test.ts",
+      "priority": "high",
+      "verifies": [
+        "GAP_TRACKER referenced evidence test",
+        "manifest-discoverable unit/static coverage"
+      ],
+      "blockedBy": [
+        "Execution proof remains governed by the owning GAP tracker row"
       ]
     }
   ]

@@ -1,8 +1,18 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
+  buildOfflineSyncArtifactReview,
+  buildOfflineSyncEvidenceDecision,
+  buildOfflineSyncExecutionPlan,
+  buildRedactedOfflineSyncArtifact,
   offlineSyncArtifactPaths,
+  offlineSyncEvidenceFlags,
+  offlineSyncExternalCommands,
+  offlineSyncExecutionPolicy,
+  offlineSyncLocalCommands,
+  offlineSyncRequiredExternalEvidence,
+  offlineSyncRuntimeProofFiles,
   offlineSyncRuntimeCommands,
   offlineSyncRuntimeMatrix,
   offlineSyncRuntimeReadiness,
@@ -64,6 +74,10 @@ describe("mobile offline sync runtime contract", () => {
     expect(offlineSyncSource).toContain("encryptedAtRest");
     expect(offlineSyncSource).toContain("runOfflineSyncOnce");
     expect(offlineSyncSource).toContain("mobileApiFetch");
+    expect(offlineSyncSource).toContain("OfflineSyncTransport");
+    expect(offlineSyncSource).toContain("failedItemIds");
+    expect(offlineSyncSource).toContain("buildOfflineSyncTransportFailureAuditEvent");
+    expect(offlineSyncSource).toContain("retryCount: item.retryCount + 1");
     expect(offlineStaticTest).toContain("redacted offline sync audit events");
     expect(offlineScreen).toContain("Sync worker contract");
     expect(offlineScreen).toContain("encrypted-storage");
@@ -72,17 +86,126 @@ describe("mobile offline sync runtime contract", () => {
   it("keeps encrypted persistence, worker, conflict, audit, and reconnect blockers explicit", () => {
     expect(offlineSyncRuntimeReadiness.status).toBe("blocked");
     expect(offlineSyncRuntimeReadiness.missingScripts).toEqual([]);
-    expect(offlineSyncRuntimeReadiness.requiredCommands).toEqual([...offlineSyncRuntimeCommands]);
-    expect(offlineSyncRuntimeReadiness.requiredEvidence).toEqual(expect.arrayContaining([
-      "encrypted offline storage adapter and at-rest encryption proof",
-      "device restart and airplane-mode reconnect evidence",
-      "runtime sync worker retry and idempotent replay test output",
-      "server conflict-resolution test output",
-      "offline sync audit trail persistence evidence",
-    ]));
+    expect(offlineSyncRuntimeReadiness.requiredCommands).toBe(offlineSyncRuntimeCommands);
+    expect(offlineSyncRuntimeReadiness.requiredEvidence).toBe(offlineSyncEvidenceFlags);
+    expect(offlineSyncRuntimeReadiness.requiredEvidence).toEqual(offlineSyncEvidenceFlags);
     expect(offlineSyncRuntimeReadiness.blockers).toContain("Encrypted offline store must be configured for sensitive queue items.");
     expect(offlineSyncRuntimeReadiness.blockers).toContain("Runtime offline sync worker must be configured.");
     expect(offlineSyncRuntimeReadiness.blockers).toContain("Airplane-mode queue and reconnect sync must be verified on device or simulator.");
+  });
+
+  it("classifies GAP-045 as blocked until encrypted offline sync evidence is complete", () => {
+    const decision = buildOfflineSyncEvidenceDecision({
+      commands: ["pnpm --filter @inkroute/mobile-support typecheck"],
+      artifacts: ["coverage/mobile-offline-sync-runtime.json"],
+      evidence: { mobileSupportTypecheckPassed: true },
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.missingCommands).toContain("Expo airplane-mode reconnect sync smoke test");
+    expect(decision.missingArtifacts).toContain("coverage/mobile-offline-sync-secret-safe-artifacts.json");
+    expect(decision.missingEvidence).toContain("secretSafeArtifactsCaptured");
+    expect(decision.blockers).toContain("Pinned offline sync commands must be run and captured.");
+  });
+
+  it("classifies GAP-045 as complete when all offline sync commands, artifacts, and evidence are present", () => {
+    const decision = buildOfflineSyncEvidenceDecision({
+      commands: offlineSyncRuntimeCommands,
+      artifacts: offlineSyncArtifactPaths,
+      evidence: Object.fromEntries(offlineSyncEvidenceFlags.map((flag) => [flag, true])),
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.missingArtifacts).toEqual([]);
+    expect(decision.missingEvidence).toEqual([]);
+    expect(decision.blockers).toEqual([]);
+  });
+
+  it("keeps GAP-045 execution policy non-executing and external evidence explicit", () => {
+    const plan = buildOfflineSyncExecutionPlan();
+
+    expect(plan.policy).toBe(offlineSyncExecutionPolicy);
+    expect(plan.requiredExternalEvidence).toBe(offlineSyncRequiredExternalEvidence);
+    expect(plan.policy.codexMayClassifyStaticOfflineSyncReadiness).toBe(true);
+    expect(plan.policy.encryptedStoreRequiredForClosure).toBe(true);
+    expect(plan.policy.restartPersistenceRequiredForClosure).toBe(true);
+    expect(plan.policy.reconnectWorkerRequiredForClosure).toBe(true);
+    expect(plan.policy.serverConflictTestsRequiredForClosure).toBe(true);
+    expect(plan.policy.auditPersistenceRequiredForClosure).toBe(true);
+    expect(plan.policy.secretSafeArtifactsRequiredForClosure).toBe(true);
+    expect(plan.commandExecutionAllowed).toBe(false);
+    expect(plan.encryptedStoreExecutionAllowed).toBe(false);
+    expect(plan.deviceRestartExecutionAllowed).toBe(false);
+    expect(plan.reconnectWorkerExecutionAllowed).toBe(false);
+    expect(plan.serverConflictExecutionAllowed).toBe(false);
+    expect(plan.auditPersistenceExecutionAllowed).toBe(false);
+    expect(plan.ciExecutionAllowed).toBe(false);
+    expect(plan.localCommands).toBe(offlineSyncLocalCommands);
+    expect(plan.externalCommands).toBe(offlineSyncExternalCommands);
+    expect(plan.requiredExternalEvidence).toBe(offlineSyncRequiredExternalEvidence);
+    expect(plan.requiredExternalEvidence).toContain("secret-safe offline sync artifact review");
+  });
+
+  it("redacts GAP-045 offline sync artifacts before secret-safe review", () => {
+    const artifact = {
+      tenantId: "tenant_private",
+      secureStoreKey: "secure_private",
+      sqliteDatabasePath: "/private/offline.db",
+      offlineQueuePayload: "payload_private",
+      nested: {
+        idempotencyKey: "idem_private",
+        publicSummary: "offline sync evidence captured",
+      },
+    };
+
+    const redacted = buildRedactedOfflineSyncArtifact(artifact);
+    expect(redacted.redactedPaths).toEqual([
+      "tenantId",
+      "secureStoreKey",
+      "sqliteDatabasePath",
+      "offlineQueuePayload",
+      "nested.idempotencyKey",
+    ]);
+    expect(redacted.redactedArtifact).toMatchObject({
+      tenantId: "[REDACTED]",
+      secureStoreKey: "[REDACTED]",
+      sqliteDatabasePath: "[REDACTED]",
+      offlineQueuePayload: "[REDACTED]",
+      nested: {
+        idempotencyKey: "[REDACTED]",
+        publicSummary: "offline sync evidence captured",
+      },
+    });
+
+    const review = buildOfflineSyncArtifactReview({
+      publicSummary: "safe offline sync evidence",
+      auditPayload: "audit_private",
+    });
+    expect(review.secretSafe).toBe(true);
+    expect(review.redactedPaths).toEqual(["auditPayload"]);
+    expect(review.requiredExternalEvidence).toBe(offlineSyncRequiredExternalEvidence);
+    expect(review.requiredExternalEvidence).toContain("airplane-mode reconnect evidence");
+  });
+
+  it("pins current offline sync proof files for GAP-045", () => {
+    expect(offlineSyncRuntimeProofFiles).toEqual(expect.arrayContaining([
+      "apps/mobile/package.json",
+      "packages/mobile/package.json",
+      "packages/mobile/src/index.ts",
+      "packages/mobile/tests/mobile-support.test.ts",
+      "apps/mobile/src/lib/offlineSync.ts",
+      "apps/mobile/src/lib/offlineSyncRuntime.ts",
+      "apps/mobile/src/lib/mobileApiClient.ts",
+      "apps/mobile/src/screens/OfflineNotesScreen.tsx",
+      "apps/mobile/tests/offline-sync-static.test.ts",
+      "apps/mobile/tests/offline-sync-runtime-static.test.ts",
+      "testing/manifests/unit-test-manifest.json",
+      ".github/workflows/ci.yml",
+    ]));
+    for (const file of offlineSyncRuntimeProofFiles) {
+      expect(readWorkspaceFile(file).length).toBeGreaterThan(0);
+    }
   });
 
   it("wires CI, manifest, tracker, and artifacts without claiming encrypted/device readiness", () => {
@@ -91,7 +214,13 @@ describe("mobile offline sync runtime contract", () => {
     expect(ciWorkflow).toContain("mobile-offline-sync-runtime-artifacts");
     expect(unitManifest).toContain("unit-mobile-offline-sync-runtime-static");
     expect(gapTracker).toContain("apps/mobile/src/lib/offlineSyncRuntime.ts");
-    expect(gapTracker).toContain("GAP-045 is mobile-offline-sync-runtime-matrix wired");
+    expect(gapTracker).toContain("GAP-045 is mobile-offline-sync-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("buildOfflineSyncExecutionPlan");
+    expect(gapTracker).toContain("offlineSyncExecutionPolicy");
+    expect(gapTracker).toContain("offlineSyncRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildRedactedOfflineSyncArtifact");
+    expect(gapTracker).toContain("buildOfflineSyncArtifactReview");
     expect(offlineSyncArtifactPaths).toContain("coverage/mobile-offline-sync-secret-safe-artifacts.json");
   });
 });
+

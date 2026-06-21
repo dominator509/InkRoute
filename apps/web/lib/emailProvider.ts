@@ -51,6 +51,24 @@ export interface EmailProviderRepository {
   }): Promise<void>;
 }
 
+export interface InMemoryEmailProviderRepositoryState {
+  readonly allowedDeliveryKeys: Set<string>;
+  readonly suppressedDestinationHashes: Set<string>;
+  readonly idempotencyKeys: Map<string, { readonly tenantId: string; readonly requestId: string }>;
+  readonly queuedDeliveries: { readonly tenantId: string; readonly plan: EmailProviderSendPlan }[];
+  readonly providerSendResults: {
+    readonly tenantId: string;
+    readonly deliveryId: string;
+    readonly result: EmailProviderSendResult;
+  }[];
+  readonly webhookReconciliations: {
+    readonly tenantId: string;
+    readonly readiness: EmailWebhookRuntimeReadinessPlan;
+    readonly reconciliation: ProviderEventReconciliationPlan;
+    readonly redactedPayload: Record<string, unknown>;
+  }[];
+}
+
 export interface EmailProviderContract {
   sendPlan: EmailProviderSendPlan;
   webhookReadiness: EmailWebhookRuntimeReadinessPlan;
@@ -150,6 +168,115 @@ export function buildEmailWebhookReadinessFromPayload(input: {
   });
 }
 
+const emailProviderPrivatePayloadKeys = new Set([
+  "apiKey",
+  "authorization",
+  "signature",
+  "rawBody",
+  "email",
+  "recipientEmail",
+  "destination",
+  "clientName",
+  "tenantSecret",
+]);
+
+function redactEmailProviderPayloadValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactEmailProviderPayloadValue(entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+        key,
+        emailProviderPrivatePayloadKeys.has(key) ? "[redacted]" : redactEmailProviderPayloadValue(entry),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+export function sanitizeEmailProviderSendResult(result: EmailProviderSendResult | null): EmailProviderSendResult | null {
+  if (!result) {
+    return null;
+  }
+
+  return {
+    providerMessageId: result.providerMessageId,
+    redactedPayload: redactEmailProviderPayloadValue(result.redactedPayload) as Record<string, unknown>,
+  };
+}
+
+export function buildRedactedEmailWebhookPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  return redactEmailProviderPayloadValue(payload) as Record<string, unknown>;
+}
+
+function buildEmailDeliveryKey(input: { readonly tenantId: string; readonly notificationId: string; readonly deliveryId: string }): string {
+  return `${input.tenantId}:${input.notificationId}:${input.deliveryId}`;
+}
+
+function buildEmailIdempotencyKey(input: { readonly tenantId: string; readonly key: string }): string {
+  return `${input.tenantId}:${input.key}`;
+}
+
+function buildSuppressionKey(input: { readonly tenantId: string; readonly destinationHash: string }): string {
+  return `${input.tenantId}:${input.destinationHash}`;
+}
+
+export function createInMemoryEmailProviderRepository(
+  state: InMemoryEmailProviderRepositoryState = {
+    allowedDeliveryKeys: new Set(),
+    suppressedDestinationHashes: new Set(),
+    idempotencyKeys: new Map(),
+    queuedDeliveries: [],
+    providerSendResults: [],
+    webhookReconciliations: [],
+  },
+): EmailProviderRepository & { readonly state: InMemoryEmailProviderRepositoryState } {
+  return {
+    state,
+    async assertTenantEmailDeliveryAllowed(input) {
+      if (!state.allowedDeliveryKeys.has(buildEmailDeliveryKey(input))) {
+        throw new Error("EMAIL_PROVIDER_DELIVERY_ACCESS_DENIED");
+      }
+    },
+    async isDestinationSuppressed(input) {
+      return state.suppressedDestinationHashes.has(buildSuppressionKey(input));
+    },
+    async claimIdempotencyKey(input) {
+      const key = buildEmailIdempotencyKey(input);
+      const existing = state.idempotencyKeys.get(key);
+
+      if (!existing) {
+        state.idempotencyKeys.set(key, { tenantId: input.tenantId, requestId: input.requestId });
+        return "claimed";
+      }
+
+      if (existing.requestId === input.requestId) {
+        return "duplicate";
+      }
+
+      throw new Error("EMAIL_PROVIDER_IDEMPOTENCY_KEY_CONFLICT");
+    },
+    async persistQueuedDelivery(input) {
+      state.queuedDeliveries.push(input);
+    },
+    async persistProviderSendResult(input) {
+      state.providerSendResults.push({
+        ...input,
+        result: sanitizeEmailProviderSendResult(input.result) ?? input.result,
+      });
+    },
+    async persistWebhookReconciliation(input) {
+      state.webhookReconciliations.push({
+        ...input,
+        redactedPayload: buildRedactedEmailWebhookPayload(input.redactedPayload),
+      });
+    },
+  };
+}
+
 export async function executeEmailProviderSend(
   input: EmailProviderMutationInput,
   repository: EmailProviderRepository,
@@ -184,7 +311,7 @@ export async function executeEmailProviderSend(
   }
 
   await repository.persistQueuedDelivery({ tenantId: input.tenantId, plan });
-  const result = sendWithProvider ? await sendWithProvider(plan) : null;
+  const result = sanitizeEmailProviderSendResult(sendWithProvider ? await sendWithProvider(plan) : null);
   if (result) {
     await repository.persistProviderSendResult({
       tenantId: input.tenantId,

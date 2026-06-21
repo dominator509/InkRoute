@@ -42,8 +42,12 @@ describe("mobile auth static contract", () => {
 
   it("surfaces the auth session contract in the Auth screen", () => {
     expect(screenSource).toContain("mobileAuthSessionPreview");
+    expect(screenSource).toContain("mobileSecureSessionContract");
     expect(screenSource).toContain("Session gate contract");
     expect(screenSource).toContain("secure session");
     expect(screenSource).toContain("provider login gated");
+    expect(screenSource).toContain("Owner session contract");
+    expect(screenSource).toContain("Local contract");
+    expect(screenSource).not.toContain('eyebrow="Scaffolded"');
   });
 });

@@ -96,7 +96,7 @@ export default function CalendarPage() {
       <section className="grid two spacious">
         <article className="card">
           <h2>ICS feed preview</h2>
-          <p>Public demo feed output prefix plus a signed-feed draft path. Real signed token storage is not implemented.</p>
+          <p>Public demo feed output prefix plus a signed-feed draft path. Durable signed-token storage, revocation, and access-log proof remain evidence-gated.</p>
           <pre className="code-preview">{dashboardTravelIcsPreview.join("\n")}</pre>
           <div className="boundary-note">
             <strong>Signed feed draft</strong>
@@ -105,12 +105,12 @@ export default function CalendarPage() {
         </article>
         <article className="card">
           <h2>Google Calendar drafts</h2>
-          <p>These payload shapes mirror the planned provider boundary. They are not sent to Google in this scaffold.</p>
+          <p>These payload shapes mirror the provider execution contract. Live Google dispatch remains evidence-gated until OAuth, encrypted tokens, sync workers, and provider smokes are captured.</p>
           <pre className="code-preview">{JSON.stringify({ event: dashboardGoogleEventDraft, freeBusy: dashboardGoogleFreeBusyDraft }, null, 2)}</pre>
         </article>
       </section>
 
-      <IntegrationBoundaryCard title="Calendar sync" status="Read APIs wired" description="Calendar reads now enforce calendar RBAC, tenant scope, no-store responses, provider payload redaction, and AuditLog rows. Google OAuth, encrypted token storage, incremental sync tokens, push channels, recurring-event reconciliation, and provider retry handling remain planned work." gapIds={["GAP-009", "GAP-055", "GAP-056", "GAP-057", "GAP-058"]} />
+      <IntegrationBoundaryCard title="Calendar sync" status="Read APIs wired" description="Calendar reads now enforce calendar RBAC, tenant scope, no-store responses, provider payload redaction, and AuditLog rows. Google OAuth, encrypted token storage, incremental sync tokens, push channels, recurring-event reconciliation, and provider retry handling remain evidence-gated runtime contracts." gapIds={["GAP-009", "GAP-055", "GAP-056", "GAP-057", "GAP-058"]} />
     </main>
   );
 }

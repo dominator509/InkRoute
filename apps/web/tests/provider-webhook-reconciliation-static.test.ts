@@ -4,12 +4,19 @@ import { join } from "node:path";
 
 import {
   buildProviderDeliveryId,
+  buildProviderWebhookReconciliationArtifactReview,
+  buildProviderWebhookReconciliationEvidenceDecision,
+  buildProviderWebhookReconciliationExecutionPlan,
   buildProviderWebhookReconciliationContract,
   buildSentryReconciliationPlan,
   mapSentryActionToErrorStatus,
   providerWebhookReconciliationArtifactPaths,
   providerWebhookReconciliationCommands,
+  providerWebhookReconciliationDecisionRequiredEvidence,
+  providerWebhookReconciliationExecutionPolicy,
   providerWebhookReconciliationMatrix,
+  providerWebhookReconciliationProofFiles,
+  providerWebhookReconciliationRequiredExternalEvidence,
   sanitizeProviderWebhookPayload,
 } from "../lib/providerWebhookReconciliation";
 
@@ -18,6 +25,11 @@ const routeSource = readFileSync(join(root, "apps/web/app/api/webhooks/sentry/ro
 const workflowSource = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
 const unitManifest = readFileSync(join(root, "testing/manifests/unit-test-manifest.json"), "utf8");
 const gapTracker = readFileSync(join(root, "GAP_TRACKER.md"), "utf8");
+const prismaSchema = readFileSync(join(root, "packages/db/prisma/schema.prisma"), "utf8");
+const providerWebhookDeliveryMigration = readFileSync(
+  join(root, "packages/db/prisma/migrations/20260613000300_add_provider_webhook_deliveries/migration.sql"),
+  "utf8",
+);
 
 const event = {
   action: "resolved",
@@ -79,18 +91,43 @@ describe("provider webhook reconciliation contract", () => {
   });
 
   it("wires signature verification, transaction persistence, and status mutation seams in the route", () => {
+    expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(routeSource).toContain("SENTRY_WEBHOOK_SECRET");
+    expect(routeSource).toContain("{ status: 503, headers: noStoreHeaders }");
+    expect(routeSource).not.toContain("{ status: 501, headers: noStoreHeaders }");
     expect(routeSource).toContain("verifySentrySignature");
     expect(routeSource).toContain("timingSafeEqual");
     expect(routeSource).toContain("prisma.$transaction");
+    expect(routeSource).toContain("tx.providerWebhookDelivery.create");
+    expect(routeSource).toContain("tx.providerWebhookDelivery.update");
     expect(routeSource).toContain("tx.auditLog.create");
     expect(routeSource).toContain('entityType: "ProviderWebhookDelivery"');
     expect(routeSource).toContain("tx.errorReport.update");
     expect(routeSource).toContain("idempotencyKey");
     expect(routeSource).toContain("rawPayloadStored");
+    expect(routeSource).toContain("provider-webhook-delivery-unique-constraint");
+    expect(routeSource).toContain("PROVIDER_WEBHOOK_RECONCILIATION_NOT_CONFIGURED");
+    expect(routeSource).toContain("providerWebhookDurablePersistenceRequired");
+    expect(routeSource).toContain('persistence: "durable-provider-webhook-attempt"');
+    expect(routeSource).not.toContain('persistence: "not-yet-wired"');
   });
 
-  it("keeps live replay and unique delivery constraints explicitly gated", () => {
+  it("pins the ProviderWebhookDelivery durable idempotency schema and migration", () => {
+    expect(prismaSchema).toContain("model ProviderWebhookDelivery");
+    expect(prismaSchema).toContain("@@unique([provider, providerDeliveryId])");
+    expect(prismaSchema).toContain("@@unique([provider, idempotencyKey])");
+    expect(prismaSchema).toContain("targetErrorStatus     ErrorReportStatus");
+    expect(prismaSchema).toContain("statusMutationApplied Boolean");
+    expect(prismaSchema).toContain("rawPayloadStored      Boolean");
+    expect(prismaSchema).toContain("providerWebhookDeliveries ProviderWebhookDelivery[]");
+    expect(providerWebhookDeliveryMigration).toContain('CREATE TABLE "ProviderWebhookDelivery"');
+    expect(providerWebhookDeliveryMigration).toContain('"ProviderWebhookDelivery_provider_idempotencyKey_key"');
+    expect(providerWebhookDeliveryMigration).toContain('"ProviderWebhookDelivery_provider_providerDeliveryId_key"');
+    expect(providerWebhookDeliveryMigration).toContain('FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE');
+    expect(providerWebhookDeliveryMigration).toContain('FOREIGN KEY ("errorReportId") REFERENCES "ErrorReport"("id") ON DELETE SET NULL');
+  });
+
+  it("keeps live replay explicitly gated while the durable idempotency source contract is wired", () => {
     const contract = buildProviderWebhookReconciliationContract();
 
     expect(contract.status).toBe("blocked");
@@ -98,10 +135,10 @@ describe("provider webhook reconciliation contract", () => {
       expect.arrayContaining([
         "route tests must pass before provider webhook reconciliation is production-ready",
         "web typecheck must pass before provider webhook reconciliation is production-ready",
-        "durable provider-delivery idempotency constraint is required",
         "live Sentry webhook proof is required",
       ]),
     );
+    expect(contract.blockers).not.toContain("durable provider-delivery idempotency constraint is required");
     expect(contract.requiredEvidence).toEqual(
       expect.arrayContaining([
         "webhook secret, signature, timing-safe comparison, and replay-protection evidence",
@@ -141,6 +178,149 @@ describe("provider webhook reconciliation contract", () => {
     expect(providerWebhookReconciliationArtifactPaths).toContain("coverage/provider-webhook-secret-safe-artifacts.json");
   });
 
+  it("builds a local execution plan without live provider replay, migration execution, or durable database execution", () => {
+    const plan = buildProviderWebhookReconciliationExecutionPlan();
+
+    expect(plan.id).toBe("gap-082-provider-webhook-reconciliation");
+    expect(plan.liveProviderReplayAllowed).toBe(false);
+    expect(plan.migrationExecutionAllowed).toBe(false);
+    expect(plan.durableDatabaseExecutionAllowed).toBe(false);
+    expect(plan.policy).toBe(providerWebhookReconciliationExecutionPolicy);
+    expect(plan.policy).toEqual({
+      executeLiveProviderReplay: false,
+      executeMigration: false,
+      executeDurableDatabase: false,
+      executeStatusMutationIntegration: false,
+      executeNoPiiAudit: false,
+      executeCi: false,
+    });
+    expect(plan.requiredCommands).toBe(providerWebhookReconciliationCommands);
+    expect(plan.requiredArtifacts).toBe(providerWebhookReconciliationArtifactPaths);
+    expect(plan.localContractArtifacts).toEqual(
+      expect.arrayContaining([
+        "coverage/provider-webhook-reconciliation.json",
+        "coverage/provider-webhook-route-static-contracts.json",
+        "coverage/provider-webhook-sanitized-payload-redacted.json",
+      ]),
+    );
+    expect(plan.durablePersistenceArtifacts).toEqual(
+      expect.arrayContaining([
+        "coverage/provider-webhook-idempotency.json",
+        "coverage/provider-webhook-durable-delivery-constraint.json",
+        "coverage/provider-webhook-error-status-mutation.json",
+      ]),
+    );
+    expect(plan.liveProviderArtifacts).toEqual(["coverage/provider-webhook-live-sentry-proof-redacted.json"]);
+    expect(plan.privacyArtifacts).toEqual(["coverage/provider-webhook-no-pii-artifact-audit.json"]);
+    expect(plan.secretSafeArtifactPath).toBe("coverage/provider-webhook-secret-safe-artifacts.json");
+    expect(plan.externalEvidenceRequired).toBe(providerWebhookReconciliationRequiredExternalEvidence);
+    expect(plan.externalEvidenceRequired).toEqual([
+      "Sentry signature and replay execution",
+      "ProviderWebhookDelivery migration applied in non-production database",
+      "durable idempotency and ErrorReport status mutation integration proof",
+      "live Sentry webhook replay proof",
+      "provider webhook no-PII audit, CI evidence, and secret-safe artifacts",
+    ]);
+  });
+
+  it("redacts provider webhook reconciliation artifacts before persistence", () => {
+    const review = buildProviderWebhookReconciliationArtifactReview("provider-webhook-live-sentry-proof", {
+      providerPayload: {
+        title: "Crash from artist@example.com",
+        authorization: "Bearer sentry-live-webhook-token",
+        token: "super-secret-token",
+      },
+      rawBody: "{\"email\":\"artist@example.com\",\"token\":\"sentry-live-webhook-token\"}",
+      signature: "sentry-signature-secret",
+      statusMutation: "resolved",
+    });
+    const serialized = JSON.stringify(review.redactedArtifact);
+
+    expect(serialized).not.toContain("artist@example.com");
+    expect(serialized).not.toContain("sentry-live-webhook-token");
+    expect(serialized).not.toContain("super-secret-token");
+    expect(serialized).not.toContain("sentry-signature-secret");
+    expect(serialized).toContain("resolved");
+    expect(review.safeToPersist).toBe(true);
+    expect(review.unsafeFindings).toEqual([]);
+    expect(review.requiredArtifactPath).toBe("coverage/provider-webhook-secret-safe-artifacts.json");
+  });
+
+  it("pins current provider webhook reconciliation proof files for GAP-082", () => {
+    expect(providerWebhookReconciliationProofFiles).toEqual(
+      expect.arrayContaining([
+      "packages/observability/package.json",
+        "apps/web/lib/providerWebhookReconciliation.ts",
+        "apps/web/app/api/webhooks/sentry/route.ts",
+        "apps/web/tests/provider-webhook-reconciliation-static.test.ts",
+        "apps/web/tests/observability-routes.test.ts",
+        "packages/observability/src/index.ts",
+        "packages/observability/tests/redaction-report.test.ts",
+        "packages/db/prisma/schema.prisma",
+        "packages/db/prisma/migrations/20260613000300_add_provider_webhook_deliveries/migration.sql",
+        "API_CONTRACTS.md",
+        ".github/workflows/ci.yml",
+        "testing/manifests/unit-test-manifest.json",
+      ]),
+    );
+    for (const file of providerWebhookReconciliationProofFiles) {
+      expect(readFileSync(join(root, file), "utf8").length).toBeGreaterThan(0);
+    }
+  });
+
+  it("classifies GAP-082 provider webhook reconciliation evidence as blocked until every durable provider artifact is captured", () => {
+    const blocked = buildProviderWebhookReconciliationEvidenceDecision({
+      observabilityTypecheckPassed: true,
+      observabilityTestsPassed: true,
+      routeStaticContractsPassed: true,
+      signatureReplayVerified: false,
+      idempotencyVerified: false,
+      durableDeliveryConstraintVerified: false,
+      errorStatusMutationVerified: false,
+      sanitizedPayloadCaptured: true,
+      liveSentryReplayProofCaptured: false,
+      noPiiArtifactAuditPassed: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactReviewPassed: false,
+      capturedArtifacts: ["coverage/provider-webhook-reconciliation.json"],
+    });
+
+    expect(blocked.status).toBe("blocked");
+    expect(blocked.blockers).toEqual(
+      expect.arrayContaining([
+        "Sentry webhook signature and replay evidence is required.",
+        "Provider webhook idempotency evidence is required.",
+        "ProviderWebhookDelivery durable unique constraint evidence is required.",
+        "ErrorReport status mutation integration evidence is required.",
+        "Live Sentry webhook replay proof evidence is required.",
+      ]),
+    );
+    expect(blocked.missingArtifacts).toContain("coverage/provider-webhook-durable-delivery-constraint.json");
+    expect(blocked.requiredCommands).toBe(providerWebhookReconciliationCommands);
+    expect(blocked.requiredEvidence).toBe(providerWebhookReconciliationDecisionRequiredEvidence);
+
+    const complete = buildProviderWebhookReconciliationEvidenceDecision({
+      observabilityTypecheckPassed: true,
+      observabilityTestsPassed: true,
+      routeStaticContractsPassed: true,
+      signatureReplayVerified: true,
+      idempotencyVerified: true,
+      durableDeliveryConstraintVerified: true,
+      errorStatusMutationVerified: true,
+      sanitizedPayloadCaptured: true,
+      liveSentryReplayProofCaptured: true,
+      noPiiArtifactAuditPassed: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactReviewPassed: true,
+      capturedArtifacts: providerWebhookReconciliationArtifactPaths,
+    });
+
+    expect(complete.status).toBe("complete");
+    expect(complete.blockers).toEqual([]);
+    expect(complete.missingArtifacts).toEqual([]);
+    expect(complete.redactedSummary).toContain("CI-safe redacted artifacts captured");
+  });
+
   it("is wired into CI with redacted provider webhook artifacts", () => {
     expect(workflowSource).toContain("Run Phase 11 provider webhook reconciliation contracts");
     expect(workflowSource).toContain("apps/web/tests/provider-webhook-reconciliation-static.test.ts");
@@ -149,6 +329,7 @@ describe("provider webhook reconciliation contract", () => {
     expect(workflowSource).toContain("coverage/provider-webhook-ci-evidence.json");
     expect(workflowSource).toContain("test-results/provider-webhook-reconciliation");
     expect(unitManifest).toContain("providerWebhookReconciliationMatrix");
-    expect(gapTracker).toContain("GAP-082 is provider-webhook-reconciliation-matrix wired");
+    expect(gapTracker).toContain("Provider webhook reconciliation evidence classifier wired and runtime-matrix gated");
+    expect(gapTracker).toContain("providerWebhookReconciliationDecisionRequiredEvidence");
   });
 });

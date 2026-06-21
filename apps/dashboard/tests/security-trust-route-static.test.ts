@@ -12,7 +12,9 @@ describe("dashboard trust status route static contract", () => {
     expect(routeSource).toContain("allowedReadRoles");
     expect(routeSource).toContain("TENANT_SCOPE_REQUIRED");
     expect(routeSource).toContain("ROLE_NOT_AUTHORIZED");
-    expect(routeSource).toContain('"Cache-Control": "no-store"');
+    expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(routeSource).toContain("headers: noStoreHeaders");
+    expect(routeSource).not.toContain('headers: { "Cache-Control": "no-store" }');
   });
 
   it("returns security posture helper outputs without enabling production controls", () => {
@@ -22,12 +24,22 @@ describe("dashboard trust status route static contract", () => {
     expect(routeSource).toContain("buildSecurityHeaderPlan");
     expect(routeSource).toContain("csrfControlPlans");
     expect(routeSource).toContain("rateLimitRules");
+    expect(routeSource).toContain("DASHBOARD_TRUST_STATUS_PROVIDER_AUTH_NOT_CONFIGURED");
+    expect(routeSource).toContain("scaffoldedTrustPreviewDisabled");
+    expect(routeSource).toContain("requiresProviderBackedSession");
     expect(routeSource).toContain("Production requires auth");
   });
 
   it("documents the no-store trust API boundary on the dashboard page", () => {
+    expect(pageSource).toContain("Security hardening control plane");
+    expect(pageSource).toContain('label="Local contracts"');
+    expect(pageSource).toContain("redaction contract");
+    expect(pageSource).toContain("fixture contract");
     expect(pageSource).toContain("no-store trust/privacy API boundaries");
     expect(pageSource).toContain("GET /api/security/trust-status");
     expect(pageSource).toContain("tenant and role gates");
+    expect(pageSource).not.toContain("Security hardening scaffold");
+    expect(pageSource).not.toContain("redaction scaffold");
+    expect(pageSource).not.toContain("test scaffold");
   });
 });

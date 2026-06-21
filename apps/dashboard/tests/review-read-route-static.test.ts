@@ -20,7 +20,9 @@ describe("dashboard review read route contract", () => {
     expect(routeSource).toContain('code: "FORBIDDEN"');
     expect(routeSource).toContain("tenantId !== actor.tenantId");
     expect(routeSource).toContain('code: "TENANT_MISMATCH"');
-    expect(routeSource).toContain('"Cache-Control": "no-store"');
+    expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(routeSource).toContain("headers: noStoreHeaders");
+    expect(routeSource).not.toContain('headers: { "Cache-Control": "no-store" }');
   });
 
   it("loads tenant-scoped reviews and writes read audit logs", () => {
@@ -43,8 +45,22 @@ describe("dashboard review read route contract", () => {
     expect(routeSource).not.toContain("bookingRequestId: true");
   });
 
+  it("disables local fallback review payloads in production", () => {
+    expect(routeSource).toContain('persistence: "local-fallback"');
+    expect(routeSource).toContain("PROVIDER_DASHBOARD_READS_NOT_CONFIGURED");
+    expect(routeSource).toContain("localDashboardReadFallbackDisabled");
+  });
+
   it("keeps dashboard copy wired to the reviews API seam", () => {
+    expect(homePageSource).toContain("Phase 5 dashboard contract");
+    expect(homePageSource).toContain("Guard contract wired");
+    expect(homePageSource).toContain("Stripe contract wired; sandbox proof gated");
+    expect(homePageSource).toContain("provider execution proof remains credential-gated");
     expect(homePageSource).toContain("Reviews now have a redacted tenant-scoped read API");
     expect(homePageSource).toContain("GET /api/reviews");
+    expect(homePageSource).not.toContain("Phase 5 scaffolded dashboard");
+    expect(homePageSource).not.toContain("Guard scaffold wired");
+    expect(homePageSource).not.toContain("Stripe boundary only");
+    expect(homePageSource).not.toContain("boundaries only");
   });
 });

@@ -1,4 +1,4 @@
-import { buildPaymentOperationsRuntimeReadinessPlan } from "@inkroute/payments";
+﻿import { buildPaymentOperationsRuntimeReadinessPlan } from "@inkroute/payments";
 
 export type PaymentOperationsRuntimeStatus =
   | "wired"
@@ -49,6 +49,121 @@ export const paymentOperationsArtifactPaths = [
   "coverage/payment-operations-dashboard-e2e-redacted.json",
   "coverage/payment-operations-secret-safe-artifacts.json",
   "test-results/payment-operations-runtime",
+] as const;
+
+export const paymentOperationsRuntimeProofFiles = [
+  "apps/dashboard/package.json",
+  "packages/payments/package.json",
+  "packages/payments/src/index.ts",
+  "packages/payments/tests/deposit-policy.test.ts",
+  "apps/dashboard/lib/paymentOperations.ts",
+  "apps/dashboard/lib/paymentOperationsRuntime.ts",
+  "apps/dashboard/tests/payment-operations-static.test.ts",
+  "apps/dashboard/tests/payment-operations-runtime-static.test.ts",
+  "apps/dashboard/app/payments/page.tsx",
+  "apps/dashboard/components/PaymentActionPanel.tsx",
+  "testing/manifests/unit-test-manifest.json",
+  ".github/workflows/ci.yml",
+] as const;
+
+export const paymentOperationsEvidenceFlags = [
+  "paymentsTypecheckPassed",
+  "paymentsTestsPassed",
+  "dashboardTypecheckPassed",
+  "dashboardOperationTestsPassed",
+  "authorizedActionsVerified",
+  "stripeRefundSmokePassed",
+  "refundPersistenceVerified",
+  "noShowAuditPersisted",
+  "disputeEvidencePersisted",
+  "disputeProviderSyncVerified",
+  "receiptGenerationVerified",
+  "receiptDeliveryVerified",
+  "accountingExportRedactionVerified",
+  "taxAccountingReviewApproved",
+  "operationIdempotencyVerified",
+  "operationAuditLogPersisted",
+  "tenantAuthorizationTested",
+  "dashboardE2eEvidenceCaptured",
+  "ciEvidenceCaptured",
+  "secretSafeArtifactsCaptured",
+] as const;
+
+export type PaymentOperationsEvidenceFlag = (typeof paymentOperationsEvidenceFlags)[number];
+
+export interface PaymentOperationsExecutionPolicy {
+  readonly codexMayClassifyStaticPaymentOperationsReadiness: true;
+  readonly stripeRefundRequiredForClosure: true;
+  readonly receiptProviderRequiredForClosure: true;
+  readonly disputeProviderSyncRequiredForClosure: true;
+  readonly accountingExportRequiredForClosure: true;
+  readonly taxAccountingReviewRequiredForClosure: true;
+  readonly dashboardE2eRequiredForClosure: true;
+  readonly secretSafeArtifactsRequiredForClosure: true;
+}
+
+export interface PaymentOperationsExecutionPlan {
+  readonly policy: typeof paymentOperationsExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly stripeRefundExecutionAllowed: false;
+  readonly receiptProviderExecutionAllowed: false;
+  readonly disputeProviderExecutionAllowed: false;
+  readonly accountingExportExecutionAllowed: false;
+  readonly taxAccountingReviewExecutionAllowed: false;
+  readonly dashboardE2eExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly localCommands: typeof paymentOperationsLocalCommands;
+  readonly externalCommands: typeof paymentOperationsExternalCommands;
+  readonly requiredExternalEvidence: typeof paymentOperationsRequiredExternalEvidence;
+}
+
+export interface PaymentOperationsArtifactReview {
+  readonly artifact: unknown;
+  readonly redactedArtifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: boolean;
+  readonly requiredExternalEvidence: typeof paymentOperationsRequiredExternalEvidence;
+}
+
+export interface PaymentOperationsEvidenceInput {
+  readonly commands?: readonly string[];
+  readonly artifacts?: readonly string[];
+  readonly evidence?: Partial<Record<PaymentOperationsEvidenceFlag, boolean>>;
+}
+
+export interface PaymentOperationsEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly requiredCommands: typeof paymentOperationsRuntimeCommands;
+  readonly missingCommands: readonly string[];
+  readonly requiredArtifacts: typeof paymentOperationsArtifactPaths;
+  readonly missingArtifacts: readonly string[];
+  readonly requiredEvidence: typeof paymentOperationsEvidenceFlags;
+  readonly missingEvidence: readonly PaymentOperationsEvidenceFlag[];
+  readonly blockers: readonly string[];
+}
+
+export const paymentOperationsExecutionPolicy = {
+  codexMayClassifyStaticPaymentOperationsReadiness: true,
+  stripeRefundRequiredForClosure: true,
+  receiptProviderRequiredForClosure: true,
+  disputeProviderSyncRequiredForClosure: true,
+  accountingExportRequiredForClosure: true,
+  taxAccountingReviewRequiredForClosure: true,
+  dashboardE2eRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies PaymentOperationsExecutionPolicy;
+
+export const paymentOperationsRequiredExternalEvidence = [
+  "Stripe test-mode refund execution proof",
+  "no-show audit persistence proof",
+  "dispute evidence provider sync proof",
+  "receipt provider delivery proof",
+  "CSV/accounting export delivery proof after local redaction",
+  "executed tax/accounting approval evidence",
+  "dashboard payment operations E2E artifacts",
+  "dashboard typecheck/test output",
+  "CI payment operations evidence",
+  "secret-safe payment operations artifact review",
 ] as const;
 
 export const paymentOperationsRuntimeMatrix = [
@@ -191,6 +306,121 @@ export const paymentOperationsRuntimeReadiness = buildPaymentOperationsRuntimeRe
   taxAccountingReviewApproved: false,
   idempotencyConfiguredForOperations: true,
   paymentAuditLogPersistedForOperations: true,
-  tenantAuthorizationTestsPassed: false,
+  tenantAuthorizationTestsPassed: true,
   dashboardE2eEvidenceAttached: false,
 });
+
+const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
+  const actualSet = new Set(actual ?? []);
+  return required.filter((entry) => !actualSet.has(entry));
+};
+
+const sensitivePaymentOperationsArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|stripe|refund|dispute|receipt|export|accounting|tax|audit|payment|deposit|idempotency|email|phone|medical|card|customer)/i;
+
+const redactPaymentOperationsArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactPaymentOperationsArtifactValue(entry, `${path}.${index}`, redactedPaths));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (sensitivePaymentOperationsArtifactKey.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[REDACTED]"];
+        }
+        return [key, redactPaymentOperationsArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const paymentOperationsLocalCommands = [
+  "pnpm --filter @inkroute/payments typecheck",
+  "pnpm --filter @inkroute/payments test",
+  "static payment operation preflight/authorization review",
+  "static provider-result, receipt, and accounting export redaction review",
+] as const;
+
+export const paymentOperationsExternalCommands = [
+  "pnpm --filter @inkroute/dashboard typecheck",
+  "pnpm test:unit -- apps/dashboard tests for payment operations",
+  "stripe refunds.create test-mode smoke",
+  "dashboard payment operations E2E smoke",
+  "receipt provider delivery smoke",
+  "dispute provider sync evidence",
+  "accounting/tax advisor sign-off",
+  "GitHub Actions payment operations evidence job",
+] as const;
+
+export const buildPaymentOperationsExecutionPlan = (): PaymentOperationsExecutionPlan => ({
+  policy: paymentOperationsExecutionPolicy,
+  commandExecutionAllowed: false,
+  stripeRefundExecutionAllowed: false,
+  receiptProviderExecutionAllowed: false,
+  disputeProviderExecutionAllowed: false,
+  accountingExportExecutionAllowed: false,
+  taxAccountingReviewExecutionAllowed: false,
+  dashboardE2eExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  localCommands: paymentOperationsLocalCommands,
+  externalCommands: paymentOperationsExternalCommands,
+  requiredExternalEvidence: paymentOperationsRequiredExternalEvidence,
+});
+
+export const buildRedactedPaymentOperationsArtifact = (artifact: unknown): Pick<PaymentOperationsArtifactReview, "redactedArtifact" | "redactedPaths"> => {
+  const redactedPaths: string[] = [];
+  return {
+    redactedArtifact: redactPaymentOperationsArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+  };
+};
+
+export const buildPaymentOperationsArtifactReview = (artifact: unknown): PaymentOperationsArtifactReview => {
+  const redacted = buildRedactedPaymentOperationsArtifact(artifact);
+  return {
+    artifact,
+    redactedArtifact: redacted.redactedArtifact,
+    redactedPaths: redacted.redactedPaths,
+    secretSafe: redacted.redactedPaths.length > 0,
+    requiredExternalEvidence: paymentOperationsRequiredExternalEvidence,
+  };
+};
+
+export const buildPaymentOperationsEvidenceDecision = (
+  input: PaymentOperationsEvidenceInput = {},
+): PaymentOperationsEvidenceDecision => {
+  const missingCommands = missingFrom(input.commands, paymentOperationsRuntimeCommands);
+  const missingArtifacts = missingFrom(input.artifacts, paymentOperationsArtifactPaths);
+  const missingEvidence = paymentOperationsEvidenceFlags.filter((flag) => input.evidence?.[flag] !== true);
+  const blockers = [
+    missingCommands.length > 0 ? "Pinned payment operations commands must be run and captured." : "",
+    missingArtifacts.length > 0
+      ? "Payment operations artifacts must be retained with provider, receipt, export, review, auth, E2E, CI, and secret-safe evidence."
+      : "",
+    missingEvidence.length > 0
+      ? "Refund, no-show, dispute, receipt, export, tax review, idempotency, audit, tenant authorization, E2E, CI, and secret-safe evidence must pass."
+      : "",
+  ].filter(Boolean);
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    requiredCommands: paymentOperationsRuntimeCommands,
+    missingCommands,
+    requiredArtifacts: paymentOperationsArtifactPaths,
+    missingArtifacts,
+    requiredEvidence: paymentOperationsEvidenceFlags,
+    missingEvidence,
+    blockers,
+  };
+};
+
+
+

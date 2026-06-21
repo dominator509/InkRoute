@@ -1,10 +1,19 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
+  buildGoogleCalendarSyncEvidenceDecision,
+  buildGoogleCalendarSyncExecutionPlan,
+  buildGoogleCalendarSyncArtifactReview,
+  buildRedactedGoogleCalendarSyncArtifact,
   googleCalendarSyncArtifactPaths,
+  googleCalendarSyncDecisionRequiredEvidence,
+  googleCalendarSyncExternalCommands,
+  googleCalendarSyncLocalCommands,
+  googleCalendarSyncRequiredExternalEvidence,
   googleCalendarSyncRuntimeCommands,
   googleCalendarSyncRuntimeMatrix,
+  googleCalendarSyncRuntimeProofFiles,
   googleCalendarSyncRuntimeReadiness,
 } from "../lib/googleCalendarSyncRuntime";
 
@@ -63,6 +72,26 @@ describe("Google Calendar sync runtime contract", () => {
     expect(googleCalendarSyncArtifactPaths).toContain("test-results/google-calendar-sync-runtime");
   });
 
+  it("pins current Google Calendar sync proof files for GAP-057", () => {
+    expect(googleCalendarSyncRuntimeProofFiles).toEqual(expect.arrayContaining([
+      "packages/calendar/package.json",
+      "packages/calendar/src/index.ts",
+      "packages/calendar/tests/availability-conflicts.test.ts",
+      "apps/dashboard/lib/googleCalendarSync.ts",
+      "apps/dashboard/lib/googleCalendarSyncRuntime.ts",
+      "apps/dashboard/app/api/calendar/google-sync/route.ts",
+      "apps/dashboard/app/api/calendar/route.ts",
+      "apps/dashboard/tests/google-calendar-sync-static.test.ts",
+      "apps/dashboard/tests/google-calendar-sync-runtime-static.test.ts",
+      "apps/dashboard/tests/calendar-read-route-static.test.ts",
+      "testing/manifests/unit-test-manifest.json",
+      ".github/workflows/ci.yml",
+    ]));
+    for (const file of googleCalendarSyncRuntimeProofFiles) {
+      expect(readWorkspaceFile(file).length).toBeGreaterThan(0);
+    }
+  });
+
   it("keeps package helper, dashboard provider-worker contract, sync route, and calendar read route wired", () => {
     expect(calendarPackageJson).toContain('"typecheck"');
     expect(calendarPackageJson).toContain('"test"');
@@ -70,11 +99,17 @@ describe("Google Calendar sync runtime contract", () => {
     expect(calendarSource).toContain("buildGoogleCalendarRuntimeReadinessPlan");
     expect(calendarTests).toContain("buildGoogleCalendarRuntimeReadinessPlan");
     expect(syncSource).toContain("GoogleCalendarSyncRepository");
+    expect(syncSource).toContain("createInMemoryGoogleCalendarSyncRepository");
+    expect(syncSource).toContain("sanitizeGoogleCalendarProviderResult");
     expect(syncSource).toContain("loadEncryptedConnection");
     expect(syncSource).toContain("runGoogleCalendarTransaction");
     expect(syncStaticTest).toContain("covers OAuth, FreeBusy, event mutation, full/incremental sync, and push renewal actions");
+    expect(syncStaticTest).toContain("sanitizes nested Google provider payloads before persistence");
+    expect(syncStaticTest).toContain("executes a local Google sync repository contract");
     expect(syncRoute).toContain("GOOGLE_CALENDAR_SYNC_BLOCKED");
     expect(syncRoute).toContain("provider-worker-required");
+    expect(syncRoute).toContain("{ status: 202, headers: noStoreHeaders }");
+    expect(syncRoute).not.toContain("{ status: 501, headers: noStoreHeaders }");
     expect(calendarRoute).toContain("CalendarProviderConnection");
     expect(readRouteStaticTest).toContain("CalendarProviderConnection");
   });
@@ -82,16 +117,153 @@ describe("Google Calendar sync runtime contract", () => {
   it("keeps SDK, OAuth, token, provider, smoke, push, isolation, and artifact blockers explicit", () => {
     expect(googleCalendarSyncRuntimeReadiness.status).toBe("blocked");
     expect(googleCalendarSyncRuntimeReadiness.missingScripts).toEqual([]);
-    expect(googleCalendarSyncRuntimeReadiness.requiredCommands).toEqual([...googleCalendarSyncRuntimeCommands]);
-    expect(googleCalendarSyncRuntimeReadiness.requiredEvidence).toEqual(expect.arrayContaining([
-      "Google SDK/client setup plus OAuth app, scopes, and callback route evidence",
-      "Google test calendar FreeBusy and event insert/update/delete smoke-test output",
-      "Google push channel renewal and webhook handler test output",
-      "retry/idempotency, tenant-isolation, and Google test-calendar artifact evidence",
-    ]));
+    expect(googleCalendarSyncRuntimeReadiness.requiredCommands).toBe(googleCalendarSyncRuntimeCommands);
+    expect(googleCalendarSyncRuntimeReadiness.requiredEvidence).toBe(googleCalendarSyncDecisionRequiredEvidence);
     expect(googleCalendarSyncRuntimeReadiness.blockers).toContain("Google Calendar SDK/client dependency must be installed and pinned.");
     expect(googleCalendarSyncRuntimeReadiness.blockers).toContain("Google FreeBusy smoke test must pass against a test calendar.");
     expect(googleCalendarSyncRuntimeReadiness.blockers).toContain("Google test calendar evidence must be attached for OAuth, freebusy, event sync, push, and recovery flows.");
+  });
+
+  it("classifies Google provider evidence before GAP-057 can close", () => {
+    const blockedDecision = buildGoogleCalendarSyncEvidenceDecision({
+      calendarTypecheckPassed: true,
+      calendarTestsPassed: true,
+      sdkClientVerified: false,
+      oauthAppVerified: false,
+      oauthCallbackSmokePassed: false,
+      requiredScopesVerified: true,
+      encryptedTokenRepositoryVerified: true,
+      providerWorkerVerified: false,
+      freebusySmokePassed: false,
+      eventCrudSmokePassed: false,
+      fullIncrementalSyncVerified: true,
+      invalidTokenRecoveryVerified: false,
+      pushRenewalVerified: true,
+      pushWebhookVerified: false,
+      retryBackoffVerified: true,
+      idempotencyStoreVerified: true,
+      calendarAuditLogVerified: true,
+      tenantIsolationVerified: false,
+      googleTestCalendarArtifactsCaptured: false,
+      secretSafeArtifactReviewPassed: false,
+      capturedArtifacts: [
+        "coverage/google-calendar-sync-runtime.json",
+        "coverage/google-calendar-sync-calendar-typecheck.txt",
+        "coverage/google-calendar-sync-calendar-test.txt",
+        "coverage/google-calendar-sync-scopes.json",
+        "coverage/google-calendar-sync-encrypted-token-repository.json",
+      ],
+    });
+
+    expect(blockedDecision.status).toBe("blocked");
+    expect(blockedDecision.blockers).toContain("Google Calendar SDK/client evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Google OAuth callback smoke evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Google provider worker execution evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Google push webhook handler evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Redacted Google test-calendar artifact bundle is missing.");
+    expect(blockedDecision.blockers).toContain(
+      "Secret-safe Google Calendar sync artifact review evidence is missing.",
+    );
+    expect(blockedDecision.missingArtifacts).toContain("coverage/google-calendar-sync-freebusy-smoke-redacted.json");
+    expect(blockedDecision.missingArtifacts).toContain("coverage/google-calendar-sync-secret-safe-artifacts.json");
+    expect(blockedDecision.requiredCommands).toBe(googleCalendarSyncRuntimeCommands);
+    expect(blockedDecision.requiredEvidence).toBe(googleCalendarSyncDecisionRequiredEvidence);
+    expect(blockedDecision.redactedSummary).toEqual({
+      capturedArtifactCount: 5,
+      requiredArtifactCount: googleCalendarSyncArtifactPaths.length,
+    });
+
+    const completeDecision = buildGoogleCalendarSyncEvidenceDecision({
+      calendarTypecheckPassed: true,
+      calendarTestsPassed: true,
+      sdkClientVerified: true,
+      oauthAppVerified: true,
+      oauthCallbackSmokePassed: true,
+      requiredScopesVerified: true,
+      encryptedTokenRepositoryVerified: true,
+      providerWorkerVerified: true,
+      freebusySmokePassed: true,
+      eventCrudSmokePassed: true,
+      fullIncrementalSyncVerified: true,
+      invalidTokenRecoveryVerified: true,
+      pushRenewalVerified: true,
+      pushWebhookVerified: true,
+      retryBackoffVerified: true,
+      idempotencyStoreVerified: true,
+      calendarAuditLogVerified: true,
+      tenantIsolationVerified: true,
+      googleTestCalendarArtifactsCaptured: true,
+      secretSafeArtifactReviewPassed: true,
+      capturedArtifacts: googleCalendarSyncArtifactPaths,
+    });
+
+    expect(completeDecision.status).toBe("complete");
+    expect(completeDecision.blockers).toEqual([]);
+    expect(completeDecision.missingArtifacts).toEqual([]);
+    expect(completeDecision.requiredEvidence).toBe(googleCalendarSyncDecisionRequiredEvidence);
+  });
+
+  it("keeps GAP-057 execution policy non-executing and external evidence explicit", () => {
+    const plan = buildGoogleCalendarSyncExecutionPlan();
+
+    expect(plan.policy.codexMayClassifyStaticGoogleCalendarSyncReadiness).toBe(true);
+    expect(plan.policy.googleSdkClientRequiredForClosure).toBe(true);
+    expect(plan.policy.oauthProviderRequiredForClosure).toBe(true);
+    expect(plan.policy.encryptedTokenPersistenceRequiredForClosure).toBe(true);
+    expect(plan.policy.providerWorkerRequiredForClosure).toBe(true);
+    expect(plan.policy.pushWebhookRequiredForClosure).toBe(true);
+    expect(plan.policy.googleTestCalendarRequiredForClosure).toBe(true);
+    expect(plan.policy.secretSafeArtifactsRequiredForClosure).toBe(true);
+    expect(plan.commandExecutionAllowed).toBe(false);
+    expect(plan.googleProviderExecutionAllowed).toBe(false);
+    expect(plan.oauthExecutionAllowed).toBe(false);
+    expect(plan.encryptedTokenExecutionAllowed).toBe(false);
+    expect(plan.pushWebhookExecutionAllowed).toBe(false);
+    expect(plan.tenantIsolationExecutionAllowed).toBe(false);
+    expect(plan.ciExecutionAllowed).toBe(false);
+    expect(plan.localCommands).toBe(googleCalendarSyncLocalCommands);
+    expect(plan.externalCommands).toBe(googleCalendarSyncExternalCommands);
+    expect(plan.requiredExternalEvidence).toBe(googleCalendarSyncRequiredExternalEvidence);
+  });
+
+  it("redacts GAP-057 Google Calendar artifacts before secret-safe review", () => {
+    const artifact = {
+      googleOAuthRefreshToken: "refresh_private",
+      googleCalendarId: "calendar_private",
+      tenantDomain: "tenant.example.test",
+      providerEventPayload: "event_private",
+      nested: {
+        pushChannelUrl: "https://private/channel",
+        publicSummary: "Google Calendar sync evidence captured",
+      },
+    };
+
+    const redacted = buildRedactedGoogleCalendarSyncArtifact(artifact);
+    expect(redacted.redactedPaths).toEqual([
+      "googleOAuthRefreshToken",
+      "googleCalendarId",
+      "tenantDomain",
+      "providerEventPayload",
+      "nested.pushChannelUrl",
+    ]);
+    expect(redacted.redactedArtifact).toMatchObject({
+      googleOAuthRefreshToken: "[REDACTED]",
+      googleCalendarId: "[REDACTED]",
+      tenantDomain: "[REDACTED]",
+      providerEventPayload: "[REDACTED]",
+      nested: {
+        pushChannelUrl: "[REDACTED]",
+        publicSummary: "Google Calendar sync evidence captured",
+      },
+    });
+
+    const review = buildGoogleCalendarSyncArtifactReview({
+      publicSummary: "safe Google Calendar sync evidence",
+      oauthCallbackUrl: "https://private/oauth",
+    });
+    expect(review.secretSafe).toBe(true);
+    expect(review.redactedPaths).toEqual(["oauthCallbackUrl"]);
+    expect(review.requiredExternalEvidence).toBe(googleCalendarSyncRequiredExternalEvidence);
   });
 
   it("wires CI, manifest, tracker, and artifacts without claiming Google provider readiness", () => {
@@ -100,7 +272,17 @@ describe("Google Calendar sync runtime contract", () => {
     expect(ciWorkflow).toContain("google-calendar-sync-runtime-artifacts");
     expect(unitManifest).toContain("unit-google-calendar-sync-runtime-static");
     expect(gapTracker).toContain("apps/dashboard/lib/googleCalendarSyncRuntime.ts");
-    expect(gapTracker).toContain("GAP-057 is google-calendar-sync-runtime-matrix wired");
+    expect(gapTracker).toContain("Google provider evidence classifier");
+    expect(gapTracker).toContain("local Google sync repository contract");
+    expect(gapTracker).toContain("provider-result sanitizer");
+    expect(gapTracker).toContain("GAP-057 is google-calendar-sync-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("buildGoogleCalendarSyncExecutionPlan");
+    expect(gapTracker).toContain("googleCalendarSyncExecutionPolicy");
+    expect(gapTracker).toContain("googleCalendarSyncRequiredExternalEvidence");
+    expect(gapTracker).toContain("googleCalendarSyncDecisionRequiredEvidence");
+    expect(gapTracker).toContain("buildRedactedGoogleCalendarSyncArtifact");
+    expect(gapTracker).toContain("buildGoogleCalendarSyncArtifactReview");
     expect(googleCalendarSyncArtifactPaths).toContain("coverage/google-calendar-sync-secret-safe-artifacts.json");
   });
 });
+

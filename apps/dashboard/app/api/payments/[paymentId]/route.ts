@@ -19,25 +19,45 @@ function redactPaymentMetadata(metadata: unknown): Record<string, unknown> {
   );
 }
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 export async function GET(request: NextRequest, context: PaymentDetailRouteContext) {
   const actor = resolveDashboardActor(request);
   try {
     assertPermission(actor, "payment:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read payments." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read payments." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const { paymentId } = await context.params;
   const params = new URL(request.url).searchParams;
   const tenantId = params.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a payment for another tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a payment for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          paymentId,
+          error: {
+            code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
+            message: "Production dashboard payment reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
+            gapIds: ["GAP-004", "GAP-007", "GAP-037", "GAP-040"],
+          },
+          productionBoundary: { localDashboardReadFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     const payment = dashboardProjectedPayments.find((row) => row.id === paymentId);
     if (!payment) {
-      return NextResponse.json({ ok: false, error: { code: "PAYMENT_NOT_FOUND", message: "Payment was not found for this tenant." } }, { status: 404 });
+      return NextResponse.json({ ok: false, error: { code: "PAYMENT_NOT_FOUND", message: "Payment was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
     }
     return NextResponse.json(
       {
@@ -49,7 +69,7 @@ export async function GET(request: NextRequest, context: PaymentDetailRouteConte
         gapIds: ["GAP-004", "GAP-007", "GAP-037", "GAP-040"],
         boundary: "Local fallback returns a tenant-projected demo payment only; database mode is required for live payment reads.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   }
 
@@ -119,7 +139,7 @@ export async function GET(request: NextRequest, context: PaymentDetailRouteConte
     });
 
     if (result.status === "not_found") {
-      return NextResponse.json({ ok: false, error: { code: "PAYMENT_NOT_FOUND", message: "Payment was not found for this tenant." } }, { status: 404 });
+      return NextResponse.json({ ok: false, error: { code: "PAYMENT_NOT_FOUND", message: "Payment was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
     }
 
     const view = buildTenantDashboardView({
@@ -170,7 +190,7 @@ export async function GET(request: NextRequest, context: PaymentDetailRouteConte
         gapIds: ["GAP-004", "GAP-007", "GAP-037", "GAP-040"],
         boundary: "Dashboard payment detail reads are tenant-scoped, redacted, no-store, and audited in AuditLog plus PaymentAuditLog.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
@@ -183,10 +203,10 @@ export async function GET(request: NextRequest, context: PaymentDetailRouteConte
           error: { code: "DATABASE_UNAVAILABLE", message: "Payment detail reads require the dashboard database connection." },
           gapIds: ["GAP-004", "GAP-007", "GAP-037", "GAP-040"],
         },
-        { status: 503, headers: { "Cache-Control": "no-store" } },
+        { status: 503, headers: noStoreHeaders },
       );
     }
 
-    return NextResponse.json({ ok: false, error: { code: "PAYMENT_DETAIL_READ_FAILED", message: "Payment could not be loaded." } }, { status: 500 });
+    return NextResponse.json({ ok: false, error: { code: "PAYMENT_DETAIL_READ_FAILED", message: "Payment could not be loaded." } }, { status: 500, headers: noStoreHeaders });
   }
 }

@@ -1,4 +1,18 @@
-﻿import { phase9AppRuntimeBuildContract, phase9AppRuntimeSurfaces } from "./phase9AppRuntimeBuild";
+﻿import {
+  buildPhase9RuntimeArtifactReview,
+  buildPhase9RuntimeExecutionPlan,
+  buildRedactedPhase9RuntimeArtifact,
+  phase9AppRuntimeBuildContract,
+  phase9AppRuntimeSurfaces,
+  phase9RuntimeRequiredArtifacts,
+} from "./phase9AppRuntimeBuild";
+
+export {
+  buildPhase9RuntimeArtifactReview,
+  buildPhase9RuntimeExecutionPlan,
+  buildRedactedPhase9RuntimeArtifact,
+  phase9RuntimeRequiredArtifacts,
+};
 
 export type Phase9AppRuntimeBuildRuntimeStatus =
   | "wired"
@@ -16,6 +30,50 @@ export interface Phase9AppRuntimeBuildRuntimeMatrixEntry {
   readonly status: Phase9AppRuntimeBuildRuntimeStatus;
 }
 
+export interface Phase9AppRuntimeBuildExecutionPolicy {
+  readonly codexMayClassifyStaticPhase9RuntimeBuildReadiness: boolean;
+  readonly localTestingAndRouteEvidenceRequiredForClosure: boolean;
+  readonly webDashboardBuildsRequiredForClosure: boolean;
+  readonly mobileTypecheckRequiredForClosure: boolean;
+  readonly dashboardPlaywrightRequiredForClosure: boolean;
+  readonly providerDisabledRuntimeRequiredForClosure: boolean;
+  readonly expoSimulatorDeviceRequiredForClosure: boolean;
+  readonly bookingToNotificationRuntimeRequiredForClosure: boolean;
+  readonly ciEvidenceRequiredForClosure: boolean;
+  readonly secretSafeArtifactsRequiredForClosure: boolean;
+}
+
+export interface Phase9AppRuntimeBuildExecutionPlan {
+  readonly policy: typeof phase9AppRuntimeBuildExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly buildExecutionAllowed: false;
+  readonly routeExecutionAllowed: false;
+  readonly playwrightExecutionAllowed: false;
+  readonly mobileExecutionAllowed: false;
+  readonly providerDisabledExecutionAllowed: false;
+  readonly expoExecutionAllowed: false;
+  readonly runtimeSmokeExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly artifactReviewExecutionAllowed: false;
+  readonly localCommands: typeof phase9AppRuntimeBuildLocalCommands;
+  readonly externalCommands: typeof phase9AppRuntimeBuildExternalCommands;
+  readonly requiredExternalEvidence: typeof phase9AppRuntimeBuildRequiredExternalEvidence;
+  readonly runtimePlan: ReturnType<typeof buildPhase9RuntimeExecutionPlan>;
+}
+
+export const phase9AppRuntimeBuildExecutionPolicy = {
+  codexMayClassifyStaticPhase9RuntimeBuildReadiness: true,
+  localTestingAndRouteEvidenceRequiredForClosure: true,
+  webDashboardBuildsRequiredForClosure: true,
+  mobileTypecheckRequiredForClosure: true,
+  dashboardPlaywrightRequiredForClosure: true,
+  providerDisabledRuntimeRequiredForClosure: true,
+  expoSimulatorDeviceRequiredForClosure: true,
+  bookingToNotificationRuntimeRequiredForClosure: true,
+  ciEvidenceRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies Phase9AppRuntimeBuildExecutionPolicy;
+
 export const phase9AppRuntimeBuildRuntimeCommands = [
   "pnpm --filter @inkroute/testing typecheck",
   "pnpm --filter @inkroute/testing test",
@@ -28,6 +86,57 @@ export const phase9AppRuntimeBuildRuntimeCommands = [
   "Expo device notification screen smoke test",
   "booking-to-notification runtime smoke with provider sends disabled",
 ] as const;
+
+export const phase9AppRuntimeBuildLocalCommands = [
+  "pnpm --filter @inkroute/testing typecheck",
+  "pnpm --filter @inkroute/testing test",
+  "pnpm vitest run apps/web/tests/phase9-app-runtime-build-runtime-static.test.ts apps/web/tests/phase9-app-runtime-build-static.test.ts",
+] as const;
+
+export const phase9AppRuntimeBuildExternalCommands = [
+  "pnpm --filter @inkroute/web build",
+  "pnpm --filter @inkroute/dashboard build",
+  "pnpm --filter @inkroute/mobile typecheck",
+  "Playwright dashboard templates/messages smoke tests",
+  "Expo simulator notification screen smoke test",
+  "Expo device notification screen smoke test",
+  "booking-to-notification runtime smoke with provider sends disabled",
+  "GitHub Actions Phase 9 app runtime/build gate",
+  "secret-safe Phase 9 runtime/build artifact review",
+] as const;
+
+export const phase9AppRuntimeBuildRequiredExternalEvidence = [
+  "actual Phase 9 runtime/build command output",
+  "web build output",
+  "dashboard build output",
+  "mobile typecheck output",
+  "notification/provider route contract output",
+  "booking/deposit runtime smoke output",
+  "dashboard Playwright templates/messages smoke artifacts",
+  "provider-disabled runtime proof",
+  "Expo simulator/device notification smoke artifacts",
+  "booking-to-notification runtime smoke output",
+  "CI Phase 9 app runtime/build artifacts",
+  "secret-safe Phase 9 runtime/build artifact review",
+] as const;
+
+export const buildPhase9AppRuntimeBuildExecutionPlan = (): Phase9AppRuntimeBuildExecutionPlan => ({
+  policy: phase9AppRuntimeBuildExecutionPolicy,
+  commandExecutionAllowed: false,
+  buildExecutionAllowed: false,
+  routeExecutionAllowed: false,
+  playwrightExecutionAllowed: false,
+  mobileExecutionAllowed: false,
+  providerDisabledExecutionAllowed: false,
+  expoExecutionAllowed: false,
+  runtimeSmokeExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  artifactReviewExecutionAllowed: false,
+  localCommands: phase9AppRuntimeBuildLocalCommands,
+  externalCommands: phase9AppRuntimeBuildExternalCommands,
+  requiredExternalEvidence: phase9AppRuntimeBuildRequiredExternalEvidence,
+  runtimePlan: buildPhase9RuntimeExecutionPlan(),
+});
 
 export const phase9AppRuntimeBuildRuntimeArtifactPaths = [
   "coverage/phase9-app-runtime-build-runtime.json",
@@ -54,6 +163,125 @@ export const phase9AppRuntimeBuildRuntimeArtifactPaths = [
   "test-results/phase9-app-runtime-build",
 ] as const;
 
+export const phase9AppRuntimeBuildRuntimeProofFiles = [
+  "apps/dashboard/package.json",
+  "apps/mobile/package.json",
+  "packages/testing/package.json",
+  "apps/web/package.json",
+  "packages/testing/src/index.ts",
+  "packages/testing/tests/testing-manifest.test.ts",
+  "apps/web/lib/phase9AppRuntimeBuild.ts",
+  "apps/web/lib/phase9AppRuntimeBuildRuntime.ts",
+  "apps/web/tests/phase9-app-runtime-build-static.test.ts",
+  "apps/web/tests/phase9-app-runtime-build-runtime-static.test.ts",
+  "apps/web/tests/notification-messaging-routes.test.ts",
+  "apps/web/tests/provider-webhook-routes.test.ts",
+  "apps/web/tests/provider-webhook-contracts.test.ts",
+  "apps/web/tests/booking-requests-contract.test.ts",
+  "apps/web/tests/payment-routes.test.ts",
+  "apps/dashboard/tests/template-read-route-static.test.ts",
+  "apps/dashboard/tests/message-read-route-static.test.ts",
+  "apps/dashboard/tests/messaging-privacy-static.test.ts",
+  "apps/mobile/tests/mobile-push-static.test.ts",
+  ".github/workflows/ci.yml",
+  "testing/manifests/unit-test-manifest.json",
+] as const;
+
+export type Phase9AppRuntimeBuildEvidenceArtifact = (typeof phase9AppRuntimeBuildRuntimeArtifactPaths)[number];
+
+export interface Phase9AppRuntimeBuildEvidenceInput {
+  readonly testingTypecheckPassed: boolean;
+  readonly testingTestsPassed: boolean;
+  readonly webBuildPassed: boolean;
+  readonly dashboardBuildPassed: boolean;
+  readonly mobileTypecheckPassed: boolean;
+  readonly staticContractPassed: boolean;
+  readonly notificationRoutesPassed: boolean;
+  readonly providerWebhookRoutesPassed: boolean;
+  readonly bookingRouteRuntimeSmokePassed: boolean;
+  readonly depositRouteRuntimeSmokePassed: boolean;
+  readonly dashboardTemplateSmokePassed: boolean;
+  readonly dashboardMessageSmokePassed: boolean;
+  readonly dashboardProviderDisabledPassed: boolean;
+  readonly mobileNotificationScreenPassed: boolean;
+  readonly expoSimulatorSmokePassed: boolean;
+  readonly expoDeviceSmokePassed: boolean;
+  readonly bookingToNotificationRuntimePassed: boolean;
+  readonly providerDisabledRuntimeProofCaptured: boolean;
+  readonly ciEvidenceCaptured: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly Phase9AppRuntimeBuildEvidenceArtifact[];
+}
+
+export const phase9AppRuntimeBuildDecisionRequiredEvidence = [
+  "web build, dashboard build, and mobile typecheck output",
+  "Phase 9 API route and booking/deposit runtime smoke output",
+  "dashboard templates/messages Playwright smoke and provider-disabled state evidence",
+  "mobile notification screen simulator and device smoke evidence",
+  "booking-to-notification runtime, provider-disabled, artifact, and CI required-gate evidence",
+  "secret-safe review of retained Phase 9 app runtime/build artifacts",
+] as const;
+
+export interface Phase9AppRuntimeBuildEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly Phase9AppRuntimeBuildEvidenceArtifact[];
+  readonly requiredCommands: typeof phase9AppRuntimeBuildRuntimeCommands;
+  readonly requiredEvidence: typeof phase9AppRuntimeBuildDecisionRequiredEvidence;
+  readonly redactedSummary: {
+    readonly capturedArtifactCount: number;
+    readonly requiredArtifactCount: number;
+  };
+}
+
+export const buildPhase9AppRuntimeBuildEvidenceDecision = (
+  input: Phase9AppRuntimeBuildEvidenceInput,
+): Phase9AppRuntimeBuildEvidenceDecision => {
+  const captured = new Set(input.capturedArtifacts);
+  const missingArtifacts = phase9AppRuntimeBuildRuntimeArtifactPaths.filter((artifact) => !captured.has(artifact));
+  const blockers = [
+    ...(!input.testingTypecheckPassed ? ["@inkroute/testing typecheck evidence is missing."] : []),
+    ...(!input.testingTestsPassed ? ["@inkroute/testing test evidence is missing."] : []),
+    ...(!input.webBuildPassed ? ["Web build evidence is missing."] : []),
+    ...(!input.dashboardBuildPassed ? ["Dashboard build evidence is missing."] : []),
+    ...(!input.mobileTypecheckPassed ? ["Mobile typecheck evidence is missing."] : []),
+    ...(!input.staticContractPassed ? ["Phase 9 app runtime static contract evidence is missing."] : []),
+    ...(!input.notificationRoutesPassed ? ["Phase 9 notification route evidence is missing."] : []),
+    ...(!input.providerWebhookRoutesPassed ? ["Phase 9 provider webhook route evidence is missing."] : []),
+    ...(!input.bookingRouteRuntimeSmokePassed ? ["Booking route runtime smoke evidence is missing."] : []),
+    ...(!input.depositRouteRuntimeSmokePassed ? ["Deposit route runtime smoke evidence is missing."] : []),
+    ...(!input.dashboardTemplateSmokePassed ? ["Dashboard template Playwright smoke evidence is missing."] : []),
+    ...(!input.dashboardMessageSmokePassed ? ["Dashboard message Playwright smoke evidence is missing."] : []),
+    ...(!input.dashboardProviderDisabledPassed ? ["Dashboard provider-disabled runtime evidence is missing."] : []),
+    ...(!input.mobileNotificationScreenPassed ? ["Mobile notification screen evidence is missing."] : []),
+    ...(!input.expoSimulatorSmokePassed ? ["Expo simulator notification smoke evidence is missing."] : []),
+    ...(!input.expoDeviceSmokePassed ? ["Expo device notification smoke evidence is missing."] : []),
+    ...(!input.bookingToNotificationRuntimePassed
+      ? ["Booking-to-notification runtime smoke evidence is missing."]
+      : []),
+    ...(!input.providerDisabledRuntimeProofCaptured
+      ? ["Provider-disabled runtime proof is missing."]
+      : []),
+    ...(!input.ciEvidenceCaptured ? ["Phase 9 app runtime/build CI evidence is missing."] : []),
+    ...(!input.secretSafeArtifactReviewPassed
+      ? ["Secret-safe Phase 9 runtime/build artifact review evidence is missing."]
+      : []),
+    ...(missingArtifacts.length > 0 ? ["All Phase 9 app runtime/build artifacts must be captured."] : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: phase9AppRuntimeBuildRuntimeCommands,
+    requiredEvidence: phase9AppRuntimeBuildDecisionRequiredEvidence,
+    redactedSummary: {
+      capturedArtifactCount: captured.size,
+      requiredArtifactCount: phase9AppRuntimeBuildRuntimeArtifactPaths.length,
+    },
+  };
+};
+
 export const phase9AppRuntimeBuildRuntimeMatrix = [
   { id: "testing-typecheck", command: "pnpm --filter @inkroute/testing typecheck", artifact: "coverage/phase9-testing-package-typecheck.txt", status: "wired" },
   { id: "testing-tests", command: "pnpm --filter @inkroute/testing test", artifact: "coverage/phase9-testing-package-test.txt", status: "wired" },
@@ -79,3 +307,5 @@ export const phase9AppRuntimeBuildRuntimeMatrix = [
 
 export const phase9AppRuntimeBuildRuntimeReadiness = phase9AppRuntimeBuildContract;
 export const phase9AppRuntimeBuildSurfaceIds = phase9AppRuntimeSurfaces.map((surface) => surface.id);
+
+

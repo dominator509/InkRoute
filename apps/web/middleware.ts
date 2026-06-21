@@ -16,6 +16,7 @@ const sessionCookieNames = [
 ];
 const mutatingMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const providerConnectSources = ["https://sentry.io", "https://api.stripe.com"];
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
 function runtimeEnvironment(): RuntimeEnvironment {
   if (process.env.VERCEL_ENV === "production") return "production";
@@ -114,7 +115,7 @@ export function middleware(request: NextRequest) {
             message: "Cookie-authenticated mutations require a valid CSRF token.",
           },
         },
-        { status: 403 },
+        { status: 403, headers: noStoreHeaders },
       ),
       request,
     );

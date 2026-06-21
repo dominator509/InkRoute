@@ -11,21 +11,58 @@ function redactEmail(value: string | null | undefined): string | null {
   return `${local.slice(0, 1)}***@${domain}`;
 }
 
+function optionalSettingString(value: unknown, maxLength: number): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  return trimmed.slice(0, maxLength);
+}
+
+function settingsMutationBody(value: unknown) {
+  const body = typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  return {
+    tenantId: optionalSettingString(body.tenantId, 160),
+    publicSiteName: optionalSettingString(body.publicSiteName, 160),
+    primaryLocale: optionalSettingString(body.primaryLocale, 32),
+    defaultTimezone: optionalSettingString(body.defaultTimezone, 120),
+    idempotencyKey: optionalSettingString(body.idempotencyKey, 180),
+  };
+}
+
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
     assertPermission(actor, "tenant:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read tenant settings." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read tenant settings." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const params = new URL(request.url).searchParams;
   const tenantId = params.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query settings for another tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query settings for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
+            message: "Production dashboard settings reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
+            gapIds: ["GAP-003", "GAP-007", "GAP-037", "GAP-040"],
+          },
+          productionBoundary: { localDashboardReadFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     return NextResponse.json(
       {
         ok: true,
@@ -38,7 +75,7 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-003", "GAP-007", "GAP-037", "GAP-040"],
         boundary: "Local fallback returns demo tenant settings only; database mode is required for live settings reads.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   }
 
@@ -112,7 +149,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (result.status === "not_found") {
-      return NextResponse.json({ ok: false, error: { code: "TENANT_NOT_FOUND", message: "Tenant settings were not found." } }, { status: 404 });
+      return NextResponse.json({ ok: false, error: { code: "TENANT_NOT_FOUND", message: "Tenant settings were not found." } }, { status: 404, headers: noStoreHeaders });
     }
 
     return NextResponse.json(
@@ -183,7 +220,7 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-003", "GAP-007", "GAP-037", "GAP-040"],
         boundary: "Dashboard settings reads are tenant-scoped, credential-safe, no-store, and audited; settings mutations and provider secret handling remain gated.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
@@ -195,10 +232,136 @@ export async function GET(request: NextRequest) {
           error: { code: "DATABASE_UNAVAILABLE", message: "Settings reads require the dashboard database connection." },
           gapIds: ["GAP-003", "GAP-007", "GAP-037", "GAP-040"],
         },
-        { status: 503, headers: { "Cache-Control": "no-store" } },
+        { status: 503, headers: noStoreHeaders },
       );
     }
 
-    return NextResponse.json({ ok: false, error: { code: "SETTINGS_READ_FAILED", message: "Tenant settings could not be loaded." } }, { status: 500 });
+    return NextResponse.json({ ok: false, error: { code: "SETTINGS_READ_FAILED", message: "Tenant settings could not be loaded." } }, { status: 500, headers: noStoreHeaders });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  const actor = resolveDashboardActor(request);
+  try {
+    assertPermission(actor, "tenant:write");
+    assertPermission(actor, "settings:write");
+  } catch {
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to update tenant settings." } }, { status: 403, headers: noStoreHeaders });
+  }
+
+  const body = settingsMutationBody(await request.json().catch(() => ({})));
+  const tenantId = body.tenantId ?? actor.tenantId;
+  if (tenantId !== actor.tenantId) {
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot update settings for another tenant." } }, { status: 403, headers: noStoreHeaders });
+  }
+
+  const update = {
+    ...(body.publicSiteName ? { publicSiteName: body.publicSiteName } : {}),
+    ...(body.primaryLocale ? { primaryLocale: body.primaryLocale } : {}),
+    ...(body.defaultTimezone ? { defaultTimezone: body.defaultTimezone } : {}),
+  };
+
+  if (Object.keys(update).length === 0) {
+    return NextResponse.json({ ok: false, error: { code: "VALIDATION_FAILED", message: "At least one safe tenant setting is required." } }, { status: 400, headers: noStoreHeaders });
+  }
+
+  if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_SETTINGS_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production settings writes require DB-backed actor resolution, tenant-scoped persistence, idempotency, and audit logs; local fallback setting plans are disabled.",
+            gapIds: ["GAP-007", "GAP-038", "GAP-040"],
+          },
+          productionBoundary: { localSettingsWriteFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId,
+        persistence: "dry-run",
+        action: "update_settings",
+        update,
+        boundary: "Local fallback returns a settings mutation contract with validated safe profile metadata; database mode is required to commit settings writes.",
+        gapIds: ["GAP-007", "GAP-038", "GAP-040"],
+      },
+      { status: 202, headers: noStoreHeaders },
+    );
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const tenant = await tx.tenant.update({
+        where: { id: tenantId },
+        data: update,
+        select: { id: true, publicSiteName: true, primaryLocale: true, defaultTimezone: true, updatedAt: true },
+      });
+
+      const audit = await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorUserId: actor.actorUserId,
+          action: "settings:update",
+          entityType: "Tenant",
+          entityId: tenant.id,
+          metadata: {
+            source: "dashboard-api",
+            dashboardMutationAction: "update_settings",
+            idempotencyKey: request.headers.get("idempotency-key") ?? body.idempotencyKey ?? null,
+            updatedFields: Object.keys(update),
+            rejectedFields: ["providerSecrets", "credentials", "legalPolicyCopy", "memberInvites", "customRoles"],
+            rawSecretsStored: false,
+          },
+        },
+        select: { id: true },
+      });
+
+      return { tenant, audit };
+    });
+
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId,
+        persistence: "database",
+        action: "update_settings",
+        tenant: {
+          id: result.tenant.id,
+          publicSiteName: result.tenant.publicSiteName,
+          primaryLocale: result.tenant.primaryLocale,
+          defaultTimezone: result.tenant.defaultTimezone,
+          updatedAt: result.tenant.updatedAt.toISOString(),
+        },
+        auditId: result.audit.id,
+        boundary: "Settings writes are limited to safe tenant profile metadata; provider secrets, member invites, custom roles, and legal policy copy remain gated.",
+        gapIds: ["GAP-007", "GAP-038", "GAP-040"],
+      },
+      { headers: noStoreHeaders },
+    );
+  } catch (error) {
+    if (isDatabaseUnavailable(error)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: { code: "DATABASE_UNAVAILABLE", message: "Settings writes require the dashboard database connection." },
+          gapIds: ["GAP-007", "GAP-038", "GAP-040"],
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
+    return NextResponse.json({ ok: false, error: { code: "SETTINGS_WRITE_FAILED", message: "Tenant settings could not be updated." } }, { status: 500, headers: noStoreHeaders });
   }
 }

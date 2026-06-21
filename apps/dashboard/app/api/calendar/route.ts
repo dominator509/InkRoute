@@ -13,23 +13,42 @@ function redactProviderPayload(value: unknown): Record<string, unknown> | null {
   );
 }
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
     assertPermission(actor, "calendar:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read calendar data." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read calendar data." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const params = new URL(request.url).searchParams;
   const tenantId = params.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query calendar data for another tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query calendar data for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const limit = Math.min(Math.max(Number(params.get("limit") ?? 50), 1), 100);
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
+            message: "Production dashboard calendar reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
+            gapIds: ["GAP-007", "GAP-037", "GAP-055", "GAP-056", "GAP-057", "GAP-058"],
+          },
+          productionBoundary: { localDashboardReadFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     return NextResponse.json(
       {
         ok: true,
@@ -42,7 +61,7 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-007", "GAP-037", "GAP-055", "GAP-056", "GAP-057", "GAP-058"],
         boundary: "Local fallback returns demo calendar data only; database mode is required for live calendar reads.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   }
 
@@ -174,7 +193,7 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-007", "GAP-037", "GAP-055", "GAP-056", "GAP-057", "GAP-058"],
         boundary: "Dashboard calendar reads are tenant-scoped, provider-secret safe, no-store, and audited; OAuth sync and provider mutations remain gated.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
@@ -186,10 +205,10 @@ export async function GET(request: NextRequest) {
           error: { code: "DATABASE_UNAVAILABLE", message: "Calendar reads require the dashboard database connection." },
           gapIds: ["GAP-007", "GAP-037", "GAP-055", "GAP-056", "GAP-057", "GAP-058"],
         },
-        { status: 503, headers: { "Cache-Control": "no-store" } },
+        { status: 503, headers: noStoreHeaders },
       );
     }
 
-    return NextResponse.json({ ok: false, error: { code: "CALENDAR_READ_FAILED", message: "Calendar data could not be loaded." } }, { status: 500 });
+    return NextResponse.json({ ok: false, error: { code: "CALENDAR_READ_FAILED", message: "Calendar data could not be loaded." } }, { status: 500, headers: noStoreHeaders });
   }
 }

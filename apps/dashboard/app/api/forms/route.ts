@@ -37,23 +37,42 @@ function redactQuestionOptions(value: unknown): Record<string, unknown> | null {
   );
 }
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
     assertPermission(actor, "form:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read forms." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read forms." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const params = new URL(request.url).searchParams;
   const tenantId = params.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query forms for another tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query forms for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const limit = Math.min(Math.max(Number(params.get("limit") ?? 50), 1), 100);
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
+            message: "Production dashboard form reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
+            gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
+          },
+          productionBoundary: { localDashboardReadFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     return NextResponse.json(
       {
         ok: true,
@@ -64,7 +83,7 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
         boundary: "Local fallback returns redacted demo form metadata only; database mode is required for live intake and consent reads.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   }
 
@@ -184,7 +203,7 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
         boundary: "Dashboard form reads expose metadata, question structure, counts, and review status only; raw answers, signatures, signer contact data, IP hashes, user agents, file asset ids, and medical acknowledgment payloads remain redacted.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
@@ -196,10 +215,10 @@ export async function GET(request: NextRequest) {
           error: { code: "DATABASE_UNAVAILABLE", message: "Form reads require the dashboard database connection." },
           gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
         },
-        { status: 503, headers: { "Cache-Control": "no-store" } },
+        { status: 503, headers: noStoreHeaders },
       );
     }
 
-    return NextResponse.json({ ok: false, error: { code: "FORM_READ_FAILED", message: "Forms could not be loaded." } }, { status: 500 });
+    return NextResponse.json({ ok: false, error: { code: "FORM_READ_FAILED", message: "Forms could not be loaded." } }, { status: 500, headers: noStoreHeaders });
   }
 }

@@ -1,4 +1,4 @@
-import { buildOfflineRuntimeReadinessPlan } from "@inkroute/mobile-support";
+﻿import { buildOfflineRuntimeReadinessPlan } from "@inkroute/mobile-support";
 
 export type OfflineSyncRuntimeStatus =
   | "wired"
@@ -44,6 +44,114 @@ export const offlineSyncArtifactPaths = [
   "coverage/mobile-offline-sync-airplane-mode-redacted.json",
   "coverage/mobile-offline-sync-secret-safe-artifacts.json",
   "test-results/mobile-offline-sync-runtime",
+] as const;
+
+export const offlineSyncRuntimeProofFiles = [
+  "apps/mobile/package.json",
+  "packages/mobile/package.json",
+  "packages/mobile/src/index.ts",
+  "packages/mobile/tests/mobile-support.test.ts",
+  "apps/mobile/src/lib/offlineSync.ts",
+  "apps/mobile/src/lib/offlineSyncRuntime.ts",
+  "apps/mobile/src/lib/mobileApiClient.ts",
+  "apps/mobile/src/screens/OfflineNotesScreen.tsx",
+  "apps/mobile/tests/offline-sync-static.test.ts",
+  "apps/mobile/tests/offline-sync-runtime-static.test.ts",
+  "testing/manifests/unit-test-manifest.json",
+  ".github/workflows/ci.yml",
+] as const;
+
+export const offlineSyncEvidenceFlags = [
+  "mobileSupportTypecheckPassed",
+  "mobileSupportTestsPassed",
+  "mobileTypecheckPassed",
+  "mobileTestsPassed",
+  "encryptedStoreAdapterVerified",
+  "sensitiveAtRestEncryptionVerified",
+  "deviceRestartPersistenceTested",
+  "reconnectSyncWorkerScheduled",
+  "retryBackoffTested",
+  "serverConflictResolutionTested",
+  "idempotencyPersistenceVerified",
+  "auditPersistenceVerified",
+  "airplaneModeReconnectTested",
+  "ciEvidenceCaptured",
+  "secretSafeArtifactsCaptured",
+] as const;
+
+export type OfflineSyncEvidenceFlag = (typeof offlineSyncEvidenceFlags)[number];
+
+export interface OfflineSyncExecutionPolicy {
+  readonly codexMayClassifyStaticOfflineSyncReadiness: true;
+  readonly encryptedStoreRequiredForClosure: true;
+  readonly restartPersistenceRequiredForClosure: true;
+  readonly reconnectWorkerRequiredForClosure: true;
+  readonly serverConflictTestsRequiredForClosure: true;
+  readonly auditPersistenceRequiredForClosure: true;
+  readonly secretSafeArtifactsRequiredForClosure: true;
+}
+
+export interface OfflineSyncExecutionPlan {
+  readonly policy: typeof offlineSyncExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly encryptedStoreExecutionAllowed: false;
+  readonly deviceRestartExecutionAllowed: false;
+  readonly reconnectWorkerExecutionAllowed: false;
+  readonly serverConflictExecutionAllowed: false;
+  readonly auditPersistenceExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly localCommands: typeof offlineSyncLocalCommands;
+  readonly externalCommands: typeof offlineSyncExternalCommands;
+  readonly requiredExternalEvidence: typeof offlineSyncRequiredExternalEvidence;
+}
+
+export interface OfflineSyncArtifactReview {
+  readonly artifact: unknown;
+  readonly redactedArtifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: boolean;
+  readonly requiredExternalEvidence: typeof offlineSyncRequiredExternalEvidence;
+}
+
+export interface OfflineSyncEvidenceInput {
+  readonly commands?: readonly string[];
+  readonly artifacts?: readonly string[];
+  readonly evidence?: Partial<Record<OfflineSyncEvidenceFlag, boolean>>;
+}
+
+export interface OfflineSyncEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly requiredCommands: typeof offlineSyncRuntimeCommands;
+  readonly missingCommands: readonly string[];
+  readonly requiredArtifacts: typeof offlineSyncArtifactPaths;
+  readonly missingArtifacts: readonly string[];
+  readonly requiredEvidence: typeof offlineSyncEvidenceFlags;
+  readonly missingEvidence: readonly OfflineSyncEvidenceFlag[];
+  readonly blockers: readonly string[];
+}
+
+export const offlineSyncExecutionPolicy = {
+  codexMayClassifyStaticOfflineSyncReadiness: true,
+  encryptedStoreRequiredForClosure: true,
+  restartPersistenceRequiredForClosure: true,
+  reconnectWorkerRequiredForClosure: true,
+  serverConflictTestsRequiredForClosure: true,
+  auditPersistenceRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies OfflineSyncExecutionPolicy;
+
+export const offlineSyncRequiredExternalEvidence = [
+  "real Expo SecureStore/encrypted SQLite adapter proof",
+  "encrypted at-rest offline queue proof",
+  "device restart persistence proof",
+  "reconnect worker scheduling proof",
+  "server stale-mutation conflict test output",
+  "idempotency persistence proof",
+  "offline sync audit persistence proof",
+  "airplane-mode reconnect evidence",
+  "mobile typecheck/test output",
+  "CI offline sync evidence",
+  "secret-safe offline sync artifact review",
 ] as const;
 
 export const offlineSyncRuntimeMatrix = [
@@ -155,3 +263,118 @@ export const offlineSyncRuntimeReadiness = buildOfflineRuntimeReadinessPlan({
   auditTrailPersistenceConfigured: false,
   offlineReconnectDeviceTested: false,
 });
+
+const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
+  const actualSet = new Set(actual ?? []);
+  return required.filter((entry) => !actualSet.has(entry));
+};
+
+const sensitiveOfflineSyncArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|securestore|sqlite|encrypted|device|queue|payload|idempotency|offline|sync|audit|conflict|email|phone|medical|payment)/i;
+
+const redactOfflineSyncArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactOfflineSyncArtifactValue(entry, `${path}.${index}`, redactedPaths));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (sensitiveOfflineSyncArtifactKey.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[REDACTED]"];
+        }
+        return [key, redactOfflineSyncArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const offlineSyncLocalCommands = [
+  "pnpm --filter @inkroute/mobile-support typecheck",
+  "pnpm --filter @inkroute/mobile-support test",
+  "static offline sync adapter and worker contract review",
+  "static offline sync audit redaction review",
+] as const;
+
+export const offlineSyncExternalCommands = [
+  "pnpm --filter @inkroute/mobile typecheck",
+  "pnpm --filter @inkroute/mobile test",
+  "Expo SecureStore/encrypted SQLite adapter proof",
+  "encrypted at-rest offline queue proof",
+  "Expo offline restart persistence smoke test",
+  "Expo airplane-mode reconnect sync smoke test",
+  "server stale-mutation conflict tests",
+  "offline sync audit persistence proof",
+  "GitHub Actions mobile offline sync evidence job",
+] as const;
+
+export const buildOfflineSyncExecutionPlan = (): OfflineSyncExecutionPlan => ({
+  policy: offlineSyncExecutionPolicy,
+  commandExecutionAllowed: false,
+  encryptedStoreExecutionAllowed: false,
+  deviceRestartExecutionAllowed: false,
+  reconnectWorkerExecutionAllowed: false,
+  serverConflictExecutionAllowed: false,
+  auditPersistenceExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  localCommands: offlineSyncLocalCommands,
+  externalCommands: offlineSyncExternalCommands,
+  requiredExternalEvidence: offlineSyncRequiredExternalEvidence,
+});
+
+export const buildRedactedOfflineSyncArtifact = (artifact: unknown): Pick<OfflineSyncArtifactReview, "redactedArtifact" | "redactedPaths"> => {
+  const redactedPaths: string[] = [];
+  return {
+    redactedArtifact: redactOfflineSyncArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+  };
+};
+
+export const buildOfflineSyncArtifactReview = (artifact: unknown): OfflineSyncArtifactReview => {
+  const redacted = buildRedactedOfflineSyncArtifact(artifact);
+  return {
+    artifact,
+    redactedArtifact: redacted.redactedArtifact,
+    redactedPaths: redacted.redactedPaths,
+    secretSafe: redacted.redactedPaths.length > 0,
+    requiredExternalEvidence: offlineSyncRequiredExternalEvidence,
+  };
+};
+
+export const buildOfflineSyncEvidenceDecision = (
+  input: OfflineSyncEvidenceInput = {},
+): OfflineSyncEvidenceDecision => {
+  const missingCommands = missingFrom(input.commands, offlineSyncRuntimeCommands);
+  const missingArtifacts = missingFrom(input.artifacts, offlineSyncArtifactPaths);
+  const missingEvidence = offlineSyncEvidenceFlags.filter((flag) => input.evidence?.[flag] !== true);
+  const blockers = [
+    missingCommands.length > 0 ? "Pinned offline sync commands must be run and captured." : "",
+    missingArtifacts.length > 0
+      ? "Offline sync artifacts must be retained with encrypted-store, reconnect, conflict, audit, CI, and secret-safe evidence."
+      : "",
+    missingEvidence.length > 0
+      ? "Encrypted at-rest storage, restart persistence, reconnect worker, retry/idempotency, conflict, audit, CI, and secret-safe evidence must pass."
+      : "",
+  ].filter(Boolean);
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    requiredCommands: offlineSyncRuntimeCommands,
+    missingCommands,
+    requiredArtifacts: offlineSyncArtifactPaths,
+    missingArtifacts,
+    requiredEvidence: offlineSyncEvidenceFlags,
+    missingEvidence,
+    blockers,
+  };
+};
+
+
+

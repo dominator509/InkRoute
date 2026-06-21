@@ -4,17 +4,39 @@ import { resolve } from "node:path";
 import {
   buildMobileApiRuntimeReadinessPlan,
   buildMobileApiRequestPlan,
+  buildMobileBookingLifecycleActionContract,
   buildMobileDeviceQaChecklist,
   buildMobileDeviceQaRuntimeReadinessPlan,
   buildMobileLaunchEvidencePlan,
   buildMobileRuntimeReadinessPlan,
   buildMobileScreenSyncRequirements,
+  buildMobileCrashCaptureContract,
+  buildMobileOtaRollbackContract,
+  buildMobilePushLocalContract,
+  buildMobileSecureSessionContract,
   buildMobileTestingExecutionReadinessPlan,
+  buildMobileTravelPublishContract,
+  buildMobileUploadIntentContract,
+  buildMobileUploadObjectKey,
+  buildOfflineQueueRepositoryContract,
+  buildOfflineSyncAuditEvent,
   getMobileScreen,
   buildOfflineIdempotencyKey,
   buildOfflineRuntimeReadinessPlan,
   calculateOfflineRetryDelayMinutes,
+  mobileApiRuntimeRequiredCommands,
+  mobileApiRuntimeRequiredEvidence,
+  mobileDeviceQaRuntimeReadinessRequiredCommands,
+  mobileDeviceQaRuntimeReadinessRequiredEvidence,
+  mobileLaunchEvidenceRequiredCommands,
+  mobileLaunchEvidenceRequiredEvidence,
+  mobileRuntimeReadinessRequiredCommands,
+  mobileRuntimeReadinessRequiredControls,
   mobileScreenRegistry,
+  mobileTestingExecutionReadinessRequiredCommands,
+  mobileTestingExecutionReadinessRequiredEvidence,
+  offlineRuntimeRequiredCommands,
+  offlineRuntimeRequiredEvidence,
   phase6HealthChecks,
   phase6MobileBoundaries,
   planOfflineSync,
@@ -46,15 +68,185 @@ describe("mobile support helpers", () => {
       "system",
     ]);
     expect(new Set(ids).size).toBe(ids.length);
+    expect(mobileScreenRegistry.find((screen) => screen.id === "bookings")?.phase6Status).toBe("local-contract-boundary");
+    expect(mobileScreenRegistry.find((screen) => screen.id === "travel")?.summary).toContain("package-backed travel publish contract");
+    expect(mobileScreenRegistry.find((screen) => screen.id === "portfolio")?.summary).toContain("upload-intent contract");
+    expect(mobileScreenRegistry.find((screen) => screen.id === "offline")?.summary).toContain("shared repository");
+    expect(mobileScreenRegistry.find((screen) => screen.id === "offline")?.summary).not.toContain("no durable local store wired yet");
   });
 
   it("returns screen metadata and rejects unknown ids", () => {
     expect(getMobileScreen("offline")).toMatchObject({
       id: "offline",
-      phase6Status: "scaffolded-boundary",
+      phase6Status: "local-contract-boundary",
     });
 
     expect(() => getMobileScreen("unknown" as never)).toThrow("Unknown mobile screen: unknown");
+  });
+
+  it("builds a redacted local mobile secure-session contract without claiming provider login readiness", () => {
+    const blocked = buildMobileSecureSessionContract({
+      tenantId: "tenant_001",
+      userId: "user_001",
+      role: "owner",
+      accessTokenPreview: "access_***",
+      refreshTokenStored: true,
+      secureStoreAvailable: true,
+      biometricRequired: true,
+      biometricUnlocked: false,
+      expiresAt: "2026-06-09T23:59:59.000Z",
+      now: "2026-06-09T00:00:00.000Z",
+    });
+    const unsafe = buildMobileSecureSessionContract({
+      tenantId: "",
+      userId: "",
+      role: "viewer",
+      accessTokenPreview: "raw-token",
+      refreshTokenStored: false,
+      secureStoreAvailable: false,
+      biometricRequired: false,
+      biometricUnlocked: false,
+      expiresAt: "2026-06-08T00:00:00.000Z",
+      now: "2026-06-09T00:00:00.000Z",
+    });
+
+    expect(blocked).toMatchObject({
+      status: "blocked",
+      tenantScoped: true,
+      secureStoreRequired: true,
+      biometricGateRequired: true,
+      providerLoginRuntimeGated: true,
+      tokenMaterialRedacted: true,
+      blockers: ["Biometric unlock is required before this mobile session can access tenant data."],
+      requiredEvidence: ["biometric unlock proof"],
+    });
+    expect(unsafe.blockers).toEqual([
+      "Tenant scope is required before mobile session access.",
+      "User id is required before mobile session access.",
+      "Mobile access token material must be redacted in local contracts.",
+      "Refresh token storage must be available before mobile session recovery.",
+      "Expo SecureStore or equivalent encrypted storage must be available before production session use.",
+      "Mobile session is expired and must refresh or sign in again.",
+    ]);
+  });
+
+  it("builds a local mobile crash capture contract without claiming Sentry or device proof", () => {
+    const contract = buildMobileCrashCaptureContract({
+      fallbackReporterConfigured: true,
+      offlineBufferConfigured: true,
+      beforeSendRedactionConfigured: true,
+      sourceMapsUploaded: false,
+      debugSymbolsUploaded: false,
+      forcedCrashProofCaptured: false,
+      providerPayloadNoPiiVerified: false,
+    });
+
+    expect(contract).toMatchObject({
+      status: "blocked",
+      localFallbackReady: true,
+      providerCaptureRuntimeGated: true,
+      deviceProofRuntimeGated: true,
+      redactionRequired: true,
+    });
+    expect(contract.blockers).toEqual([
+      "Expo source maps must upload before provider crash resolution is production-ready.",
+      "React Native debug symbols must upload before provider crash resolution is production-ready.",
+      "Forced simulator/device crash proof must be captured before closure.",
+      "Provider payloads must be proven free of PII, medical, payment, token, and private URL values.",
+    ]);
+    expect(contract.requiredEvidence).toEqual([
+      "source-map and debug-symbol upload proof",
+      "forced simulator/device crash proof",
+      "no-PII provider payload proof",
+    ]);
+  });
+
+  it("builds a local OTA rollback contract without claiming EAS provider proof", () => {
+    const blocked = buildMobileOtaRollbackContract({
+      runtimeVersion: "1.0.0",
+      channel: "preview",
+      currentUpdateId: undefined,
+      previousCompatibleUpdateId: undefined,
+      redactedDeviceReceipts: 0,
+      failedReceipts: 1,
+      rollbackRepublishCommandRecorded: false,
+      easProjectConfigured: false,
+    });
+    const readyLocalContract = buildMobileOtaRollbackContract({
+      runtimeVersion: "1.0.0",
+      channel: "preview",
+      currentUpdateId: "update_preview_001",
+      previousCompatibleUpdateId: "update_previous_001",
+      redactedDeviceReceipts: 3,
+      failedReceipts: 1,
+      rollbackRepublishCommandRecorded: true,
+      easProjectConfigured: true,
+    });
+
+    expect(blocked.rollbackCommand).toBe("eas update --channel preview --message rollback-republish-drill --non-interactive");
+    expect(blocked).toMatchObject({
+      status: "blocked",
+      providerExecutionGated: true,
+      redactedAdoptionOnly: true,
+      rollbackTargetUpdateId: null,
+    });
+    expect(blocked.requiredEvidence).toEqual([
+      "EAS project/update id proof",
+      "redacted OTA adoption and failure proof",
+      "rollback republish proof",
+    ]);
+    expect(readyLocalContract).toMatchObject({
+      status: "ready",
+      providerExecutionGated: true,
+      redactedAdoptionOnly: true,
+      rollbackTargetUpdateId: "update_previous_001",
+      blockers: [],
+      requiredEvidence: [],
+    });
+  });
+
+  it("builds a local mobile push contract without claiming Expo credentials or device QA", () => {
+    const contract = buildMobilePushLocalContract({
+      permissionRuntimeImplemented: true,
+      tokenRegistrationRuntimeImplemented: true,
+      optOutPersistenceContract: true,
+      receiptIdempotencyContract: true,
+      invalidTokenSuppressionContract: true,
+      safeTapRoutingContract: true,
+      auditLogContract: true,
+      expoCredentialsConfigured: false,
+      foregroundBackgroundDeviceQaPassed: false,
+    });
+
+    expect(contract).toMatchObject({
+      status: "blocked",
+      localContractReady: true,
+      providerExecutionGated: true,
+      deviceQaGated: true,
+      requiredEvidence: ["Expo push credential proof", "foreground/background/tap device QA proof"],
+    });
+    expect(contract.blockers).toEqual([
+      "Expo project/access token and APNs/FCM credentials remain provider-gated.",
+      "Foreground/background/tap push QA must pass on device before closure.",
+    ]);
+
+    const missingLocalInput = buildMobilePushLocalContract({
+      permissionRuntimeImplemented: false,
+      tokenRegistrationRuntimeImplemented: true,
+      optOutPersistenceContract: true,
+      receiptIdempotencyContract: true,
+      invalidTokenSuppressionContract: true,
+      safeTapRoutingContract: true,
+      auditLogContract: true,
+      expoCredentialsConfigured: false,
+      foregroundBackgroundDeviceQaPassed: false,
+    });
+
+    expect(missingLocalInput.localContractReady).toBe(false);
+    expect(missingLocalInput.blockers).toContain(
+      "Push permission runtime contract input is required before the local mobile push contract is ready.",
+    );
+    expect(missingLocalInput.blockers).not.toContain("Push permission runtime contract must be wired before mobile push can close.");
   });
 
   it("summarizes offline queue risk without claiming production readiness", () => {
@@ -153,6 +345,10 @@ describe("mobile support helpers", () => {
     expect(buildOfflineIdempotencyKey(items[0]!)).toBe("tenant_001:client_note:client_001:2026-06-08T00:00:00.000Z");
     expect(calculateOfflineRetryDelayMinutes(3)).toBe(8);
     expect(blocked.productionReady).toBe(false);
+    expect(blocked.warning).toBe(
+      "Offline sync planning and app-side worker contract are wired; encrypted device persistence, server conflict integration, and reconnect proof remain runtime-gated.",
+    );
+    expect(blocked.warning).not.toContain("runtime worker execution remain unimplemented");
     expect(blocked.blockedCount).toBe(1);
     expect(blocked.conflictCount).toBe(1);
     expect(blocked.decisions.find((decision) => decision.itemId === "sensitive_1")).toMatchObject({
@@ -173,6 +369,50 @@ describe("mobile support helpers", () => {
     });
     expect(encrypted.readyCount).toBe(1);
     expect(encrypted.decisions[0]?.status).toBe("ready_to_sync");
+  });
+
+  it("defines a local offline repository and redacted audit contract without claiming device persistence", () => {
+    const contract = buildOfflineQueueRepositoryContract({
+      adapter: "memory-contract",
+      encryptedAtRest: false,
+      restartPersistence: false,
+      auditTrailPersistence: true,
+      idempotentReplay: true,
+      syncWorker: true,
+    });
+    const item: OfflineQueueItem = {
+      id: "offline_sensitive_1",
+      kind: "client_note",
+      label: "Sensitive client note",
+      status: "queued",
+      createdAt: "2026-06-08T01:00:00.000Z",
+      retryCount: 0,
+      sensitive: true,
+      tenantId: "tenant_001",
+      entityId: "client_001",
+    };
+    const [decision] = planOfflineSync({
+      items: [item],
+      generatedAt: "2026-06-08T01:05:00.000Z",
+      encryptedStoreAvailable: false,
+    }).decisions;
+
+    expect(contract).toMatchObject({
+      adapter: "memory-contract",
+      productionReady: false,
+      auditTrailPersistence: true,
+      idempotentReplay: true,
+      syncWorker: true,
+    });
+    expect(contract.requiredEvidence).toEqual([
+      "encrypted offline storage adapter and at-rest encryption proof",
+      "device restart and airplane-mode reconnect evidence",
+    ]);
+    expect(buildOfflineSyncAuditEvent(item, decision!, "2026-06-08T01:05:00.000Z")).toMatchObject({
+      decision: "blocked_unencrypted",
+      sensitive: true,
+      redactedDetail: "Sensitive offline payload redacted.",
+    });
   });
 
   it("blocks offline runtime readiness until encrypted persistence, worker replay, conflicts, and audit evidence exist", () => {
@@ -198,12 +438,8 @@ describe("mobile support helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toContain("Expo airplane-mode reconnect sync smoke test");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "encrypted offline storage adapter and at-rest encryption proof",
-      "runtime sync worker retry and idempotent replay test output",
-      "server conflict-resolution test output",
-    ]));
+    expect(plan.requiredCommands).toBe(offlineRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(offlineRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("Offline idempotency keys must persist through replay and restart.");
     expect(plan.blockers).toContain("Offline sync attempts, conflicts, retries, and drops must persist audit events.");
   });
@@ -315,6 +551,176 @@ describe("mobile support helpers", () => {
     );
   });
 
+  it("builds a local mobile booking lifecycle action contract while keeping provider execution gated", () => {
+    const contract = buildMobileBookingLifecycleActionContract({
+      tenantId: "tenant_001",
+      bookingId: "booking_001",
+      requestId: "req_booking_001",
+      idempotencyKey: "idem_booking_001",
+      action: "accept",
+      authenticatedApiReady: true,
+      stateEventContractReady: true,
+      calendarConflictCheckReady: true,
+      notificationHandoffReady: true,
+      auditLogContractReady: true,
+      providerExecutionVerified: false,
+    });
+
+    expect(contract).toMatchObject({
+      status: "blocked",
+      localContractReady: true,
+      providerExecutionGated: true,
+      endpoint: "/api/mobile/bookings/:id/actions",
+      method: "POST",
+      action: "accept",
+      blockers: ["Provider-backed booking lifecycle execution proof remains required."],
+      requiredEvidence: ["provider-backed booking lifecycle execution proof"],
+    });
+    expect(contract.requiredHeaders).toEqual(["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"]);
+
+    const unsafe = buildMobileBookingLifecycleActionContract({
+      tenantId: "",
+      bookingId: "",
+      requestId: "",
+      idempotencyKey: "",
+      action: "decline",
+      authenticatedApiReady: false,
+      stateEventContractReady: false,
+      calendarConflictCheckReady: false,
+      notificationHandoffReady: false,
+      auditLogContractReady: false,
+      providerExecutionVerified: false,
+    });
+
+    expect(unsafe.localContractReady).toBe(false);
+    expect(unsafe.blockers).toContain("Booking id is required for booking lifecycle action.");
+    expect(unsafe.blockers).toContain(
+      "Authenticated booking lifecycle API contract input is required before the local action contract is ready.",
+    );
+    expect(unsafe.blockers).not.toContain("Authenticated booking lifecycle API contract must be wired before action execution.");
+    expect(unsafe.requiredEvidence).toEqual([
+      "authenticated booking lifecycle API contract",
+      "booking state event contract",
+      "calendar conflict check contract",
+      "booking notification handoff contract",
+      "booking lifecycle audit log contract",
+      "provider-backed booking lifecycle execution proof",
+    ]);
+  });
+
+  it("builds a local mobile travel publish contract while keeping provider execution gated", () => {
+    const contract = buildMobileTravelPublishContract({
+      tenantId: "tenant_001",
+      travelScheduleId: "travel_001",
+      citySlug: "oakland-ca",
+      requestId: "req_travel_001",
+      idempotencyKey: "idem_travel_001",
+      authenticatedApiReady: true,
+      auditLogContractReady: true,
+      publicCacheRevalidationContractReady: true,
+      notificationFanoutContractReady: true,
+      seoRevalidationContractReady: true,
+      providerExecutionVerified: false,
+    });
+
+    expect(contract).toMatchObject({
+      status: "blocked",
+      localContractReady: true,
+      providerExecutionGated: true,
+      endpoint: "/api/mobile/travel-stops/:id/publish",
+      method: "POST",
+      blockers: ["Provider-backed travel publish execution proof remains required."],
+      requiredEvidence: ["provider-backed travel publish execution proof"],
+    });
+    expect(contract.requiredHeaders).toEqual(["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"]);
+
+    const unsafe = buildMobileTravelPublishContract({
+      tenantId: "",
+      travelScheduleId: "travel_001",
+      citySlug: "../oakland",
+      requestId: "",
+      idempotencyKey: "",
+      authenticatedApiReady: false,
+      auditLogContractReady: false,
+      publicCacheRevalidationContractReady: false,
+      notificationFanoutContractReady: false,
+      seoRevalidationContractReady: false,
+      providerExecutionVerified: false,
+    });
+
+    expect(unsafe.localContractReady).toBe(false);
+    expect(unsafe.blockers).toContain("Travel city slug must be normalized before publish.");
+    expect(unsafe.blockers).toContain(
+      "Authenticated mobile travel API contract input is required before the local publish contract is ready.",
+    );
+    expect(unsafe.blockers).not.toContain("Authenticated mobile travel API contract must be wired before publish.");
+    expect(unsafe.requiredEvidence).toEqual([
+      "authenticated mobile travel API contract",
+      "travel publish audit log contract",
+      "public travel cache revalidation contract",
+      "travel notification fanout contract",
+      "travel SEO revalidation contract",
+      "provider-backed travel publish execution proof",
+    ]);
+  });
+
+  it("builds tenant-scoped mobile upload intent contracts without claiming provider storage readiness", () => {
+    const contract = buildMobileUploadIntentContract({
+      tenantId: "tenant_001",
+      requestId: "req_upload_001",
+      idempotencyKey: "idem_upload_001",
+      kind: "portfolio_public",
+      filename: "Black Sun Flash.JPG",
+      mimeType: "image/jpeg",
+      sizeBytes: 950000,
+      city: "Oakland",
+      altText: "Blackwork sun flash tattoo concept",
+      styleTags: ["blackwork", "flash"],
+    });
+
+    expect(contract).toMatchObject({
+      status: "ready",
+      endpoint: "/api/mobile/portfolio/upload-intents",
+      method: "POST",
+      providerSignedUploadRequired: true,
+      providerStorageRuntimeGated: true,
+      metadataReady: true,
+      blockers: [],
+    });
+    expect(contract.requiredHeaders).toEqual(["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"]);
+    expect(contract.objectKey).toBe("tenant_001/mobile/portfolio_public/req_upload_001/black-sun-flash.jpg");
+    expect(buildMobileUploadObjectKey({
+      tenantId: "tenant_001",
+      requestId: "req_upload_002",
+      kind: "reference_private",
+      filename: "../Client Reference HEIC",
+    })).toBe("tenant_001/mobile/reference_private/req_upload_002/client-reference-heic");
+  });
+
+  it("blocks unsafe mobile upload intent contracts before provider signing", () => {
+    const contract = buildMobileUploadIntentContract({
+      tenantId: "",
+      requestId: "",
+      idempotencyKey: "",
+      kind: "portfolio_public",
+      filename: "",
+      mimeType: "application/pdf",
+      sizeBytes: 0,
+    });
+
+    expect(contract.status).toBe("blocked");
+    expect(contract.objectKey).toBeNull();
+    expect(contract.blockers).toEqual([
+      "Tenant scope is required before mobile upload intents can be requested.",
+      "Request id is required for mobile upload traceability.",
+      "Idempotency key is required before mobile upload intents can be retried safely.",
+      "Filename is required before creating a mobile upload intent.",
+      "Mobile uploads must be image MIME types before provider signing.",
+      "Mobile upload size must be positive.",
+      "Public portfolio uploads require alt text before publication.",
+    ]);
+  });
+
   it("blocks mobile API runtime readiness until typed clients, auth headers, screen wiring, and replay evidence exist", () => {
     const plan = buildMobileApiRuntimeReadinessPlan({
       packageScripts: { test: "vitest run" },
@@ -340,12 +746,8 @@ describe("mobile support helpers", () => {
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
     expect(plan.missingScreenDomains).toEqual(["appointments", "travel", "portfolio", "notifications", "releases"]);
-    expect(plan.requiredCommands).toContain("offline reconnect/replay mobile test");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "mobile screen API-client wiring matrix for bookings, appointments, clients, travel, portfolio, notifications, and releases",
-      "expired-auth and cross-tenant denial test output",
-      "offline idempotent replay test output",
-    ]));
+    expect(plan.requiredCommands).toBe(mobileApiRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(mobileApiRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("Typed Expo API client must be implemented before replacing static mobile data.");
   });
 
@@ -408,6 +810,7 @@ describe("mobile support helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck", "android"]);
+    expect(plan.requiredCommands).toBe(mobileDeviceQaRuntimeReadinessRequiredCommands);
     expect(plan.requiredCommands).toEqual(
       expect.arrayContaining([
         "pnpm --filter @inkroute/mobile-support test",
@@ -417,15 +820,7 @@ describe("mobile support helpers", () => {
         "manual physical-device QA for auth/api/offline/push/crash/OTA/accessibility",
       ]),
     );
-    expect(plan.requiredEvidence).toEqual(
-      expect.arrayContaining([
-        "Expo app component/render and static test output for every registered screen",
-        "iOS, Android, and physical device smoke screenshots or videos",
-        "VoiceOver/TalkBack, text scaling, contrast, and touch-target QA notes",
-        "offline, push, crash, and OTA rollback runtime QA transcripts",
-        "CI job links and retained mobile QA artifacts",
-      ]),
-    );
+    expect(plan.requiredEvidence).toBe(mobileDeviceQaRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Expo app component/render tests must cover registered screens.");
     expect(plan.blockers).toContain("Mobile QA artifacts must include simulator screenshots/logs, accessibility notes, provider/device transcripts, and release evidence.");
   });
@@ -438,6 +833,12 @@ describe("mobile support helpers", () => {
       "mobile-offline-store",
       "mobile-crash",
     ]);
+    expect(phase6MobileBoundaries.find((boundary) => boundary.id === "mobile-api")?.status).toBe("local-contract");
+    expect(phase6MobileBoundaries.find((boundary) => boundary.id === "mobile-auth")?.status).toBe("local-contract");
+    expect(phase6MobileBoundaries.find((boundary) => boundary.id === "mobile-push")?.status).toBe("local-contract");
+    expect(phase6MobileBoundaries.find((boundary) => boundary.id === "mobile-offline-store")?.status).toBe("local-contract");
+    expect(phase6MobileBoundaries.find((boundary) => boundary.id === "mobile-crash")?.detail).toContain("package-backed sanitized fallback/offline-buffer crash reporter contract is wired");
+    expect(phase6MobileBoundaries.find((boundary) => boundary.id === "mobile-offline-store")?.detail).toContain("encrypted SQLite/AsyncStorage persistence");
   });
 
   it("keeps runtime health checks marked as unverified or not configured", () => {
@@ -478,16 +879,17 @@ describe("mobile support helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual([]);
-    expect(plan.requiredCommands).toContain("eas build --profile preview --platform all");
-    expect(plan.requiredControls).toContain("Encrypt sensitive offline queue items and replay mutations idempotently after reconnect.");
+    expect(plan.requiredCommands).toBe(mobileRuntimeReadinessRequiredCommands);
+    expect(plan.requiredControls).toBe(mobileRuntimeReadinessRequiredControls);
     expect(plan.blockingQaItemIds).toContain("ios-screen-smoke");
     expect(plan.blockers).toEqual(expect.arrayContaining([
-      "Expo runtime has not been launched locally for this scaffold.",
+      "Expo runtime has not been launched locally for this mobile contract.",
       "Mobile auth provider/session exchange is not configured.",
       "Tenant-scoped mobile API client is not configured.",
       "Expo/EAS project id is still deployment-gated.",
       "Mobile device QA checklist still has blocking runtime/provider/manual items.",
     ]));
+    expect(plan.blockers).not.toContain("Expo runtime has not been launched locally for this scaffold.");
   });
   it("blocks mobile testing execution readiness until Expo, simulator, device, provider, OTA, accessibility, artifacts, and CI evidence exist", () => {
     const plan = buildMobileTestingExecutionReadinessPlan({
@@ -516,14 +918,8 @@ describe("mobile support helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck", "ios", "android"]);
-    expect(plan.requiredCommands).toContain("eas update --channel preview");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "Expo dependency install, runtime start, mobile typecheck, and static/security test output",
-      "iOS simulator, Android emulator, and physical device screen-smoke evidence",
-      "biometric, tenant API sync, offline reconnect, and push QA transcripts",
-      "crash capture, EAS preview/update rollback, and accessibility QA evidence",
-      "synced mobile QA checklist, retained artifacts, and CI/mobile check evidence",
-    ]));
+    expect(plan.requiredCommands).toBe(mobileTestingExecutionReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(mobileTestingExecutionReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Offline reconnect QA must prove encrypted queue persistence, idempotent replay, retry, and conflict handling.");
     expect(plan.blockers).toContain("EAS update rollback QA must prove preview adoption and rollback republish on the same runtime.");
   });
@@ -589,16 +985,10 @@ describe("mobile support helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["ios", "android"]);
-    expect(plan.requiredCommands).toContain("eas build --profile preview --platform all");
-    expect(plan.requiredEvidence).toEqual([
-      "mobile-support and mobile app typecheck/test output",
-      "Expo runtime, iOS simulator, Android emulator, and EAS preview build evidence",
-      "auth/biometric, tenant API, push, and encrypted offline QA evidence",
-      "upload, crash, OTA rollback, physical device, and accessibility QA evidence",
-      "Expo project/channel configuration, CI, and secret-safe artifact evidence",
-    ]);
+    expect(plan.requiredCommands).toBe(mobileLaunchEvidenceRequiredCommands);
+    expect(plan.requiredEvidence).toBe(mobileLaunchEvidenceRequiredEvidence);
     expect(plan.blockers).toContain("Tenant-scoped mobile API client QA must pass against preview APIs.");
-    expect(plan.blockers).toContain("OTA update and rollback QA must pass on the same runtime version.");
+    expect(plan.blockers).toContain("OTA update and rollback QA must pass with package-backed rollback command/adoption contracts on the same runtime version.");
     expect(plan.blockers).toContain("Mobile launch artifacts must be redacted and free of secrets, tokens, PII, medical, or payment data.");
   });
 

@@ -102,6 +102,109 @@ export const calendarCiArtifactPaths = [
   "test-results/travel",
 ] as const;
 
+const calendarAutomationPrivateArtifactKeys = [
+  "googleAccessToken",
+  "googleRefreshToken",
+  "icsFeedToken",
+  "signedFeedToken",
+  "clientEmail",
+  "clientName",
+  "privateBookingNotes",
+  "locationPrivateNotes",
+] as const;
+
+type CalendarAutomationArtifactPayload = Record<string, unknown>;
+
+const calendarAutomationPrivateArtifactKeySet = new Set<string>(calendarAutomationPrivateArtifactKeys);
+
+function redactCalendarAutomationArtifactValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactCalendarAutomationArtifactValue(entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as CalendarAutomationArtifactPayload).map(([key, entry]) => [
+        key,
+        calendarAutomationPrivateArtifactKeySet.has(key)
+          ? "[redacted]"
+          : redactCalendarAutomationArtifactValue(entry),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+function collectCalendarAutomationPrivateValues(payload: CalendarAutomationArtifactPayload): readonly string[] {
+  const values: string[] = [];
+
+  const visit = (value: unknown, key?: string): void => {
+    if (calendarAutomationPrivateArtifactKeySet.has(key ?? "") && typeof value === "string" && value.length > 0) {
+      values.push(value);
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        visit(entry);
+      }
+      return;
+    }
+
+    if (value && typeof value === "object") {
+      for (const [entryKey, entryValue] of Object.entries(value as CalendarAutomationArtifactPayload)) {
+        visit(entryValue, entryKey);
+      }
+    }
+  };
+
+  visit(payload);
+  return values;
+}
+
+export function buildRedactedCalendarAutomationArtifact(input: {
+  readonly artifactId: string;
+  readonly payload: CalendarAutomationArtifactPayload;
+}): { readonly artifactId: string; readonly payload: Record<string, unknown>; readonly redactedSummary: string } {
+  return {
+    artifactId: input.artifactId,
+    payload: redactCalendarAutomationArtifactValue(input.payload) as CalendarAutomationArtifactPayload,
+    redactedSummary:
+      "Calendar automation artifacts redact provider tokens, signed-feed tokens, client PII, and private booking/location notes before retention.",
+  };
+}
+
+export function buildCalendarAutomationSecretSafeArtifactReview(input: {
+  readonly artifacts: readonly {
+    readonly artifactId: string;
+    readonly payload: CalendarAutomationArtifactPayload;
+  }[];
+}): {
+  readonly passed: boolean;
+  readonly reviewedArtifactIds: readonly string[];
+  readonly blockers: readonly string[];
+  readonly redactedArtifacts: readonly ReturnType<typeof buildRedactedCalendarAutomationArtifact>[];
+} {
+  const redactedArtifacts = input.artifacts.map((artifact) => buildRedactedCalendarAutomationArtifact(artifact));
+  const redactedSerialized = JSON.stringify(redactedArtifacts);
+  const privateValues = input.artifacts.flatMap((artifact) => collectCalendarAutomationPrivateValues(artifact.payload));
+  const leakedValues = privateValues.filter((value) => redactedSerialized.includes(value));
+  const blockers = [
+    ...(input.artifacts.length === 0 ? ["Calendar automation artifact review requires at least one retained artifact."] : []),
+    ...(leakedValues.length > 0
+      ? ["Calendar automation artifact review found unredacted provider token, signed-feed token, PII, or private booking data."]
+      : []),
+  ];
+
+  return {
+    passed: blockers.length === 0,
+    reviewedArtifactIds: input.artifacts.map((artifact) => artifact.artifactId),
+    blockers,
+    redactedArtifacts,
+  };
+}
+
 export function buildCalendarAutomatedTestContract(): CalendarAutomatedTestContract {
   return {
     suites: calendarAutomatedTestSuites,

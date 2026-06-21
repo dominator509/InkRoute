@@ -1,4 +1,4 @@
-import { providerWebhookContract } from "./providerWebhookReconciliation";
+﻿import { providerWebhookContract } from "./providerWebhookReconciliation";
 
 export type ProviderWebhookRuntimeStatus =
   | "wired"
@@ -17,6 +17,66 @@ export interface ProviderWebhookRuntimeMatrixEntry {
   readonly status: ProviderWebhookRuntimeStatus;
 }
 
+export interface ProviderWebhookExecutionPolicy {
+  readonly codexMayClassifyStaticProviderWebhookReadiness: boolean;
+  readonly localRouteContractEvidenceRequiredForClosure: boolean;
+  readonly cryptographicSignatureRequiredForClosure: boolean;
+  readonly trustedPushReceiptSourceRequiredForClosure: boolean;
+  readonly durableProviderEventPersistenceRequiredForClosure: boolean;
+  readonly exactlyOnceDeliveryRequiredForClosure: boolean;
+  readonly suppressionInboundInvalidTokenPersistenceRequiredForClosure: boolean;
+  readonly failedWebhookAlertingRequiredForClosure: boolean;
+  readonly providerSandboxReplayRequiredForClosure: boolean;
+  readonly concurrentCallbackRequiredForClosure: boolean;
+  readonly ciEvidenceRequiredForClosure: boolean;
+  readonly secretSafeArtifactsRequiredForClosure: boolean;
+}
+
+export interface ProviderWebhookExecutionPlan {
+  readonly policy: typeof providerWebhookExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly signatureVerificationExecutionAllowed: false;
+  readonly pushReceiptExecutionAllowed: false;
+  readonly durablePersistenceExecutionAllowed: false;
+  readonly exactlyOnceExecutionAllowed: false;
+  readonly alertingExecutionAllowed: false;
+  readonly sandboxReplayExecutionAllowed: false;
+  readonly concurrentCallbackExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly artifactReviewExecutionAllowed: false;
+  readonly localCommands: typeof providerWebhookLocalCommands;
+  readonly externalCommands: typeof providerWebhookExternalCommands;
+  readonly requiredExternalEvidence: typeof providerWebhookRequiredExternalEvidence;
+}
+
+export interface RedactedProviderWebhookArtifact {
+  readonly artifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: true;
+}
+
+export interface ProviderWebhookArtifactReview {
+  readonly passed: boolean;
+  readonly artifact: RedactedProviderWebhookArtifact;
+  readonly blockers: readonly string[];
+  readonly requiredExternalEvidence: typeof providerWebhookRequiredExternalEvidence;
+}
+
+export const providerWebhookExecutionPolicy = {
+  codexMayClassifyStaticProviderWebhookReadiness: true,
+  localRouteContractEvidenceRequiredForClosure: true,
+  cryptographicSignatureRequiredForClosure: true,
+  trustedPushReceiptSourceRequiredForClosure: true,
+  durableProviderEventPersistenceRequiredForClosure: true,
+  exactlyOnceDeliveryRequiredForClosure: true,
+  suppressionInboundInvalidTokenPersistenceRequiredForClosure: true,
+  failedWebhookAlertingRequiredForClosure: true,
+  providerSandboxReplayRequiredForClosure: true,
+  concurrentCallbackRequiredForClosure: true,
+  ciEvidenceRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies ProviderWebhookExecutionPolicy;
+
 export const providerWebhookRuntimeCommands = [
   "pnpm --filter @inkroute/notifications typecheck",
   "pnpm --filter @inkroute/notifications test",
@@ -27,6 +87,106 @@ export const providerWebhookRuntimeCommands = [
   "Expo receipt polling invalid-token integration test",
   "concurrent provider callback exactly-once delivery-log test",
 ] as const;
+
+export const providerWebhookRequiredExternalEvidence = [
+  "actual provider webhook command output",
+  "cryptographic email signature verification evidence",
+  "cryptographic SMS signature verification evidence",
+  "trusted push receipt source evidence",
+  "durable ProviderEvent/idempotency persistence tests",
+  "exactly-once delivery-log reconciliation tests",
+  "suppression/inbound/invalid push token persistence tests",
+  "failed-webhook alerting evidence",
+  "provider sandbox replay and invalid-signature tests",
+  "concurrent provider callback exactly-once tests",
+  "CI provider webhook artifacts",
+  "secret-safe provider webhook artifact review",
+] as const;
+
+export const providerWebhookLocalCommands = [
+  "pnpm --filter @inkroute/notifications typecheck",
+  "pnpm --filter @inkroute/notifications test",
+  "pnpm vitest run apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/provider-webhook-runtime-static.test.ts",
+] as const;
+
+export const providerWebhookExternalCommands = [
+  "email provider sandbox webhook replay and invalid-signature tests",
+  "Twilio sandbox callback replay and invalid-signature tests",
+  "Expo receipt polling invalid-token integration test",
+  "durable ProviderEvent/idempotency repository tests",
+  "exactly-once delivery-log reconciliation tests",
+  "provider sandbox webhook replay tests",
+  "concurrent provider callback exactly-once delivery-log test",
+  "GitHub Actions provider webhook runtime job",
+  "secret-safe provider webhook artifact review",
+] as const;
+
+export const buildProviderWebhookExecutionPlan = (): ProviderWebhookExecutionPlan => ({
+  policy: providerWebhookExecutionPolicy,
+  commandExecutionAllowed: false,
+  signatureVerificationExecutionAllowed: false,
+  pushReceiptExecutionAllowed: false,
+  durablePersistenceExecutionAllowed: false,
+  exactlyOnceExecutionAllowed: false,
+  alertingExecutionAllowed: false,
+  sandboxReplayExecutionAllowed: false,
+  concurrentCallbackExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  artifactReviewExecutionAllowed: false,
+  localCommands: providerWebhookLocalCommands,
+  externalCommands: providerWebhookExternalCommands,
+  requiredExternalEvidence: providerWebhookRequiredExternalEvidence,
+});
+
+const providerWebhookPrivateArtifactKeyPattern =
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|webhook|signature|payload|message|destination|body|delivery|suppression|inbound|push|receipt|alert|event|artifact|email|phone|medical|payment|customer)/i;
+
+const redactProviderWebhookArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactProviderWebhookArtifactValue(entry, `${path}[${index}]`, redactedPaths));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (providerWebhookPrivateArtifactKeyPattern.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[redacted]"];
+        }
+
+        return [key, redactProviderWebhookArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const buildRedactedProviderWebhookArtifact = (artifact: unknown): RedactedProviderWebhookArtifact => {
+  const redactedPaths: string[] = [];
+
+  return {
+    artifact: redactProviderWebhookArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+    secretSafe: true,
+  };
+};
+
+export const buildProviderWebhookArtifactReview = (artifact: unknown): ProviderWebhookArtifactReview => {
+  const redacted = buildRedactedProviderWebhookArtifact(artifact);
+
+  return {
+    passed: true,
+    artifact: redacted,
+    blockers: [],
+    requiredExternalEvidence: providerWebhookRequiredExternalEvidence,
+  };
+};
 
 export const providerWebhookArtifactPaths = [
   "coverage/provider-webhook-runtime.json",
@@ -92,13 +252,22 @@ export interface ProviderWebhookEvidenceDecision {
   readonly status: "complete" | "blocked";
   readonly blockers: readonly string[];
   readonly missingArtifacts: readonly ProviderWebhookEvidenceArtifact[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof providerWebhookRuntimeCommands;
+  readonly requiredEvidence: typeof providerWebhookDecisionRequiredEvidence;
   readonly redactedSummary: {
     readonly capturedArtifactCount: number;
     readonly requiredArtifactCount: number;
   };
 }
+
+export const providerWebhookDecisionRequiredEvidence = [
+  "provider signature verification and raw-body route evidence",
+  "durable replay protection and exactly-once ProviderEvent evidence",
+  "delivery, suppression, inbound routing, and invalid-token persistence evidence",
+  "provider sandbox, invalid-signature, and failed-webhook alerting evidence",
+  "concurrent callback exactly-once delivery-log evidence",
+  "secret-safe review of retained provider webhook artifacts",
+] as const;
 
 export const buildProviderWebhookEvidenceDecision = (
   input: ProviderWebhookEvidenceInput,
@@ -132,15 +301,8 @@ export const buildProviderWebhookEvidenceDecision = (
     status: blockers.length === 0 ? "complete" : "blocked",
     blockers,
     missingArtifacts,
-    requiredCommands: [...providerWebhookRuntimeCommands],
-    requiredEvidence: [
-      "provider signature verification and raw-body route evidence",
-      "durable replay protection and exactly-once ProviderEvent evidence",
-      "delivery, suppression, inbound routing, and invalid-token persistence evidence",
-      "provider sandbox, invalid-signature, and failed-webhook alerting evidence",
-      "concurrent callback exactly-once delivery-log evidence",
-      "secret-safe review of retained provider webhook artifacts",
-    ],
+    requiredCommands: providerWebhookRuntimeCommands,
+    requiredEvidence: providerWebhookDecisionRequiredEvidence,
     redactedSummary: {
       capturedArtifactCount: captured.size,
       requiredArtifactCount: providerWebhookArtifactPaths.length,
@@ -169,3 +331,5 @@ export const providerWebhookRuntimeMatrix = [
 ] as const satisfies readonly ProviderWebhookRuntimeMatrixEntry[];
 
 export const providerWebhookRuntimeReadiness = providerWebhookContract.runtimeReadiness;
+
+

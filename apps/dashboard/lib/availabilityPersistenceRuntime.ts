@@ -1,4 +1,4 @@
-import { buildAvailabilityRuntimeReadinessPlan } from "@inkroute/calendar";
+﻿import { buildAvailabilityRuntimeReadinessPlan } from "@inkroute/calendar";
 
 export type AvailabilityPersistenceRuntimeStatus =
   | "wired"
@@ -49,6 +49,241 @@ export const availabilityPersistenceArtifactPaths = [
   "coverage/availability-persistence-secret-safe-artifacts.json",
   "test-results/availability-persistence-runtime",
 ] as const;
+
+export const availabilityPersistenceRuntimeProofFiles = [
+  "packages/db/package.json",
+  "packages/calendar/package.json",
+  "packages/calendar/src/index.ts",
+  "packages/calendar/tests/availability-conflicts.test.ts",
+  "apps/dashboard/lib/availabilityPersistence.ts",
+  "apps/dashboard/lib/availabilityPersistenceRuntime.ts",
+  "apps/dashboard/app/api/calendar/holds/route.ts",
+  "apps/dashboard/app/api/calendar/route.ts",
+  "apps/dashboard/tests/availability-persistence-static.test.ts",
+  "apps/dashboard/tests/availability-persistence-runtime-static.test.ts",
+  "apps/dashboard/tests/calendar-read-route-static.test.ts",
+  "apps/web/app/api/public/[tenantSlug]/availability-preview/route.ts",
+  "testing/manifests/unit-test-manifest.json",
+  ".github/workflows/ci.yml",
+] as const;
+
+export type AvailabilityPersistenceEvidenceArtifact = (typeof availabilityPersistenceArtifactPaths)[number];
+
+export interface AvailabilityPersistenceExecutionPolicy {
+  readonly codexMayClassifyStaticAvailabilityPersistenceReadiness: true;
+  readonly durablePrismaRepositoryRequiredForClosure: true;
+  readonly seededPostgresRequiredForClosure: true;
+  readonly overlapRejectionRequiredForClosure: true;
+  readonly concurrentHoldRaceRequiredForClosure: true;
+  readonly crossTenantMutationRequiredForClosure: true;
+  readonly secretSafeArtifactsRequiredForClosure: true;
+}
+
+export interface AvailabilityPersistenceExecutionPlan {
+  readonly policy: typeof availabilityPersistenceExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly prismaExecutionAllowed: false;
+  readonly databaseExecutionAllowed: false;
+  readonly concurrentRaceExecutionAllowed: false;
+  readonly crossTenantExecutionAllowed: false;
+  readonly dashboardApiExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly localCommands: typeof availabilityPersistenceLocalCommands;
+  readonly externalCommands: typeof availabilityPersistenceExternalCommands;
+  readonly requiredExternalEvidence: typeof availabilityPersistenceRequiredExternalEvidence;
+}
+
+export interface AvailabilityPersistenceArtifactReview {
+  readonly artifact: unknown;
+  readonly redactedArtifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: boolean;
+  readonly requiredExternalEvidence: typeof availabilityPersistenceRequiredExternalEvidence;
+}
+
+export interface AvailabilityPersistenceEvidenceInput {
+  readonly calendarTypecheckPassed: boolean;
+  readonly calendarTestsPassed: boolean;
+  readonly prismaValidatePassed: boolean;
+  readonly schemaModelsVerified: boolean;
+  readonly repositoryContractVerified: boolean;
+  readonly tenantScopeVerified: boolean;
+  readonly windowTransactionVerified: boolean;
+  readonly slotHoldTransactionVerified: boolean;
+  readonly appointmentConfirmationVerified: boolean;
+  readonly holdReleaseVerified: boolean;
+  readonly auditLogVerified: boolean;
+  readonly idempotencyStoreVerified: boolean;
+  readonly persistedConflictRowsVerified: boolean;
+  readonly concurrentHoldProtectionVerified: boolean;
+  readonly overlapRejectionVerified: boolean;
+  readonly crossTenantDenialVerified: boolean;
+  readonly seededPostgresVerified: boolean;
+  readonly dashboardApiRepositoryVerified: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly AvailabilityPersistenceEvidenceArtifact[];
+}
+
+export interface AvailabilityPersistenceEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly AvailabilityPersistenceEvidenceArtifact[];
+  readonly requiredCommands: typeof availabilityPersistenceRuntimeCommands;
+  readonly requiredEvidence: typeof availabilityPersistenceDecisionRequiredEvidence;
+  readonly redactedSummary: {
+    readonly capturedArtifactCount: number;
+    readonly requiredArtifactCount: number;
+  };
+}
+
+export const availabilityPersistenceExecutionPolicy = {
+  codexMayClassifyStaticAvailabilityPersistenceReadiness: true,
+  durablePrismaRepositoryRequiredForClosure: true,
+  seededPostgresRequiredForClosure: true,
+  overlapRejectionRequiredForClosure: true,
+  concurrentHoldRaceRequiredForClosure: true,
+  crossTenantMutationRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies AvailabilityPersistenceExecutionPolicy;
+
+export const availabilityPersistenceRequiredExternalEvidence = [
+  "durable Prisma availability repository execution proof",
+  "seeded Postgres lifecycle tests",
+  "overlapping DB rejection tests",
+  "concurrent slot hold race-condition tests",
+  "cross-tenant mutation tests",
+  "dashboard/API availability repository tests",
+  "CI availability persistence evidence",
+  "secret-safe availability persistence artifact review",
+] as const;
+
+export const availabilityPersistenceDecisionRequiredEvidence = [
+  "calendar command output and Prisma validation output",
+  "schema model, repository contract, tenant scope, and transaction evidence",
+  "persisted conflict detection and concurrent hold rejection evidence",
+  "seeded Postgres tenant isolation and availability lifecycle integration test output",
+  "dashboard/API repository execution evidence",
+  "secret-safe review of retained availability persistence artifacts",
+] as const;
+
+const sensitiveAvailabilityPersistenceArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|availability|calendar|artist|appointment|hold|booking|idempotency|audit|postgres|prisma|email|phone|medical|payment|customer)/i;
+
+const redactAvailabilityPersistenceArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactAvailabilityPersistenceArtifactValue(entry, `${path}.${index}`, redactedPaths));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (sensitiveAvailabilityPersistenceArtifactKey.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[REDACTED]"];
+        }
+        return [key, redactAvailabilityPersistenceArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const availabilityPersistenceLocalCommands = [
+  "pnpm --filter @inkroute/calendar typecheck",
+  "pnpm --filter @inkroute/calendar test",
+  "static local in-memory availability repository contract review",
+  "static production availability preview fail-closed guard review",
+] as const;
+
+export const availabilityPersistenceExternalCommands = [
+  "pnpm --filter @inkroute/db prisma validate",
+  "availability persistence seeded Postgres integration tests",
+  "concurrent slot hold race-condition tests",
+  "dashboard/API availability repository tests",
+  "cross-tenant availability mutation tests",
+  "GitHub Actions availability persistence evidence job",
+] as const;
+
+export const buildAvailabilityPersistenceExecutionPlan = (): AvailabilityPersistenceExecutionPlan => ({
+  policy: availabilityPersistenceExecutionPolicy,
+  commandExecutionAllowed: false,
+  prismaExecutionAllowed: false,
+  databaseExecutionAllowed: false,
+  concurrentRaceExecutionAllowed: false,
+  crossTenantExecutionAllowed: false,
+  dashboardApiExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  localCommands: availabilityPersistenceLocalCommands,
+  externalCommands: availabilityPersistenceExternalCommands,
+  requiredExternalEvidence: availabilityPersistenceRequiredExternalEvidence,
+});
+
+export const buildRedactedAvailabilityPersistenceArtifact = (artifact: unknown): Pick<AvailabilityPersistenceArtifactReview, "redactedArtifact" | "redactedPaths"> => {
+  const redactedPaths: string[] = [];
+  return {
+    redactedArtifact: redactAvailabilityPersistenceArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+  };
+};
+
+export const buildAvailabilityPersistenceArtifactReview = (artifact: unknown): AvailabilityPersistenceArtifactReview => {
+  const redacted = buildRedactedAvailabilityPersistenceArtifact(artifact);
+  return {
+    artifact,
+    redactedArtifact: redacted.redactedArtifact,
+    redactedPaths: redacted.redactedPaths,
+    secretSafe: redacted.redactedPaths.length > 0,
+    requiredExternalEvidence: availabilityPersistenceRequiredExternalEvidence,
+  };
+};
+
+export const buildAvailabilityPersistenceEvidenceDecision = (
+  input: AvailabilityPersistenceEvidenceInput,
+): AvailabilityPersistenceEvidenceDecision => {
+  const captured = new Set(input.capturedArtifacts);
+  const missingArtifacts = availabilityPersistenceArtifactPaths.filter((artifact) => !captured.has(artifact));
+  const blockers = [
+    ...(!input.calendarTypecheckPassed ? ["Calendar package typecheck evidence is missing."] : []),
+    ...(!input.calendarTestsPassed ? ["Calendar package test evidence is missing."] : []),
+    ...(!input.prismaValidatePassed ? ["Prisma validation evidence is missing."] : []),
+    ...(!input.schemaModelsVerified ? ["Availability persistence schema-model evidence is missing."] : []),
+    ...(!input.repositoryContractVerified ? ["Availability repository contract evidence is missing."] : []),
+    ...(!input.tenantScopeVerified ? ["Tenant/artist scoped availability query evidence is missing."] : []),
+    ...(!input.windowTransactionVerified ? ["Availability window transaction evidence is missing."] : []),
+    ...(!input.slotHoldTransactionVerified ? ["Slot hold transaction evidence is missing."] : []),
+    ...(!input.appointmentConfirmationVerified ? ["Appointment confirmation persistence evidence is missing."] : []),
+    ...(!input.holdReleaseVerified ? ["Hold release persistence evidence is missing."] : []),
+    ...(!input.auditLogVerified ? ["CalendarAuditLog persistence evidence is missing."] : []),
+    ...(!input.idempotencyStoreVerified ? ["IdempotencyKey persistence evidence is missing."] : []),
+    ...(!input.persistedConflictRowsVerified ? ["Persisted conflict-row lookup evidence is missing."] : []),
+    ...(!input.concurrentHoldProtectionVerified ? ["Concurrent slot hold protection evidence is missing."] : []),
+    ...(!input.overlapRejectionVerified ? ["Overlapping slot DB rejection evidence is missing."] : []),
+    ...(!input.crossTenantDenialVerified ? ["Cross-tenant availability denial evidence is missing."] : []),
+    ...(!input.seededPostgresVerified ? ["Seeded Postgres availability lifecycle evidence is missing."] : []),
+    ...(!input.dashboardApiRepositoryVerified ? ["Dashboard/API repository execution evidence is missing."] : []),
+    ...(!input.secretSafeArtifactReviewPassed
+      ? ["Secret-safe availability persistence artifact review evidence is missing."]
+      : []),
+    ...(missingArtifacts.length > 0 ? ["All availability persistence artifacts must be captured."] : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: availabilityPersistenceRuntimeCommands,
+    requiredEvidence: availabilityPersistenceDecisionRequiredEvidence,
+    redactedSummary: {
+      capturedArtifactCount: captured.size,
+      requiredArtifactCount: availabilityPersistenceArtifactPaths.length,
+    },
+  };
+};
 
 export const availabilityPersistenceRuntimeMatrix = [
   {
@@ -190,3 +425,5 @@ export const availabilityPersistenceRuntimeReadiness = buildAvailabilityRuntimeR
   seededPostgresIntegrationTestsPassed: false,
   dashboardAndApiUseRepository: true,
 });
+
+

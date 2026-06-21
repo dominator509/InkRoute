@@ -63,8 +63,8 @@ export interface TenantIsolationIntegrationReadinessInput {
 export interface TenantIsolationIntegrationReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof tenantIsolationIntegrationRequiredCommands;
+  requiredEvidence: typeof tenantIsolationIntegrationRequiredEvidence;
   blockers: readonly string[];
 }
 
@@ -91,9 +91,9 @@ export interface TenantIsolationRepositoryEvidenceInput {
 export interface TenantIsolationRepositoryEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof tenantIsolationRepositoryRequiredCommands;
+  requiredEvidence: readonly TenantIsolationRepositoryRequiredEvidence[];
+  requiredControls: typeof tenantIsolationRepositoryRequiredControls;
   blockers: readonly string[];
 }
 
@@ -139,6 +139,54 @@ export function assertTenantScopedData(value: { data?: Record<string, unknown> }
   }
 }
 
+export const tenantIsolationIntegrationRequiredCommands = [
+  "pnpm --filter @inkroute/db db:validate",
+  "pnpm --filter @inkroute/db db:generate",
+  "pnpm --filter @inkroute/db db:migrate",
+  "pnpm --filter @inkroute/db db:seed",
+  "pnpm --filter @inkroute/db test",
+  "tenant isolation Postgres integration suite",
+] as const;
+
+export const tenantIsolationIntegrationRequiredEvidence = [
+  "Redacted DATABASE_URL target proving tests ran against non-production Postgres.",
+  "Migration and seed command output for two or more tenant fixtures.",
+  "Cross-tenant read denial output for every tenant-owned model.",
+  "Cross-tenant write denial output for every tenant-owned model mutation path.",
+  "AuditLog rows proving tenantId, actorId, entityType, entityId, and action metadata are persisted.",
+  "Fixture cleanup output proving tenant-scoped teardown only removed test records.",
+] as const;
+
+export const tenantIsolationRepositoryRequiredCommands = [
+  "pnpm --filter @inkroute/db typecheck",
+  "pnpm --filter @inkroute/db test",
+  "pnpm --filter @inkroute/db db:generate",
+  "pnpm --filter @inkroute/db db:migrate",
+  "pnpm --filter @inkroute/db db:seed",
+  "tenant isolation repository integration suite",
+  "cross-tenant read/write denial matrix",
+  "tenant-scoped fixture cleanup proof",
+  "GitHub Actions tenant isolation evidence job",
+] as const;
+
+export const tenantIsolationRepositoryRequiredControls = [
+  "Use tenant scope helpers for every tenant-owned read and write path.",
+  "Reject missing or mismatched tenantId before database mutation side effects.",
+  "Persist audit rows with tenant and actor metadata for sensitive tenant-owned operations.",
+  "Run fixture cleanup only against seeded test tenants and redact database URLs in artifacts.",
+] as const;
+
+export const tenantIsolationRepositoryRequiredEvidence = [
+  "db typecheck/test, Prisma generate, migration, and seeded multi-tenant fixture evidence",
+  "tenant-scoped repository helper adoption and model coverage matrix evidence",
+  "cross-tenant read/write denial and missing-tenant rejection evidence",
+  "tenant-scoped audit-row and fixture cleanup evidence",
+  "redacted database, CI, and secret-safe artifact evidence",
+] as const;
+
+export type TenantIsolationRepositoryRequiredEvidence =
+  (typeof tenantIsolationRepositoryRequiredEvidence)[number];
+
 export function buildTenantIsolationIntegrationReadinessPlan(input: TenantIsolationIntegrationReadinessInput): TenantIsolationIntegrationReadinessPlan {
   const requiredScripts = ["test", "db:validate", "db:generate", "db:migrate", "db:seed"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
@@ -160,22 +208,8 @@ export function buildTenantIsolationIntegrationReadinessPlan(input: TenantIsolat
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/db db:validate",
-      "pnpm --filter @inkroute/db db:generate",
-      "pnpm --filter @inkroute/db db:migrate",
-      "pnpm --filter @inkroute/db db:seed",
-      "pnpm --filter @inkroute/db test",
-      "tenant isolation Postgres integration suite",
-    ],
-    requiredEvidence: [
-      "Redacted DATABASE_URL target proving tests ran against non-production Postgres.",
-      "Migration and seed command output for two or more tenant fixtures.",
-      "Cross-tenant read denial output for every tenant-owned model.",
-      "Cross-tenant write denial output for every tenant-owned model mutation path.",
-      "AuditLog rows proving tenantId, actorId, entityType, entityId, and action metadata are persisted.",
-      "Fixture cleanup output proving tenant-scoped teardown only removed test records.",
-    ],
+    requiredCommands: tenantIsolationIntegrationRequiredCommands,
+    requiredEvidence: tenantIsolationIntegrationRequiredEvidence,
     blockers,
   };
 }
@@ -186,7 +220,7 @@ export function buildTenantIsolationRepositoryEvidencePlan(
   const requiredScripts = ["test", "typecheck", "db:validate", "db:generate", "db:migrate", "db:seed"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: TenantIsolationRepositoryRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/db ${script} script.`);
   if (!input.dbTypecheckPassed) blockers.push("@inkroute/db typecheck must pass before tenant isolation evidence is ready.");
@@ -194,7 +228,7 @@ export function buildTenantIsolationRepositoryEvidencePlan(
   if (!input.prismaClientGenerated) blockers.push("Prisma Client must be generated before repository tenant isolation tests.");
   if (!input.migrationsApplied) blockers.push("Migrations must be applied before repository tenant isolation tests.");
   if (!input.seededMultiTenantFixturesLoaded) blockers.push("Seeded multi-tenant fixtures must be loaded before cross-tenant tests.");
-  if (!input.repositoryLayerImplemented) blockers.push("Tenant-scoped repository/service layer must be implemented.");
+  if (!input.repositoryLayerImplemented) blockers.push("Tenant-scoped repository/service adoption evidence must be captured before tenant isolation readiness.");
   if (!input.repositoryLayerUsesTenantHelpers) blockers.push("Repository/service layer must use tenant scope helpers for tenant-owned models.");
   if (!input.allTenantOwnedModelsCovered) blockers.push("Tenant isolation matrix must cover every tenant-owned model.");
   if (!input.crossTenantReadDenialPassed) blockers.push("Cross-tenant read denial tests must pass for tenant-owned records.");
@@ -207,42 +241,30 @@ export function buildTenantIsolationRepositoryEvidencePlan(
   if (!input.secretSafeArtifactsCaptured) blockers.push("Tenant isolation artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.");
 
   if (!input.dbTypecheckPassed || !input.dbTestsPassed || !input.prismaClientGenerated || !input.migrationsApplied || !input.seededMultiTenantFixturesLoaded) {
-    requiredEvidence.push("db typecheck/test, Prisma generate, migration, and seeded multi-tenant fixture evidence");
+    requiredEvidence.push(tenantIsolationRepositoryRequiredEvidence[0]);
   }
   if (!input.repositoryLayerImplemented || !input.repositoryLayerUsesTenantHelpers || !input.allTenantOwnedModelsCovered) {
-    requiredEvidence.push("tenant-scoped repository helper adoption and model coverage matrix evidence");
+    requiredEvidence.push(tenantIsolationRepositoryRequiredEvidence[1]);
   }
   if (!input.crossTenantReadDenialPassed || !input.crossTenantWriteDenialPassed || !input.missingTenantWriteRejectionPassed) {
-    requiredEvidence.push("cross-tenant read/write denial and missing-tenant rejection evidence");
+    requiredEvidence.push(tenantIsolationRepositoryRequiredEvidence[2]);
   }
   if (!input.tenantScopedAuditRowsVerified || !input.fixtureCleanupTenantScoped) {
-    requiredEvidence.push("tenant-scoped audit-row and fixture cleanup evidence");
+    requiredEvidence.push(tenantIsolationRepositoryRequiredEvidence[3]);
   }
   if (!input.databaseEvidenceCaptured || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
-    requiredEvidence.push("redacted database, CI, and secret-safe artifact evidence");
+    requiredEvidence.push(tenantIsolationRepositoryRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/db typecheck",
-      "pnpm --filter @inkroute/db test",
-      "pnpm --filter @inkroute/db db:generate",
-      "pnpm --filter @inkroute/db db:migrate",
-      "pnpm --filter @inkroute/db db:seed",
-      "tenant isolation repository integration suite",
-      "cross-tenant read/write denial matrix",
-      "tenant-scoped fixture cleanup proof",
-      "GitHub Actions tenant isolation evidence job",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Use tenant scope helpers for every tenant-owned read and write path.",
-      "Reject missing or mismatched tenantId before database mutation side effects.",
-      "Persist audit rows with tenant and actor metadata for sensitive tenant-owned operations.",
-      "Run fixture cleanup only against seeded test tenants and redact database URLs in artifacts.",
-    ],
+    requiredCommands: tenantIsolationRepositoryRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === tenantIsolationRepositoryRequiredEvidence.length
+        ? tenantIsolationRepositoryRequiredEvidence
+        : requiredEvidence,
+    requiredControls: tenantIsolationRepositoryRequiredControls,
     blockers,
   };
 }

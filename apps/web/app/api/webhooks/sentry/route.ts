@@ -3,6 +3,8 @@ import { buildAgenticBugFixWorkflow, buildGithubIssueDraft, buildObservabilityRe
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 import {
   buildProviderWebhookReconciliationContract,
   buildProviderDeliveryId,
@@ -29,6 +31,10 @@ function isDatabaseUnavailable(error: unknown): boolean {
   return error instanceof Error && /connect|timeout|ECONN|P10\d{2}|database|tenant/i.test(error.message);
 }
 
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return Boolean(error && typeof error === "object" && "code" in error && (error as { code?: unknown }).code === "P2002");
+}
+
 async function persistProviderWebhookReconciliation(input: {
   tenantId: string | null;
   providerDeliveryId: string;
@@ -50,6 +56,21 @@ async function persistProviderWebhookReconciliation(input: {
 
   try {
     return await prisma.$transaction(async (tx) => {
+      const providerWebhookDelivery = await tx.providerWebhookDelivery.create({
+        data: {
+          tenantId: input.tenantId!,
+          provider: "sentry",
+          providerDeliveryId: input.providerDeliveryId,
+          idempotencyKey: input.idempotencyKey,
+          providerFingerprint: input.providerFingerprint,
+          action: "sentry.webhook.reconcile",
+          targetErrorStatus: input.targetErrorStatus,
+          rawPayloadStored: input.rawPayloadStored,
+          sanitizedPayload: input.sanitizedPayload,
+        },
+        select: { id: true },
+      });
+
       const existingErrorReport = input.providerFingerprint
         ? await tx.errorReport.findFirst({
             where: { tenantId: input.tenantId, stackHash: input.providerFingerprint },
@@ -85,23 +106,45 @@ async function persistProviderWebhookReconciliation(input: {
             statusMutated: Boolean(updatedErrorReport),
             rawPayloadStored: input.rawPayloadStored,
             sanitizedProviderPayload: input.sanitizedPayload,
-            replayProtection: "ProviderWebhookDelivery-shaped AuditLog seam; dedicated unique table remains required",
+            providerWebhookDeliveryId: providerWebhookDelivery.id,
+            replayProtection: "ProviderWebhookDelivery unique provider/idempotency constraint claimed before side effects",
           },
         },
         select: { id: true },
       });
 
+      await tx.providerWebhookDelivery.update({
+        where: { id: providerWebhookDelivery.id },
+        data: {
+          errorReportId: updatedErrorReport?.id ?? null,
+          statusMutationApplied: Boolean(updatedErrorReport),
+        },
+      });
+
       return {
-        persistence: "database-audit-log-transaction",
+        persistence: "database-provider-webhook-delivery-transaction",
+        providerWebhookDeliveryId: providerWebhookDelivery.id,
         auditLogId: auditLog.id,
         matchedErrorReportId: updatedErrorReport?.id ?? null,
         statusMutated: Boolean(updatedErrorReport),
-        replayProtection: "audit-log-provider-delivery-seam",
+        replayProtection: "provider-webhook-delivery-unique-constraint",
       };
     });
   } catch (error) {
+    if (isUniqueConstraintViolation(error)) {
+      return {
+        persistence: "duplicate-provider-webhook-delivery",
+        providerWebhookDeliveryId: null,
+        auditLogId: null,
+        matchedErrorReportId: null,
+        statusMutated: false,
+        replayProtection: "provider-webhook-delivery-unique-constraint-replay-rejected",
+      };
+    }
+
     return {
       persistence: isDatabaseUnavailable(error) ? "database-unavailable" : "database-write-rejected",
+      providerWebhookDeliveryId: null,
       auditLogId: null,
       matchedErrorReportId: null,
       statusMutated: false,
@@ -122,7 +165,7 @@ export async function POST(request: NextRequest) {
           message: "Sentry webhook requests must include a provider signature header before production use.",
         },
       },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -140,7 +183,7 @@ export async function POST(request: NextRequest) {
           requiredNextWork: ["Configure SENTRY_WEBHOOK_SECRET before accepting provider webhook deliveries."],
         },
       },
-      { status: 501 },
+      { status: 503, headers: noStoreHeaders },
     );
   }
 
@@ -150,14 +193,14 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json(
       { ok: false, error: { code: "WEBHOOK_BODY_UNREADABLE", message: "Webhook body could not be read." } },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
   if (!verifySentrySignature(rawBody, signature, webhookSecret)) {
     return NextResponse.json(
       { ok: false, error: { code: "INVALID_SENTRY_SIGNATURE", message: "Sentry webhook signature verification failed." } },
-      { status: 401 },
+      { status: 401, headers: noStoreHeaders },
     );
   }
 
@@ -167,7 +210,7 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json(
       { ok: false, error: { code: "INVALID_WEBHOOK_JSON", message: "Webhook body must be valid JSON." } },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -205,6 +248,29 @@ export async function POST(request: NextRequest) {
     sanitizedPayload: reconciliationPlan.sanitizedPayload,
     rawPayloadStored: reconciliationPlan.rawPayloadStored,
   });
+  if (process.env.NODE_ENV === "production" && persistenceResult.persistence !== "database-provider-webhook-delivery-transaction") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "PROVIDER_WEBHOOK_RECONCILIATION_NOT_CONFIGURED",
+          message: "Production Sentry webhook reconciliation requires tenant ownership resolution and durable AuditLog/ErrorReport persistence; non-durable fallback reconciliation is disabled.",
+          gapIds: ["GAP-079", "GAP-082"],
+        },
+        data: {
+          receivedSignatureHeader: "present",
+          providerDeliveryId: reconciliationPlan.providerDeliveryId,
+          idempotencyKey: reconciliationPlan.idempotencyKey,
+          durablePersistence: persistenceResult.persistence,
+          providerWebhookDeliveryId: persistenceResult.providerWebhookDeliveryId,
+          replayProtection: persistenceResult.replayProtection,
+          ownership: reconciliationPlan.ownership,
+          productionBoundary: { providerWebhookDurablePersistenceRequired: true },
+        },
+      },
+      { status: 503, headers: noStoreHeaders },
+    );
+  }
   const reconciliationContract = buildProviderWebhookReconciliationContract();
 
   return NextResponse.json(
@@ -218,8 +284,9 @@ export async function POST(request: NextRequest) {
           provider: reconciliationPlan.provider,
           action: reconciliationPlan.action,
           targetErrorStatus: reconciliationPlan.targetErrorStatus,
-          persistence: "not-yet-wired",
+          persistence: "durable-provider-webhook-attempt",
           durablePersistence: persistenceResult.persistence,
+          providerWebhookDeliveryId: persistenceResult.providerWebhookDeliveryId,
           auditLogId: persistenceResult.auditLogId,
           matchedErrorReportId: persistenceResult.matchedErrorReportId,
           statusMutated: persistenceResult.statusMutated,
@@ -234,12 +301,12 @@ export async function POST(request: NextRequest) {
         workflow: buildAgenticBugFixWorkflow(report),
         issueDraft: buildGithubIssueDraft(report),
         requiredNextWork: [
-          "Add a dedicated ProviderWebhookDelivery table with unique provider/idempotency constraints.",
           "Run live Sentry webhook replay/idempotency proof against the configured provider secret.",
           "Promote seeded ErrorReport status-mutation and provider no-PII artifact checks from static coverage to integration evidence.",
         ],
       },
     },
-    { status: 202 },
+    { status: 202, headers: noStoreHeaders },
   );
 }
+

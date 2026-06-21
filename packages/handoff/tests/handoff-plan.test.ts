@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  agentExecutionLedgerRequiredCommands,
+  agentExecutionLedgerRequiredEvidence,
+  agentTaskTrackingRequiredCommands,
+  agentTaskTrackingRequiredEvidence,
   auditGapRecords,
   buildAgentExecutionLedgerReadinessPlan,
   buildAgentTaskTrackingReadinessPlan,
   buildHandoffToolingRuntimeReadinessPlan,
   extractGapRecords,
   getTasksForAgent,
+  handoffToolingRuntimeRequiredCommands,
+  handoffToolingRuntimeRequiredEvidence,
   phase16AgentExecutionTasks,
   renderAgentPrompt,
   summarizeAgentExecutionQueue,
@@ -171,8 +177,8 @@ describe("Phase 16 handoff plan", () => {
     expect(plan.unknownExecutionTaskIds).toEqual(["unknown-task"]);
     expect(plan.incompleteExecutionTaskIds).toEqual(expect.arrayContaining(["task-a:assignedAgent", "task-a", "task-a:GAP-119"]));
     expect(plan.unsafeEvidenceFields).toContain("task-a:5");
-    expect(plan.requiredCommands).toContain("pnpm handoff:verify-ledger");
-    expect(plan.requiredEvidence).toContain("Secret-safe review status for every completed execution.");
+    expect(plan.requiredCommands).toBe(agentExecutionLedgerRequiredCommands);
+    expect(plan.requiredEvidence).toBe(agentExecutionLedgerRequiredEvidence);
     expect(plan.blockers).toContain("Every Phase 16 queue task must have an execution ledger entry.");
     expect(plan.blockers).toContain("Agent execution ledger must not contain secrets, database URLs, private keys, PII, or payment payloads.");
   });
@@ -205,6 +211,7 @@ describe("Phase 16 handoff plan", () => {
     expect(plan.duplicateExecutionTaskIds).toEqual([]);
     expect(plan.incompleteExecutionTaskIds).toEqual([]);
     expect(plan.unsafeEvidenceFields).toEqual([]);
+    expect(plan.requiredCommands).toBe(agentExecutionLedgerRequiredCommands);
     expect(plan.blockers).toEqual([]);
   });
 
@@ -242,8 +249,10 @@ describe("Phase 16 handoff plan", () => {
     expect(plan.missingDocs).toEqual(["HANDOFF_TO_CODEX.md"]);
     expect(plan.missingCiEvidence).toEqual(["pnpm handoff:verify-tooling"]);
     expect(plan.missingPackageScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toContain("pnpm handoff:verify-tooling");
-    expect(plan.requiredEvidence).toContain("CI workflow evidence naming Phase 16 handoff manifest/tooling checks.");
+    expect(plan.requiredCommands).toBe(handoffToolingRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(handoffToolingRuntimeRequiredEvidence);
+    expect(plan.blockers).toContain("Root handoff scripts missing from package.json: handoff:audit, handoff:verify-tooling.");
+    expect(plan.blockers).not.toContain("Root handoff scripts must be wired in package.json.");
     expect(plan.blockers).toContain("handoff:all must include handoff:verify-tooling.");
     expect(plan.blockers).toContain("Agent execution ledger must contain one execution entry per queue task.");
   });
@@ -255,6 +264,7 @@ describe("Phase 16 handoff plan", () => {
       "handoff:next",
       "handoff:verify-ledger",
       "handoff:verify-tooling",
+      "handoff:verify-task-sync",
       "handoff:all",
     ];
     const requiredReports = [
@@ -269,6 +279,7 @@ describe("Phase 16 handoff plan", () => {
       "scripts/handoff/print-next-agent-tasks.mjs",
       "scripts/handoff/verify-agent-execution-ledger.mjs",
       "scripts/handoff/verify-handoff-tooling.mjs",
+      "scripts/handoff/verify-agent-task-sync.mjs",
     ];
     const requiredDocs = [
       "docs/handoff/README.md",
@@ -285,9 +296,11 @@ describe("Phase 16 handoff plan", () => {
       "pnpm handoff:next",
       "pnpm handoff:verify-ledger",
       "pnpm handoff:verify-tooling",
+      "pnpm handoff:verify-task-sync",
     ];
     const rootScripts = Object.fromEntries(requiredRootScripts.map((script) => [script, `pnpm ${script}`]));
-    rootScripts["handoff:all"] = "pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next && pnpm handoff:verify-ledger && pnpm handoff:verify-tooling";
+    rootScripts["handoff:all"] =
+      "pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next && pnpm handoff:verify-ledger && pnpm handoff:verify-tooling && pnpm handoff:verify-task-sync";
 
     const plan = buildHandoffToolingRuntimeReadinessPlan({
       requiredRootScripts,
@@ -319,6 +332,7 @@ describe("Phase 16 handoff plan", () => {
     expect(plan.missingDocs).toEqual([]);
     expect(plan.missingCiEvidence).toEqual([]);
     expect(plan.missingPackageScripts).toEqual([]);
+    expect(plan.requiredCommands).toBe(handoffToolingRuntimeRequiredCommands);
     expect(plan.blockers).toEqual([]);
   });
 
@@ -374,8 +388,8 @@ describe("Phase 16 handoff plan", () => {
       ]),
     );
     expect(plan.unsafeTrackingFields).toContain(`${tasks[0]!.id}:10`);
-    expect(plan.requiredCommands).toContain("pnpm handoff:verify-task-sync");
-    expect(plan.requiredEvidence).toContain("Traceable status updates from issue/project state into the execution ledger.");
+    expect(plan.requiredCommands).toBe(agentTaskTrackingRequiredCommands);
+    expect(plan.requiredEvidence).toBe(agentTaskTrackingRequiredEvidence);
     expect(plan.blockers).toContain("GitHub issues must be created for every queued agent task.");
     expect(plan.blockers).toContain("Task status updates must be traceable between queue, issues/projects, ledger, and gap tracker.");
   });
@@ -411,6 +425,7 @@ describe("Phase 16 handoff plan", () => {
     expect(plan.unknownIssueTaskIds).toEqual([]);
     expect(plan.incompleteIssueTaskIds).toEqual([]);
     expect(plan.unsafeTrackingFields).toEqual([]);
+    expect(plan.requiredCommands).toBe(agentTaskTrackingRequiredCommands);
     expect(plan.blockers).toEqual([]);
   });
 });

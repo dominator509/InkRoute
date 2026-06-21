@@ -1,4 +1,4 @@
-import { buildMobileAuthRuntimeReadinessPlan } from "@inkroute/auth";
+﻿import { buildMobileAuthRuntimeReadinessPlan } from "@inkroute/auth";
 
 export type MobileAuthRuntimeStatus =
   | "wired"
@@ -41,6 +41,112 @@ export const mobileAuthArtifactPaths = [
   "coverage/mobile-auth-secret-safe-artifacts.json",
   "test-results/mobile-auth-runtime",
 ] as const;
+
+export const mobileAuthRuntimeProofFiles = [
+  "apps/mobile/package.json",
+  "packages/mobile/package.json",
+  "apps/mobile/src/lib/mobileAuth.ts",
+  "apps/mobile/src/lib/mobileAuthRuntime.ts",
+  "apps/mobile/src/screens/AuthScreen.tsx",
+  "apps/mobile/tests/mobile-auth-static.test.ts",
+  "apps/mobile/tests/mobile-auth-runtime-static.test.ts",
+  "packages/auth/package.json",
+  "packages/auth/src/index.ts",
+  "packages/auth/tests/authorization.test.ts",
+  "testing/manifests/unit-test-manifest.json",
+] as const;
+
+export const mobileAuthEvidenceFlags = [
+  "authTypecheckPassed",
+  "authTestsPassed",
+  "mobileTypecheckPassed",
+  "mobileTestsPassed",
+  "providerLoginLogoutTested",
+  "secureStorePlaintextDenied",
+  "biometricDeviceTested",
+  "refreshLogoutRevocationClearingTested",
+  "tenantMembershipRoleResolutionTested",
+  "crossTenantDenialTested",
+  "auditPersistenceVerified",
+  "iosAndroidSmokeTested",
+  "ciEvidenceCaptured",
+  "secretSafeArtifactsCaptured",
+] as const;
+
+export const mobileAuthExecutionPolicy = {
+  codexMayClassifyStaticMobileAuthReadiness: true,
+  providerLoginLogoutRequiredForClosure: true,
+  secureStorePersistenceRequiredForClosure: true,
+  biometricDeviceSmokeRequiredForClosure: true,
+  serverTenantMembershipRequiredForClosure: true,
+  auditPersistenceRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies MobileAuthExecutionPolicy;
+
+export const mobileAuthRequiredExternalEvidence = [
+  "provider-backed login/logout/session callback transcript",
+  "real Expo SecureStore persistence evidence",
+  "plaintext-denial SecureStore evidence",
+  "biometric device unlock smoke",
+  "refresh/logout/revocation clearing proof",
+  "server-backed tenant membership and role resolution proof",
+  "cross-tenant runtime denial proof",
+  "mobile auth audit persistence evidence",
+  "mobile typecheck/test output",
+  "CI mobile auth evidence",
+  "secret-safe mobile auth artifact review",
+] as const;
+
+export type MobileAuthEvidenceFlag = (typeof mobileAuthEvidenceFlags)[number];
+
+export interface MobileAuthExecutionPolicy {
+  readonly codexMayClassifyStaticMobileAuthReadiness: true;
+  readonly providerLoginLogoutRequiredForClosure: true;
+  readonly secureStorePersistenceRequiredForClosure: true;
+  readonly biometricDeviceSmokeRequiredForClosure: true;
+  readonly serverTenantMembershipRequiredForClosure: true;
+  readonly auditPersistenceRequiredForClosure: true;
+  readonly secretSafeArtifactsRequiredForClosure: true;
+}
+
+export interface MobileAuthExecutionPlan {
+  readonly policy: typeof mobileAuthExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly authProviderExecutionAllowed: false;
+  readonly secureStoreExecutionAllowed: false;
+  readonly biometricExecutionAllowed: false;
+  readonly deviceExecutionAllowed: false;
+  readonly serverTenantExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly localCommands: typeof mobileAuthLocalCommands;
+  readonly externalCommands: typeof mobileAuthExternalCommands;
+  readonly requiredExternalEvidence: typeof mobileAuthRequiredExternalEvidence;
+}
+
+export interface MobileAuthArtifactReview {
+  readonly artifact: unknown;
+  readonly redactedArtifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: boolean;
+  readonly requiredExternalEvidence: typeof mobileAuthRequiredExternalEvidence;
+}
+
+export interface MobileAuthEvidenceInput {
+  readonly commands?: readonly string[];
+  readonly artifacts?: readonly string[];
+  readonly evidence?: Partial<Record<MobileAuthEvidenceFlag, boolean>>;
+}
+
+export interface MobileAuthEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly requiredCommands: typeof mobileAuthRuntimeCommands;
+  readonly missingCommands: readonly string[];
+  readonly requiredArtifacts: typeof mobileAuthArtifactPaths;
+  readonly missingArtifacts: readonly string[];
+  readonly requiredEvidence: typeof mobileAuthEvidenceFlags;
+  readonly missingEvidence: readonly MobileAuthEvidenceFlag[];
+  readonly blockers: readonly string[];
+}
 
 export const mobileAuthRuntimeMatrix = [
   {
@@ -125,3 +231,115 @@ export const mobileAuthRuntimeReadiness = buildMobileAuthRuntimeReadinessPlan({
   secureTokenStorageVerified: false,
   auditLogPersistenceConfigured: false,
 });
+
+const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
+  const actualSet = new Set(actual ?? []);
+  return required.filter((entry) => !actualSet.has(entry));
+};
+
+const sensitiveMobileAuthArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|securestore|biometric|device|auth|audit|role|member|email|phone|medical|payment)/i;
+
+const redactMobileAuthArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactMobileAuthArtifactValue(entry, `${path}.${index}`, redactedPaths));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (sensitiveMobileAuthArtifactKey.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[REDACTED]"];
+        }
+        return [key, redactMobileAuthArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const mobileAuthLocalCommands = [
+  "pnpm --filter @inkroute/auth typecheck",
+  "pnpm --filter @inkroute/auth test",
+  "static mobile secure-session adapter review",
+  "static AuthScreen auth contract surfacing review",
+] as const;
+
+export const mobileAuthExternalCommands = [
+  "pnpm --filter @inkroute/mobile typecheck",
+  "pnpm --filter @inkroute/mobile test",
+  "provider-backed mobile login/logout/session callback tests",
+  "Expo SecureStore plaintext-denial evidence",
+  "biometric device unlock smoke",
+  "mobile refresh/logout/revocation clearing tests",
+  "server-backed tenant membership and cross-tenant denial tests",
+  "mobile auth audit persistence tests",
+  "GitHub Actions mobile auth evidence job",
+] as const;
+
+export const buildMobileAuthExecutionPlan = (): MobileAuthExecutionPlan => ({
+  policy: mobileAuthExecutionPolicy,
+  commandExecutionAllowed: false,
+  authProviderExecutionAllowed: false,
+  secureStoreExecutionAllowed: false,
+  biometricExecutionAllowed: false,
+  deviceExecutionAllowed: false,
+  serverTenantExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  localCommands: mobileAuthLocalCommands,
+  externalCommands: mobileAuthExternalCommands,
+  requiredExternalEvidence: mobileAuthRequiredExternalEvidence,
+});
+
+export const buildRedactedMobileAuthArtifact = (artifact: unknown): Pick<MobileAuthArtifactReview, "redactedArtifact" | "redactedPaths"> => {
+  const redactedPaths: string[] = [];
+  return {
+    redactedArtifact: redactMobileAuthArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+  };
+};
+
+export const buildMobileAuthArtifactReview = (artifact: unknown): MobileAuthArtifactReview => {
+  const redacted = buildRedactedMobileAuthArtifact(artifact);
+  return {
+    artifact,
+    redactedArtifact: redacted.redactedArtifact,
+    redactedPaths: redacted.redactedPaths,
+    secretSafe: redacted.redactedPaths.length > 0,
+    requiredExternalEvidence: mobileAuthRequiredExternalEvidence,
+  };
+};
+
+export const buildMobileAuthEvidenceDecision = (
+  input: MobileAuthEvidenceInput = {},
+): MobileAuthEvidenceDecision => {
+  const missingCommands = missingFrom(input.commands, mobileAuthRuntimeCommands);
+  const missingArtifacts = missingFrom(input.artifacts, mobileAuthArtifactPaths);
+  const missingEvidence = mobileAuthEvidenceFlags.filter((flag) => input.evidence?.[flag] !== true);
+  const blockers = [
+    missingCommands.length > 0 ? "Pinned mobile auth commands must be run and captured." : "",
+    missingArtifacts.length > 0 ? "Mobile auth artifacts must be retained with redacted provider, device, CI, and secret-safe evidence." : "",
+    missingEvidence.length > 0
+      ? "Provider login/logout, SecureStore, biometric, refresh/revocation clearing, tenant/RBAC denial, audit, device smoke, CI, and secret-safe evidence must pass."
+      : "",
+  ].filter(Boolean);
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    requiredCommands: mobileAuthRuntimeCommands,
+    missingCommands,
+    requiredArtifacts: mobileAuthArtifactPaths,
+    missingArtifacts,
+    requiredEvidence: mobileAuthEvidenceFlags,
+    missingEvidence,
+    blockers,
+  };
+};
+
+

@@ -18,25 +18,45 @@ function redactAssetMetadata(metadata: unknown): Record<string, unknown> {
   );
 }
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 export async function GET(request: NextRequest, context: PortfolioDetailRouteContext) {
   const actor = resolveDashboardActor(request);
   try {
     assertPermission(actor, "portfolio:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read portfolio items." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read portfolio items." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const { portfolioId } = await context.params;
   const params = new URL(request.url).searchParams;
   const tenantId = params.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a portfolio item for another tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a portfolio item for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          portfolioId,
+          error: {
+            code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
+            message: "Production dashboard portfolio reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
+            gapIds: ["GAP-005", "GAP-007", "GAP-037", "GAP-040"],
+          },
+          productionBoundary: { localDashboardReadFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     const item = dashboardProjectedPortfolio.find((row) => row.id === portfolioId);
     if (!item) {
-      return NextResponse.json({ ok: false, error: { code: "PORTFOLIO_NOT_FOUND", message: "Portfolio item was not found for this tenant." } }, { status: 404 });
+      return NextResponse.json({ ok: false, error: { code: "PORTFOLIO_NOT_FOUND", message: "Portfolio item was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
     }
     return NextResponse.json(
       {
@@ -48,7 +68,7 @@ export async function GET(request: NextRequest, context: PortfolioDetailRouteCon
         gapIds: ["GAP-005", "GAP-007", "GAP-037", "GAP-040"],
         boundary: "Local fallback returns a tenant-projected demo portfolio item only; database mode is required for live portfolio reads.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   }
 
@@ -125,7 +145,7 @@ export async function GET(request: NextRequest, context: PortfolioDetailRouteCon
     });
 
     if (result.status === "not_found") {
-      return NextResponse.json({ ok: false, error: { code: "PORTFOLIO_NOT_FOUND", message: "Portfolio item was not found for this tenant." } }, { status: 404 });
+      return NextResponse.json({ ok: false, error: { code: "PORTFOLIO_NOT_FOUND", message: "Portfolio item was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
     }
 
     const view = buildTenantDashboardView({
@@ -188,7 +208,7 @@ export async function GET(request: NextRequest, context: PortfolioDetailRouteCon
         gapIds: ["GAP-005", "GAP-007", "GAP-037", "GAP-040"],
         boundary: "Dashboard portfolio detail reads are tenant-scoped, file-key redacted, no-store, and audited.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
@@ -201,10 +221,10 @@ export async function GET(request: NextRequest, context: PortfolioDetailRouteCon
           error: { code: "DATABASE_UNAVAILABLE", message: "Portfolio detail reads require the dashboard database connection." },
           gapIds: ["GAP-005", "GAP-007", "GAP-037", "GAP-040"],
         },
-        { status: 503, headers: { "Cache-Control": "no-store" } },
+        { status: 503, headers: noStoreHeaders },
       );
     }
 
-    return NextResponse.json({ ok: false, error: { code: "PORTFOLIO_DETAIL_READ_FAILED", message: "Portfolio item could not be loaded." } }, { status: 500 });
+    return NextResponse.json({ ok: false, error: { code: "PORTFOLIO_DETAIL_READ_FAILED", message: "Portfolio item could not be loaded." } }, { status: 500, headers: noStoreHeaders });
   }
 }

@@ -28,6 +28,26 @@ describe("dashboard trust status route", () => {
     expect(body.gapIds).toContain("GAP-103");
   });
 
+  it("fail-closes production trust previews without provider-backed session evidence", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      const response = await GET(trustStatusRequest("demo-studio-alpha", "studio_manager", "trust-production-reader"));
+      const body = await response.json();
+
+      expect(response.status).toBe(503);
+      expect(body.ok).toBe(false);
+      expect(body.error.code).toBe("DASHBOARD_TRUST_STATUS_PROVIDER_AUTH_NOT_CONFIGURED");
+      expect(body.error.message).toContain("header-only trust previews are disabled until provider-backed session evidence is captured");
+      expect(body.productionBoundary.scaffoldedTrustPreviewDisabled).toBe(true);
+      expect(body.productionBoundary.requiresProviderBackedSession).toBe(true);
+      expect(body.productionBoundary.requiresSecurityRuntimeEvidence).toBe(true);
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
   it("denies trust status reads without matching tenant scope", async () => {
     const response = await GET(trustStatusRequest("other-tenant", "studio_manager", "cross-tenant-reader"));
     const body = await response.json();

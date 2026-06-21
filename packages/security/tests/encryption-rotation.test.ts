@@ -186,4 +186,13 @@ describe("encryption policy and cache-rotation coverage", () => {
       restoreEnv(restore);
     }
   });
+
+  it(pins GAP-021 tracker closure evidence in the unit manifest, async () => {
+    const manifestText = await import(node:fs).then((fs) =>
+      fs.readFileSync(testing/manifests/unit-test-manifest.json, utf8),
+    );
+
+    expect(manifestText).toContain(unit-security-encryption-rotation);
+    expect(manifestText).toContain("GAP-021 is encryption-key-management-contract wired with evidence classifier");
+  });
 });

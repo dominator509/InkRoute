@@ -1,5 +1,5 @@
 import { DashboardPageHeader } from "../../components/DashboardPageHeader";
-import { DisabledActionPanel } from "../../components/DisabledActionPanel";
+import { ImageSeoActionPanel } from "../../components/ImageSeoActionPanel";
 import { StatusPill } from "../../components/StatusPill";
 import { dashboardProjectedPortfolio } from "../../lib/demo";
 
@@ -28,11 +28,7 @@ export default function PortfolioManagerPage() {
         ))}
       </section>
 
-      <DisabledActionPanel
-        title="Image workflow actions"
-        description="Portfolio reads now redact storage keys and private asset metadata. Upload, crop, reorder, publish, transform, and alt-text assistant actions still require signed storage, image optimization, background jobs, and access control."
-        actions={["Upload image", "Generate derivative", "Publish to website", "Request healed photo"]}
-      />
+      <ImageSeoActionPanel />
     </main>
   );
 }

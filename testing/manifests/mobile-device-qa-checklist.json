@@ -79,7 +79,7 @@
       "priority": "critical",
       "description": "Publish a preview EAS update, verify adoption, and rehearse rollback by republishing a previous compatible update.",
       "platforms": ["Physical device", "EAS preview channel"],
-      "command": "eas update --channel preview and rollback republish",
+      "command": "eas update --channel preview --message rollback-republish-drill --non-interactive",
       "evidenceRequired": "Preview update adoption screenshot and rollback republish proof on the same runtime.",
       "gaps": ["GAP-047", "GAP-048", "GAP-108"]
     },

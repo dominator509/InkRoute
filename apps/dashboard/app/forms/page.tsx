@@ -1,5 +1,5 @@
 import { DashboardPageHeader } from "../../components/DashboardPageHeader";
-import { DisabledActionPanel } from "../../components/DisabledActionPanel";
+import { FormActionPanel } from "../../components/FormActionPanel";
 import { StatusPill } from "../../components/StatusPill";
 
 const forms = [
@@ -33,11 +33,7 @@ export default function FormsPage() {
         ))}
       </section>
 
-      <DisabledActionPanel
-        title="Form actions"
-        description="GET /api/forms and GET /api/forms/[formId] now provide RBAC-gated, audited, no-store reads. Form editing, signature requests, private upload retention, and attorney-reviewed copy remain gated before production."
-        actions={["Create intake form", "Publish consent form", "Send signature request", "Archive form version"]}
-      />
+      <FormActionPanel />
     </main>
   );
 }

@@ -60,6 +60,30 @@ export interface SmsProviderRepository {
   }): Promise<void>;
 }
 
+export interface InMemorySmsProviderRepositoryState {
+  readonly allowedDeliveryKeys: Set<string>;
+  readonly consentProofDestinationHashes: Set<string>;
+  readonly suppressedDestinationHashes: Set<string>;
+  readonly idempotencyKeys: Map<string, { readonly tenantId: string; readonly requestId: string }>;
+  readonly queuedDeliveries: { readonly tenantId: string; readonly plan: SmsProviderSendPlan }[];
+  readonly providerSendResults: {
+    readonly tenantId: string;
+    readonly deliveryId: string;
+    readonly result: SmsProviderSendResult;
+  }[];
+  readonly webhookReconciliations: {
+    readonly tenantId: string;
+    readonly readiness: SmsWebhookRuntimeReadinessPlan;
+    readonly reconciliation: ProviderEventReconciliationPlan;
+    readonly redactedPayload: Record<string, unknown>;
+  }[];
+  readonly inboundThreads: {
+    readonly tenantId: string;
+    readonly readiness: SmsWebhookRuntimeReadinessPlan;
+    readonly redactedPayload: Record<string, unknown>;
+  }[];
+}
+
 export interface SmsProviderContract {
   sendPlan: SmsProviderSendPlan;
   stopWebhookReadiness: SmsWebhookRuntimeReadinessPlan;
@@ -196,6 +220,128 @@ export function buildSmsWebhookReadinessFromPayload(input: {
   });
 }
 
+const smsProviderPrivatePayloadKeys = new Set([
+  "accountSid",
+  "authToken",
+  "authorization",
+  "signature",
+  "rawBody",
+  "phone",
+  "from",
+  "to",
+  "body",
+  "clientName",
+  "tenantSecret",
+]);
+
+function redactSmsProviderPayloadValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactSmsProviderPayloadValue(entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+        key,
+        smsProviderPrivatePayloadKeys.has(key) ? "[redacted]" : redactSmsProviderPayloadValue(entry),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+export function sanitizeSmsProviderSendResult(result: SmsProviderSendResult | null): SmsProviderSendResult | null {
+  if (!result) {
+    return null;
+  }
+
+  return {
+    providerMessageId: result.providerMessageId,
+    redactedPayload: redactSmsProviderPayloadValue(result.redactedPayload) as Record<string, unknown>,
+  };
+}
+
+export function buildRedactedSmsWebhookPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  return redactSmsProviderPayloadValue(payload) as Record<string, unknown>;
+}
+
+function buildSmsDeliveryKey(input: { readonly tenantId: string; readonly notificationId: string; readonly deliveryId: string }): string {
+  return `${input.tenantId}:${input.notificationId}:${input.deliveryId}`;
+}
+
+function buildSmsDestinationKey(input: { readonly tenantId: string; readonly destinationHash: string }): string {
+  return `${input.tenantId}:${input.destinationHash}`;
+}
+
+function buildSmsIdempotencyKey(input: { readonly tenantId: string; readonly key: string }): string {
+  return `${input.tenantId}:${input.key}`;
+}
+
+export function createInMemorySmsProviderRepository(
+  state: InMemorySmsProviderRepositoryState = {
+    allowedDeliveryKeys: new Set(),
+    consentProofDestinationHashes: new Set(),
+    suppressedDestinationHashes: new Set(),
+    idempotencyKeys: new Map(),
+    queuedDeliveries: [],
+    providerSendResults: [],
+    webhookReconciliations: [],
+    inboundThreads: [],
+  },
+): SmsProviderRepository & { readonly state: InMemorySmsProviderRepositoryState } {
+  return {
+    state,
+    async assertTenantSmsDeliveryAllowed(input) {
+      if (!state.allowedDeliveryKeys.has(buildSmsDeliveryKey(input))) {
+        throw new Error("SMS_PROVIDER_DELIVERY_ACCESS_DENIED");
+      }
+    },
+    async hasStoredConsentProof(input) {
+      return state.consentProofDestinationHashes.has(buildSmsDestinationKey(input));
+    },
+    async isDestinationSuppressed(input) {
+      return state.suppressedDestinationHashes.has(buildSmsDestinationKey(input));
+    },
+    async claimIdempotencyKey(input) {
+      const key = buildSmsIdempotencyKey(input);
+      const existing = state.idempotencyKeys.get(key);
+
+      if (!existing) {
+        state.idempotencyKeys.set(key, { tenantId: input.tenantId, requestId: input.requestId });
+        return "claimed";
+      }
+
+      if (existing.requestId === input.requestId) {
+        return "duplicate";
+      }
+
+      throw new Error("SMS_PROVIDER_IDEMPOTENCY_KEY_CONFLICT");
+    },
+    async persistQueuedDelivery(input) {
+      state.queuedDeliveries.push(input);
+    },
+    async persistProviderSendResult(input) {
+      state.providerSendResults.push({
+        ...input,
+        result: sanitizeSmsProviderSendResult(input.result) ?? input.result,
+      });
+    },
+    async persistWebhookReconciliation(input) {
+      state.webhookReconciliations.push({
+        ...input,
+        redactedPayload: buildRedactedSmsWebhookPayload(input.redactedPayload),
+      });
+    },
+    async persistInboundThread(input) {
+      state.inboundThreads.push({
+        ...input,
+        redactedPayload: buildRedactedSmsWebhookPayload(input.redactedPayload),
+      });
+    },
+  };
+}
+
 export async function executeSmsProviderSend(
   input: SmsProviderMutationInput,
   repository: SmsProviderRepository,
@@ -232,7 +378,7 @@ export async function executeSmsProviderSend(
   }
 
   await repository.persistQueuedDelivery({ tenantId: input.tenantId, plan });
-  const result = sendWithProvider ? await sendWithProvider(plan) : null;
+  const result = sanitizeSmsProviderSendResult(sendWithProvider ? await sendWithProvider(plan) : null);
   if (result) {
     await repository.persistProviderSendResult({
       tenantId: input.tenantId,

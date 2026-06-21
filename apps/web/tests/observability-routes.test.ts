@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createHmac } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { NextRequest } from "next/server";
 
 const dbMocks = vi.hoisted(() => ({
@@ -105,6 +107,55 @@ describe("observability route boundaries", () => {
     expect(JSON.stringify(payload.data.preview.report.redactedMetadata)).not.toContain("avery@example.com");
     expect(payload.data.preview.report.stackHash).toHaveLength(12);
     expect(payload.data.localBoundary.rateLimitRule).toBe("fallback-error-report");
+  });
+
+  it("fail-closes production public error reports instead of using local runtime fallback", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      const response = await createPublicErrorReport(
+        errorReportRequest(
+          {
+            source: "web",
+            runtime: "browser",
+            environment: "production",
+            message: "Production booking crash should not persist locally",
+            route: "/booking",
+            release: "phase11-route-test",
+            handled: false,
+          },
+          "203.0.113.84",
+        ),
+        { params: Promise.resolve({ tenantSlug: "inkroute-demo" }) },
+      );
+      const payload = (await response.json()) as {
+        ok: boolean;
+        error: { code: string; gapIds: string[] };
+        productionBoundary: { localObservabilityRuntimeFallbackDisabled: boolean };
+      };
+
+      expect(response.status).toBe(503);
+      expect(payload.ok).toBe(false);
+      expect(payload.error.code).toBe("PROVIDER_OBSERVABILITY_PERSISTENCE_NOT_CONFIGURED");
+      expect(payload.error.gapIds).toContain("GAP-011");
+      expect(payload.error.gapIds).toContain("GAP-081");
+      expect(payload.productionBoundary.localObservabilityRuntimeFallbackDisabled).toBe(true);
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
+  it("keeps public error-report persistence responses no-store", () => {
+    const routeSource = readFileSync(join(process.cwd(), "apps/web/app/api/public/[tenantSlug]/error-reports/route.ts"), "utf8");
+
+    expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(routeSource).toContain('headers: { ...noStoreHeaders, "x-request-id": correlation.requestId, "traceparent": correlation.traceparent }');
+    expect(routeSource).not.toContain('headers: { "x-request-id": correlation.requestId, "traceparent": correlation.traceparent }');
+    expect(routeSource).toContain("{ status: 400, headers: noStoreHeaders }");
+    expect(routeSource).toContain("{ status: 404, headers: noStoreHeaders }");
+    expect(routeSource).toContain('headers: { ...noStoreHeaders, "Retry-After": String(rateLimit.retryAfterSeconds) }');
+    expect(routeSource).toContain("{ status: 500, headers: noStoreHeaders }");
   });
 
   it("persists database-backed public error reports as redacted tenant rows with audit metadata", async () => {
@@ -216,7 +267,7 @@ describe("observability route boundaries", () => {
       ok: false,
       error: { code: "MISSING_SENTRY_SIGNATURE" },
     });
-    expect(acceptedShape.status).toBe(501);
+    expect(acceptedShape.status).toBe(503);
     expect(acceptedPayload.ok).toBe(false);
     expect(acceptedPayload.error.code).toBe("SENTRY_WEBHOOK_SECRET_NOT_CONFIGURED");
     expect(acceptedPayload.data.receivedSignatureHeader).toBe("present");
@@ -266,7 +317,7 @@ describe("observability route boundaries", () => {
       data: {
         providerDeliveryId: string;
         idempotencyKey: string;
-        reconciliation: { targetErrorStatus: string; persistence: string };
+        reconciliation: { targetErrorStatus: string; persistence: string; durablePersistence: string };
         report: { route: string; release: string; redactedMessage: string };
         requiredNextWork: string[];
       };
@@ -278,13 +329,14 @@ describe("observability route boundaries", () => {
     expect(payload.data.idempotencyKey).toBe("sentry:resolved:issue_123");
     expect(payload.data.reconciliation).toMatchObject({
       targetErrorStatus: "resolved",
-      persistence: "not-yet-wired",
+      persistence: "durable-provider-webhook-attempt",
+      durablePersistence: "database-write-rejected",
     });
     expect(payload.data.report).toMatchObject({
       route: "/booking",
       release: "phase11-route-test",
     });
     expect(payload.data.report.redactedMessage).not.toContain("avery@example.com");
-    expect(payload.data.requiredNextWork.join(" ")).toContain("Persist webhook deliveries idempotently");
+    expect(payload.data.requiredNextWork.join(" ")).toContain("Run live Sentry webhook replay");
   });
 });

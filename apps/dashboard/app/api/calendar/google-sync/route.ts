@@ -4,6 +4,8 @@ import { buildGoogleCalendarProviderSyncPlan, type GoogleCalendarSyncAction } fr
 import { dashboardGoogleCalendarSyncContract } from "../../../../lib/googleCalendarSync";
 import { assertPermission, resolveDashboardActor } from "../../dashboardAuth";
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 const supportedActions = new Set<GoogleCalendarSyncAction>(dashboardGoogleCalendarSyncContract.supportedActions);
 
 export async function POST(request: NextRequest) {
@@ -13,7 +15,7 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json(
       { ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to sync Google Calendar." } },
-      { status: 403, headers: { "Cache-Control": "no-store" } },
+      { status: 403, headers: noStoreHeaders },
     );
   }
 
@@ -22,7 +24,7 @@ export async function POST(request: NextRequest) {
   if (tenantId !== actor.tenantId) {
     return NextResponse.json(
       { ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot sync Google Calendar for another tenant." } },
-      { status: 403, headers: { "Cache-Control": "no-store" } },
+      { status: 403, headers: noStoreHeaders },
     );
   }
 
@@ -30,7 +32,7 @@ export async function POST(request: NextRequest) {
   if (!supportedActions.has(action as GoogleCalendarSyncAction)) {
     return NextResponse.json(
       { ok: false, error: { code: "UNSUPPORTED_GOOGLE_SYNC_ACTION", message: "Google Calendar sync action is not supported." } },
-      { status: 400, headers: { "Cache-Control": "no-store" } },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest) {
         readiness: dashboardGoogleCalendarSyncContract.readiness,
         gapIds: ["GAP-057"],
       },
-      { status: 409, headers: { "Cache-Control": "no-store" } },
+      { status: 409, headers: noStoreHeaders },
     );
   }
 
@@ -77,6 +79,6 @@ export async function POST(request: NextRequest) {
       readiness: dashboardGoogleCalendarSyncContract.readiness,
       gapIds: ["GAP-057"],
     },
-    { status: 501, headers: { "Cache-Control": "no-store" } },
+    { status: 202, headers: noStoreHeaders },
   );
 }

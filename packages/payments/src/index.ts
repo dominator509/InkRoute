@@ -138,7 +138,7 @@ export interface StripeCheckoutExecutionReadiness {
   canCallStripe: boolean;
   draft: StripeCheckoutSessionDraft;
   requiredWrites: readonly string[];
-  requiredControls: readonly string[];
+  requiredControls: typeof stripeCheckoutExecutionRequiredControls;
   blockers: readonly string[];
 }
 
@@ -165,13 +165,52 @@ export interface StripeCheckoutRouteRuntimeReadinessInput {
   stripeTestModeCheckoutVerified: boolean;
 }
 
+export const stripeCheckoutExecutionRequiredControls = [
+  "Create Checkout Session only for accepted bookings or valid signed deposit tokens.",
+  "Persist idempotency key before provider call and reuse it for Stripe request options.",
+  "Persist provider session id and redirect URL after Stripe returns.",
+  "Return only Stripe-hosted checkout URL to the browser; never return secret keys or raw provider payloads.",
+  "Reconcile final payment state only through verified Stripe webhooks.",
+] as const;
+
+export const stripeCheckoutRouteRuntimeRequiredCommands = [
+  "pnpm --filter @inkroute/payments typecheck",
+  "pnpm --filter @inkroute/payments test",
+  "pnpm --filter @inkroute/web typecheck",
+  "pnpm test:unit -- apps/web/tests/payment-routes.test.ts",
+  "capture installed Stripe SDK/API-version source contract and redacted secret evidence",
+  "configure STRIPE_SECRET_KEY in secret store",
+  "enforce accepted booking or short-lived signed deposit token",
+  "persist idempotency key before calling Stripe Checkout",
+  "persist Stripe Checkout session id and redirect URL after provider creation",
+  "persist PaymentAuditLog for Checkout attempts and outcomes",
+  "wrap Deposit, Payment, PaymentAuditLog, and IdempotencyKey writes in one tenant-scoped transaction",
+  "enforce success/cancel redirect host allowlist at route boundary",
+  "return only Stripe-hosted redirect URL and redacted local ids to browser",
+  "test invalid and expired signed deposit token rejection",
+  "stripe checkout session create test-mode smoke",
+  "stripe trigger checkout.session.completed",
+  "GitHub Actions Stripe Checkout evidence job",
+] as const;
+
 export interface StripeCheckoutRouteRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof stripeCheckoutRouteRuntimeRequiredCommands;
+  requiredEvidence: readonly StripeCheckoutRouteRuntimeRequiredEvidence[];
   blockers: readonly string[];
 }
+
+export const stripeCheckoutRouteRuntimeRequiredEvidence = [
+  "Stripe Checkout client route wiring with secret-backed test-mode configuration",
+  "accepted-booking or signed-token authorization tests for valid, invalid, and expired deposit access",
+  "tenant-scoped transaction evidence for Deposit, Payment, PaymentAuditLog, and IdempotencyKey writes",
+  "safe redirect allowlist and browser response redaction test output",
+  "Stripe test-mode Checkout and verified webhook reconciliation transcript",
+] as const;
+
+export type StripeCheckoutRouteRuntimeRequiredEvidence =
+  (typeof stripeCheckoutRouteRuntimeRequiredEvidence)[number];
 
 export interface RefundPolicyInput {
   amountPaidCents: number;
@@ -286,14 +325,49 @@ export interface StripeWebhookRuntimeReadinessInput {
   stripeCliReplayVerified: boolean;
 }
 
+export const stripeWebhookRuntimeRequiredCommands = [
+  "pnpm --filter @inkroute/payments typecheck",
+  "pnpm --filter @inkroute/payments test",
+  "pnpm --filter @inkroute/web typecheck",
+  "pnpm test:unit -- apps/web/tests/payment-routes.test.ts",
+  "use Stripe SDK constructEvent with raw request body and STRIPE_WEBHOOK_SECRET",
+  "reject invalid and stale Stripe signatures before trusted parsing",
+  "persist Stripe provider event ids for replay protection",
+  "cover checkout completed/expired, payment succeeded/failed, refund, and dispute events",
+  "fetch or verify Stripe provider objects before reconciliation",
+  "resolve tenant from trusted provider metadata or persisted provider ids",
+  "reconcile Deposit, Payment, and Refund records",
+  "persist PaymentAuditLog for accepted and rejected Stripe events",
+  "persist BookingStateEvent for payment lifecycle changes",
+  "run webhook reconciliation writes in one tenant-scoped transaction",
+  "reject amount and currency mismatches before reconciliation",
+  "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
+  "stripe trigger checkout.session.completed",
+  "stripe trigger payment_intent.payment_failed",
+  "stripe trigger charge.refunded",
+  "Stripe CLI replay for supported events, invalid signature, and replay denial",
+  "GitHub Actions Stripe webhook evidence job",
+] as const;
+
 export interface StripeWebhookRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
   missingSupportedEvents: readonly StripeWebhookEventType[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof stripeWebhookRuntimeRequiredCommands;
+  requiredEvidence: readonly StripeWebhookRuntimeRequiredEvidence[];
   blockers: readonly string[];
 }
+
+export const stripeWebhookRuntimeRequiredEvidence = [
+  "Stripe SDK constructEvent raw-body verification evidence with STRIPE_WEBHOOK_SECRET",
+  "persistent event-id replay protection and tenant-scoped transaction evidence",
+  "supported event reconciliation tests for success, failure, expiration, refund, dispute, and mismatch cases",
+  "Deposit, Payment, Refund, BookingStateEvent, and PaymentAuditLog persistence evidence",
+  "Stripe CLI replay transcript for supported events, invalid signature, and replay denial",
+] as const;
+
+export type StripeWebhookRuntimeRequiredEvidence =
+  (typeof stripeWebhookRuntimeRequiredEvidence)[number];
 
 export type PaymentLifecycleAction =
   | "create_deposit"
@@ -334,6 +408,14 @@ export interface PaymentLifecycleWrite {
   payload: Record<string, unknown>;
 }
 
+export const paymentLifecyclePersistenceRequiredControls = [
+  "Execute all writes in one tenant-scoped database transaction.",
+  "Insert or claim the idempotency key before mutating payment state.",
+  "Reject cross-tenant deposit, payment, refund, and booking ids before applying writes.",
+  "Write PaymentAuditLog for every lifecycle mutation, including failed and disputed outcomes.",
+  "Treat provider webhook ids as replay protection inputs and never as tenant authorization.",
+] as const;
+
 export interface PaymentLifecyclePersistencePlan {
   status: "ready" | "blocked";
   action: PaymentLifecycleAction;
@@ -342,7 +424,7 @@ export interface PaymentLifecyclePersistencePlan {
   requiresTransaction: true;
   idempotencyKey: string | null;
   writes: readonly PaymentLifecycleWrite[];
-  requiredControls: readonly string[];
+  requiredControls: typeof paymentLifecyclePersistenceRequiredControls;
   blockers: readonly string[];
 }
 
@@ -369,13 +451,32 @@ export interface PaymentPersistenceRuntimeReadinessInput {
   dashboardPaymentReadsUseRepository: boolean;
 }
 
+export const paymentPersistenceRuntimeRequiredCommands = [
+  "pnpm --filter @inkroute/payments typecheck",
+  "pnpm --filter @inkroute/payments test",
+  "pnpm --filter @inkroute/db prisma validate",
+  "payment persistence seeded Postgres integration tests",
+  "dashboard payment repository route/action tests",
+] as const;
+
 export interface PaymentPersistenceRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof paymentPersistenceRuntimeRequiredCommands;
+  requiredEvidence: readonly PaymentPersistenceRuntimeRequiredEvidence[];
   blockers: readonly string[];
 }
+
+export const paymentPersistenceRuntimeRequiredEvidence = [
+  "Prisma models and tenant-scoped payment repository/service implementation",
+  "deposit, provider-session, paid, and failed transition persistence test output",
+  "refund and dispute persistence test output",
+  "PaymentAuditLog and BookingStateEvent persistence evidence for every lifecycle mutation",
+  "seeded Postgres integration tests for tenant isolation and idempotent replay",
+] as const;
+
+export type PaymentPersistenceRuntimeRequiredEvidence =
+  (typeof paymentPersistenceRuntimeRequiredEvidence)[number];
 
 export type PaymentOperationsWorkflowAction =
   | "execute_refund"
@@ -424,6 +525,14 @@ export interface PaymentOperationsWrite {
   payload: Record<string, unknown>;
 }
 
+export const paymentOperationsWorkflowRequiredControls = [
+  "Authorize the actor against the tenant and payment before provider calls or local writes.",
+  "Claim the idempotency key before executing Stripe refunds, receipt delivery, or export creation.",
+  "Persist PaymentAuditLog and operation result in the same transaction as local state changes.",
+  "Store redacted provider references only; never persist secret keys or raw unredacted provider payloads.",
+  "Require accounting/tax review before enabling export files for production bookkeeping.",
+] as const;
+
 export interface PaymentOperationsWorkflowPlan {
   status: "ready" | "blocked";
   action: PaymentOperationsWorkflowAction;
@@ -431,7 +540,7 @@ export interface PaymentOperationsWorkflowPlan {
   requiresTransaction: true;
   idempotencyKey: string | null;
   writes: readonly PaymentOperationsWrite[];
-  requiredControls: readonly string[];
+  requiredControls: typeof paymentOperationsWorkflowRequiredControls;
   blockers: readonly string[];
 }
 
@@ -459,13 +568,35 @@ export interface PaymentOperationsRuntimeReadinessInput {
   dashboardE2eEvidenceAttached: boolean;
 }
 
+export const paymentOperationsRuntimeRequiredCommands = [
+  "pnpm --filter @inkroute/payments typecheck",
+  "pnpm --filter @inkroute/payments test",
+  "pnpm --filter @inkroute/dashboard typecheck",
+  "pnpm test:unit -- apps/dashboard tests for payment operations",
+  "stripe refunds.create test-mode smoke",
+  "dashboard payment operations E2E smoke",
+] as const;
+
 export interface PaymentOperationsRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof paymentOperationsRuntimeRequiredCommands;
+  requiredEvidence: readonly PaymentOperationsRuntimeRequiredEvidence[];
   blockers: readonly string[];
 }
+
+export const paymentOperationsRuntimeRequiredEvidence = [
+  "authorized dashboard/server actions with cross-tenant denial tests",
+  "Stripe test-mode refund transcript and persisted Refund/PaymentAuditLog records",
+  "no-show forfeiture action evidence with BookingStateEvent and PaymentAuditLog rows",
+  "dispute evidence files and Stripe test-mode dispute sync transcript",
+  "generated and delivered receipt evidence with redacted client/payment data",
+  "accounting export file, redaction proof, and tax/accounting review approval",
+  "idempotency, audit-log, and dashboard E2E evidence for all payment operations",
+] as const;
+
+export type PaymentOperationsRuntimeRequiredEvidence =
+  (typeof paymentOperationsRuntimeRequiredEvidence)[number];
 
 export interface PaymentAutomatedTestReadinessInput {
   packageScripts: Readonly<Record<string, string>>;
@@ -483,13 +614,33 @@ export interface PaymentAutomatedTestReadinessInput {
   artifactsCaptured: boolean;
 }
 
+export const paymentAutomatedTestReadinessRequiredCommands = [
+  "pnpm --filter @inkroute/payments typecheck",
+  "pnpm --filter @inkroute/payments test",
+  "pnpm vitest run apps/web/tests/payment-routes.test.ts",
+  "payment DB reconciliation integration tests",
+  "Stripe CLI payment lifecycle tests",
+  "Playwright booking-to-paid payment E2E flow",
+] as const;
+
 export interface PaymentAutomatedTestReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof paymentAutomatedTestReadinessRequiredCommands;
+  requiredEvidence: readonly PaymentAutomatedTestReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
+
+export const paymentAutomatedTestReadinessRequiredEvidence = [
+  "payment helper, route-boundary, and Stripe signature test output",
+  "Stripe CLI lifecycle transcript for checkout success/failure/expiration/refund/dispute/replay",
+  "seeded DB reconciliation, tenant isolation, and idempotent replay test output",
+  "Playwright/dashboard E2E evidence for booking-to-paid, refund/no-show/dispute, receipt, and export flows",
+  "CI payment test job configuration and retained artifacts",
+] as const;
+
+export type PaymentAutomatedTestReadinessRequiredEvidence =
+  (typeof paymentAutomatedTestReadinessRequiredEvidence)[number];
 
 export interface LiveStripePaymentsReadinessInput {
   packageScripts: Readonly<Record<string, string>>;
@@ -516,10 +667,36 @@ export interface LiveStripePaymentsReadinessInput {
 export interface LiveStripePaymentsReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof liveStripePaymentsReadinessRequiredCommands;
+  requiredEvidence: readonly LiveStripePaymentsReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
+
+export const liveStripePaymentsReadinessRequiredCommands = [
+  "pnpm --filter @inkroute/payments typecheck",
+  "pnpm --filter @inkroute/payments test",
+  "pnpm vitest run apps/web/tests/payment-routes.test.ts",
+  "pin Stripe SDK and configure redacted Stripe secret/webhook/API-version evidence",
+  "create real Stripe Checkout sessions in provider-backed mode",
+  "Stripe CLI checkout/payment/refund/dispute/replay lifecycle tests",
+  "payment DB reconciliation integration tests",
+  "authorized refund execution and dispute workflow tests",
+  "Playwright booking-to-paid E2E flow",
+  "GitHub Actions payment evidence job",
+  "capture redacted payment artifacts without Stripe secrets or client-private data",
+] as const;
+
+export const liveStripePaymentsReadinessRequiredEvidence = [
+  "Stripe SDK pin plus redacted secret/webhook/API-version configuration evidence.",
+  "Real Checkout session creation with persisted provider session and DB-backed idempotency evidence.",
+  "Raw-body webhook verification, replay protection, and supported lifecycle event evidence.",
+  "Tenant-scoped transactional reconciliation and cross-tenant denial evidence.",
+  "Refund execution and dispute workflow evidence or explicit blocked-operation audit evidence.",
+  "Stripe CLI, booking-to-paid E2E, CI, and secret-safe artifact evidence.",
+] as const;
+
+export type LiveStripePaymentsReadinessRequiredEvidence =
+  (typeof liveStripePaymentsReadinessRequiredEvidence)[number];
 
 export interface PaymentReceiptExportRow {
   receiptNumber: string;
@@ -709,13 +886,7 @@ export function buildStripeCheckoutExecutionReadiness(input: StripeCheckoutExecu
     canCallStripe: blockers.length === 0,
     draft,
     requiredWrites: ["Deposit", "Payment", "PaymentAuditLog", "IdempotencyKey"],
-    requiredControls: [
-      "Create Checkout Session only for accepted bookings or valid signed deposit tokens.",
-      "Persist idempotency key before provider call and reuse it for Stripe request options.",
-      "Persist provider session id and redirect URL after Stripe returns.",
-      "Return only Stripe-hosted checkout URL to the browser; never return secret keys or raw provider payloads.",
-      "Reconcile final payment state only through verified Stripe webhooks.",
-    ],
+    requiredControls: stripeCheckoutExecutionRequiredControls,
     blockers,
   };
 }
@@ -726,7 +897,7 @@ export function buildStripeCheckoutRouteRuntimeReadinessPlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: StripeCheckoutRouteRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/payments package script is missing ${script}.`);
   if (!input.paymentsTestsPassed) blockers.push("@inkroute/payments tests must pass.");
@@ -768,15 +939,11 @@ export function buildStripeCheckoutRouteRuntimeReadinessPlan(
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/payments typecheck",
-      "pnpm --filter @inkroute/payments test",
-      "pnpm --filter @inkroute/web typecheck",
-      "pnpm test:unit -- apps/web/tests/payment-routes.test.ts",
-      "stripe checkout session create test-mode smoke",
-      "stripe trigger checkout.session.completed",
-    ],
-    requiredEvidence,
+    requiredCommands: stripeCheckoutRouteRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === stripeCheckoutRouteRuntimeRequiredEvidence.length
+        ? stripeCheckoutRouteRuntimeRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -1094,7 +1261,7 @@ export function buildStripeWebhookRuntimeReadinessPlan(input: StripeWebhookRunti
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const missingSupportedEvents = requiredEvents.filter((eventType) => !input.supportedEventsCovered.includes(eventType));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: StripeWebhookRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/payments package script is missing ${script}.`);
   if (!input.paymentsTestsPassed) blockers.push("@inkroute/payments webhook tests must pass.");
@@ -1136,17 +1303,11 @@ export function buildStripeWebhookRuntimeReadinessPlan(input: StripeWebhookRunti
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
     missingSupportedEvents,
-    requiredCommands: [
-      "pnpm --filter @inkroute/payments typecheck",
-      "pnpm --filter @inkroute/payments test",
-      "pnpm --filter @inkroute/web typecheck",
-      "pnpm test:unit -- apps/web/tests/payment-routes.test.ts",
-      "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
-      "stripe trigger checkout.session.completed",
-      "stripe trigger payment_intent.payment_failed",
-      "stripe trigger charge.refunded",
-    ],
-    requiredEvidence,
+    requiredCommands: stripeWebhookRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === stripeWebhookRuntimeRequiredEvidence.length
+        ? stripeWebhookRuntimeRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -1258,13 +1419,7 @@ export function buildPaymentLifecyclePersistencePlan(input: PaymentLifecyclePlan
     requiresTransaction: true,
     idempotencyKey: input.idempotencyKey?.trim() ? input.idempotencyKey : null,
     writes,
-    requiredControls: [
-      "Execute all writes in one tenant-scoped database transaction.",
-      "Insert or claim the idempotency key before mutating payment state.",
-      "Reject cross-tenant deposit, payment, refund, and booking ids before applying writes.",
-      "Write PaymentAuditLog for every lifecycle mutation, including failed and disputed outcomes.",
-      "Treat provider webhook ids as replay protection inputs and never as tenant authorization.",
-    ],
+    requiredControls: paymentLifecyclePersistenceRequiredControls,
     blockers,
   };
 }
@@ -1275,13 +1430,13 @@ export function buildPaymentPersistenceRuntimeReadinessPlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: PaymentPersistenceRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/payments package script is missing ${script}.`);
   if (!input.paymentsTestsPassed) blockers.push("@inkroute/payments lifecycle tests must pass.");
   if (!input.paymentsTypecheckPassed) blockers.push("@inkroute/payments typecheck must pass.");
   if (!input.dbSchemaIncludesPaymentModels) blockers.push("Prisma schema must include Deposit, Payment, Refund, PaymentAuditLog, and IdempotencyKey models.");
-  if (!input.repositoriesImplemented) blockers.push("Tenant-scoped payment repositories/services must be implemented.");
+  if (!input.repositoriesImplemented) blockers.push("Tenant-scoped payment repository/service evidence must be captured before payment persistence readiness.");
   if (!input.tenantScopedQueriesEnforced) blockers.push("Payment repositories must enforce tenant scope on every read and write.");
   if (!input.transactionalMutationsImplemented) blockers.push("Payment lifecycle mutations must run in database transactions.");
   if (!input.idempotencyStoreImplemented) blockers.push("Idempotency store must be implemented for provider sessions, webhooks, refunds, and retries.");
@@ -1317,14 +1472,11 @@ export function buildPaymentPersistenceRuntimeReadinessPlan(
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/payments typecheck",
-      "pnpm --filter @inkroute/payments test",
-      "pnpm --filter @inkroute/db prisma validate",
-      "payment persistence seeded Postgres integration tests",
-      "dashboard payment repository route/action tests",
-    ],
-    requiredEvidence,
+    requiredCommands: paymentPersistenceRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === paymentPersistenceRuntimeRequiredEvidence.length
+        ? paymentPersistenceRuntimeRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -1434,13 +1586,7 @@ export function buildPaymentOperationsWorkflowPlan(input: PaymentOperationsWorkf
     requiresTransaction: true,
     idempotencyKey: input.idempotencyKey?.trim() ? input.idempotencyKey : null,
     writes,
-    requiredControls: [
-      "Authorize the actor against the tenant and payment before provider calls or local writes.",
-      "Claim the idempotency key before executing Stripe refunds, receipt delivery, or export creation.",
-      "Persist PaymentAuditLog and operation result in the same transaction as local state changes.",
-      "Store redacted provider references only; never persist secret keys or raw unredacted provider payloads.",
-      "Require accounting/tax review before enabling export files for production bookkeeping.",
-    ],
+    requiredControls: paymentOperationsWorkflowRequiredControls,
     blockers,
   };
 }
@@ -1451,23 +1597,23 @@ export function buildPaymentOperationsRuntimeReadinessPlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: PaymentOperationsRuntimeRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/payments package script is missing ${script}.`);
   if (!input.paymentsTestsPassed) blockers.push("@inkroute/payments operation tests must pass.");
   if (!input.paymentsTypecheckPassed) blockers.push("@inkroute/payments typecheck must pass.");
-  if (!input.dashboardPaymentActionsImplemented) blockers.push("Dashboard/server payment operation actions must be implemented.");
+  if (!input.dashboardPaymentActionsImplemented) blockers.push("Dashboard/server payment operation action evidence must be captured before payment operations readiness.");
   if (!input.refundActionAuthorized) blockers.push("Refund action must enforce tenant authorization and payment ownership.");
   if (!input.stripeRefundsTestModeVerified) blockers.push("Stripe test-mode refund execution must be verified.");
   if (!input.refundPersistenceConfigured) blockers.push("Refund execution must persist Refund, Payment, PaymentAuditLog, and IdempotencyKey writes.");
-  if (!input.noShowForfeitureActionImplemented) blockers.push("No-show forfeiture action must be implemented.");
+  if (!input.noShowForfeitureActionImplemented) blockers.push("No-show forfeiture action evidence must be captured before payment operations readiness.");
   if (!input.noShowAuditPersistenceConfigured) blockers.push("No-show forfeiture must persist BookingStateEvent and PaymentAuditLog records.");
   if (!input.disputeEvidenceWorkflowImplemented) blockers.push("Dispute evidence workflow must collect and persist evidence files.");
   if (!input.disputeProviderSyncVerified) blockers.push("Stripe dispute evidence sync must be verified in test mode.");
   if (!input.receiptGenerationImplemented) blockers.push("Receipt generation must be implemented with stable receipt numbers.");
   if (!input.receiptDeliveryProviderConfigured) blockers.push("Receipt delivery provider must be configured before sending receipts.");
   if (!input.receiptDeliveryTested) blockers.push("Receipt delivery must be tested with redacted client/payment data.");
-  if (!input.accountingExportImplemented) blockers.push("Accounting export workflow must be implemented.");
+  if (!input.accountingExportImplemented) blockers.push("Accounting export workflow evidence must be captured before payment operations readiness.");
   if (!input.exportRedactionVerified) blockers.push("Accounting export must redact non-accounting PII, medical notes, and provider secrets.");
   if (!input.taxAccountingReviewApproved) blockers.push("Tax/accounting review must approve export fields and retention policy.");
   if (!input.idempotencyConfiguredForOperations) blockers.push("Refund, no-show, dispute, receipt, and export operations must claim idempotency keys.");
@@ -1500,15 +1646,11 @@ export function buildPaymentOperationsRuntimeReadinessPlan(
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/payments typecheck",
-      "pnpm --filter @inkroute/payments test",
-      "pnpm --filter @inkroute/dashboard typecheck",
-      "pnpm test:unit -- apps/dashboard tests for payment operations",
-      "stripe refunds.create test-mode smoke",
-      "dashboard payment operations E2E smoke",
-    ],
-    requiredEvidence,
+    requiredCommands: paymentOperationsRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === paymentOperationsRuntimeRequiredEvidence.length
+        ? paymentOperationsRuntimeRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -1519,7 +1661,7 @@ export function buildPaymentAutomatedTestReadinessPlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: PaymentAutomatedTestReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/payments package script is missing ${script}.`);
   if (!input.paymentsUnitTestsPassed) blockers.push("@inkroute/payments unit tests must pass.");
@@ -1554,15 +1696,11 @@ export function buildPaymentAutomatedTestReadinessPlan(
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/payments typecheck",
-      "pnpm --filter @inkroute/payments test",
-      "pnpm vitest run apps/web/tests/payment-routes.test.ts",
-      "payment DB reconciliation integration tests",
-      "Stripe CLI payment lifecycle tests",
-      "Playwright booking-to-paid payment E2E flow",
-    ],
-    requiredEvidence,
+    requiredCommands: paymentAutomatedTestReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === paymentAutomatedTestReadinessRequiredEvidence.length
+        ? paymentAutomatedTestReadinessRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -1573,7 +1711,7 @@ export function buildLiveStripePaymentsReadinessPlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: LiveStripePaymentsReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/payments package script is missing ${script}.`);
   if (!input.stripeSdkInstalled) blockers.push("Stripe SDK must be installed and pinned before live provider payment readiness can close.");
@@ -1617,16 +1755,11 @@ export function buildLiveStripePaymentsReadinessPlan(
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/payments typecheck",
-      "pnpm --filter @inkroute/payments test",
-      "pnpm vitest run apps/web/tests/payment-routes.test.ts",
-      "Stripe CLI checkout/payment/refund/dispute/replay lifecycle tests",
-      "payment DB reconciliation integration tests",
-      "Playwright booking-to-paid E2E flow",
-      "GitHub Actions payment evidence job",
-    ],
-    requiredEvidence,
+    requiredCommands: liveStripePaymentsReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === liveStripePaymentsReadinessRequiredEvidence.length
+        ? liveStripePaymentsReadinessRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }

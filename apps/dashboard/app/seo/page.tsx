@@ -1,7 +1,7 @@
-﻿import { DashboardPageHeader } from "../../components/DashboardPageHeader";
-import { DisabledActionPanel } from "../../components/DisabledActionPanel";
+import { DashboardPageHeader } from "../../components/DashboardPageHeader";
 import { IntegrationBoundaryCard } from "../../components/IntegrationBoundaryCard";
 import { MetricCard } from "../../components/MetricCard";
+import { SeoPublicationActionPanel } from "../../components/SeoPublicationActionPanel";
 import { StatusPill } from "../../components/StatusPill";
 import { dashboardSeoEnginePreview, dashboardSeoRouteRecords } from "../../lib/seoDemo";
 
@@ -20,7 +20,7 @@ export default function SeoManagerPage() {
       <section className="metric-grid">
         <MetricCard label="Tracked public routes" value={String(dashboardSeoRouteRecords.length)} detail="Static demo route inventory" />
         <MetricCard label="Sitemap entries" value={String(sitemap.indexableCount)} detail={`${sitemap.noindexCount} omitted/noindex`} />
-        <MetricCard label="Audit issues" value={String(warningCount)} detail="Static heuristic checks only" />
+        <MetricCard label="Audit issues" value={String(warningCount)} detail="Static heuristic checks plus routed publication evidence gates" />
         <MetricCard label="Internal links" value={String(internalLinks.length)} detail="City/style conversion paths" />
       </section>
 
@@ -134,12 +134,7 @@ export default function SeoManagerPage() {
           gapIds={["GAP-071", "GAP-072", "GAP-073", "GAP-074", "GAP-076"]}
         />
       </section>
-
-      <DisabledActionPanel
-        title="SEO publishing actions"
-        description="SEO reads now have authenticated tenant-scoped dashboard APIs with AuditLog rows. Publishing actions remain disabled until content mutations, Search Console credentials, /api/seo/search-console status, sitemap submission, revalidation workers, and build/runtime verification are complete."
-        actions={["Create city page", "Create style page", "Preview JSON-LD", "Publish and revalidate", "Submit sitemap"]}
-      />
+      <SeoPublicationActionPanel />
     </main>
   );
 }

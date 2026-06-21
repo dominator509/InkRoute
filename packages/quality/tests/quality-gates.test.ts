@@ -7,17 +7,59 @@ import {
   auditSemanticDocumentationClaims,
   buildDocumentationAuditRuntimeReadinessPlan,
   buildLegalReviewRuntimeReadinessPlan,
+  buildPrGapEvidenceEnforcementArtifactReview,
+  buildPrGapEvidenceEnforcementEvidenceDecision,
+  buildPrGapEvidenceEnforcementExecutionPlan,
+  buildPrGapEvidenceEnforcementExecutionRequiredEvidence,
+  buildPrDiffEvidenceRuntimeArtifactReview,
+  buildPrDiffEvidenceRuntimeExecutionPlan,
+  buildPrDiffEvidenceRuntimeExecutionRequiredEvidence,
   buildPrDiffEvidenceRuntimeReadinessPlan,
+  buildPrDiffEvidenceEvidenceDecision,
   buildPrGapEvidenceEnforcementReadinessPlan,
   buildQualityGateRuntimeReadinessPlan,
+  buildRedactedPrDiffEvidenceArtifact,
+  buildRedactedPrGapEvidenceEnforcementArtifact,
   buildRepositoryGovernanceRuntimeReadinessPlan,
   buildRequiredChecksRuntimeReadinessPlan,
   buildSemanticDocumentationRuntimeReadinessPlan,
+  documentationAuditRuntimeRequiredCommands,
+  documentationAuditRuntimeRequiredEvidence,
   extractMarkdownLinks,
+  legalReviewRuntimeRequiredCommands,
+  legalReviewRuntimeRequiredEvidence,
   parseGapEvidenceRecords,
   phase17QualityGates,
+  prGapEvidenceEnforcementExecutionPolicy,
+  prGapEvidenceEnforcementExternalArtifacts,
+  prGapEvidenceEnforcementExternalCommands,
+  prGapEvidenceEnforcementLocalArtifacts,
+  prGapEvidenceEnforcementLocalCommands,
+  prGapEvidenceEnforcementProofFiles,
+  prGapEvidenceEnforcementReadinessRequiredEvidence,
+  prGapEvidenceEnforcementRequiredExternalEvidence,
+  prDiffEvidenceRuntimeExecutionPolicy,
+  prDiffEvidenceRuntimeExternalArtifacts,
+  prDiffEvidenceRuntimeExternalCommands,
+  prDiffEvidenceRuntimeLocalArtifacts,
+  prDiffEvidenceRuntimeLocalCommands,
+  prDiffEvidenceRuntimeProofFiles,
+  prDiffEvidenceRuntimeReadinessRequiredEvidence,
+  prDiffEvidenceRuntimeRequiredExternalEvidence,
   prDiffEvidenceRunPersistenceContract,
   prGapEvidenceEnforcementRunPersistenceContract,
+  qualityGateRuntimeRequiredCommands,
+  qualityGateRuntimeRequiredEvidence,
+  requiredPrDiffEvidenceRuntimeArtifacts,
+  requiredPrDiffEvidenceRuntimeCommands,
+  requiredPrGapEvidenceEnforcementArtifacts,
+  requiredPrGapEvidenceEnforcementCommands,
+  repositoryGovernanceRuntimeRequiredEvidence,
+  repositoryGovernanceRuntimeRequiredCommands,
+  requiredChecksRuntimeRequiredCommands,
+  requiredChecksRuntimeRequiredEvidence,
+  semanticDocumentationRuntimeRequiredCommands,
+  semanticDocumentationRuntimeRequiredEvidence,
   summarizeQualityGates,
 } from "../src/index";
 import { readFileSync } from "node:fs";
@@ -235,8 +277,8 @@ describe("quality gates", () => {
     expect(plan.missingScripts).toEqual(["quality:pr-gap-fixtures"]);
     expect(plan.missingCiTerms).toEqual(["pnpm quality:pr-gaps"]);
     expect(plan.missingFixtures).toEqual(["invalid-missing-evidence.diff"]);
-    expect(plan.requiredCommands).toContain("pnpm quality:pr-gap-fixtures");
-    expect(plan.requiredEvidence).toContain("Branch protection settings proving the CI quality job is required before merge.");
+    expect(plan.requiredCommands).toBe(requiredPrGapEvidenceEnforcementCommands);
+    expect(plan.requiredEvidence).toBe(prGapEvidenceEnforcementReadinessRequiredEvidence);
     expect(plan.blockers).toContain("quality:all must include quality:pr-gap-fixtures.");
     expect(plan.blockers).toContain("Negative gap-diff fixture without evidence must fail.");
     expect(plan.blockers).toContain("Branch protection must require the CI quality job before merge.");
@@ -271,12 +313,103 @@ describe("quality gates", () => {
     expect(plan.blockers).toEqual([]);
   });
 
+  it("blocks PR gap evidence enforcement closure until artifacts, commands, persistence, and merge-block proof exist", () => {
+    const decision = buildPrGapEvidenceEnforcementEvidenceDecision({
+      rootScripts: {
+        "quality:pr-gaps": "node scripts/quality/audit-gap-tracker-diff.mjs",
+        "quality:all": "pnpm quality:docs",
+      },
+      ciWorkflowText: "run: pnpm quality:all",
+      fixtureNames: ["valid-with-evidence.diff"],
+      prGapAuditPassedWithoutContext: true,
+      prGapAuditPassedWithMergeFallback: true,
+      positiveFixturePassed: true,
+      negativeFixtureFailed: false,
+      productionBlockerDowngradeFixtureCovered: false,
+      closedRowFixtureCovered: false,
+      noSecretLogsVerified: false,
+      branchProtectionRequiresQualityJob: false,
+      liveFailingPrEvidenceCaptured: false,
+      livePassingPrEvidenceCaptured: false,
+      capturedArtifacts: [
+        "docs/quality/manifests/gap-evidence-audit.json",
+        "docs/quality/manifests/pr-gap-diff-fixtures.json",
+      ],
+      completedCommands: ["pnpm quality:pr-gap-fixtures", "pnpm quality:pr-gaps"],
+      prGapEvidenceRunPersisted: false,
+      mergeBlockProofCaptured: false,
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.readinessPlan.status).toBe("blocked");
+    expect(decision.missingArtifacts).toEqual([
+      "PrGapEvidenceEnforcementRun persistence row",
+      "redacted branch protection settings evidence",
+      "live failing PR merge-block evidence",
+      "live passing PR evidence",
+      "secret-safe PR gap enforcement log review",
+    ]);
+    expect(decision.missingCommands).toEqual([
+      "pnpm quality:all",
+      "GitHub Actions CI quality job",
+      "branch protection required-check audit",
+    ]);
+    expect(decision.requiredArtifacts).toBe(requiredPrGapEvidenceEnforcementArtifacts);
+    expect(decision.requiredCommands).toBe(requiredPrGapEvidenceEnforcementCommands);
+    expect(decision.requiredEvidence).toEqual(
+      buildPrGapEvidenceEnforcementExecutionRequiredEvidence(prGapEvidenceEnforcementReadinessRequiredEvidence),
+    );
+    expect(decision.blockers).toContain("PrGapEvidenceEnforcementRun persistence row must be captured for durable auditability.");
+    expect(decision.blockers).toContain("Live merge-block proof must show evidence-free gap changes cannot merge.");
+    expect(decision.blockers).toContain("Every required PR gap evidence enforcement artifact must be captured.");
+    expect(decision.blockers).toContain("Every required PR gap evidence enforcement command must be completed.");
+  });
+
+  it("completes PR gap evidence enforcement closure when all proof artifacts and commands are captured", () => {
+    const decision = buildPrGapEvidenceEnforcementEvidenceDecision({
+      rootScripts: {
+        "quality:pr-gaps": "node scripts/quality/audit-gap-tracker-diff.mjs",
+        "quality:pr-gap-fixtures": "node scripts/quality/verify-pr-gap-diff-fixtures.mjs",
+        "quality:all": "pnpm quality:docs && pnpm quality:pr-gap-fixtures",
+      },
+      ciWorkflowText: "run: pnpm quality:all && pnpm quality:pr-gaps",
+      fixtureNames: ["valid-with-evidence.diff", "invalid-missing-evidence.diff"],
+      prGapAuditPassedWithoutContext: true,
+      prGapAuditPassedWithMergeFallback: true,
+      positiveFixturePassed: true,
+      negativeFixtureFailed: true,
+      productionBlockerDowngradeFixtureCovered: true,
+      closedRowFixtureCovered: true,
+      noSecretLogsVerified: true,
+      branchProtectionRequiresQualityJob: true,
+      liveFailingPrEvidenceCaptured: true,
+      livePassingPrEvidenceCaptured: true,
+      capturedArtifacts: requiredPrGapEvidenceEnforcementArtifacts,
+      completedCommands: requiredPrGapEvidenceEnforcementCommands,
+      prGapEvidenceRunPersisted: true,
+      mergeBlockProofCaptured: true,
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.readinessPlan.status).toBe("ready");
+    expect(decision.missingArtifacts).toEqual([]);
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.blockers).toEqual([]);
+  });
+
   it("pins durable PrGapEvidenceEnforcementRun persistence for live merge-block proof", () => {
     const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
     const prismaMigration = readRepoFile(
       "packages/db/prisma/migrations/20260609026000_add_pr_gap_evidence_enforcement_runs/migration.sql",
     );
     const gapTracker = readRepoFile("GAP_TRACKER.md");
+    expect(gapTracker).toContain("GAP-122 is pr-gap-evidence-enforcement-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("buildPrGapEvidenceEnforcementExecutionPlan");
+    expect(gapTracker).toContain("prGapEvidenceEnforcementExecutionPolicy");
+    expect(gapTracker).toContain("prGapEvidenceEnforcementLocalCommands/prGapEvidenceEnforcementExternalCommands");
+    expect(gapTracker).toContain("prGapEvidenceEnforcementLocalArtifacts/prGapEvidenceEnforcementExternalArtifacts");
+    expect(gapTracker).toContain("prGapEvidenceEnforcementRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildPrGapEvidenceEnforcementArtifactReview");
 
     expect(prGapEvidenceEnforcementRunPersistenceContract.prismaModel).toBe("PrGapEvidenceEnforcementRun");
     expect(prGapEvidenceEnforcementRunPersistenceContract.tenantRelation).toBe("prGapEvidenceEnforcementRuns");
@@ -310,6 +443,122 @@ describe("quality gates", () => {
     expect(gapTracker).toContain("packages/db/prisma/migrations/20260609026000_add_pr_gap_evidence_enforcement_runs/migration.sql");
   });
 
+  it("pins current PR gap evidence enforcement proof files for GAP-122", () => {
+    expect(prGapEvidenceEnforcementProofFiles).toEqual(
+      expect.arrayContaining([
+        "docs/handoff/GAP_CLOSURE_PROTOCOL.md",
+        "scripts/quality/audit-gap-tracker-diff.mjs",
+        "scripts/quality/verify-pr-gap-diff-fixtures.mjs",
+        "packages/quality/src/index.ts",
+        "packages/quality/tests/quality-gates.test.ts",
+        "packages/db/prisma/migrations/20260609026000_add_pr_gap_evidence_enforcement_runs/migration.sql",
+        ".github/workflows/ci.yml"
+      ])
+    );
+    for (const file of prGapEvidenceEnforcementProofFiles) {
+      expect(readRepoFile(file).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps PR gap evidence live enforcement disabled while splitting local fixture proof from external merge-block proof", () => {
+    const plan = buildPrGapEvidenceEnforcementExecutionPlan();
+
+    expect(plan.localCommands).toBe(prGapEvidenceEnforcementLocalCommands);
+    expect(plan.externalCommands).toBe(prGapEvidenceEnforcementExternalCommands);
+    expect(plan.localArtifacts).toBe(prGapEvidenceEnforcementLocalArtifacts);
+    expect(plan.externalArtifacts).toBe(prGapEvidenceEnforcementExternalArtifacts);
+    expect(plan.localCommands).toEqual([
+      "pnpm quality:pr-gap-fixtures",
+      "pnpm quality:pr-gaps",
+    ]);
+    expect(plan.externalCommands).toEqual(
+      expect.arrayContaining([
+        "pnpm quality:all",
+        "GitHub Actions CI quality job",
+        "branch protection required-check audit",
+      ]),
+    );
+    expect(plan.localArtifacts).toEqual([
+      "docs/quality/manifests/gap-evidence-audit.json",
+      "docs/quality/manifests/pr-gap-diff-fixtures.json",
+    ]);
+    expect(plan.externalArtifacts).toEqual(
+      expect.arrayContaining([
+        "PrGapEvidenceEnforcementRun persistence row",
+        "redacted branch protection settings evidence",
+        "live failing PR merge-block evidence",
+        "live passing PR evidence",
+        "secret-safe PR gap enforcement log review",
+      ]),
+    );
+    expect(plan.fixtureVerificationExecutionAllowed).toBe(false);
+    expect(plan.prGapAuditExecutionAllowed).toBe(false);
+    expect(plan.qualityAllExecutionAllowed).toBe(false);
+    expect(plan.ciQualityExecutionAllowed).toBe(false);
+    expect(plan.branchProtectionAuditExecutionAllowed).toBe(false);
+    expect(plan.persistenceExecutionAllowed).toBe(false);
+    expect(plan.liveFailingPrExecutionAllowed).toBe(false);
+    expect(plan.livePassingPrExecutionAllowed).toBe(false);
+    expect(plan.secretSafeLogReviewExecutionAllowed).toBe(false);
+    expect(plan.executionPolicy).toBe(prGapEvidenceEnforcementExecutionPolicy);
+    expect(plan.executionPolicy).toEqual({
+      codexMayClassifyLocalFixtures: true,
+      livePrMergeBlockRequiredForClosure: true,
+      branchProtectionEvidenceRequired: true,
+      durablePersistenceRowRequired: true,
+      secretSafeLogsRequired: true,
+      localFixturesDoNotProveLiveEnforcement: true,
+    });
+    expect(plan.externalEvidenceRequired).toBe(prGapEvidenceEnforcementRequiredExternalEvidence);
+  });
+
+  it("redacts PR gap evidence enforcement artifacts before review or retention", () => {
+    const rawArtifact = {
+      pullRequestUrl: "https://github.com/dominator509/InkRoute/pull/123",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/123456",
+      branchProtectionPayload: { requiredBypassActorEmail: "owner@example.com", token: "ghp_secret" },
+      checkRunLog: "Blocked tenant_demo with Authorization: Bearer pr-gap-token",
+      artifactUrl: "https://provider.example.com/artifacts/artifact_123",
+      nested: {
+        phone: "+1 555 111 3434",
+        projectId: "project_pr_gap_123",
+      },
+    };
+    const redacted = buildRedactedPrGapEvidenceEnforcementArtifact(rawArtifact);
+    const review = buildPrGapEvidenceEnforcementArtifactReview("live failing PR merge-block evidence", rawArtifact);
+    const serialized = JSON.stringify(review);
+
+    expect(JSON.stringify(redacted)).not.toContain("github.com/dominator509");
+    expect(serialized).not.toContain("owner@example.com");
+    expect(serialized).not.toContain("ghp_secret");
+    expect(serialized).not.toContain("tenant_demo");
+    expect(serialized).not.toContain("Bearer pr-gap-token");
+    expect(serialized).not.toContain("provider.example.com");
+    expect(serialized).not.toContain("+1 555 111 3434");
+    expect(serialized).not.toContain("project_pr_gap_123");
+    expect(review.containsUnredactedSensitiveValues).toBe(false);
+    expect(review.redactions).toEqual(
+      expect.arrayContaining([
+        "artifactUrl",
+        "branchProtectionPayload",
+        "checkRunLog",
+        "ciRunUrl",
+        "phone",
+        "projectId",
+        "pullRequestUrl",
+      ]),
+    );
+    expect(review.externalEvidenceRequired).toBe(prGapEvidenceEnforcementRequiredExternalEvidence);
+    expect(review.externalEvidenceRequired).toEqual(
+      expect.arrayContaining([
+        "Live failing PR merge-block and live passing PR evidence must be captured from GitHub with PR URLs, run URLs, tokens, and actors redacted.",
+        "Branch-protection evidence must prove required quality checks without exposing repository settings tokens or provider identifiers.",
+        "Durable PrGapEvidenceEnforcementRun persistence must execute only in an approved provider-backed database.",
+        "Secret-safe log review must redact check-run logs, command output, environment values, customer data, and provider IDs before retention.",
+      ]),
+    );
+  });
+
   it("blocks documentation audit readiness until scripts, reports, CI, inventory, provider, and legal evidence are complete", () => {
     const plan = buildDocumentationAuditRuntimeReadinessPlan({
       rootScripts: {
@@ -339,8 +588,8 @@ describe("quality gates", () => {
       "docs/quality/manifests/documentation-inventory-audit.json",
     ]);
     expect(plan.failedAuditAreas).toEqual(["semanticPaths", "routeReferences", "legalReadinessLanguage", "workspaceInventory"]);
-    expect(plan.requiredCommands).toContain("pnpm quality:docs");
-    expect(plan.requiredEvidence).toContain("Provider proof or blocked/gated language for provider readiness claims.");
+    expect(plan.requiredCommands).toBe(documentationAuditRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(documentationAuditRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("quality:docs must run markdown links, documentation consistency, and documentation inventory audits.");
     expect(plan.blockers).toContain("CI evidence for pnpm quality:docs must be captured.");
     expect(plan.blockers).toContain("Legal readiness documentation claims must have legal review evidence or remain pending/gated.");
@@ -349,7 +598,7 @@ describe("quality gates", () => {
   it("marks documentation audit readiness ready when docs audits, inventory, CI, provider, and legal evidence are complete", () => {
     const plan = buildDocumentationAuditRuntimeReadinessPlan({
       rootScripts: {
-        "quality:docs": "node scripts/quality/audit-doc-links.mjs && node scripts/quality/verify-documentation-consistency.mjs && node scripts/quality/verify-documentation-inventory.mjs",
+        "quality:docs": "pnpm quality:doc-links && pnpm quality:doc-consistency && pnpm quality:doc-inventory",
       },
       auditsPassed: {
         markdownLinks: true,
@@ -409,8 +658,8 @@ describe("quality gates", () => {
       "enforcement-test-pr",
       "redacted-settings-evidence",
     ]);
-    expect(plan.requiredCommands).toContain("pnpm quality:governance");
-    expect(plan.requiredEvidence).toContain("Redacted branch protection settings proving required checks and review rules are active.");
+    expect(plan.requiredCommands).toBe(repositoryGovernanceRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(repositoryGovernanceRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("GitHub branch protection must be active for the protected branch.");
     expect(plan.blockers).toContain("A test PR must prove branch protection, required checks, and CODEOWNERS review enforcement.");
   });
@@ -473,8 +722,8 @@ describe("quality gates", () => {
         "docs/quality/manifests/quality-gates.json",
       ]),
     );
-    expect(plan.requiredCommands).toContain("pnpm quality:all");
-    expect(plan.requiredEvidence).toContain("GitHub Actions quality job URL and status check evidence.");
+    expect(plan.requiredCommands).toBe(qualityGateRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(qualityGateRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("quality:all must include quality:pr-gap-fixtures.");
     expect(plan.blockers).toContain("@inkroute/quality typecheck must pass.");
     expect(plan.blockers).toContain("GitHub Actions quality job must pass.");
@@ -542,8 +791,8 @@ describe("quality gates", () => {
     expect(plan.status).toBe("blocked");
     expect(plan.missingApprovedItems).toEqual(["terms-of-service", "sms-notifications"]);
     expect(plan.missingArtifacts).toEqual(["apps/web/app/terms/page.tsx"]);
-    expect(plan.requiredCommands).toContain("pnpm legal:verify-review");
-    expect(plan.requiredEvidence).toContain("No privileged attorney advice, secrets, or client data are committed.");
+    expect(plan.requiredCommands).toBe(legalReviewRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(legalReviewRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("Every required legal review item must be attorney-approved before production launch.");
     expect(plan.blockers).toContain("Legal review audit must pass.");
     expect(plan.blockers).toContain("CI quality gates must include legal review verification.");
@@ -590,8 +839,8 @@ describe("quality gates", () => {
     });
 
     expect(plan.status).toBe("blocked");
-    expect(plan.requiredCommands).toContain("pnpm quality:pr-gaps");
-    expect(plan.requiredEvidence).toContain("Shallow-checkout or missing merge-base fallback output.");
+    expect(plan.requiredCommands).toBe(requiredPrDiffEvidenceRuntimeCommands);
+    expect(plan.requiredEvidence).toBe(prDiffEvidenceRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Closed/non-open gap rows must require evidence in both current-status and verification columns.");
     expect(plan.blockers).toContain("Production-blocker downgrades must require evidence-rich status and verification columns.");
     expect(plan.blockers).toContain("Negative PR diff fixture without evidence must fail.");
@@ -618,12 +867,93 @@ describe("quality gates", () => {
     expect(plan.blockers).toEqual([]);
   });
 
+  it("blocks focused PR diff evidence closure until persistence, artifacts, and commands are captured", () => {
+    const decision = buildPrDiffEvidenceEvidenceDecision({
+      diffAuditScriptPresent: true,
+      prContextDetectionImplemented: true,
+      missingPrContextSkipsSafely: true,
+      gapRowParserCoversTrackerColumns: true,
+      closureRequiresStatusEvidence: true,
+      closureRequiresVerificationEvidence: false,
+      blockerDowngradeRequiresEvidence: false,
+      unrelatedGapChangesIgnored: true,
+      shallowCheckoutFallbackImplemented: true,
+      positiveFixturePassed: true,
+      negativeFixtureFailed: false,
+      ciPullRequestStepWired: true,
+      secretSafeLogsVerified: false,
+      capturedArtifacts: [
+        "docs/quality/manifests/gap-evidence-audit.json",
+        "docs/quality/manifests/pr-gap-diff-fixtures.json",
+      ],
+      completedCommands: ["pnpm quality:pr-gaps", "pnpm quality:pr-gap-fixtures"],
+      prDiffEvidenceRunPersisted: false,
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.readinessPlan.status).toBe("blocked");
+    expect(decision.missingArtifacts).toEqual([
+      "PrDiffEvidenceRun persistence row",
+      "no-PR context skip artifact",
+      "merge-base fallback artifact",
+      "positive PR diff fixture artifact",
+      "negative PR diff fixture artifact",
+      "secret-safe PR diff log review",
+    ]);
+    expect(decision.missingCommands).toEqual([
+      "GitHub Actions pull_request quality job",
+      "simulated PR diff audit with missing merge-base fallback",
+    ]);
+    expect(decision.requiredArtifacts).toBe(requiredPrDiffEvidenceRuntimeArtifacts);
+    expect(decision.requiredCommands).toBe(requiredPrDiffEvidenceRuntimeCommands);
+    expect(decision.requiredEvidence).toEqual(
+      buildPrDiffEvidenceRuntimeExecutionRequiredEvidence(prDiffEvidenceRuntimeReadinessRequiredEvidence),
+    );
+    expect(decision.blockers).toContain("Closed/non-open gap rows must require evidence in both current-status and verification columns.");
+    expect(decision.blockers).toContain("PrDiffEvidenceRun persistence row must be captured for durable auditability.");
+    expect(decision.blockers).toContain("Every required PR diff evidence artifact must be captured.");
+  });
+
+  it("completes focused PR diff evidence closure when algorithm, persistence, artifacts, and commands are proven", () => {
+    const decision = buildPrDiffEvidenceEvidenceDecision({
+      diffAuditScriptPresent: true,
+      prContextDetectionImplemented: true,
+      missingPrContextSkipsSafely: true,
+      gapRowParserCoversTrackerColumns: true,
+      closureRequiresStatusEvidence: true,
+      closureRequiresVerificationEvidence: true,
+      blockerDowngradeRequiresEvidence: true,
+      unrelatedGapChangesIgnored: true,
+      shallowCheckoutFallbackImplemented: true,
+      positiveFixturePassed: true,
+      negativeFixtureFailed: true,
+      ciPullRequestStepWired: true,
+      secretSafeLogsVerified: true,
+      capturedArtifacts: requiredPrDiffEvidenceRuntimeArtifacts,
+      completedCommands: requiredPrDiffEvidenceRuntimeCommands,
+      prDiffEvidenceRunPersisted: true,
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.readinessPlan.status).toBe("ready");
+    expect(decision.missingArtifacts).toEqual([]);
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.blockers).toEqual([]);
+  });
+
   it("pins durable PrDiffEvidenceRun persistence for PR row-diff enforcement proof", () => {
     const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
     const prismaMigration = readRepoFile(
       "packages/db/prisma/migrations/20260609030000_add_pr_diff_evidence_runs/migration.sql",
     );
     const gapTracker = readRepoFile("GAP_TRACKER.md");
+    expect(gapTracker).toContain("GAP-127 is pr-diff-evidence-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("buildPrDiffEvidenceRuntimeExecutionPlan");
+    expect(gapTracker).toContain("prDiffEvidenceRuntimeExecutionPolicy");
+    expect(gapTracker).toContain("prDiffEvidenceRuntimeLocalCommands/prDiffEvidenceRuntimeExternalCommands");
+    expect(gapTracker).toContain("prDiffEvidenceRuntimeLocalArtifacts/prDiffEvidenceRuntimeExternalArtifacts");
+    expect(gapTracker).toContain("prDiffEvidenceRuntimeRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildPrDiffEvidenceRuntimeArtifactReview");
 
     expect(prDiffEvidenceRunPersistenceContract.prismaModel).toBe("PrDiffEvidenceRun");
     expect(prDiffEvidenceRunPersistenceContract.tenantRelation).toBe("prDiffEvidenceRuns");
@@ -657,6 +987,95 @@ describe("quality gates", () => {
     expect(gapTracker).toContain("packages/db/prisma/migrations/20260609030000_add_pr_diff_evidence_runs/migration.sql");
   });
 
+  it("pins current PR diff evidence runtime proof files for GAP-127", () => {
+    expect(prDiffEvidenceRuntimeProofFiles).toEqual(
+      expect.arrayContaining([
+        "scripts/quality/audit-gap-tracker-diff.mjs",
+        "scripts/quality/verify-pr-gap-diff-fixtures.mjs",
+        "scripts/quality/fixtures/pr-gap-diff/valid-with-evidence.diff",
+        "scripts/quality/fixtures/pr-gap-diff/invalid-missing-evidence.diff",
+        "packages/quality/package.json",
+        "packages/quality/src/index.ts",
+        "packages/quality/tests/quality-gates.test.ts",
+        "packages/db/prisma/migrations/20260609030000_add_pr_diff_evidence_runs/migration.sql",
+        ".github/workflows/ci.yml"
+      ])
+    );
+    for (const file of prDiffEvidenceRuntimeProofFiles) {
+      expect(readRepoFile(file).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps GAP-127 execution policy non-executing while separating local and external PR diff proof", () => {
+    const plan = buildPrDiffEvidenceRuntimeExecutionPlan();
+
+    expect(plan.localCommands).toBe(prDiffEvidenceRuntimeLocalCommands);
+    expect(plan.externalCommands).toBe(prDiffEvidenceRuntimeExternalCommands);
+    expect(plan.localArtifacts).toBe(prDiffEvidenceRuntimeLocalArtifacts);
+    expect(plan.externalArtifacts).toBe(prDiffEvidenceRuntimeExternalArtifacts);
+    expect(plan).toMatchObject({
+      prGapAuditExecutionAllowed: false,
+      fixtureVerificationExecutionAllowed: false,
+      noPrSkipSimulationExecutionAllowed: false,
+      pullRequestCiExecutionAllowed: false,
+      mergeBaseFallbackSimulationExecutionAllowed: false,
+      positiveFixtureArtifactCaptureAllowed: false,
+      negativeFixtureArtifactCaptureAllowed: false,
+      secretSafeLogReviewAllowed: false,
+      persistenceExecutionAllowed: false,
+      branchProtectionEnforcementAllowed: false,
+    });
+    expect(plan.executionPolicy).toBe(prDiffEvidenceRuntimeExecutionPolicy);
+    expect(plan.executionPolicy).toEqual({
+      codexMayClassifyStaticPrDiffEvidence: true,
+      runtimeCommandEvidenceRequiredForClosure: true,
+      ciPullRequestEvidenceRequiredForClosure: true,
+      providerDatabaseRequiredForPersistence: true,
+      branchProtectionEvidenceRequiredForClosure: true,
+      secretSafeLogReviewRequiredForClosure: true,
+    });
+    expect(plan.requiredExternalEvidence).toBe(prDiffEvidenceRuntimeRequiredExternalEvidence);
+  });
+
+  it("redacts PR diff evidence runtime artifacts before tracker or handoff use", () => {
+    const artifact = {
+      runId: "prdiff_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      repositoryUrl: "https://github.com/dominator509/InkRoute/pull/127",
+      branchName: "feature/customer-jane-doe@example.com",
+      logOutput: "token github_pat_1234567890ABCDEFGHIJKLMNOP for +1 (555) 867-5309",
+      persistence: {
+        tenantId: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
+        databaseUrl: "postgres://inkroute:secret@example.neon.tech/inkroute",
+      },
+    };
+
+    expect(buildRedactedPrDiffEvidenceArtifact(artifact)).toEqual({
+      runId: "[REDACTED]",
+      repositoryUrl: "[REDACTED]",
+      branchName: "[REDACTED]",
+      logOutput: "token [REDACTED] for [REDACTED]",
+      persistence: {
+        tenantId: "[REDACTED]",
+        databaseUrl: "[REDACTED]",
+      },
+    });
+
+    const review = buildPrDiffEvidenceRuntimeArtifactReview(artifact);
+    expect(review.safeForTracker).toBe(true);
+    expect(review.requiredExternalEvidence).toBe(prDiffEvidenceRuntimeRequiredExternalEvidence);
+    expect(review.redactions).toEqual(
+      expect.arrayContaining([
+        "runId",
+        "repositoryUrl",
+        "branchName",
+        "logOutput",
+        "persistence.tenantId",
+        "persistence.databaseUrl",
+      ]),
+    );
+    expect(review.requiredExternalEvidence).toBe(prDiffEvidenceRuntimeRequiredExternalEvidence);
+  });
+
   it("blocks semantic documentation readiness when static checks fail or runtime/provider/legal proof is conflated", () => {
     const plan = buildSemanticDocumentationRuntimeReadinessPlan({
       qualityDocsScriptIncludesLinkAudit: true,
@@ -684,8 +1103,8 @@ describe("quality gates", () => {
       "legal-readiness-language",
       "app-package-inventory",
     ]);
-    expect(plan.requiredCommands).toContain("pnpm quality:docs");
-    expect(plan.requiredEvidence).toContain("Explicit notes that runtime build proof, provider proof, and legal review remain separate evidence gates.");
+    expect(plan.requiredCommands).toBe(semanticDocumentationRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(semanticDocumentationRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("quality:docs must chain link/path, documentation consistency, and documentation inventory audits.");
     expect(plan.blockers).toContain("Semantic documentation audit must not be treated as runtime build or live route proof.");
   });
@@ -738,8 +1157,8 @@ describe("quality gates", () => {
     expect(plan.missingWorkflowTerms).toEqual(["pnpm test:unit:coverage", "pnpm test:e2e"]);
     expect(plan.missingBranchProtectionChecks).toEqual(["typecheck", "lint"]);
     expect(plan.missingRepositorySettings).toEqual(["Require CODEOWNERS review", "Enable secret scanning"]);
-    expect(plan.requiredCommands).toContain("pnpm quality:required-checks");
-    expect(plan.requiredEvidence).toContain("A failing quality-gate PR that cannot merge.");
+    expect(plan.requiredCommands).toBe(requiredChecksRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(requiredChecksRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("GitHub branch protection must require every documented quality status check.");
     expect(plan.blockers).toContain("A failing quality-gate PR must be proven unable to merge.");
   });

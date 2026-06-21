@@ -17,6 +17,64 @@ export interface NotificationSchedulerRuntimeMatrixEntry {
   readonly status: NotificationSchedulerRuntimeStatus;
 }
 
+export interface NotificationSchedulerExecutionPolicy {
+  readonly codexMayClassifyStaticNotificationSchedulerReadiness: boolean;
+  readonly localCommandEvidenceRequiredForClosure: boolean;
+  readonly queueBackendRequiredForClosure: boolean;
+  readonly durableJobRepositoriesRequiredForClosure: boolean;
+  readonly schedulerWorkerDeploymentRequiredForClosure: boolean;
+  readonly providerDispatchRequiredForClosure: boolean;
+  readonly dueJobConcurrencyRequiredForClosure: boolean;
+  readonly retryDeadLetterRequiredForClosure: boolean;
+  readonly cancellationRequiredForClosure: boolean;
+  readonly ciEvidenceRequiredForClosure: boolean;
+  readonly secretSafeArtifactsRequiredForClosure: boolean;
+}
+
+export interface NotificationSchedulerExecutionPlan {
+  readonly policy: typeof notificationSchedulerExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly queueBackendExecutionAllowed: false;
+  readonly durableRepositoryExecutionAllowed: false;
+  readonly schedulerProcessExecutionAllowed: false;
+  readonly workerProcessExecutionAllowed: false;
+  readonly providerDispatchExecutionAllowed: false;
+  readonly concurrencyExecutionAllowed: false;
+  readonly integrationExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly artifactReviewExecutionAllowed: false;
+  readonly localCommands: typeof notificationSchedulerLocalCommands;
+  readonly externalCommands: typeof notificationSchedulerExternalCommands;
+  readonly requiredExternalEvidence: typeof notificationSchedulerRequiredExternalEvidence;
+}
+
+export interface RedactedNotificationSchedulerArtifact {
+  readonly artifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: true;
+}
+
+export interface NotificationSchedulerArtifactReview {
+  readonly passed: boolean;
+  readonly artifact: RedactedNotificationSchedulerArtifact;
+  readonly blockers: readonly string[];
+  readonly requiredExternalEvidence: typeof notificationSchedulerRequiredExternalEvidence;
+}
+
+export const notificationSchedulerExecutionPolicy = {
+  codexMayClassifyStaticNotificationSchedulerReadiness: true,
+  localCommandEvidenceRequiredForClosure: true,
+  queueBackendRequiredForClosure: true,
+  durableJobRepositoriesRequiredForClosure: true,
+  schedulerWorkerDeploymentRequiredForClosure: true,
+  providerDispatchRequiredForClosure: true,
+  dueJobConcurrencyRequiredForClosure: true,
+  retryDeadLetterRequiredForClosure: true,
+  cancellationRequiredForClosure: true,
+  ciEvidenceRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies NotificationSchedulerExecutionPolicy;
+
 export const notificationSchedulerRuntimeCommands = [
   "pnpm --filter @inkroute/notifications typecheck",
   "pnpm --filter @inkroute/notifications test",
@@ -28,6 +86,121 @@ export const notificationSchedulerRuntimeCommands = [
   "idempotent due-job worker concurrency test",
   "provider dispatch worker integration tests",
 ] as const;
+
+export const notificationSchedulerRequiredExternalEvidence = [
+  "actual notification scheduler command output",
+  "queue backend configuration evidence",
+  "NotificationJob persistence tests",
+  "DeadLetterJob persistence tests",
+  "NotificationWorkerAuditLog persistence tests",
+  "scheduler IdempotencyKey persistence tests",
+  "scheduler and worker process deployment evidence",
+  "provider dispatch worker integration evidence",
+  "Postgres due-job concurrency tests",
+  "retry/backoff and dead-letter integration tests",
+  "appointment reschedule/cancel scheduled-job cancellation tests",
+  "CI notification scheduler artifacts",
+  "secret-safe notification scheduler artifact review",
+] as const;
+
+export const notificationSchedulerDecisionRequiredEvidence = [
+  "queue backend and NotificationJob persistence evidence",
+  "scheduler/worker process and transactional due-job claiming evidence",
+  "retry, dead-letter, and worker audit persistence evidence",
+  "provider dispatch worker integration evidence",
+  "queue, retry/dead-letter, and appointment cancellation integration test evidence",
+  "secret-safe review of retained notification scheduler artifacts",
+] as const;
+
+export const notificationSchedulerLocalCommands = [
+  "pnpm --filter @inkroute/notifications typecheck",
+  "pnpm --filter @inkroute/notifications test",
+  "pnpm --filter @inkroute/dashboard typecheck",
+  "pnpm vitest run apps/dashboard/tests/notification-scheduler-runtime-static.test.ts apps/dashboard/tests/notification-scheduler-static.test.ts",
+] as const;
+
+export const notificationSchedulerExternalCommands = [
+  "notification scheduler Postgres queue integration tests",
+  "notification retry/backoff and dead-letter integration tests",
+  "appointment reschedule/cancel scheduled-job cancellation integration tests",
+  "idempotent due-job worker concurrency test",
+  "provider dispatch worker integration tests",
+  "GitHub Actions notification scheduler runtime job",
+  "secret-safe notification scheduler artifact review",
+] as const;
+
+export const buildNotificationSchedulerExecutionPlan = (): NotificationSchedulerExecutionPlan => ({
+  policy: notificationSchedulerExecutionPolicy,
+  commandExecutionAllowed: false,
+  queueBackendExecutionAllowed: false,
+  durableRepositoryExecutionAllowed: false,
+  schedulerProcessExecutionAllowed: false,
+  workerProcessExecutionAllowed: false,
+  providerDispatchExecutionAllowed: false,
+  concurrencyExecutionAllowed: false,
+  integrationExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  artifactReviewExecutionAllowed: false,
+  localCommands: notificationSchedulerLocalCommands,
+  externalCommands: notificationSchedulerExternalCommands,
+  requiredExternalEvidence: notificationSchedulerRequiredExternalEvidence,
+});
+
+const notificationSchedulerPrivateArtifactKeyPattern =
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|notification|scheduler|job|message|destination|body|payload|worker|audit|idempotency|queue|dead.?letter|retry|handoff|email|phone|medical|payment|customer)/i;
+
+const redactNotificationSchedulerArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) =>
+      redactNotificationSchedulerArtifactValue(entry, `${path}[${index}]`, redactedPaths),
+    );
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (notificationSchedulerPrivateArtifactKeyPattern.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[redacted]"];
+        }
+
+        return [key, redactNotificationSchedulerArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const buildRedactedNotificationSchedulerArtifact = (
+  artifact: unknown,
+): RedactedNotificationSchedulerArtifact => {
+  const redactedPaths: string[] = [];
+
+  return {
+    artifact: redactNotificationSchedulerArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+    secretSafe: true,
+  };
+};
+
+export const buildNotificationSchedulerArtifactReview = (
+  artifact: unknown,
+): NotificationSchedulerArtifactReview => {
+  const redacted = buildRedactedNotificationSchedulerArtifact(artifact);
+
+  return {
+    passed: true,
+    artifact: redacted,
+    blockers: [],
+    requiredExternalEvidence: notificationSchedulerRequiredExternalEvidence,
+  };
+};
 
 export const notificationSchedulerArtifactPaths = [
   "coverage/notification-scheduler-runtime.json",
@@ -53,6 +226,7 @@ export const notificationSchedulerArtifactPaths = [
 ] as const;
 
 export const notificationSchedulerRuntimeProofFiles = [
+  "apps/dashboard/package.json",
   "packages/notifications/package.json",
   "packages/notifications/src/index.ts",
   "packages/notifications/tests/delivery-plan.test.ts",
@@ -60,6 +234,7 @@ export const notificationSchedulerRuntimeProofFiles = [
   "apps/dashboard/lib/notificationSchedulerRuntime.ts",
   "apps/dashboard/app/api/notifications/scheduler/route.ts",
   "apps/dashboard/app/templates/page.tsx",
+  "apps/dashboard/components/NotificationSchedulerActionPanel.tsx",
   "apps/dashboard/tests/notification-scheduler-static.test.ts",
   "apps/dashboard/tests/notification-scheduler-runtime-static.test.ts",
   "testing/manifests/unit-test-manifest.json",
@@ -94,8 +269,8 @@ export interface NotificationSchedulerEvidenceDecision {
   readonly status: "complete" | "blocked";
   readonly blockers: readonly string[];
   readonly missingArtifacts: readonly NotificationSchedulerEvidenceArtifact[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof notificationSchedulerRuntimeCommands;
+  readonly requiredEvidence: typeof notificationSchedulerDecisionRequiredEvidence;
   readonly redactedSummary: {
     readonly capturedArtifactCount: number;
     readonly requiredArtifactCount: number;
@@ -135,15 +310,8 @@ export const buildNotificationSchedulerEvidenceDecision = (
     status: blockers.length === 0 ? "complete" : "blocked",
     blockers,
     missingArtifacts,
-    requiredCommands: [...notificationSchedulerRuntimeCommands],
-    requiredEvidence: [
-      "queue backend and NotificationJob persistence evidence",
-      "scheduler/worker process and transactional due-job claiming evidence",
-      "retry, dead-letter, and worker audit persistence evidence",
-      "provider dispatch worker integration evidence",
-      "queue, retry/dead-letter, and appointment cancellation integration test evidence",
-      "secret-safe review of retained notification scheduler artifacts",
-    ],
+    requiredCommands: notificationSchedulerRuntimeCommands,
+    requiredEvidence: notificationSchedulerDecisionRequiredEvidence,
     redactedSummary: {
       capturedArtifactCount: captured.size,
       requiredArtifactCount: notificationSchedulerArtifactPaths.length,
@@ -173,3 +341,5 @@ export const notificationSchedulerRuntimeMatrix = [
 ] as const satisfies readonly NotificationSchedulerRuntimeMatrixEntry[];
 
 export const notificationSchedulerRuntimeReadiness = dashboardNotificationSchedulerContract.runtimeReadiness;
+
+

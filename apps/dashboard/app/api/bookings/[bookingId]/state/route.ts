@@ -13,6 +13,8 @@ interface BookingStateRouteContext {
   params: Promise<{ bookingId: string }>;
 }
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 const allowedActions = new Set<BookingLifecycleAction>([
   "request_more_info",
   "accept",
@@ -72,14 +74,14 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
   try {
     assertPermission(actor, "booking:write");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to mutate bookings." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to mutate bookings." } }, { status: 403, headers: noStoreHeaders });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Booking state body must be valid JSON." } }, { status: 400 });
+    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Booking state body must be valid JSON." } }, { status: 400, headers: noStoreHeaders });
   }
 
   const input = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
@@ -87,17 +89,36 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
   if (!action) {
     return NextResponse.json(
       { ok: false, error: { code: "INVALID_ACTION", message: "Booking state action is missing or unsupported." } },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
   const { bookingId } = await context.params;
   const tenantId = typeof input.tenantId === "string" && input.tenantId.trim() ? input.tenantId.trim() : actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot mutate a booking for another tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot mutate a booking for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          bookingId,
+          action,
+          error: {
+            code: "PROVIDER_BOOKING_STATE_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production booking lifecycle mutations require DB-backed actor resolution plus BookingStateEvent and AuditLog persistence; local fallback mutations are disabled.",
+            gapIds: ["GAP-007", "GAP-037", "GAP-038"],
+          },
+          productionBoundary: { localBookingStateMutationFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     return NextResponse.json(
       {
         ok: false,
@@ -111,7 +132,7 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
         },
         gapIds: ["GAP-007", "GAP-037"],
       },
-      { status: 409 },
+      { status: 409, headers: noStoreHeaders },
     );
   }
 
@@ -208,28 +229,31 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
     });
 
     if (result.status === "not_found") {
-      return NextResponse.json({ ok: false, error: { code: "BOOKING_NOT_FOUND", message: "Booking was not found for this tenant." } }, { status: 404 });
+      return NextResponse.json({ ok: false, error: { code: "BOOKING_NOT_FOUND", message: "Booking was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
     }
 
     if (result.status === "invalid_transition") {
       return NextResponse.json(
         { ok: false, error: { code: "INVALID_TRANSITION", message: result.plan.reason }, plan: result.plan },
-        { status: 409 },
+        { status: 409, headers: noStoreHeaders },
       );
     }
 
-    return NextResponse.json({
-      ok: true,
-      source: actor.source,
-      tenantId,
-      booking: result.booking,
-      event: result.event,
-      auditId: result.audit.id,
-      dashboardMutationPlan: result.dashboardMutationPlan,
-      transition: result.plan.transition,
-      gapIds: ["GAP-007", "GAP-037", "GAP-038"],
-      boundary: "Booking lifecycle mutation persisted in one tenant-scoped transaction with BookingStateEvent and AuditLog rows.",
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId,
+        booking: result.booking,
+        event: result.event,
+        auditId: result.audit.id,
+        dashboardMutationPlan: result.dashboardMutationPlan,
+        transition: result.plan.transition,
+        gapIds: ["GAP-007", "GAP-037", "GAP-038"],
+        boundary: "Booking lifecycle mutation persisted in one tenant-scoped transaction with BookingStateEvent and AuditLog rows.",
+      },
+      { headers: noStoreHeaders },
+    );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
       return NextResponse.json(
@@ -242,10 +266,10 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
           error: { code: "DATABASE_UNAVAILABLE", message: "Booking state mutation requires the dashboard database connection." },
           gapIds: ["GAP-007", "GAP-037"],
         },
-        { status: 503 },
+        { status: 503, headers: noStoreHeaders },
       );
     }
 
-    return NextResponse.json({ ok: false, error: { code: "BOOKING_STATE_MUTATION_FAILED", message: "Booking state could not be persisted." } }, { status: 500 });
+    return NextResponse.json({ ok: false, error: { code: "BOOKING_STATE_MUTATION_FAILED", message: "Booking state could not be persisted." } }, { status: 500, headers: noStoreHeaders });
   }
 }

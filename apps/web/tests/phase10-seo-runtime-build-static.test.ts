@@ -2,14 +2,26 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import {
+  buildPhase10SeoRuntimeArtifactReview,
+  buildPhase10SeoRuntimeEvidenceDecision,
+  buildPhase10SeoRuntimeExecutionPlan,
+  buildRedactedPhase10SeoRuntimeArtifact,
   phase10SeoRuntimeArtifactPaths,
   phase10SeoRuntimeBuildCommands,
   phase10SeoRuntimeBuildContract,
   phase10SeoRuntimeBuildMatrix,
+  phase10SeoRuntimeDecisionRequiredEvidence,
+  phase10SeoRuntimeExecutionPolicy,
+  phase10SeoRuntimeProofFiles,
+  phase10SeoRuntimeRequiredExternalEvidence,
   phase10SeoRuntimeSurfaces,
 } from "../lib/phase10SeoRuntimeBuild";
 
 const ciWorkflow = readFileSync(".github/workflows/ci.yml", "utf8");
+const gapTracker = readFileSync("GAP_TRACKER.md", "utf8");
+const seoPreviewRoute = readFileSync("apps/web/app/api/public/[tenantSlug]/seo-preview/route.ts", "utf8");
+const sitemapPreviewRoute = readFileSync("apps/web/app/api/public/[tenantSlug]/sitemap-preview/route.ts", "utf8");
+const sitemapRouteTest = readFileSync("apps/web/tests/sitemap-route.test.ts", "utf8");
 
 describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
   it("enumerates build, route, dashboard, crawl, database, preview, canonical, and provider-status surfaces", () => {
@@ -39,6 +51,14 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
     expect(phase10SeoRuntimeSurfaces.filter((surface) => surface.evidenceType === "runtime-required").map((surface) => surface.id)).toEqual(
       expect.arrayContaining(["dashboard-seo-browser-smoke", "rendered-public-seo-crawl", "canonical-runtime-artifacts"]),
     );
+  });
+
+  it("keeps SEO preview and sitemap preview API payloads no-store", () => {
+    expect(seoPreviewRoute).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(sitemapPreviewRoute).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(seoPreviewRoute).toContain("{ headers: noStoreHeaders }");
+    expect(sitemapPreviewRoute).toContain("{ headers: noStoreHeaders }");
+    expect(sitemapRouteTest).toContain('response.headers.get("Cache-Control")).toBe("no-store")');
   });
 
   it("retains Phase 10 SEO runtime artifact paths without claiming unrun browser proof", () => {
@@ -92,6 +112,131 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
     ]);
   });
 
+  it("builds a local execution plan without provider execution", () => {
+    const plan = buildPhase10SeoRuntimeExecutionPlan();
+
+    expect(plan.id).toBe("gap-076-phase10-seo-runtime-build");
+    expect(plan.providerExecutionAllowed).toBe(false);
+    expect(plan.policy).toBe(phase10SeoRuntimeExecutionPolicy);
+    expect(plan.policy).toEqual({
+      executeTestingPackageChecks: false,
+      executeWebBuild: false,
+      executeDashboardBuild: false,
+      executeBrowserSmokes: false,
+      executeRenderedCrawls: false,
+      executeSearchConsoleProvider: false,
+      executeCi: false,
+    });
+    expect(plan.requiredCommands).toBe(phase10SeoRuntimeBuildCommands);
+    expect(plan.requiredArtifacts).toBe(phase10SeoRuntimeArtifactPaths);
+    expect(plan.buildSurfaces).toEqual(expect.arrayContaining(["testing-package", "web-build", "dashboard-build"]));
+    expect(plan.runtimeSurfaces).toEqual(
+      expect.arrayContaining(["dashboard-seo-browser-smoke", "rendered-public-seo-crawl", "canonical-runtime-artifacts"]),
+    );
+    expect(plan.providerSurfaces).toEqual(["search-console-provider-status"]);
+    expect(plan.secretSafeArtifactPath).toBe("coverage/phase10-seo-runtime-secret-safe-artifacts.json");
+    expect(plan.externalEvidenceRequired).toBe(phase10SeoRuntimeRequiredExternalEvidence);
+    expect(plan.externalEvidenceRequired).toEqual([
+      "testing package test/typecheck output",
+      "web and dashboard build logs",
+      "dashboard SEO browser and publish/edit/archive Playwright proof",
+      "rendered public SEO and sitemap/canonical crawl artifacts",
+      "sitemap/API preview/canonical runtime artifact capture",
+      "Search Console provider execution proof captured as redacted artifacts",
+      "GitHub Actions Phase 10 SEO runtime/build gate evidence",
+    ]);
+  });
+
+  it("redacts Phase 10 SEO runtime/build artifacts before persistence", () => {
+    const rawArtifact = {
+      searchConsole: {
+        authorization: "Bearer ya29.search-console-provider-token",
+        email: "artist@example.com",
+        siteUrl: "https://tenant.example.com",
+        rows: [{ query: "fine line tattoo", clicks: 12 }],
+      },
+      preview: {
+        phone: "+1 (555) 867-5309",
+        privateDraftHtml: "<h1>Private campaign draft</h1>",
+      },
+    };
+
+    const redacted = buildRedactedPhase10SeoRuntimeArtifact(rawArtifact);
+    const review = buildPhase10SeoRuntimeArtifactReview("phase10-search-console-provider-execution", rawArtifact);
+    const serialized = JSON.stringify(review.redactedArtifact);
+
+    expect(JSON.stringify(redacted)).not.toContain("artist@example.com");
+    expect(serialized).not.toContain("ya29.search-console-provider-token");
+    expect(serialized).not.toContain("+1 (555) 867-5309");
+    expect(serialized).not.toContain("Private campaign draft");
+    expect(review.safeToPersist).toBe(true);
+    expect(review.unsafeFindings).toEqual([]);
+    expect(review.requiredArtifactPath).toBe("coverage/phase10-seo-runtime-secret-safe-artifacts.json");
+  });
+
+  it("classifies GAP-076 Phase 10 SEO runtime/build evidence as blocked until every runtime artifact is captured", () => {
+    const blocked = buildPhase10SeoRuntimeEvidenceDecision({
+      testingPackageTestsPassed: true,
+      testingPackageTypecheckPassed: true,
+      webBuildPassed: false,
+      dashboardBuildPassed: false,
+      staticContractsPassed: true,
+      dashboardSeoBrowserSmokePassed: false,
+      dashboardSeoPublishSmokePassed: false,
+      renderedPublicSeoCrawlPassed: false,
+      renderedSitemapCanonicalCrawlPassed: false,
+      databaseBackedSeoRoutesVerified: true,
+      sitemapRuntimeCaptured: false,
+      apiPreviewRuntimeCaptured: false,
+      canonicalRuntimeCaptured: false,
+      searchConsoleStatusVerified: true,
+      searchConsoleProviderExecutionCaptured: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactReviewPassed: false,
+      capturedArtifacts: ["coverage/phase10-seo-testing-package.json"],
+    });
+
+    expect(blocked.status).toBe("blocked");
+    expect(blocked.blockers).toEqual(
+      expect.arrayContaining([
+        "Web build evidence is required.",
+        "Dashboard build evidence is required.",
+        "Dashboard SEO browser smoke evidence is required.",
+        "Rendered sitemap/canonical crawl evidence is required.",
+        "Redacted Search Console provider execution evidence is required.",
+      ]),
+    );
+    expect(blocked.missingArtifacts).toContain("coverage/phase10-seo-web-build.json");
+    expect(blocked.requiredCommands).toBe(phase10SeoRuntimeBuildCommands);
+    expect(blocked.requiredEvidence).toBe(phase10SeoRuntimeDecisionRequiredEvidence);
+
+    const complete = buildPhase10SeoRuntimeEvidenceDecision({
+      testingPackageTestsPassed: true,
+      testingPackageTypecheckPassed: true,
+      webBuildPassed: true,
+      dashboardBuildPassed: true,
+      staticContractsPassed: true,
+      dashboardSeoBrowserSmokePassed: true,
+      dashboardSeoPublishSmokePassed: true,
+      renderedPublicSeoCrawlPassed: true,
+      renderedSitemapCanonicalCrawlPassed: true,
+      databaseBackedSeoRoutesVerified: true,
+      sitemapRuntimeCaptured: true,
+      apiPreviewRuntimeCaptured: true,
+      canonicalRuntimeCaptured: true,
+      searchConsoleStatusVerified: true,
+      searchConsoleProviderExecutionCaptured: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactReviewPassed: true,
+      capturedArtifacts: phase10SeoRuntimeArtifactPaths,
+    });
+
+    expect(complete.status).toBe("complete");
+    expect(complete.blockers).toEqual([]);
+    expect(complete.missingArtifacts).toEqual([]);
+    expect(complete.redactedSummary).toContain("CI-safe artifacts captured");
+  });
+
   it("requires the Phase 10 SEO app runtime/build gate in CI", () => {
     expect(ciWorkflow).toContain("Run Phase 10 SEO app runtime and build gate");
     expect(ciWorkflow).toContain("pnpm --filter @inkroute/testing test");
@@ -103,5 +248,39 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
     expect(ciWorkflow).toContain("phase10-seo-runtime-build-artifacts");
     expect(ciWorkflow).toContain("coverage/phase10-seo-runtime-ci-evidence.json");
     expect(ciWorkflow).toContain("coverage/phase10-seo-runtime-secret-safe-artifacts.json");
+    expect(gapTracker).toContain("Phase 10 SEO runtime/build evidence classifier wired and runtime-matrix gated");
+    expect(gapTracker).toContain("phase10SeoRuntimeDecisionRequiredEvidence");
+  });
+
+  it("pins current Phase 10 SEO runtime/build proof files for GAP-076", () => {
+    expect(phase10SeoRuntimeProofFiles).toEqual(expect.arrayContaining([
+      "apps/dashboard/package.json",
+      "apps/web/package.json",
+      "packages/testing/package.json",
+      "packages/testing/src/index.ts",
+      "packages/testing/tests/testing-manifest.test.ts",
+      "apps/web/lib/seoEngine.ts",
+      "apps/web/lib/canonicalRuntime.ts",
+      "apps/web/lib/structuredDataCrawlQa.ts",
+      "apps/web/lib/phase10SeoRuntimeBuild.ts",
+      "apps/web/app/sitemap.ts",
+      "apps/web/app/api/public/[tenantSlug]/seo-preview/route.ts",
+      "apps/web/app/api/public/[tenantSlug]/sitemap-preview/route.ts",
+      "apps/web/tests/sitemap-route.test.ts",
+      "apps/web/tests/canonical-domain-runtime-static.test.ts",
+      "apps/web/tests/structured-data-crawl-qa-static.test.ts",
+      "apps/web/tests/phase10-seo-runtime-build-static.test.ts",
+      "apps/dashboard/app/seo/page.tsx",
+      "apps/dashboard/app/api/seo/route.ts",
+      "apps/dashboard/app/api/seo/search-console/route.ts",
+      "apps/dashboard/tests/seo-read-route-static.test.ts",
+      "apps/dashboard/tests/seo-publication-route-static.test.ts",
+      "apps/dashboard/tests/search-console-route-static.test.ts",
+      ".github/workflows/ci.yml",
+      "testing/manifests/unit-test-manifest.json",
+    ]));
+    for (const file of phase10SeoRuntimeProofFiles) {
+      expect(readFileSync(file, "utf8").length).toBeGreaterThan(0);
+    }
   });
 });

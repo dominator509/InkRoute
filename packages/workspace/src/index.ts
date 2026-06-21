@@ -107,8 +107,8 @@ export interface DependencyInstallReadinessInput {
 export interface DependencyInstallReadinessPlan {
   readonly status: "ready" | "blocked";
   readonly missingSourceFiles: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof dependencyInstallRequiredCommands;
+  readonly requiredEvidence: typeof dependencyInstallRequiredEvidence;
   readonly blockers: readonly string[];
 }
 
@@ -152,8 +152,8 @@ export interface RuntimeEvidenceReadinessPlan {
   readonly status: "ready" | "blocked";
   readonly missingEvidenceIds: readonly string[];
   readonly nonPassingEvidenceIds: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: readonly RuntimeEvidenceRequiredCommand[];
+  readonly requiredEvidence: typeof runtimeEvidenceReadinessRequiredEvidence;
   readonly blockers: readonly string[];
 }
 
@@ -206,8 +206,8 @@ export interface WorkspaceRequiredChecksReadinessInput {
 export interface WorkspaceRequiredChecksReadinessPlan {
   readonly status: "ready" | "blocked";
   readonly missingBranchProtectionChecks: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof workspaceRequiredChecksRequiredCommands;
+  readonly requiredEvidence: typeof workspaceRequiredChecksRequiredEvidence;
   readonly blockers: readonly string[];
 }
 
@@ -255,6 +255,96 @@ export const requiredRootScripts = [
 ] as const;
 
 export const requiredProjectScripts = ["build", "typecheck", "lint", "test"] as const;
+
+export const dependencyInstallRequiredCommands = [
+  "corepack enable",
+  "pnpm install",
+  "pnpm install --frozen-lockfile",
+  "pnpm workspace:all",
+  "pnpm typecheck",
+  "pnpm lint",
+  "pnpm test:unit",
+  "GitHub Actions CI quality job",
+  "dependency readiness report keeps provider/runtime/legal blockers visible",
+] as const;
+
+export const dependencyInstallRequiredEvidence = [
+  "package.json, pnpm-workspace.yaml, and pnpm-lock.yaml are present and committed.",
+  "Package manager pin and lockfile are used for a deterministic pnpm install.",
+  "Local or clean-checkout install output plus frozen-lockfile CI output.",
+  "typecheck, lint, unit test, and workspace audit output after install.",
+  "CI evidence showing the same install/tooling gates passed.",
+  "GAP_TRACKER.md continues to show unresolved provider/runtime/legal blockers separately.",
+] as const;
+
+export const runtimeEvidenceBaseRequiredCommands = [
+  "pnpm workspace:runtime-evidence",
+  "pnpm workspace:all",
+  "GitHub Actions Phase 18 workspace runtime readiness job",
+  "runtime evidence report keeps production blockers visible",
+] as const;
+
+export type RuntimeEvidenceRequiredCommand =
+  | RuntimeEvidenceRequirement["command"]
+  | typeof runtimeEvidenceBaseRequiredCommands[number];
+
+export const runtimeEvidenceReadinessRequiredEvidence = [
+  "Each required runtime command has a passed record with a redacted evidence label.",
+  "runtime-evidence-audit.json reports pass.",
+  "workspace:runtime-evidence and workspace:all command output are captured.",
+  "GitHub Actions evidence is captured without secrets or private customer data.",
+  "Production blockers remain visible in readiness evidence until resolved.",
+] as const;
+
+export function buildRuntimeEvidenceRequiredCommands(
+  requirements: readonly RuntimeEvidenceRequirement[],
+): readonly RuntimeEvidenceRequiredCommand[] {
+  return [
+    ...requirements.map((requirement) => requirement.command),
+    ...runtimeEvidenceBaseRequiredCommands,
+  ];
+}
+
+export const workspaceRequiredChecksRequiredCommands = [
+  "pnpm workspace:required-checks",
+  "pnpm workspace:all",
+  "pnpm quality:required-checks",
+  "GitHub Actions CI / quality",
+  "GitHub branch protection required-check review",
+  "Failing workspace-audit PR merge-block proof",
+  "PR GAP tracker diff evidence merge-block proof",
+  "required-check evidence logs redacted and secret-free",
+] as const;
+
+export const workspaceRequiredChecksRequiredEvidence = [
+  "workspace:required-checks, workspace:all, and quality:required-checks command output.",
+  "GitHub Actions CI / quality job output showing workspace and PR gap-diff checks.",
+  "Branch protection settings showing every required workspace and PR gap-diff check is required before merge.",
+  "A failing workspace-audit PR cannot merge.",
+  "A failing PR GAP tracker diff evidence check cannot merge.",
+  "Evidence logs are redacted and contain no secrets.",
+] as const;
+
+export const workspaceRuntimeToolchainRequiredCommands = [
+  "pnpm --filter @inkroute/workspace typecheck",
+  "pnpm --filter @inkroute/workspace test",
+  "pnpm workspace:toolchain",
+  "pnpm workspace:all",
+  "pnpm install",
+  "pnpm --filter @inkroute/web build",
+  "pnpm --filter @inkroute/dashboard build",
+  "GitHub Actions Phase 18 workspace runtime readiness job",
+  "runtime readiness report keeps production blockers visible",
+] as const;
+
+export const workspaceRuntimeToolchainRequiredEvidence = [
+  "@inkroute/workspace package typecheck and test output.",
+  "workspace:toolchain and workspace:all output.",
+  "Generated workspace import, package-script, runtime-evidence, runtime-readiness, required-checks, and toolchain-readiness reports.",
+  "Dependency install evidence and CI workspace job evidence.",
+  "Web/dashboard build evidence before launch readiness claims.",
+  "Runtime readiness report showing production blockers remain visible.",
+] as const;
 
 const workspacePackagePattern = /^@inkroute\/[a-z0-9-]+$/;
 
@@ -473,7 +563,7 @@ export function auditPackageScripts(projects: readonly WorkspaceProjectManifest[
     }
     const lint = project.scripts.lint ?? "";
     if (/not configured/i.test(lint)) {
-      findings.push({ status: "warn", packageName: project.name, message: "Lint script is an informational placeholder." });
+      findings.push({ status: "warn", packageName: project.name, message: "Lint script is an informational contract until a dedicated linter is configured." });
     }
   }
 
@@ -527,7 +617,7 @@ export function summarizeRuntimeReadiness(input: {
     },
     {
       id: "ci-workflow",
-      title: "CI workflow scaffold",
+      title: "CI workflow contract",
       status: input.hasCiWorkflow ? "pass" : "warn",
       evidence: input.hasCiWorkflow ? ".github/workflows/ci.yml exists." : "CI workflow file is missing.",
       gapIds: ["GAP-111", "GAP-129"],
@@ -612,24 +702,8 @@ export function buildDependencyInstallReadinessPlan(
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingSourceFiles,
-    requiredCommands: [
-      "corepack enable",
-      "pnpm install",
-      "pnpm install --frozen-lockfile",
-      "pnpm workspace:all",
-      "pnpm typecheck",
-      "pnpm lint",
-      "pnpm test:unit",
-      "GitHub Actions CI quality job",
-    ],
-    requiredEvidence: [
-      "package.json, pnpm-workspace.yaml, and pnpm-lock.yaml are present and committed.",
-      "Package manager pin and lockfile are used for a deterministic pnpm install.",
-      "Local or clean-checkout install output plus frozen-lockfile CI output.",
-      "typecheck, lint, unit test, and workspace audit output after install.",
-      "CI evidence showing the same install/tooling gates passed.",
-      "GAP_TRACKER.md continues to show unresolved provider/runtime/legal blockers separately.",
-    ],
+    requiredCommands: dependencyInstallRequiredCommands,
+    requiredEvidence: dependencyInstallRequiredEvidence,
     blockers,
   };
 }
@@ -712,23 +786,14 @@ export function buildRuntimeEvidenceReadinessPlan(input: RuntimeEvidenceReadines
     blockers.push("Runtime evidence reports must keep production blockers visible until launch blockers are resolved.");
   }
 
+  const requiredCommands = buildRuntimeEvidenceRequiredCommands(input.requirements);
+
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingEvidenceIds,
     nonPassingEvidenceIds,
-    requiredCommands: [
-      ...input.requirements.map((requirement) => requirement.command),
-      "pnpm workspace:runtime-evidence",
-      "pnpm workspace:all",
-      "GitHub Actions Phase 18 workspace runtime readiness job",
-    ],
-    requiredEvidence: [
-      "Each required runtime command has a passed record with a redacted evidence label.",
-      "runtime-evidence-audit.json reports pass.",
-      "workspace:runtime-evidence and workspace:all command output are captured.",
-      "GitHub Actions evidence is captured without secrets or private customer data.",
-      "Production blockers remain visible in readiness evidence until resolved.",
-    ],
+    requiredCommands,
+    requiredEvidence: runtimeEvidenceReadinessRequiredEvidence,
     blockers,
   };
 }
@@ -822,23 +887,8 @@ export function buildWorkspaceRequiredChecksReadinessPlan(
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingBranchProtectionChecks,
-    requiredCommands: [
-      "pnpm workspace:required-checks",
-      "pnpm workspace:all",
-      "pnpm quality:required-checks",
-      "GitHub Actions CI / quality",
-      "GitHub branch protection required-check review",
-      "Failing workspace-audit PR merge-block proof",
-      "PR GAP tracker diff evidence merge-block proof",
-    ],
-    requiredEvidence: [
-      "workspace:required-checks, workspace:all, and quality:required-checks command output.",
-      "GitHub Actions CI / quality job output showing workspace and PR gap-diff checks.",
-      "Branch protection settings showing every required workspace and PR gap-diff check is required before merge.",
-      "A failing workspace-audit PR cannot merge.",
-      "A failing PR GAP tracker diff evidence check cannot merge.",
-      "Evidence logs are redacted and contain no secrets.",
-    ],
+    requiredCommands: workspaceRequiredChecksRequiredCommands,
+    requiredEvidence: workspaceRequiredChecksRequiredEvidence,
     blockers,
   };
 }
@@ -917,8 +967,8 @@ export interface WorkspaceRuntimeToolchainReadinessInput {
 export interface WorkspaceRuntimeToolchainReadinessPlan {
   readonly status: "ready" | "blocked";
   readonly missingGeneratedReports: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof workspaceRuntimeToolchainRequiredCommands;
+  readonly requiredEvidence: typeof workspaceRuntimeToolchainRequiredEvidence;
   readonly blockers: readonly string[];
 }
 
@@ -966,24 +1016,8 @@ export function buildWorkspaceRuntimeToolchainReadinessPlan(
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingGeneratedReports,
-    requiredCommands: [
-      "pnpm --filter @inkroute/workspace typecheck",
-      "pnpm --filter @inkroute/workspace test",
-      "pnpm workspace:toolchain",
-      "pnpm workspace:all",
-      "pnpm install",
-      "pnpm --filter @inkroute/web build",
-      "pnpm --filter @inkroute/dashboard build",
-      "GitHub Actions Phase 18 workspace runtime readiness job",
-    ],
-    requiredEvidence: [
-      "@inkroute/workspace package typecheck and test output.",
-      "workspace:toolchain and workspace:all output.",
-      "Generated workspace import, package-script, runtime-evidence, runtime-readiness, required-checks, and toolchain-readiness reports.",
-      "Dependency install evidence and CI workspace job evidence.",
-      "Web/dashboard build evidence before launch readiness claims.",
-      "Runtime readiness report showing production blockers remain visible.",
-    ],
+    requiredCommands: workspaceRuntimeToolchainRequiredCommands,
+    requiredEvidence: workspaceRuntimeToolchainRequiredEvidence,
     blockers,
   };
 }

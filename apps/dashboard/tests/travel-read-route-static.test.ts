@@ -14,7 +14,11 @@ describe("dashboard travel read route contract", () => {
       expect(source).toContain("tenantId !== actor.tenantId");
       expect(source).toContain('code: "TENANT_MISMATCH"');
       expect(source).toContain('"Cache-Control": "no-store"');
+      expect(source).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+      expect(source).not.toContain('}, { status: 403 });');
+      expect(source).not.toContain('}, { status: 500 });');
     }
+    expect(detailRouteSource).not.toContain('}, { status: 404 });');
   });
 
   it("uses Prisma travel reads with projection redaction and sensitive-read audit logs", () => {
@@ -43,6 +47,8 @@ describe("dashboard travel read route contract", () => {
     for (const source of [listRouteSource, detailRouteSource]) {
       expect(source).toContain("demoTravelStops");
       expect(source).toContain('persistence: "local-fallback"');
+      expect(source).toContain("PROVIDER_DASHBOARD_READS_NOT_CONFIGURED");
+      expect(source).toContain("localDashboardReadFallbackDisabled");
       expect(source).toContain('code: "DATABASE_UNAVAILABLE"');
     }
   });

@@ -40,12 +40,6 @@ interface PortfolioCardProps {
   priority?: boolean;
 }
 
-function buildDerivativeBlurDataUrl(title: string): string {
-  const safeTitle = title.replace(/[<&>"]/g, "").slice(0, 42);
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='32' height='40' viewBox='0 0 32 40'><rect width='32' height='40' fill='#17120f'/><path d='M4 31 C13 24 11 15 23 8' stroke='#b07c55' stroke-width='3' fill='none' stroke-linecap='round'/><text x='4' y='36' fill='#f7efe6' font-size='3' font-family='serif'>${safeTitle}</text></svg>`;
-  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
-}
-
 export function PortfolioCard({ item, priority = false }: PortfolioCardProps) {
   const tags = [item.freshness.replace("_", " "), placementLabel[item.placement] ?? item.placement, item.city].filter(Boolean);
   const image = getPortfolioImageDerivative(item);
@@ -67,7 +61,7 @@ export function PortfolioCard({ item, priority = false }: PortfolioCardProps) {
           sizes={image.sizes}
           priority={priority}
           placeholder="blur"
-          blurDataURL={buildDerivativeBlurDataUrl(item.title)}
+          blurDataURL={image.blurDataUrl}
           unoptimized
         />
         <span>{item.title}</span>

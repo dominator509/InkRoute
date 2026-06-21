@@ -10,6 +10,7 @@ import {
 import { checkRateLimit, getClientIp, persistUploadIntent, resolveTenant } from "../../../../../lib/localRuntimeState";
 
 const uploadKinds: UploadAssetKind[] = ["portfolio_public", "reference_private", "consent_signature", "healed_follow_up", "document_private"];
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
 function isUploadKind(value: unknown): value is UploadAssetKind {
   return typeof value === "string" && uploadKinds.includes(value as UploadAssetKind);
@@ -22,12 +23,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Upload intent body must be valid JSON." } }, { status: 400 });
+    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Upload intent body must be valid JSON." } }, { status: 400, headers: noStoreHeaders });
   }
 
   const input = typeof body === "object" && body !== null ? body as Record<string, unknown> : {};
   if (!isUploadKind(input.kind) || typeof input.filename !== "string" || typeof input.mimeType !== "string" || typeof input.sizeBytes !== "number") {
-    return NextResponse.json({ ok: false, error: { code: "VALIDATION_FAILED", message: "Expected kind, filename, mimeType, and sizeBytes." } }, { status: 400 });
+    return NextResponse.json({ ok: false, error: { code: "VALIDATION_FAILED", message: "Expected kind, filename, mimeType, and sizeBytes." } }, { status: 400, headers: noStoreHeaders });
   }
 
   const validation = validateUploadDraft({
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   if (!resolvedTenant) {
     return NextResponse.json(
       { ok: false, error: { code: "TENANT_NOT_FOUND", message: "Upload intents are available for local demo tenant slug only." } },
-      { status: 404 },
+      { status: 404, headers: noStoreHeaders },
     );
   }
 
@@ -51,11 +52,37 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
         ok: false,
         error: {
           code: "UPLOAD_VALIDATION_FAILED",
-          message: "Upload metadata did not pass scaffolded validation rules.",
+          message: "Upload metadata did not pass local signed-upload validation rules.",
           reasons: validation.reasons,
         },
       },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
+    );
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "PROVIDER_STORAGE_NOT_CONFIGURED",
+          message: "Production upload intents require provider-backed signed URLs; local upload intent previews are disabled.",
+        },
+        data: {
+          productionBoundary: {
+            gapIds: ["GAP-005", "GAP-033", "GAP-096", "GAP-097"],
+            localUploadIntentDisabled: true,
+            requiredBeforeEnablement: [
+              "Object storage provider selected and configured",
+              "Private bucket ACL and approved-derivative public policy verified",
+              "Provider-backed signed upload/download URLs wired",
+              "FileAsset, link, AuditLog, and SignedUrlGrant rows persisted transactionally",
+              "Malware scan, metadata stripping, private-original denial, and cross-tenant denial verified",
+            ],
+          },
+        },
+      },
+      { status: 503, headers: noStoreHeaders },
     );
   }
 
@@ -69,7 +96,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           details: { gapIds: ["GAP-005", "GAP-096", "GAP-097"], remaining: rateLimit.remaining, retryAfterSeconds: rateLimit.retryAfterSeconds },
         },
       },
-      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+      { status: 429, headers: { ...noStoreHeaders, "Retry-After": String(rateLimit.retryAfterSeconds) } },
     );
   }
 
@@ -165,6 +192,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
         },
       },
     },
-    { status: 201 },
+    { status: 201, headers: noStoreHeaders },
   );
 }

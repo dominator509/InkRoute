@@ -1,6 +1,6 @@
 import type { Permission, Role } from "@inkroute/types";
 
-export type SecurityStatus = "implemented" | "scaffolded" | "credential_gated" | "legal_review_required" | "deployment_gated" | "blocked";
+export type SecurityStatus = "implemented" | "local_contract" | "scaffolded" | "credential_gated" | "legal_review_required" | "deployment_gated" | "blocked";
 export type DataSensitivity = "public" | "internal" | "pii" | "sensitive" | "medical" | "payment" | "secret";
 export type RedactionMode = "none" | "mask" | "hash_required" | "omit" | "encrypt_required";
 export type UploadAssetKind = "portfolio_public" | "reference_private" | "consent_signature" | "healed_follow_up" | "document_private";
@@ -61,8 +61,27 @@ export interface UploadValidationResult {
   maxSizeBytes: number;
   storageVisibility: "public_derivative" | "tenant_private" | "client_private" | "system_private";
   reasons: string[];
-  requiredProductionControls: string[];
+  requiredProductionControls: typeof uploadValidationRequiredProductionControls;
 }
+
+export const uploadValidationRequiredProductionControls = [
+  "Generate server-side object keys; never trust client filenames.",
+  "Verify file signature/magic bytes in addition to extension and MIME type.",
+  "Strip EXIF/GPS metadata and create safe derivatives for public portfolio use.",
+  "Run malware scanning or quarantine workflow before durable use.",
+  "Store private reference and consent assets behind signed, revocable URLs.",
+  "Persist tenant-scoped FileAsset and AuditLog records after upload completion.",
+] as const;
+
+export const signedUploadIntentRequiredAdditionalControls = [
+  "Signed upload URLs must expire and be scoped to a single object key, content type, and max byte size.",
+  "Private upload objects must not be readable through public URLs before or after scan completion.",
+  "Reference images must be associated to the booking request before artist review.",
+] as const;
+
+export type SignedUploadIntentRequiredControl =
+  | (typeof uploadValidationRequiredProductionControls)[number]
+  | (typeof signedUploadIntentRequiredAdditionalControls)[number];
 
 export interface SignedUploadIntentInput extends UploadValidationInput {
   tenantId: string;
@@ -85,7 +104,7 @@ export interface SignedUploadIntentPlan {
   signedUploadUrlRequired: boolean;
   publicReadAllowed: boolean;
   requiredWrites: Array<"FileAsset" | "AuditLog" | "BookingReferenceImage">;
-  requiredControls: string[];
+  requiredControls: readonly SignedUploadIntentRequiredControl[];
 }
 
 export type MalwareScanVerdict = "not_run" | "clean" | "suspicious" | "malware";
@@ -111,7 +130,7 @@ export interface UploadScanPipelinePlan {
     required: true;
     fields: readonly string[];
   };
-  requiredControls: readonly string[];
+  requiredControls: typeof uploadScanPipelineRequiredControls;
   reasons: readonly string[];
 }
 
@@ -146,7 +165,7 @@ export interface PrivateStorageAccessPlan {
   publicReadAllowed: boolean;
   expiresInSeconds: number;
   requiredWrites: Array<"FileAsset" | "AuditLog" | "SignedUrlGrant">;
-  requiredControls: readonly string[];
+  requiredControls: typeof privateStorageAccessRequiredControls;
   reasons: readonly string[];
 }
 
@@ -175,8 +194,8 @@ export interface PrivateStorageRuntimeReadinessInput {
 export interface PrivateStorageRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof privateStorageRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly PrivateStorageRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -213,8 +232,8 @@ export interface ProviderStorageUploadReadinessInput {
 export interface ProviderStorageUploadReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof providerStorageUploadReadinessRequiredCommands;
+  requiredEvidence: readonly ProviderStorageUploadReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -243,9 +262,9 @@ export interface ReferenceUploadProviderEvidenceInput {
 export interface ReferenceUploadProviderEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredControls: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof referenceUploadProviderEvidenceRequiredCommands;
+  requiredControls: typeof referenceUploadProviderEvidenceRequiredControls;
+  requiredEvidence: readonly ReferenceUploadProviderEvidenceRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -278,7 +297,7 @@ export interface FileAssetPersistencePlan {
   publicReadAllowed: boolean;
   requiredWrites: Array<"FileAsset" | "AuditLog" | "BookingReferenceImage" | "ConsentArtifact">;
   requiredFields: readonly string[];
-  requiredControls: readonly string[];
+  requiredControls: typeof fileAssetPersistenceRequiredControls;
   blockers: readonly string[];
 }
 
@@ -1083,8 +1102,8 @@ export interface PrivacyRequestRuntimeReadinessInput {
 export interface PrivacyRequestRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof privacyRequestRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly PrivacyRequestRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -1112,25 +1131,25 @@ export interface RetentionEnforcementRuntimeReadinessInput {
 export interface RetentionEnforcementRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof retentionEnforcementRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly RetentionEnforcementRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
 export interface PrivacyRetentionRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof privacyRetentionRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly PrivacyRetentionRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
 export interface PrivacyRetentionDryRunEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredControls: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof privacyRetentionDryRunEvidenceRequiredCommands;
+  requiredControls: typeof privacyRetentionDryRunEvidenceRequiredControls;
+  requiredEvidence: readonly PrivacyRetentionDryRunEvidenceRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -1215,8 +1234,8 @@ export interface LegalDocumentProductionReadinessInput {
 export interface LegalDocumentProductionReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof legalDocumentProductionReadinessRequiredCommands;
+  requiredEvidence: readonly LegalDocumentProductionReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -1246,8 +1265,8 @@ export interface PaymentPolicyLegalReviewRuntimeReadinessInput {
 export interface PaymentPolicyLegalReviewRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof paymentPolicyLegalReviewRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly PaymentPolicyLegalReviewRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -1275,8 +1294,8 @@ export interface AbuseControlRuntimeReadinessInput {
 export interface AbuseControlRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof abuseControlRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly AbuseControlRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -1303,8 +1322,8 @@ export interface SecurityAutomatedCoverageReadinessInput {
 export interface SecurityAutomatedCoverageReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof securityAutomatedCoverageReadinessRequiredCommands;
+  requiredEvidence: readonly SecurityAutomatedCoverageReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -1332,8 +1351,8 @@ export interface SecurityAppRuntimeVerificationInput {
 export interface SecurityAppRuntimeVerificationPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof securityAppRuntimeVerificationRequiredCommands;
+  requiredEvidence: readonly SecurityAppRuntimeVerificationRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -1367,8 +1386,8 @@ export interface SecurityMiddlewareRuntimeReadinessInput {
 export interface SecurityMiddlewareRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof securityMiddlewareRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly SecurityMiddlewareRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -1472,9 +1491,9 @@ export const phase13SecurityControls: SecurityControl[] = [
     id: "SEC-AUTHZ-001",
     area: "authorization",
     label: "Tenant-scoped RBAC middleware",
-    status: "scaffolded",
+    status: "local_contract",
     blocksProduction: true,
-    currentImplementation: "RBAC permission matrix exists; app route guards and data loader enforcement are not wired.",
+    currentImplementation: "RBAC permission matrix, dashboard route guards, and redacted data-loader contracts are wired locally; provider-backed sessions, DB roles, audit persistence, and cross-tenant runtime proof remain gated.",
     nextAction: "Create shared server guard for tenant membership, role permissions, field-level access, and audit outcomes.",
     gapIds: ["GAP-003", "GAP-022", "GAP-036", "GAP-095"],
   },
@@ -1482,9 +1501,9 @@ export const phase13SecurityControls: SecurityControl[] = [
     id: "SEC-UPLOAD-001",
     area: "uploads",
     label: "Secure private upload pipeline",
-    status: "scaffolded",
+    status: "local_contract",
     blocksProduction: true,
-    currentImplementation: "Upload validation policy is defined, but signed uploads, scanning, private buckets, and derivative pipeline are not live.",
+    currentImplementation: "Upload validation policy, signed-intent plans, private object-key controls, and route evidence are wired locally; provider storage, scanning, bucket ACLs, and derivative proof remain gated.",
     nextAction: "Wire S3/Supabase signed uploads, MIME/signature checks, metadata stripping, malware scanning, private ACLs, and audit logs.",
     gapIds: ["GAP-005", "GAP-033", "GAP-096", "GAP-097"],
   },
@@ -1492,9 +1511,9 @@ export const phase13SecurityControls: SecurityControl[] = [
     id: "SEC-PRIVACY-001",
     area: "privacy",
     label: "Privacy request and retention workflow",
-    status: "scaffolded",
+    status: "local_contract",
     blocksProduction: true,
-    currentImplementation: "Privacy request drafts and placeholder policy pages exist only as non-binding demo content.",
+    currentImplementation: "Privacy request intake, workflow planning, fail-closed route guards, and placeholder legal boundaries are wired locally; identity proofing, workers, storage actions, and attorney-reviewed copy remain gated.",
     nextAction: "Implement verified identity workflow, export/delete jobs, retention policies, audit logs, and attorney-reviewed privacy language.",
     gapIds: ["GAP-013", "GAP-098", "GAP-099", "GAP-100"],
   },
@@ -1512,7 +1531,7 @@ export const phase13SecurityControls: SecurityControl[] = [
     id: "SEC-RATE-001",
     area: "tenant_isolation",
     label: "Public abuse controls and rate limiting",
-    status: "scaffolded",
+    status: "local_contract",
     blocksProduction: true,
     currentImplementation: "Static rate-limit policies exist, but no Redis/Upstash/edge limiter is connected.",
     nextAction: "Apply route-level rate limits to booking, contact, upload, error report, message, and privacy request endpoints.",
@@ -1554,13 +1573,13 @@ export const uploadPolicies: Record<UploadAssetKind, { allowedExtensions: string
 };
 
 export const rateLimitRules: RateLimitRule[] = [
-  { id: "public-booking-submit", routePattern: "/api/public/:tenantSlug/booking-requests", windowSeconds: 3600, maxRequests: 8, keyStrategy: "ip_tenant", status: "scaffolded", gapIds: ["GAP-032", "GAP-095"] },
-  { id: "public-upload-intent", routePattern: "/api/public/:tenantSlug/secure-upload-intents", windowSeconds: 3600, maxRequests: 20, keyStrategy: "ip_tenant", status: "scaffolded", gapIds: ["GAP-096", "GAP-097"] },
-  { id: "public-privacy-request", routePattern: "/api/public/:tenantSlug/privacy-requests", windowSeconds: 3600, maxRequests: 6, keyStrategy: "ip_tenant", status: "scaffolded", gapIds: ["GAP-098", "GAP-101"] },
-  { id: "public-message", routePattern: "/api/public/:tenantSlug/messages", windowSeconds: 3600, maxRequests: 10, keyStrategy: "ip_tenant", status: "scaffolded", gapIds: ["GAP-064", "GAP-068"] },
-  { id: "fallback-error-report", routePattern: "/api/public/:tenantSlug/error-reports", windowSeconds: 900, maxRequests: 20, keyStrategy: "ip_tenant", status: "scaffolded", gapIds: ["GAP-081", "GAP-101"] },
-  { id: "provider-webhook", routePattern: "/api/webhooks/:provider", windowSeconds: 60, maxRequests: 1000, keyStrategy: "provider_signature", status: "scaffolded", gapIds: ["GAP-061", "GAP-079", "GAP-101"] },
-  { id: "dashboard-mutation", routePattern: "/api/**", windowSeconds: 60, maxRequests: 120, keyStrategy: "user_tenant", status: "scaffolded", gapIds: ["GAP-036", "GAP-088", "GAP-095"] },
+  { id: "public-booking-submit", routePattern: "/api/public/:tenantSlug/booking-requests", windowSeconds: 3600, maxRequests: 8, keyStrategy: "ip_tenant", status: "local_contract", gapIds: ["GAP-032", "GAP-095"] },
+  { id: "public-upload-intent", routePattern: "/api/public/:tenantSlug/secure-upload-intents", windowSeconds: 3600, maxRequests: 20, keyStrategy: "ip_tenant", status: "local_contract", gapIds: ["GAP-096", "GAP-097"] },
+  { id: "public-privacy-request", routePattern: "/api/public/:tenantSlug/privacy-requests", windowSeconds: 3600, maxRequests: 6, keyStrategy: "ip_tenant", status: "local_contract", gapIds: ["GAP-098", "GAP-101"] },
+  { id: "public-message", routePattern: "/api/public/:tenantSlug/messages", windowSeconds: 3600, maxRequests: 10, keyStrategy: "ip_tenant", status: "local_contract", gapIds: ["GAP-064", "GAP-068"] },
+  { id: "fallback-error-report", routePattern: "/api/public/:tenantSlug/error-reports", windowSeconds: 900, maxRequests: 20, keyStrategy: "ip_tenant", status: "local_contract", gapIds: ["GAP-081", "GAP-101"] },
+  { id: "provider-webhook", routePattern: "/api/webhooks/:provider", windowSeconds: 60, maxRequests: 1000, keyStrategy: "provider_signature", status: "local_contract", gapIds: ["GAP-061", "GAP-079", "GAP-101"] },
+  { id: "dashboard-mutation", routePattern: "/api/**", windowSeconds: 60, maxRequests: 120, keyStrategy: "user_tenant", status: "local_contract", gapIds: ["GAP-036", "GAP-088", "GAP-095"] },
 ];
 
 export const csrfControlPlans: CsrfControlPlan[] = [
@@ -1570,7 +1589,7 @@ export const csrfControlPlans: CsrfControlPlan[] = [
     appliesWhen: "POST/PATCH/DELETE routes use browser cookies or server actions.",
     tokenPattern: "framework_action",
     sameSiteRequirement: "lax",
-    status: "scaffolded",
+    status: "local_contract",
     gapIds: ["GAP-095", "GAP-102"],
   },
   {
@@ -1579,7 +1598,7 @@ export const csrfControlPlans: CsrfControlPlan[] = [
     appliesWhen: "Public forms become persistent and set client cookies or challenge state.",
     tokenPattern: "signed_double_submit",
     sameSiteRequirement: "lax",
-    status: "scaffolded",
+    status: "local_contract",
     gapIds: ["GAP-031", "GAP-095", "GAP-101"],
   },
   {
@@ -1698,13 +1717,29 @@ export function buildLegalReviewPacketPlan(input: LegalReviewPacketInput): Legal
   };
 }
 
+export const legalDocumentProductionReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm vitest run apps/web/tests/legal-pages-route.test.ts apps/web/tests/consent-acceptance-route.test.ts",
+      "node scripts/legal/verify-approved-legal-pages.mjs",
+    ] as const;
+
+export const legalDocumentProductionReadinessRequiredEvidence = [
+  "attorney approval records for all required legal topics and jurisdiction policies",
+  "reviewed public legal pages with placeholder removal and approved indexing smoke evidence",
+  "versioned consent/studio policy persistence plus acceptance audit route tests",
+  "dashboard acceptance UI proof and legal-copy rollback plan",
+] as const;
+export type LegalDocumentProductionReadinessRequiredEvidence = (typeof legalDocumentProductionReadinessRequiredEvidence)[number];
+
 export function buildLegalDocumentProductionReadinessPlan(
   input: LegalDocumentProductionReadinessInput,
 ): LegalDocumentProductionReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: LegalDocumentProductionReadinessRequiredEvidence[] = [];
 
   if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
   if (!input.securityTestsPassed) blockers.push("Run and pass @inkroute/security tests before marking legal documents production-ready.");
@@ -1735,21 +1770,37 @@ export function buildLegalDocumentProductionReadinessPlan(
   if (!input.dashboardAcceptanceUiWired || !input.rollbackPlanDocumented) {
     requiredEvidence.push("dashboard acceptance UI proof and legal-copy rollback plan");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === legalDocumentProductionReadinessRequiredEvidence.length
+      ? legalDocumentProductionReadinessRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/security typecheck",
-      "pnpm --filter @inkroute/security test",
-      "pnpm --filter @inkroute/web typecheck",
-      "pnpm vitest run apps/web/tests/legal-pages-route.test.ts apps/web/tests/consent-acceptance-route.test.ts",
-      "node scripts/legal/verify-approved-legal-pages.mjs",
-    ],
-    requiredEvidence,
+    requiredCommands: legalDocumentProductionReadinessRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
+
+export const paymentPolicyLegalReviewRuntimeReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "payment policy approved-copy E2E sweep",
+      "legal/tax approval packet review",
+    ] as const;
+
+export const paymentPolicyLegalReviewRuntimeReadinessRequiredEvidence = [
+  "signed attorney and tax/accounting approval records for payment policy language",
+  "committed reviewed copy for deposits, cancellation, no-show, refund, SMS, receipts, and tax disclosures",
+  "versioned Terms/Privacy/Consent/studio policy updates plus acceptance audit evidence",
+  "E2E screenshots or test output proving approved copy appears in booking, dashboard payment, receipt, and SMS flows",
+  "documented policy-copy correction and rollback plan",
+] as const;
+export type PaymentPolicyLegalReviewRuntimeReadinessRequiredEvidence = (typeof paymentPolicyLegalReviewRuntimeReadinessRequiredEvidence)[number];
 
 export function buildPaymentPolicyLegalReviewRuntimeReadinessPlan(
   input: PaymentPolicyLegalReviewRuntimeReadinessInput,
@@ -1757,7 +1808,7 @@ export function buildPaymentPolicyLegalReviewRuntimeReadinessPlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: PaymentPolicyLegalReviewRuntimeReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/security package script is missing ${script}.`);
   if (!input.securityTestsPassed) blockers.push("@inkroute/security legal review tests must pass.");
@@ -1801,19 +1852,16 @@ export function buildPaymentPolicyLegalReviewRuntimeReadinessPlan(
     requiredEvidence.push("E2E screenshots or test output proving approved copy appears in booking, dashboard payment, receipt, and SMS flows");
   }
   if (!input.rollbackCopyPlanDocumented) requiredEvidence.push("documented policy-copy correction and rollback plan");
+  const requiredEvidenceResult =
+    requiredEvidence.length === paymentPolicyLegalReviewRuntimeReadinessRequiredEvidence.length
+      ? paymentPolicyLegalReviewRuntimeReadinessRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/security typecheck",
-      "pnpm --filter @inkroute/security test",
-      "pnpm --filter @inkroute/web typecheck",
-      "pnpm --filter @inkroute/dashboard typecheck",
-      "payment policy approved-copy E2E sweep",
-      "legal/tax approval packet review",
-    ],
-    requiredEvidence,
+    requiredCommands: paymentPolicyLegalReviewRuntimeReadinessRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
@@ -1918,10 +1966,10 @@ export const retentionPolicyRules: RetentionPolicyRule[] = [
 ];
 
 export const securityHeaderDrafts: SecurityHeaderDraft[] = [
-  { name: "Content-Security-Policy", value: "default-src 'self'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'", status: "scaffolded", rationale: "Starting policy must be adjusted when Stripe Checkout, Sentry, analytics, storage/CDN, and image providers are wired." },
-  { name: "X-Content-Type-Options", value: "nosniff", status: "scaffolded", rationale: "Helps prevent MIME confusion around public pages and asset responses." },
-  { name: "Referrer-Policy", value: "strict-origin-when-cross-origin", status: "scaffolded", rationale: "Limits leakage of booking and city/style paths to third parties while preserving useful origin attribution." },
-  { name: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()", status: "scaffolded", rationale: "Default deny for browser capabilities until a surface explicitly needs them." },
+  { name: "Content-Security-Policy", value: "default-src 'self'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'", status: "local_contract", rationale: "Starting policy must be adjusted when Stripe Checkout, Sentry, analytics, storage/CDN, and image providers are wired." },
+  { name: "X-Content-Type-Options", value: "nosniff", status: "local_contract", rationale: "Helps prevent MIME confusion around public pages and asset responses." },
+  { name: "Referrer-Policy", value: "strict-origin-when-cross-origin", status: "local_contract", rationale: "Limits leakage of booking and city/style paths to third parties while preserving useful origin attribution." },
+  { name: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()", status: "local_contract", rationale: "Default deny for browser capabilities until a surface explicitly needs them." },
   { name: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload", status: "deployment_gated", rationale: "Only enable after HTTPS is confirmed on production domains and subdomains." },
 ];
 
@@ -1967,14 +2015,7 @@ export function validateUploadDraft(input: UploadValidationInput): UploadValidat
     maxSizeBytes: policy.maxSizeBytes,
     storageVisibility: policy.visibility,
     reasons,
-    requiredProductionControls: [
-      "Generate server-side object keys; never trust client filenames.",
-      "Verify file signature/magic bytes in addition to extension and MIME type.",
-      "Strip EXIF/GPS metadata and create safe derivatives for public portfolio use.",
-      "Run malware scanning or quarantine workflow before durable use.",
-      "Store private reference and consent assets behind signed, revocable URLs.",
-      "Persist tenant-scoped FileAsset and AuditLog records after upload completion.",
-    ],
+    requiredProductionControls: uploadValidationRequiredProductionControls,
   };
 }
 
@@ -2013,13 +2054,15 @@ export function buildSignedUploadIntentPlan(input: SignedUploadIntentInput): Sig
     signedUploadUrlRequired: validation.accepted,
     publicReadAllowed: validation.storageVisibility === "public_derivative",
     requiredWrites: input.kind === "reference_private" ? ["FileAsset", "BookingReferenceImage", "AuditLog"] : ["FileAsset", "AuditLog"],
-    requiredControls: [
-      ...validation.requiredProductionControls,
-      "Signed upload URLs must expire and be scoped to a single object key, content type, and max byte size.",
-      "Private upload objects must not be readable through public URLs before or after scan completion.",
-      "Reference images must be associated to the booking request before artist review.",
-    ],
+    requiredControls: buildSignedUploadIntentRequiredControls(validation),
   };
+}
+
+export function buildSignedUploadIntentRequiredControls(validation: UploadValidationResult): readonly SignedUploadIntentRequiredControl[] {
+  return [
+    ...validation.requiredProductionControls,
+    ...signedUploadIntentRequiredAdditionalControls,
+  ];
 }
 
 const magicByteSignatures: Array<{ mimeType: string; signatures: readonly string[] }> = [
@@ -2040,6 +2083,15 @@ export function detectMimeTypeFromSignature(fileSignatureHex: string): string | 
   const match = magicByteSignatures.find((candidate) => candidate.signatures.some((signature) => normalized.startsWith(signature)));
   return match?.mimeType ?? null;
 }
+
+export const uploadScanPipelineRequiredControls = [
+      "Verify magic bytes server-side after upload completion.",
+      "Quarantine objects until malware scan returns clean.",
+      "Strip EXIF/GPS metadata and normalize image derivatives before public exposure.",
+      "Persist scan status and detected MIME type on the tenant-scoped FileAsset record.",
+      "Write AuditLog entries for approval, quarantine, rejection, and derivative publication.",
+      "Never expose original private uploads publicly; publish only safe derivatives when allowed.",
+    ] as const;
 
 export function buildUploadScanPipelinePlan(input: UploadScanPipelineInput): UploadScanPipelinePlan {
   const validation = validateUploadDraft(input);
@@ -2089,14 +2141,7 @@ export function buildUploadScanPipelinePlan(input: UploadScanPipelineInput): Upl
       required: true,
       fields: ["tenantId", "fileAssetId", "scanStatus", "detectedMimeType", "malwareVerdict", "metadataStrippedAt", "derivativeObjectKey", "quarantinedAt"],
     },
-    requiredControls: [
-      "Verify magic bytes server-side after upload completion.",
-      "Quarantine objects until malware scan returns clean.",
-      "Strip EXIF/GPS metadata and normalize image derivatives before public exposure.",
-      "Persist scan status and detected MIME type on the tenant-scoped FileAsset record.",
-      "Write AuditLog entries for approval, quarantine, rejection, and derivative publication.",
-      "Never expose original private uploads publicly; publish only safe derivatives when allowed.",
-    ],
+    requiredControls: uploadScanPipelineRequiredControls,
     reasons,
   };
 }
@@ -2105,6 +2150,16 @@ function isExpired(now: string, expiresAt?: string): boolean {
   if (!expiresAt) return false;
   return new Date(expiresAt).getTime() <= new Date(now).getTime();
 }
+
+export const privateStorageAccessRequiredControls = [
+      "Generate object keys server-side from tenant, asset kind, and subject identifiers.",
+      "Use private bucket ACLs for original reference, consent, healed-photo, and document assets.",
+      "Issue signed URLs scoped to one object key, content type, operation, and expiry window.",
+      "Check revocation and expiry before every private download grant.",
+      "Require approved scan status before private download and before public derivative publication.",
+      "Publish public portfolio access only through separate derivative object keys.",
+      "Write AuditLog entries for signed URL creation, download, revocation, and public derivative publication.",
+    ] as const;
 
 export function buildPrivateStorageAccessPlan(input: PrivateStorageAccessInput): PrivateStorageAccessPlan {
   const reasons: string[] = [];
@@ -2152,18 +2207,27 @@ export function buildPrivateStorageAccessPlan(input: PrivateStorageAccessInput):
     publicReadAllowed: input.storageVisibility === "public_derivative" && status === "signed_url_ready",
     expiresInSeconds,
     requiredWrites: ["FileAsset", "AuditLog", "SignedUrlGrant"],
-    requiredControls: [
-      "Generate object keys server-side from tenant, asset kind, and subject identifiers.",
-      "Use private bucket ACLs for original reference, consent, healed-photo, and document assets.",
-      "Issue signed URLs scoped to one object key, content type, operation, and expiry window.",
-      "Check revocation and expiry before every private download grant.",
-      "Require approved scan status before private download and before public derivative publication.",
-      "Publish public portfolio access only through separate derivative object keys.",
-      "Write AuditLog entries for signed URL creation, download, revocation, and public derivative publication.",
-    ],
+    requiredControls: privateStorageAccessRequiredControls,
     reasons,
   };
 }
+
+export const privateStorageRuntimeReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts",
+      "node scripts/storage/verify-private-bucket-acl.mjs",
+      "node scripts/storage/verify-signed-url-grants.mjs",
+    ] as const;
+
+export const privateStorageRuntimeReadinessRequiredEvidence = [
+  "configured S3/Supabase private bucket, signing environment, and ACL denial transcript",
+  "provider signed upload/download URL implementation smoke with server-owned object keys",
+  "persisted FileAsset, SignedUrlGrant, revocation, and AuditLog rows for signed storage flows",
+  "scan-approved private download and separate public derivative publication proof",
+  "private/public object access integration tests against provider sandbox or emulator",
+] as const;
+export type PrivateStorageRuntimeReadinessRequiredEvidence = (typeof privateStorageRuntimeReadinessRequiredEvidence)[number];
 
 export function buildPrivateStorageRuntimeReadinessPlan(
   input: PrivateStorageRuntimeReadinessInput,
@@ -2171,7 +2235,7 @@ export function buildPrivateStorageRuntimeReadinessPlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: PrivateStorageRuntimeReadinessRequiredEvidence[] = [];
 
   if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
   if (!input.securityTestsPassed) blockers.push("Run and pass @inkroute/security tests before marking private storage ready.");
@@ -2208,18 +2272,16 @@ export function buildPrivateStorageRuntimeReadinessPlan(
   if (!input.privateOriginalPublicReadDenied || !input.approvedDerivativePublicReadVerified || !input.tenantScopedAccessIntegrationTestsPassed || !input.providerSandboxIntegrationTestsPassed) {
     requiredEvidence.push("private/public object access integration tests against provider sandbox or emulator");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === privateStorageRuntimeReadinessRequiredEvidence.length
+      ? privateStorageRuntimeReadinessRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/security typecheck",
-      "pnpm --filter @inkroute/security test",
-      "pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts",
-      "node scripts/storage/verify-private-bucket-acl.mjs",
-      "node scripts/storage/verify-signed-url-grants.mjs",
-    ],
-    requiredEvidence,
+    requiredCommands: privateStorageRuntimeReadinessRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
@@ -2281,7 +2343,7 @@ function redactUnknownValue(fieldName: string, value: unknown): unknown {
 export function evaluateRateLimitDraft(input: RateLimitEvaluationInput): RateLimitEvaluationResult {
   const rule = rateLimitRules.find((candidate) => candidate.id === input.ruleId);
   if (!rule) {
-    return { allowed: false, remaining: 0, status: "rule_not_found", warning: "No scaffolded rate-limit rule matched this route." };
+    return { allowed: false, remaining: 0, status: "rule_not_found", warning: "No local-contract rate-limit rule matched this route." };
   }
   const sameWindow = input.windowSeconds === rule.windowSeconds;
   const remaining = Math.max(rule.maxRequests - input.observedRequests, 0);
@@ -2290,7 +2352,7 @@ export function evaluateRateLimitDraft(input: RateLimitEvaluationInput): RateLim
     allowed,
     remaining,
     status: allowed ? "allow" : "throttle",
-    warning: sameWindow ? "Scaffolded evaluation only; production requires distributed counters." : "Observed window does not match configured rule window.",
+    warning: sameWindow ? "Local-contract evaluation only; production requires distributed counters." : "Observed window does not match configured rule window.",
   };
 }
 
@@ -2627,11 +2689,28 @@ export function buildRetentionEnforcementDryRun(input: RetentionEnforcementDryRu
   };
 }
 
+export const privacyRetentionRuntimeReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm --filter @inkroute/security test -- privacy-workers",
+      "node scripts/privacy/run-retention-dry-run.mjs",
+      "node scripts/privacy/verify-backup-restore-tombstones.mjs",
+    ] as const;
+
+export const privacyRetentionRuntimeReadinessRequiredEvidence = [
+  "attorney-approved privacy retention and deletion schedule",
+  "persisted PrivacyCase and AuditLog records for intake, identity, worker execution, notification, and closure",
+  "Prisma and object-storage export/delete/anonymization dry-run output",
+  "backup/restore tombstone replay policy and drill evidence",
+  "cross-tenant privacy worker denial tests",
+] as const;
+export type PrivacyRetentionRuntimeReadinessRequiredEvidence = (typeof privacyRetentionRuntimeReadinessRequiredEvidence)[number];
+
 export function buildPrivacyRetentionRuntimeReadinessPlan(input: PrivacyRetentionRuntimeReadinessInput): PrivacyRetentionRuntimeReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: PrivacyRetentionRuntimeReadinessRequiredEvidence[] = [];
 
   if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
   if (!input.packageTestsPassed) blockers.push("Run and pass @inkroute/security tests before marking privacy retention ready.");
@@ -2668,21 +2747,48 @@ export function buildPrivacyRetentionRuntimeReadinessPlan(input: PrivacyRetentio
   if (!input.tenantIsolationVerified) {
     requiredEvidence.push("cross-tenant privacy worker denial tests");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === privacyRetentionRuntimeReadinessRequiredEvidence.length
+      ? privacyRetentionRuntimeReadinessRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/security typecheck",
-      "pnpm --filter @inkroute/security test",
-      "pnpm --filter @inkroute/security test -- privacy-workers",
-      "node scripts/privacy/run-retention-dry-run.mjs",
-      "node scripts/privacy/verify-backup-restore-tombstones.mjs",
-    ],
-    requiredEvidence,
+    requiredCommands: privacyRetentionRuntimeReadinessRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
+
+export const privacyRetentionDryRunEvidenceRequiredCommands = [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "privacy request worker integration tests",
+      "Prisma privacy delete/anonymize dry run",
+      "object storage deletion dry run",
+      "tenant isolation privacy dry run",
+      "backup/restore tombstone replay drill",
+      "GitHub Actions privacy retention evidence job",
+    ] as const;
+
+export const privacyRetentionDryRunEvidenceRequiredControls = [
+      "Verify requester identity before export, delete, anonymize, or rectify workers run.",
+      "Persist privacy case status, worker output metadata, tombstones, and audit events transactionally.",
+      "Execute Prisma and object-storage dry-runs only against non-production fixtures.",
+      "Enforce legal holds before any destructive action is planned or executed.",
+      "Replay deletion/anonymization tombstones after backup restore before restored data is queryable.",
+      "Keep all evidence artifacts redacted, secret-safe, and free of client PII or medical details.",
+    ] as const;
+
+export const privacyRetentionDryRunEvidenceRequiredEvidence = [
+  "attorney approval packet for retention schedule, legal holds, destructive actions, and notification templates",
+  "persisted identity, export, delete/anonymize, PrivacyRequest/PrivacyCase, tombstone, and AuditLog worker output",
+  "Prisma, object-storage, tenant-isolation, and legal-hold privacy dry-run transcripts",
+  "backup/restore tombstone replay drill output",
+  "redacted CI artifact bundle with retention report and no secrets or client PII",
+] as const;
+export type PrivacyRetentionDryRunEvidenceRequiredEvidence = (typeof privacyRetentionDryRunEvidenceRequiredEvidence)[number];
 
 export function buildPrivacyRetentionDryRunEvidencePlan(
   input: PrivacyRetentionDryRunEvidenceInput,
@@ -2690,7 +2796,7 @@ export function buildPrivacyRetentionDryRunEvidencePlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: PrivacyRetentionDryRunEvidenceRequiredEvidence[] = [];
 
   if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
   if (!input.securityTestsPassed) blockers.push("@inkroute/security tests must pass before privacy retention dry-run evidence can close.");
@@ -2725,29 +2831,17 @@ export function buildPrivacyRetentionDryRunEvidencePlan(
   if (!input.retentionReportCaptured || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
     requiredEvidence.push("redacted CI artifact bundle with retention report and no secrets or client PII");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === privacyRetentionDryRunEvidenceRequiredEvidence.length
+      ? privacyRetentionDryRunEvidenceRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/security typecheck",
-      "pnpm --filter @inkroute/security test",
-      "privacy request worker integration tests",
-      "Prisma privacy delete/anonymize dry run",
-      "object storage deletion dry run",
-      "tenant isolation privacy dry run",
-      "backup/restore tombstone replay drill",
-      "GitHub Actions privacy retention evidence job",
-    ],
-    requiredControls: [
-      "Verify requester identity before export, delete, anonymize, or rectify workers run.",
-      "Persist privacy case status, worker output metadata, tombstones, and audit events transactionally.",
-      "Execute Prisma and object-storage dry-runs only against non-production fixtures.",
-      "Enforce legal holds before any destructive action is planned or executed.",
-      "Replay deletion/anonymization tombstones after backup restore before restored data is queryable.",
-      "Keep all evidence artifacts redacted, secret-safe, and free of client PII or medical details.",
-    ],
-    requiredEvidence,
+    requiredCommands: privacyRetentionDryRunEvidenceRequiredCommands,
+    requiredControls: privacyRetentionDryRunEvidenceRequiredControls,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
@@ -2802,13 +2896,30 @@ export interface DashboardPrivacyProjection {
   retentionWorkflowRequired: boolean;
 }
 
+export const privacyRequestRuntimeReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm vitest run apps/web/tests/privacy-requests-public-route.test.ts apps/web/tests/privacy-requests-dashboard-route.test.ts",
+      "node scripts/privacy/verify-privacy-request-workers.mjs",
+      "node scripts/privacy/verify-privacy-request-notifications.mjs",
+    ] as const;
+
+export const privacyRequestRuntimeReadinessRequiredEvidence = [
+  "persisted PrivacyRequest status transitions and AuditLog records",
+  "identity, tenant relationship, requester mismatch, and cross-tenant denial proof",
+  "Postgres and object-storage export/delete/anonymize worker integration output",
+  "third-party redaction and legal-retention hold execution evidence",
+  "approved notification templates and provider delivery transcript",
+] as const;
+export type PrivacyRequestRuntimeReadinessRequiredEvidence = (typeof privacyRequestRuntimeReadinessRequiredEvidence)[number];
+
 export function buildPrivacyRequestRuntimeReadinessPlan(
   input: PrivacyRequestRuntimeReadinessInput,
 ): PrivacyRequestRuntimeReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: PrivacyRequestRuntimeReadinessRequiredEvidence[] = [];
 
   if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
   if (!input.securityTestsPassed) blockers.push("Run and pass @inkroute/security tests before marking privacy requests ready.");
@@ -2846,21 +2957,36 @@ export function buildPrivacyRequestRuntimeReadinessPlan(
   if (!input.notificationProviderConfigured || !input.notificationTemplatesApproved) {
     requiredEvidence.push("approved notification templates and provider delivery transcript");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === privacyRequestRuntimeReadinessRequiredEvidence.length
+      ? privacyRequestRuntimeReadinessRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/security typecheck",
-      "pnpm --filter @inkroute/security test",
-      "pnpm vitest run apps/web/tests/privacy-requests-public-route.test.ts apps/web/tests/privacy-requests-dashboard-route.test.ts",
-      "node scripts/privacy/verify-privacy-request-workers.mjs",
-      "node scripts/privacy/verify-privacy-request-notifications.mjs",
-    ],
-    requiredEvidence,
+    requiredCommands: privacyRequestRuntimeReadinessRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
+
+export const retentionEnforcementRuntimeReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "node scripts/privacy/run-retention-dry-run.mjs",
+      "node scripts/privacy/execute-retention-workers.mjs",
+      "node scripts/privacy/verify-backup-restore-tombstones.mjs",
+    ] as const;
+
+export const retentionEnforcementRuntimeReadinessRequiredEvidence = [
+  "attorney-approved retention schedule and legal-hold enforcement transcript",
+  "scheduled idempotent worker run with dry-run-to-execution reconciliation",
+  "Postgres, object-storage, and export artifact retention execution output",
+  "deletion/anonymization tombstone persistence plus backup restore replay drill",
+  "audit persistence, tenant-isolation tests, and destructive-action rollback documentation",
+] as const;
+export type RetentionEnforcementRuntimeReadinessRequiredEvidence = (typeof retentionEnforcementRuntimeReadinessRequiredEvidence)[number];
 
 export function buildRetentionEnforcementRuntimeReadinessPlan(
   input: RetentionEnforcementRuntimeReadinessInput,
@@ -2868,7 +2994,7 @@ export function buildRetentionEnforcementRuntimeReadinessPlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: RetentionEnforcementRuntimeReadinessRequiredEvidence[] = [];
 
   if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
   if (!input.securityTestsPassed) blockers.push("Run and pass @inkroute/security tests before marking retention enforcement ready.");
@@ -2904,18 +3030,16 @@ export function buildRetentionEnforcementRuntimeReadinessPlan(
   if (!input.auditLogPersistenceConfigured || !input.tenantIsolationIntegrationTestsPassed || !input.destructiveActionRollbackDocumented) {
     requiredEvidence.push("audit persistence, tenant-isolation tests, and destructive-action rollback documentation");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === retentionEnforcementRuntimeReadinessRequiredEvidence.length
+      ? retentionEnforcementRuntimeReadinessRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/security typecheck",
-      "pnpm --filter @inkroute/security test",
-      "node scripts/privacy/run-retention-dry-run.mjs",
-      "node scripts/privacy/execute-retention-workers.mjs",
-      "node scripts/privacy/verify-backup-restore-tombstones.mjs",
-    ],
-    requiredEvidence,
+    requiredCommands: retentionEnforcementRuntimeReadinessRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
@@ -2946,8 +3070,8 @@ export interface DashboardPrivacyRuntimeReadinessPlan {
   missingScripts: readonly string[];
   missingProjectionSurfaces: readonly DashboardPrivacySurface[];
   missingRouteTestSurfaces: readonly DashboardPrivacySurface[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof dashboardPrivacyRuntimeReadinessRequiredCommands;
+  requiredEvidence: readonly DashboardPrivacyRuntimeReadinessRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -3087,6 +3211,24 @@ export function projectDashboardPrivacyRecord<TRecord extends Record<string, unk
   };
 }
 
+export const dashboardPrivacyRuntimeReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/dashboard test -- dashboard-privacy",
+      "pnpm --filter @inkroute/security test -- privacy",
+    ] as const;
+
+export const dashboardPrivacyRuntimeReadinessRequiredEvidence = [
+  "dashboard route/API privacy projection matrix for client, booking, consent, payment, message, and file surfaces",
+  "attorney/product approval record for dashboard privacy, consent, medical, deposit, and SMS copy",
+  "persisted export/delete/anonymization workflow test output for tenant dashboard data",
+  "private file storage deletion test output",
+  "AuditLog persistence and sanitized log/error evidence for dashboard privacy actions",
+] as const;
+export type DashboardPrivacyRuntimeReadinessRequiredEvidence = (typeof dashboardPrivacyRuntimeReadinessRequiredEvidence)[number];
+
 export function buildDashboardPrivacyRuntimeReadinessPlan(
   input: DashboardPrivacyRuntimeReadinessInput,
 ): DashboardPrivacyRuntimeReadinessPlan {
@@ -3103,14 +3245,14 @@ export function buildDashboardPrivacyRuntimeReadinessPlan(
   const missingProjectionSurfaces = requiredSurfaces.filter((surface) => !input.surfacesUsingProjection.includes(surface));
   const missingRouteTestSurfaces = requiredSurfaces.filter((surface) => !input.surfacesWithRouteTests.includes(surface));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: DashboardPrivacyRuntimeReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/security package script is missing ${script}.`);
   if (!input.securityTestsPassed) blockers.push("@inkroute/security dashboard privacy tests must pass.");
   if (!input.securityTypecheckPassed) blockers.push("@inkroute/security typecheck must pass in an installed workspace.");
   if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass with privacy projections wired.");
   if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with privacy projections wired.");
-  if (missingProjectionSurfaces.length > 0) blockers.push(`Dashboard privacy projection is not wired for surfaces: ${missingProjectionSurfaces.join(", ")}.`);
+  if (missingProjectionSurfaces.length > 0) blockers.push(`Dashboard privacy projection coverage is required for surfaces: ${missingProjectionSurfaces.join(", ")}.`);
   if (missingRouteTestSurfaces.length > 0) blockers.push(`Route/API privacy tests are missing for surfaces: ${missingRouteTestSurfaces.join(", ")}.`);
   if (!input.legalReviewApproved) blockers.push("Attorney/product privacy review must approve dashboard consent, medical, payment, file, and SMS language.");
   if (!input.persistedPrivacyWorkflowsConfigured) blockers.push("Persisted privacy workflows must back export/delete/retention actions for dashboard data.");
@@ -3137,21 +3279,18 @@ export function buildDashboardPrivacyRuntimeReadinessPlan(
   if (!input.auditLogPersistenceConfigured || !input.logAndErrorRedactionVerified) {
     requiredEvidence.push("AuditLog persistence and sanitized log/error evidence for dashboard privacy actions");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === dashboardPrivacyRuntimeReadinessRequiredEvidence.length
+      ? dashboardPrivacyRuntimeReadinessRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
     missingProjectionSurfaces,
     missingRouteTestSurfaces,
-    requiredCommands: [
-      "pnpm --filter @inkroute/security typecheck",
-      "pnpm --filter @inkroute/security test",
-      "pnpm --filter @inkroute/dashboard typecheck",
-      "pnpm --filter @inkroute/dashboard build",
-      "pnpm --filter @inkroute/dashboard test -- dashboard-privacy",
-      "pnpm --filter @inkroute/security test -- privacy",
-    ],
-    requiredEvidence,
+    requiredCommands: dashboardPrivacyRuntimeReadinessRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
@@ -3182,11 +3321,44 @@ export interface DashboardPrivacyWorkflowEvidencePlan {
   missingScripts: readonly string[];
   missingProjectionSurfaces: readonly DashboardPrivacySurface[];
   missingRouteTestSurfaces: readonly DashboardPrivacySurface[];
-  requiredCommands: readonly string[];
-  requiredControls: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof dashboardPrivacyWorkflowEvidenceRequiredCommands;
+  requiredControls: typeof dashboardPrivacyWorkflowEvidenceRequiredControls;
+  requiredEvidence: readonly DashboardPrivacyWorkflowEvidenceRequiredEvidence[];
   blockers: readonly string[];
 }
+
+export const dashboardPrivacyWorkflowEvidenceRequiredCommands = [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/dashboard build",
+      "dashboard privacy route/API tests",
+      "persisted dashboard export workflow tests",
+      "persisted dashboard delete/anonymize workflow tests",
+      "private file deletion integration tests",
+      "dashboard privacy AuditLog persistence tests",
+      "dashboard sanitized log/error evidence sweep",
+      "legal/product dashboard privacy approval review",
+      "GitHub Actions dashboard privacy evidence job",
+    ] as const;
+
+export const dashboardPrivacyWorkflowEvidenceRequiredControls = [
+      "Apply privacy projections before serializing client, booking, consent, payment, message, and file surfaces.",
+      "Persist privacy request/case status, export/delete/anonymize workflow output, tombstones, and redacted AuditLog rows.",
+      "Delete or tombstone private consent, reference, document, and message files through provider-backed storage workflows.",
+      "Redact runtime logs and error reports before they leave the dashboard boundary.",
+      "Require attorney/product approval for consent, medical, deposit/payment, and SMS/message dashboard copy.",
+      "Redact secrets, raw PII, medical notes, payment data, provider tokens, message bodies, and private file URLs from artifacts.",
+    ] as const;
+
+export const dashboardPrivacyWorkflowEvidenceRequiredEvidence = [
+  "dashboard privacy route projection and route-test matrix for client, booking, consent, payment, message, and file surfaces",
+  "persisted privacy request, export/delete/anonymize, and private storage deletion workflow evidence",
+  "redacted AuditLog, sanitized runtime log, and sanitized error-report evidence",
+  "attorney/product approval for privacy, consent, medical, deposit/payment, and SMS/message copy",
+  "dashboard typecheck/build, CI, and secret-safe artifact evidence",
+] as const;
+export type DashboardPrivacyWorkflowEvidenceRequiredEvidence = (typeof dashboardPrivacyWorkflowEvidenceRequiredEvidence)[number];
 
 export function buildDashboardPrivacyWorkflowEvidencePlan(
   input: DashboardPrivacyWorkflowEvidenceInput,
@@ -3204,7 +3376,7 @@ export function buildDashboardPrivacyWorkflowEvidencePlan(
   const missingProjectionSurfaces = requiredSurfaces.filter((surface) => !input.routeProjectionSurfaces.includes(surface));
   const missingRouteTestSurfaces = requiredSurfaces.filter((surface) => !input.routeTestSurfaces.includes(surface));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: DashboardPrivacyWorkflowEvidenceRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/security package script is missing ${script}.`);
   if (!input.securityTestsPassed) blockers.push("@inkroute/security dashboard privacy tests must pass before workflow evidence can close.");
@@ -3240,35 +3412,19 @@ export function buildDashboardPrivacyWorkflowEvidencePlan(
   if (!input.dashboardTypecheckPassed || !input.dashboardBuildPassed || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
     requiredEvidence.push("dashboard typecheck/build, CI, and secret-safe artifact evidence");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === dashboardPrivacyWorkflowEvidenceRequiredEvidence.length
+      ? dashboardPrivacyWorkflowEvidenceRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
     missingProjectionSurfaces,
     missingRouteTestSurfaces,
-    requiredCommands: [
-      "pnpm --filter @inkroute/security typecheck",
-      "pnpm --filter @inkroute/security test",
-      "pnpm --filter @inkroute/dashboard typecheck",
-      "pnpm --filter @inkroute/dashboard build",
-      "dashboard privacy route/API tests",
-      "persisted dashboard export workflow tests",
-      "persisted dashboard delete/anonymize workflow tests",
-      "private file deletion integration tests",
-      "dashboard privacy AuditLog persistence tests",
-      "dashboard sanitized log/error evidence sweep",
-      "legal/product dashboard privacy approval review",
-      "GitHub Actions dashboard privacy evidence job",
-    ],
-    requiredControls: [
-      "Apply privacy projections before serializing client, booking, consent, payment, message, and file surfaces.",
-      "Persist privacy request/case status, export/delete/anonymize workflow output, tombstones, and redacted AuditLog rows.",
-      "Delete or tombstone private consent, reference, document, and message files through provider-backed storage workflows.",
-      "Redact runtime logs and error reports before they leave the dashboard boundary.",
-      "Require attorney/product approval for consent, medical, deposit/payment, and SMS/message dashboard copy.",
-      "Redact secrets, raw PII, medical notes, payment data, provider tokens, message bodies, and private file URLs from artifacts.",
-    ],
-    requiredEvidence,
+    requiredCommands: dashboardPrivacyWorkflowEvidenceRequiredCommands,
+    requiredControls: dashboardPrivacyWorkflowEvidenceRequiredControls,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
@@ -3282,13 +3438,30 @@ export function buildSecurityHeaderPlan(extraConnectSources: string[] = []): Sec
   });
 }
 
+export const abuseControlRuntimeReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts apps/web/tests/privacy-requests-public-route.test.ts",
+      "node scripts/security/verify-abuse-rate-limits.mjs",
+      "node scripts/security/verify-abuse-alerts.mjs",
+    ] as const;
+
+export const abuseControlRuntimeReadinessRequiredEvidence = [
+  "live distributed limiter configuration and middleware route-family enforcement proof",
+  "privacy-safe hashed abuse keys and redacted AbuseEvent persistence evidence",
+  "bot challenge provider configuration and suspicious-route challenge tests",
+  "provider webhook bypass, invalid signature challenge, replay validation, and fail-closed behavior tests",
+  "abuse alert delivery smoke and public-route limiter integration tests",
+] as const;
+export type AbuseControlRuntimeReadinessRequiredEvidence = (typeof abuseControlRuntimeReadinessRequiredEvidence)[number];
+
 export function buildAbuseControlRuntimeReadinessPlan(
   input: AbuseControlRuntimeReadinessInput,
 ): AbuseControlRuntimeReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: AbuseControlRuntimeReadinessRequiredEvidence[] = [];
 
   if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
   if (!input.securityTestsPassed) blockers.push("Run and pass @inkroute/security tests before marking abuse controls ready.");
@@ -3324,21 +3497,35 @@ export function buildAbuseControlRuntimeReadinessPlan(
   if (!input.alertDeliveryConfigured || !input.throttlingAlertSmokePassed || !input.publicRouteIntegrationTestsPassed) {
     requiredEvidence.push("abuse alert delivery smoke and public-route limiter integration tests");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === abuseControlRuntimeReadinessRequiredEvidence.length
+      ? abuseControlRuntimeReadinessRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/security typecheck",
-      "pnpm --filter @inkroute/security test",
-      "pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts apps/web/tests/privacy-requests-public-route.test.ts",
-      "node scripts/security/verify-abuse-rate-limits.mjs",
-      "node scripts/security/verify-abuse-alerts.mjs",
-    ],
-    requiredEvidence,
+    requiredCommands: abuseControlRuntimeReadinessRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
+
+export const securityMiddlewareRuntimeReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm vitest run apps/web/tests/security-runtime-middleware.test.ts apps/web/tests/security-runtime-middleware-static.test.ts apps/web/tests/dashboard-security-runtime-middleware-static.test.ts",
+      "pnpm exec playwright test apps/web/tests/e2e/security-runtime.spec.ts apps/dashboard/tests/e2e/security-runtime.spec.ts",
+      "node scripts/security/verify-runtime-security-headers.mjs",
+    ] as const;
+
+export const securityMiddlewareRuntimeReadinessRequiredEvidence = [
+  "web/dashboard middleware wiring plus runtime route integration tests",
+  "browser header smoke tests with production HSTS and preview/local HSTS suppression proof",
+  "runtime CSP provider connect-src and frame/base/form invariant verification",
+  "CSRF attack/allow simulations, SameSite session behavior, token binding, and signed webhook bypass review",
+] as const;
+export type SecurityMiddlewareRuntimeReadinessRequiredEvidence = (typeof securityMiddlewareRuntimeReadinessRequiredEvidence)[number];
 
 export function buildSecurityMiddlewareRuntimeReadinessPlan(
   input: SecurityMiddlewareRuntimeReadinessInput,
@@ -3346,7 +3533,7 @@ export function buildSecurityMiddlewareRuntimeReadinessPlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: SecurityMiddlewareRuntimeReadinessRequiredEvidence[] = [];
 
   if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
   if (!input.securityTestsPassed) blockers.push("Run and pass @inkroute/security tests before marking security middleware ready.");
@@ -3378,21 +3565,36 @@ export function buildSecurityMiddlewareRuntimeReadinessPlan(
   if (!input.csrfCookieMutationAttackTestsPassed || !input.csrfValidTokenAllowTestsPassed || !input.sameSiteCookieBehaviorVerified || !input.csrfSessionBindingVerified || !input.providerWebhookCsrfBypassReviewed) {
     requiredEvidence.push("CSRF attack/allow simulations, SameSite session behavior, token binding, and signed webhook bypass review");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === securityMiddlewareRuntimeReadinessRequiredEvidence.length
+      ? securityMiddlewareRuntimeReadinessRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/security typecheck",
-      "pnpm --filter @inkroute/security test",
-      "pnpm vitest run apps/web/tests/security-runtime-middleware.test.ts apps/web/tests/security-runtime-middleware-static.test.ts apps/web/tests/dashboard-security-runtime-middleware-static.test.ts",
-      "pnpm exec playwright test apps/web/tests/e2e/security-runtime.spec.ts apps/dashboard/tests/e2e/security-runtime.spec.ts",
-      "node scripts/security/verify-runtime-security-headers.mjs",
-    ],
-    requiredEvidence,
+    requiredCommands: securityMiddlewareRuntimeReadinessRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
+
+export const securityAutomatedCoverageReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts apps/web/tests/privacy-requests-public-route.test.ts apps/web/tests/privacy-requests-dashboard-route.test.ts apps/web/tests/dashboard-trust-status-route.test.ts apps/web/tests/security-runtime-middleware.test.ts apps/web/tests/security-runtime-middleware-static.test.ts apps/web/tests/dashboard-security-runtime-middleware-static.test.ts packages/security/tests/upload-policy.test.ts",
+      "pnpm exec playwright test apps/web/tests/e2e/security-runtime.spec.ts apps/dashboard/tests/e2e/security-runtime.spec.ts",
+      "pnpm test:unit",
+    ] as const;
+
+export const securityAutomatedCoverageReadinessRequiredEvidence = [
+  "executed package typecheck/tests, full unit suite, and CI security check transcript",
+  "route, runtime middleware, static wiring, and manifest verification test output",
+  "web and dashboard Playwright security smoke artifacts",
+  "authenticated DB-backed tenant isolation, role-boundary, and privacy workflow integration output",
+  "storage provider negative-test artifacts, coverage bundle, and documented security failure fixtures",
+] as const;
+export type SecurityAutomatedCoverageReadinessRequiredEvidence = (typeof securityAutomatedCoverageReadinessRequiredEvidence)[number];
 
 export function buildSecurityAutomatedCoverageReadinessPlan(
   input: SecurityAutomatedCoverageReadinessInput,
@@ -3400,7 +3602,7 @@ export function buildSecurityAutomatedCoverageReadinessPlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: SecurityAutomatedCoverageReadinessRequiredEvidence[] = [];
 
   if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
   if (!input.securityPackageTestsPassed) blockers.push("@inkroute/security package tests must execute and pass with upload, privacy, abuse, header, CSRF, and readiness coverage.");
@@ -3435,21 +3637,36 @@ export function buildSecurityAutomatedCoverageReadinessPlan(
   if (!input.storageProviderNegativeTestsPassed || !input.coverageArtifactsCollected || !input.failureModeFixturesDocumented) {
     requiredEvidence.push("storage provider negative-test artifacts, coverage bundle, and documented security failure fixtures");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === securityAutomatedCoverageReadinessRequiredEvidence.length
+      ? securityAutomatedCoverageReadinessRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/security typecheck",
-      "pnpm --filter @inkroute/security test",
-      "pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts apps/web/tests/privacy-requests-public-route.test.ts apps/web/tests/privacy-requests-dashboard-route.test.ts apps/web/tests/dashboard-trust-status-route.test.ts apps/web/tests/security-runtime-middleware.test.ts apps/web/tests/security-runtime-middleware-static.test.ts apps/web/tests/dashboard-security-runtime-middleware-static.test.ts packages/security/tests/upload-policy.test.ts",
-      "pnpm exec playwright test apps/web/tests/e2e/security-runtime.spec.ts apps/dashboard/tests/e2e/security-runtime.spec.ts",
-      "pnpm test:unit",
-    ],
-    requiredEvidence,
+    requiredCommands: securityAutomatedCoverageReadinessRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
+
+export const securityAppRuntimeVerificationRequiredCommands = [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm vitest run apps/web/tests/security-next-config-static.test.ts apps/mobile/tests/mobile-security-static.test.ts",
+      "pnpm --filter @inkroute/web typecheck && pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard typecheck && pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/mobile typecheck",
+    ] as const;
+
+export const securityAppRuntimeVerificationRequiredEvidence = [
+  "web/dashboard/mobile typecheck and build command output",
+  "Next config and mobile security static test output",
+  "web/dashboard route and middleware runtime smoke transcripts",
+  "browser, mobile device/emulator, and CI runtime artifact bundle",
+] as const;
+export type SecurityAppRuntimeVerificationRequiredEvidence = (typeof securityAppRuntimeVerificationRequiredEvidence)[number];
 
 export function buildSecurityAppRuntimeVerificationPlan(
   input: SecurityAppRuntimeVerificationInput,
@@ -3457,7 +3674,7 @@ export function buildSecurityAppRuntimeVerificationPlan(
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: SecurityAppRuntimeVerificationRequiredEvidence[] = [];
 
   if (missingScripts.length > 0) blockers.push(`Missing @inkroute/security package script(s): ${missingScripts.join(", ")}.`);
   if (!input.securityTestsPassed) blockers.push("@inkroute/security tests must pass before app runtime verification can close.");
@@ -3490,19 +3707,16 @@ export function buildSecurityAppRuntimeVerificationPlan(
   if (!input.mobileSystemStatusScreenSmokePassed || !input.browserRuntimeSmokePassed || !input.deviceRuntimeSmokePassed || !input.ciRuntimeEvidenceCollected) {
     requiredEvidence.push("browser, mobile device/emulator, and CI runtime artifact bundle");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === securityAppRuntimeVerificationRequiredEvidence.length
+      ? securityAppRuntimeVerificationRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/security typecheck",
-      "pnpm --filter @inkroute/security test",
-      "pnpm vitest run apps/web/tests/security-next-config-static.test.ts apps/mobile/tests/mobile-security-static.test.ts",
-      "pnpm --filter @inkroute/web typecheck && pnpm --filter @inkroute/web build",
-      "pnpm --filter @inkroute/dashboard typecheck && pnpm --filter @inkroute/dashboard build",
-      "pnpm --filter @inkroute/mobile typecheck",
-    ],
-    requiredEvidence,
+    requiredCommands: securityAppRuntimeVerificationRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
@@ -3556,13 +3770,14 @@ export function summarizeSecurityPosture(controls: SecurityControl[] = phase13Se
   const total = controls.length;
   const blockers = controls.filter((control) => control.blocksProduction).length;
   const implemented = controls.filter((control) => control.status === "implemented").length;
-  const scaffolded = controls.filter((control) => control.status === "scaffolded").length;
+  const localContracts = controls.filter((control) => control.status === "scaffolded" || control.status === "local_contract").length;
   const legal = controls.filter((control) => control.status === "legal_review_required").length;
   return {
     total,
     blockers,
     implemented,
-    scaffolded,
+    localContracts,
+    scaffolded: localContracts,
     legal,
     productionReady: blockers === 0 && legal === 0,
   };
@@ -3574,6 +3789,14 @@ function fileAssetAccessLevel(visibility: UploadValidationResult["storageVisibil
   if (visibility === "system_private") return "system_only";
   return "tenant_member";
 }
+
+export const fileAssetPersistenceRequiredControls = [
+      "Persist FileAsset metadata in the same tenant scope as the booking, consent, message, or portfolio owner.",
+      "Keep original objects private; expose only approved public derivatives for portfolio assets.",
+      "Require malware scan approval and metadata stripping before any read grant or derivative publication.",
+      "Write AuditLog rows for upload intent creation, scan verdicts, signed URL grants, revocations, and deletion.",
+      "Apply privacy retention rules to private reference, consent, document, and healed follow-up files.",
+    ] as const;
 
 export function buildFileAssetPersistencePlan(input: FileAssetPersistencePlanInput): FileAssetPersistencePlan {
   const blockers: string[] = [];
@@ -3618,23 +3841,43 @@ export function buildFileAssetPersistencePlan(input: FileAssetPersistencePlanInp
       "createdByUserId",
       "retentionCategory",
     ],
-    requiredControls: [
-      "Persist FileAsset metadata in the same tenant scope as the booking, consent, message, or portfolio owner.",
-      "Keep original objects private; expose only approved public derivatives for portfolio assets.",
-      "Require malware scan approval and metadata stripping before any read grant or derivative publication.",
-      "Write AuditLog rows for upload intent creation, scan verdicts, signed URL grants, revocations, and deletion.",
-      "Apply privacy retention rules to private reference, consent, document, and healed follow-up files.",
-    ],
+    requiredControls: fileAssetPersistenceRequiredControls,
     blockers,
   };
 }
+
+export const providerStorageUploadReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts",
+      "select object storage provider and configure redacted provider secrets",
+      "verify private original ACL and approved derivative public policy",
+      "object storage provider upload/download integration tests",
+      "persist FileAsset, link rows, SignedUrlGrant, and AuditLog transactionally",
+      "malware scan and derivative worker integration tests",
+      "private-original public-read denial test",
+      "cross-tenant denial and privacy retention provider tests",
+      "GitHub Actions storage/upload evidence job",
+      "capture redacted storage artifacts without provider secrets or client-private files",
+    ] as const;
+
+export const providerStorageUploadReadinessRequiredEvidence = [
+  "storage provider selection plus redacted provider configuration evidence",
+  "private bucket ACL and derivative-publication policy proof",
+  "provider-backed signed upload/download URL evidence with persisted grant expiry and revocation",
+  "transactional FileAsset, AuditLog, and related link-row persistence evidence",
+  "malware scan, MIME verification, metadata stripping, and derivative generation evidence",
+  "tenant-isolated provider integration, retention, CI, and secret-safe artifact evidence",
+] as const;
+export type ProviderStorageUploadReadinessRequiredEvidence = (typeof providerStorageUploadReadinessRequiredEvidence)[number];
 
 export function buildProviderStorageUploadReadinessPlan(
   input: ProviderStorageUploadReadinessInput,
 ): ProviderStorageUploadReadinessPlan {
   const missingScripts = ["test", "typecheck"].filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: ProviderStorageUploadReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/security package script is missing ${script}.`);
   if (!input.securityTestsPassed) blockers.push("@inkroute/security upload policy tests must pass.");
@@ -3646,7 +3889,7 @@ export function buildProviderStorageUploadReadinessPlan(
   if (!input.storageSecretsConfigured) blockers.push("Storage provider credentials must be configured through the secret store.");
   if (!input.privateBucketAclVerified) blockers.push("Private original bucket ACL must deny public reads.");
   if (!input.derivativeBucketPolicyVerified) blockers.push("Derivative bucket or prefix policy must allow only approved public derivatives.");
-  if (!input.signedUploadUrlsProviderBacked) blockers.push("Signed upload URLs must be provider-backed instead of local plan-only responses.");
+  if (!input.signedUploadUrlsProviderBacked) blockers.push("Signed upload URLs must be provider-backed instead of local-contract fallback responses.");
   if (!input.signedDownloadUrlsProviderBacked) blockers.push("Signed download URLs must be provider-backed with expiry and revocation checks.");
   if (!input.serverOwnedObjectKeysEnforced) blockers.push("Object keys must be server-owned and tenant-scoped.");
   if (!input.fileAssetPersistenceTransactional) blockers.push("FileAsset metadata must persist transactionally with link rows and audit logs.");
@@ -3682,31 +3925,56 @@ export function buildProviderStorageUploadReadinessPlan(
   if (!input.tenantScopedProviderIntegrationTestsPassed || !input.privacyRetentionEnforced || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
     requiredEvidence.push("tenant-isolated provider integration, retention, CI, and secret-safe artifact evidence");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === providerStorageUploadReadinessRequiredEvidence.length
+      ? providerStorageUploadReadinessRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
+    requiredCommands: providerStorageUploadReadinessRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
+    blockers,
+  };
+}
+
+export const referenceUploadProviderEvidenceRequiredCommands = [
       "pnpm --filter @inkroute/security typecheck",
       "pnpm --filter @inkroute/security test",
       "pnpm --filter @inkroute/web typecheck",
       "pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts",
-      "object storage provider upload/download integration tests",
-      "malware scan and derivative worker integration tests",
-      "private-original public-read denial test",
-      "GitHub Actions storage/upload evidence job",
-    ],
-    requiredEvidence,
-    blockers,
-  };
-}
+      "reference image provider-signed upload integration test",
+      "reference image magic-byte and malware scan integration test",
+      "FileAsset/BookingReferenceImage/AuditLog persistence integration test",
+      "private reference anonymous and cross-tenant fetch-denial tests",
+      "GitHub Actions reference upload provider evidence job",
+    ] as const;
+
+export const referenceUploadProviderEvidenceRequiredControls = [
+      "Issue short-lived provider upload URLs only from server-owned tenant-scoped object keys.",
+      "Verify uploaded bytes and magic bytes before scan approval or artist-visible state changes.",
+      "Persist FileAsset, BookingReferenceImage, and AuditLog records transactionally with scan verdicts.",
+      "Keep reference originals private; do not generate public derivatives for booking references.",
+      "Deny anonymous and cross-tenant reads for every private reference object.",
+      "Redact provider tokens, signed URLs, client PII, and raw image payloads from artifacts.",
+    ] as const;
+
+export const referenceUploadProviderEvidenceRequiredEvidence = [
+  "secure upload intent route, provider-signed URL, and byte upload verification evidence",
+  "magic-byte validation, malware scan, and quarantine flow evidence",
+  "FileAsset, BookingReferenceImage, and AuditLog persistence evidence",
+  "private ACL, anonymous fetch denial, and cross-tenant denial evidence",
+  "web typecheck/route test, CI, and secret-safe artifact evidence",
+] as const;
+export type ReferenceUploadProviderEvidenceRequiredEvidence = (typeof referenceUploadProviderEvidenceRequiredEvidence)[number];
 
 export function buildReferenceUploadProviderEvidencePlan(
   input: ReferenceUploadProviderEvidenceInput,
 ): ReferenceUploadProviderEvidencePlan {
   const missingScripts = ["test", "typecheck"].filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: ReferenceUploadProviderEvidenceRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/security package script is missing ${script}.`);
   if (!input.securityTestsPassed) blockers.push("@inkroute/security upload policy tests must pass before reference upload provider evidence can close.");
@@ -3747,26 +4015,12 @@ export function buildReferenceUploadProviderEvidencePlan(
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/security typecheck",
-      "pnpm --filter @inkroute/security test",
-      "pnpm --filter @inkroute/web typecheck",
-      "pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts",
-      "reference image provider-signed upload integration test",
-      "reference image magic-byte and malware scan integration test",
-      "FileAsset/BookingReferenceImage/AuditLog persistence integration test",
-      "private reference anonymous and cross-tenant fetch-denial tests",
-      "GitHub Actions reference upload provider evidence job",
-    ],
-    requiredControls: [
-      "Issue short-lived provider upload URLs only from server-owned tenant-scoped object keys.",
-      "Verify uploaded bytes and magic bytes before scan approval or artist-visible state changes.",
-      "Persist FileAsset, BookingReferenceImage, and AuditLog records transactionally with scan verdicts.",
-      "Keep reference originals private; do not generate public derivatives for booking references.",
-      "Deny anonymous and cross-tenant reads for every private reference object.",
-      "Redact provider tokens, signed URLs, client PII, and raw image payloads from artifacts.",
-    ],
-    requiredEvidence,
+    requiredCommands: referenceUploadProviderEvidenceRequiredCommands,
+    requiredControls: referenceUploadProviderEvidenceRequiredControls,
+    requiredEvidence:
+      requiredEvidence.length === referenceUploadProviderEvidenceRequiredEvidence.length
+        ? referenceUploadProviderEvidenceRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }

@@ -236,7 +236,7 @@ export function checkRateLimit(ruleId: string, tenantSlug: string, identifier: s
       remaining: 0,
       retryAfterSeconds: 0,
       status: "rule_not_found",
-      warning: "No scaffolded rate-limit rule found; route is unmetered in local fallback.",
+      warning: "No local-contract rate-limit rule found; route is unmetered in local fallback.",
       maxRequests: 0,
       windowSeconds: 0,
     };
@@ -265,8 +265,8 @@ export function checkRateLimit(ruleId: string, tenantSlug: string, identifier: s
     retryAfterSeconds,
     status: allowed ? "allow" : "throttle",
     warning: allowed
-      ? "Local scaffolded rate limit passed."
-      : "Local scaffolding blocked this request because the rule threshold has been reached.",
+      ? "Local-contract rate limit passed."
+      : "Local-contract rate limit blocked this request because the rule threshold has been reached.",
     maxRequests: rule.maxRequests,
     windowSeconds: rule.windowSeconds,
   };

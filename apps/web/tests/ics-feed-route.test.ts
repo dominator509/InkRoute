@@ -12,6 +12,7 @@ describe("signed ICS feed route", () => {
     });
 
     expect(response.status).toBe(404);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     await expect(response.json()).resolves.toMatchObject({
       ok: false,
       error: { code: "NOT_FOUND" },
@@ -62,5 +63,32 @@ describe("signed ICS feed route", () => {
     expect(body).toContain("BEGIN:VCALENDAR");
     expect(body).toContain("BEGIN:VEVENT");
     expect(body).toContain("END:VCALENDAR");
+  });
+
+  it("fail-closes production ICS feeds instead of serving local demo feed tokens", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      const response = await getTravelIcsFeed(
+        new Request("https://local.test/api/public/inkroute-demo/calendar/mara-vale/travel.ics?token=inkroute-demo-travel-feed-token"),
+        routeContext,
+      );
+      const body = (await response.json()) as {
+        ok: boolean;
+        error: { code: string; gapIds: string[] };
+        productionBoundary: { localDemoSignedFeedDisabled: boolean };
+      };
+
+      expect(response.status).toBe(503);
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+      expect(response.headers.get("X-InkRoute-Status")).toBe("signed-feed-provider-not-configured");
+      expect(body.ok).toBe(false);
+      expect(body.error.code).toBe("PROVIDER_SIGNED_ICS_NOT_CONFIGURED");
+      expect(body.error.gapIds).toContain("GAP-055");
+      expect(body.productionBoundary.localDemoSignedFeedDisabled).toBe(true);
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
   });
 });

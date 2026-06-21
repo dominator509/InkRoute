@@ -4,6 +4,8 @@ import { buildAvailabilityPersistencePlan } from "@inkroute/calendar";
 import { dashboardAvailabilityPersistenceContract } from "../../../../lib/availabilityPersistence";
 import { assertPermission, resolveDashboardActor } from "../../dashboardAuth";
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 export async function POST(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
@@ -11,7 +13,7 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json(
       { ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to mutate availability." } },
-      { status: 403, headers: { "Cache-Control": "no-store" } },
+      { status: 403, headers: noStoreHeaders },
     );
   }
 
@@ -20,7 +22,7 @@ export async function POST(request: NextRequest) {
   if (tenantId !== actor.tenantId) {
     return NextResponse.json(
       { ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot create a slot hold for another tenant." } },
-      { status: 403, headers: { "Cache-Control": "no-store" } },
+      { status: 403, headers: noStoreHeaders },
     );
   }
 
@@ -48,7 +50,7 @@ export async function POST(request: NextRequest) {
         readiness: dashboardAvailabilityPersistenceContract.readiness,
         gapIds: ["GAP-056"],
       },
-      { status: 409, headers: { "Cache-Control": "no-store" } },
+      { status: 409, headers: noStoreHeaders },
     );
   }
 
@@ -61,6 +63,6 @@ export async function POST(request: NextRequest) {
       readiness: dashboardAvailabilityPersistenceContract.readiness,
       gapIds: ["GAP-056"],
     },
-    { status: 501, headers: { "Cache-Control": "no-store" } },
+    { status: 202, headers: noStoreHeaders },
   );
 }

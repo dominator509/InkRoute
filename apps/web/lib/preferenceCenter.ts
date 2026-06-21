@@ -16,6 +16,15 @@ export interface PreferenceRepository {
   persistPreferenceAudit(input: { tenantId: string; plan: PreferenceMutationPlan; redactedMetadata: Record<string, unknown> }): Promise<void>;
 }
 
+export interface InMemoryPreferenceRepositoryState {
+  readonly preferenceTokens: { readonly tenantId: string; readonly clientId: string; readonly tokenHash: string; readonly expiresAt: string }[];
+  readonly idempotencyKeys: Map<string, { readonly tenantId: string; readonly action: PreferenceMutationAction }>;
+  readonly clientPreferences: { readonly tenantId: string; readonly plan: PreferenceMutationPlan }[];
+  readonly suppressions: { readonly tenantId: string; readonly plan: PreferenceMutationPlan; readonly reason: string }[];
+  readonly tenantChannelSettings: { readonly tenantId: string; readonly plan: PreferenceMutationPlan }[];
+  readonly preferenceAudits: { readonly tenantId: string; readonly plan: PreferenceMutationPlan; readonly redactedMetadata: Record<string, unknown> }[];
+}
+
 export interface PreferenceCenterContract {
   runtimeReadiness: PreferenceCenterRuntimeReadinessPlan;
   issueTokenPlan: PreferenceMutationPlan;
@@ -26,6 +35,90 @@ export interface PreferenceCenterContract {
   tenantSettingsPlan: PreferenceMutationPlan;
   listUnsubscribeHeaders: Record<string, string>;
   requiredRepositoryMethods: readonly (keyof PreferenceRepository)[];
+}
+
+const preferencePrivateMetadataKeys = new Set([
+  "email",
+  "phone",
+  "rawToken",
+  "token",
+  "destination",
+  "messageBody",
+  "clientName",
+  "providerSecret",
+]);
+
+function redactPreferenceMetadataValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactPreferenceMetadataValue(entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+        key,
+        preferencePrivateMetadataKeys.has(key) ? "[redacted]" : redactPreferenceMetadataValue(entry),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+export function buildRedactedPreferenceMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  return redactPreferenceMetadataValue(metadata) as Record<string, unknown>;
+}
+
+function buildPreferenceIdempotencyKey(input: { readonly tenantId: string; readonly key: string }): string {
+  return `${input.tenantId}:${input.key}`;
+}
+
+export function createInMemoryPreferenceRepository(
+  state: InMemoryPreferenceRepositoryState = {
+    preferenceTokens: [],
+    idempotencyKeys: new Map(),
+    clientPreferences: [],
+    suppressions: [],
+    tenantChannelSettings: [],
+    preferenceAudits: [],
+  },
+): PreferenceRepository & { readonly state: InMemoryPreferenceRepositoryState } {
+  return {
+    state,
+    async issuePreferenceToken(input) {
+      state.preferenceTokens.push(input);
+    },
+    async claimIdempotencyKey(input) {
+      const key = buildPreferenceIdempotencyKey(input);
+      const existing = state.idempotencyKeys.get(key);
+
+      if (!existing) {
+        state.idempotencyKeys.set(key, { tenantId: input.tenantId, action: input.action });
+        return "claimed";
+      }
+
+      if (existing.action === input.action) {
+        return "duplicate";
+      }
+
+      throw new Error("PREFERENCE_CENTER_IDEMPOTENCY_KEY_CONFLICT");
+    },
+    async persistClientPreference(input) {
+      state.clientPreferences.push(input);
+    },
+    async persistSuppression(input) {
+      state.suppressions.push(input);
+    },
+    async persistTenantChannelSettings(input) {
+      state.tenantChannelSettings.push(input);
+    },
+    async persistPreferenceAudit(input) {
+      state.preferenceAudits.push({
+        ...input,
+        redactedMetadata: buildRedactedPreferenceMetadata(input.redactedMetadata),
+      });
+    },
+  };
 }
 
 const now = "2026-06-09T17:00:00.000Z";
@@ -181,7 +274,15 @@ export async function executePreferenceMutation(
   if (plan.writes.some((write) => write.model === "ClientNotificationPreference")) await repository.persistClientPreference({ tenantId, plan });
   if (plan.writes.some((write) => write.model === "SuppressionListEntry")) await repository.persistSuppression({ tenantId, plan, reason: plan.action });
   if (plan.writes.some((write) => write.model === "TenantNotificationSetting")) await repository.persistTenantChannelSettings({ tenantId, plan });
-  await repository.persistPreferenceAudit({ tenantId, plan, redactedMetadata: { action: plan.action, tokenHash: plan.tokenHash, writes: plan.writes.map((write) => write.model) } });
+  await repository.persistPreferenceAudit({
+    tenantId,
+    plan,
+    redactedMetadata: buildRedactedPreferenceMetadata({
+      action: plan.action,
+      tokenHash: plan.tokenHash,
+      writes: plan.writes.map((write) => write.model),
+    }),
+  });
 
   return { status: "processed", plan };
 }

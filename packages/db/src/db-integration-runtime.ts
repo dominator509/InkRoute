@@ -60,6 +60,22 @@ export interface DbIntegrationRunPersistenceContract {
   tenantIsolationKey: "tenantId";
 }
 
+export type DbIntegrationRunData = DbIntegrationRunPersistenceInput & {
+  commitSha: string | null;
+  redactedTranscriptPath: string | null;
+  ciRunUrl: string | null;
+};
+
+export interface DbIntegrationRunRepository {
+  readonly dbIntegrationRun: {
+    upsert(args: {
+      where: { tenantId_runId: { tenantId: string; runId: string } };
+      create: DbIntegrationRunData;
+      update: DbIntegrationRunData;
+    }): unknown;
+  };
+}
+
 export const dbIntegrationRuntimeArtifactPaths = [
   "coverage/db-integration-runtime.json",
   "coverage/db-postgres-provisioning-redacted.json",
@@ -78,6 +94,23 @@ export const dbIntegrationRuntimeArtifactPaths = [
   "test-results/db-integration-runtime"
 ] as const;
 
+export const dbIntegrationRuntimeProofFiles = [
+  "packages/db/src/db-integration-runtime.ts",
+  "packages/db/src/integration-readiness.ts",
+  "packages/db/src/index.ts",
+  "packages/db/tests/db-integration-runtime-static.test.ts",
+  "packages/db/tests/db-integration-plan.test.ts",
+  "packages/db/prisma/schema.prisma",
+  "packages/db/prisma/migrations/20260609010000_add_db_integration_runs/migration.sql",
+  "packages/db/prisma/seed.ts",
+  "packages/db/package.json",
+  "testing/manifests/db-integration-test-manifest.json",
+  "testing/manifests/unit-test-manifest.json",
+  "testing/scripts/verify-test-manifest.mjs",
+  ".github/workflows/ci.yml",
+  "TESTING_PLAN.md",
+] as const;
+
 export const dbIntegrationRuntimeCommands = [
   "pnpm --filter @inkroute/db db:validate",
   "pnpm --filter @inkroute/db db:generate",
@@ -86,6 +119,253 @@ export const dbIntegrationRuntimeCommands = [
   "pnpm --filter @inkroute/db db:verify-seed",
   "pnpm --filter @inkroute/db test -- db-integration"
 ] as const;
+
+export const dbIntegrationRuntimeRequiredExternalEvidence = [
+  "Non-production Postgres provisioning proof",
+  "DATABASE_URL and DIRECT_URL configuration proof",
+  "Prisma migrate/seed/verify execution proof",
+  "Tenant-isolation/workflow/audit-log integration proof",
+  "Migration rollback and redacted transcript proof",
+  "CI DB artifact proof",
+  "Provider-backed DbIntegrationRun persistence proof",
+] as const;
+
+export type DbIntegrationRuntimeArtifact = (typeof dbIntegrationRuntimeArtifactPaths)[number];
+
+export type DbIntegrationRuntimeCommand = (typeof dbIntegrationRuntimeCommands)[number];
+
+export const dbIntegrationRuntimeLocalCommands = dbIntegrationRuntimeCommands.slice(0, 2);
+
+export const dbIntegrationRuntimeExternalCommands = dbIntegrationRuntimeCommands.slice(2);
+
+export const dbIntegrationRuntimeLocalArtifacts = [
+  "coverage/db-integration-runtime.json",
+  "coverage/db-prisma-validate.log",
+  "coverage/db-prisma-generate.log",
+  "coverage/db-destructive-reset-guard.json",
+  "coverage/db-command-transcript-redacted.log",
+  "test-results/db-integration-runtime",
+] as const satisfies readonly DbIntegrationRuntimeArtifact[];
+
+export const dbIntegrationRuntimeExternalArtifacts = [
+  "coverage/db-postgres-provisioning-redacted.json",
+  "coverage/db-prisma-migrate.log",
+  "coverage/db-seed-execution.log",
+  "coverage/db-seed-verification.json",
+  "coverage/db-tenant-isolation-results.json",
+  "coverage/db-workflow-persistence-results.json",
+  "coverage/db-audit-log-integration-results.json",
+  "coverage/db-migration-rollback.md",
+  "coverage/db-ci-run-redacted.json",
+] as const satisfies readonly DbIntegrationRuntimeArtifact[];
+
+export type DbIntegrationRuntimeExecutionPolicy = {
+  localValidateGenerateOnly: true;
+  postgresProvisioningRequiresExternalEvidence: true;
+  databaseUrlRequiresExternalEvidence: true;
+  prismaMigrationSeedRequiresExternalEvidence: true;
+  integrationTestsRequireExternalEvidence: true;
+  ciDbRequiresExternalEvidence: true;
+  persistenceRequiresExternalEvidence: true;
+  externalEvidenceRequired: typeof dbIntegrationRuntimeRequiredExternalEvidence;
+};
+
+export type DbIntegrationRuntimeEvidenceInput = {
+  nonProductionPostgresProvisioned: boolean;
+  databaseUrlConfigured: boolean;
+  directUrlConfigured: boolean;
+  prismaValidatePassed: boolean;
+  prismaGeneratePassed: boolean;
+  prismaMigratePassed: boolean;
+  prismaSeedPassed: boolean;
+  seedVerificationPassed: boolean;
+  tenantIsolationPassed: boolean;
+  workflowPersistencePassed: boolean;
+  auditLogIntegrationPassed: boolean;
+  destructiveResetGuarded: boolean;
+  rollbackDocumented: boolean;
+  commandTranscriptCaptured: boolean;
+  ciDbArtifactCaptured: boolean;
+  requiredCommandsRun: readonly DbIntegrationRuntimeCommand[];
+  capturedArtifacts: readonly DbIntegrationRuntimeArtifact[];
+};
+
+export type DbIntegrationRuntimeEvidenceDecision = {
+  status: "complete" | "blocked";
+  blockers: string[];
+  missingArtifacts: DbIntegrationRuntimeArtifact[];
+  requiredCommands: typeof dbIntegrationRuntimeCommands;
+  requiredEvidence: typeof dbIntegrationRuntimeArtifactPaths;
+  databasePolicy: {
+    productionDataForbidden: true;
+    destructiveResetGuardRequired: true;
+    commandTranscriptsRedacted: true;
+  };
+};
+
+export type DbIntegrationRuntimeExecutionPlan = {
+  status: "local-plan-ready";
+  policy: DbIntegrationRuntimeExecutionPolicy;
+  externalEvidenceRequired: typeof dbIntegrationRuntimeRequiredExternalEvidence;
+  postgresProvisioningExecutionAllowed: false;
+  databaseUrlExecutionAllowed: false;
+  prismaMigrationExecutionAllowed: false;
+  seedExecutionAllowed: false;
+  integrationTestExecutionAllowed: false;
+  ciDbExecutionAllowed: false;
+  persistenceExecutionAllowed: false;
+  localCommands: typeof dbIntegrationRuntimeLocalCommands;
+  externalCommands: typeof dbIntegrationRuntimeExternalCommands;
+  localArtifacts: typeof dbIntegrationRuntimeLocalArtifacts;
+  externalArtifacts: typeof dbIntegrationRuntimeExternalArtifacts;
+  disabledReasons: readonly string[];
+};
+
+export const dbIntegrationRuntimeExecutionPolicy: DbIntegrationRuntimeExecutionPolicy = {
+  localValidateGenerateOnly: true,
+  postgresProvisioningRequiresExternalEvidence: true,
+  databaseUrlRequiresExternalEvidence: true,
+  prismaMigrationSeedRequiresExternalEvidence: true,
+  integrationTestsRequireExternalEvidence: true,
+  ciDbRequiresExternalEvidence: true,
+  persistenceRequiresExternalEvidence: true,
+  externalEvidenceRequired: dbIntegrationRuntimeRequiredExternalEvidence,
+};
+
+export type DbIntegrationRuntimeArtifactReview = {
+  status: "redacted-review-ready";
+  redactedArtifact: unknown;
+  requiredArtifacts: typeof dbIntegrationRuntimeArtifactPaths;
+  retainedExternalGates: readonly string[];
+};
+
+const dbIntegrationRuntimeSensitivePatterns = [
+  /(database[_-]?url['":=\s]+)[^"',\s}]+/gi,
+  /(direct[_-]?url['":=\s]+)[^"',\s}]+/gi,
+  /(postgres(?:ql)?:\/\/)[^"'\s]+/gi,
+  /(run[_-]?id['":=\s]+)[^"',\s}]+/gi,
+  /(commit[_-]?sha['":=\s]+)[^"',\s}]+/gi,
+  /(ci[_-]?run[_-]?url['":=\s]+)[^"',\s}]+/gi,
+  /(redacted[_-]?transcript[_-]?path['":=\s]+)[^"',\s}]+/gi,
+  /(authorization:\s*bearer\s+)[A-Za-z0-9._-]+/gi,
+  /(token['":=\s]+)[^"',\s}]+/gi,
+  /(secret['":=\s]+)[^"',\s}]+/gi,
+] as const;
+
+export function buildRedactedDbIntegrationRuntimeArtifact(value: unknown): unknown {
+  if (typeof value === "string") {
+    return dbIntegrationRuntimeSensitivePatterns.reduce(
+      (redacted, pattern) => redacted.replace(pattern, (_match, prefix: string | undefined) => `${prefix ?? ""}[REDACTED]`),
+      value,
+    );
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => buildRedactedDbIntegrationRuntimeArtifact(entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        /databaseUrl|directUrl|url|token|secret|authorization|credential|password|rawBody|stack|ciRunUrl|commitSha|runId|redactedTranscriptPath|commandTranscript|postgres/i.test(key)
+          ? "[REDACTED]"
+          : buildRedactedDbIntegrationRuntimeArtifact(entry),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+export function buildDbIntegrationRuntimeExecutionPlan(): DbIntegrationRuntimeExecutionPlan {
+  return {
+    status: "local-plan-ready",
+    policy: dbIntegrationRuntimeExecutionPolicy,
+    externalEvidenceRequired: dbIntegrationRuntimeRequiredExternalEvidence,
+    postgresProvisioningExecutionAllowed: false,
+    databaseUrlExecutionAllowed: false,
+    prismaMigrationExecutionAllowed: false,
+    seedExecutionAllowed: false,
+    integrationTestExecutionAllowed: false,
+    ciDbExecutionAllowed: false,
+    persistenceExecutionAllowed: false,
+    localCommands: dbIntegrationRuntimeLocalCommands,
+    externalCommands: dbIntegrationRuntimeExternalCommands,
+    localArtifacts: dbIntegrationRuntimeLocalArtifacts,
+    externalArtifacts: dbIntegrationRuntimeExternalArtifacts,
+    disabledReasons: [
+      "Non-production Postgres proof requires provisioned database infrastructure.",
+      "DATABASE_URL and DIRECT_URL execution proof requires non-production credentials.",
+      "Prisma migrate/seed execution requires non-production Postgres.",
+      "Tenant-isolation, workflow, and audit-log tests require integration data.",
+      "CI DB artifact proof requires CI database job execution.",
+      "DbIntegrationRun persistence proof requires provider-backed database execution.",
+    ],
+  };
+}
+
+export function buildDbIntegrationRuntimeArtifactReview(rawArtifact: unknown): DbIntegrationRuntimeArtifactReview {
+  return {
+    status: "redacted-review-ready",
+    redactedArtifact: buildRedactedDbIntegrationRuntimeArtifact(rawArtifact),
+    requiredArtifacts: dbIntegrationRuntimeArtifactPaths,
+    retainedExternalGates: [
+      "Non-production Postgres provisioning proof",
+      "DATABASE_URL and DIRECT_URL configuration proof",
+      "Prisma migrate/seed/verify execution proof",
+      "Tenant-isolation/workflow/audit-log integration proof",
+      "Migration rollback and redacted transcript proof",
+      "CI DB artifact proof",
+      "Provider-backed DbIntegrationRun persistence proof",
+    ],
+  };
+}
+
+export function buildDbIntegrationRuntimeEvidenceDecision(
+  input: DbIntegrationRuntimeEvidenceInput,
+): DbIntegrationRuntimeEvidenceDecision {
+  const blockers = [
+    !input.nonProductionPostgresProvisioned && "Provision non-production Postgres.",
+    !input.databaseUrlConfigured && "Configure non-production DATABASE_URL.",
+    !input.directUrlConfigured && "Configure non-production DIRECT_URL.",
+    !input.prismaValidatePassed && "Run Prisma schema validation.",
+    !input.prismaGeneratePassed && "Run Prisma client generation.",
+    !input.prismaMigratePassed && "Run Prisma migrations against non-production Postgres.",
+    !input.prismaSeedPassed && "Run Prisma seed against non-production Postgres.",
+    !input.seedVerificationPassed && "Run seed verification.",
+    !input.tenantIsolationPassed && "Run tenant-isolation integration tests.",
+    !input.workflowPersistencePassed && "Run workflow persistence integration tests.",
+    !input.auditLogIntegrationPassed && "Run audit-log integration tests.",
+    !input.destructiveResetGuarded && "Capture destructive reset guard proof.",
+    !input.rollbackDocumented && "Document migration rollback notes.",
+    !input.commandTranscriptCaptured && "Capture redacted DB command transcript.",
+    !input.ciDbArtifactCaptured && "Capture CI DB artifact proof.",
+  ].filter(Boolean) as string[];
+
+  const missingArtifacts = dbIntegrationRuntimeArtifactPaths.filter(
+    (artifact) => !input.capturedArtifacts.includes(artifact),
+  );
+  const missingCommands = dbIntegrationRuntimeCommands.filter(
+    (command) => !input.requiredCommandsRun.includes(command),
+  );
+
+  return {
+    status: blockers.length === 0 && missingArtifacts.length === 0 && missingCommands.length === 0 ? "complete" : "blocked",
+    blockers: [
+      ...blockers,
+      ...missingCommands.map((command) => `Required command not recorded: ${command}`),
+    ],
+    missingArtifacts,
+    requiredCommands: dbIntegrationRuntimeCommands,
+    requiredEvidence: dbIntegrationRuntimeArtifactPaths,
+    databasePolicy: {
+      productionDataForbidden: true,
+      destructiveResetGuardRequired: true,
+      commandTranscriptsRedacted: true,
+    },
+  };
+}
 
 export const dbIntegrationRuntimeMatrix: readonly DbIntegrationRuntimeMatrixEntry[] = [
   {
@@ -169,6 +449,28 @@ export function buildDbIntegrationRunPersistenceContract(
     artifactFields: ["runtimeMatrix", "artifactManifest", "redactedTranscriptPath"],
     tenantIsolationKey: "tenantId",
   };
+}
+
+export function buildDbIntegrationRunData(input: DbIntegrationRunPersistenceInput): DbIntegrationRunData {
+  return {
+    ...input,
+    commitSha: input.commitSha ?? null,
+    redactedTranscriptPath: input.redactedTranscriptPath ?? null,
+    ciRunUrl: input.ciRunUrl ?? null,
+  };
+}
+
+export function persistDbIntegrationRun(
+  repository: DbIntegrationRunRepository,
+  input: DbIntegrationRunPersistenceInput,
+): unknown {
+  const data = buildDbIntegrationRunData(input);
+
+  return repository.dbIntegrationRun.upsert({
+    where: { tenantId_runId: { tenantId: data.tenantId, runId: data.runId } },
+    create: data,
+    update: data,
+  });
 }
 
 export const dbIntegrationRuntimeReadiness = buildDbIntegrationRuntimeReadinessPlan({

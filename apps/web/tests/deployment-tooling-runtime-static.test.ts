@@ -2,12 +2,25 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildDeploymentToolingRuntimeArtifactReview,
+  buildDeploymentToolingRuntimeEvidenceDecision,
+  buildDeploymentToolingRuntimeExecutionPlan,
+  buildRedactedDeploymentToolingArtifact,
+  buildDeploymentToolingRunData,
   buildDeploymentToolingRunPersistenceContract,
   deploymentToolingRunPersistencePreview,
   deploymentToolingRuntimeArtifactPaths,
   deploymentToolingRuntimeCommands,
+  deploymentToolingRuntimeExternalArtifacts,
+  deploymentToolingRuntimeExternalCommands,
+  deploymentToolingRuntimeExecutionPolicy,
+  deploymentToolingRuntimeLocalArtifacts,
+  deploymentToolingRuntimeLocalCommands,
   deploymentToolingRuntimeMatrix,
-  deploymentToolingRuntimeReadiness
+  deploymentToolingRuntimeProofFiles,
+  deploymentToolingRuntimeReadiness,
+  deploymentToolingRuntimeRequiredExternalEvidence,
+  persistDeploymentToolingRun
 } from "../lib/deploymentToolingRuntime";
 
 const root = process.cwd();
@@ -17,6 +30,8 @@ const deploymentPackage = read("packages/deployment/package.json");
 const deploymentTest = read("packages/deployment/tests/deployment-readiness.test.ts");
 const dashboardRouteTest = read("apps/web/tests/dashboard-deployment-readiness-route.test.ts");
 const dashboardStaticTest = read("apps/dashboard/tests/deployment-readiness-route-static.test.ts");
+const deploymentPage = read("apps/dashboard/app/deployment/page.tsx");
+const deploymentActionPanel = read("apps/dashboard/components/DeploymentReadinessActionPanel.tsx");
 const ciWorkflow = read(".github/workflows/ci.yml");
 const unitManifest = read("testing/manifests/unit-test-manifest.json");
 const gapTracker = read("GAP_TRACKER.md");
@@ -32,15 +47,24 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
       "pnpm deploy:checklist",
       "pnpm deploy:gaps",
       "pnpm --filter @inkroute/dashboard build",
-      "dashboard deployment page/API route smoke"
+      "dashboard deployment page smoke",
+      "dashboard deployment readiness API smoke",
+      "verify rollback preflight remains non-mutating",
+      "verify production approval boundary remains blocked without required evidence",
+      "capture CI deployment reports",
+      "capture deployment blocker-owner artifact"
     ]);
     expect(deploymentToolingRuntimeMatrix.map((entry) => entry.id)).toEqual([
       "install-package-quality",
       "route-contract-tests",
       "deployment-scripts",
-      "dashboard-build-smoke",
-      "rollback-approval-boundary",
-      "ci-reports-blockers"
+      "dashboard-build",
+      "dashboard-page-smoke",
+      "dashboard-readiness-api-smoke",
+      "rollback-preflight",
+      "production-approval-boundary",
+      "ci-deployment-reports",
+      "blocker-owner-artifact"
     ]);
     expect(deploymentToolingRuntimeArtifactPaths).toEqual(
       expect.arrayContaining([
@@ -52,6 +76,9 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
         "coverage/deploy-checklist.json",
         "coverage/deploy-gaps.json",
         "coverage/deployment-dashboard-build.log",
+        "coverage/deployment-dashboard-page-smoke.json",
+        "coverage/deployment-readiness-api-smoke.json",
+        "coverage/deployment-rollback-preflight.json",
         "coverage/deployment-production-approval-boundary.json",
         "coverage/deployment-ci-reports-redacted.json",
         "coverage/deployment-blocker-owner-list.json",
@@ -79,14 +106,17 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     expect(dashboardRouteTest).toContain("does not perform external provider calls");
     expect(dashboardStaticTest).toContain("no-store tenant-scoped readiness API");
     expect(dashboardStaticTest).toContain("prisma.auditLog.create");
-    expect(dashboardStaticTest).toContain("All live deployment actions remain disabled");
+    expect(deploymentPage).toContain("DeploymentReadinessActionPanel");
+    expect(deploymentActionPanel).toContain('fetch("/api/deployment/readiness"');
+    expect(deploymentActionPanel).toContain("Request readiness review");
+    expect(deploymentActionPanel).toContain("provider deploys, migrations, EAS updates, Sentry uploads, and rollback execution remain gated");
   });
 
   it("keeps readiness blocked until install, script, dashboard, rollback, CI, and blocker-owner evidence exists", () => {
     expect(deploymentToolingRuntimeReadiness.status).toBe("blocked");
     expect(deploymentToolingRuntimeReadiness.missingPackageScripts).toEqual([]);
     expect(deploymentToolingRuntimeReadiness.missingRootScripts).toEqual([]);
-    expect(deploymentToolingRuntimeReadiness.requiredCommands).toEqual(deploymentToolingRuntimeCommands);
+    expect(deploymentToolingRuntimeReadiness.requiredCommands).toBe(deploymentToolingRuntimeCommands);
     expect(deploymentToolingRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "Dependency install output plus @inkroute/deployment typecheck and test output.",
@@ -142,6 +172,40 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     expect(contract.artifactFields).toContain("blockerOwnerArtifactPath");
     expect(contract.tenantIsolationKey).toBe("tenantId");
     expect(deploymentToolingRunPersistencePreview.modelName).toBe("DeploymentToolingRun");
+    const runData = buildDeploymentToolingRunData(contract.row);
+    expect(runData).toMatchObject({
+      tenantId: "tenant_demo",
+      runId: "deployment-tooling-demo",
+      status: "dashboard_gated",
+      productionApprovalBoundaryVerified: true,
+      blockerOwnerArtifactPath: "coverage/deployment-blocker-owner-list.json",
+    });
+    expect(persistDeploymentToolingRun).toBeTypeOf("function");
+    expect(String(persistDeploymentToolingRun)).toContain("repository.deploymentToolingRun.upsert");
+  });
+
+  it("pins current deployment tooling runtime proof files for GAP-113", () => {
+    expect(deploymentToolingRuntimeProofFiles).toEqual(
+      expect.arrayContaining([
+      "apps/dashboard/app/api/deployment/readiness/route.ts",
+      "apps/dashboard/app/deployment/page.tsx",
+      "apps/dashboard/components/DeploymentReadinessActionPanel.tsx",
+      "deployment/manifests/environment-contract.json",
+      "deployment/scripts/check-env.mjs",
+      "deployment/scripts/final-gap-summary.mjs",
+      "deployment/scripts/print-launch-checklist.mjs",
+      "apps/dashboard/package.json",
+        "apps/web/lib/deploymentToolingRuntime.ts",
+        "apps/web/tests/deployment-tooling-runtime-static.test.ts",
+        "packages/deployment/src/index.ts",
+        "packages/deployment/tests/deployment-readiness.test.ts",
+        "packages/db/prisma/migrations/20260609016000_add_deployment_tooling_runs/migration.sql",
+        ".github/workflows/ci.yml",
+      ]),
+    );
+    for (const file of deploymentToolingRuntimeProofFiles) {
+      expect(read(file).length).toBeGreaterThan(0);
+    }
   });
 
   it("keeps CI, manifest registration, and tracker status aligned", () => {
@@ -153,6 +217,207 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     expect(unitManifest).toContain("unit-web-deployment-tooling-runtime-static");
     expect(unitManifest).toContain("DeploymentToolingRun Prisma model and app row contract are wired");
     expect(gapTracker).toContain("apps/web/lib/deploymentToolingRuntime.ts");
-    expect(gapTracker).toContain("live deployment tooling execution proof remains open");
+    expect(gapTracker).toContain("Deployment tooling evidence classifier wired and execution proof gated");
+    expect(gapTracker).toContain("GAP-113 is deployment-tooling-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("persistDeploymentToolingRun upsert seam");
+  });
+
+  it("classifies GAP-113 evidence as blocked until deployment tooling execution proof is captured", () => {
+    const blockedDecision = buildDeploymentToolingRuntimeEvidenceDecision({
+      frozenInstallPassed: true,
+      deploymentPackageTypecheckPassed: false,
+      deploymentPackageTestsPassed: false,
+      routeContractTestsPassed: true,
+      deployCheckEnvPassed: false,
+      deployChecklistPassed: false,
+      deployGapsPassed: false,
+      dashboardBuildPassed: false,
+      dashboardPageSmokePassed: false,
+      dashboardReadinessApiSmokePassed: false,
+      rollbackPreflightVerified: false,
+      productionApprovalBoundaryVerified: true,
+      ciDeploymentReportsCaptured: false,
+      blockerOwnersDocumented: true,
+      requiredCommandsRun: deploymentToolingRuntimeCommands.filter(
+        (command) =>
+          command !== "pnpm --filter @inkroute/deployment test" &&
+          command !== "pnpm deploy:checklist" &&
+          command !== "pnpm --filter @inkroute/dashboard build" &&
+          command !== "dashboard deployment page smoke" &&
+          command !== "dashboard deployment readiness API smoke" &&
+          command !== "verify rollback preflight remains non-mutating" &&
+          command !== "capture CI deployment reports",
+      ),
+      capturedArtifacts: [
+        "coverage/deployment-tooling-runtime.json",
+        "coverage/deployment-install.log",
+        "coverage/deployment-route-contracts.json",
+        "coverage/deployment-production-approval-boundary.json",
+        "coverage/deployment-blocker-owner-list.json",
+        "test-results/deployment-tooling-runtime"
+      ],
+    });
+
+    expect(blockedDecision.status).toBe("blocked");
+    expect(blockedDecision.blockers).toEqual(
+      expect.arrayContaining([
+        "Run @inkroute/deployment typecheck.",
+        "Run @inkroute/deployment tests.",
+        "Run deploy:check-env.",
+        "Run deploy:checklist.",
+        "Run deploy:gaps.",
+        "Run dashboard build.",
+        "Capture dashboard deployment page smoke proof.",
+        "Capture rollback preflight proof.",
+        "Capture CI deployment report artifacts.",
+        "Required command not recorded: pnpm --filter @inkroute/deployment test",
+        "Required command not recorded: pnpm deploy:checklist",
+        "Required command not recorded: pnpm --filter @inkroute/dashboard build",
+        "Required command not recorded: dashboard deployment page smoke",
+        "Required command not recorded: dashboard deployment readiness API smoke",
+        "Required command not recorded: verify rollback preflight remains non-mutating",
+        "Required command not recorded: capture CI deployment reports",
+      ]),
+    );
+    expect(blockedDecision.missingArtifacts).toEqual(
+      expect.arrayContaining([
+        "coverage/deployment-package-typecheck.log",
+        "coverage/deployment-package-tests.json",
+        "coverage/deploy-check-env.json",
+        "coverage/deploy-checklist.json",
+        "coverage/deployment-dashboard-build.log",
+        "coverage/deployment-ci-reports-redacted.json",
+      ]),
+    );
+    expect(blockedDecision.deploymentPolicy).toEqual({
+      productionActionsRemainApprovalGated: true,
+      rollbackPreflightRequired: true,
+      blockerOwnersRequired: true,
+    });
+
+    const completeDecision = buildDeploymentToolingRuntimeEvidenceDecision({
+      frozenInstallPassed: true,
+      deploymentPackageTypecheckPassed: true,
+      deploymentPackageTestsPassed: true,
+      routeContractTestsPassed: true,
+      deployCheckEnvPassed: true,
+      deployChecklistPassed: true,
+      deployGapsPassed: true,
+      dashboardBuildPassed: true,
+      dashboardPageSmokePassed: true,
+      dashboardReadinessApiSmokePassed: true,
+      rollbackPreflightVerified: true,
+      productionApprovalBoundaryVerified: true,
+      ciDeploymentReportsCaptured: true,
+      blockerOwnersDocumented: true,
+      requiredCommandsRun: deploymentToolingRuntimeCommands,
+      capturedArtifacts: deploymentToolingRuntimeArtifactPaths,
+    });
+
+    expect(completeDecision.status).toBe("complete");
+    expect(completeDecision.blockers).toEqual([]);
+    expect(completeDecision.missingArtifacts).toEqual([]);
+    expect(completeDecision.requiredCommands).toBe(deploymentToolingRuntimeCommands);
+    expect(completeDecision.requiredEvidence).toBe(deploymentToolingRuntimeArtifactPaths);
+  });
+
+  it("keeps deployment tooling execution disabled while separating local and external proof", () => {
+    const plan = buildDeploymentToolingRuntimeExecutionPlan();
+
+    expect(plan.localCommands).toBe(deploymentToolingRuntimeLocalCommands);
+    expect(plan.externalCommands).toBe(deploymentToolingRuntimeExternalCommands);
+    expect(plan.localArtifacts).toBe(deploymentToolingRuntimeLocalArtifacts);
+    expect(plan.externalArtifacts).toBe(deploymentToolingRuntimeExternalArtifacts);
+    expect(plan.localArtifacts).toEqual(
+      expect.arrayContaining([
+        "coverage/deployment-tooling-runtime.json",
+        "coverage/deployment-package-typecheck.log",
+        "coverage/deployment-package-tests.json",
+        "coverage/deployment-route-contracts.json",
+        "coverage/deploy-check-env.json",
+        "coverage/deploy-checklist.json",
+        "coverage/deploy-gaps.json",
+        "test-results/deployment-tooling-runtime",
+      ]),
+    );
+    expect(plan.externalArtifacts).toEqual(
+      expect.arrayContaining([
+        "coverage/deployment-install.log",
+        "coverage/deployment-dashboard-build.log",
+        "coverage/deployment-dashboard-page-smoke.json",
+        "coverage/deployment-readiness-api-smoke.json",
+        "coverage/deployment-rollback-preflight.json",
+        "coverage/deployment-production-approval-boundary.json",
+        "coverage/deployment-ci-reports-redacted.json",
+        "coverage/deployment-blocker-owner-list.json",
+      ]),
+    );
+    expect(plan.frozenInstallExecutionAllowed).toBe(false);
+    expect(plan.packageQualityExecutionAllowed).toBe(false);
+    expect(plan.deploymentScriptExecutionAllowed).toBe(false);
+    expect(plan.dashboardBuildExecutionAllowed).toBe(false);
+    expect(plan.dashboardSmokeExecutionAllowed).toBe(false);
+    expect(plan.rollbackPreflightExecutionAllowed).toBe(false);
+    expect(plan.productionApprovalExecutionAllowed).toBe(false);
+    expect(plan.ciReportExecutionAllowed).toBe(false);
+    expect(plan.persistenceExecutionAllowed).toBe(false);
+    expect(plan.executionPolicy).toBe(deploymentToolingRuntimeExecutionPolicy);
+    expect(plan.executionPolicy).toEqual({
+      codexMayClassifyLocalCommands: true,
+      dependencyInstallRequiresUserApproval: true,
+      dashboardRuntimeSmokeRequiresRunningApp: true,
+      productionApprovalMustRemainHumanGated: true,
+      ciProviderRequiredForDeploymentReports: true,
+      providerEnvironmentRequiredForPersistence: true,
+    });
+  });
+
+  it("redacts deployment tooling artifacts before retention or handoff", () => {
+    const rawArtifact = {
+      env: { RENDER_API_KEY: "rk_live_secret", DATABASE_URL: "postgres://tenant_demo:secret@db.example.com/inkroute" },
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/123456",
+      deployUrl: "https://inkroute-dashboard.example.com/deployment?tenant=tenant_demo",
+      approvalPayload: { approvedByEmail: "owner@example.com", phone: "+1 555 444 2222" },
+      blockerOwners: ["owner_123", "artist@example.com"],
+      nested: {
+        authorization: "Bearer deployment-secret-token",
+        providerResourceId: "deployment_abc123",
+        tenantId: "tenant_demo",
+      },
+    };
+    const redacted = buildRedactedDeploymentToolingArtifact(rawArtifact);
+    const review = buildDeploymentToolingRuntimeArtifactReview("coverage/deployment-ci-reports-redacted.json", rawArtifact);
+    const serialized = JSON.stringify(review);
+
+    expect(JSON.stringify(redacted)).not.toContain("postgres://");
+    expect(serialized).not.toContain("github.com/dominator509");
+    expect(serialized).not.toContain("inkroute-dashboard.example.com");
+    expect(serialized).not.toContain("owner@example.com");
+    expect(serialized).not.toContain("artist@example.com");
+    expect(serialized).not.toContain("+1 555 444 2222");
+    expect(serialized).not.toContain("Bearer deployment-secret-token");
+    expect(serialized).not.toContain("tenant_demo");
+    expect(serialized).not.toContain("deployment_abc123");
+    expect(review.containsUnredactedSensitiveValues).toBe(false);
+    expect(review.redactions).toEqual(
+      expect.arrayContaining([
+        "authorization",
+        "blockerOwners",
+        "ciRunUrl",
+        "deployUrl",
+        "env",
+        "approvalPayload",
+      ]),
+    );
+    expect(review.externalEvidenceRequired).toBe(deploymentToolingRuntimeRequiredExternalEvidence);
+    expect(review.externalEvidenceRequired).toEqual(
+      expect.arrayContaining([
+        "Frozen install, dashboard build, and route-smoke artifacts must be captured outside Codex when execution is approved.",
+        "Deployment approval and rollback-preflight artifacts must prove production actions stayed human-gated and non-mutating.",
+        "CI deployment reports must be retained with run URLs, provider identifiers, tokens, and environment details redacted.",
+        "Provider-backed DeploymentToolingRun persistence must execute only in approved provider environments.",
+      ]),
+    );
   });
 });
+

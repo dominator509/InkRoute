@@ -1,4 +1,7 @@
-import { buildAgentTaskTrackingReadinessPlan } from "@inkroute/handoff";
+﻿import {
+  agentTaskTrackingRequiredEvidence as agentTaskTrackingPackageRequiredEvidence,
+  buildAgentTaskTrackingReadinessPlan,
+} from "@inkroute/handoff";
 import type { AgentTarget } from "@inkroute/handoff";
 
 export type AgentTaskTrackingRuntimeStatus =
@@ -89,9 +92,25 @@ export const agentTaskTrackingRuntimeCommands = [
   "pnpm handoff:verify-task-sync",
   "gh issue create or GitHub issue automation",
   "GitHub Project item sync",
+  "link redacted issue/project labels from handoff docs",
+  "link tracking evidence from GAP_TRACKER rows",
+  "trace status updates between queue, issues/projects, ledger, and gap tracker",
+  "pnpm handoff:verify-ledger",
+  "pnpm handoff:audit",
+  "capture CI agent task tracking artifacts",
+] as const;
+
+export const agentTaskTrackingRuntimeLocalCommands = [
+  "pnpm handoff:verify-task-sync",
   "pnpm handoff:verify-ledger",
   "pnpm handoff:audit",
 ] as const;
+
+const agentTaskTrackingRuntimeLocalCommandSet = new Set<string>(agentTaskTrackingRuntimeLocalCommands);
+
+export const agentTaskTrackingRuntimeExternalCommands = agentTaskTrackingRuntimeCommands.filter(
+  (command) => !agentTaskTrackingRuntimeLocalCommandSet.has(command),
+);
 
 export const agentTaskTrackingRuntimeArtifactPaths = [
   "coverage/agent-task-tracking-runtime.json",
@@ -104,6 +123,230 @@ export const agentTaskTrackingRuntimeArtifactPaths = [
   "coverage/agent-task-tracking-ci-run-redacted.json",
   "test-results/agent-task-tracking-runtime",
 ] as const;
+
+export const agentTaskTrackingRuntimeProofFiles = [
+  "docs/handoff/manifests/agent-execution-queue.json",
+  "docs/handoff/manifests/agent-task-tracking-sync.json",
+  "scripts/handoff/verify-agent-task-sync.mjs",
+  "packages/handoff/src/index.ts",
+  "packages/handoff/tests/handoff-plan.test.ts",
+  "docs/handoff/AGENT_EXECUTION_QUEUE.md",
+  "apps/web/lib/agentTaskTrackingRuntime.ts",
+  "apps/web/tests/agent-task-tracking-runtime-static.test.ts",
+  ".github/workflows/ci.yml",
+  "packages/db/prisma/schema.prisma",
+  "packages/db/prisma/migrations/20260609025000_add_agent_task_tracking_runs/migration.sql",
+  "testing/manifests/unit-test-manifest.json",
+] as const;
+
+export type AgentTaskTrackingRuntimeCommand = (typeof agentTaskTrackingRuntimeCommands)[number];
+export type AgentTaskTrackingRuntimeArtifact = (typeof agentTaskTrackingRuntimeArtifactPaths)[number];
+
+export interface AgentTaskTrackingEvidenceInput {
+  readonly verifierPassed: boolean;
+  readonly queueIssueParityVerified: boolean;
+  readonly defaultLabelsApplied: boolean;
+  readonly targetPriorityLabelsApplied: boolean;
+  readonly gapIdsLinked: boolean;
+  readonly acceptanceEvidenceFieldsLinked: boolean;
+  readonly githubIssuesCreated: boolean;
+  readonly githubProjectItemsLinked: boolean;
+  readonly redactedTrackingUrlsRecorded: boolean;
+  readonly handoffDocsLinked: boolean;
+  readonly gapTrackerLinked: boolean;
+  readonly statusUpdatesTraceable: boolean;
+  readonly ciTaskTrackingArtifactsCaptured: boolean;
+  readonly agentTaskTrackingRunPersisted: boolean;
+  readonly capturedArtifacts: readonly AgentTaskTrackingRuntimeArtifact[];
+  readonly completedCommands: readonly AgentTaskTrackingRuntimeCommand[];
+}
+
+export interface AgentTaskTrackingEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly missingArtifacts: readonly AgentTaskTrackingRuntimeArtifact[];
+  readonly missingCommands: readonly AgentTaskTrackingRuntimeCommand[];
+  readonly requiredArtifacts: typeof agentTaskTrackingRuntimeArtifactPaths;
+  readonly requiredCommands: typeof agentTaskTrackingRuntimeCommands;
+  readonly requiredEvidence: typeof agentTaskTrackingRequiredEvidence;
+  readonly blockers: readonly string[];
+}
+
+export interface AgentTaskTrackingRuntimeExecutionPlan {
+  readonly localCommands: typeof agentTaskTrackingRuntimeLocalCommands;
+  readonly externalCommands: typeof agentTaskTrackingRuntimeExternalCommands;
+  readonly localArtifacts: typeof agentTaskTrackingRuntimeLocalArtifacts;
+  readonly externalArtifacts: typeof agentTaskTrackingRuntimeExternalArtifacts;
+  readonly taskSyncVerifierExecutionAllowed: false;
+  readonly githubIssueCreationAllowed: false;
+  readonly githubProjectSyncAllowed: false;
+  readonly handoffDocLinkExecutionAllowed: false;
+  readonly gapTrackerLinkExecutionAllowed: false;
+  readonly statusTraceabilityExecutionAllowed: false;
+  readonly ledgerVerificationExecutionAllowed: false;
+  readonly handoffAuditExecutionAllowed: false;
+  readonly ciArtifactExecutionAllowed: false;
+  readonly persistenceExecutionAllowed: false;
+  readonly executionPolicy: typeof agentTaskTrackingRuntimeExecutionPolicy;
+  readonly externalEvidenceRequired: typeof agentTaskTrackingRuntimeRequiredExternalEvidence;
+}
+
+export interface AgentTaskTrackingRuntimeArtifactReview {
+  readonly artifactPath: AgentTaskTrackingRuntimeArtifact | string;
+  readonly redactedArtifact: unknown;
+  readonly redactions: readonly string[];
+  readonly containsUnredactedSensitiveValues: false;
+  readonly externalEvidenceRequired: typeof agentTaskTrackingRuntimeRequiredExternalEvidence;
+}
+
+export const agentTaskTrackingRuntimeRequiredExternalEvidence = [
+  "GitHub issue creation and Project sync must be performed only in approved GitHub context with tracking URLs redacted.",
+  "Handoff doc links, GAP_TRACKER links, and status traceability artifacts must redact issue URLs, project item URLs, actors, and private metadata.",
+  "CI agent task tracking artifacts must redact run URLs, tokens, provider labels, and raw logs before retention.",
+  "AgentTaskTrackingRun persistence must execute only against an approved provider-backed database.",
+] as const;
+
+export const agentTaskTrackingRuntimeLocalArtifacts = [
+  "coverage/agent-task-tracking-runtime.json",
+  "coverage/agent-task-tracking-sync-verifier.json",
+  "test-results/agent-task-tracking-runtime",
+] as const satisfies readonly AgentTaskTrackingRuntimeArtifact[];
+
+export const agentTaskTrackingRuntimeExternalArtifacts = agentTaskTrackingRuntimeArtifactPaths.filter(
+  (artifact) =>
+    artifact !== "coverage/agent-task-tracking-runtime.json" &&
+    artifact !== "coverage/agent-task-tracking-sync-verifier.json" &&
+    artifact !== "test-results/agent-task-tracking-runtime",
+);
+
+export const agentTaskTrackingReadinessRequiredEvidence = agentTaskTrackingPackageRequiredEvidence;
+
+export type AgentTaskTrackingDecisionRequiredEvidence = readonly [
+  ...typeof agentTaskTrackingReadinessRequiredEvidence,
+  "AgentTaskTrackingRun row with queue, issue, tracking-link, and artifact matrices.",
+  "CI artifact bundle proving task tracking sync, issue creation, project sync, docs links, gap links, and status traceability.",
+];
+
+export function buildAgentTaskTrackingDecisionRequiredEvidence(
+  readinessEvidence: typeof agentTaskTrackingReadinessRequiredEvidence,
+): AgentTaskTrackingDecisionRequiredEvidence {
+  return [
+    ...readinessEvidence,
+    "AgentTaskTrackingRun row with queue, issue, tracking-link, and artifact matrices.",
+    "CI artifact bundle proving task tracking sync, issue creation, project sync, docs links, gap links, and status traceability.",
+  ];
+}
+
+export const agentTaskTrackingRequiredEvidence = buildAgentTaskTrackingDecisionRequiredEvidence(
+  agentTaskTrackingReadinessRequiredEvidence,
+);
+
+export type AgentTaskTrackingRuntimeExecutionPolicy = {
+  readonly codexMayClassifyQueueAndTrackingLabels: true;
+  readonly githubIssueCreationRequiresApprovedGhContext: true;
+  readonly githubProjectSyncRequiresApprovedGhContext: true;
+  readonly redactedTrackingUrlsOnly: true;
+  readonly statusTraceabilityRequiredForClosure: true;
+  readonly providerDatabaseRequiredForPersistence: true;
+};
+
+export const agentTaskTrackingRuntimeExecutionPolicy: AgentTaskTrackingRuntimeExecutionPolicy = {
+  codexMayClassifyQueueAndTrackingLabels: true,
+  githubIssueCreationRequiresApprovedGhContext: true,
+  githubProjectSyncRequiresApprovedGhContext: true,
+  redactedTrackingUrlsOnly: true,
+  statusTraceabilityRequiredForClosure: true,
+  providerDatabaseRequiredForPersistence: true,
+};
+
+const sensitiveAgentTaskTrackingKeyPattern =
+  /(token|secret|password|authorization|cookie|github|issueUrl|projectItemUrl|trackingUrl|artifactUrl|ciRunUrl|assignee|actor|tenantId|userId|runId|email|phone|payload)/i;
+
+const sensitiveAgentTaskTrackingStringPatterns: readonly [RegExp, string][] = [
+  [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
+  [/https?:\/\/[^\s"'<>]+/gi, "[REDACTED_URL]"],
+  [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
+  [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
+  [/\b(?:ghp|gho|ghu|ghs|sk|pk|rk|whsec)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
+  [/\b(?:tenant|user|project|issue|task|run|tracking)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+];
+
+export function buildAgentTaskTrackingRuntimeExecutionPlan(): AgentTaskTrackingRuntimeExecutionPlan {
+  return {
+    localCommands: agentTaskTrackingRuntimeLocalCommands,
+    externalCommands: agentTaskTrackingRuntimeExternalCommands,
+    localArtifacts: agentTaskTrackingRuntimeLocalArtifacts,
+    externalArtifacts: agentTaskTrackingRuntimeExternalArtifacts,
+    taskSyncVerifierExecutionAllowed: false,
+    githubIssueCreationAllowed: false,
+    githubProjectSyncAllowed: false,
+    handoffDocLinkExecutionAllowed: false,
+    gapTrackerLinkExecutionAllowed: false,
+    statusTraceabilityExecutionAllowed: false,
+    ledgerVerificationExecutionAllowed: false,
+    handoffAuditExecutionAllowed: false,
+    ciArtifactExecutionAllowed: false,
+    persistenceExecutionAllowed: false,
+    executionPolicy: agentTaskTrackingRuntimeExecutionPolicy,
+    externalEvidenceRequired: agentTaskTrackingRuntimeRequiredExternalEvidence,
+  };
+}
+
+function redactAgentTaskTrackingString(value: string, redactions: Set<string>): string {
+  return sensitiveAgentTaskTrackingStringPatterns.reduce((current, [pattern, replacement]) => {
+    pattern.lastIndex = 0;
+    if (pattern.test(current)) {
+      redactions.add(replacement);
+    }
+    pattern.lastIndex = 0;
+    return current.replace(pattern, replacement);
+  }, value);
+}
+
+function redactAgentTaskTrackingValue(value: unknown, redactions: Set<string>, key?: string): unknown {
+  if (key && sensitiveAgentTaskTrackingKeyPattern.test(key)) {
+    redactions.add(key);
+    return `[REDACTED_${key.replace(/[^A-Za-z0-9]/g, "_").toUpperCase()}]`;
+  }
+
+  if (typeof value === "string") {
+    return redactAgentTaskTrackingString(value, redactions);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactAgentTaskTrackingValue(entry, redactions));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([entryKey, entryValue]) => [
+        entryKey,
+        redactAgentTaskTrackingValue(entryValue, redactions, entryKey),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+export function buildRedactedAgentTaskTrackingArtifact(artifact: unknown): unknown {
+  return redactAgentTaskTrackingValue(artifact, new Set<string>());
+}
+
+export function buildAgentTaskTrackingRuntimeArtifactReview(
+  artifactPath: AgentTaskTrackingRuntimeArtifact | string,
+  artifact: unknown,
+): AgentTaskTrackingRuntimeArtifactReview {
+  const redactions = new Set<string>();
+  const redactedArtifact = redactAgentTaskTrackingValue(artifact, redactions);
+
+  return {
+    artifactPath,
+    redactedArtifact,
+    redactions: [...redactions].sort(),
+    containsUnredactedSensitiveValues: false,
+    externalEvidenceRequired: agentTaskTrackingRuntimeRequiredExternalEvidence,
+  };
+}
 
 export const agentTaskTrackingRuntimeMatrix = [
   {
@@ -140,6 +383,12 @@ export const agentTaskTrackingRuntimeMatrix = [
     id: "status-traceability",
     command: "trace status updates between queue, issues/projects, ledger, and gap tracker",
     artifact: "coverage/agent-task-tracking-status-traceability.json",
+    status: "traceability-gated",
+  },
+  {
+    id: "ci-task-tracking-artifacts",
+    command: "capture CI agent task tracking artifacts",
+    artifact: "coverage/agent-task-tracking-ci-run-redacted.json",
     status: "traceability-gated",
   },
 ] as const satisfies readonly AgentTaskTrackingRuntimeMatrixEntry[];
@@ -218,3 +467,66 @@ export const agentTaskTrackingRuntimeReadiness = buildAgentTaskTrackingReadiness
   gapTrackerLinked: false,
   statusUpdatesTraceable: false,
 });
+
+export function buildAgentTaskTrackingEvidenceDecision(
+  input: AgentTaskTrackingEvidenceInput,
+): AgentTaskTrackingEvidenceDecision {
+  const readinessPlan = buildAgentTaskTrackingReadinessPlan({
+    queueTasks,
+    plannedIssues,
+    defaultLabels: [...agentTaskTrackingDefaultLabels],
+    verifierPassed: input.verifierPassed,
+    githubIssuesCreated: input.githubIssuesCreated,
+    githubProjectItemsLinked: input.githubProjectItemsLinked,
+    handoffDocsLinked: input.handoffDocsLinked,
+    gapTrackerLinked: input.gapTrackerLinked,
+    statusUpdatesTraceable: input.statusUpdatesTraceable,
+  });
+  const capturedArtifacts = new Set(input.capturedArtifacts);
+  const completedCommands = new Set(input.completedCommands);
+  const missingArtifacts = agentTaskTrackingRuntimeArtifactPaths.filter((artifact) => !capturedArtifacts.has(artifact));
+  const missingCommands = agentTaskTrackingRuntimeCommands.filter((command) => !completedCommands.has(command));
+  const blockers = [...readinessPlan.blockers];
+
+  if (!input.queueIssueParityVerified) {
+    blockers.push("Queue task parity with planned GitHub issues must be verified.");
+  }
+  if (!input.defaultLabelsApplied) {
+    blockers.push("Default agent-task, gap-tracked, and verification-required labels must be applied.");
+  }
+  if (!input.targetPriorityLabelsApplied) {
+    blockers.push("Target and priority labels must be applied to every tracked issue.");
+  }
+  if (!input.gapIdsLinked) {
+    blockers.push("Gap IDs must be linked on every tracked issue.");
+  }
+  if (!input.acceptanceEvidenceFieldsLinked) {
+    blockers.push("Acceptance evidence fields must be linked on every tracked issue.");
+  }
+  if (!input.redactedTrackingUrlsRecorded) {
+    blockers.push("Redacted tracking labels or URLs must be recorded without secrets.");
+  }
+  if (!input.ciTaskTrackingArtifactsCaptured) {
+    blockers.push("CI task-tracking artifacts must be captured.");
+  }
+  if (!input.agentTaskTrackingRunPersisted) {
+    blockers.push("AgentTaskTrackingRun persistence row must be captured for durable traceability.");
+  }
+  if (missingArtifacts.length > 0) {
+    blockers.push("Every required agent task tracking artifact must be captured.");
+  }
+  if (missingCommands.length > 0) {
+    blockers.push("Every required agent task tracking command must be completed.");
+  }
+
+  return {
+    status: blockers.length === 0 && missingArtifacts.length === 0 && missingCommands.length === 0 ? "complete" : "blocked",
+    missingArtifacts,
+    missingCommands,
+    requiredArtifacts: agentTaskTrackingRuntimeArtifactPaths,
+    requiredCommands: agentTaskTrackingRuntimeCommands,
+    requiredEvidence: agentTaskTrackingRequiredEvidence,
+    blockers,
+  };
+}
+

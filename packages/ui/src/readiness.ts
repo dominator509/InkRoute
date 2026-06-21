@@ -23,17 +23,46 @@ export interface UiPackageAdoptionEvidenceInput {
 export interface UiPackageAdoptionEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  requiredControls: readonly string[];
+  requiredCommands: typeof uiPackageAdoptionRequiredCommands;
+  requiredEvidence: readonly UiPackageAdoptionRequiredEvidence[];
+  requiredControls: typeof uiPackageAdoptionRequiredControls;
   blockers: readonly string[];
 }
+
+export const uiPackageAdoptionRequiredCommands = [
+  "pnpm --filter @inkroute/ui typecheck",
+  "pnpm --filter @inkroute/ui test",
+  "pnpm --filter @inkroute/web build",
+  "pnpm --filter @inkroute/dashboard build",
+  "web shared UI adoption smoke",
+  "dashboard shared UI adoption smoke",
+  "accessibility and keyboard focus smoke",
+  "Storybook or visual smoke capture",
+] as const;
+
+export const uiPackageAdoptionRequiredControls = [
+  "Preserve existing app visual language while adopting shared primitives incrementally.",
+  "Keep labels, hints, errors, dialogs, and navigation keyboard-accessible in app context.",
+  "Capture visual evidence from seeded/demo-safe data only.",
+  "Do not include secrets, tokens, raw PII, medical, payment, or private URLs in screenshots or visual reports.",
+] as const;
+
+export const uiPackageAdoptionRequiredEvidence = [
+  "UI package typecheck, test, and export-contract evidence",
+  "web/dashboard primitive adoption evidence for forms, navigation, surfaces, and dialogs",
+  "accessibility, keyboard, and focus-visible smoke evidence",
+  "Storybook or visual smoke/regression evidence and style-regression review",
+  "web/dashboard build and app smoke evidence after UI adoption",
+  "design-token documentation and secret-safe visual artifact evidence",
+] as const;
+
+export type UiPackageAdoptionRequiredEvidence = (typeof uiPackageAdoptionRequiredEvidence)[number];
 
 export function buildUiPackageAdoptionEvidencePlan(input: UiPackageAdoptionEvidenceInput): UiPackageAdoptionEvidencePlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: UiPackageAdoptionRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/ui ${script} script.`);
   if (!input.uiTypecheckPassed) blockers.push("@inkroute/ui typecheck must pass before UI package adoption is ready.");
@@ -56,44 +85,33 @@ export function buildUiPackageAdoptionEvidencePlan(input: UiPackageAdoptionEvide
   if (!input.secretSafeArtifactsCaptured) blockers.push("UI screenshots, visual artifacts, and reports must be free of secrets, tokens, raw PII, medical, or payment data.");
 
   if (!input.uiTypecheckPassed || !input.uiTestsPassed || !input.exportedPrimitivesCovered) {
-    requiredEvidence.push("UI package typecheck, test, and export-contract evidence");
+    requiredEvidence.push(uiPackageAdoptionRequiredEvidence[0]);
   }
   if (!input.webAdoptionCompleted || !input.dashboardAdoptionCompleted || !input.formFieldAdoptionCompleted || !input.navSurfaceAdoptionCompleted || !input.dialogAdoptionCompleted) {
-    requiredEvidence.push("web/dashboard primitive adoption evidence for forms, navigation, surfaces, and dialogs");
+    requiredEvidence.push(uiPackageAdoptionRequiredEvidence[1]);
   }
   if (!input.accessibilitySmokePassed || !input.keyboardFocusSmokePassed) {
-    requiredEvidence.push("accessibility, keyboard, and focus-visible smoke evidence");
+    requiredEvidence.push(uiPackageAdoptionRequiredEvidence[2]);
   }
   if (!input.storybookOrVisualSmokeConfigured || !input.visualRegressionArtifactsCaptured || !input.noStyleRegressionAccepted) {
-    requiredEvidence.push("Storybook or visual smoke/regression evidence and style-regression review");
+    requiredEvidence.push(uiPackageAdoptionRequiredEvidence[3]);
   }
   if (!input.webBuildPassed || !input.dashboardBuildPassed || !input.appSmokeTestsPassed) {
-    requiredEvidence.push("web/dashboard build and app smoke evidence after UI adoption");
+    requiredEvidence.push(uiPackageAdoptionRequiredEvidence[4]);
   }
   if (!input.designTokensDocumented || !input.secretSafeArtifactsCaptured) {
-    requiredEvidence.push("design-token documentation and secret-safe visual artifact evidence");
+    requiredEvidence.push(uiPackageAdoptionRequiredEvidence[5]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/ui typecheck",
-      "pnpm --filter @inkroute/ui test",
-      "pnpm --filter @inkroute/web build",
-      "pnpm --filter @inkroute/dashboard build",
-      "web shared UI adoption smoke",
-      "dashboard shared UI adoption smoke",
-      "accessibility and keyboard focus smoke",
-      "Storybook or visual smoke capture",
-    ],
-    requiredEvidence,
-    requiredControls: [
-      "Preserve existing app visual language while adopting shared primitives incrementally.",
-      "Keep labels, hints, errors, dialogs, and navigation keyboard-accessible in app context.",
-      "Capture visual evidence from seeded/demo-safe data only.",
-      "Do not include secrets, tokens, raw PII, medical, payment, or private URLs in screenshots or visual reports.",
-    ],
+    requiredCommands: uiPackageAdoptionRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === uiPackageAdoptionRequiredEvidence.length
+        ? uiPackageAdoptionRequiredEvidence
+        : requiredEvidence,
+    requiredControls: uiPackageAdoptionRequiredControls,
     blockers,
   };
 }

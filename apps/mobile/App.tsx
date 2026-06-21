@@ -51,7 +51,7 @@ export default function App() {
         <View style={{ gap: 8 }}>
           <Text style={{ color: "#fafaf9", fontSize: 34, fontWeight: "900" }}>InkRoute Artist</Text>
           <Text style={{ color: "#a8a29e", lineHeight: 22 }}>
-            Expo Phase 6 scaffold for artist mobility. Current screen: {screen.label}. Status: {screen.phase6Status}.
+            Expo Phase 6 mobile contract for artist mobility. Current screen: {screen.label}. Status: {screen.phase6Status}.
           </Text>
           <Text style={{ color: "#a8a29e", lineHeight: 22 }}>
             QA contract: {mobileQaExecutionPreview.screens.length} screens mapped · {mobileQaExecutionPreview.blockingItemIds.length} device/runtime checks still gated.

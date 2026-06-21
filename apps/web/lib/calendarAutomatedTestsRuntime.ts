@@ -1,4 +1,10 @@
-import { buildCalendarAutomatedTestReadinessPlan } from "@inkroute/calendar";
+﻿import { buildCalendarAutomatedTestReadinessPlan } from "@inkroute/calendar";
+import {
+  buildCalendarAutomationSecretSafeArtifactReview,
+  buildRedactedCalendarAutomationArtifact,
+} from "./calendarAutomatedTests";
+
+export { buildRedactedCalendarAutomationArtifact };
 
 export type CalendarAutomationRuntimeStatus =
   | "wired"
@@ -18,6 +24,49 @@ export interface CalendarAutomationRuntimeMatrixEntry {
   readonly status: CalendarAutomationRuntimeStatus;
 }
 
+export interface CalendarAutomationExecutionPolicy {
+  readonly codexMayClassifyStaticCalendarAutomationReadiness: boolean;
+  readonly helperRouteCommandsRequiredForClosure: boolean;
+  readonly seededPostgresRequiredForClosure: boolean;
+  readonly googleProviderRequiredForClosure: boolean;
+  readonly timezoneMatrixRequiredForClosure: boolean;
+  readonly playwrightTravelRequiredForClosure: boolean;
+  readonly concurrentHoldRaceRequiredForClosure: boolean;
+  readonly signedFeedRevocationRequiredForClosure: boolean;
+  readonly secretSafeArtifactsRequiredForClosure: boolean;
+}
+
+export interface CalendarAutomationExecutionPlan {
+  readonly policy: typeof calendarAutomationExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly seededPostgresExecutionAllowed: false;
+  readonly googleProviderExecutionAllowed: false;
+  readonly playwrightExecutionAllowed: false;
+  readonly concurrentRaceExecutionAllowed: false;
+  readonly signedFeedRevocationExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly artifactReviewExecutionAllowed: false;
+  readonly localCommands: typeof calendarAutomationLocalCommands;
+  readonly externalCommands: typeof calendarAutomationExternalCommands;
+  readonly requiredExternalEvidence: typeof calendarAutomationRequiredExternalEvidence;
+}
+
+export type CalendarAutomationArtifactReview = ReturnType<
+  typeof buildCalendarAutomationSecretSafeArtifactReview
+>;
+
+export const calendarAutomationExecutionPolicy = {
+  codexMayClassifyStaticCalendarAutomationReadiness: true,
+  helperRouteCommandsRequiredForClosure: true,
+  seededPostgresRequiredForClosure: true,
+  googleProviderRequiredForClosure: true,
+  timezoneMatrixRequiredForClosure: true,
+  playwrightTravelRequiredForClosure: true,
+  concurrentHoldRaceRequiredForClosure: true,
+  signedFeedRevocationRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies CalendarAutomationExecutionPolicy;
+
 export const calendarAutomationRuntimeCommands = [
   "pnpm --filter @inkroute/calendar typecheck",
   "pnpm --filter @inkroute/calendar test",
@@ -27,6 +76,57 @@ export const calendarAutomationRuntimeCommands = [
   "Google test-calendar provider tests",
   "Playwright dashboard/public travel calendar smoke",
 ] as const;
+
+export const calendarAutomationLocalCommands = [
+  "pnpm --filter @inkroute/calendar typecheck",
+  "pnpm --filter @inkroute/calendar test",
+  "pnpm vitest run apps/web/tests/ics-feed-route.test.ts",
+  "pnpm vitest run apps/web/tests/availability-preview-route.test.ts",
+] as const;
+
+export const calendarAutomationExternalCommands = [
+  "calendar Postgres integration tests",
+  "Google test-calendar provider tests",
+  "DST/recurrence provider matrix tests",
+  "Playwright dashboard/public travel calendar smoke",
+  "concurrent hold race-condition tests",
+  "signed-feed revocation DB tests",
+  "GitHub Actions calendar lifecycle test job",
+  "calendar automation artifact retention review",
+  "secret-safe calendar automation artifact review",
+] as const;
+
+export const calendarAutomationRequiredExternalEvidence = [
+  "actual helper/route command output",
+  "calendar Postgres integration tests",
+  "Google test-calendar provider transcripts",
+  "timezone matrix artifacts",
+  "dashboard/public Playwright travel calendar smoke",
+  "concurrent hold race tests",
+  "signed-feed revocation DB tests",
+  "CI calendar automation artifacts",
+  "artifact retention proof",
+  "secret-safe calendar automation artifact review",
+] as const;
+
+export const buildCalendarAutomationExecutionPlan = (): CalendarAutomationExecutionPlan => ({
+  policy: calendarAutomationExecutionPolicy,
+  commandExecutionAllowed: false,
+  seededPostgresExecutionAllowed: false,
+  googleProviderExecutionAllowed: false,
+  playwrightExecutionAllowed: false,
+  concurrentRaceExecutionAllowed: false,
+  signedFeedRevocationExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  artifactReviewExecutionAllowed: false,
+  localCommands: calendarAutomationLocalCommands,
+  externalCommands: calendarAutomationExternalCommands,
+  requiredExternalEvidence: calendarAutomationRequiredExternalEvidence,
+});
+
+export const buildCalendarAutomationArtifactReview = (
+  input: Parameters<typeof buildCalendarAutomationSecretSafeArtifactReview>[0],
+): CalendarAutomationArtifactReview => buildCalendarAutomationSecretSafeArtifactReview(input);
 
 export const calendarAutomationArtifactPaths = [
   "coverage/calendar-automation-runtime.json",
@@ -46,6 +146,125 @@ export const calendarAutomationArtifactPaths = [
   "coverage/calendar-automation-secret-safe-artifacts.json",
   "test-results/calendar-automation-runtime",
 ] as const;
+
+export const calendarAutomationRuntimeProofFiles = [
+  "packages/calendar/package.json",
+  "packages/calendar/src/index.ts",
+  "packages/calendar/tests/availability-conflicts.test.ts",
+  "apps/web/lib/calendarAutomatedTests.ts",
+  "apps/web/lib/calendarAutomatedTestsRuntime.ts",
+  "apps/web/tests/calendar-automation-static.test.ts",
+  "apps/web/tests/calendar-automation-runtime-static.test.ts",
+  "apps/web/tests/ics-feed-route.test.ts",
+  "apps/web/tests/availability-preview-route.test.ts",
+  "apps/web/app/api/public/[tenantSlug]/calendar/[artistSlug]/travel.ics/route.ts",
+  "apps/web/app/api/public/[tenantSlug]/availability-preview/route.ts",
+  "apps/dashboard/app/calendar/page.tsx",
+  "testing/manifests/unit-test-manifest.json",
+  ".github/workflows/ci.yml",
+] as const;
+
+export type CalendarAutomationEvidenceArtifact = (typeof calendarAutomationArtifactPaths)[number];
+
+export interface CalendarAutomationEvidenceInput {
+  readonly calendarTypecheckPassed: boolean;
+  readonly calendarTestsPassed: boolean;
+  readonly signedIcsRouteTestsPassed: boolean;
+  readonly availabilityPreviewRouteTestsPassed: boolean;
+  readonly postgresIntegrationTestsPassed: boolean;
+  readonly googleProviderTestsPassed: boolean;
+  readonly timezoneProviderMatrixPassed: boolean;
+  readonly dashboardCalendarPlaywrightPassed: boolean;
+  readonly publicTravelPlaywrightPassed: boolean;
+  readonly concurrentHoldRaceTestsPassed: boolean;
+  readonly signedIcsRevocationDbTestsPassed: boolean;
+  readonly ciCalendarJobEvidenceCaptured: boolean;
+  readonly artifactRetentionVerified: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly CalendarAutomationEvidenceArtifact[];
+}
+
+export interface CalendarAutomationEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly CalendarAutomationEvidenceArtifact[];
+  readonly requiredCommands: typeof calendarAutomationRuntimeCommands;
+  readonly requiredEvidence: typeof calendarAutomationDecisionRequiredEvidence;
+  readonly redactedSummary: {
+    readonly capturedArtifactCount: number;
+    readonly requiredArtifactCount: number;
+  };
+}
+
+export type CalendarAutomationDecisionRequiredEvidence = readonly [
+  ...typeof calendarAutomationRuntimeReadiness.requiredEvidence,
+  "secret-safe review of retained calendar/travel artifacts",
+];
+
+export function buildCalendarAutomationDecisionRequiredEvidence(
+  readinessEvidence: typeof calendarAutomationRuntimeReadiness.requiredEvidence,
+): CalendarAutomationDecisionRequiredEvidence {
+  return [
+    ...readinessEvidence,
+    "secret-safe review of retained calendar/travel artifacts",
+  ];
+}
+
+export const buildCalendarAutomationEvidenceDecision = (
+  input: CalendarAutomationEvidenceInput,
+): CalendarAutomationEvidenceDecision => {
+  const captured = new Set(input.capturedArtifacts);
+  const missingArtifacts = calendarAutomationArtifactPaths.filter((artifact) => !captured.has(artifact));
+  const blockers = [
+    ...(!input.calendarTypecheckPassed ? ["Calendar package typecheck evidence is missing."] : []),
+    ...(!input.calendarTestsPassed ? ["Calendar package test evidence is missing."] : []),
+    ...(!input.signedIcsRouteTestsPassed ? ["Signed ICS route test evidence is missing."] : []),
+    ...(!input.availabilityPreviewRouteTestsPassed
+      ? ["Availability preview route test evidence is missing."]
+      : []),
+    ...(!input.postgresIntegrationTestsPassed
+      ? ["Calendar Postgres integration evidence is missing."]
+      : []),
+    ...(!input.googleProviderTestsPassed
+      ? ["Google test-calendar provider evidence is missing."]
+      : []),
+    ...(!input.timezoneProviderMatrixPassed
+      ? ["DST/recurrence timezone provider matrix evidence is missing."]
+      : []),
+    ...(!input.dashboardCalendarPlaywrightPassed
+      ? ["Dashboard calendar Playwright evidence is missing."]
+      : []),
+    ...(!input.publicTravelPlaywrightPassed
+      ? ["Public travel calendar Playwright evidence is missing."]
+      : []),
+    ...(!input.concurrentHoldRaceTestsPassed
+      ? ["Concurrent hold race-condition evidence is missing."]
+      : []),
+    ...(!input.signedIcsRevocationDbTestsPassed
+      ? ["Signed ICS revocation DB evidence is missing."]
+      : []),
+    ...(!input.ciCalendarJobEvidenceCaptured ? ["CI calendar job evidence is missing."] : []),
+    ...(!input.artifactRetentionVerified
+      ? ["Calendar automation artifact retention evidence is missing."]
+      : []),
+    ...(!input.secretSafeArtifactReviewPassed
+      ? ["Secret-safe calendar automation artifact review evidence is missing."]
+      : []),
+    ...(missingArtifacts.length > 0 ? ["All calendar automation artifacts must be captured."] : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: calendarAutomationRuntimeCommands,
+    requiredEvidence: calendarAutomationDecisionRequiredEvidence,
+    redactedSummary: {
+      capturedArtifactCount: captured.size,
+      requiredArtifactCount: calendarAutomationArtifactPaths.length,
+    },
+  };
+};
 
 export const calendarAutomationRuntimeMatrix = [
   { id: "calendar-typecheck", command: "pnpm --filter @inkroute/calendar typecheck", artifact: "coverage/calendar-automation-calendar-typecheck.txt", status: "wired" },
@@ -79,3 +298,8 @@ export const calendarAutomationRuntimeReadiness = buildCalendarAutomatedTestRead
   ciCalendarTestJobConfigured: true,
   artifactsCaptured: false,
 });
+
+export const calendarAutomationDecisionRequiredEvidence =
+  buildCalendarAutomationDecisionRequiredEvidence(calendarAutomationRuntimeReadiness.requiredEvidence);
+
+

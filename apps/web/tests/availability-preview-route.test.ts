@@ -8,6 +8,7 @@ describe("availability preview route", () => {
     });
 
     expect(response.status).toBe(404);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     await expect(response.json()).resolves.toMatchObject({
       ok: false,
       error: { code: "NOT_FOUND" },
@@ -30,6 +31,7 @@ describe("availability preview route", () => {
     };
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     expect(payload.ok).toBe(true);
     expect(payload.status).toBe("static_preview_not_persistent");
     expect(payload.gapIds).toEqual(["GAP-009", "GAP-056", "GAP-057"]);
@@ -48,5 +50,31 @@ describe("availability preview route", () => {
         reason: "Appointment times overlap.",
       }),
     ]);
+  });
+
+  it("fail-closes production availability previews instead of returning static demo slots", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      const response = await getAvailabilityPreview(new Request("https://local.test/api/public/inkroute-demo/availability-preview"), {
+        params: Promise.resolve({ tenantSlug: "inkroute-demo" }),
+      });
+      const payload = (await response.json()) as {
+        ok: boolean;
+        error: { code: string };
+        productionBoundary: { staticPreviewDisabled: boolean; gapIds: string[] };
+      };
+
+      expect(response.status).toBe(503);
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+      expect(payload.ok).toBe(false);
+      expect(payload.error.code).toBe("PROVIDER_AVAILABILITY_NOT_CONFIGURED");
+      expect(payload.productionBoundary.staticPreviewDisabled).toBe(true);
+      expect(payload.productionBoundary.gapIds).toContain("GAP-009");
+      expect(payload.productionBoundary.gapIds).toContain("GAP-056");
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
   });
 });

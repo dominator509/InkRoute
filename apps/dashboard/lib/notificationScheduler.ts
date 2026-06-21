@@ -20,6 +20,17 @@ export interface DashboardNotificationSchedulerRepository {
   persistWorkerAuditLog(input: { tenantId: string; plan: NotificationSchedulerPlan; redactedMetadata: Record<string, unknown> }): Promise<void>;
 }
 
+export interface InMemoryNotificationSchedulerRepositoryState {
+  readonly idempotencyKeys: Map<string, { readonly tenantId: string; readonly action: NotificationSchedulerAction }>;
+  readonly notificationJobs: { readonly tenantId: string; readonly plan: NotificationSchedulerPlan }[];
+  readonly dueJobClaims: Map<string, { readonly tenantId: string; readonly claimedAt: string }>;
+  readonly deliveries: { readonly tenantId: string; readonly plan: NotificationSchedulerPlan }[];
+  readonly cancellations: { readonly tenantId: string; readonly appointmentId?: string; readonly bookingRequestId?: string; readonly reason: string }[];
+  readonly retries: { readonly tenantId: string; readonly plan: NotificationSchedulerPlan }[];
+  readonly deadLetters: { readonly tenantId: string; readonly plan: NotificationSchedulerPlan; readonly reason: string }[];
+  readonly workerAuditLogs: { readonly tenantId: string; readonly plan: NotificationSchedulerPlan; readonly redactedMetadata: Record<string, unknown> }[];
+}
+
 export interface DashboardNotificationSchedulerContract {
   runtimeReadiness: NotificationSchedulerRuntimeReadinessPlan;
   schedulePlan: NotificationSchedulerPlan;
@@ -28,6 +39,115 @@ export interface DashboardNotificationSchedulerContract {
   cancelPlan: NotificationSchedulerPlan;
   deadLetterPlan: NotificationSchedulerPlan;
   requiredRepositoryMethods: readonly (keyof DashboardNotificationSchedulerRepository)[];
+}
+
+const notificationSchedulerPrivateMetadataKeys = new Set([
+  "body",
+  "rawBody",
+  "destination",
+  "email",
+  "phone",
+  "providerPayload",
+  "providerSecret",
+  "clientName",
+]);
+
+function redactNotificationSchedulerMetadataValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactNotificationSchedulerMetadataValue(entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+        key,
+        notificationSchedulerPrivateMetadataKeys.has(key)
+          ? "[redacted]"
+          : redactNotificationSchedulerMetadataValue(entry),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+export function buildRedactedNotificationSchedulerMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  return redactNotificationSchedulerMetadataValue(metadata) as Record<string, unknown>;
+}
+
+function buildSchedulerIdempotencyKey(input: { readonly tenantId: string; readonly key: string }): string {
+  return `${input.tenantId}:${input.key}`;
+}
+
+function buildDueJobClaimKey(input: { readonly tenantId: string; readonly jobId: string }): string {
+  return `${input.tenantId}:${input.jobId}`;
+}
+
+export function createInMemoryNotificationSchedulerRepository(
+  state: InMemoryNotificationSchedulerRepositoryState = {
+    idempotencyKeys: new Map(),
+    notificationJobs: [],
+    dueJobClaims: new Map(),
+    deliveries: [],
+    cancellations: [],
+    retries: [],
+    deadLetters: [],
+    workerAuditLogs: [],
+  },
+): DashboardNotificationSchedulerRepository & { readonly state: InMemoryNotificationSchedulerRepositoryState } {
+  return {
+    state,
+    async claimIdempotencyKey(input) {
+      const key = buildSchedulerIdempotencyKey(input);
+      const existing = state.idempotencyKeys.get(key);
+
+      if (!existing) {
+        state.idempotencyKeys.set(key, { tenantId: input.tenantId, action: input.action });
+        return "claimed";
+      }
+
+      if (existing.action === input.action) {
+        return "duplicate";
+      }
+
+      throw new Error("NOTIFICATION_SCHEDULER_IDEMPOTENCY_KEY_CONFLICT");
+    },
+    async persistNotificationJobs(input) {
+      state.notificationJobs.push(input);
+    },
+    async claimDueNotificationJob(input) {
+      const key = buildDueJobClaimKey(input);
+      if (state.dueJobClaims.has(key)) {
+        return "already_claimed";
+      }
+      state.dueJobClaims.set(key, { tenantId: input.tenantId, claimedAt: input.now });
+      return "claimed";
+    },
+    async persistNotificationDelivery(input) {
+      state.deliveries.push(input);
+    },
+    async cancelScheduledJobs(input) {
+      state.cancellations.push(input);
+      return state.notificationJobs.filter((job) => {
+        const write = job.plan.writes[0];
+        return write?.tenantId === input.tenantId &&
+          (!input.appointmentId || write.payload.appointmentId === input.appointmentId) &&
+          (!input.bookingRequestId || write.payload.bookingRequestId === input.bookingRequestId);
+      }).length;
+    },
+    async persistRetry(input) {
+      state.retries.push(input);
+    },
+    async persistDeadLetter(input) {
+      state.deadLetters.push(input);
+    },
+    async persistWorkerAuditLog(input) {
+      state.workerAuditLogs.push({
+        ...input,
+        redactedMetadata: buildRedactedNotificationSchedulerMetadata(input.redactedMetadata),
+      });
+    },
+  };
 }
 
 const demoNow = "2026-06-09T17:00:00.000Z";

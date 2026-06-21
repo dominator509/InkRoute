@@ -81,6 +81,13 @@ InkRoute Suite is a multi-tenant tattoo artist SaaS platform:
 - Stripe, Sentry/OpenTelemetry, Google Calendar, storage, email/SMS, push, and CI/provider deployments remain credential- or provider-gated.
 - Legal/compliance language remains placeholder until reviewed by qualified counsel.
 
+## Agent Workflow
+
+- Use `docs/ai/SERENA_OBSIDIAN_WORKFLOW.md` as the operational playbook for semantic navigation and project memory.
+- Serena is for targeted code ownership, references, call sites, and impact checks before broad reads.
+- Obsidian is for specific InkRoute decisions, reviews, and handoffs only; repo files remain authoritative.
+- Do not delay credential-free gap closure for broad Serena or Obsidian context gathering.
+
 ## Do Not Touch Without Approval
 
 - Secrets, `.env` files, provider credentials, production infrastructure, and CI secret settings.

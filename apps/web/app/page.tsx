@@ -6,6 +6,7 @@ import {
   inkrouteDemoArtist,
   publicFaqs,
 } from "@inkroute/config";
+import { Dialog, DialogPanel, DialogTitle, Field, FieldHint, FieldLabel, Input, NavBar, NavItem, Surface, Textarea } from "@inkroute/ui";
 import {
   buildArtistPersonSchema,
   buildFaqSchema,
@@ -21,7 +22,7 @@ import { TravelStopCard } from "../components/TravelStopCard";
 const trustSignals = [
   { value: "3", label: "upcoming travel cities", detail: "Nomad Mode makes availability visible before the artist arrives." },
   { value: "82%", label: "demo readiness score", detail: "Future intake scoring flags missing placement, size, and budget details." },
-  { value: "0", label: "live payments collected", detail: "Deposits are intentionally not live until Stripe is wired and tested." },
+  { value: "0", label: "live payments collected", detail: "Deposits stay disabled until Stripe provider proof is captured." },
 ];
 
 const processSteps = [
@@ -56,6 +57,11 @@ export default function HomePage() {
               <a className="button" href="/booking">Start a request</a>
               <a className="button secondary" href="/portfolio">Explore work</a>
             </div>
+            <NavBar label="Public booking shortcuts" className="mt-5">
+              <NavItem href="/portfolio" active>Portfolio</NavItem>
+              <NavItem href="/travel">Travel</NavItem>
+              <NavItem href="/faq">FAQ</NavItem>
+            </NavBar>
             <dl className="hero-facts" aria-label="Artist highlights">
               <div><dt>Home base</dt><dd>{inkrouteDemoArtist.homeBaseCity}</dd></div>
               <div><dt>Specialties</dt><dd>Blackwork · Ornamental · Fine line</dd></div>
@@ -79,11 +85,11 @@ export default function HomePage() {
           />
           <div className="stat-grid">
             {trustSignals.map((signal) => (
-              <article className="stat-card" key={signal.label}>
+              <Surface className="stat-card" key={signal.label}>
                 <strong>{signal.value}</strong>
                 <span>{signal.label}</span>
                 <p>{signal.detail}</p>
-              </article>
+              </Surface>
             ))}
           </div>
         </div>
@@ -131,12 +137,31 @@ export default function HomePage() {
             <p>
               The Phase 3 booking page is static, but the planned request lifecycle is already shaped around tattoo-specific information quality.
             </p>
+            <div className="stack" aria-label="Shared UI form primitive adoption preview">
+              <Field>
+                <FieldLabel htmlFor="style-preview" required>Style direction</FieldLabel>
+                <Input id="style-preview" name="style-preview" defaultValue="Blackwork floral sleeve" readOnly aria-describedby="style-preview-hint" />
+                <FieldHint id="style-preview-hint">Shared Field/Input primitives keep labels and hints wired before the live form posts.</FieldHint>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="notes-preview">Artist notes</FieldLabel>
+                <Textarea id="notes-preview" name="notes-preview" defaultValue="Client wants healed-work examples and Seattle travel dates." readOnly aria-describedby="notes-preview-hint" />
+                <FieldHint id="notes-preview-hint">Demo-safe copy only; no medical, payment, or private client data.</FieldHint>
+              </Field>
+            </div>
           </div>
           <ol className="check-list">
             {bookingIntakePreview.map((item) => <li key={item}>{item}</li>)}
           </ol>
         </div>
       </section>
+
+      <Dialog aria-labelledby="booking-dialog-title">
+        <DialogPanel>
+          <DialogTitle id="booking-dialog-title">Booking dialog shell</DialogTitle>
+          <p>Shared Dialog primitives are reserved for the live booking confirmation flow once mutations are enabled.</p>
+        </DialogPanel>
+      </Dialog>
 
       <section className="section" aria-labelledby="process-heading">
         <div className="container">

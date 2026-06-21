@@ -81,6 +81,23 @@ export const privateStorageSignedUrlArtifactPaths = [
   "test-results/private-storage-signed-urls",
 ] as const;
 
+export const privateStorageSignedUrlProofFiles = [
+  "packages/security/package.json",
+  "packages/security/src/index.ts",
+  "packages/security/tests/upload-policy.test.ts",
+  "apps/web/lib/privateStorageSignedUrls.ts",
+  "apps/web/tests/private-storage-signed-url-static.test.ts",
+  "apps/web/tests/secure-upload-intents-route.test.ts",
+  "apps/web/app/api/public/[tenantSlug]/upload-policy/route.ts",
+  "apps/web/app/api/public/[tenantSlug]/secure-upload-intents/route.ts",
+  ".env.example",
+  "ENVIRONMENT_VARIABLES.md",
+  "packages/db/prisma/schema.prisma",
+  "packages/db/prisma/migrations/20260609000000_add_signed_url_grants/migration.sql",
+  ".github/workflows/ci.yml",
+  "testing/manifests/unit-test-manifest.json",
+] as const;
+
 export const privateStorageSignedUrlCommands = [
   "pnpm --filter @inkroute/security test",
   "pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts apps/web/tests/private-storage-signed-url-static.test.ts",
@@ -90,6 +107,217 @@ export const privateStorageSignedUrlCommands = [
   "SignedUrlGrant expiry and revocation persistence test",
   "approved derivative public-read integration test",
 ] as const;
+
+export const privateStorageSignedUrlLocalCommands = privateStorageSignedUrlCommands.slice(0, 2);
+export const privateStorageSignedUrlExternalCommands = privateStorageSignedUrlCommands.slice(2);
+
+export const privateStorageSignedUrlRequiredExternalEvidence = [
+  "S3/Supabase private bucket ACL denial proof",
+  "provider signed upload URL proof",
+  "provider signed download URL proof",
+  "SignedUrlGrant expiry and revocation persistence proof",
+  "approved derivative public-read integration proof",
+] as const;
+
+export type PrivateStorageSignedUrlArtifact = (typeof privateStorageSignedUrlArtifactPaths)[number];
+
+export type PrivateStorageSignedUrlCommand = (typeof privateStorageSignedUrlCommands)[number];
+
+export const privateStorageSignedUrlLocalArtifacts = [
+  "coverage/private-storage-signed-url-plan.json",
+  "coverage/private-storage-provider-env-redacted.json",
+  "coverage/private-storage-signed-url-revocation.json",
+  "coverage/private-storage-fileasset-grant-persistence.json",
+  "test-results/private-storage-signed-urls",
+] as const satisfies readonly PrivateStorageSignedUrlArtifact[];
+
+export const privateStorageSignedUrlExternalArtifacts = [
+  "coverage/private-storage-private-acl-denial.json",
+  "coverage/private-storage-signed-upload-url.json",
+  "coverage/private-storage-signed-download-url.json",
+  "coverage/private-storage-public-derivative-access.json",
+] as const satisfies readonly PrivateStorageSignedUrlArtifact[];
+
+export type PrivateStorageSignedUrlEvidenceInput = {
+  packagePrivateStorageTestsPassed: boolean;
+  providerEnvGateCaptured: boolean;
+  privateBucketAclDenialCaptured: boolean;
+  signedUploadUrlCaptured: boolean;
+  signedDownloadUrlCaptured: boolean;
+  signedUrlRevocationCaptured: boolean;
+  fileAssetGrantPersistenceCaptured: boolean;
+  publicDerivativeAccessCaptured: boolean;
+  requiredCommandsRun: readonly PrivateStorageSignedUrlCommand[];
+  capturedArtifacts: readonly PrivateStorageSignedUrlArtifact[];
+};
+
+export type PrivateStorageSignedUrlEvidenceDecision = {
+  status: "complete" | "blocked";
+  blockers: string[];
+  missingArtifacts: PrivateStorageSignedUrlArtifact[];
+  requiredCommands: typeof privateStorageSignedUrlCommands;
+  requiredEvidence: typeof privateStorageSignedUrlArtifactPaths;
+  redactionPolicy: {
+    signedUrlsStoredRaw: false;
+    signedUrlHashesRedacted: true;
+    providerSecretsRedacted: true;
+  };
+};
+
+export type PrivateStorageSignedUrlExecutionPlan = {
+  status: "local-plan-ready";
+  bucketAclExecutionAllowed: false;
+  signedUploadExecutionAllowed: false;
+  signedDownloadExecutionAllowed: false;
+  transactionalPersistenceExecutionAllowed: false;
+  publicDerivativeExecutionAllowed: false;
+  policy: PrivateStorageSignedUrlExecutionPolicy;
+  localCommands: typeof privateStorageSignedUrlLocalCommands;
+  externalCommands: typeof privateStorageSignedUrlExternalCommands;
+  localArtifacts: typeof privateStorageSignedUrlLocalArtifacts;
+  externalArtifacts: typeof privateStorageSignedUrlExternalArtifacts;
+  requiredExternalEvidence: typeof privateStorageSignedUrlRequiredExternalEvidence;
+  disabledReasons: readonly string[];
+};
+
+export type PrivateStorageSignedUrlExecutionPolicy = {
+  bucketAclExecutionAllowed: false;
+  signedUploadExecutionAllowed: false;
+  signedDownloadExecutionAllowed: false;
+  transactionalPersistenceExecutionAllowed: false;
+  publicDerivativeExecutionAllowed: false;
+  tenantScopedAccessExecutionAllowed: false;
+};
+
+export type PrivateStorageSignedUrlArtifactReview = {
+  status: "redacted-review-ready";
+  redactedArtifact: unknown;
+  requiredArtifacts: typeof privateStorageSignedUrlArtifactPaths;
+  retainedExternalGates: readonly string[];
+};
+
+const privateStorageSignedUrlSecretPatterns = [
+  /(s3[_-]?(?:secret|access)?[_-]?key['":=\s]+)[^"',\s}]+/gi,
+  /(supabase[_-]?(?:service[_-]?role[_-]?key|url)['":=\s]+)[^"',\s}]+/gi,
+  /(signed[_-]?url['":=\s]+)[^"',\s}]+/gi,
+  /(signed[_-]?url[_-]?hash['":=\s]+)[^"',\s}]+/gi,
+  /(authorization:\s*bearer\s+)[A-Za-z0-9._-]+/gi,
+  /(secret['":=\s]+)[^"',\s}]+/gi,
+  /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
+  /\+?\d[\d\s().-]{7,}\d/g,
+] as const;
+
+export function buildRedactedPrivateStorageSignedUrlArtifact(value: unknown): unknown {
+  if (typeof value === "string") {
+    return privateStorageSignedUrlSecretPatterns.reduce(
+      (redacted, pattern) => redacted.replace(pattern, (_match, prefix: string | undefined) => `${prefix ?? ""}[REDACTED]`),
+      value,
+    );
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => buildRedactedPrivateStorageSignedUrlArtifact(entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        /token|secret|authorization|credential|password|signedUrl|signedUrlHash|providerPayload|rawBody|stack|objectKey|bucket/i.test(key)
+          ? "[REDACTED]"
+          : buildRedactedPrivateStorageSignedUrlArtifact(entry),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+export const privateStorageSignedUrlExecutionPolicy: PrivateStorageSignedUrlExecutionPolicy = {
+  bucketAclExecutionAllowed: false,
+  signedUploadExecutionAllowed: false,
+  signedDownloadExecutionAllowed: false,
+  transactionalPersistenceExecutionAllowed: false,
+  publicDerivativeExecutionAllowed: false,
+  tenantScopedAccessExecutionAllowed: false,
+};
+
+export function buildPrivateStorageSignedUrlExecutionPlan(): PrivateStorageSignedUrlExecutionPlan {
+  return {
+    status: "local-plan-ready",
+    bucketAclExecutionAllowed: false,
+    signedUploadExecutionAllowed: false,
+    signedDownloadExecutionAllowed: false,
+    transactionalPersistenceExecutionAllowed: false,
+    publicDerivativeExecutionAllowed: false,
+    policy: privateStorageSignedUrlExecutionPolicy,
+    localCommands: privateStorageSignedUrlLocalCommands,
+    externalCommands: privateStorageSignedUrlExternalCommands,
+    localArtifacts: privateStorageSignedUrlLocalArtifacts,
+    externalArtifacts: privateStorageSignedUrlExternalArtifacts,
+    requiredExternalEvidence: privateStorageSignedUrlRequiredExternalEvidence,
+    disabledReasons: [
+      "Private bucket ACL denial proof requires live S3/Supabase bucket access.",
+      "Provider signed upload URL proof requires configured storage secrets.",
+      "Provider signed download URL proof requires configured storage secrets and scan-approved objects.",
+      "SignedUrlGrant transactional persistence proof requires provider-backed storage/database execution.",
+      "Approved derivative public-read proof requires live public/private storage access checks.",
+    ],
+  };
+}
+
+export function buildPrivateStorageSignedUrlArtifactReview(rawArtifact: unknown): PrivateStorageSignedUrlArtifactReview {
+  return {
+    status: "redacted-review-ready",
+    redactedArtifact: buildRedactedPrivateStorageSignedUrlArtifact(rawArtifact),
+    requiredArtifacts: privateStorageSignedUrlArtifactPaths,
+    retainedExternalGates: [
+      "S3/Supabase private bucket ACL denial proof",
+      "Provider signed upload URL proof",
+      "Provider signed download URL proof",
+      "SignedUrlGrant expiry and revocation persistence proof",
+      "Approved derivative public-read proof",
+    ],
+  };
+}
+
+export function buildPrivateStorageSignedUrlEvidenceDecision(
+  input: PrivateStorageSignedUrlEvidenceInput,
+): PrivateStorageSignedUrlEvidenceDecision {
+  const blockers = [
+    !input.packagePrivateStorageTestsPassed && "Run package private storage planner tests.",
+    !input.providerEnvGateCaptured && "Capture provider environment gate proof with redacted secrets.",
+    !input.privateBucketAclDenialCaptured && "Capture private bucket ACL public-read denial proof.",
+    !input.signedUploadUrlCaptured && "Capture provider signed upload URL proof.",
+    !input.signedDownloadUrlCaptured && "Capture provider signed download URL proof.",
+    !input.signedUrlRevocationCaptured && "Capture SignedUrlGrant expiry and revocation persistence proof.",
+    !input.fileAssetGrantPersistenceCaptured && "Capture FileAsset, SignedUrlGrant, and AuditLog transactional persistence proof.",
+    !input.publicDerivativeAccessCaptured && "Capture approved public derivative access without private-original exposure.",
+  ].filter(Boolean) as string[];
+
+  const missingArtifacts = privateStorageSignedUrlArtifactPaths.filter(
+    (artifact) => !input.capturedArtifacts.includes(artifact),
+  );
+  const missingCommands = privateStorageSignedUrlCommands.filter(
+    (command) => !input.requiredCommandsRun.includes(command),
+  );
+
+  return {
+    status: blockers.length === 0 && missingArtifacts.length === 0 && missingCommands.length === 0 ? "complete" : "blocked",
+    blockers: [
+      ...blockers,
+      ...missingCommands.map((command) => `Required command not recorded: ${command}`),
+    ],
+    missingArtifacts,
+    requiredCommands: privateStorageSignedUrlCommands,
+    requiredEvidence: privateStorageSignedUrlArtifactPaths,
+    redactionPolicy: {
+      signedUrlsStoredRaw: false,
+      signedUrlHashesRedacted: true,
+      providerSecretsRedacted: true,
+    },
+  };
+}
 
 export function buildPrivateStorageSignedUrlGrantPersistenceContract(
   input: PrivateStorageSignedUrlGrantPersistenceInput,
@@ -140,10 +368,10 @@ export const privateStorageSignedUrlRuntimeContract = buildPrivateStorageRuntime
   serverOwnedObjectKeysEnforced: true,
   signedUploadUrlsImplemented: false,
   signedDownloadUrlsImplemented: false,
-  fileAssetPersistenceConfigured: false,
-  signedUrlGrantPersistenceConfigured: false,
-  signedUrlRevocationPersistenceConfigured: false,
-  auditLogPersistenceConfigured: false,
+  fileAssetPersistenceConfigured: true,
+  signedUrlGrantPersistenceConfigured: true,
+  signedUrlRevocationPersistenceConfigured: true,
+  auditLogPersistenceConfigured: true,
   scanApprovalGateEnforced: true,
   publicDerivativeSeparationEnforced: true,
   privateOriginalPublicReadDenied: false,

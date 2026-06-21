@@ -1,11 +1,26 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildRedactedTenantIsolationArtifact,
+  buildTenantIsolationArtifactReview,
+  buildTenantIsolationEvidenceDecision,
+  buildTenantIsolationExecutionPlan,
+  buildTenantIsolationRunData,
+  persistTenantIsolationRun,
   tenantIsolationArtifactPaths,
+  tenantIsolationEvidenceFlags,
+  tenantIsolationExternalArtifacts,
+  tenantIsolationExternalCommands,
+  tenantIsolationExecutionPolicy,
+  tenantIsolationLocalArtifacts,
+  tenantIsolationLocalCommands,
   tenantIsolationModelCoverage,
+  tenantIsolationRequiredExternalEvidence,
   tenantIsolationRuntimeCommands,
+  tenantIsolationRuntimeControls,
   tenantIsolationRuntimeMatrix,
+  tenantIsolationRuntimeProofFiles,
   tenantIsolationRuntimeReadiness,
   tenantIsolationRunPersistenceContract,
 } from "../lib/tenantIsolationRuntime";
@@ -56,6 +71,21 @@ describe("tenant isolation runtime contract", () => {
     expect(tenantIsolationArtifactPaths).toContain("test-results/tenant-isolation-runtime");
   });
 
+  it("pins tenant isolation runtime control helper identity", () => {
+    const decision = buildTenantIsolationEvidenceDecision({
+      commands: tenantIsolationRuntimeCommands,
+      artifacts: tenantIsolationArtifactPaths,
+      controls: tenantIsolationRuntimeControls,
+      evidence: Object.fromEntries(tenantIsolationEvidenceFlags.map((flag) => [flag, true])) as Record<
+        (typeof tenantIsolationEvidenceFlags)[number],
+        true
+      >,
+    });
+
+    expect(decision.requiredControls).toBe(tenantIsolationRuntimeControls);
+    expect(gapTracker).toContain("tenantIsolationRuntimeControls");
+  });
+
   it("keeps tenant scope helpers, contract, docs, package scripts, and DB manifest wired", () => {
     for (const scriptName of ["typecheck", "test", "db:validate", "db:generate", "db:migrate", "db:seed"]) {
       expect(dbPackageJson).toContain(`"${scriptName}"`);
@@ -73,21 +103,13 @@ describe("tenant isolation runtime contract", () => {
   it("keeps repository evidence blocked until database, repository, denial, audit, cleanup, CI, and safe artifacts exist", () => {
     expect(tenantIsolationRuntimeReadiness.status).toBe("blocked");
     expect(tenantIsolationRuntimeReadiness.missingScripts).toEqual([]);
-    expect(tenantIsolationRuntimeReadiness.requiredCommands).toEqual([...tenantIsolationRuntimeCommands]);
-    expect(tenantIsolationRuntimeReadiness.requiredControls).toEqual([
-      "Use tenant scope helpers for every tenant-owned read and write path.",
-      "Reject missing or mismatched tenantId before database mutation side effects.",
-      "Persist audit rows with tenant and actor metadata for sensitive tenant-owned operations.",
-      "Run fixture cleanup only against seeded test tenants and redact database URLs in artifacts.",
-    ]);
-    expect(tenantIsolationRuntimeReadiness.requiredEvidence).toEqual([
-      "db typecheck/test, Prisma generate, migration, and seeded multi-tenant fixture evidence",
-      "tenant-scoped repository helper adoption and model coverage matrix evidence",
-      "cross-tenant read/write denial and missing-tenant rejection evidence",
-      "tenant-scoped audit-row and fixture cleanup evidence",
-      "redacted database, CI, and secret-safe artifact evidence",
-    ]);
+    expect(tenantIsolationRuntimeReadiness.requiredCommands).toBe(tenantIsolationRuntimeCommands);
+    expect(tenantIsolationRuntimeReadiness.requiredControls).toBe(tenantIsolationRuntimeControls);
+    expect(tenantIsolationRuntimeReadiness.requiredEvidence).toBe(tenantIsolationEvidenceFlags);
     expect(tenantIsolationRuntimeReadiness.blockers).toContain(
+      "Tenant-scoped repository/service adoption evidence must be captured before tenant isolation readiness.",
+    );
+    expect(tenantIsolationRuntimeReadiness.blockers).not.toContain(
       "Tenant-scoped repository/service layer must be implemented.",
     );
     expect(tenantIsolationRuntimeReadiness.blockers).toContain(
@@ -99,6 +121,26 @@ describe("tenant isolation runtime contract", () => {
   });
 
   it("pins the TenantIsolationRun persistence model and migration", () => {
+    const runData = buildTenantIsolationRunData({
+      tenantId: "tenant_static",
+      runId: "tenant_isolation_static",
+      commitSha: "abc123",
+      status: "blocked",
+      commands: ["tenant isolation repository integration suite"],
+      artifacts: ["coverage/tenant-isolation-repository-helper-adoption.json"],
+      databaseLifecycleEvidenceCaptured: true,
+      repositoryAdoptionEvidenceCaptured: false,
+      tenantOwnedModelCoverageCaptured: false,
+      crossTenantDenialEvidenceCaptured: false,
+      missingTenantRejectionEvidenceCaptured: false,
+      auditRowEvidenceCaptured: false,
+      fixtureCleanupEvidenceCaptured: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: true,
+      modelCoverageReportPath: "coverage/tenant-isolation-model-coverage.json",
+      denialMatrixReportPath: "coverage/tenant-isolation-cross-tenant-read-denial.json",
+    });
+
     expect(tenantIsolationRunPersistenceContract).toEqual({
       prismaModel: "TenantIsolationRun",
       tenantRelation: "tenantIsolationRuns",
@@ -118,6 +160,21 @@ describe("tenant isolation runtime contract", () => {
       storesCiEvidence: true,
       storesSecretSafeArtifacts: true,
     });
+    expect(runData).toMatchObject({
+      tenantId: "tenant_static",
+      runId: "tenant_isolation_static",
+      commitSha: "abc123",
+      status: "blocked",
+      commandMatrix: ["tenant isolation repository integration suite"],
+      artifactManifest: ["coverage/tenant-isolation-repository-helper-adoption.json"],
+      databaseLifecycleEvidenceCaptured: true,
+      repositoryAdoptionEvidenceCaptured: false,
+      crossTenantDenialEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: true,
+      modelCoverageReportPath: "coverage/tenant-isolation-model-coverage.json",
+      denialMatrixReportPath: "coverage/tenant-isolation-cross-tenant-read-denial.json",
+    });
+    expect(String(persistTenantIsolationRun)).toContain("repository.tenantIsolationRun.upsert");
     expect(prismaSchema).toContain("model TenantIsolationRun");
     expect(prismaSchema).toContain("tenantIsolationRuns TenantIsolationRun[]");
     expect(prismaSchema).toContain("repositoryAdoptionEvidenceCaptured");
@@ -129,6 +186,100 @@ describe("tenant isolation runtime contract", () => {
     expect(tenantIsolationRunMigration).toContain('"TenantIsolationRun_tenantId_runId_key"');
   });
 
+  it("blocks tenant isolation completion when repository, denial, audit, cleanup, or safe evidence is missing", () => {
+    const decision = buildTenantIsolationEvidenceDecision({
+      commands: ["pnpm --filter @inkroute/db typecheck"],
+      artifacts: ["coverage/tenant-isolation-db-typecheck.txt"],
+      controls: ["use-tenant-scope-helpers-for-every-tenant-owned-read-write-path"],
+      evidence: {
+        dbTypecheckPassed: true,
+      },
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.missingCommands).toContain("cross-tenant read/write denial matrix");
+    expect(decision.missingArtifacts).toContain("coverage/tenant-isolation-secret-safe-artifacts.json");
+    expect(decision.missingControls).toContain("reject-missing-or-mismatched-tenant-id-before-database-mutations");
+    expect(decision.missingEvidence).toContain("repositoryLayerImplemented");
+    expect(decision.missingEvidence).toContain("crossTenantWriteDenialPassed");
+    expect(decision.blockers).toContain("Tenant-scoped repository/service adoption evidence must be captured before tenant isolation readiness.");
+    expect(decision.blockers).not.toContain("Tenant-scoped repository/service layer must be implemented.");
+    expect(decision.blockers).toContain("Cross-tenant write denial tests must pass for tenant-owned mutations.");
+  });
+
+  it("completes tenant isolation only when every command, artifact, control, and evidence flag is present", () => {
+    const completeEvidence = Object.fromEntries(tenantIsolationEvidenceFlags.map((flag) => [flag, true]));
+    const decision = buildTenantIsolationEvidenceDecision({
+      commands: tenantIsolationRuntimeCommands,
+      artifacts: tenantIsolationArtifactPaths,
+      controls: tenantIsolationRuntimeControls,
+      evidence: completeEvidence,
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.missingArtifacts).toEqual([]);
+    expect(decision.missingControls).toEqual([]);
+    expect(decision.missingEvidence).toEqual([]);
+    expect(decision.requiredEvidence).toBe(tenantIsolationEvidenceFlags);
+  });
+
+  it("keeps tenant isolation execution classified, redacted, and database-gated", () => {
+    const executionPlan = buildTenantIsolationExecutionPlan();
+    expect(executionPlan.localCommands).toBe(tenantIsolationLocalCommands);
+    expect(executionPlan.externalCommands).toBe(tenantIsolationExternalCommands);
+    expect(executionPlan.localArtifacts).toBe(tenantIsolationLocalArtifacts);
+    expect(executionPlan.externalArtifacts).toBe(tenantIsolationExternalArtifacts);
+    expect(executionPlan.localArtifacts).toContain("coverage/tenant-isolation-db-test.txt");
+    expect(executionPlan.externalArtifacts).toContain("coverage/tenant-isolation-database-evidence-redacted.json");
+    expect(executionPlan.externalArtifacts).toContain("provider-backed TenantIsolationRun persistence proof");
+    expect(executionPlan.commandExecutionAllowed).toBe(false);
+    expect(executionPlan.databaseExecutionAllowed).toBe(false);
+    expect(executionPlan.ciExecutionAllowed).toBe(false);
+    expect(executionPlan.providerPersistenceExecutionAllowed).toBe(false);
+    expect(executionPlan.executionPolicy).toBe(tenantIsolationExecutionPolicy);
+    expect(executionPlan.executionPolicy).toEqual({
+      codexMayClassifyStaticTenantIsolationReadiness: true,
+      seededDatabaseRequiredForClosure: true,
+      tenantOwnedModelCoverageRequiredForClosure: true,
+      providerDatabaseRequiredForPersistence: true,
+      secretSafeArtifactsRequiredForClosure: true,
+    });
+    expect(executionPlan.requiredExternalEvidence).toBe(tenantIsolationRequiredExternalEvidence);
+    expect(executionPlan.requiredExternalEvidence).toContain(
+      "Provider-backed TenantIsolationRun persistence row captured through persistTenantIsolationRun.",
+    );
+
+    const artifact = {
+      tenantId: "tenant_a_1234567890abcdefghijklmnopqrstuvwxyz",
+      crossTenantId: "tenant_b_1234567890abcdefghijklmnopqrstuvwxyz",
+      actorEmail: "admin@example.com",
+      databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
+      nested: {
+        auditLogId: "audit_1234567890abcdefghijklmnopqrstuvwxyz",
+        publicSummary: "tenant isolation evidence captured",
+      },
+    };
+    const redactedOnly = buildRedactedTenantIsolationArtifact(artifact);
+    const review = buildTenantIsolationArtifactReview(artifact);
+    const serialized = JSON.stringify(review.artifact);
+
+    expect(JSON.stringify(redactedOnly)).not.toContain("tenant_a_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(serialized).not.toContain("tenant_b_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(serialized).not.toContain("admin@example.com");
+    expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
+    expect(serialized).not.toContain("audit_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(review.redactions).toEqual([
+      "tenantId",
+      "crossTenantId",
+      "actorEmail",
+      "databaseUrl",
+      "nested.auditLogId",
+    ]);
+    expect(review.safeForTracker).toBe(true);
+    expect(review.requiredExternalEvidence).toBe(tenantIsolationRequiredExternalEvidence);
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming live tenant isolation proof", () => {
     expect(ciWorkflow).toContain("Run Phase 2 tenant isolation runtime contracts");
     expect(ciWorkflow).toContain("tenant-isolation-runtime-static.test.ts");
@@ -137,7 +288,27 @@ describe("tenant isolation runtime contract", () => {
     expect(unitManifest).toContain("unit-web-tenant-isolation-runtime-static");
     expect(unitManifest).toContain("TenantIsolationRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/tenantIsolationRuntime.ts");
-    expect(gapTracker).toContain("TenantIsolationRun Prisma model and app row contract");
-    expect(gapTracker).toContain("live Prisma generate/migrate/seed, seeded multi-tenant fixtures, repository helper adoption, tenant-owned model coverage, cross-tenant denial tests, missing-tenant write rejection, audit-row integration, fixture cleanup, database evidence, CI evidence, and secret-safe artifacts remain open");
+    expect(gapTracker).toContain("persistTenantIsolationRun upsert seam");
+    expect(gapTracker).toContain("GAP-022 is tenant-isolation-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("live Prisma generate/migrate/seed, seeded multi-tenant fixtures, provider-backed persistTenantIsolationRun execution, repository helper adoption, tenant-owned model coverage, cross-tenant denial tests, missing-tenant write rejection, audit-row integration, fixture cleanup, database evidence, CI evidence, and secret-safe artifacts remain open");
+    expect(gapTracker).toContain("proof inventory");
+    expect(gapTracker).toContain("buildTenantIsolationExecutionPlan");
+    expect(gapTracker).toContain("tenantIsolationLocalArtifacts");
+    expect(gapTracker).toContain("tenantIsolationExternalArtifacts");
+    expect(gapTracker).toContain("tenantIsolationExecutionPolicy");
+    expect(gapTracker).toContain("tenantIsolationRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildRedactedTenantIsolationArtifact");
+    expect(gapTracker).toContain("buildTenantIsolationArtifactReview");
+  });
+
+  it("pins current tenant isolation proof files for GAP-022", () => {
+    expect(tenantIsolationRuntimeProofFiles).toContain("packages/db/package.json");
+    expect(tenantIsolationRuntimeProofFiles).toContain("apps/web/lib/tenantIsolationRuntime.ts");
+    expect(tenantIsolationRuntimeProofFiles).toContain("apps/web/tests/tenant-isolation-runtime-static.test.ts");
+    for (const proofFile of tenantIsolationRuntimeProofFiles) {
+      expect(readRepoFile(proofFile).length).toBeGreaterThan(0);
+    }
   });
 });
+
+

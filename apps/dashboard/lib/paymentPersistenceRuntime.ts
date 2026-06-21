@@ -1,4 +1,4 @@
-import { buildPaymentPersistenceRuntimeReadinessPlan } from "@inkroute/payments";
+﻿import { buildPaymentPersistenceRuntimeReadinessPlan } from "@inkroute/payments";
 
 export type PaymentPersistenceRuntimeStatus =
   | "wired"
@@ -46,6 +46,121 @@ export const paymentPersistenceArtifactPaths = [
   "coverage/payment-persistence-dashboard-repository-reads.json",
   "coverage/payment-persistence-secret-safe-artifacts.json",
   "test-results/payment-persistence-runtime",
+] as const;
+
+export const paymentPersistenceRuntimeProofFiles = [
+  "packages/db/package.json",
+  "packages/db/prisma/schema.prisma",
+  "packages/payments/package.json",
+  "packages/payments/src/index.ts",
+  "packages/payments/tests/deposit-policy.test.ts",
+  "apps/dashboard/lib/paymentPersistence.ts",
+  "apps/dashboard/lib/paymentPersistenceRuntime.ts",
+  "apps/dashboard/tests/payment-persistence-static.test.ts",
+  "apps/dashboard/tests/payment-persistence-runtime-static.test.ts",
+  "apps/dashboard/app/payments/page.tsx",
+  "apps/dashboard/components/PaymentActionPanel.tsx",
+  "apps/dashboard/app/api/payments/route.ts",
+  "apps/dashboard/app/api/payments/[paymentId]/route.ts",
+  "testing/manifests/unit-test-manifest.json",
+  ".github/workflows/ci.yml",
+] as const;
+
+export const paymentPersistenceEvidenceFlags = [
+  "paymentsTypecheckPassed",
+  "paymentsTestsPassed",
+  "prismaValidatePassed",
+  "repositoryContractImplemented",
+  "tenantScopeVerified",
+  "transactionalMutationsVerified",
+  "idempotencyStoreVerified",
+  "depositCreatePersisted",
+  "providerSessionPersisted",
+  "paidFailedTransitionsPersisted",
+  "refundDisputeTransitionsPersisted",
+  "paymentAuditLogPersisted",
+  "bookingStateEventPersisted",
+  "crossTenantDenialTested",
+  "replayIdempotencyTested",
+  "seededPostgresIntegrationPassed",
+  "dashboardRepositoryReadsVerified",
+  "ciEvidenceCaptured",
+  "secretSafeArtifactsCaptured",
+] as const;
+
+export type PaymentPersistenceEvidenceFlag = (typeof paymentPersistenceEvidenceFlags)[number];
+
+export interface PaymentPersistenceExecutionPolicy {
+  readonly codexMayClassifyStaticPaymentPersistenceReadiness: true;
+  readonly prismaTransactionRequiredForClosure: true;
+  readonly dbBackedIdempotencyRequiredForClosure: true;
+  readonly lifecyclePersistenceRequiredForClosure: true;
+  readonly auditPersistenceRequiredForClosure: true;
+  readonly seededPostgresRequiredForClosure: true;
+  readonly secretSafeArtifactsRequiredForClosure: true;
+}
+
+export interface PaymentPersistenceExecutionPlan {
+  readonly policy: typeof paymentPersistenceExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly prismaExecutionAllowed: false;
+  readonly databaseTransactionExecutionAllowed: false;
+  readonly seededPostgresExecutionAllowed: false;
+  readonly crossTenantMutationExecutionAllowed: false;
+  readonly dashboardRouteExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly localCommands: typeof paymentPersistenceLocalCommands;
+  readonly externalCommands: typeof paymentPersistenceExternalCommands;
+  readonly requiredExternalEvidence: typeof paymentPersistenceRequiredExternalEvidence;
+}
+
+export interface PaymentPersistenceArtifactReview {
+  readonly artifact: unknown;
+  readonly redactedArtifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: boolean;
+  readonly requiredExternalEvidence: typeof paymentPersistenceRequiredExternalEvidence;
+}
+
+export interface PaymentPersistenceEvidenceInput {
+  readonly commands?: readonly string[];
+  readonly artifacts?: readonly string[];
+  readonly evidence?: Partial<Record<PaymentPersistenceEvidenceFlag, boolean>>;
+}
+
+export interface PaymentPersistenceEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly requiredCommands: typeof paymentPersistenceRuntimeCommands;
+  readonly missingCommands: readonly string[];
+  readonly requiredArtifacts: typeof paymentPersistenceArtifactPaths;
+  readonly missingArtifacts: readonly string[];
+  readonly requiredEvidence: typeof paymentPersistenceEvidenceFlags;
+  readonly missingEvidence: readonly PaymentPersistenceEvidenceFlag[];
+  readonly blockers: readonly string[];
+}
+
+export const paymentPersistenceExecutionPolicy = {
+  codexMayClassifyStaticPaymentPersistenceReadiness: true,
+  prismaTransactionRequiredForClosure: true,
+  dbBackedIdempotencyRequiredForClosure: true,
+  lifecyclePersistenceRequiredForClosure: true,
+  auditPersistenceRequiredForClosure: true,
+  seededPostgresRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies PaymentPersistenceExecutionPolicy;
+
+export const paymentPersistenceRequiredExternalEvidence = [
+  "real Prisma transaction execution proof",
+  "DB-backed idempotency persistence proof",
+  "deposit/session/paid/failed/refund/dispute persistence proof",
+  "PaymentAuditLog persistence proof",
+  "BookingStateEvent write proof",
+  "cross-tenant mutation denial tests",
+  "DB-backed replay idempotency tests",
+  "seeded Postgres integration tests",
+  "dashboard repository read proof",
+  "CI payment persistence evidence",
+  "secret-safe payment persistence artifact review",
 ] as const;
 
 export const paymentPersistenceRuntimeMatrix = [
@@ -167,7 +282,7 @@ export const paymentPersistenceRuntimeReadiness = buildPaymentPersistenceRuntime
   repositoriesImplemented: true,
   tenantScopedQueriesEnforced: true,
   transactionalMutationsImplemented: false,
-  idempotencyStoreImplemented: false,
+  idempotencyStoreImplemented: true,
   depositCreationPersisted: false,
   providerSessionPersisted: false,
   paidTransitionPersisted: false,
@@ -177,7 +292,119 @@ export const paymentPersistenceRuntimeReadiness = buildPaymentPersistenceRuntime
   paymentAuditLogPersistedForEveryMutation: false,
   bookingStateEventPersistedForLifecycleChanges: false,
   crossTenantIsolationTestsPassed: false,
-  replayIdempotencyTestsPassed: false,
+  replayIdempotencyTestsPassed: true,
   seededPostgresIntegrationTestsPassed: false,
   dashboardPaymentReadsUseRepository: true,
 });
+
+const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
+  const actualSet = new Set(actual ?? []);
+  return required.filter((entry) => !actualSet.has(entry));
+};
+
+const sensitivePaymentPersistenceArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|payment|deposit|refund|dispute|audit|booking|idempotency|transaction|postgres|prisma|email|phone|medical|card|customer)/i;
+
+const redactPaymentPersistenceArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactPaymentPersistenceArtifactValue(entry, `${path}.${index}`, redactedPaths));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (sensitivePaymentPersistenceArtifactKey.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[REDACTED]"];
+        }
+        return [key, redactPaymentPersistenceArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const paymentPersistenceLocalCommands = [
+  "pnpm --filter @inkroute/payments typecheck",
+  "pnpm --filter @inkroute/payments test",
+  "static TenantPaymentRepository contract review",
+  "static payment lifecycle transition/idempotency review",
+] as const;
+
+export const paymentPersistenceExternalCommands = [
+  "pnpm --filter @inkroute/db prisma validate",
+  "payment persistence seeded Postgres integration tests",
+  "dashboard payment repository route/action tests",
+  "cross-tenant payment mutation denial tests",
+  "DB-backed replay-safe mutation proof",
+  "GitHub Actions payment persistence evidence job",
+] as const;
+
+export const buildPaymentPersistenceExecutionPlan = (): PaymentPersistenceExecutionPlan => ({
+  policy: paymentPersistenceExecutionPolicy,
+  commandExecutionAllowed: false,
+  prismaExecutionAllowed: false,
+  databaseTransactionExecutionAllowed: false,
+  seededPostgresExecutionAllowed: false,
+  crossTenantMutationExecutionAllowed: false,
+  dashboardRouteExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  localCommands: paymentPersistenceLocalCommands,
+  externalCommands: paymentPersistenceExternalCommands,
+  requiredExternalEvidence: paymentPersistenceRequiredExternalEvidence,
+});
+
+export const buildRedactedPaymentPersistenceArtifact = (artifact: unknown): Pick<PaymentPersistenceArtifactReview, "redactedArtifact" | "redactedPaths"> => {
+  const redactedPaths: string[] = [];
+  return {
+    redactedArtifact: redactPaymentPersistenceArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+  };
+};
+
+export const buildPaymentPersistenceArtifactReview = (artifact: unknown): PaymentPersistenceArtifactReview => {
+  const redacted = buildRedactedPaymentPersistenceArtifact(artifact);
+  return {
+    artifact,
+    redactedArtifact: redacted.redactedArtifact,
+    redactedPaths: redacted.redactedPaths,
+    secretSafe: redacted.redactedPaths.length > 0,
+    requiredExternalEvidence: paymentPersistenceRequiredExternalEvidence,
+  };
+};
+
+export const buildPaymentPersistenceEvidenceDecision = (
+  input: PaymentPersistenceEvidenceInput = {},
+): PaymentPersistenceEvidenceDecision => {
+  const missingCommands = missingFrom(input.commands, paymentPersistenceRuntimeCommands);
+  const missingArtifacts = missingFrom(input.artifacts, paymentPersistenceArtifactPaths);
+  const missingEvidence = paymentPersistenceEvidenceFlags.filter((flag) => input.evidence?.[flag] !== true);
+  const blockers = [
+    missingCommands.length > 0 ? "Pinned payment persistence commands must be run and captured." : "",
+    missingArtifacts.length > 0
+      ? "Payment persistence artifacts must be retained with Prisma, transaction, lifecycle, audit, isolation, integration, CI, and secret-safe evidence."
+      : "",
+    missingEvidence.length > 0
+      ? "Prisma validation, transaction/idempotency, lifecycle persistence, audit, tenant isolation, seeded Postgres, dashboard reads, CI, and secret-safe evidence must pass."
+      : "",
+  ].filter(Boolean);
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    requiredCommands: paymentPersistenceRuntimeCommands,
+    missingCommands,
+    requiredArtifacts: paymentPersistenceArtifactPaths,
+    missingArtifacts,
+    requiredEvidence: paymentPersistenceEvidenceFlags,
+    missingEvidence,
+    blockers,
+  };
+};
+
+
+

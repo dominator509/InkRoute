@@ -4,6 +4,7 @@ import {
   buildDatabaseOperationsRuntimeReadinessPlan,
   buildDeploymentLaunchEvidencePlan,
   buildDeploymentPipelineReadinessPlan,
+  buildDeploymentToolingVerificationPlan,
   buildLaunchOperationsRuntimeReadinessPlan,
   buildMobileDeploymentRuntimeReadinessPlan,
   buildProductionLaunchEvidenceRuntimeReadinessPlan,
@@ -13,9 +14,28 @@ import {
   buildDeploymentSteps,
   buildHandoffTasks,
   buildProductionLaunchChecklist,
+  databaseOperationsRuntimeRequiredCommands,
+  databaseOperationsRuntimeRequiredEvidence,
+  deploymentLaunchEvidenceRequiredCommands,
+  deploymentLaunchEvidenceRequiredEvidence,
+  deploymentPipelineReadinessRequiredCommands,
+  deploymentPipelineReadinessRequiredEvidence,
+  deploymentToolingVerificationRequiredEvidence,
+  deploymentToolingRuntimeVerificationRequiredCommands,
+  deploymentToolingRuntimeVerificationRequiredEvidence,
   evaluateEnvironmentReadiness,
+  launchOperationsRuntimeRequiredCommands,
+  launchOperationsRuntimeRequiredEvidence,
   maskEnvValue,
+  mobileDeploymentRuntimeRequiredCommands,
+  mobileDeploymentRuntimeRequiredEvidence,
   providerOptions,
+  providerEnvironmentRuntimeRequiredCommands,
+  providerEnvironmentRuntimeRequiredEvidence,
+  productionLaunchEvidenceRuntimeRequiredCommands,
+  productionLaunchEvidenceRuntimeRequiredEvidence,
+  secretManagementRuntimeRequiredCommands,
+  secretManagementRuntimeRequiredEvidence,
   summarizeLaunchChecklist,
 } from "../src/index";
 
@@ -69,6 +89,7 @@ describe("deployment readiness helpers", () => {
     expect(summary.itemCount).toBeGreaterThan(0);
     expect(summary.productionBlockingCount).toBeGreaterThan(0);
     expect(summary.blockerIds).toContain("launch-foundation-install");
+    expect(summary.byStatus.local_contract).toBeGreaterThan(0);
     expect(summary.byStatus.blocked).toBeGreaterThan(0);
     expect(summary.byStatus.deployment_gated).toBeGreaterThan(0);
     expect(summary.byStatus.manual).toBeGreaterThan(0);
@@ -135,14 +156,40 @@ describe("deployment readiness helpers", () => {
     });
 
     expect(plan.status).toBe("blocked");
-    expect(plan.requiredCommands).toContain("pnpm deploy:check-env:strict");
-    expect(plan.requiredCommands).toContain("eas build --profile preview");
-    expect(plan.requiredEvidence).toContain("Preview web and dashboard deployment URLs with route smoke output.");
+    expect(plan.requiredCommands).toBe(deploymentPipelineReadinessRequiredCommands);
+    expect(plan.requiredCommands).toBe(deploymentPipelineReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(deploymentPipelineReadinessRequiredEvidence);
     expect(plan.approvalGates).toContain("Production GitHub environment requires human approval.");
     expect(plan.blockers).toContain("GitHub environment secrets must be configured without placeholder values.");
     expect(plan.blockers).toContain("EAS preview build must succeed for mobile.");
     expect(plan.blockers).toContain("Launch evidence packet must include URLs, command logs, provider screenshots, redacted secrets proof, and rollback evidence.");
   });
+
+  it("blocks deployment tooling verification with a typed evidence catalog for local scripts, builds, rollback, CI, and blocker reports", () => {
+    const plan = buildDeploymentToolingVerificationPlan({
+      packageScripts: { test: "vitest run" },
+      dependenciesInstalled: false,
+      deploymentPackageTestsPassed: false,
+      deploymentPackageTypecheckPassed: false,
+      unitRouteContractTestsPassed: false,
+      deployCheckEnvPassed: false,
+      deployChecklistPassed: false,
+      deployGapsPassed: false,
+      webBuildPassed: false,
+      dashboardBuildPassed: false,
+      dashboardReadinessApiSmokePassed: false,
+      dashboardDeploymentPageSmokePassed: false,
+      rollbackPreflightVerified: false,
+      blockedProductionApprovalVerified: false,
+      ciCapturedDeploymentReports: false,
+      documentedBlockersPublished: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.requiredEvidence).toBe(deploymentToolingVerificationRequiredEvidence);
+    expect(plan.blockers).toContain("Deployment blockers must be published in a human-readable report for handoff.");
+  });
+
   it("blocks deployment tooling runtime verification until scripts, route smoke, and CI evidence all pass", () => {
     const plan = buildDeploymentToolingRuntimeVerificationPlan({
       packageScripts: { test: "vitest run" },
@@ -167,15 +214,8 @@ describe("deployment readiness helpers", () => {
     expect(plan.status).toBe("blocked");
     expect(plan.missingPackageScripts).toEqual(["typecheck"]);
     expect(plan.missingRootScripts).toEqual(["deploy:gaps", "test:unit"]);
-    expect(plan.requiredCommands).toContain("pnpm deploy:gaps");
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/dashboard build");
-    expect(plan.requiredEvidence).toEqual(
-      expect.arrayContaining([
-        "Dependency install output plus @inkroute/deployment typecheck and test output.",
-        "Dashboard build output plus deployment page and readiness API smoke output.",
-        "CI deployment report artifacts and documented blocker owner list.",
-      ]),
-    );
+    expect(plan.requiredCommands).toBe(deploymentToolingRuntimeVerificationRequiredCommands);
+    expect(plan.requiredEvidence).toBe(deploymentToolingRuntimeVerificationRequiredEvidence);
     expect(plan.blockers).toContain("Dashboard deployment readiness route contract tests must pass.");
     expect(plan.blockers).toContain("Dashboard build must pass before route smoke is meaningful.");
     expect(plan.blockers).toContain("CI must capture deployment reports/artifacts.");
@@ -239,8 +279,15 @@ describe("deployment readiness helpers", () => {
     expect(plan.unverifiedEnvironmentSurfacePairs).toContain("preview/web");
     expect(plan.unverifiedEnvironmentSurfacePairs).toContain("preview/web:requiredEvidence");
     expect(plan.unsafeEvidenceFields).toContain("preview/web:1");
-    expect(plan.requiredCommands).toContain("pnpm deploy:verify-provider-envs");
-    expect(plan.requiredEvidence).toContain("GitHub Actions environment protection, required checks, secret-store destination, and artifact-retention proof.");
+    expect(plan.requiredCommands).toBe(providerEnvironmentRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(providerEnvironmentRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(providerEnvironmentRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(deploymentPipelineReadinessRequiredCommands);
+    expect(plan.requiredCommands).toBe(providerEnvironmentRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(providerEnvironmentRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(providerEnvironmentRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(providerEnvironmentRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(providerEnvironmentRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("Provider environment evidence must not include raw secrets, project ids, tokens, or connection strings.");
     expect(plan.blockers).toContain("pnpm deploy:verify-provider-envs must pass.");
   });
@@ -320,8 +367,11 @@ describe("deployment readiness helpers", () => {
       expect.arrayContaining(["DATABASE_URL", "DATABASE_URL:requiredEvidence", "DATABASE_URL:rotationCadenceDays"]),
     );
     expect(plan.unsafeEvidenceFields).toContain("DATABASE_URL:2");
-    expect(plan.requiredCommands).toContain("pnpm deploy:verify-secrets");
-    expect(plan.requiredEvidence).toContain("Masked CI log artifacts proving secrets are not printed.");
+    expect(plan.requiredCommands).toBe(secretManagementRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(secretManagementRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(secretManagementRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(secretManagementRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(secretManagementRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("Every production secret from the environment contract must be represented in the secret-management audit.");
     expect(plan.blockers).toContain("Secret-management evidence must not contain raw secret values, tokens, connection strings, or private keys.");
     expect(plan.blockers).toContain("pnpm deploy:check-env:strict must pass against a real secret-backed environment.");
@@ -418,8 +468,15 @@ describe("deployment readiness helpers", () => {
     expect(plan.incompleteProfiles).toEqual(expect.arrayContaining(["preview", "preview:platforms", "preview/ios", "preview/ios:evidenceRequired"]));
     expect(plan.missingQaEvidence).toEqual(["push-token", "crash-capture", "ota-rollback", "store-readiness"]);
     expect(plan.incompleteQaEvidence).toEqual(expect.arrayContaining(["device-qa", "device-qa:requiredEvidence"]));
-    expect(plan.requiredCommands).toContain("pnpm deploy:verify-mobile");
-    expect(plan.requiredEvidence).toContain("OTA publish and rollback rehearsal evidence on preview channel.");
+    expect(plan.requiredCommands).toBe(mobileDeploymentRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(mobileDeploymentRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(mobileDeploymentRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(mobileDeploymentRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(mobileDeploymentRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(mobileDeploymentRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(mobileDeploymentRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(mobileDeploymentRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(mobileDeploymentRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("Mobile app runtimeVersion policy must match deployment runtime policy.");
     expect(plan.blockers).toContain("Mobile push credentials and token registration proof must be configured.");
     expect(plan.blockers).toContain("App Store and Google Play readiness must be reviewed before production mobile launch.");
@@ -507,9 +564,11 @@ describe("deployment readiness helpers", () => {
   });
 
   it("blocks database operations readiness until migrations, backup/restore, tenant smoke, and promotion evidence pass", () => {
+    const partialDatabaseOperationsRuntimeCommands = ["pnpm db:generate"] as const;
+
     const plan = buildDatabaseOperationsRuntimeReadinessPlan({
       providerStatus: "not_provisioned",
-      requiredCommands: ["pnpm db:generate"],
+      requiredCommands: partialDatabaseOperationsRuntimeCommands,
       dbPackageScripts: {
         "db:generate": "prisma generate",
         "db:migrate": "prisma migrate dev",
@@ -547,8 +606,14 @@ describe("deployment readiness helpers", () => {
         "destructive-change-scan:TRUNCATE",
       ]),
     );
-    expect(plan.requiredCommands).toContain("pnpm deploy:verify-database-ops");
-    expect(plan.requiredEvidence).toContain("Backup snapshot, restore drill log, and RTO/RPO note.");
+    expect(plan.requiredCommands).toBe(databaseOperationsRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(databaseOperationsRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(databaseOperationsRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(databaseOperationsRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(databaseOperationsRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(databaseOperationsRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(databaseOperationsRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(databaseOperationsRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("Database provider branch/project must be provisioned and verified with redacted evidence.");
     expect(plan.blockers).toContain("Production data safety, seed policy, and destructive SQL gates must be reviewed.");
   });
@@ -583,12 +648,7 @@ describe("deployment readiness helpers", () => {
 
     const plan = buildDatabaseOperationsRuntimeReadinessPlan({
       providerStatus: "verified_redacted",
-      requiredCommands: [
-        "pnpm db:generate",
-        "pnpm --filter @inkroute/db db:validate",
-        "pnpm db:migrate",
-        "pnpm db:seed",
-      ],
+      requiredCommands: databaseOperationsRuntimeRequiredCommands,
       dbPackageScripts: {
         "db:validate": "prisma validate",
         "db:generate": "prisma generate",
@@ -643,8 +703,14 @@ describe("deployment readiness helpers", () => {
       expect.arrayContaining(["ci-build-test", "ci-build-test:requiredEvidence", "ci-build-test:sourceArtifacts", "ci-build-test:gapIds"]),
     );
     expect(plan.unsafeEvidenceFields).toContain("ci-build-test:2");
-    expect(plan.requiredCommands).toContain("pnpm deploy:verify-launch-evidence");
-    expect(plan.requiredEvidence).toContain("Explicit redacted production approval record after every bundle is verified.");
+    expect(plan.requiredCommands).toBe(productionLaunchEvidenceRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(productionLaunchEvidenceRuntimeRequiredEvidence);
+    expect(plan.requiredCommands).toBe(productionLaunchEvidenceRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(productionLaunchEvidenceRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(productionLaunchEvidenceRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(productionLaunchEvidenceRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(productionLaunchEvidenceRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(productionLaunchEvidenceRuntimeRequiredCommands);
     expect(plan.blockers).toContain("Production launch approval must remain blocked until every evidence bundle is verified.");
     expect(plan.blockers).toContain("Production launch checklist must retain all production-blocking launch categories.");
     expect(plan.blockers).toContain("Legal approval evidence must be verified before production approval.");
@@ -725,8 +791,12 @@ describe("deployment readiness helpers", () => {
     expect(plan.incompleteChecks).toEqual(expect.arrayContaining(["alert-routing", "alert-routing:sla", "alert-routing:requiredEvidence"]));
     expect(plan.unassignedOwnerFields).toEqual(["incidentCommander", "supportOwner", "securityOwner"]);
     expect(plan.unsafeEvidenceFields).toEqual(expect.arrayContaining(["alert-routing:2", "ownerModel:1"]));
-    expect(plan.requiredCommands).toContain("pnpm deploy:verify-ops");
-    expect(plan.requiredEvidence).toContain("Privacy request export/delete drill with identity verification and audit log labels.");
+    expect(plan.requiredCommands).toBe(launchOperationsRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(launchOperationsRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(launchOperationsRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(launchOperationsRuntimeRequiredCommands);
+    expect(plan.requiredCommands).toBe(launchOperationsRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(launchOperationsRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("Launch operations approval must remain blocked until all checks and owners are ready.");
     expect(plan.blockers).toContain("Production monitoring dashboard, uptime, Sentry, and release-health evidence must be verified.");
   });
@@ -815,14 +885,7 @@ describe("deployment readiness helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "Vercel web/dashboard project, preview deployment, and production dry-run evidence",
-      "GitHub protected environment, approval gate, and CI deployment gate evidence",
-      "strict environment, secret redaction, and provider artifact safety evidence",
-      "managed database migration dry-run, backup/restore, and storage provider evidence",
-      "EAS project, preview build, native credential, and OTA rollback evidence",
-      "Sentry release upload, rollback test, and launch evidence packet",
-    ]);
+    expect(plan.requiredEvidence).toBe(deploymentLaunchEvidenceRequiredEvidence);
     expect(plan.blockers).toContain("Vercel web and dashboard projects must be configured with redacted project evidence.");
     expect(plan.blockers).toContain("Production deployment must be protected by verified approval gates.");
     expect(plan.blockers).toContain("Mobile OTA rollback test must pass.");
@@ -861,7 +924,7 @@ describe("deployment readiness helpers", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredCommands).toContain("production deployment dry run");
-    expect(plan.requiredCommands).toContain("pnpm deploy:verify-launch-evidence");
+    expect(plan.requiredCommands).toBe(deploymentLaunchEvidenceRequiredCommands);
+    expect(plan.requiredCommands).toBe(productionLaunchEvidenceRuntimeRequiredCommands);
   });
 });

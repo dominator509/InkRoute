@@ -15,25 +15,44 @@ function toNumber(value: unknown): number | null {
   return null;
 }
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 export async function GET(request: NextRequest, context: TravelDetailRouteContext) {
   const actor = resolveDashboardActor(request);
   try {
     assertPermission(actor, "travel:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read travel schedules." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read travel schedules." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const { travelScheduleId } = await context.params;
   const params = new URL(request.url).searchParams;
   const tenantId = params.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a travel schedule for another tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a travel schedule for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
+            message: "Production dashboard travel reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
+            gapIds: ["GAP-007", "GAP-037", "GAP-046", "GAP-047"],
+          },
+          productionBoundary: { localDashboardReadFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     const travel = demoTravelStops.find((row) => row.id === travelScheduleId);
     if (!travel) {
-      return NextResponse.json({ ok: false, error: { code: "TRAVEL_NOT_FOUND", message: "Travel schedule was not found for this tenant." } }, { status: 404 });
+      return NextResponse.json({ ok: false, error: { code: "TRAVEL_NOT_FOUND", message: "Travel schedule was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
     }
     return NextResponse.json(
       {
@@ -45,7 +64,7 @@ export async function GET(request: NextRequest, context: TravelDetailRouteContex
         gapIds: ["GAP-007", "GAP-037", "GAP-046", "GAP-047"],
         boundary: "Local fallback returns a demo travel stop only; database mode is required for live travel reads.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   }
 
@@ -126,7 +145,7 @@ export async function GET(request: NextRequest, context: TravelDetailRouteContex
     });
 
     if (result.status === "not_found") {
-      return NextResponse.json({ ok: false, error: { code: "TRAVEL_NOT_FOUND", message: "Travel schedule was not found for this tenant." } }, { status: 404 });
+      return NextResponse.json({ ok: false, error: { code: "TRAVEL_NOT_FOUND", message: "Travel schedule was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
     }
 
     const view = buildTenantDashboardView({
@@ -197,7 +216,7 @@ export async function GET(request: NextRequest, context: TravelDetailRouteContex
         gapIds: ["GAP-007", "GAP-037", "GAP-046", "GAP-047"],
         boundary: "Dashboard travel detail reads are tenant-scoped, internal-note redacted, no-store, and audited.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
@@ -210,10 +229,10 @@ export async function GET(request: NextRequest, context: TravelDetailRouteContex
           error: { code: "DATABASE_UNAVAILABLE", message: "Travel detail reads require the dashboard database connection." },
           gapIds: ["GAP-007", "GAP-037", "GAP-046", "GAP-047"],
         },
-        { status: 503, headers: { "Cache-Control": "no-store" } },
+        { status: 503, headers: noStoreHeaders },
       );
     }
 
-    return NextResponse.json({ ok: false, error: { code: "TRAVEL_DETAIL_READ_FAILED", message: "Travel schedule could not be loaded." } }, { status: 500 });
+    return NextResponse.json({ ok: false, error: { code: "TRAVEL_DETAIL_READ_FAILED", message: "Travel schedule could not be loaded." } }, { status: 500, headers: noStoreHeaders });
   }
 }

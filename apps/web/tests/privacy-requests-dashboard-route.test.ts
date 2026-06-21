@@ -64,6 +64,26 @@ describe("dashboard privacy request route", () => {
     expect(body.data.gapIds).toContain("GAP-098");
   });
 
+  it("fail-closes production dashboard privacy requests before in-memory demo persistence", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      const response = await POST(dashboardPrivacyRequest(validDashboardPrivacyBody, "203.0.113.184", "dashboard-user-production"));
+      const body = await response.json();
+
+      expect(response.status).toBe(503);
+      expect(body.ok).toBe(false);
+      expect(body.error.code).toBe("DASHBOARD_PRIVACY_REQUEST_PERSISTENCE_NOT_CONFIGURED");
+      expect(body.data.redactedSubmission.email).not.toBe("client@example.test");
+      expect(body.data.productionBoundary.inMemoryPrivacyRequestPersistenceDisabled).toBe(true);
+      expect(body.data.productionBoundary.requiresDurablePrivacyRequestStore).toBe(true);
+      expect(body.data.productionBoundary.requiresAuditLogPersistence).toBe(true);
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
   it("denies dashboard privacy mutations without matching tenant scope", async () => {
     const response = await POST(dashboardPrivacyRequest(validDashboardPrivacyBody, "203.0.113.182", "dashboard-user-cross", "other-tenant"));
     const body = await response.json();

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const routeSource = readFileSync(join(process.cwd(), "apps/dashboard/app/api/settings/route.ts"), "utf8");
 const settingsPageSource = readFileSync(join(process.cwd(), "apps/dashboard/app/settings/page.tsx"), "utf8");
+const settingsActionPanelSource = readFileSync(join(process.cwd(), "apps/dashboard/components/SettingsActionPanel.tsx"), "utf8");
 
 describe("dashboard settings read route contract", () => {
   it("guards settings reads with tenant RBAC, tenant scope, and no-store cache policy", () => {
@@ -12,6 +13,10 @@ describe("dashboard settings read route contract", () => {
     expect(routeSource).toContain("tenantId !== actor.tenantId");
     expect(routeSource).toContain('code: "TENANT_MISMATCH"');
     expect(routeSource).toContain('"Cache-Control": "no-store"');
+    expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(routeSource).not.toContain('}, { status: 403 });');
+    expect(routeSource).not.toContain('}, { status: 404 });');
+    expect(routeSource).not.toContain('}, { status: 500 });');
   });
 
   it("loads tenant settings without secret-bearing fields and writes audit logs", () => {
@@ -39,12 +44,35 @@ describe("dashboard settings read route contract", () => {
     expect(routeSource).toContain("dashboardShellContext.tenant");
     expect(routeSource).toContain("dashboardFeatureFlags");
     expect(routeSource).toContain('persistence: "local-fallback"');
+    expect(routeSource).toContain("PROVIDER_DASHBOARD_READS_NOT_CONFIGURED");
+    expect(routeSource).toContain("localDashboardReadFallbackDisabled");
     expect(routeSource).toContain('code: "DATABASE_UNAVAILABLE"');
   });
 
-  it("documents that settings reads are wired while writes/provider secrets remain gated", () => {
+  it("documents that settings reads and safe writes are wired while provider secrets remain gated", () => {
     expect(settingsPageSource).toContain("Tenant-scoped redacted settings read API now exists");
-    expect(settingsPageSource).toContain("Settings reads now use a credential-safe tenant API");
-    expect(settingsPageSource).toContain("provider secret handling");
+    expect(settingsPageSource).toContain("SettingsActionPanel");
+    expect(settingsPageSource).not.toContain("Settings reads now use a credential-safe tenant API");
+    expect(settingsActionPanelSource).toContain('fetch("/api/settings"');
+    expect(settingsActionPanelSource).toContain('method: "PATCH"');
+    expect(settingsActionPanelSource).toContain('"idempotency-key"');
+    expect(settingsActionPanelSource).toContain("Save settings draft");
+    expect(settingsActionPanelSource).toContain("safe profile metadata contract");
+    expect(settingsActionPanelSource).toContain("Provider secrets, member invitations, custom roles, and legal policy copy stay evidence-gated");
+    expect(settingsActionPanelSource).not.toContain("This action only updates safe");
+  });
+
+  it("guards safe settings writes with RBAC, tenant scope, transactions, audit logs, and production fail-close", () => {
+    expect(routeSource).toContain("export async function PATCH");
+    expect(routeSource).toContain('assertPermission(actor, "tenant:write")');
+    expect(routeSource).toContain('assertPermission(actor, "settings:write")');
+    expect(routeSource).toContain("tenantId !== actor.tenantId");
+    expect(routeSource).toContain("prisma.$transaction");
+    expect(routeSource).toContain("tx.tenant.update");
+    expect(routeSource).toContain('action: "settings:update"');
+    expect(routeSource).toContain('dashboardMutationAction: "update_settings"');
+    expect(routeSource).toContain("PROVIDER_SETTINGS_PERSISTENCE_NOT_CONFIGURED");
+    expect(routeSource).toContain("localSettingsWriteFallbackDisabled");
+    expect(routeSource).toContain("rawSecretsStored: false");
   });
 });

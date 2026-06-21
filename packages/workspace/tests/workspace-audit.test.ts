@@ -8,14 +8,23 @@ import {
   auditWorkspaceDependencies,
   buildDependencyInstallReadinessPlan,
   buildRuntimeEvidenceReadinessPlan,
+  buildRuntimeEvidenceRequiredCommands,
   buildWorkspaceRequiredChecksReadinessPlan,
   buildWorkspaceRuntimeToolchainReadinessPlan,
   classifyWorkspacePath,
+  dependencyInstallRequiredCommands,
+  dependencyInstallRequiredEvidence,
   extractImportSpecifiers,
   extractWorkspaceImportSpecifiers,
   getExternalPackageNameFromSpecifier,
   getWorkspacePackageNameFromSpecifier,
+  runtimeEvidenceBaseRequiredCommands,
+  runtimeEvidenceReadinessRequiredEvidence,
   summarizeRuntimeReadiness,
+  workspaceRequiredChecksRequiredCommands,
+  workspaceRequiredChecksRequiredEvidence,
+  workspaceRuntimeToolchainRequiredCommands,
+  workspaceRuntimeToolchainRequiredEvidence,
 } from "../src/index";
 
 const baseProject = {
@@ -186,7 +195,8 @@ describe("workspace audit helpers", () => {
     expect(audit.status).toBe("fail");
     expect(audit.findings.some((finding) => finding.message === "Duplicate package name in workspace.")).toBe(true);
     expect(audit.findings.some((finding) => finding.message === "Missing test script.")).toBe(true);
-    expect(audit.findings.some((finding) => finding.message === "Lint script is an informational placeholder.")).toBe(true);
+    expect(audit.findings.some((finding) => finding.message === "Lint script is an informational contract until a dedicated linter is configured.")).toBe(true);
+    expect(audit.findings.some((finding) => finding.message === "Lint script is an informational placeholder.")).toBe(false);
   });
 
   it("summarizes blocked and needs-attention runtime readiness", () => {
@@ -215,6 +225,8 @@ describe("workspace audit helpers", () => {
     expect(withLockfile.level).toBe("needs-attention");
     expect(withLockfile.firstExternalCommands).toContain("pnpm workspace:all");
     expect(withLockfile.checks.some((check) => check.id === "production-blockers" && check.status === "fail")).toBe(true);
+    expect(withLockfile.checks.some((check) => check.id === "ci-workflow" && check.title === "CI workflow contract")).toBe(true);
+    expect(withLockfile.checks.some((check) => check.title === "CI workflow scaffold")).toBe(false);
   });
 
   it("blocks dependency install readiness until lockfile, install, tooling, CI, and blocker visibility are proven", () => {
@@ -236,8 +248,8 @@ describe("workspace audit helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingSourceFiles).toEqual(["pnpm-lock.yaml"]);
-    expect(plan.requiredCommands).toContain("pnpm install --frozen-lockfile");
-    expect(plan.requiredEvidence).toContain("typecheck, lint, unit test, and workspace audit output after install.");
+    expect(plan.requiredCommands).toBe(dependencyInstallRequiredCommands);
+    expect(plan.requiredEvidence).toBe(dependencyInstallRequiredEvidence);
     expect(plan.blockers).toContain("Dependency source files must include package.json, pnpm-workspace.yaml, and pnpm-lock.yaml.");
     expect(plan.blockers).toContain("pnpm install must pass in the working environment.");
     expect(plan.blockers).toContain("CI evidence for install, typecheck, lint, tests, and workspace audits must be captured.");
@@ -278,7 +290,7 @@ describe("workspace audit helpers", () => {
 
     expect(audit.status).toBe("fail");
     expect(audit.requirementsChecked).toBe(3);
-    expect(audit.missingRequiredEvidence).toContain("typecheck");
+    expect(audit.missingRequiredEvidence).toEqual(expect.arrayContaining(["typecheck"]));
     expect(audit.findings.some((finding) => finding.id === "storybook" && finding.status === "warn")).toBe(true);
   });
 
@@ -305,8 +317,8 @@ describe("workspace audit helpers", () => {
     expect(plan.status).toBe("blocked");
     expect(plan.missingEvidenceIds).toEqual(["storybook"]);
     expect(plan.nonPassingEvidenceIds).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toContain("pnpm workspace:runtime-evidence");
-    expect(plan.requiredEvidence).toContain("Production blockers remain visible in readiness evidence until resolved.");
+    expect(plan.requiredCommands).toEqual(buildRuntimeEvidenceRequiredCommands(requirements));
+    expect(plan.requiredEvidence).toBe(runtimeEvidenceReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Runtime evidence for pnpm typecheck must be passed with a redacted evidence label.");
     expect(plan.blockers).toContain("Runtime evidence audit must pass before runtime readiness can be claimed.");
     expect(plan.blockers).toContain("CI evidence must be captured for the runtime evidence audit.");
@@ -390,8 +402,8 @@ describe("workspace audit helpers", () => {
       "Verify Phase 18 workspace runtime readiness",
       "Verify PR GAP tracker diff evidence",
     ]);
-    expect(plan.requiredCommands).toContain("pnpm workspace:required-checks");
-    expect(plan.requiredEvidence).toContain("A failing workspace-audit PR cannot merge.");
+    expect(plan.requiredCommands).toBe(workspaceRequiredChecksRequiredCommands);
+    expect(plan.requiredEvidence).toBe(workspaceRequiredChecksRequiredEvidence);
     expect(plan.blockers).toContain("pnpm workspace:all must pass with required-check enforcement included.");
     expect(plan.blockers).toContain("GitHub branch protection must require every workspace and PR gap-diff check before merge.");
     expect(plan.blockers).toContain("The PR GAP tracker diff evidence check must be proven merge-blocking.");
@@ -477,8 +489,8 @@ describe("workspace audit helpers", () => {
       "docs/workspace/manifests/package-script-audit.json",
       "docs/workspace/manifests/runtime-evidence-audit.json",
     ]);
-    expect(plan.requiredCommands).toContain("pnpm workspace:all");
-    expect(plan.requiredEvidence).toContain("Runtime readiness report showing production blockers remain visible.");
+    expect(plan.requiredCommands).toBe(workspaceRuntimeToolchainRequiredCommands);
+    expect(plan.requiredEvidence).toBe(workspaceRuntimeToolchainRequiredEvidence);
     expect(plan.blockers).toContain("@inkroute/workspace typecheck must pass.");
     expect(plan.blockers).toContain("Dependency install evidence must be captured before runtime readiness is more than static pre-install signal.");
     expect(plan.blockers).toContain("Runtime readiness reports must keep production blockers visible.");

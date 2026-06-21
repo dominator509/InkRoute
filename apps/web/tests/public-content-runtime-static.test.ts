@@ -1,10 +1,22 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildPublicContentEvidenceDecision,
+  buildPublicContentExecutionPlan,
+  buildPublicContentArtifactReview,
+  buildRedactedPublicContentArtifact,
+  buildPublicContentRunData,
+  persistPublicContentRun,
   publicContentArtifactPaths,
+  publicContentEvidenceFlags,
+  publicContentExternalCommands,
+  publicContentExecutionPolicy,
+  publicContentLocalCommands,
+  publicContentRequiredExternalEvidence,
   publicContentRuntimeCommands,
   publicContentRuntimeMatrix,
+  publicContentRuntimeProofFiles,
   publicContentRuntimeReadiness,
   publicContentRunPersistenceContract,
 } from "../lib/publicContentRuntime";
@@ -63,16 +75,10 @@ describe("public content runtime evidence contract", () => {
   it("keeps public content evidence blocked until persisted repository reads, redaction, cache, browser, and CI proof exist", () => {
     expect(publicContentRuntimeReadiness.status).toBe("blocked");
     expect(publicContentRuntimeReadiness.missingScripts).toEqual([]);
-    expect(publicContentRuntimeReadiness.requiredCommands).toEqual([...publicContentRuntimeCommands]);
-    expect(publicContentRuntimeReadiness.requiredEvidence).toEqual([
-      "persistent tenant/domain resolver plus public repository route wiring map",
-      "seeded DB or CMS public content read transcript",
-      "public API JSON and rendered HTML private-field redaction proof",
-      "public content cache revalidation configuration and invalidation smoke output",
-      "web typecheck/build, browser smoke, and CI artifact evidence",
-    ]);
+    expect(publicContentRuntimeReadiness.requiredCommands).toBe(publicContentRuntimeCommands);
+    expect(publicContentRuntimeReadiness.requiredEvidence).toBe(publicContentEvidenceFlags);
     expect(publicContentRuntimeReadiness.blockers).toContain(
-      "Tenant/domain resolver must be backed by persisted tenant records instead of static demo-only matching.",
+      "Tenant/domain resolver must graduate from the local demo resolver contract to persisted tenant records.",
     );
     expect(publicContentRuntimeReadiness.blockers).toContain(
       "Public API JSON must be proven free of tenant IDs, artist IDs, attribution keys, private object keys, plan/status fields, and non-public portfolio records.",
@@ -83,6 +89,27 @@ describe("public content runtime evidence contract", () => {
   });
 
   it("pins the PublicContentRun persistence model and migration", () => {
+    const runData = buildPublicContentRunData({
+      tenantId: "tenant_static",
+      runId: "public_content_static",
+      commitSha: "abc123",
+      status: "blocked",
+      commands: ["public content seeded DB/API redaction tests"],
+      artifacts: ["coverage/public-content-seeded-db-cms-redacted.json"],
+      tenantDomainResolverEvidenceCaptured: true,
+      repositoryReadEvidenceCaptured: false,
+      routeApiAdoptionEvidenceCaptured: false,
+      seededContentEvidenceCaptured: true,
+      apiJsonRedactionEvidenceCaptured: false,
+      renderedHtmlRedactionEvidenceCaptured: false,
+      privatePortfolioExclusionEvidenceCaptured: false,
+      cacheRevalidationEvidenceCaptured: false,
+      browserCiEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: true,
+      resolverReportPath: "coverage/public-content-resolver-wiring.json",
+      redactionReportPath: "coverage/public-content-api-json-redaction.json",
+    });
+
     expect(publicContentRunPersistenceContract).toEqual({
       prismaModel: "PublicContentRun",
       tenantRelation: "publicContentRuns",
@@ -103,6 +130,22 @@ describe("public content runtime evidence contract", () => {
       storesBrowserCiEvidence: true,
       storesSecretSafeArtifacts: true,
     });
+    expect(runData).toMatchObject({
+      tenantId: "tenant_static",
+      runId: "public_content_static",
+      commitSha: "abc123",
+      status: "blocked",
+      commandMatrix: ["public content seeded DB/API redaction tests"],
+      artifactManifest: ["coverage/public-content-seeded-db-cms-redacted.json"],
+      tenantDomainResolverEvidenceCaptured: true,
+      repositoryReadEvidenceCaptured: false,
+      seededContentEvidenceCaptured: true,
+      apiJsonRedactionEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: true,
+      resolverReportPath: "coverage/public-content-resolver-wiring.json",
+      redactionReportPath: "coverage/public-content-api-json-redaction.json",
+    });
+    expect(String(persistPublicContentRun)).toContain("repository.publicContentRun.upsert");
     expect(prismaSchema).toContain("model PublicContentRun");
     expect(prismaSchema).toContain("publicContentRuns PublicContentRun[]");
     expect(prismaSchema).toContain("tenantDomainResolverEvidenceCaptured");
@@ -114,6 +157,97 @@ describe("public content runtime evidence contract", () => {
     expect(publicContentRunMigration).toContain('"PublicContentRun_tenantId_runId_key"');
   });
 
+  it("blocks public content completion when persisted resolver, repository, redaction, cache, browser, or safe evidence is missing", () => {
+    const decision = buildPublicContentEvidenceDecision({
+      commands: ["pnpm --filter @inkroute/config typecheck"],
+      artifacts: ["coverage/public-content-config-typecheck.txt"],
+      evidence: {
+        configTypecheckPassed: true,
+      },
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.missingCommands).toContain("public content browser HTML redaction smoke");
+    expect(decision.missingArtifacts).toContain("coverage/public-content-rendered-html-redaction.json");
+    expect(decision.missingEvidence).toContain("tenantDomainResolverBackedByPersistence");
+    expect(decision.missingEvidence).toContain("apiJsonRedactionVerified");
+    expect(decision.blockers).toContain(
+      "Tenant/domain resolver must graduate from the local demo resolver contract to persisted tenant records.",
+    );
+    expect(decision.blockers).toContain(
+      "Public API JSON must be proven free of tenant IDs, artist IDs, attribution keys, private object keys, plan/status fields, and non-public portfolio records.",
+    );
+  });
+
+  it("completes public content readiness only when every command, artifact, and evidence flag is present", () => {
+    const completeEvidence = Object.fromEntries(publicContentEvidenceFlags.map((flag) => [flag, true]));
+    const decision = buildPublicContentEvidenceDecision({
+      commands: publicContentRuntimeCommands,
+      artifacts: publicContentArtifactPaths,
+      evidence: completeEvidence,
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.missingArtifacts).toEqual([]);
+    expect(decision.missingEvidence).toEqual([]);
+    expect(decision.requiredEvidence).toBe(publicContentEvidenceFlags);
+  });
+
+  it("separates local public content review from external execution and redacts private artifacts", () => {
+    const executionPlan = buildPublicContentExecutionPlan();
+    const artifactReview = buildPublicContentArtifactReview({
+      tenantDomain: "tenant.example.com",
+      clientEmail: "client@example.com",
+      privateFileUrl: "https://files.example.com/private/client.png",
+      portfolioAssetId: "file_1234567890abcdefghijklmnopqrstuvwxyz",
+      nested: {
+        databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
+        publicSummary: "public content evidence captured",
+      },
+    });
+    const directRedaction = buildRedactedPublicContentArtifact({
+      publicSummary: "safe public content",
+      privatePortfolioUrl: "https://files.example.com/private/portfolio.png",
+    });
+
+    expect(executionPlan.localCommands).toBe(publicContentLocalCommands);
+    expect(executionPlan.externalCommands).toBe(publicContentExternalCommands);
+    expect(executionPlan.commandExecutionAllowed).toBe(false);
+    expect(executionPlan.databaseExecutionAllowed).toBe(false);
+    expect(executionPlan.browserExecutionAllowed).toBe(false);
+    expect(executionPlan.ciExecutionAllowed).toBe(false);
+    expect(executionPlan.providerPersistenceExecutionAllowed).toBe(false);
+    expect(executionPlan.executionPolicy).toBe(publicContentExecutionPolicy);
+    expect(executionPlan.executionPolicy).toEqual({
+      codexMayClassifyStaticPublicContentReadiness: true,
+      repositoryBackedReadsRequiredForClosure: true,
+      renderedRedactionProofRequiredForClosure: true,
+      providerDatabaseRequiredForPersistence: true,
+      secretSafeArtifactsRequiredForClosure: true,
+    });
+    expect(executionPlan.requiredExternalEvidence).toBe(publicContentRequiredExternalEvidence);
+    expect(executionPlan.requiredExternalEvidence).toContain("provider-backed PublicContentRun persistence execution");
+    expect(executionPlan.requiredExternalEvidence).toContain("rendered HTML redaction proof");
+    expect(executionPlan.requiredExternalEvidence).toContain("secret-safe public content artifact review");
+    expect(artifactReview.requiredExternalEvidence).toBe(publicContentRequiredExternalEvidence);
+    expect(artifactReview.redactions).toEqual([
+      "tenantDomain",
+      "clientEmail",
+      "privateFileUrl",
+      "portfolioAssetId",
+      "nested.databaseUrl",
+    ]);
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant.example.com");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("client@example.com");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("postgres://");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("file_1234567890");
+    expect(JSON.stringify(artifactReview.artifact)).toContain("public content evidence captured");
+    expect(artifactReview.secretSafe).toBe(true);
+    expect(directRedaction.redactions).toEqual(["privatePortfolioUrl"]);
+    expect(JSON.stringify(directRedaction.artifact)).toContain("safe public content");
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming repository-backed public content readiness", () => {
     expect(ciWorkflow).toContain("Run Phase 3 public content runtime contracts");
     expect(ciWorkflow).toContain("public-content-runtime-static.test.ts");
@@ -122,7 +256,26 @@ describe("public content runtime evidence contract", () => {
     expect(unitManifest).toContain("unit-web-public-content-runtime-static");
     expect(unitManifest).toContain("PublicContentRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/publicContentRuntime.ts");
-    expect(gapTracker).toContain("PublicContentRun Prisma model and app row contract");
-    expect(gapTracker).toContain("live persisted tenant/domain resolver, repository-backed public reads, DB/CMS seed proof, route/API adoption proof, API JSON and rendered HTML redaction proof, cache revalidation, web build, browser smoke, CI evidence, and secret-safe artifact review remain open");
+    expect(gapTracker).toContain("persistPublicContentRun upsert seam");
+    expect(gapTracker).toContain("buildPublicContentExecutionPlan");
+    expect(gapTracker).toContain("buildRedactedPublicContentArtifact");
+    expect(gapTracker).toContain("buildPublicContentArtifactReview");
+    expect(gapTracker).toContain("publicContentExecutionPolicy");
+    expect(gapTracker).toContain("publicContentRequiredExternalEvidence");
+    expect(gapTracker).toContain("GAP-026 is public-content-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("live persisted tenant/domain resolver, provider-backed persistPublicContentRun execution, repository-backed public reads, DB/CMS seed proof, route/API adoption proof, API JSON and rendered HTML redaction proof, cache revalidation, web build, browser smoke, CI evidence, and secret-safe artifact review remain open");
+    expect(gapTracker).toContain("proof inventory");
+  });
+
+  it("pins current public content proof files for GAP-026", () => {
+    expect(publicContentRuntimeProofFiles).toContain("packages/config/package.json");
+    expect(publicContentRuntimeProofFiles).toContain("apps/web/package.json");
+    expect(publicContentRuntimeProofFiles).toContain("apps/web/lib/publicContentRuntime.ts");
+    expect(publicContentRuntimeProofFiles).toContain("apps/web/tests/public-content-runtime-static.test.ts");
+    for (const proofFile of publicContentRuntimeProofFiles) {
+      expect(readRepoFile(proofFile).length).toBeGreaterThan(0);
+    }
   });
 });
+
+

@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createReleaseCandidate, createRollbackPlan, demoReleaseCandidate, buildReleaseHealthChecks } from "@inkroute/releases";
 import { releaseCreateInputSchema } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
@@ -22,6 +22,7 @@ type PersistedReleaseSummary = {
 type ReleaseInputChannel = "development" | "preview" | "staging" | "production" | "mobile-preview" | "mobile-production";
 type PersistedReleaseChannel = "development" | "preview" | "production" | "mobile_preview" | "mobile_production";
 const STAGING_PERSISTENCE_CHANNEL: PersistedReleaseChannel = "preview";
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
 type ReleaseRecordSummary = {
   id: string;
@@ -102,17 +103,34 @@ export async function GET(request: NextRequest) {
   try {
     membershipLookup = await assertPermissionWithTenantMembership(actor, "release:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read release records." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read release records." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const params = new URL(request.url).searchParams;
   const tenantId = params.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query release records for another tenant." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query release records for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   if (actor.source === "local-fallback") {
-    return NextResponse.json(buildReleaseFallback(actor), { headers: { "Cache-Control": "no-store" } });
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_RELEASE_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production release reads require DB-backed actor resolution and persisted tenant-scoped release records; local fallback release payloads are disabled.",
+            gapIds: ["GAP-015", "GAP-088", "GAP-122", "GAP-125"],
+          },
+          productionBoundary: { localReleaseFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
+    return NextResponse.json(buildReleaseFallback(actor), { headers: noStoreHeaders });
   }
 
   try {
@@ -168,13 +186,29 @@ export async function GET(request: NextRequest) {
       auditId: result.audit.id,
       boundary: "Release records are now tenant-scoped and persisted when database is reachable; deployment automation remains external in this pass.",
       gapIds: ["GAP-015", "GAP-122", "GAP-125"],
-    }, { headers: { "Cache-Control": "no-store" } });
+    }, { headers: noStoreHeaders });
   } catch (error) {
     if (!isDatabaseUnavailable(error)) {
       throw error;
     }
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_RELEASE_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production release reads require the dashboard database connection; demo fallback release payloads are disabled.",
+            gapIds: ["GAP-015", "GAP-088", "GAP-122", "GAP-125"],
+          },
+          productionBoundary: { localReleaseFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
 
-    return NextResponse.json(buildReleaseFallback(actor), { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(buildReleaseFallback(actor), { headers: noStoreHeaders });
   }
 }
 
@@ -184,21 +218,21 @@ export async function POST(request: NextRequest) {
   try {
     membershipLookup = await assertPermissionWithTenantMembership(actor, "release:write");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to create release records." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to create release records." } }, { status: 403, headers: noStoreHeaders });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Release request body must be valid JSON." } }, { status: 400 });
+    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Release request body must be valid JSON." } }, { status: 400, headers: noStoreHeaders });
   }
 
   const parsed = releaseCreateInputSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: { code: "VALIDATION_FAILED", message: "Release payload failed validation.", issues: parsed.error.flatten() } },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -208,7 +242,7 @@ export async function POST(request: NextRequest) {
   const requestedApprovalState = typeof rawInput.approvalState === "string" ? rawInput.approvalState : request.headers.get("x-release-approval-state");
   const tenantId = input.tenantId ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot write release records for a different tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot write release records for a different tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const releaseCandidate = createReleaseCandidate({
@@ -243,6 +277,23 @@ export async function POST(request: NextRequest) {
   const membershipMetadata = buildTenantMembershipLookupMetadata({ ...membershipLookup, actorSource: membershipLookup.source });
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_RELEASE_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production release writes require DB-backed actor resolution and persisted tenant-scoped release/audit records; local fallback release drafts are disabled.",
+            gapIds: ["GAP-015", "GAP-088", "GAP-122", "GAP-125"],
+          },
+          productionBoundary: { localReleaseFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     return NextResponse.json(
       {
         ok: true,
@@ -256,7 +307,7 @@ export async function POST(request: NextRequest) {
         artifactPaths: releasePersistenceRbacArtifactPaths,
         boundary: "Local fallback mode.",
       },
-      { status: 201 },
+      { status: 201, headers: noStoreHeaders },
     );
   }
 
@@ -327,26 +378,43 @@ export async function POST(request: NextRequest) {
       healthChecks: buildReleaseHealthChecks(releaseCandidate),
       ...(warning ? { warning } : {}),
       boundary: "Release create path persists candidate and audit metadata under tenant and actor context.",
-    }, { status: 201 });
+    }, { status: 201, headers: noStoreHeaders });
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json(
+          {
+            ok: false,
+            source: actor.source,
+            tenantId,
+            error: {
+              code: "PROVIDER_RELEASE_PERSISTENCE_NOT_CONFIGURED",
+              message: "Production release writes require the dashboard database connection; API-boundary-only release drafts are disabled.",
+              gapIds: ["GAP-015", "GAP-088", "GAP-122", "GAP-125"],
+            },
+            productionBoundary: { localReleaseFallbackDisabled: true },
+          },
+          { status: 503, headers: noStoreHeaders },
+        );
+      }
+
       return NextResponse.json(
         { ok: true, source: actor.source, tenantId, persistence: "local-fallback", release: releaseCandidate, warning: "Database unavailable; draft persisted only in API boundary." },
-        { status: 201 },
+        { status: 201, headers: noStoreHeaders },
       );
     }
 
     if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "RELEASE_CONCURRENCY_CONFLICT") {
       return NextResponse.json(
         { ok: false, error: { code: "RELEASE_CONCURRENCY_CONFLICT", message: "Release candidate changed before approval/orchestration." }, concurrency: (error as { concurrency?: unknown }).concurrency },
-        { status: 409 },
+        { status: 409, headers: noStoreHeaders },
       );
     }
 
     if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "P2002") {
       return NextResponse.json(
         { ok: false, error: { code: "RELEASE_UNIQUENESS_CONFLICT", message: "A release with that version already exists for this tenant." } },
-        { status: 409 },
+        { status: 409, headers: noStoreHeaders },
       );
     }
 

@@ -65,6 +65,8 @@ web-build/
 ## Editors / local config
 .vscode/
 .idea/
+.obsidian/
+.serena/cache/
 .history/
 .vscode-test/
 *.swp

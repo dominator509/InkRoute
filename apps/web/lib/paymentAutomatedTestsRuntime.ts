@@ -1,4 +1,4 @@
-import { buildPaymentAutomatedTestReadinessPlan } from "@inkroute/payments";
+﻿import { buildPaymentAutomatedTestReadinessPlan } from "@inkroute/payments";
 
 export type PaymentAutomationRuntimeStatus =
   | "wired"
@@ -27,6 +27,21 @@ export const paymentAutomationRuntimeCommands = [
   "Playwright booking-to-paid payment E2E flow",
 ] as const;
 
+export const paymentAutomationLocalCommands = [
+  "pnpm --filter @inkroute/payments typecheck",
+  "pnpm --filter @inkroute/payments test",
+  "pnpm vitest run apps/web/tests/payment-routes.test.ts",
+  "static payment lifecycle automation contract review",
+] as const;
+
+export const paymentAutomationExternalCommands = [
+  "payment DB reconciliation integration tests",
+  "Stripe CLI payment lifecycle tests",
+  "Playwright booking-to-paid payment E2E flow",
+  "refund/no-show/dispute/receipt/export E2E artifacts",
+  "GitHub Actions payment automation evidence job",
+] as const;
+
 export const paymentAutomationArtifactPaths = [
   "coverage/payment-automation-runtime.json",
   "coverage/payment-automation-payments-typecheck.txt",
@@ -45,6 +60,218 @@ export const paymentAutomationArtifactPaths = [
   "coverage/payment-automation-secret-safe-artifacts.json",
   "test-results/payment-automation-runtime",
 ] as const;
+
+export const paymentAutomationRuntimeProofFiles = [
+  "packages/payments/package.json",
+  "pnpm-lock.yaml",
+  "packages/payments/src/index.ts",
+  "packages/payments/tests/deposit-policy.test.ts",
+  "apps/web/lib/paymentAutomatedTests.ts",
+  "apps/web/lib/paymentAutomatedTestsRuntime.ts",
+  "apps/web/tests/payment-automation-static.test.ts",
+  "apps/web/tests/payment-automation-runtime-static.test.ts",
+  "apps/web/tests/payment-routes.test.ts",
+  "apps/web/app/api/public/[tenantSlug]/deposit-sessions/route.ts",
+  "apps/web/app/api/webhooks/stripe/route.ts",
+  "testing/manifests/unit-test-manifest.json",
+  ".github/workflows/ci.yml",
+] as const;
+
+export type PaymentAutomationEvidenceArtifact = (typeof paymentAutomationArtifactPaths)[number];
+
+export interface PaymentAutomationExecutionPolicy {
+  readonly codexMayClassifyStaticPaymentAutomationReadiness: true;
+  readonly helperRouteCommandsRequiredForClosure: true;
+  readonly stripeCliLifecycleRequiredForClosure: true;
+  readonly dbReconciliationRequiredForClosure: true;
+  readonly playwrightE2eRequiredForClosure: true;
+  readonly artifactRetentionRequiredForClosure: true;
+  readonly secretSafeArtifactsRequiredForClosure: true;
+}
+
+export interface PaymentAutomationExecutionPlan {
+  readonly policy: typeof paymentAutomationExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly stripeCliExecutionAllowed: false;
+  readonly databaseExecutionAllowed: false;
+  readonly playwrightExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly artifactReviewExecutionAllowed: false;
+  readonly localCommands: typeof paymentAutomationLocalCommands;
+  readonly externalCommands: typeof paymentAutomationExternalCommands;
+  readonly requiredExternalEvidence: typeof paymentAutomationRequiredExternalEvidence;
+}
+
+export interface PaymentAutomationArtifactReview {
+  readonly artifact: unknown;
+  readonly redactedArtifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: boolean;
+  readonly requiredExternalEvidence: typeof paymentAutomationRequiredExternalEvidence;
+}
+
+export interface PaymentAutomationEvidenceInput {
+  readonly paymentsTypecheckPassed: boolean;
+  readonly paymentsUnitTestsPassed: boolean;
+  readonly routeBoundaryTestsPassed: boolean;
+  readonly stripeSignatureTestsPassed: boolean;
+  readonly stripeCliLifecycleTranscriptCaptured: boolean;
+  readonly dbReconciliationTestsPassed: boolean;
+  readonly bookingToPaidE2ePassed: boolean;
+  readonly refundNoShowDisputeTestsPassed: boolean;
+  readonly receiptExportTestsPassed: boolean;
+  readonly crossTenantPaymentTestsPassed: boolean;
+  readonly replayIdempotencyTestsPassed: boolean;
+  readonly ciPaymentJobEvidenceCaptured: boolean;
+  readonly artifactRetentionVerified: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly PaymentAutomationEvidenceArtifact[];
+}
+
+export interface PaymentAutomationEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly PaymentAutomationEvidenceArtifact[];
+  readonly requiredCommands: typeof paymentAutomationRuntimeCommands;
+  readonly requiredEvidence: typeof paymentAutomationDecisionRequiredEvidence;
+  readonly redactedSummary: {
+    readonly capturedArtifactCount: number;
+    readonly requiredArtifactCount: number;
+  };
+}
+
+export const paymentAutomationDecisionRequiredEvidence = [
+  "payment helper, route-boundary, and Stripe signature test output",
+  "Stripe CLI lifecycle transcript for checkout success/failure/expiration/refund/dispute/replay",
+  "seeded DB reconciliation, tenant isolation, and idempotent replay test output",
+  "Playwright/dashboard E2E evidence for booking-to-paid, refund/no-show/dispute, receipt, and export flows",
+  "CI payment test job configuration and retained artifacts",
+  "secret-safe review of all retained payment artifacts",
+] as const;
+
+export const paymentAutomationExecutionPolicy = {
+  codexMayClassifyStaticPaymentAutomationReadiness: true,
+  helperRouteCommandsRequiredForClosure: true,
+  stripeCliLifecycleRequiredForClosure: true,
+  dbReconciliationRequiredForClosure: true,
+  playwrightE2eRequiredForClosure: true,
+  artifactRetentionRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies PaymentAutomationExecutionPolicy;
+
+export const paymentAutomationRequiredExternalEvidence = [
+  "payment helper and route boundary command output",
+  "Stripe CLI lifecycle transcript",
+  "seeded DB reconciliation evidence",
+  "Playwright booking-to-paid payment E2E evidence",
+  "refund/no-show/dispute/receipt/export E2E artifacts",
+  "cross-tenant payment isolation evidence",
+  "replay/idempotency evidence",
+  "CI payment automation evidence",
+  "artifact retention proof",
+  "secret-safe payment automation artifact review",
+] as const;
+
+const sensitivePaymentAutomationArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|stripe|payment|checkout|refund|dispute|receipt|export|artifact|trace|screenshot|playwright|cli|email|phone|medical|card|customer)/i;
+
+const redactPaymentAutomationArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactPaymentAutomationArtifactValue(entry, `${path}.${index}`, redactedPaths));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (sensitivePaymentAutomationArtifactKey.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[REDACTED]"];
+        }
+        return [key, redactPaymentAutomationArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const buildPaymentAutomationExecutionPlan = (): PaymentAutomationExecutionPlan => ({
+  policy: paymentAutomationExecutionPolicy,
+  commandExecutionAllowed: false,
+  stripeCliExecutionAllowed: false,
+  databaseExecutionAllowed: false,
+  playwrightExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  artifactReviewExecutionAllowed: false,
+  localCommands: paymentAutomationLocalCommands,
+  externalCommands: paymentAutomationExternalCommands,
+  requiredExternalEvidence: paymentAutomationRequiredExternalEvidence,
+});
+
+export const buildRedactedPaymentAutomationArtifact = (artifact: unknown): Pick<PaymentAutomationArtifactReview, "redactedArtifact" | "redactedPaths"> => {
+  const redactedPaths: string[] = [];
+  return {
+    redactedArtifact: redactPaymentAutomationArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+  };
+};
+
+export const buildPaymentAutomationArtifactReview = (artifact: unknown): PaymentAutomationArtifactReview => {
+  const redacted = buildRedactedPaymentAutomationArtifact(artifact);
+  return {
+    artifact,
+    redactedArtifact: redacted.redactedArtifact,
+    redactedPaths: redacted.redactedPaths,
+    secretSafe: redacted.redactedPaths.length > 0,
+    requiredExternalEvidence: paymentAutomationRequiredExternalEvidence,
+  };
+};
+
+export const buildPaymentAutomationEvidenceDecision = (
+  input: PaymentAutomationEvidenceInput,
+): PaymentAutomationEvidenceDecision => {
+  const captured = new Set(input.capturedArtifacts);
+  const missingArtifacts = paymentAutomationArtifactPaths.filter((artifact) => !captured.has(artifact));
+  const blockers = [
+    ...(!input.paymentsTypecheckPassed ? ["Payments package typecheck evidence is missing."] : []),
+    ...(!input.paymentsUnitTestsPassed ? ["Payments package unit test evidence is missing."] : []),
+    ...(!input.routeBoundaryTestsPassed ? ["Payment route-boundary test evidence is missing."] : []),
+    ...(!input.stripeSignatureTestsPassed ? ["Stripe webhook signature test evidence is missing."] : []),
+    ...(!input.stripeCliLifecycleTranscriptCaptured
+      ? ["Stripe CLI lifecycle transcript must cover checkout success/failure/expiration/refund/dispute/replay."]
+      : []),
+    ...(!input.dbReconciliationTestsPassed
+      ? ["Seeded DB reconciliation tests must prove payment lifecycle persistence."]
+      : []),
+    ...(!input.bookingToPaidE2ePassed ? ["Booking-to-paid Playwright E2E evidence is missing."] : []),
+    ...(!input.refundNoShowDisputeTestsPassed
+      ? ["Refund, no-show, and dispute workflow test evidence is missing."]
+      : []),
+    ...(!input.receiptExportTestsPassed ? ["Receipt and accounting export test evidence is missing."] : []),
+    ...(!input.crossTenantPaymentTestsPassed ? ["Cross-tenant payment isolation test evidence is missing."] : []),
+    ...(!input.replayIdempotencyTestsPassed ? ["Replay and idempotency test evidence is missing."] : []),
+    ...(!input.ciPaymentJobEvidenceCaptured ? ["CI payment job evidence is missing."] : []),
+    ...(!input.artifactRetentionVerified ? ["Payment automation artifact retention evidence is missing."] : []),
+    ...(!input.secretSafeArtifactReviewPassed ? ["Secret-safe payment artifact review evidence is missing."] : []),
+    ...(missingArtifacts.length > 0 ? ["All payment automation artifacts must be captured."] : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: paymentAutomationRuntimeCommands,
+    requiredEvidence: paymentAutomationDecisionRequiredEvidence,
+    redactedSummary: {
+      capturedArtifactCount: captured.size,
+      requiredArtifactCount: paymentAutomationArtifactPaths.length,
+    },
+  };
+};
 
 export const paymentAutomationRuntimeMatrix = [
   {
@@ -140,7 +367,7 @@ export const paymentAutomationRuntimeReadiness = buildPaymentAutomatedTestReadin
   },
   paymentsUnitTestsPassed: false,
   paymentRouteTestsPassed: false,
-  stripeSdkSignatureTestsPassed: false,
+  stripeSdkSignatureTestsPassed: true,
   stripeCliLifecycleTestsPassed: false,
   dbReconciliationTestsPassed: false,
   bookingToPaidE2ePassed: false,
@@ -151,3 +378,5 @@ export const paymentAutomationRuntimeReadiness = buildPaymentAutomatedTestReadin
   ciPaymentTestJobConfigured: true,
   artifactsCaptured: false,
 });
+
+

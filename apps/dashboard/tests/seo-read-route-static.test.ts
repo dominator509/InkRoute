@@ -12,6 +12,11 @@ describe("dashboard SEO read route contract", () => {
     expect(routeSource).toContain("tenantId !== actor.tenantId");
     expect(routeSource).toContain('code: "TENANT_MISMATCH"');
     expect(routeSource).toContain('"Cache-Control": "no-store"');
+    expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(routeSource).toContain("headers: noStoreHeaders");
+    expect(routeSource).not.toContain('headers: { "Cache-Control": "no-store" }');
+    expect(routeSource).not.toContain('}, { status: 403 });');
+    expect(routeSource).not.toContain('}, { status: 500 });');
   });
 
   it("loads tenant-scoped city/style/redirect SEO records and writes audit logs", () => {
@@ -33,7 +38,14 @@ describe("dashboard SEO read route contract", () => {
   it("keeps local fallback and database outage states explicit", () => {
     expect(routeSource).toContain("dashboardSeoRouteRecords");
     expect(routeSource).toContain('persistence: "local-fallback"');
+    expect(routeSource).toContain("PROVIDER_DASHBOARD_READS_NOT_CONFIGURED");
+    expect(routeSource).toContain("localDashboardReadFallbackDisabled");
     expect(routeSource).toContain('code: "DATABASE_UNAVAILABLE"');
+  });
+
+  it("disables local fallback SEO publication mutation plans in production", () => {
+    expect(routeSource).toContain("PROVIDER_DASHBOARD_WRITES_NOT_CONFIGURED");
+    expect(routeSource).toContain("localDashboardWriteFallbackDisabled");
   });
 
   it("documents that SEO reads are wired while publishing/provider actions remain gated", () => {

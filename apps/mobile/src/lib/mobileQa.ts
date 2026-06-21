@@ -17,16 +17,25 @@ export interface MobileScreenRenderContract {
 export interface MobileQaExecutionContract {
   screens: readonly MobileScreenRenderContract[];
   checklistIds: readonly string[];
+  artifactBundles: readonly MobileQaArtifactBundle[];
   runtimeReadiness: ReturnType<typeof buildMobileDeviceQaRuntimeReadinessPlan>;
   blockingItemIds: readonly string[];
   artifactPolicy: readonly string[];
   boundary: string;
 }
 
+export interface MobileQaArtifactBundle {
+  checklistId: string;
+  requiredArtifactTypes: readonly ("screenshot" | "video" | "log" | "transcript" | "accessibility-notes" | "provider-receipt")[];
+  redactionRequired: readonly ("secrets" | "pii" | "medical" | "payment" | "push-token" | "private-file-url")[];
+  retainedArtifactPath: string;
+  status: "attached" | "missing" | "redaction-review-required";
+}
+
 export const mobileScreenRenderContracts: readonly MobileScreenRenderContract[] = [
   { screenId: "auth", componentName: "AuthScreen", staticEvidence: "Auth route is rendered by App.tsx switch.", runtimeEvidence: "Signed-out, expired, and biometric-locked render smoke.", deviceEvidenceRequired: true },
   { screenId: "home", componentName: "HomeScreen", staticEvidence: "Home route is rendered by App.tsx switch.", runtimeEvidence: "Dashboard summary and API sync contract render smoke.", deviceEvidenceRequired: false },
-  { screenId: "bookings", componentName: "BookingRequestsScreen", staticEvidence: "Booking route is rendered by App.tsx switch.", runtimeEvidence: "Booking API sync and action-disabled state render smoke.", deviceEvidenceRequired: false },
+  { screenId: "bookings", componentName: "BookingRequestsScreen", staticEvidence: "Booking route is rendered by App.tsx switch.", runtimeEvidence: "Booking API sync and lifecycle action contract render smoke.", deviceEvidenceRequired: false },
   { screenId: "appointments", componentName: "AppointmentsScreen", staticEvidence: "Appointments route is rendered by App.tsx switch.", runtimeEvidence: "Calendar list render smoke.", deviceEvidenceRequired: false },
   { screenId: "clients", componentName: "ClientsScreen", staticEvidence: "Clients route is rendered by App.tsx switch.", runtimeEvidence: "Client privacy boundary render smoke.", deviceEvidenceRequired: false },
   { screenId: "travel", componentName: "TravelUpdateScreen", staticEvidence: "Travel route is rendered by App.tsx switch.", runtimeEvidence: "Travel publishing boundary render smoke.", deviceEvidenceRequired: false },
@@ -36,15 +45,45 @@ export const mobileScreenRenderContracts: readonly MobileScreenRenderContract[] 
   { screenId: "system", componentName: "SystemStatusScreen", staticEvidence: "System route is rendered by App.tsx switch.", runtimeEvidence: "Crash and OTA contract render smoke.", deviceEvidenceRequired: true },
 ];
 
+export function buildMobileQaArtifactBundles(checklistIds: readonly string[]): MobileQaArtifactBundle[] {
+  return checklistIds.map((checklistId) => {
+    const providerBacked = [
+      "tenant-api-sync",
+      "offline-reconnect-sync",
+      "push-token-delivery",
+      "mobile-crash-capture",
+      "ota-preview-rollback",
+    ].includes(checklistId);
+    const accessibility = checklistId === "mobile-accessibility-pass";
+    const simulator = checklistId === "ios-screen-smoke" || checklistId === "android-screen-smoke";
+
+    return {
+      checklistId,
+      requiredArtifactTypes: accessibility
+        ? ["screenshot", "accessibility-notes"]
+        : providerBacked
+          ? ["screenshot", "log", "transcript", "provider-receipt"]
+          : simulator
+            ? ["screenshot", "video", "log"]
+            : ["log"],
+      redactionRequired: ["secrets", "pii", "medical", "payment", "push-token", "private-file-url"],
+      retainedArtifactPath: `coverage/mobile-qa-artifacts/${checklistId}.redacted.json`,
+      status: "missing",
+    };
+  });
+}
+
 export function buildMobileQaExecutionContract(): MobileQaExecutionContract {
   const checklist = buildMobileDeviceQaChecklist();
   const summary = summarizeMobileDeviceQa(checklist);
   const registryIds = mobileScreenRegistry.map((screen) => screen.id);
   const screens = mobileScreenRenderContracts.filter((contract) => registryIds.includes(contract.screenId));
+  const checklistIds = checklist.map((item) => item.id);
 
   return {
     screens,
-    checklistIds: checklist.map((item) => item.id),
+    checklistIds,
+    artifactBundles: buildMobileQaArtifactBundles(checklistIds),
     runtimeReadiness: buildMobileDeviceQaRuntimeReadinessPlan({
       packageScripts: {
         test: "vitest run apps/mobile/tests/**/*.test.ts",
@@ -73,6 +112,7 @@ export function buildMobileQaExecutionContract(): MobileQaExecutionContract {
     artifactPolicy: [
       "Keep screenshots, simulator logs, provider receipts, and device transcripts free of secrets, PII, medical details, payment data, and raw push tokens.",
       "Attach one artifact bundle per checklist id and keep GAP-048/GAP-108 references in the manifest.",
+      "Retain each checklist bundle at coverage/mobile-qa-artifacts/<checklist-id>.redacted.json after redaction review.",
       "Do not mark mobile runtime QA ready until iOS, Android, physical-device, accessibility, offline, push, crash, and OTA artifacts are all present.",
     ],
     boundary:

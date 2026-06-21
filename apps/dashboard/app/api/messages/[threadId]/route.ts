@@ -12,25 +12,44 @@ function redactedPreview(value: string | null | undefined): string {
   return value.length > 0 ? "[redacted-message-body]" : "";
 }
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 export async function GET(request: NextRequest, context: MessageThreadDetailRouteContext) {
   const actor = resolveDashboardActor(request);
   try {
     assertPermission(actor, "message:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read messages." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read messages." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const { threadId } = await context.params;
   const params = new URL(request.url).searchParams;
   const tenantId = params.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a message thread for another tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a message thread for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
+            message: "Production dashboard message reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
+            gapIds: ["GAP-007", "GAP-010", "GAP-037", "GAP-061", "GAP-064", "GAP-066"],
+          },
+          productionBoundary: { localDashboardReadFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     const thread = dashboardRedactedMessageThreadDrafts.find((row) => row.subject === threadId || row.relatedBookingRequestId === threadId || row.relatedAppointmentId === threadId);
     if (!thread) {
-      return NextResponse.json({ ok: false, error: { code: "MESSAGE_THREAD_NOT_FOUND", message: "Message thread was not found for this tenant." } }, { status: 404 });
+      return NextResponse.json({ ok: false, error: { code: "MESSAGE_THREAD_NOT_FOUND", message: "Message thread was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
     }
     return NextResponse.json(
       {
@@ -42,7 +61,7 @@ export async function GET(request: NextRequest, context: MessageThreadDetailRout
         gapIds: ["GAP-010", "GAP-064", "GAP-068"],
         boundary: "Local fallback returns a redacted demo message thread only; database mode is required for live message reads.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   }
 
@@ -103,7 +122,7 @@ export async function GET(request: NextRequest, context: MessageThreadDetailRout
     });
 
     if (result.status === "not_found") {
-      return NextResponse.json({ ok: false, error: { code: "MESSAGE_THREAD_NOT_FOUND", message: "Message thread was not found for this tenant." } }, { status: 404 });
+      return NextResponse.json({ ok: false, error: { code: "MESSAGE_THREAD_NOT_FOUND", message: "Message thread was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
     }
 
     const thread = {
@@ -144,7 +163,7 @@ export async function GET(request: NextRequest, context: MessageThreadDetailRout
         gapIds: ["GAP-010", "GAP-064", "GAP-068"],
         boundary: "Dashboard message thread detail reads are tenant-scoped, body/provider redacted, no-store, and audited.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
@@ -157,10 +176,10 @@ export async function GET(request: NextRequest, context: MessageThreadDetailRout
           error: { code: "DATABASE_UNAVAILABLE", message: "Message thread detail reads require the dashboard database connection." },
           gapIds: ["GAP-010", "GAP-064", "GAP-068"],
         },
-        { status: 503, headers: { "Cache-Control": "no-store" } },
+        { status: 503, headers: noStoreHeaders },
       );
     }
 
-    return NextResponse.json({ ok: false, error: { code: "MESSAGE_THREAD_DETAIL_READ_FAILED", message: "Message thread could not be loaded." } }, { status: 500 });
+    return NextResponse.json({ ok: false, error: { code: "MESSAGE_THREAD_DETAIL_READ_FAILED", message: "Message thread could not be loaded." } }, { status: 500, headers: noStoreHeaders });
   }
 }

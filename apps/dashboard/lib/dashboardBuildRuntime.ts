@@ -1,4 +1,9 @@
-import { buildDashboardLaunchEvidencePlan } from "@inkroute/auth";
+import {
+  buildDashboardLaunchEvidencePlan,
+  dashboardLaunchEvidenceRequiredCommands,
+} from "@inkroute/auth";
+
+export { dashboardLaunchEvidenceRequiredCommands as dashboardBuildRuntimeReadinessRequiredCommands };
 
 export type DashboardBuildRuntimeStatus =
   | "wired"
@@ -50,6 +55,18 @@ export const dashboardBuildArtifactPaths = [
   "coverage/dashboard-build-ci-evidence.json",
   "coverage/dashboard-build-secret-safe-artifacts.json",
   "test-results/dashboard-build-runtime",
+] as const;
+
+export const dashboardBuildRuntimeProofFiles = [
+  "apps/dashboard/lib/dashboardBuildRuntime.ts",
+  "apps/dashboard/tests/dashboard-build-runtime-static.test.ts",
+  "apps/dashboard/package.json",
+  "apps/dashboard/next.config.mjs",
+  "apps/dashboard/app/layout.tsx",
+  "apps/dashboard/middleware.ts",
+  ".github/workflows/ci.yml",
+  "testing/manifests/unit-test-manifest.json",
+  "GAP_TRACKER.md",
 ] as const;
 
 export const dashboardBuildRuntimeMatrix = [
@@ -145,3 +162,238 @@ export const dashboardBuildRuntimeReadiness = buildDashboardLaunchEvidencePlan({
   ciEvidenceCaptured: false,
   dashboardArtifactsSecretSafe: false,
 });
+
+export const dashboardBuildRuntimeEvidenceFlags = [
+  "dependenciesInstalled",
+  "nextReactTypesAvailable",
+  "dashboardTypecheckPassed",
+  "dashboardBuildPassed",
+  "dashboardTestsPassed",
+  "browserHomeSmokePassed",
+  "browserBookingsSmokePassed",
+  "browserClientsSmokePassed",
+  "browserPaymentsSmokePassed",
+  "browserPortfolioSmokePassed",
+  "browserTravelSmokePassed",
+  "browserMessagesSmokePassed",
+  "browserSettingsSmokePassed",
+  "next15RuntimeSmokePassed",
+  "ciEvidenceCaptured",
+  "secretSafeArtifactsCaptured",
+] as const;
+
+export type DashboardBuildRuntimeEvidenceFlag = (typeof dashboardBuildRuntimeEvidenceFlags)[number];
+
+export interface DashboardBuildRuntimeEvidenceInput {
+  readonly commands?: readonly string[];
+  readonly artifacts?: readonly string[];
+  readonly evidence?: Partial<Record<DashboardBuildRuntimeEvidenceFlag, boolean>>;
+}
+
+export interface DashboardBuildRuntimeEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly missingCommands: readonly string[];
+  readonly missingArtifacts: readonly string[];
+  readonly missingEvidence: readonly DashboardBuildRuntimeEvidenceFlag[];
+  readonly requiredCommands: typeof dashboardBuildRuntimeCommands;
+  readonly requiredArtifacts: typeof dashboardBuildArtifactPaths;
+  readonly requiredEvidence: typeof dashboardBuildRuntimeEvidenceFlags;
+  readonly blockers: readonly string[];
+}
+
+const dashboardBuildRuntimeEvidenceBlockers: Record<DashboardBuildRuntimeEvidenceFlag, string> = {
+  dependenciesInstalled: "Workspace dependencies must be installed with a committed lockfile.",
+  nextReactTypesAvailable: "Next 15, React 19, JSX, and route handler types must be available.",
+  dashboardTypecheckPassed: "@inkroute/dashboard typecheck must pass.",
+  dashboardBuildPassed: "@inkroute/dashboard build must pass.",
+  dashboardTestsPassed: "@inkroute/dashboard tests must pass.",
+  browserHomeSmokePassed: "Dashboard browser smoke for / must pass.",
+  browserBookingsSmokePassed: "Dashboard browser smoke for /bookings must pass.",
+  browserClientsSmokePassed: "Dashboard browser smoke for /clients must pass.",
+  browserPaymentsSmokePassed: "Dashboard browser smoke for /payments must pass.",
+  browserPortfolioSmokePassed: "Dashboard browser smoke for /portfolio must pass.",
+  browserTravelSmokePassed: "Dashboard browser smoke for /travel must pass.",
+  browserMessagesSmokePassed: "Dashboard browser smoke for /messages must pass.",
+  browserSettingsSmokePassed: "Dashboard browser smoke for /settings must pass.",
+  next15RuntimeSmokePassed: "Next 15 app-router runtime smoke must pass.",
+  ciEvidenceCaptured: "CI dashboard build/runtime evidence must be captured.",
+  secretSafeArtifactsCaptured:
+    "Dashboard build/runtime artifacts must be redacted and free of secrets, provider tokens, raw PII, medical, payment, and private tenant data.",
+};
+
+const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) =>
+  required.filter((item) => !(actual ?? []).includes(item));
+
+export const buildDashboardBuildRuntimeEvidenceDecision = (
+  input: DashboardBuildRuntimeEvidenceInput,
+): DashboardBuildRuntimeEvidenceDecision => {
+  const missingCommands = missingFrom(input.commands, dashboardBuildRuntimeCommands);
+  const missingArtifacts = missingFrom(input.artifacts, dashboardBuildArtifactPaths);
+  const missingEvidence = dashboardBuildRuntimeEvidenceFlags.filter((flag) => input.evidence?.[flag] !== true);
+  const blockers = missingEvidence.map((flag) => dashboardBuildRuntimeEvidenceBlockers[flag]);
+
+  return {
+    status:
+      missingCommands.length === 0 && missingArtifacts.length === 0 && missingEvidence.length === 0
+        ? "complete"
+        : "blocked",
+    missingCommands,
+    missingArtifacts,
+    missingEvidence,
+    requiredCommands: dashboardBuildRuntimeCommands,
+    requiredArtifacts: dashboardBuildArtifactPaths,
+    requiredEvidence: dashboardBuildRuntimeEvidenceFlags,
+    blockers,
+  };
+};
+
+export interface DashboardBuildRuntimeExecutionPolicy {
+  readonly codexMayClassifyStaticBuildReadiness: true;
+  readonly dependencyInstallRequiredForClosure: true;
+  readonly nextReactTypesRequiredForClosure: true;
+  readonly dashboardTypecheckBuildTestRequiredForClosure: true;
+  readonly browserSmokeRequiredForClosure: true;
+  readonly next15RuntimeSmokeRequiredForClosure: true;
+  readonly secretSafeArtifactsRequiredForClosure: true;
+}
+
+export interface DashboardBuildRuntimeExecutionPlan {
+  readonly localCommands: typeof dashboardBuildRuntimeLocalCommands;
+  readonly externalCommands: typeof dashboardBuildRuntimeExternalCommands;
+  readonly requiredExternalEvidence: typeof dashboardBuildRuntimeRequiredExternalEvidence;
+  readonly commandExecutionAllowed: false;
+  readonly dependencyInstallExecutionAllowed: false;
+  readonly typecheckExecutionAllowed: false;
+  readonly buildExecutionAllowed: false;
+  readonly browserExecutionAllowed: false;
+  readonly nextRuntimeExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly executionPolicy: typeof dashboardBuildRuntimeExecutionPolicy;
+}
+
+export interface DashboardBuildRuntimeArtifactReview {
+  readonly artifact: unknown;
+  readonly redactions: readonly string[];
+  readonly requiredExternalEvidence: typeof dashboardBuildRuntimeRequiredExternalEvidence;
+  readonly secretSafe: boolean;
+}
+
+export const dashboardBuildRuntimeRequiredExternalEvidence = [
+  "pnpm install output with committed lockfile",
+  "Next React JSX and route handler type availability evidence",
+  "pnpm --filter @inkroute/dashboard typecheck output",
+  "pnpm --filter @inkroute/dashboard build output",
+  "pnpm --filter @inkroute/dashboard test output",
+  "dashboard browser smoke evidence for launch-critical routes",
+  "Next 15 app-router runtime smoke evidence",
+  "fresh CI dashboard build/runtime artifacts",
+  "secret-safe dashboard build/runtime artifact review",
+] as const;
+
+export const dashboardBuildRuntimeExecutionPolicy: DashboardBuildRuntimeExecutionPolicy = {
+  codexMayClassifyStaticBuildReadiness: true,
+  dependencyInstallRequiredForClosure: true,
+  nextReactTypesRequiredForClosure: true,
+  dashboardTypecheckBuildTestRequiredForClosure: true,
+  browserSmokeRequiredForClosure: true,
+  next15RuntimeSmokeRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+};
+
+export const dashboardBuildRuntimeLocalCommands = [
+  "static dashboard package script review",
+  "static dashboard Next config review",
+  "static dashboard layout and middleware build-surface review",
+] as const;
+
+export const dashboardBuildRuntimeExternalCommands = [
+  "pnpm install",
+  "pnpm --filter @inkroute/dashboard typecheck",
+  "pnpm --filter @inkroute/dashboard build",
+  "pnpm --filter @inkroute/dashboard test",
+  "dashboard browser smoke: /",
+  "dashboard browser smoke: /bookings",
+  "dashboard browser smoke: /clients",
+  "dashboard browser smoke: /payments",
+  "dashboard browser smoke: /portfolio",
+  "dashboard browser smoke: /travel",
+  "dashboard browser smoke: /messages",
+  "dashboard browser smoke: /settings",
+  "GitHub Actions dashboard build/runtime evidence job",
+] as const;
+
+export const buildDashboardBuildRuntimeExecutionPlan = (): DashboardBuildRuntimeExecutionPlan => ({
+  localCommands: dashboardBuildRuntimeLocalCommands,
+  externalCommands: dashboardBuildRuntimeExternalCommands,
+  requiredExternalEvidence: dashboardBuildRuntimeRequiredExternalEvidence,
+  commandExecutionAllowed: false,
+  dependencyInstallExecutionAllowed: false,
+  typecheckExecutionAllowed: false,
+  buildExecutionAllowed: false,
+  browserExecutionAllowed: false,
+  nextRuntimeExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  executionPolicy: dashboardBuildRuntimeExecutionPolicy,
+});
+
+const dashboardBuildRuntimeSensitiveArtifactKeyPattern =
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|cookie|email|phone|medical|payment|stripe|build|env|header|authorization|log|trace|sourcemap)/i;
+
+export const buildRedactedDashboardBuildRuntimeArtifact = (
+  artifact: unknown,
+): Pick<DashboardBuildRuntimeArtifactReview, "artifact" | "redactions"> => {
+  const redactions: string[] = [];
+
+  const redact = (value: unknown, path: string): unknown => {
+    if (Array.isArray(value)) {
+      return value.map((item, index) => redact(item, `${path}[${index}]`));
+    }
+
+    if (value && typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([key, entry]) => {
+          const entryPath = path ? `${path}.${key}` : key;
+
+          if (dashboardBuildRuntimeSensitiveArtifactKeyPattern.test(key)) {
+            redactions.push(entryPath);
+            return [key, "[REDACTED_DASHBOARD_BUILD_PRIVATE_VALUE]"];
+          }
+
+          return [key, redact(entry, entryPath)];
+        }),
+      );
+    }
+
+    return value;
+  };
+
+  return {
+    artifact: redact(artifact, ""),
+    redactions,
+  };
+};
+
+export const buildDashboardBuildRuntimeArtifactReview = (
+  artifact: unknown,
+): DashboardBuildRuntimeArtifactReview => {
+  const redacted = buildRedactedDashboardBuildRuntimeArtifact(artifact);
+  const serialized = JSON.stringify(redacted.artifact);
+  const leakedPrivateMarkers = [
+    "DATABASE_URL",
+    "client@example.com",
+    "tenant.example.com",
+    "authorization:",
+    "sk_",
+    "provider-token",
+    "private-tenant",
+  ].some((marker) => serialized.includes(marker));
+
+  return {
+    ...redacted,
+    requiredExternalEvidence: dashboardBuildRuntimeRequiredExternalEvidence,
+    secretSafe: !leakedPrivateMarkers,
+  };
+};
+
+
+

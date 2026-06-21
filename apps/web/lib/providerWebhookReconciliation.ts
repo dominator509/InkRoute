@@ -1,4 +1,4 @@
-import { buildProviderWebhookReconciliationPlan as buildObservabilityProviderWebhookReconciliationPlan } from "@inkroute/observability";
+﻿import { buildProviderWebhookReconciliationPlan as buildObservabilityProviderWebhookReconciliationPlan } from "@inkroute/observability";
 import {
   buildProviderWebhookRuntimeReadinessPlan,
   type ProviderEventReconciliationPlan,
@@ -36,6 +36,14 @@ export const providerWebhookReconciliationCommands = [
   "provider webhook no-PII artifact audit",
 ] as const;
 
+export const providerWebhookReconciliationRequiredExternalEvidence = [
+  "Sentry signature and replay execution",
+  "ProviderWebhookDelivery migration applied in non-production database",
+  "durable idempotency and ErrorReport status mutation integration proof",
+  "live Sentry webhook replay proof",
+  "provider webhook no-PII audit, CI evidence, and secret-safe artifacts",
+] as const;
+
 export const providerWebhookReconciliationArtifactPaths = [
   "coverage/provider-webhook-reconciliation.json",
   "coverage/provider-webhook-observability-typecheck.txt",
@@ -52,6 +60,185 @@ export const providerWebhookReconciliationArtifactPaths = [
   "coverage/provider-webhook-secret-safe-artifacts.json",
   "test-results/provider-webhook-reconciliation",
 ] as const;
+
+export const providerWebhookReconciliationProofFiles = [
+  "packages/observability/package.json",
+  "apps/web/lib/providerWebhookReconciliation.ts",
+  "apps/web/app/api/webhooks/sentry/route.ts",
+  "apps/web/tests/provider-webhook-reconciliation-static.test.ts",
+  "apps/web/tests/observability-routes.test.ts",
+  "packages/observability/src/index.ts",
+  "packages/observability/tests/redaction-report.test.ts",
+  "packages/db/prisma/schema.prisma",
+  "packages/db/prisma/migrations/20260613000300_add_provider_webhook_deliveries/migration.sql",
+  "API_CONTRACTS.md",
+  ".github/workflows/ci.yml",
+  "testing/manifests/unit-test-manifest.json",
+] as const;
+
+export type ProviderWebhookReconciliationEvidenceArtifact = (typeof providerWebhookReconciliationArtifactPaths)[number];
+
+export interface ProviderWebhookReconciliationExecutionPlan {
+  readonly id: "gap-082-provider-webhook-reconciliation";
+  readonly liveProviderReplayAllowed: false;
+  readonly migrationExecutionAllowed: false;
+  readonly durableDatabaseExecutionAllowed: false;
+  readonly policy: ProviderWebhookReconciliationExecutionPolicy;
+  readonly source: "local-software-plan";
+  readonly requiredCommands: typeof providerWebhookReconciliationCommands;
+  readonly requiredArtifacts: typeof providerWebhookReconciliationArtifactPaths;
+  readonly localContractArtifacts: readonly ProviderWebhookReconciliationEvidenceArtifact[];
+  readonly durablePersistenceArtifacts: readonly ProviderWebhookReconciliationEvidenceArtifact[];
+  readonly liveProviderArtifacts: readonly ProviderWebhookReconciliationEvidenceArtifact[];
+  readonly privacyArtifacts: readonly ProviderWebhookReconciliationEvidenceArtifact[];
+  readonly secretSafeArtifactPath: ProviderWebhookReconciliationEvidenceArtifact;
+  readonly externalEvidenceRequired: typeof providerWebhookReconciliationRequiredExternalEvidence;
+}
+
+export interface ProviderWebhookReconciliationExecutionPolicy {
+  readonly executeLiveProviderReplay: false;
+  readonly executeMigration: false;
+  readonly executeDurableDatabase: false;
+  readonly executeStatusMutationIntegration: false;
+  readonly executeNoPiiAudit: false;
+  readonly executeCi: false;
+}
+
+export interface ProviderWebhookReconciliationArtifactReview {
+  readonly artifactName: string;
+  readonly safeToPersist: boolean;
+  readonly redactedArtifact: Record<string, unknown>;
+  readonly unsafeFindings: readonly string[];
+  readonly requiredArtifactPath: ProviderWebhookReconciliationEvidenceArtifact;
+}
+
+const PROVIDER_WEBHOOK_ARTIFACT_EMAIL_PATTERN = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+const PROVIDER_WEBHOOK_ARTIFACT_TOKEN_PATTERN = /\b(?:bearer|sentry|sk|ya29)[A-Za-z0-9._:/-]{8,}\b/gi;
+
+export const providerWebhookReconciliationExecutionPolicy: ProviderWebhookReconciliationExecutionPolicy = {
+  executeLiveProviderReplay: false,
+  executeMigration: false,
+  executeDurableDatabase: false,
+  executeStatusMutationIntegration: false,
+  executeNoPiiAudit: false,
+  executeCi: false,
+};
+
+export function buildProviderWebhookReconciliationExecutionPlan(): ProviderWebhookReconciliationExecutionPlan {
+  return {
+    id: "gap-082-provider-webhook-reconciliation",
+    liveProviderReplayAllowed: false,
+    migrationExecutionAllowed: false,
+    durableDatabaseExecutionAllowed: false,
+    policy: providerWebhookReconciliationExecutionPolicy,
+    source: "local-software-plan",
+    requiredCommands: providerWebhookReconciliationCommands,
+    requiredArtifacts: providerWebhookReconciliationArtifactPaths,
+    localContractArtifacts: [
+      "coverage/provider-webhook-reconciliation.json",
+      "coverage/provider-webhook-observability-typecheck.txt",
+      "coverage/provider-webhook-observability-test.txt",
+      "coverage/provider-webhook-route-static-contracts.json",
+      "coverage/provider-webhook-sanitized-payload-redacted.json",
+    ],
+    durablePersistenceArtifacts: [
+      "coverage/provider-webhook-signature-replay.json",
+      "coverage/provider-webhook-idempotency.json",
+      "coverage/provider-webhook-durable-delivery-constraint.json",
+      "coverage/provider-webhook-error-status-mutation.json",
+    ],
+    liveProviderArtifacts: ["coverage/provider-webhook-live-sentry-proof-redacted.json"],
+    privacyArtifacts: ["coverage/provider-webhook-no-pii-artifact-audit.json"],
+    secretSafeArtifactPath: "coverage/provider-webhook-secret-safe-artifacts.json",
+    externalEvidenceRequired: providerWebhookReconciliationRequiredExternalEvidence,
+  };
+}
+
+export function buildProviderWebhookReconciliationArtifactReview(
+  artifactName: string,
+  artifact: Record<string, unknown>,
+  requiredArtifactPath: ProviderWebhookReconciliationEvidenceArtifact = "coverage/provider-webhook-secret-safe-artifacts.json",
+): ProviderWebhookReconciliationArtifactReview {
+  const redactedArtifact = buildRedactedProviderWebhookPayload(artifact);
+  const serialized = JSON.stringify(redactedArtifact);
+  const unsafeFindings = [
+    serialized.match(PROVIDER_WEBHOOK_ARTIFACT_EMAIL_PATTERN) ? "email" : null,
+    serialized.match(PROVIDER_WEBHOOK_ARTIFACT_TOKEN_PATTERN) ? "provider-token" : null,
+  ].filter((finding): finding is string => finding !== null);
+
+  return {
+    artifactName,
+    safeToPersist: unsafeFindings.length === 0,
+    redactedArtifact,
+    unsafeFindings,
+    requiredArtifactPath,
+  };
+}
+
+export interface ProviderWebhookReconciliationEvidenceInput {
+  readonly observabilityTypecheckPassed: boolean;
+  readonly observabilityTestsPassed: boolean;
+  readonly routeStaticContractsPassed: boolean;
+  readonly signatureReplayVerified: boolean;
+  readonly idempotencyVerified: boolean;
+  readonly durableDeliveryConstraintVerified: boolean;
+  readonly errorStatusMutationVerified: boolean;
+  readonly sanitizedPayloadCaptured: boolean;
+  readonly liveSentryReplayProofCaptured: boolean;
+  readonly noPiiArtifactAuditPassed: boolean;
+  readonly ciEvidenceCaptured: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly ProviderWebhookReconciliationEvidenceArtifact[];
+}
+
+export const providerWebhookReconciliationDecisionRequiredEvidence = [
+  "observability package typecheck/test and route static contract artifacts",
+  "Sentry signature/replay, idempotency, durable ProviderWebhookDelivery constraint, and status mutation artifacts",
+  "sanitized payload, live Sentry replay, and no-PII provider webhook artifact audit evidence",
+  "CI evidence and redacted secret-safe artifact review",
+] as const;
+
+export interface ProviderWebhookReconciliationEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly ProviderWebhookReconciliationEvidenceArtifact[];
+  readonly requiredCommands: typeof providerWebhookReconciliationCommands;
+  readonly requiredEvidence: typeof providerWebhookReconciliationDecisionRequiredEvidence;
+  readonly redactedSummary: string;
+}
+
+export function buildProviderWebhookReconciliationEvidenceDecision(
+  input: ProviderWebhookReconciliationEvidenceInput,
+): ProviderWebhookReconciliationEvidenceDecision {
+  const blockers = [
+    !input.observabilityTypecheckPassed ? "Observability package typecheck evidence is required." : null,
+    !input.observabilityTestsPassed ? "Observability package test evidence is required." : null,
+    !input.routeStaticContractsPassed ? "Provider webhook route static contract evidence is required." : null,
+    !input.signatureReplayVerified ? "Sentry webhook signature and replay evidence is required." : null,
+    !input.idempotencyVerified ? "Provider webhook idempotency evidence is required." : null,
+    !input.durableDeliveryConstraintVerified ? "ProviderWebhookDelivery durable unique constraint evidence is required." : null,
+    !input.errorStatusMutationVerified ? "ErrorReport status mutation integration evidence is required." : null,
+    !input.sanitizedPayloadCaptured ? "Sanitized provider payload artifact evidence is required." : null,
+    !input.liveSentryReplayProofCaptured ? "Live Sentry webhook replay proof evidence is required." : null,
+    !input.noPiiArtifactAuditPassed ? "Provider webhook no-PII artifact audit evidence is required." : null,
+    !input.ciEvidenceCaptured ? "CI provider webhook reconciliation gate evidence is required." : null,
+    !input.secretSafeArtifactReviewPassed ? "Secret-safe artifact review evidence is required." : null,
+  ].filter((blocker): blocker is string => blocker !== null);
+  const capturedArtifacts = new Set(input.capturedArtifacts);
+  const missingArtifacts = providerWebhookReconciliationArtifactPaths.filter((artifact) => !capturedArtifacts.has(artifact));
+
+  return {
+    status: blockers.length === 0 && missingArtifacts.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: providerWebhookReconciliationCommands,
+    requiredEvidence: providerWebhookReconciliationDecisionRequiredEvidence,
+    redactedSummary:
+      blockers.length === 0 && missingArtifacts.length === 0
+        ? "GAP-082 provider webhook reconciliation evidence is complete with CI-safe redacted artifacts captured."
+        : "GAP-082 provider webhook reconciliation evidence remains blocked until durable delivery, replay, status mutation, provider, no-PII, CI, and redaction artifacts are captured.",
+  };
+}
 
 export const providerWebhookReconciliationMatrix: readonly ProviderWebhookReconciliationMatrixEntry[] = [
   { id: "observability-typecheck", command: "pnpm --filter @inkroute/observability typecheck", artifact: "coverage/provider-webhook-observability-typecheck.txt", status: "wired" },
@@ -204,7 +391,7 @@ export function buildProviderWebhookReconciliationContract() {
     timingSafeComparisonEnabled: true,
     replayProtectionConfigured: true,
     durableDeliveryPersistenceConfigured: true,
-    idempotencyConstraintConfigured: false,
+    idempotencyConstraintConfigured: true,
     tenantIssueOwnershipLookupConfigured: true,
     errorReportStatusMutationConfigured: true,
     reconciliationAuditLogsConfigured: true,
@@ -225,6 +412,122 @@ export interface ProviderWebhookPersistenceRepository {
   suppressInvalidPushToken(input: { tenantId: string; reconciliation: ProviderEventReconciliationPlan }): Promise<void>;
   persistWebhookAudit(input: { tenantId: string; reconciliation: ProviderEventReconciliationPlan; redactedPayload: Record<string, unknown> }): Promise<void>;
   alertFailedWebhook(input: { tenantId: string | null; reason: string; redactedPayload: Record<string, unknown> }): Promise<void>;
+}
+
+export interface InMemoryProviderWebhookPersistenceRepositoryState {
+  readonly providerEvents: Map<string, { readonly tenantId: string; readonly provider: string; readonly eventId: string }>;
+  readonly persistedProviderEvents: { readonly tenantId: string; readonly reconciliation: ProviderEventReconciliationPlan; readonly redactedPayload: Record<string, unknown> }[];
+  readonly deliveryUpdates: Map<string, { readonly tenantId: string; readonly reconciliation: ProviderEventReconciliationPlan }>;
+  readonly suppressions: { readonly tenantId: string; readonly reconciliation: ProviderEventReconciliationPlan }[];
+  readonly inboundRoutes: { readonly tenantId: string; readonly reconciliation: ProviderEventReconciliationPlan }[];
+  readonly invalidPushTokens: { readonly tenantId: string; readonly reconciliation: ProviderEventReconciliationPlan }[];
+  readonly webhookAudits: { readonly tenantId: string; readonly reconciliation: ProviderEventReconciliationPlan; readonly redactedPayload: Record<string, unknown> }[];
+  readonly failedAlerts: { readonly tenantId: string | null; readonly reason: string; readonly redactedPayload: Record<string, unknown> }[];
+}
+
+const providerWebhookPrivatePayloadKeys = new Set([
+  "authorization",
+  "cookie",
+  "destination",
+  "email",
+  "messageBody",
+  "phone",
+  "providerPayload",
+  "rawBody",
+  "signature",
+  "token",
+]);
+
+function redactProviderWebhookValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactProviderWebhookValue(entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+        key,
+        providerWebhookPrivatePayloadKeys.has(key) ? "[redacted]" : redactProviderWebhookValue(entry),
+      ]),
+    );
+  }
+
+  return typeof value === "string" ? redactText(value) : value;
+}
+
+export function buildRedactedProviderWebhookPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  return redactProviderWebhookValue(payload) as Record<string, unknown>;
+}
+
+function buildProviderEventClaimKey(input: { readonly tenantId: string; readonly provider: string; readonly idempotencyKey: string }): string {
+  return `${input.tenantId}:${input.provider}:${input.idempotencyKey}`;
+}
+
+function buildDeliveryUpdateKey(input: { readonly tenantId: string; readonly reconciliation: ProviderEventReconciliationPlan }): string {
+  return `${input.tenantId}:${input.reconciliation.provider}:${input.reconciliation.providerMessageId ?? input.reconciliation.eventId}`;
+}
+
+export function createInMemoryProviderWebhookPersistenceRepository(
+  state: InMemoryProviderWebhookPersistenceRepositoryState = {
+    providerEvents: new Map(),
+    persistedProviderEvents: [],
+    deliveryUpdates: new Map(),
+    suppressions: [],
+    inboundRoutes: [],
+    invalidPushTokens: [],
+    webhookAudits: [],
+    failedAlerts: [],
+  },
+): ProviderWebhookPersistenceRepository & { readonly state: InMemoryProviderWebhookPersistenceRepositoryState } {
+  return {
+    state,
+    async claimProviderEvent(input) {
+      const key = buildProviderEventClaimKey(input);
+      if (state.providerEvents.has(key)) {
+        return "duplicate";
+      }
+
+      state.providerEvents.set(key, {
+        tenantId: input.tenantId,
+        provider: input.provider,
+        eventId: input.eventId,
+      });
+      return "claimed";
+    },
+    async persistProviderEvent(input) {
+      state.persistedProviderEvents.push({
+        ...input,
+        redactedPayload: buildRedactedProviderWebhookPayload(input.redactedPayload),
+      });
+    },
+    async updateDeliveryLogExactlyOnce(input) {
+      const key = buildDeliveryUpdateKey(input);
+      if (!state.deliveryUpdates.has(key)) {
+        state.deliveryUpdates.set(key, input);
+      }
+    },
+    async persistSuppression(input) {
+      state.suppressions.push(input);
+    },
+    async persistInboundRouting(input) {
+      state.inboundRoutes.push(input);
+    },
+    async suppressInvalidPushToken(input) {
+      state.invalidPushTokens.push(input);
+    },
+    async persistWebhookAudit(input) {
+      state.webhookAudits.push({
+        ...input,
+        redactedPayload: buildRedactedProviderWebhookPayload(input.redactedPayload),
+      });
+    },
+    async alertFailedWebhook(input) {
+      state.failedAlerts.push({
+        ...input,
+        redactedPayload: buildRedactedProviderWebhookPayload(input.redactedPayload),
+      });
+    },
+  };
 }
 
 export interface ProviderWebhookContract {
@@ -257,6 +560,14 @@ export function redactedWebhookPayloadSummary(input: ProviderWebhookRouteBoundar
   };
 }
 
+export const providerWebhookRouteBoundaryRequiredControls = [
+  "Verify provider signature against the raw request body before side effects.",
+  "Claim ProviderEvent idempotency before delivery, suppression, inbound, or push-token mutations.",
+  "Apply exactly-once delivery updates under replay and concurrent callbacks.",
+  "Persist suppression, inbound routing, invalid push-token, audit, and failed-webhook alert outcomes in tenant scope.",
+  "Redact provider payloads, destinations, message bodies, private URLs, signatures, and tokens from logs and previews.",
+] as const;
+
 export function buildProviderWebhookRouteBoundary(input: ProviderWebhookRouteBoundaryInput) {
   return {
     source: input.source,
@@ -273,13 +584,7 @@ export function buildProviderWebhookRouteBoundary(input: ProviderWebhookRouteBou
       "WebhookAuditLog",
       "FailedWebhookAlert",
     ] as const,
-    requiredControls: [
-      "Verify provider signature against the raw request body before side effects.",
-      "Claim ProviderEvent idempotency before delivery, suppression, inbound, or push-token mutations.",
-      "Apply exactly-once delivery updates under replay and concurrent callbacks.",
-      "Persist suppression, inbound routing, invalid push-token, audit, and failed-webhook alert outcomes in tenant scope.",
-      "Redact provider payloads, destinations, message bodies, private URLs, signatures, and tokens from logs and previews.",
-    ] as const,
+    requiredControls: providerWebhookRouteBoundaryRequiredControls,
   };
 }
 
@@ -357,3 +662,5 @@ export async function executeProviderWebhookReconciliation(
 }
 
 export const providerWebhookContract = buildProviderWebhookContract();
+
+

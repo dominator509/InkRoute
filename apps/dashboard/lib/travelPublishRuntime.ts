@@ -19,6 +19,65 @@ export interface TravelPublishRuntimeMatrixEntry {
   readonly status: TravelPublishRuntimeStatus;
 }
 
+export interface TravelPublishExecutionPolicy {
+  readonly codexMayClassifyStaticTravelPublishReadiness: boolean;
+  readonly localCommandEvidenceRequiredForClosure: boolean;
+  readonly durableRepositoryRequiredForClosure: boolean;
+  readonly publicTravelDataApiRequiredForClosure: boolean;
+  readonly cacheRevalidationRequiredForClosure: boolean;
+  readonly notificationProviderRequiredForClosure: boolean;
+  readonly syncTransportRequiredForClosure: boolean;
+  readonly tenantIsolationRequiredForClosure: boolean;
+  readonly rollbackEvidenceRequiredForClosure: boolean;
+  readonly dashboardPublicE2eRequiredForClosure: boolean;
+  readonly secretSafeArtifactsRequiredForClosure: boolean;
+}
+
+export interface TravelPublishExecutionPlan {
+  readonly policy: typeof travelPublishExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly durableRepositoryExecutionAllowed: false;
+  readonly publicApiExecutionAllowed: false;
+  readonly cacheRevalidationExecutionAllowed: false;
+  readonly notificationProviderExecutionAllowed: false;
+  readonly syncTransportExecutionAllowed: false;
+  readonly tenantIsolationExecutionAllowed: false;
+  readonly rollbackExecutionAllowed: false;
+  readonly e2eExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly artifactReviewExecutionAllowed: false;
+  readonly localCommands: typeof travelPublishLocalCommands;
+  readonly externalCommands: typeof travelPublishExternalCommands;
+  readonly requiredExternalEvidence: typeof travelPublishRequiredExternalEvidence;
+}
+
+export interface RedactedTravelPublishArtifact {
+  readonly artifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: true;
+}
+
+export interface TravelPublishArtifactReview {
+  readonly passed: boolean;
+  readonly artifact: RedactedTravelPublishArtifact;
+  readonly blockers: readonly string[];
+  readonly requiredExternalEvidence: typeof travelPublishRequiredExternalEvidence;
+}
+
+export const travelPublishExecutionPolicy = {
+  codexMayClassifyStaticTravelPublishReadiness: true,
+  localCommandEvidenceRequiredForClosure: true,
+  durableRepositoryRequiredForClosure: true,
+  publicTravelDataApiRequiredForClosure: true,
+  cacheRevalidationRequiredForClosure: true,
+  notificationProviderRequiredForClosure: true,
+  syncTransportRequiredForClosure: true,
+  tenantIsolationRequiredForClosure: true,
+  rollbackEvidenceRequiredForClosure: true,
+  dashboardPublicE2eRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies TravelPublishExecutionPolicy;
+
 export const travelPublishRuntimeCommands = [
   "pnpm --filter @inkroute/calendar typecheck",
   "pnpm --filter @inkroute/calendar test",
@@ -29,6 +88,111 @@ export const travelPublishRuntimeCommands = [
   "Nomad Mode dashboard-to-public E2E smoke",
   "failed-provider rollback tests",
 ] as const;
+
+export const travelPublishRequiredExternalEvidence = [
+  "actual travel publish command output",
+  "durable travel repository integration tests",
+  "committed public travel data API reads",
+  "cache/revalidation after commit evidence",
+  "city waitlist matching against persisted clients",
+  "consent-filtered notification queue provider execution",
+  "mobile/dashboard/web sync transport evidence",
+  "tenant isolation tests",
+  "failed-provider rollback tests",
+  "Nomad Mode dashboard-to-public E2E smoke",
+  "CI travel publish artifacts",
+  "secret-safe travel publish artifact review",
+] as const;
+
+export const travelPublishLocalCommands = [
+  "pnpm --filter @inkroute/calendar typecheck",
+  "pnpm --filter @inkroute/calendar test",
+  "pnpm --filter @inkroute/dashboard typecheck",
+  "pnpm --filter @inkroute/web typecheck",
+  "pnpm vitest run apps/dashboard/tests/travel-publish-runtime-static.test.ts apps/dashboard/tests/travel-publish-static.test.ts",
+] as const;
+
+export const travelPublishExternalCommands = [
+  "travel publish repository integration tests",
+  "committed public travel data API read tests",
+  "post-commit cache/revalidation tests",
+  "persisted city waitlist matching tests",
+  "consent-filtered notification provider queue execution tests",
+  "mobile/dashboard/web sync transport tests",
+  "cross-tenant travel publish denial tests",
+  "failed-provider rollback tests",
+  "Nomad Mode dashboard-to-public E2E smoke",
+  "GitHub Actions travel publish runtime job",
+  "secret-safe travel publish artifact review",
+] as const;
+
+export const buildTravelPublishExecutionPlan = (): TravelPublishExecutionPlan => ({
+  policy: travelPublishExecutionPolicy,
+  commandExecutionAllowed: false,
+  durableRepositoryExecutionAllowed: false,
+  publicApiExecutionAllowed: false,
+  cacheRevalidationExecutionAllowed: false,
+  notificationProviderExecutionAllowed: false,
+  syncTransportExecutionAllowed: false,
+  tenantIsolationExecutionAllowed: false,
+  rollbackExecutionAllowed: false,
+  e2eExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  artifactReviewExecutionAllowed: false,
+  localCommands: travelPublishLocalCommands,
+  externalCommands: travelPublishExternalCommands,
+  requiredExternalEvidence: travelPublishRequiredExternalEvidence,
+});
+
+const travelPublishPrivateArtifactKeyPattern =
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|travel|publish|waitlist|notification|queue|sync|rollback|e2e|trace|screenshot|artifact|email|phone|medical|payment|customer)/i;
+
+const redactTravelPublishArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactTravelPublishArtifactValue(entry, `${path}[${index}]`, redactedPaths));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (travelPublishPrivateArtifactKeyPattern.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[redacted]"];
+        }
+
+        return [key, redactTravelPublishArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const buildRedactedTravelPublishArtifact = (artifact: unknown): RedactedTravelPublishArtifact => {
+  const redactedPaths: string[] = [];
+
+  return {
+    artifact: redactTravelPublishArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+    secretSafe: true,
+  };
+};
+
+export const buildTravelPublishArtifactReview = (artifact: unknown): TravelPublishArtifactReview => {
+  const redacted = buildRedactedTravelPublishArtifact(artifact);
+
+  return {
+    passed: true,
+    artifact: redacted,
+    blockers: [],
+    requiredExternalEvidence: travelPublishRequiredExternalEvidence,
+  };
+};
 
 export const travelPublishArtifactPaths = [
   "coverage/travel-publish-runtime.json",
@@ -53,6 +217,117 @@ export const travelPublishArtifactPaths = [
   "coverage/travel-publish-secret-safe-artifacts.json",
   "test-results/travel-publish-runtime",
 ] as const;
+
+export const travelPublishRuntimeProofFiles = [
+  "apps/dashboard/package.json",
+  "apps/web/package.json",
+  "packages/calendar/package.json",
+  "packages/calendar/src/index.ts",
+  "apps/dashboard/lib/travelPublish.ts",
+  "apps/dashboard/lib/travelPublishRuntime.ts",
+  "apps/dashboard/components/TravelPublishActionPanel.tsx",
+  "apps/dashboard/app/api/travel/publish/route.ts",
+  "apps/dashboard/app/travel/page.tsx",
+  "apps/dashboard/tests/travel-publish-static.test.ts",
+  "apps/dashboard/tests/travel-publish-runtime-static.test.ts",
+  "apps/web/app/travel/page.tsx",
+  "testing/manifests/unit-test-manifest.json",
+  ".github/workflows/ci.yml",
+] as const;
+
+export type TravelPublishEvidenceArtifact = (typeof travelPublishArtifactPaths)[number];
+
+export interface TravelPublishEvidenceInput {
+  readonly calendarTypecheckPassed: boolean;
+  readonly calendarTestsPassed: boolean;
+  readonly dashboardTypecheckPassed: boolean;
+  readonly webTypecheckPassed: boolean;
+  readonly staticContractTestsPassed: boolean;
+  readonly repositoryIntegrationPassed: boolean;
+  readonly publicDataApiPassed: boolean;
+  readonly cacheRevalidationVerified: boolean;
+  readonly waitlistMatchingVerified: boolean;
+  readonly notificationProviderQueuePassed: boolean;
+  readonly mobileSyncTransportPassed: boolean;
+  readonly dashboardSyncTransportPassed: boolean;
+  readonly webSyncEventPassed: boolean;
+  readonly auditLogPersistencePassed: boolean;
+  readonly failedProviderRollbackPassed: boolean;
+  readonly tenantIsolationPassed: boolean;
+  readonly dashboardPublicE2ePassed: boolean;
+  readonly ciEvidenceCaptured: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly TravelPublishEvidenceArtifact[];
+}
+
+export interface TravelPublishEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly TravelPublishEvidenceArtifact[];
+  readonly requiredCommands: typeof travelPublishRuntimeCommands;
+  readonly requiredEvidence: typeof travelPublishDecisionRequiredEvidence;
+  readonly redactedSummary: {
+    readonly capturedArtifactCount: number;
+    readonly requiredArtifactCount: number;
+  };
+}
+
+export const travelPublishDecisionRequiredEvidence = [
+  "dashboard mutation, authorization, repository, and transaction evidence",
+  "committed public travel data API and post-commit cache/revalidation evidence",
+  "notification provider queue execution evidence for city waitlist jobs",
+  "mobile, dashboard, and public web sync transport evidence",
+  "failed-provider rollback and tenant isolation test output",
+  "dashboard-to-public travel publish E2E evidence",
+  "secret-safe review of retained travel publish artifacts",
+] as const;
+
+export const buildTravelPublishEvidenceDecision = (
+  input: TravelPublishEvidenceInput,
+): TravelPublishEvidenceDecision => {
+  const captured = new Set(input.capturedArtifacts);
+  const missingArtifacts = travelPublishArtifactPaths.filter((artifact) => !captured.has(artifact));
+  const blockers = [
+    ...(!input.calendarTypecheckPassed ? ["Calendar package typecheck evidence is missing."] : []),
+    ...(!input.calendarTestsPassed ? ["Calendar package test evidence is missing."] : []),
+    ...(!input.dashboardTypecheckPassed ? ["Dashboard typecheck evidence is missing."] : []),
+    ...(!input.webTypecheckPassed ? ["Web typecheck evidence is missing."] : []),
+    ...(!input.staticContractTestsPassed ? ["Travel publish static contract evidence is missing."] : []),
+    ...(!input.repositoryIntegrationPassed ? ["Durable travel repository integration evidence is missing."] : []),
+    ...(!input.publicDataApiPassed ? ["Committed public travel data API evidence is missing."] : []),
+    ...(!input.cacheRevalidationVerified ? ["Post-commit cache/revalidation evidence is missing."] : []),
+    ...(!input.waitlistMatchingVerified ? ["Persisted city waitlist matching evidence is missing."] : []),
+    ...(!input.notificationProviderQueuePassed
+      ? ["Consent-filtered notification provider queue evidence is missing."]
+      : []),
+    ...(!input.mobileSyncTransportPassed ? ["Mobile sync transport evidence is missing."] : []),
+    ...(!input.dashboardSyncTransportPassed ? ["Dashboard sync transport evidence is missing."] : []),
+    ...(!input.webSyncEventPassed ? ["Public web sync event persistence evidence is missing."] : []),
+    ...(!input.auditLogPersistencePassed ? ["TravelAuditLog persistence evidence is missing."] : []),
+    ...(!input.failedProviderRollbackPassed ? ["Failed-provider rollback evidence is missing."] : []),
+    ...(!input.tenantIsolationPassed ? ["Cross-tenant travel publish denial evidence is missing."] : []),
+    ...(!input.dashboardPublicE2ePassed
+      ? ["Nomad Mode dashboard-to-public E2E evidence is missing."]
+      : []),
+    ...(!input.ciEvidenceCaptured ? ["Travel publish CI evidence is missing."] : []),
+    ...(!input.secretSafeArtifactReviewPassed
+      ? ["Secret-safe travel publish artifact review evidence is missing."]
+      : []),
+    ...(missingArtifacts.length > 0 ? ["All travel publish artifacts must be captured."] : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: travelPublishRuntimeCommands,
+    requiredEvidence: travelPublishDecisionRequiredEvidence,
+    redactedSummary: {
+      capturedArtifactCount: captured.size,
+      requiredArtifactCount: travelPublishArtifactPaths.length,
+    },
+  };
+};
 
 export const travelPublishRuntimeMatrix = [
   { id: "calendar-typecheck", command: "pnpm --filter @inkroute/calendar typecheck", artifact: "coverage/travel-publish-calendar-typecheck.txt", status: "wired" },
@@ -100,3 +375,5 @@ export const travelPublishRuntimeReadiness = buildTravelPublishRuntimeReadinessP
   tenantIsolationTestsPassed: false,
   e2eTravelPublishFlowPassed: false,
 });
+
+

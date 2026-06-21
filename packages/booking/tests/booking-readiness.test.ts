@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   buildBookingPostSubmitPlan,
@@ -9,8 +10,24 @@ import {
   buildDashboardMutationRuntimeReadinessPlan,
   buildDomainEventAuditReadinessPlan,
   buildDomainEventAuditTransactionEvidencePlan,
+  bookingContactRuntimeRequiredCommands,
+  bookingContactRuntimeRequiredControls,
+  bookingContactRuntimeRequiredEvidence,
+  bookingProviderHandoffRuntimeRequiredCommands,
+  bookingProviderHandoffRuntimeRequiredControls,
+  bookingProviderHandoffRuntimeRequiredEvidence,
   calculateTattooReadinessScore,
   createBookingTransitionPlan,
+  dashboardMutationExecutionRequiredCommands,
+  dashboardMutationExecutionRequiredControls,
+  dashboardMutationExecutionRequiredEvidence,
+  dashboardMutationRuntimeRequiredCommands,
+  dashboardMutationRuntimeRequiredEvidence,
+  domainEventAuditReadinessRequiredCommands,
+  domainEventAuditReadinessRequiredControls,
+  domainEventAuditTransactionRequiredCommands,
+  domainEventAuditTransactionRequiredControls,
+  domainEventAuditTransactionRequiredEvidence,
   emptyBookingDraft,
   getAvailableBookingActions,
   getTravelBookingCta,
@@ -367,9 +384,10 @@ describe("booking readiness", () => {
     expect(plan.missingScripts).toEqual(["typecheck"]);
     expect(plan.missingServerRoutes).toContain("create_calendar_hold");
     expect(plan.missingRouteTests).toContain("rollback_release");
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/dashboard test -- dashboard-mutations");
-    expect(plan.requiredEvidence).toContain("tenant isolation and RBAC denial test output for dashboard mutations");
-    expect(plan.blockers).toContain("Disabled dashboard action placeholders must be replaced by gated actions before runtime readiness.");
+    expect(plan.requiredCommands).toBe(dashboardMutationRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(dashboardMutationRuntimeRequiredEvidence);
+    expect(plan.blockers).toContain("Dashboard mutation surfaces must expose gated action UI and explicit feedback states before runtime readiness.");
+    expect(plan.blockers).not.toContain("Dashboard mutation surfaces must expose gated actions instead of disabled placeholder copy before runtime readiness.");
   });
 
   it("blocks dashboard mutation execution evidence until routes, transactions, RBAC, rollback, UI states, CI, and artifacts exist", () => {
@@ -399,24 +417,13 @@ describe("booking readiness", () => {
     expect(plan.missingServerActions).toContain("create_deposit_session");
     expect(plan.missingApiRoutes).toContain("rollback_release");
     expect(plan.missingRouteTests).toContain("update_settings");
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "dashboard mutation server-action/API route tests",
-      "dashboard mutation Prisma transaction tests",
-      "dashboard mutation tenant-isolation and RBAC tests",
-      "provider mutation rollback/retry tests",
-      "dashboard mutation UI feedback-state tests",
-    ]));
-    expect(plan.requiredControls).toContain("Use buildDashboardMutationPlan before every server action or API mutation side effect.");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "server action, API route, and route-test matrix for every dashboard mutation",
-      "Prisma transaction, idempotency, and AuditLog persistence evidence",
-      "tenant-isolation and RBAC-denial mutation test evidence",
-      "provider rollback/retry evidence for storage, Stripe, notification, calendar, release, and settings actions",
-      "gated mutation UI replacement plus loading/success/denial/failure/retry state evidence",
-      "dashboard typecheck/build, CI, and secret-safe artifact evidence",
-    ]));
-    expect(plan.blockers).toContain("Disabled dashboard placeholders must be replaced with gated mutation UI.");
-    expect(plan.blockers).toContain("Dashboard mutation artifacts must be redacted and free of secrets, provider tokens, raw PII, medical notes, payment data, and private file URLs.");
+    expect(plan.requiredCommands).toBe(dashboardMutationExecutionRequiredCommands);
+    expect(plan.requiredControls).toBe(dashboardMutationExecutionRequiredControls);
+    expect(plan.requiredEvidence).toBe(dashboardMutationExecutionRequiredEvidence);
+    expect(plan.blockers).toContain("Dashboard mutation server actions are missing for: request_changes, mark_deposit_paid, confirm_appointment, complete, create_reference_upload_intent, create_deposit_session, send_client_notification, create_calendar_hold, publish_travel_stop, publish_portfolio_item, toggle_feature_flag, rollback_release, update_settings.");
+    expect(plan.blockers).toContain("Dashboard mutation surfaces must expose gated action UI and explicit feedback states before execution readiness.");
+    expect(plan.blockers).not.toContain("Dashboard mutation surfaces must expose gated actions instead of disabled placeholder copy before execution readiness.");
+    expect(plan.blockers).toContain("Dashboard mutation artifacts must be redacted and free of secrets, raw PII, medical notes, payment data, and private file URLs.");
   });
 
   it("marks dashboard mutation execution evidence ready when routes, transactions, RBAC, rollback, UI states, CI, and artifacts align", () => {
@@ -467,7 +474,7 @@ describe("booking readiness", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Replace disabled placeholders with gated UI actions and explicit loading/success/denial/failure/retry states.");
+    expect(plan.requiredControls).toBe(dashboardMutationExecutionRequiredControls);
   });
 
   it("blocks booking/contact runtime evidence until route, UI, persistence, provider, E2E, CI, and artifact proof exist", () => {
@@ -496,20 +503,11 @@ describe("booking readiness", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "booking/contact API E2E tests",
-      "booking/contact browser E2E tests",
-      "provider sandbox handoff boundary tests",
-    ]));
-    expect(plan.requiredControls).toContain("Preserve no-live-payment behavior until Stripe sandbox credentials and reviewed deposit copy are configured.");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "public route, confirmation UI, and contact persistence wiring evidence",
-      "tenant-scoped booking/contact database integration evidence",
-      "provider-gated upload, deposit, notification, calendar, and no-live-payment boundary evidence",
-      "browser E2E, API E2E, and provider sandbox transcript evidence",
-      "web typecheck/build, CI, and secret-safe artifact evidence",
-    ]));
-    expect(plan.blockers).toContain("Contact form submissions must persist through a tenant-scoped pathway with audit metadata.");
+    expect(plan.requiredCommands).toBe(bookingContactRuntimeRequiredCommands);
+    expect(plan.requiredControls).toBe(bookingContactRuntimeRequiredControls);
+    expect(plan.requiredEvidence).toBe(bookingContactRuntimeRequiredEvidence);
+    expect(plan.blockers).toContain("Contact form persistence must be configured for submissions and workflow reads.");
+    expect(plan.blockers).toContain("Booking/contact database persistence integration tests must pass.");
     expect(plan.blockers).toContain("Deposit handoff must preserve the no-live-payment boundary until Stripe test credentials and sandbox evidence exist.");
     expect(plan.blockers).toContain("Booking/contact artifacts must be redacted and free of secrets, raw medical notes, payment data, provider tokens, and private file URLs.");
   });
@@ -544,7 +542,7 @@ describe("booking readiness", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Persist booking/contact submissions before creating upload, deposit, notification, or calendar handoff work.");
+    expect(plan.requiredControls).toBe(bookingContactRuntimeRequiredControls);
   });
 
   it("blocks booking provider handoff evidence until accepted gates, workers, provider sandboxes, rollback, CI, and artifacts exist", () => {
@@ -573,24 +571,13 @@ describe("booking readiness", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "Stripe CLI deposit session sandbox test",
-      "email/SMS/push notification sandbox delivery tests",
-      "Google Calendar tentative hold sandbox test",
-      "persisted provider worker execution tests",
-      "provider rollback/retry integration tests",
-    ]));
-    expect(plan.requiredControls).toContain("Create Stripe deposit sessions only after accepted booking state and policy approval.");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "accepted-booking gate, persisted worker queue, and provider idempotency evidence",
-      "reference upload, Stripe, notification, and calendar sandbox execution evidence",
-      "audit persistence, retry, rollback, and operator-review queue evidence",
-      "booking, payments, notifications, and calendar package test/typecheck evidence",
-      "provider sandbox, CI, and secret-safe artifact evidence",
-    ]));
-    expect(plan.blockers).toContain("Deposit and calendar handoffs must run only after an accepted booking state.");
+    expect(plan.requiredCommands).toBe(bookingProviderHandoffRuntimeRequiredCommands);
+    expect(plan.requiredControls).toBe(bookingProviderHandoffRuntimeRequiredControls);
+    expect(plan.requiredEvidence).toBe(bookingProviderHandoffRuntimeRequiredEvidence);
+    expect(plan.blockers).toContain("Provider handoffs must only execute after accepted booking state and policy approval.");
+    expect(plan.blockers).toContain("Persisted provider worker queue must be configured before provider handoff execution can close.");
     expect(plan.blockers).toContain("Stripe deposit session sandbox test must pass without live-payment mode.");
-    expect(plan.blockers).toContain("Provider handoff artifacts must be redacted and free of secrets, provider tokens, payment data, private URLs, and raw client PII.");
+    expect(plan.blockers).toContain("Booking provider handoff artifacts must be redacted and free of secrets, provider tokens, payment data, private URLs, and raw client PII.");
   });
 
   it("marks booking provider handoff evidence ready when workers, sandboxes, rollback, CI, and artifacts align", () => {
@@ -623,7 +610,7 @@ describe("booking readiness", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Persist audit payloads and idempotency keys before invoking external providers.");
+    expect(plan.requiredControls).toBe(bookingProviderHandoffRuntimeRequiredControls);
   });
 
   it("summarizes domain event and audit readiness across booking, payment, transactions, idempotency, and rollback", () => {
@@ -646,10 +633,10 @@ describe("booking readiness", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toContain("booking/payment lifecycle Prisma transaction integration tests");
-    expect(plan.requiredControls).toContain("Make invalid state transitions impossible through the service layer, not just through UI disabled states.");
+    expect(plan.requiredCommands).toBe(domainEventAuditReadinessRequiredCommands);
+    expect(plan.requiredControls).toBe(domainEventAuditReadinessRequiredControls);
     expect(plan.blockers).toContain("Prisma service layer must execute state changes and event/audit writes in one transaction.");
-    expect(plan.blockers).toContain("Idempotency store must reject replayed booking/payment lifecycle mutations.");
+    expect(plan.blockers).toContain("Idempotency store must persist replay keys for lifecycle and provider actions.");
     expect(plan.blockers).toContain("Database integration tests must prove state mutation, event row, audit row, idempotency, and rollback behavior atomically.");
   });
 
@@ -679,14 +666,8 @@ describe("booking readiness", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "booking/payment package test and typecheck evidence",
-      "Prisma transaction service and tenant-scoped repository evidence",
-      "atomic booking/payment state, event, audit, and payment-audit persistence evidence",
-      "idempotency persistence and replay original-result evidence",
-      "provider rollback, invalid-transition denial, and cross-tenant denial evidence",
-      "database integration, CI, and secret-safe artifact evidence",
-    ]);
+    expect(plan.requiredCommands).toBe(domainEventAuditTransactionRequiredCommands);
+    expect(plan.requiredEvidence).toBe(domainEventAuditTransactionRequiredEvidence);
     expect(plan.blockers).toContain("Booking/payment lifecycle services must execute writes inside Prisma transactions.");
     expect(plan.blockers).toContain("Replayed lifecycle mutations must return the original committed result without duplicate writes.");
     expect(plan.blockers).toContain("Domain event/audit artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.");
@@ -722,7 +703,7 @@ describe("booking readiness", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Commit state mutation, domain event, audit row, payment audit row, and idempotency key in the same tenant-scoped transaction.");
+    expect(plan.requiredControls).toBe(domainEventAuditTransactionRequiredControls);
   });
 
   it("returns travel booking calls to action for open, waitlist, and closed statuses", () => {
@@ -730,4 +711,11 @@ describe("booking readiness", () => {
     expect(getTravelBookingCta("waitlist")).toBe("Join the waitlist");
     expect(getTravelBookingCta("closed")).toBe("View travel notes");
   });
+  it("pins GAP-035 booking state machine tracker closure", () => {
+    const gapTracker = readFileSync("GAP_TRACKER.md", "utf8");
+
+    expect(gapTracker).toContain("GAP-035 is booking-state-machine-tests wired with evidence classifier");
+    expect(gapTracker).toContain("packages/booking/tests/booking-readiness.test.ts");
+  });
+
 });

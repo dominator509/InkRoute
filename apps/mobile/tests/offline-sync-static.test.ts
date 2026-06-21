@@ -10,6 +10,7 @@ function readWorkspaceFile(path: string): string {
 
 describe("mobile offline sync static contract", () => {
   const offlineSource = readWorkspaceFile("apps/mobile/src/lib/offlineSync.ts");
+  const mobileSupportSource = readWorkspaceFile("packages/mobile/src/index.ts");
   const screenSource = readWorkspaceFile("apps/mobile/src/screens/OfflineNotesScreen.tsx");
 
   it("defines an encrypted-store adapter boundary and queue persistence calls", () => {
@@ -29,6 +30,7 @@ describe("mobile offline sync static contract", () => {
 
   it("replays ready items through the mobile API client with idempotency keys", () => {
     expect(offlineSource).toContain("mobileApiFetch");
+    expect(offlineSource).toContain("transport?: OfflineSyncTransport");
     expect(offlineSource).toContain("buildOfflineIdempotencyKey(item)");
     expect(offlineSource).toContain('method: "PATCH"');
     expect(offlineSource).toContain("/api/mobile/offline/");
@@ -36,14 +38,36 @@ describe("mobile offline sync static contract", () => {
 
   it("records redacted audit events instead of leaking sensitive offline payloads", () => {
     expect(offlineSource).toContain("buildOfflineSyncAuditEvent");
+    expect(offlineSource).toContain("buildOfflineSyncTransportFailureAuditEvent");
     expect(offlineSource).toContain("Sensitive offline payload redacted.");
+    expect(offlineSource).toContain("Offline sync transport failed. Payload, response body, and credentials redacted.");
     expect(offlineSource).not.toContain("label: item.label");
+  });
+
+  it("persists retry state when a replay transport call fails", () => {
+    expect(offlineSource).toContain("failedItemIds");
+    expect(offlineSource).toContain('decision: "transport_failed"');
+    expect(offlineSource).toContain('status: "failed" as const');
+    expect(offlineSource).toContain("retryCount: item.retryCount + 1");
+    expect(offlineSource).toContain("await input.store.saveQueue(nextItems)");
   });
 
   it("surfaces the runtime gate in the offline screen", () => {
     expect(screenSource).toContain("offlineSyncPreview");
     expect(screenSource).toContain("Sync worker contract");
+    expect(screenSource).toContain("Offline queue contract");
+    expect(screenSource).toContain("app-side adapter, sync worker, idempotent replay, retry state, and redacted audit events are wired");
     expect(screenSource).toContain("encrypted device storage");
     expect(screenSource).toContain("reconnect smoke");
+    expect(screenSource).not.toContain("Static queue model");
+    expect(screenSource).not.toContain("not implemented yet");
+  });
+
+  it("keeps mobile support offline summary aligned with app-side worker wiring", () => {
+    expect(mobileSupportSource).toContain("Offline queue planning and the app-side adapter/worker contract are wired");
+    expect(mobileSupportSource).toContain("encrypted device persistence, conflict integration, and reconnect proof remain gated");
+    expect(mobileSupportSource).not.toContain(
+      "Offline queue is a Phase 6 model only; encrypted persistence and sync conflict handling are not implemented",
+    );
   });
 });

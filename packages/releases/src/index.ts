@@ -35,6 +35,76 @@ export interface ReleaseGate {
   readonly nextAction: string;
 }
 
+export type ReleaseRuntimeCommand = string;
+
+export const migrationRuntimeDryRunReadinessRequiredEvidence = [
+  "Prisma schema, committed migration, and staging DATABASE_URL evidence",
+  "Prisma validate, diff, migrate dry-run, and destructive SQL scan evidence",
+  "backup, approval, expand/contract, forward-fix, and rollback evidence",
+  "GitHub Actions migration dry-run artifact evidence",
+] as const;
+export type MigrationRuntimeDryRunReadinessRequiredEvidence = (typeof migrationRuntimeDryRunReadinessRequiredEvidence)[number];
+
+export const releaseRuntimeVerificationRequiredEvidence = [
+  "release package test/typecheck, web typecheck, and release-health route smoke evidence",
+  "web, dashboard, and mobile build/typecheck evidence",
+  "dashboard release and feature-flag route smoke evidence",
+  "GitHub release-governance workflow dry-run/dispatch evidence",
+  "CI artifact, log, and release evidence attachment",
+] as const;
+export type ReleaseRuntimeVerificationRequiredEvidence = (typeof releaseRuntimeVerificationRequiredEvidence)[number];
+
+export const releasePersistenceRbacReadinessRequiredEvidence = [
+  "dashboard static route test and dashboard typecheck evidence",
+  "tenant-scoped RBAC, mismatch rejection, and membership lookup evidence",
+  "provider credential gate, previous-state metadata, and optimistic concurrency evidence",
+  "approval state machine, rendered dashboard workflow, orchestration hook, and DB-backed route evidence",
+] as const;
+export type ReleasePersistenceRbacReadinessRequiredEvidence = (typeof releasePersistenceRbacReadinessRequiredEvidence)[number];
+
+export const cicdDeploymentAutomationReadinessRequiredEvidence = [
+  "workflow source, no-secret-literal, and CI prerequisite evidence",
+  "GitHub protected environment and secret configuration evidence",
+  "preview, staging, production, and Vercel deployment job evidence",
+  "Prisma, EAS, Sentry, and Search Console deployment gate evidence",
+  "ReleaseRecord CI result write and live workflow dispatch evidence",
+] as const;
+export type CicdDeploymentAutomationReadinessRequiredEvidence = (typeof cicdDeploymentAutomationReadinessRequiredEvidence)[number];
+
+export const featureFlagRuntimeIntegrationReadinessRequiredEvidence = [
+  "release package, static runtime, dashboard typecheck, and mobile typecheck evidence",
+  "DB-backed evaluation and dashboard/mobile/public runtime payload evidence",
+  "cached resolver, real auth context, and invalidation/revalidation evidence",
+  "provider kill-switch, rollout bucket, tenant-safe payload, and live rollout evidence",
+] as const;
+export type FeatureFlagRuntimeIntegrationReadinessRequiredEvidence = (typeof featureFlagRuntimeIntegrationReadinessRequiredEvidence)[number];
+
+export const mobileOtaProductionEnablementRequiredEvidence = [
+  "real Expo project/update URL, expo-updates, and runtimeVersion policy evidence",
+  "preview/production EAS channel and native build evidence",
+  "preview OTA publish, update ID, and device adoption evidence",
+  "adoption monitoring, rollback republish drill, and release-health linkage evidence",
+] as const;
+export type MobileOtaProductionEnablementRequiredEvidence = (typeof mobileOtaProductionEnablementRequiredEvidence)[number];
+
+export const releaseAutomatedTestReadinessRequiredEvidence = [
+  "package helper, workflow, route, static surface, mobile static, and dashboard typecheck evidence",
+  "Playwright dashboard release smoke and provider-backed route integration evidence",
+  "Expo render and physical-device release/OTA evidence",
+  "GitHub Actions workflow execution, real secrets/environments, and CI artifact evidence",
+] as const;
+export type ReleaseAutomatedTestReadinessRequiredEvidence = (typeof releaseAutomatedTestReadinessRequiredEvidence)[number];
+
+export const releaseLaunchControlEvidenceRequiredEvidence = [
+  "ReleaseRecord/FeatureFlag persistence, RBAC, tenant-scope, concurrency, and audit evidence",
+  "protected environment, signed job, CI required-check, preview deploy, and production approval dry-run evidence",
+  "migration gate and incident-linked rollback drill evidence",
+  "EAS update governance, channel, runtime, adoption, and rollback evidence",
+  "tenant rollout, kill-switch drill, and release-health envelope evidence",
+  "provider-backed route, CI artifact, and secret-safe launch evidence",
+] as const;
+export type ReleaseLaunchControlEvidenceRequiredEvidence = (typeof releaseLaunchControlEvidenceRequiredEvidence)[number];
+
 export interface ReleaseCandidateInput {
   readonly version: string;
   readonly channel: ReleaseChannel;
@@ -142,7 +212,7 @@ export interface EasOtaReadinessPlan {
   readonly status: "ready_for_preview" | "blocked";
   readonly productionReady: boolean;
   readonly gates: readonly ReleaseGate[];
-  readonly requiredCommands: readonly string[];
+  readonly requiredCommands: typeof easOtaReadinessRequiredCommands;
   readonly rollbackRequirement: string;
   readonly blockers: readonly string[];
 }
@@ -174,8 +244,8 @@ export interface ExpoEasRuntimeEvidencePlan {
   readonly status: "ready" | "blocked";
   readonly missingScripts: readonly string[];
   readonly gates: readonly ReleaseGate[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof expoEasRuntimeEvidenceRequiredCommands;
+  readonly requiredEvidence: typeof expoEasRuntimeEvidenceRequiredEvidence;
   readonly blockers: readonly string[];
 }
 
@@ -232,7 +302,7 @@ export interface MigrationCompatibilityEnforcementPlan {
   readonly classification: MigrationRisk;
   readonly productionBlocked: boolean;
   readonly gates: readonly ReleaseGate[];
-  readonly requiredCommands: readonly string[];
+  readonly requiredCommands: ReturnType<typeof buildMigrationCompatibilityRequiredCommands>;
   readonly policy: readonly string[];
 }
 
@@ -264,8 +334,8 @@ export interface ReleaseControlPlaneReadinessInput {
 export interface ReleaseControlPlaneReadinessPlan {
   readonly status: "ready" | "blocked";
   readonly missingScripts: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof releaseControlPlaneReadinessRequiredCommands;
+  readonly requiredEvidence: typeof releaseControlPlaneReadinessRequiredEvidence;
   readonly blockers: readonly string[];
 }
 
@@ -288,8 +358,8 @@ export interface ReleaseRuntimeVerificationInput {
 export interface ReleaseRuntimeVerificationPlan {
   readonly status: "ready" | "blocked";
   readonly missingScripts: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof releaseRuntimeVerificationRequiredCommands;
+  readonly requiredEvidence: readonly ReleaseRuntimeVerificationRequiredEvidence[];
   readonly blockers: readonly string[];
 }
 
@@ -316,8 +386,8 @@ export interface ReleasePersistenceRbacReadinessInput {
 export interface ReleasePersistenceRbacReadinessPlan {
   readonly status: "ready" | "blocked";
   readonly missingScripts: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof releasePersistenceRbacReadinessRequiredCommands;
+  readonly requiredEvidence: readonly ReleasePersistenceRbacReadinessRequiredEvidence[];
   readonly blockers: readonly string[];
 }
 
@@ -346,8 +416,10 @@ export interface CicdDeploymentAutomationReadinessInput {
 export interface CicdDeploymentAutomationReadinessPlan {
   readonly status: "ready" | "blocked";
   readonly missingScripts: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof cicdDeploymentAutomationReadinessRequiredCommands;
+  readonly requiredEvidence:
+    | readonly CicdDeploymentAutomationReadinessRequiredEvidence[]
+    | typeof cicdDeploymentAutomationReadinessRequiredEvidence;
   readonly blockers: readonly string[];
 }
 
@@ -374,8 +446,8 @@ export interface FeatureFlagRuntimeIntegrationReadinessInput {
 export interface FeatureFlagRuntimeIntegrationReadinessPlan {
   readonly status: "ready" | "blocked";
   readonly missingScripts: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof featureFlagRuntimeIntegrationReadinessRequiredCommands;
+  readonly requiredEvidence: readonly FeatureFlagRuntimeIntegrationReadinessRequiredEvidence[];
   readonly blockers: readonly string[];
 }
 
@@ -404,8 +476,8 @@ export interface MobileOtaProductionEnablementInput {
 export interface MobileOtaProductionEnablementPlan {
   readonly status: "ready" | "blocked";
   readonly missingScripts: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof mobileOtaProductionEnablementRequiredCommands;
+  readonly requiredEvidence: readonly MobileOtaProductionEnablementRequiredEvidence[];
   readonly blockers: readonly string[];
 }
 
@@ -433,8 +505,8 @@ export interface MigrationRuntimeDryRunReadinessInput {
 export interface MigrationRuntimeDryRunReadinessPlan {
   readonly status: "ready" | "blocked";
   readonly missingScripts: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof migrationRuntimeDryRunReadinessRequiredCommands;
+  readonly requiredEvidence: readonly MigrationRuntimeDryRunReadinessRequiredEvidence[];
   readonly blockers: readonly string[];
 }
 
@@ -458,8 +530,8 @@ export interface ReleaseAutomatedTestReadinessInput {
 export interface ReleaseAutomatedTestReadinessPlan {
   readonly status: "ready" | "blocked";
   readonly missingScripts: readonly string[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof releaseAutomatedTestReadinessRequiredCommands;
+  readonly requiredEvidence: readonly ReleaseAutomatedTestReadinessRequiredEvidence[];
   readonly blockers: readonly string[];
 }
 
@@ -611,11 +683,7 @@ export function buildMigrationCompatibilityEnforcementPlan(input: MigrationCompa
     classification,
     productionBlocked: gates.some((gate) => gate.status !== "pass"),
     gates,
-    requiredCommands: [
-      `pnpm --filter @inkroute/db prisma validate --schema ${input.prismaSchemaPath}`,
-      `pnpm --filter @inkroute/db prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel ${input.prismaSchemaPath} --script`,
-      "pnpm --filter @inkroute/db prisma migrate deploy",
-    ],
+    requiredCommands: buildMigrationCompatibilityRequiredCommands(input),
     policy: [
       "Expand-only migrations may proceed after staging dry-run evidence is attached.",
       "Contract/destructive migrations require expand/contract sequencing and explicit approval.",
@@ -625,11 +693,30 @@ export function buildMigrationCompatibilityEnforcementPlan(input: MigrationCompa
   };
 }
 
+export function buildMigrationCompatibilityRequiredCommands(
+  input: Pick<MigrationCompatibilityEnforcementInput, "prismaSchemaPath">,
+): readonly string[] {
+  return [
+    `pnpm --filter @inkroute/db prisma validate --schema ${input.prismaSchemaPath}`,
+    `pnpm --filter @inkroute/db prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel ${input.prismaSchemaPath} --script`,
+    "pnpm --filter @inkroute/db prisma migrate deploy",
+  ];
+}
+
+export const migrationRuntimeDryRunReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/releases typecheck",
+      "pnpm --filter @inkroute/releases test",
+      "pnpm --filter @inkroute/db prisma validate --schema packages/db/prisma/schema.prisma",
+      "pnpm --filter @inkroute/db prisma migrate diff --from-url \"$DATABASE_URL\" --to-schema-datamodel packages/db/prisma/schema.prisma --script",
+      "pnpm --filter @inkroute/db prisma migrate deploy",
+      "release-governance migration dry run with staging DATABASE_URL",
+    ] as const;
+
 export function buildMigrationRuntimeDryRunReadinessPlan(input: MigrationRuntimeDryRunReadinessInput): MigrationRuntimeDryRunReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: MigrationRuntimeDryRunReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/releases ${script} script.`);
   if (!input.releasesTestsPassed) blockers.push("@inkroute/releases tests must pass before migration runtime dry-run readiness.");
@@ -666,15 +753,11 @@ export function buildMigrationRuntimeDryRunReadinessPlan(input: MigrationRuntime
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/releases typecheck",
-      "pnpm --filter @inkroute/releases test",
-      "pnpm --filter @inkroute/db prisma validate --schema packages/db/prisma/schema.prisma",
-      "pnpm --filter @inkroute/db prisma migrate diff --from-url \"$DATABASE_URL\" --to-schema-datamodel packages/db/prisma/schema.prisma --script",
-      "pnpm --filter @inkroute/db prisma migrate deploy",
-      "release-governance migration dry run with staging DATABASE_URL",
-    ],
-    requiredEvidence,
+    requiredCommands: migrationRuntimeDryRunReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === migrationRuntimeDryRunReadinessRequiredEvidence.length
+        ? migrationRuntimeDryRunReadinessRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -839,6 +922,13 @@ function evidenceGate(id: string, label: string, present: boolean, evidence: str
   };
 }
 
+export const easOtaReadinessRequiredCommands = [
+      "eas build --profile preview",
+      "eas update --channel preview",
+      "eas channel:list",
+      "eas update:list --channel preview",
+    ] as const;
+
 export function buildEasOtaReadinessPlan(input: EasOtaReadinessInput): EasOtaReadinessPlan {
   const gates: ReleaseGate[] = [
     evidenceGate(
@@ -920,16 +1010,29 @@ export function buildEasOtaReadinessPlan(input: EasOtaReadinessInput): EasOtaRea
     status: previewReady ? "ready_for_preview" : "blocked",
     productionReady: blockers.length === 0,
     gates,
-    requiredCommands: [
-      "eas build --profile preview",
-      "eas update --channel preview",
-      "eas channel:list",
-      "eas update:list --channel preview",
-    ],
+    requiredCommands: easOtaReadinessRequiredCommands,
     rollbackRequirement: "Republish the previous compatible EAS update on the same preview channel and confirm the device receives it.",
     blockers,
   };
 }
+
+export const expoEasRuntimeEvidenceRequiredCommands = [
+      "pnpm --filter @inkroute/releases typecheck",
+      "pnpm --filter @inkroute/releases test",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "eas build --profile preview --platform all",
+      "eas update --channel preview",
+      "eas update:list --channel preview",
+      "eas update --channel preview --message rollback-republish-drill --non-interactive",
+    ] as const;
+
+export const expoEasRuntimeEvidenceRequiredEvidence = [
+  "apps/mobile app config contains the real non-secret EAS project id, update URL, runtimeVersion policy, and preview/production channel mapping.",
+  "EAS credentials are configured outside source control and preview/prod native builds are linked to release evidence.",
+  "Preview OTA update id is recorded and a device running the preview binary receives the update.",
+  "Rollback republish drill confirms the previous compatible update can be restored on the preview channel.",
+  "Update adoption, error, and release-health monitoring are wired before production OTA.",
+] as const;
 
 export function buildExpoEasRuntimeEvidencePlan(input: ExpoEasRuntimeEvidenceInput): ExpoEasRuntimeEvidencePlan {
   const requiredScripts = ["test", "typecheck"];
@@ -1083,22 +1186,8 @@ export function buildExpoEasRuntimeEvidencePlan(input: ExpoEasRuntimeEvidenceInp
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
     gates,
-    requiredCommands: [
-      "pnpm --filter @inkroute/releases typecheck",
-      "pnpm --filter @inkroute/releases test",
-      "pnpm --filter @inkroute/mobile typecheck",
-      "eas build --profile preview --platform all",
-      "eas update --channel preview",
-      "eas update:list --channel preview",
-      "rollback republish drill on preview channel",
-    ],
-    requiredEvidence: [
-      "apps/mobile app config contains the real non-secret EAS project id, update URL, runtimeVersion policy, and preview/production channel mapping.",
-      "EAS credentials are configured outside source control and preview/prod native builds are linked to release evidence.",
-      "Preview OTA update id is recorded and a device running the preview binary receives the update.",
-      "Rollback republish drill confirms the previous compatible update can be restored on the preview channel.",
-      "Update adoption, error, and release-health monitoring are wired before production OTA.",
-    ],
+    requiredCommands: expoEasRuntimeEvidenceRequiredCommands,
+    requiredEvidence: expoEasRuntimeEvidenceRequiredEvidence,
     blockers,
   };
 }
@@ -1121,16 +1210,49 @@ export function createRollbackPlan(candidate: ReleaseCandidate, previousVersion:
 }
 
 export function buildGithubReleaseWorkflowPlan(): GithubReleaseWorkflowPlan {
+  const releaseWorkflowRequiredChecks = [
+    "pnpm install --frozen-lockfile",
+    "pnpm typecheck",
+    "pnpm lint",
+    "pnpm test",
+    "Prisma validate",
+    "Prisma migration diff",
+    "Prisma migration dry run",
+    "Next.js builds",
+    "Expo preview build/update when mobile surface changed",
+  ];
+
   return {
     workflowName: "Release Governance",
     triggers: ["workflow_dispatch", "push to main", "tagged release candidates"],
     requiredSecrets: ["VERCEL_TOKEN", "VERCEL_ORG_ID", "VERCEL_PROJECT_ID", "EXPO_TOKEN", "DATABASE_URL"],
-    requiredChecks: ["pnpm install --frozen-lockfile", "pnpm typecheck", "pnpm lint", "pnpm test", "Prisma validate", "Prisma migration diff", "Prisma migration dry run", "Next.js builds", "Expo preview build/update when mobile surface changed"],
+    requiredChecks: releaseWorkflowRequiredChecks,
     concurrencyGroup: "release-${{ github.ref }}",
     environments: ["preview", "staging", "production"],
     deploymentGatedSteps: ["Vercel preview/prod deploy", "Prisma validate", "Prisma migrate diff destructive-change scan", "Prisma migrate deploy", "EAS Update publish", "Sentry release/source-map upload", "Search Console sitemap submission"],
   };
 }
+
+export const releaseControlPlaneReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/releases typecheck",
+      "pnpm --filter @inkroute/releases test",
+      "pnpm test:unit -- apps/web/tests/release-health-route.test.ts apps/web/tests/release-automation-static.test.ts",
+      "pnpm test:unit -- apps/mobile/tests/mobile-static.test.ts",
+      "release-governance workflow dry run",
+      "Prisma migration compatibility dry run",
+      "preview deploy and rollback rehearsal",
+      "EAS preview update and rollback rehearsal",
+    ] as const;
+
+export const releaseControlPlaneReadinessRequiredEvidence = [
+  "ReleaseRecord and FeatureFlag writes persisted with tenant scope, RBAC, audit rows, and version checks.",
+  "Release/feature-flag API route envelopes are consistent for success, validation failure, unauthorized access, and cross-tenant denial.",
+  "GitHub protected environment settings require CI checks and human approval before production deployment.",
+  "Deployment jobs are tied to immutable commit SHA, release version, environment, artifact URLs, and redacted secrets evidence.",
+  "Migration gate output includes Prisma validate, diff, dry-run, backup/restore or forward-fix evidence, and destructive-change approval when needed.",
+  "Rollback rehearsal covers web, dashboard, mobile OTA, database forward-fix/restore policy, feature flags, and incident communication.",
+  "Release health route reads persisted release/flag state and links Sentry/ErrorReport incident fingerprints.",
+] as const;
 
 export function buildReleaseControlPlaneReadinessPlan(input: ReleaseControlPlaneReadinessInput): ReleaseControlPlaneReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
@@ -1163,34 +1285,29 @@ export function buildReleaseControlPlaneReadinessPlan(input: ReleaseControlPlane
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/releases typecheck",
-      "pnpm --filter @inkroute/releases test",
-      "pnpm test:unit -- apps/web/tests/release-health-route.test.ts apps/web/tests/release-automation-static.test.ts",
-      "pnpm test:unit -- apps/mobile/tests/mobile-static.test.ts",
-      "release-governance workflow dry run",
-      "Prisma migration compatibility dry run",
-      "preview deploy and rollback rehearsal",
-      "EAS preview update and rollback rehearsal",
-    ],
-    requiredEvidence: [
-      "ReleaseRecord and FeatureFlag writes persisted with tenant scope, RBAC, audit rows, and version checks.",
-      "Release/feature-flag API route envelopes are consistent for success, validation failure, unauthorized access, and cross-tenant denial.",
-      "GitHub protected environment settings require CI checks and human approval before production deployment.",
-      "Deployment jobs are tied to immutable commit SHA, release version, environment, artifact URLs, and redacted secrets evidence.",
-      "Migration gate output includes Prisma validate, diff, dry-run, backup/restore or forward-fix evidence, and destructive-change approval when needed.",
-      "Rollback rehearsal covers web, dashboard, mobile OTA, database forward-fix/restore policy, feature flags, and incident communication.",
-      "Release health route reads persisted release/flag state and links Sentry/ErrorReport incident fingerprints.",
-    ],
+    requiredCommands: releaseControlPlaneReadinessRequiredCommands,
+    requiredEvidence: releaseControlPlaneReadinessRequiredEvidence,
     blockers,
   };
 }
+
+export const releaseRuntimeVerificationRequiredCommands = [
+      "pnpm --filter @inkroute/releases typecheck",
+      "pnpm --filter @inkroute/releases test",
+      "pnpm vitest run apps/web/tests/release-health-route.test.ts",
+      "pnpm --filter @inkroute/web typecheck",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "dashboard release/feature-flag route smoke",
+      "release-governance workflow dry run",
+    ] as const;
 
 export function buildReleaseRuntimeVerificationPlan(input: ReleaseRuntimeVerificationInput): ReleaseRuntimeVerificationPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: ReleaseRuntimeVerificationRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/releases ${script} script.`);
   if (!input.releasesTestsPassed) blockers.push("@inkroute/releases tests must pass before release runtime verification.");
@@ -1225,27 +1342,29 @@ export function buildReleaseRuntimeVerificationPlan(input: ReleaseRuntimeVerific
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/releases typecheck",
-      "pnpm --filter @inkroute/releases test",
-      "pnpm vitest run apps/web/tests/release-health-route.test.ts",
-      "pnpm --filter @inkroute/web typecheck",
-      "pnpm --filter @inkroute/web build",
-      "pnpm --filter @inkroute/dashboard build",
-      "pnpm --filter @inkroute/mobile typecheck",
-      "dashboard release/feature-flag route smoke",
-      "release-governance workflow dry run",
-    ],
-    requiredEvidence,
+    requiredCommands: releaseRuntimeVerificationRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === releaseRuntimeVerificationRequiredEvidence.length
+        ? releaseRuntimeVerificationRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
+
+export const releasePersistenceRbacReadinessRequiredCommands = [
+      "pnpm vitest run apps/web/tests/dashboard-release-rbac-static.test.ts",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "dashboard release/feature-flag DB-backed route tests",
+      "dashboard rendered release workflow smoke",
+      "release approval state machine smoke",
+      "release workflow orchestration hook smoke",
+    ] as const;
 
 export function buildReleasePersistenceRbacReadinessPlan(input: ReleasePersistenceRbacReadinessInput): ReleasePersistenceRbacReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: ReleasePersistenceRbacReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/releases ${script} script.`);
   if (!input.dashboardStaticRouteTestsPassed) blockers.push("Dashboard release/RBAC static route tests must pass.");
@@ -1284,24 +1403,30 @@ export function buildReleasePersistenceRbacReadinessPlan(input: ReleasePersisten
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm vitest run apps/web/tests/dashboard-release-rbac-static.test.ts",
-      "pnpm --filter @inkroute/dashboard typecheck",
-      "dashboard release/feature-flag DB-backed route tests",
-      "dashboard rendered release workflow smoke",
-      "release approval state machine smoke",
-      "release workflow orchestration hook smoke",
-    ],
-    requiredEvidence,
+    requiredCommands: releasePersistenceRbacReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === releasePersistenceRbacReadinessRequiredEvidence.length
+        ? releasePersistenceRbacReadinessRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
+
+export const cicdDeploymentAutomationReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/releases typecheck",
+      "pnpm --filter @inkroute/releases test",
+      "pnpm vitest run packages/releases/tests/release-governance-workflow.test.ts",
+      "release-governance workflow_dispatch dry run",
+      "Vercel preview/staging/production deploy smoke",
+      "Prisma migrate dry-run/deploy smoke",
+      "Sentry/Search Console release step smoke",
+    ] as const;
 
 export function buildCicdDeploymentAutomationReadinessPlan(input: CicdDeploymentAutomationReadinessInput): CicdDeploymentAutomationReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: CicdDeploymentAutomationReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/releases ${script} script.`);
   if (!input.releasesTestsPassed) blockers.push("@inkroute/releases tests must pass before CI/CD automation readiness.");
@@ -1342,25 +1467,31 @@ export function buildCicdDeploymentAutomationReadinessPlan(input: CicdDeployment
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/releases typecheck",
-      "pnpm --filter @inkroute/releases test",
-      "pnpm vitest run packages/releases/tests/release-governance-workflow.test.ts",
-      "release-governance workflow_dispatch dry run",
-      "Vercel preview/staging/production deploy smoke",
-      "Prisma migrate dry-run/deploy smoke",
-      "Sentry/Search Console release step smoke",
-    ],
-    requiredEvidence,
+    requiredCommands: cicdDeploymentAutomationReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === cicdDeploymentAutomationReadinessRequiredEvidence.length
+        ? cicdDeploymentAutomationReadinessRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
+
+export const featureFlagRuntimeIntegrationReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/releases typecheck",
+      "pnpm --filter @inkroute/releases test",
+      "pnpm vitest run apps/web/tests/feature-flag-runtime-static.test.ts",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "provider-worker feature-flag kill-switch smoke",
+      "feature-flag invalidation/revalidation smoke",
+      "live rollout bucket proof",
+    ] as const;
 
 export function buildFeatureFlagRuntimeIntegrationReadinessPlan(input: FeatureFlagRuntimeIntegrationReadinessInput): FeatureFlagRuntimeIntegrationReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: FeatureFlagRuntimeIntegrationReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/releases ${script} script.`);
   if (!input.releasesTestsPassed) blockers.push("@inkroute/releases tests must pass before feature-flag runtime integration readiness.");
@@ -1396,26 +1527,32 @@ export function buildFeatureFlagRuntimeIntegrationReadinessPlan(input: FeatureFl
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/releases typecheck",
-      "pnpm --filter @inkroute/releases test",
-      "pnpm vitest run apps/web/tests/feature-flag-runtime-static.test.ts",
-      "pnpm --filter @inkroute/dashboard typecheck",
-      "pnpm --filter @inkroute/mobile typecheck",
-      "provider-worker feature-flag kill-switch smoke",
-      "feature-flag invalidation/revalidation smoke",
-      "live rollout bucket proof",
-    ],
-    requiredEvidence,
+    requiredCommands: featureFlagRuntimeIntegrationReadinessRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === releaseLaunchControlEvidenceRequiredEvidence.length
+        ? releaseLaunchControlEvidenceRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }
+
+export const mobileOtaProductionEnablementRequiredCommands = [
+      "pnpm --filter @inkroute/releases typecheck",
+      "pnpm --filter @inkroute/releases test",
+      "pnpm vitest run apps/mobile/tests/mobile-static.test.ts",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "eas build --profile preview --platform all",
+      "eas build --profile production --platform all",
+      "eas update --channel preview",
+      "eas update:list --channel preview",
+      "eas update --channel preview --message rollback-republish-drill --non-interactive",
+    ] as const;
 
 export function buildMobileOtaProductionEnablementPlan(input: MobileOtaProductionEnablementInput): MobileOtaProductionEnablementPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: MobileOtaProductionEnablementRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/releases ${script} script.`);
   if (!input.releasesTestsPassed) blockers.push("@inkroute/releases tests must pass before mobile OTA production enablement.");
@@ -1449,31 +1586,35 @@ export function buildMobileOtaProductionEnablementPlan(input: MobileOtaProductio
   if (!input.adoptionMonitoringConfigured || !input.rollbackRepublishDrillPassed || !input.releaseHealthLinked) {
     requiredEvidence.push("adoption monitoring, rollback republish drill, and release-health linkage evidence");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === mobileOtaProductionEnablementRequiredEvidence.length
+      ? mobileOtaProductionEnablementRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/releases typecheck",
-      "pnpm --filter @inkroute/releases test",
-      "pnpm vitest run apps/mobile/tests/mobile-static.test.ts",
-      "pnpm --filter @inkroute/mobile typecheck",
-      "eas build --profile preview --platform all",
-      "eas build --profile production --platform all",
-      "eas update --channel preview",
-      "eas update:list --channel preview",
-      "rollback republish drill on preview channel",
-    ],
-    requiredEvidence,
+    requiredCommands: mobileOtaProductionEnablementRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
+
+export const releaseAutomatedTestReadinessRequiredCommands = [
+      "pnpm --filter @inkroute/releases test",
+      "pnpm vitest run apps/web/tests/release-health-route.test.ts apps/web/tests/release-automation-static.test.ts apps/mobile/tests/mobile-static.test.ts",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "Playwright dashboard release smoke",
+      "provider-backed release route integration tests",
+      "Expo release status render/device tests",
+      "GitHub Actions release-governance workflow execution",
+    ] as const;
 
 export function buildReleaseAutomatedTestReadinessPlan(input: ReleaseAutomatedTestReadinessInput): ReleaseAutomatedTestReadinessPlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: ReleaseAutomatedTestReadinessRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/releases ${script} script.`);
   if (!input.releasePackageTestsPassed) blockers.push("@inkroute/releases helper tests must pass.");
@@ -1502,20 +1643,16 @@ export function buildReleaseAutomatedTestReadinessPlan(input: ReleaseAutomatedTe
   if (!input.githubActionsWorkflowExecutionEvidenceCaptured || !input.realSecretsAndEnvironmentsConfigured || !input.ciArtifactsCaptured) {
     requiredEvidence.push("GitHub Actions workflow execution, real secrets/environments, and CI artifact evidence");
   }
+  const requiredEvidenceResult =
+    requiredEvidence.length === releaseAutomatedTestReadinessRequiredEvidence.length
+      ? releaseAutomatedTestReadinessRequiredEvidence
+      : requiredEvidence;
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/releases test",
-      "pnpm vitest run apps/web/tests/release-health-route.test.ts apps/web/tests/release-automation-static.test.ts apps/mobile/tests/mobile-static.test.ts",
-      "pnpm --filter @inkroute/dashboard typecheck",
-      "Playwright dashboard release smoke",
-      "provider-backed release route integration tests",
-      "Expo release status render/device tests",
-      "GitHub Actions release-governance workflow execution",
-    ],
-    requiredEvidence,
+    requiredCommands: releaseAutomatedTestReadinessRequiredCommands,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
@@ -1546,18 +1683,33 @@ export interface ReleaseLaunchControlEvidenceInput {
 }
 
 export interface ReleaseLaunchControlEvidencePlan {
-  status: "ready" | "blocked";
-  missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
-  blockers: readonly string[];
+  readonly status: "ready" | "blocked";
+  readonly missingScripts: readonly string[];
+  readonly requiredCommands: typeof releaseLaunchControlEvidenceRequiredCommands;
+  readonly requiredEvidence: readonly ReleaseLaunchControlEvidenceRequiredEvidence[];
+  readonly blockers: readonly string[];
 }
+
+export const releaseLaunchControlEvidenceRequiredCommands = [
+      "pnpm --filter @inkroute/releases typecheck",
+      "pnpm --filter @inkroute/releases test",
+      "pnpm release:launch-control-evidence",
+      "provider-backed release/feature-flag route integration tests",
+      "release-governance GitHub Actions workflow execution",
+      "protected environment approval dry run",
+      "signed deployment provenance check",
+      "migration gate dry run",
+      "incident-linked rollback drill",
+      "EAS update governance drill",
+      "feature-flag kill-switch drill",
+      "release-health envelope smoke",
+    ] as const;
 
 export function buildReleaseLaunchControlEvidencePlan(input: ReleaseLaunchControlEvidenceInput): ReleaseLaunchControlEvidencePlan {
   const requiredScripts = ["test", "typecheck"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: ReleaseLaunchControlEvidenceRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/releases ${script} script.`);
   if (!input.releasesTestsPassed) blockers.push("@inkroute/releases tests must pass before release launch control is ready.");
@@ -1602,19 +1754,7 @@ export function buildReleaseLaunchControlEvidencePlan(input: ReleaseLaunchContro
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/releases typecheck",
-      "pnpm --filter @inkroute/releases test",
-      "provider-backed release/feature-flag route integration tests",
-      "release-governance GitHub Actions workflow execution",
-      "protected environment approval dry run",
-      "signed deployment provenance check",
-      "migration gate dry run",
-      "incident-linked rollback drill",
-      "EAS update governance drill",
-      "feature-flag kill-switch drill",
-      "release-health envelope smoke",
-    ],
+    requiredCommands: releaseLaunchControlEvidenceRequiredCommands,
     requiredEvidence,
     blockers,
   };
@@ -1633,7 +1773,7 @@ export function buildReleaseHealthChecks(candidate: ReleaseCandidate): readonly 
       id: "production-gates",
       label: "Production gates",
       status: candidate.productionBlocked ? "block" : "pass",
-      detail: candidate.productionBlocked ? "At least one gate blocks production." : "No scaffolded gate blocks production.",
+      detail: candidate.productionBlocked ? "At least one gate blocks production." : "No release-control gate blocks production.",
       remediation: candidate.productionBlocked ? "Resolve blocking gates and attach evidence to ReleaseRecord." : "Continue to preview release verification.",
     },
     {
@@ -1731,7 +1871,7 @@ export const demoReleaseCandidate = createReleaseCandidate({
       nextAction: "Run full monorepo install, typecheck, tests, and builds in local/CI environment.",
     },
   ],
-  createdBy: "chatgpt-phase12-scaffold",
+  createdBy: "codex-phase12-release-contract",
   createdAt: "2026-06-03T09:00:00-07:00",
 });
 

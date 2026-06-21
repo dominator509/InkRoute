@@ -152,6 +152,7 @@ jobs:
           path: |
             coverage/provider-environment-runtime.json
             coverage/provider-environment-verifier.json
+            coverage/provider-strict-env-check-redacted.json
             coverage/provider-web-dashboard-smoke-redacted.json
             coverage/provider-database-migration-dry-run-redacted.json
             coverage/provider-storage-private-acl-redacted.json
@@ -266,6 +267,7 @@ jobs:
             coverage/handoff-next.json
             coverage/handoff-ledger-verification.json
             coverage/handoff-tooling-verification.json
+            coverage/handoff-task-sync.json
             coverage/handoff-all-output.txt
             coverage/handoff-tooling-ci-run.json
             test-results/handoff-tooling-runtime

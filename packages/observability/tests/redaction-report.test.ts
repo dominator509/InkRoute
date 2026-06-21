@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
+  alertRuntimeDeliveryRequiredCommands,
+  alertRuntimeDeliveryRequiredControls,
+  alertRuntimeDeliveryRequiredEvidence,
   buildAgenticBugFixWorkflow,
   buildAlertEscalationPlan,
   buildAlertRoute,
@@ -23,8 +28,39 @@ import {
   buildStackHash,
   buildTelemetryPipelinePlan,
   classifyErrorSeverity,
+  demoErrorReports,
+  errorReportIngestHardeningRequiredEvidence,
+  errorReportIngestHardeningRequiredCommands,
+  errorReportIngestHardeningRequiredControls,
+  githubIssueRuntimeDispatchRequiredCommands,
+  githubIssueRuntimeDispatchRequiredControls,
+  githubIssueRuntimeDispatchRequiredEvidence,
+  mobileCrashRuntimeRequiredCommands,
+  mobileCrashRuntimeRequiredEvidence,
+  observabilityAutomatedCoverageRequiredCommands,
+  observabilityAutomatedCoverageRequiredControls,
+  observabilityAutomatedCoverageRequiredEvidence,
+  observabilityLaunchRequiredCommands,
+  observabilityLaunchRequiredControls,
+  observabilityLaunchRequiredEvidence,
+  observabilityRuntimeReadinessRequiredCommands,
+  observabilityRuntimeReadinessRequiredControls,
+  observabilityRuntimeVerificationRequiredCommands,
+  observabilityRuntimeVerificationRequiredControls,
+  observabilityRuntimeVerificationRequiredEvidence,
+  openTelemetryRuntimeRequiredCommands,
+  openTelemetryRuntimeRequiredControls,
+  openTelemetryRuntimeRequiredEvidence,
+  providerWebhookReconciliationRequiredCommands,
+  providerWebhookReconciliationRequiredControls,
+  providerWebhookReconciliationRequiredEvidence,
   redactMetadata,
   redactSensitiveText,
+  releaseIncidentRuntimeRequiredCommands,
+  releaseIncidentRuntimeRequiredEvidence,
+  sentrySdkRuntimeRequiredCommands,
+  sentrySdkRuntimeRequiredControls,
+  sentrySdkRuntimeRequiredEvidence,
 } from "../src/index";
 
 describe("observability redaction and triage", () => {
@@ -52,7 +88,19 @@ describe("observability redaction and triage", () => {
     expect(report.severity).toBe("critical");
     expect(report.redactedMetadata.email).not.toBe("client@example.com");
     expect(buildStackHash({ message: "Stripe webhook rejected", route: "/api/webhooks/stripe", source: "api" })).toHaveLength(12);
-    expect(buildAgenticBugFixWorkflow(report).length).toBeGreaterThan(3);
+    const workflow = buildAgenticBugFixWorkflow(report);
+    expect(workflow.length).toBeGreaterThan(3);
+    expect(workflow[0]).toMatchObject({ title: "Classify and redact", status: "local-contract" });
+  });
+
+  it("keeps demo error report copy aligned with local fallback and external persistence gates", () => {
+    const bookingReport = demoErrorReports.find((report) => report.route === "/api/public/inkroute-demo/booking-requests");
+    const serializedReport = JSON.stringify(bookingReport);
+
+    expect(bookingReport?.message).toContain("local fallback");
+    expect(serializedReport).toContain("provider-backed persistence evidence remains gated");
+    expect(serializedReport).not.toContain("501");
+    expect(serializedReport).not.toContain("intentionally not implemented");
   });
 
   it("redacts nested metadata and high-risk keys", () => {
@@ -199,8 +247,8 @@ describe("observability redaction and triage", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
-    expect(plan.requiredCommands).toContain("live synthetic critical pager delivery");
-    expect(plan.requiredControls).toContain("Deliver alerts through a durable worker with retry, backoff, and dead-letter handling.");
+    expect(plan.requiredCommands).toBe(alertRuntimeDeliveryRequiredCommands);
+    expect(plan.requiredControls).toBe(alertRuntimeDeliveryRequiredControls);
   });
 
   it("blocks runtime alert delivery until provider credentials, worker delivery, schedules, acknowledgements, and live proof exist", () => {
@@ -225,13 +273,9 @@ describe("observability redaction and triage", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "Slack, email, and pager provider credential evidence",
-      "durable alert worker retry/backoff and dead-letter evidence",
-      "on-call schedule, quiet-hours policy, and acknowledgement-state evidence",
-      "sanitized payload and dashboard-only suppression evidence",
-      "live synthetic critical pager and high-severity Slack delivery evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(alertRuntimeDeliveryRequiredEvidence);
+    expect(plan.requiredCommands).toBe(alertRuntimeDeliveryRequiredCommands);
+    expect(plan.requiredControls).toBe(alertRuntimeDeliveryRequiredControls);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "Missing @inkroute/observability typecheck script.",
@@ -365,8 +409,8 @@ describe("observability redaction and triage", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
-    expect(plan.requiredCommands).toContain("live OTLP trace/log backend ingestion proof");
-    expect(plan.requiredControls).toContain("Suppress blocked_high_risk_payload events from all external OTLP sinks.");
+    expect(plan.requiredCommands).toBe(openTelemetryRuntimeRequiredCommands);
+    expect(plan.requiredControls).toBe(openTelemetryRuntimeRequiredControls);
   });
 
   it("blocks OpenTelemetry runtime readiness until SDKs, middleware, correlation, export suppression, and live backend proof exist", () => {
@@ -395,13 +439,9 @@ describe("observability redaction and triage", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "OpenTelemetry SDK, OTLP exporter, endpoint, service metadata, and sampling evidence",
-      "web, dashboard, API, and worker instrumentation middleware evidence",
-      "request ID, trace context, ErrorReport correlation, and structured logging evidence",
-      "blocked high-risk export suppression and no-PII telemetry evidence",
-      "live OTLP trace and structured log backend ingestion evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(openTelemetryRuntimeRequiredEvidence);
+    expect(plan.requiredCommands).toBe(openTelemetryRuntimeRequiredCommands);
+    expect(plan.requiredControls).toBe(openTelemetryRuntimeRequiredControls);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "Missing @inkroute/observability typecheck script.",
@@ -430,6 +470,10 @@ describe("observability redaction and triage", () => {
     expect(issue.blocked).toBe(true);
     expect(issue.labels).toContain("severity:critical");
     expect(issue.body).toContain("[redacted:email]");
+    expect(issue.blockedReason).toBe(
+      "GitHub issue creation is provider-gated until repo token, project labels, assignees, privacy template, and human approval are configured.",
+    );
+    expect(issue.blockedReason).not.toContain("scaffolded only");
     expect(issue.body).not.toContain("avery@example.com");
     expect(issue.body).not.toContain("sk_live_secret");
   });
@@ -541,8 +585,8 @@ describe("observability redaction and triage", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
-    expect(plan.requiredCommands).toContain("live synthetic GitHub issue creation proof");
-    expect(plan.requiredControls).toContain("Dispatch GitHub issues only from sanitized createIssueRequest payloads after explicit human approval.");
+    expect(plan.requiredCommands).toBe(githubIssueRuntimeDispatchRequiredCommands);
+    expect(plan.requiredControls).toBe(githubIssueRuntimeDispatchRequiredControls);
   });
 
   it("blocks GitHub issue runtime dispatch until approval UI, API dispatch, persisted links, privacy gates, and live proof exist", () => {
@@ -567,20 +611,16 @@ describe("observability redaction and triage", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "GitHub token, repository, labels, assignees, and privacy template evidence",
-      "dashboard approval UI, human approval audit, and GitHub API dispatch evidence",
-      "ErrorReport issue-link persistence and dashboard status sync evidence",
-      "high-risk dashboard-only blocking and sanitized issue body evidence",
-      "live synthetic GitHub issue creation evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(githubIssueRuntimeDispatchRequiredEvidence);
+    expect(plan.requiredCommands).toBe(githubIssueRuntimeDispatchRequiredCommands);
+    expect(plan.requiredControls).toBe(githubIssueRuntimeDispatchRequiredControls);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "Missing @inkroute/observability typecheck script.",
         "@inkroute/observability typecheck must pass.",
         "GitHub token must be configured in secrets before live issue dispatch.",
-        "Dashboard approval UI/actions must be wired before GitHub issue dispatch.",
-        "GitHub API issue creation must be wired behind human approval.",
+        "Rendered dashboard approval UI/action evidence must be captured before GitHub issue dispatch.",
+        "GitHub create-issue provider adapter smoke evidence must be captured behind human approval.",
         "Created issue URL/number must persist back to ErrorReport records.",
         "Live synthetic GitHub issue creation proof is required before closing GAP-085.",
       ]),
@@ -608,8 +648,8 @@ describe("observability redaction and triage", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
-    expect(plan.requiredCommands).toContain("Playwright dashboard observability triage smoke");
-    expect(plan.requiredControls).toContain("Render global-error boundaries rather than relying only on static source checks before closure.");
+    expect(plan.requiredCommands).toBe(observabilityAutomatedCoverageRequiredCommands);
+    expect(plan.requiredControls).toBe(observabilityAutomatedCoverageRequiredControls);
   });
 
   it("blocks observability automated coverage until rendered global-error, dashboard browser, mobile UI, and CI artifact proof exist", () => {
@@ -628,15 +668,33 @@ describe("observability redaction and triage", () => {
       publicIngestPersistenceTestsCovered: true,
       ciArtifactsCaptured: false,
     });
+    const allMissingEvidencePlan = buildObservabilityAutomatedCoverageReadinessPlan({
+      packageScripts: [],
+      observabilityPackageTestsPassed: false,
+      webRouteTestsPassed: false,
+      webUiStaticTestsPassed: false,
+      webTypecheckPassed: false,
+      globalErrorRenderedComponentTestsAdded: false,
+      dashboardErrorsPageSmokePassed: false,
+      playwrightDashboardTriageCovered: false,
+      mobileSimulatorCrashReportUiTested: false,
+      mobileDeviceCrashReportUiTested: false,
+      sentryWebhookSignatureTestsCovered: false,
+      publicIngestPersistenceTestsCovered: false,
+      ciArtifactsCaptured: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toBe(observabilityAutomatedCoverageRequiredCommands);
+    expect(plan.requiredControls).toBe(observabilityAutomatedCoverageRequiredControls);
     expect(plan.requiredEvidence).toEqual([
-      "package, route, UI static, and web typecheck evidence",
-      "rendered global-error, dashboard errors smoke, and Playwright triage evidence",
-      "mobile simulator and physical-device crash-report UI evidence",
-      "CI screenshots, logs, and artifact evidence",
+      observabilityAutomatedCoverageRequiredEvidence[0],
+      observabilityAutomatedCoverageRequiredEvidence[1],
+      observabilityAutomatedCoverageRequiredEvidence[2],
+      observabilityAutomatedCoverageRequiredEvidence[4],
     ]);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(observabilityAutomatedCoverageRequiredEvidence);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "Missing @inkroute/observability typecheck script.",
@@ -756,8 +814,7 @@ describe("observability redaction and triage", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
-    expect(plan.requiredCommands).toContain("Sentry release/source-map correlation smoke");
-    expect(plan.requiredCommands).toContain("rollback communication handoff persistence smoke");
+    expect(plan.requiredCommands).toBe(releaseIncidentRuntimeRequiredCommands);
   });
 
   it("blocks release incident runtime linkage until Sentry, persistence, provider, dashboard, tenant isolation, and sanitized evidence exist", () => {
@@ -782,12 +839,7 @@ describe("observability redaction and triage", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "Sentry release tag, source-map/debug-symbol, and live release evidence",
-      "ErrorReport, ReleaseRecord, incident link, and rollback communication persistence evidence",
-      "tenant incident provider configuration, creation, and live provider evidence",
-      "tenant owner, dashboard filter, tenant isolation, and sanitized payload evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(releaseIncidentRuntimeRequiredEvidence);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "Missing @inkroute/observability typecheck script.",
@@ -898,8 +950,8 @@ describe("observability redaction and triage", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
-    expect(plan.requiredControls).toContain("Run beforeSend redaction and tenant-safe tag filtering before every provider submission.");
-    expect(plan.requiredCommands).toContain("Sentry source-map/debug-symbol resolution check");
+    expect(plan.requiredCommands).toBe(sentrySdkRuntimeRequiredCommands);
+    expect(plan.requiredControls).toBe(sentrySdkRuntimeRequiredControls);
   });
 
   it("blocks Sentry SDK implementation until packages, instrumentation, credentials, artifacts, live proof, and no-PII evidence exist", () => {
@@ -933,24 +985,25 @@ describe("observability redaction and triage", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "Sentry package installation evidence for web, dashboard, and mobile",
-      "Sentry instrumentation and config file evidence across app surfaces",
-      "Sentry credential and CI secret configuration evidence",
-      "source-map, debug-symbol, and CI release artifact upload evidence",
-      "live synthetic capture, provider issue, and no-PII payload evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(sentrySdkRuntimeRequiredEvidence);
+    expect(plan.requiredCommands).toBe(sentrySdkRuntimeRequiredCommands);
+    expect(plan.requiredControls).toBe(sentrySdkRuntimeRequiredControls);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "Missing @inkroute/observability typecheck script.",
         "@inkroute/observability typecheck must pass.",
         "@sentry/nextjs must be installed for the public web app.",
-        "Dashboard Sentry instrumentation/config files must be implemented.",
+        "Dashboard Sentry instrumentation/config file evidence must be captured before Sentry SDK readiness.",
         "Next.js source-map upload must be configured for web and dashboard.",
         "Live mobile synthetic Sentry capture must be verified.",
         "Sentry provider payloads must be proven free of raw PII, medical, payment, token, and private URL values.",
       ]),
     );
+    expect(plan.blockers).toContain("Public web Sentry instrumentation/config file evidence must be captured before Sentry SDK readiness.");
+    expect(plan.blockers).toContain("Mobile Sentry/Expo instrumentation file evidence must be captured before Sentry SDK readiness.");
+    expect(plan.blockers).not.toContain("Public web Sentry instrumentation/config files must be implemented.");
+    expect(plan.blockers).not.toContain("Dashboard Sentry instrumentation/config files must be implemented.");
+    expect(plan.blockers).not.toContain("Mobile Sentry/Expo instrumentation files must be implemented.");
   });
 
   it("plans ready hardened public error-report ingest with persistence, audit, abuse, and tenant controls", () => {
@@ -978,8 +1031,8 @@ describe("observability redaction and triage", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
-    expect(plan.requiredCommands).toContain("live Postgres tenant-isolation ingest proof");
-    expect(plan.requiredControls).toContain("Use production bot protection plus durable distributed rate limiting for public ingest endpoints.");
+    expect(plan.requiredCommands).toBe(errorReportIngestHardeningRequiredCommands);
+    expect(plan.requiredControls).toBe(errorReportIngestHardeningRequiredControls);
   });
 
   it("blocks public error-report ingest hardening until production abuse controls, provider gates, live DB isolation, and no-PII proof exist", () => {
@@ -1005,13 +1058,9 @@ describe("observability redaction and triage", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "public ingest tenant, validation, bot-protection, and distributed rate-limit evidence",
-      "redacted ErrorReport, AuditLog, and local fallback persistence evidence",
-      "dashboard RBAC and live Postgres tenant-isolation evidence",
-      "provider forwarding, webhook signature, replay, and no-PII payload evidence",
-      "abuse monitoring, request ID, and trace propagation evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(errorReportIngestHardeningRequiredEvidence);
+    expect(plan.requiredCommands).toBe(errorReportIngestHardeningRequiredCommands);
+    expect(plan.requiredControls).toBe(errorReportIngestHardeningRequiredControls);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "Missing @inkroute/web typecheck script.",
@@ -1047,8 +1096,8 @@ describe("observability redaction and triage", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
-    expect(plan.requiredCommands).toContain("provider action ErrorReport reconciliation smoke");
-    expect(plan.requiredControls).toContain("Persist provider deliveries durably with unique idempotency keys before mutating ErrorReport state.");
+    expect(plan.requiredCommands).toBe(providerWebhookReconciliationRequiredCommands);
+    expect(plan.requiredControls).toBe(providerWebhookReconciliationRequiredControls);
   });
 
   it("blocks provider webhook reconciliation until signature, replay, persistence, status mutation, audit, and live proof exist", () => {
@@ -1071,12 +1120,9 @@ describe("observability redaction and triage", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "webhook secret, signature, timing-safe comparison, and replay-protection evidence",
-      "durable provider-delivery persistence and idempotency constraint evidence",
-      "tenant ownership lookup, ErrorReport status mutation, and reconciliation audit evidence",
-      "sanitized provider payload and live Sentry webhook replay evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(providerWebhookReconciliationRequiredEvidence);
+    expect(plan.requiredCommands).toBe(providerWebhookReconciliationRequiredCommands);
+    expect(plan.requiredControls).toBe(providerWebhookReconciliationRequiredControls);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "Missing @inkroute/web typecheck script.",
@@ -1091,6 +1137,7 @@ describe("observability redaction and triage", () => {
   });
 
   it("blocks mobile crash runtime readiness until SDK/fallback capture, redaction, artifacts, forced crashes, and ErrorReport sync are proven", () => {
+    const source = readFileSync(resolve(__dirname, "../src/index.ts"), "utf8");
     const plan = buildMobileCrashRuntimeReadinessPlan({
       packageScripts: ["test"],
       observabilityTestsPassed: true,
@@ -1111,17 +1158,42 @@ describe("observability redaction and triage", () => {
       offlineCrashBufferingVerified: false,
       noPiiProviderPayloadVerified: false,
     });
+    const allMissingEvidencePlan = buildMobileCrashRuntimeReadinessPlan({
+      packageScripts: [],
+      observabilityTestsPassed: false,
+      observabilityTypecheckPassed: false,
+      mobileTypecheckPassed: false,
+      sentryExpoSdkConfigured: false,
+      fallbackReporterConfigured: false,
+      sentryDsnConfigured: false,
+      releaseTagsConfigured: false,
+      beforeSendRedactionConfigured: false,
+      piiRedactionTestsPassed: false,
+      sourceMapsUploaded: false,
+      debugSymbolsUploaded: false,
+      forcedCrashSimulatorVerified: false,
+      forcedCrashDeviceVerified: false,
+      errorReportPersistenceConfigured: false,
+      sanitizedDashboardSyncVerified: false,
+      offlineCrashBufferingVerified: false,
+      noPiiProviderPayloadVerified: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toContain("Expo physical-device forced crash smoke test");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "mobile crash capture SDK or fallback reporter configuration evidence",
-      "Expo source-map and React Native debug-symbol upload evidence",
-      "mobile crash privacy redaction and offline buffering evidence",
-    ]));
+    expect(plan.requiredCommands).toBe(mobileCrashRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toEqual([
+      mobileCrashRuntimeRequiredEvidence[0],
+      mobileCrashRuntimeRequiredEvidence[1],
+      mobileCrashRuntimeRequiredEvidence[2],
+      mobileCrashRuntimeRequiredEvidence[3],
+      mobileCrashRuntimeRequiredEvidence[4],
+    ]);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(mobileCrashRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("Either Sentry Expo/React Native SDK or a privacy-safe fallback reporter must be configured.");
     expect(plan.blockers).toContain("Provider payloads and dashboard summaries must be proven free of raw PII, medical, payment, token, and private URL values.");
+    expect(source).toContain("Mobile fallback crash reporting is wired; live Expo/Sentry capture remains gated");
+    expect(source).not.toContain("Mobile crash reporting is not connected to Expo runtime");
   });
 
   it("summarizes observability runtime readiness across Sentry, OTel, persistence, alerts, and privacy gates", () => {
@@ -1151,8 +1223,8 @@ describe("observability redaction and triage", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/observability typecheck");
-    expect(plan.requiredControls).toContain("Persist only sanitized ErrorReport summaries and keep raw provider payloads out of dashboard triage.");
+    expect(plan.requiredCommands).toBe(observabilityRuntimeReadinessRequiredCommands);
+    expect(plan.requiredControls).toBe(observabilityRuntimeReadinessRequiredControls);
     expect(plan.blockers).toContain("Sentry Next.js SDK must be configured for the dashboard app.");
     expect(plan.blockers).toContain("OpenTelemetry exporter endpoint and service metadata must be configured.");
     expect(plan.blockers).toContain("Sanitized ErrorReport persistence must be configured before dashboard viewing is production-ready.");
@@ -1190,8 +1262,8 @@ describe("observability redaction and triage", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Use safe synthetic errors only; never trigger destructive or production-impacting failures.");
-    expect(plan.requiredCommands).toContain("Sentry/provider live runtime proof");
+    expect(plan.requiredCommands).toBe(observabilityRuntimeVerificationRequiredCommands);
+    expect(plan.requiredControls).toBe(observabilityRuntimeVerificationRequiredControls);
   });
 
   it("blocks observability runtime verification until forced-error UX, screenshots, logs, persistence, provider proof, and no-PII evidence exist", () => {
@@ -1222,13 +1294,9 @@ describe("observability redaction and triage", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "browser forced-error fallback UX screenshot evidence",
-      "mobile simulator/device forced-error UX evidence",
-      "API/webhook forced-error envelope, sanitized log, and local persistence evidence",
-      "dashboard triage and no-PII leakage evidence",
-      "Sentry/provider runtime proof and attached closeout evidence",
-    ]);
+    expect(plan.requiredCommands).toBe(observabilityRuntimeVerificationRequiredCommands);
+    expect(plan.requiredControls).toBe(observabilityRuntimeVerificationRequiredControls);
+    expect(plan.requiredEvidence).toBe(observabilityRuntimeVerificationRequiredEvidence);
     expect(plan.blockers).toContain("Forced public web error fallback UX must be verified in a browser.");
     expect(plan.blockers).toContain("Forced webhook error response envelope and provider-gated behavior must be verified.");
     expect(plan.blockers).toContain("Forced-error screenshots, logs, persistence, and provider payloads must be proven free of raw PII.");
@@ -1271,8 +1339,8 @@ describe("observability redaction and triage", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredCommands).toContain("forced web/dashboard/API/webhook Sentry capture smoke");
-    expect(plan.requiredControls).toContain("Persist only sanitized ErrorReport summaries and enforce tenant isolation for dashboard triage reads.");
+    expect(plan.requiredCommands).toBe(observabilityLaunchRequiredCommands);
+    expect(plan.requiredControls).toBe(observabilityLaunchRequiredControls);
   });
 
   it("blocks observability launch evidence until live SDKs, OTel, source maps, forced captures, persistence, webhook signatures, alerts, redaction, CI, and secret-safe artifacts exist", () => {
@@ -1307,16 +1375,9 @@ describe("observability redaction and triage", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "Sentry web/dashboard/mobile SDK and OpenTelemetry exporter configuration evidence",
-      "source-map and mobile debug-symbol upload/resolution evidence",
-      "forced web, dashboard, API, webhook, and mobile capture evidence",
-      "sanitized ErrorReport persistence and tenant-isolated dashboard triage evidence",
-      "Sentry/provider webhook signature and replay evidence",
-      "alert routing and release incident linkage evidence",
-      "redaction, no-PII, and secret-safe artifact evidence",
-      "GitHub Actions observability launch evidence",
-    ]);
+    expect(plan.requiredCommands).toBe(observabilityLaunchRequiredCommands);
+    expect(plan.requiredControls).toBe(observabilityLaunchRequiredControls);
+    expect(plan.requiredEvidence).toBe(observabilityLaunchRequiredEvidence);
     expect(plan.blockers).toContain("Sentry web SDK must be configured for public web runtime.");
     expect(plan.blockers).toContain("OpenTelemetry exporter and service metadata must be configured.");
     expect(plan.blockers).toContain("Dashboard triage reads must be tenant-isolated and backed by persisted ErrorReport rows.");

@@ -1,5 +1,7 @@
-﻿import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { buildPreferencePlanFromRequest, preferenceCenterContract } from "../../../../../lib/preferenceCenter";
+
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
 export async function POST(request: NextRequest, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;
@@ -19,6 +21,29 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     transactionalAllowed: true,
   });
 
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "PROVIDER_UNSUBSCRIBE_PERSISTENCE_NOT_CONFIGURED",
+          message: "Production one-click unsubscribe requires durable hash-only token validation, suppression persistence, audit logs, and idempotency storage; local-contract fallback responses are disabled.",
+          gapIds: ["GAP-010", "GAP-061", "GAP-067", "GAP-069"],
+        },
+        productionBoundary: {
+          localContractUnsubscribeFallbackDisabled: true,
+          requiredBeforeEnablement: [
+            "hash-only preference token validation",
+            "SuppressionListEntry persistence",
+            "NotificationAuditLog and IdempotencyKey persistence",
+            "provider List-Unsubscribe integration evidence",
+          ],
+        },
+      },
+      { status: 503, headers: noStoreHeaders },
+    );
+  }
+
   return NextResponse.json(
     {
       ok: plan.status === "ready",
@@ -28,6 +53,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
       gapIds: ["GAP-067"],
       boundary: "One-click unsubscribe route returns the suppression write plan and never stores raw preference tokens in local runtime.",
     },
-    { status: plan.status === "ready" ? 202 : 409, headers: { "Cache-Control": "no-store" } },
+    { status: plan.status === "ready" ? 202 : 409, headers: noStoreHeaders },
   );
 }

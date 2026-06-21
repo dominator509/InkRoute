@@ -24,6 +24,9 @@ describe("dashboard security runtime middleware wiring", () => {
     expect(source).toContain("inkroute_dashboard_csrf");
     expect(source).toContain("inkroute_dashboard_session");
     expect(source).toContain("cookieAuthenticatedMutation");
+    expect(source).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(source).toContain("headers: noStoreHeaders");
+    expect(source).not.toContain('headers: { "Cache-Control": "no-store" }');
   });
 
   it("keeps dashboard static assets outside middleware while protecting application and API paths", () => {

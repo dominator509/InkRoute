@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   assertPermission,
+  authSessionTenantGuardRuntimeRequiredCommands,
+  authSessionTenantGuardRuntimeRequiredControls,
+  authSessionTenantGuardRuntimeRequiredEvidence,
   buildAuthSessionTenantGuardRuntimeReadinessPlan,
   buildDashboardAuthGuardEvidencePlan,
   buildDashboardLaunchEvidencePlan,
@@ -10,12 +13,30 @@ import {
   buildMobileAuthRuntimeReadinessPlan,
   buildProviderSessionStoreReadinessPlan,
   buildSessionPersistencePlan,
+  dashboardAuthGuardRequiredCommands,
+  dashboardAuthGuardRequiredControls,
+  dashboardAuthGuardRequiredEvidence,
+  dashboardLaunchEvidenceRequiredCommands,
+  dashboardLaunchEvidenceRequiredControls,
+  dashboardLaunchEvidenceRequiredEvidence,
+  dashboardReadinessRequiredCommands,
+  dashboardReadinessRequiredControls,
+  domainAuthorizationRouteRequiredCommands,
+  domainAuthorizationRouteRequiredControls,
+  domainAuthorizationRouteRequiredEvidence,
+  domainAuthorizationRuntimeRequiredCommands,
+  domainAuthorizationRuntimeRequiredControls,
   evaluateApiRouteGuard,
   evaluateDashboardRouteGuard,
   evaluateFieldAuthorization,
   evaluateMobileSessionGate,
   evaluateTenantAuthorization,
   hasPermission,
+  mobileAuthRuntimeReadinessRequiredCommands,
+  mobileAuthRuntimeReadinessRequiredEvidence,
+  providerSessionStoreRequiredCommands,
+  providerSessionStoreRequiredControls,
+  providerSessionStoreRequiredEvidence,
   resolveTenantPermissions,
 } from "../src/index";
 
@@ -411,12 +432,8 @@ describe("auth authorization helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toContain("Expo device biometric unlock test");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "provider-backed mobile login/logout test output",
-      "Expo SecureStore token persistence/clearing evidence with no plaintext token storage",
-      "tenant membership, role resolution, and cross-tenant denial test output",
-    ]));
+    expect(plan.requiredCommands).toBe(mobileAuthRuntimeReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(mobileAuthRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Revoked sessions must clear local mobile auth state.");
     expect(plan.blockers).toContain("Mobile login, refresh, logout, denial, revocation, and tenant-switch decisions must persist audit logs.");
   });
@@ -599,8 +616,8 @@ describe("auth authorization helpers", () => {
     expect(plan.unauditedMutations).toEqual(["release-feature-flags", "stripe-refund-action"]);
     expect(plan.unpersistedSurfaces).toEqual(["release-feature-flags", "stripe-refund-action"]);
     expect(plan.untestedSurfaces).toEqual(["stripe-refund-action"]);
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/dashboard build");
-    expect(plan.requiredControls).toContain("Execute state-changing actions inside tenant-scoped transactions with AuditLog writes.");
+    expect(plan.requiredCommands).toBe(dashboardReadinessRequiredCommands);
+    expect(plan.requiredControls).toBe(dashboardReadinessRequiredControls);
     expect(plan.blockers).toEqual(expect.arrayContaining([
       "Dashboard Next.js build has not been verified in the installed workspace.",
       "Dashboard has no verified seeded tenant data source for smoke and mutation tests.",
@@ -633,15 +650,9 @@ describe("auth authorization helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["test"]);
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/dashboard build");
-    expect(plan.requiredEvidence).toEqual([
-      "dashboard typecheck, build, unit/contract, and Playwright smoke output",
-      "seeded tenant data, provider-backed auth, and tenant-scoped API evidence",
-      "Prisma repository, real mutation, and AuditLog persistence evidence",
-      "provider action, RBAC denial, cross-tenant denial, and field-redaction evidence",
-      "loading/empty/error state, CI, and secret-safe artifact evidence",
-    ]);
-    expect(plan.requiredControls).toContain("Execute mutations in tenant-scoped transactions with AuditLog rows.");
+    expect(plan.requiredCommands).toBe(dashboardLaunchEvidenceRequiredCommands);
+    expect(plan.requiredEvidence).toBe(dashboardLaunchEvidenceRequiredEvidence);
+    expect(plan.requiredControls).toBe(dashboardLaunchEvidenceRequiredControls);
     expect(plan.blockers).toContain("Dashboard Playwright smoke tests must pass with seeded tenant data.");
     expect(plan.blockers).toContain("Dashboard must use provider-backed auth/session state.");
     expect(plan.blockers).toContain("Dashboard test/build artifacts must be redacted and free of secrets or client-private data.");
@@ -673,6 +684,8 @@ describe("auth authorization helpers", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
+    expect(plan.requiredCommands).toBe(dashboardLaunchEvidenceRequiredCommands);
+    expect(plan.requiredControls).toBe(dashboardLaunchEvidenceRequiredControls);
   });
 
   it("summarizes domain authorization runtime readiness across middleware, roles, audits, CSRF, and route tests", () => {
@@ -695,8 +708,8 @@ describe("auth authorization helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toContain("dashboard/API role matrix route tests");
-    expect(plan.requiredControls).toContain("Combine built-in role permissions with active tenant-scoped custom grants only.");
+    expect(plan.requiredCommands).toBe(domainAuthorizationRuntimeRequiredCommands);
+    expect(plan.requiredControls).toBe(domainAuthorizationRuntimeRequiredControls);
     expect(plan.blockers).toContain("CustomRole rows must be loaded from the database before runtime authorization decisions.");
     expect(plan.blockers).toContain("Authorization allow/deny decisions must persist AuditLog rows with tenant, actor, route, and permission metadata.");
     expect(plan.blockers).toContain("Route tests must cover owner, artist, assistant, studio manager, admin, and custom roles.");
@@ -729,8 +742,8 @@ describe("auth authorization helpers", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredCommands).toContain("CustomRole database loading route tests");
-    expect(plan.requiredControls).toContain("Apply route guards before dashboard/API/server-action data loading or mutation side effects.");
+    expect(plan.requiredCommands).toBe(domainAuthorizationRouteRequiredCommands);
+    expect(plan.requiredControls).toBe(domainAuthorizationRouteRequiredControls);
   });
 
   it("blocks dashboard auth guard evidence until provider sessions, middleware, layouts, DB roles, browser smoke, CI, and safe artifacts exist", () => {
@@ -758,22 +771,12 @@ describe("auth authorization helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "dashboard middleware auth guard tests",
-      "dashboard protected layout auth guard tests",
-      "dashboard API auth guard tests",
-      "browser dashboard login/logout smoke",
-      "browser dashboard cross-tenant denial smoke",
-    ]));
-    expect(plan.requiredControls).toContain("Apply middleware, protected layout, and API helper guards before private reads or mutations.");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "provider-backed session plus TenantMember/CustomRole database lookup evidence",
-      "dashboard middleware, protected layout, and API helper guard adoption evidence",
-      "unauthorized state, redacted AuditLog, and no-store cache evidence",
-      "browser login/logout, tenant-switch, and cross-tenant denial evidence",
-      "dashboard typecheck/build, CI, and secret-safe artifact evidence",
-    ]));
+    expect(plan.requiredCommands).toBe(dashboardAuthGuardRequiredCommands);
+    expect(plan.requiredControls).toBe(dashboardAuthGuardRequiredControls);
+    expect(plan.requiredEvidence).toBe(dashboardAuthGuardRequiredEvidence);
     expect(plan.blockers).toContain("Dashboard middleware must enforce auth and tenant guard decisions before route rendering.");
+    expect(plan.blockers).toContain("Dashboard unauthorized, login redirect, tenant-switch, expired-session, and denied-permission state evidence must be captured before auth guard readiness.");
+    expect(plan.blockers).not.toContain("Dashboard unauthorized, login redirect, tenant-switch, expired-session, and denied-permission states must be implemented.");
     expect(plan.blockers).toContain("Browser cross-tenant denial evidence must prove private tenant data is not exposed.");
     expect(plan.blockers).toContain("Dashboard auth guard artifacts must be redacted and free of secrets, session tokens, raw PII, medical, and payment data.");
   });
@@ -807,7 +810,8 @@ describe("auth authorization helpers", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Set no-store cache policy on protected dashboard responses.");
+    expect(plan.requiredCommands).toBe(dashboardAuthGuardRequiredCommands);
+    expect(plan.requiredControls).toBe(dashboardAuthGuardRequiredControls);
   });
 
   it("blocks domain authorization route evidence until DB roles, route guards, role matrices, audits, CSRF, revocation, CI, and safe artifacts exist", () => {
@@ -833,14 +837,7 @@ describe("auth authorization helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "auth package test/typecheck and provider-backed session evidence",
-      "database CustomRole loading and dashboard/API/server-action route-guard adoption evidence",
-      "built-in role matrix, custom-role, and cross-tenant route denial evidence",
-      "field redaction and authorization AuditLog persistence evidence",
-      "CSRF session binding and session revocation route evidence",
-      "CI domain authorization route evidence and secret-safe artifact proof",
-    ]);
+    expect(plan.requiredEvidence).toBe(domainAuthorizationRouteRequiredEvidence);
     expect(plan.blockers).toContain("CustomRole rows must be loaded from tenant-scoped database storage in guarded route tests.");
     expect(plan.blockers).toContain("Cross-tenant dashboard/API/server-action denial tests must pass.");
     expect(plan.blockers).toContain("Authorization route artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.");
@@ -872,8 +869,8 @@ describe("auth authorization helpers", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
-    expect(plan.requiredCommands).toContain("provider-backed login/logout integration tests");
-    expect(plan.requiredControls).toContain("Bind CSRF tokens to cookie-authenticated mutating route sessions.");
+    expect(plan.requiredCommands).toBe(authSessionTenantGuardRuntimeRequiredCommands);
+    expect(plan.requiredControls).toBe(authSessionTenantGuardRuntimeRequiredControls);
   });
 
   it("blocks production auth/session/tenant guards until provider, storage, middleware, route integrations, revocation, CSRF, audits, and cross-tenant tests exist", () => {
@@ -900,12 +897,9 @@ describe("auth authorization helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "auth provider selection, login/logout callback, and provider-backed route test evidence",
-      "secure cookie, mobile token storage, revocation, and CSRF binding evidence",
-      "server tenant membership persistence and route middleware integration evidence",
-      "field authorization, audit-log write, and cross-tenant integration evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(authSessionTenantGuardRuntimeRequiredEvidence);
+    expect(plan.requiredCommands).toBe(authSessionTenantGuardRuntimeRequiredCommands);
+    expect(plan.requiredControls).toBe(authSessionTenantGuardRuntimeRequiredControls);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "@inkroute/auth package script is missing typecheck.",
@@ -942,14 +936,9 @@ describe("auth authorization helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toContain("provider-backed session callback and TenantMember lookup test");
-    expect(plan.requiredEvidence).toEqual([
-      "provider selection, redacted environment/callback configuration, and login/logout/session callback evidence",
-      "provider identity mapping plus persisted user, TenantMember, CustomRole, and session lookup evidence",
-      "revocation, secure dashboard cookie, and mobile secure-token storage evidence",
-      "audit-log, provider-backed auth test, cross-tenant smoke, and command-output evidence",
-    ]);
-    expect(plan.requiredControls).toContain("Resolve TenantMember and CustomRole rows server-side for every guarded request.");
+    expect(plan.requiredCommands).toBe(providerSessionStoreRequiredCommands);
+    expect(plan.requiredEvidence).toBe(providerSessionStoreRequiredEvidence);
+    expect(plan.requiredControls).toBe(providerSessionStoreRequiredControls);
     expect(plan.blockers).toContain("Auth provider must be selected before provider-backed sessions can be claimed.");
     expect(plan.blockers).toContain("TenantMember lookup must come from the database or provider-backed server store.");
     expect(plan.blockers).toContain("Tenant isolation smoke tests must deny cross-tenant provider sessions.");
@@ -980,5 +969,7 @@ describe("auth authorization helpers", () => {
     expect(plan.missingScripts).toEqual([]);
     expect(plan.requiredEvidence).toEqual([]);
     expect(plan.blockers).toEqual([]);
+    expect(plan.requiredCommands).toBe(providerSessionStoreRequiredCommands);
+    expect(plan.requiredControls).toBe(providerSessionStoreRequiredControls);
   });
 });

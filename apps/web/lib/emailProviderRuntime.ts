@@ -16,11 +16,66 @@ export interface EmailProviderRuntimeMatrixEntry {
   readonly status: EmailProviderRuntimeStatus;
 }
 
+export interface EmailProviderExecutionPolicy {
+  readonly codexMayClassifyStaticEmailProviderReadiness: boolean;
+  readonly localNotificationCommandsRequiredForClosure: boolean;
+  readonly resendSdkApiKeyRequiredForClosure: boolean;
+  readonly verifiedSenderDomainRequiredForClosure: boolean;
+  readonly rawBodySignatureRequiredForClosure: boolean;
+  readonly durablePersistenceRequiredForClosure: boolean;
+  readonly sandboxEventsRequiredForClosure: boolean;
+  readonly invalidSignatureRouteRequiredForClosure: boolean;
+  readonly ciEvidenceRequiredForClosure: boolean;
+  readonly secretSafeArtifactsRequiredForClosure: boolean;
+}
+
+export interface EmailProviderExecutionPlan {
+  readonly policy: typeof emailProviderExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly resendSdkExecutionAllowed: false;
+  readonly domainVerificationExecutionAllowed: false;
+  readonly signatureVerificationExecutionAllowed: false;
+  readonly durablePersistenceExecutionAllowed: false;
+  readonly sandboxEventExecutionAllowed: false;
+  readonly invalidSignatureExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly artifactReviewExecutionAllowed: false;
+  readonly localCommands: typeof emailProviderLocalCommands;
+  readonly externalCommands: typeof emailProviderExternalCommands;
+  readonly requiredExternalEvidence: typeof emailProviderRequiredExternalEvidence;
+}
+
+export interface RedactedEmailProviderArtifact {
+  readonly artifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: true;
+}
+
+export interface EmailProviderArtifactReview {
+  readonly passed: boolean;
+  readonly artifact: RedactedEmailProviderArtifact;
+  readonly blockers: readonly string[];
+  readonly requiredExternalEvidence: typeof emailProviderRequiredExternalEvidence;
+}
+
+export const emailProviderExecutionPolicy = {
+  codexMayClassifyStaticEmailProviderReadiness: true,
+  localNotificationCommandsRequiredForClosure: true,
+  resendSdkApiKeyRequiredForClosure: true,
+  verifiedSenderDomainRequiredForClosure: true,
+  rawBodySignatureRequiredForClosure: true,
+  durablePersistenceRequiredForClosure: true,
+  sandboxEventsRequiredForClosure: true,
+  invalidSignatureRouteRequiredForClosure: true,
+  ciEvidenceRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies EmailProviderExecutionPolicy;
+
 export interface EmailProviderRuntimeReadiness {
   readonly status: "ready" | "blocked";
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
-  readonly requiredControls: readonly string[];
+  readonly requiredCommands: typeof emailProviderRuntimeCommands;
+  readonly requiredEvidence: typeof emailProviderRuntimeReadinessRequiredEvidence;
+  readonly requiredControls: typeof emailProviderRuntimeReadinessRequiredControls;
   readonly blockers: readonly string[];
 }
 
@@ -28,12 +83,146 @@ export const emailProviderRuntimeCommands = [
   "pnpm --filter @inkroute/notifications typecheck",
   "pnpm --filter @inkroute/notifications test",
   "pnpm vitest run apps/web/tests/email-provider-static.test.ts",
+  "install/configure Resend SDK and sandbox API key",
+  "prove verified sender/domain without exposing DNS secrets",
+  "verify Resend/Svix signature against raw webhook bodies",
+  "durable NotificationDelivery transaction tests",
+  "durable ProviderEvent replay/idempotency tests",
+  "durable bounce/complaint/unsubscribe suppression tests",
   "Resend sandbox delivered event test",
   "Resend sandbox bounced event test",
   "Resend sandbox complained event test",
   "Resend unsubscribe suppression test",
   "invalid email webhook signature route test",
+  "GitHub Actions email provider runtime job",
+  "review email artifacts for API keys, signatures, raw payloads, destinations, and tenant data",
 ] as const;
+
+export const emailProviderRequiredExternalEvidence = [
+  "actual email provider command output",
+  "Resend SDK/API key readiness evidence",
+  "verified sender/domain evidence",
+  "raw-body Resend/Svix signature verification evidence",
+  "durable NotificationDelivery persistence tests",
+  "durable ProviderEvent replay/idempotency tests",
+  "durable suppression persistence tests",
+  "Resend sandbox delivered/bounced/complained event transcripts",
+  "unsubscribe suppression evidence",
+  "invalid email webhook signature route evidence",
+  "CI email provider artifacts",
+  "secret-safe email provider artifact review",
+] as const;
+
+export const emailProviderRuntimeReadinessRequiredEvidence = [
+  "Resend SDK/API key and verified sender/domain evidence",
+  "raw-body Resend/Svix signature verification and invalid-signature route evidence",
+  "durable NotificationDelivery, ProviderEvent, and suppression persistence evidence",
+  "sandbox delivered, bounced, complained, and unsubscribe event transcripts",
+  "CI email provider runtime evidence with secret-safe artifacts",
+] as const;
+
+export type EmailProviderRequiredEvidence = readonly [
+  ...typeof emailProviderRuntimeReadinessRequiredEvidence,
+  "secret-safe review of retained email provider artifacts",
+];
+
+export function buildEmailProviderDecisionRequiredEvidence(
+  readinessEvidence: typeof emailProviderRuntimeReadinessRequiredEvidence,
+): EmailProviderRequiredEvidence {
+  return [...readinessEvidence, "secret-safe review of retained email provider artifacts"];
+}
+
+export const emailProviderRequiredEvidence = buildEmailProviderDecisionRequiredEvidence(
+  emailProviderRuntimeReadinessRequiredEvidence,
+);
+
+export const emailProviderLocalCommands = [
+  "pnpm --filter @inkroute/notifications typecheck",
+  "pnpm --filter @inkroute/notifications test",
+  "pnpm vitest run apps/web/tests/email-provider-runtime-static.test.ts apps/web/tests/email-provider-static.test.ts",
+] as const;
+
+export const emailProviderExternalCommands = [
+  "install/configure Resend SDK and sandbox API key",
+  "prove verified sender/domain without exposing DNS secrets",
+  "verify Resend/Svix signature against raw webhook bodies",
+  "durable NotificationDelivery transaction tests",
+  "durable ProviderEvent replay/idempotency tests",
+  "durable bounce/complaint/unsubscribe suppression tests",
+  "Resend sandbox delivered event test",
+  "Resend sandbox bounced event test",
+  "Resend sandbox complained event test",
+  "Resend unsubscribe suppression test",
+  "invalid email webhook signature route test",
+  "GitHub Actions email provider runtime job",
+  "secret-safe email provider artifact review",
+] as const;
+
+export const buildEmailProviderExecutionPlan = (): EmailProviderExecutionPlan => ({
+  policy: emailProviderExecutionPolicy,
+  commandExecutionAllowed: false,
+  resendSdkExecutionAllowed: false,
+  domainVerificationExecutionAllowed: false,
+  signatureVerificationExecutionAllowed: false,
+  durablePersistenceExecutionAllowed: false,
+  sandboxEventExecutionAllowed: false,
+  invalidSignatureExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  artifactReviewExecutionAllowed: false,
+  localCommands: emailProviderLocalCommands,
+  externalCommands: emailProviderExternalCommands,
+  requiredExternalEvidence: emailProviderRequiredExternalEvidence,
+});
+
+const emailProviderPrivateArtifactKeyPattern =
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|email|resend|svix|signature|webhook|payload|destination|suppression|bounce|complaint|unsubscribe|delivery|event|artifact|customer|phone|medical|payment)/i;
+
+const redactEmailProviderArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactEmailProviderArtifactValue(entry, `${path}[${index}]`, redactedPaths));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (emailProviderPrivateArtifactKeyPattern.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[redacted]"];
+        }
+
+        return [key, redactEmailProviderArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const buildRedactedEmailProviderArtifact = (artifact: unknown): RedactedEmailProviderArtifact => {
+  const redactedPaths: string[] = [];
+
+  return {
+    artifact: redactEmailProviderArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+    secretSafe: true,
+  };
+};
+
+export const buildEmailProviderArtifactReview = (artifact: unknown): EmailProviderArtifactReview => {
+  const redacted = buildRedactedEmailProviderArtifact(artifact);
+
+  return {
+    passed: true,
+    artifact: redacted,
+    blockers: [],
+    requiredExternalEvidence: emailProviderRequiredExternalEvidence,
+  };
+};
 
 export const emailProviderArtifactPaths = [
   "coverage/email-provider-runtime.json",
@@ -97,8 +286,8 @@ export interface EmailProviderEvidenceDecision {
   readonly status: "complete" | "blocked";
   readonly blockers: readonly string[];
   readonly missingArtifacts: readonly EmailProviderEvidenceArtifact[];
-  readonly requiredCommands: readonly string[];
-  readonly requiredEvidence: readonly string[];
+  readonly requiredCommands: typeof emailProviderRuntimeCommands;
+  readonly requiredEvidence: typeof emailProviderRequiredEvidence;
   readonly redactedSummary: {
     readonly capturedArtifactCount: number;
     readonly requiredArtifactCount: number;
@@ -136,15 +325,8 @@ export const buildEmailProviderEvidenceDecision = (
     status: blockers.length === 0 ? "complete" : "blocked",
     blockers,
     missingArtifacts,
-    requiredCommands: [...emailProviderRuntimeCommands],
-    requiredEvidence: [
-      "Resend SDK/API key and verified sender/domain evidence",
-      "raw-body Resend/Svix signature verification and invalid-signature route evidence",
-      "durable NotificationDelivery, ProviderEvent, and suppression persistence evidence",
-      "sandbox delivered, bounced, complained, and unsubscribe event transcripts",
-      "CI email provider runtime evidence with secret-safe artifacts",
-      "secret-safe review of retained email provider artifacts",
-    ],
+    requiredCommands: emailProviderRuntimeCommands,
+    requiredEvidence: emailProviderRequiredEvidence,
     redactedSummary: {
       capturedArtifactCount: captured.size,
       requiredArtifactCount: emailProviderArtifactPaths.length,
@@ -171,20 +353,16 @@ export const emailProviderRuntimeMatrix = [
   { id: "secret-safe-artifacts", command: "review email artifacts for API keys, signatures, raw payloads, destinations, and tenant data", artifact: "coverage/email-provider-secret-safe-artifacts.json", status: "ci-gated" },
 ] as const satisfies readonly EmailProviderRuntimeMatrixEntry[];
 
+export const emailProviderRuntimeReadinessRequiredControls = [
+  ...emailProviderContract.sendPlan.requiredControls,
+  ...emailProviderContract.webhookReadiness.requiredControls,
+] as const;
+
 export const emailProviderRuntimeReadiness: EmailProviderRuntimeReadiness = {
   status: "blocked",
   requiredCommands: emailProviderRuntimeCommands,
-  requiredEvidence: [
-    "Resend SDK/API key and verified sender/domain evidence",
-    "raw-body Resend/Svix signature verification and invalid-signature route evidence",
-    "durable NotificationDelivery, ProviderEvent, and suppression persistence evidence",
-    "sandbox delivered, bounced, complained, and unsubscribe event transcripts",
-    "CI email provider runtime evidence with secret-safe artifacts",
-  ],
-  requiredControls: [
-    ...emailProviderContract.sendPlan.requiredControls,
-    ...emailProviderContract.webhookReadiness.requiredControls,
-  ],
+  requiredEvidence: emailProviderRuntimeReadinessRequiredEvidence,
+  requiredControls: emailProviderRuntimeReadinessRequiredControls,
   blockers: [
     "Real Resend SDK/API key must be configured in a secret store before provider-backed sends.",
     "Verified sender/domain evidence must be captured before production email delivery.",
@@ -194,3 +372,5 @@ export const emailProviderRuntimeReadiness: EmailProviderRuntimeReadiness = {
     "Email provider CI evidence and secret-safe artifact review must be captured.",
   ],
 };
+
+

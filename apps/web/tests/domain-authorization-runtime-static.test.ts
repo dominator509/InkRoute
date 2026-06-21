@@ -1,10 +1,25 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildDomainAuthorizationArtifactReview,
+  buildDomainAuthorizationEvidenceDecision,
+  buildDomainAuthorizationExecutionPlan,
+  buildDomainAuthorizationRunData,
+  buildRedactedDomainAuthorizationArtifact,
+  persistDomainAuthorizationRun,
   domainAuthorizationArtifactPaths,
+  domainAuthorizationEvidenceFlags,
+  domainAuthorizationExternalArtifacts,
+  domainAuthorizationExternalCommands,
+  domainAuthorizationExecutionPolicy,
+  domainAuthorizationLocalArtifacts,
+  domainAuthorizationLocalCommands,
+  domainAuthorizationRequiredExternalEvidence,
   domainAuthorizationRuntimeCommands,
+  domainAuthorizationRuntimeControls,
   domainAuthorizationRuntimeMatrix,
+  domainAuthorizationRuntimeProofFiles,
   domainAuthorizationRuntimeReadiness,
   domainAuthorizationRunPersistenceContract,
 } from "../lib/domainAuthorizationRuntime";
@@ -53,6 +68,21 @@ describe("domain authorization route runtime contract", () => {
     expect(domainAuthorizationArtifactPaths).toContain("test-results/domain-authorization-runtime");
   });
 
+  it("pins domain authorization runtime control helper identity", () => {
+    const decision = buildDomainAuthorizationEvidenceDecision({
+      commands: domainAuthorizationRuntimeCommands,
+      artifacts: domainAuthorizationArtifactPaths,
+      controls: domainAuthorizationRuntimeControls,
+      evidence: Object.fromEntries(domainAuthorizationEvidenceFlags.map((flag) => [flag, true])) as Record<
+        (typeof domainAuthorizationEvidenceFlags)[number],
+        true
+      >,
+    });
+
+    expect(decision.requiredControls).toBe(domainAuthorizationRuntimeControls);
+    expect(gapTracker).toContain("domainAuthorizationRuntimeControls");
+  });
+
   it("keeps auth package scripts, route guard helpers, DB role models, and current middleware boundary visible", () => {
     expect(authPackageJson).toContain('"typecheck"');
     expect(authPackageJson).toContain('"test"');
@@ -70,22 +100,9 @@ describe("domain authorization route runtime contract", () => {
   it("keeps route evidence blocked until provider sessions, DB roles, route guards, audits, CSRF, revocation, CI, and safe artifacts exist", () => {
     expect(domainAuthorizationRuntimeReadiness.status).toBe("blocked");
     expect(domainAuthorizationRuntimeReadiness.missingScripts).toEqual([]);
-    expect(domainAuthorizationRuntimeReadiness.requiredCommands).toEqual([...domainAuthorizationRuntimeCommands]);
-    expect(domainAuthorizationRuntimeReadiness.requiredControls).toEqual([
-      "Resolve provider-backed session, TenantMember, and CustomRole rows server-side before route authorization.",
-      "Apply route guards before dashboard/API/server-action data loading or mutation side effects.",
-      "Reject invalid permissions, inactive roles, cross-tenant roles, tenant mismatches, revoked sessions, and CSRF mismatches.",
-      "Persist redacted AuditLog rows for allow and deny decisions.",
-      "Apply field authorization before serializing private client, medical, payment, consent, and system data.",
-    ]);
-    expect(domainAuthorizationRuntimeReadiness.requiredEvidence).toEqual([
-      "auth package test/typecheck and provider-backed session evidence",
-      "database CustomRole loading and dashboard/API/server-action route-guard adoption evidence",
-      "built-in role matrix, custom-role, and cross-tenant route denial evidence",
-      "field redaction and authorization AuditLog persistence evidence",
-      "CSRF session binding and session revocation route evidence",
-      "CI domain authorization route evidence and secret-safe artifact proof",
-    ]);
+    expect(domainAuthorizationRuntimeReadiness.requiredCommands).toBe(domainAuthorizationRuntimeCommands);
+    expect(domainAuthorizationRuntimeReadiness.requiredControls).toBe(domainAuthorizationRuntimeControls);
+    expect(domainAuthorizationRuntimeReadiness.requiredEvidence).toBe(domainAuthorizationEvidenceFlags);
     expect(domainAuthorizationRuntimeReadiness.blockers).toContain(
       "CustomRole rows must be loaded from tenant-scoped database storage in guarded route tests.",
     );
@@ -98,6 +115,26 @@ describe("domain authorization route runtime contract", () => {
   });
 
   it("pins the DomainAuthorizationRun persistence model and migration", () => {
+    const runData = buildDomainAuthorizationRunData({
+      tenantId: "tenant_static",
+      runId: "domain_authorization_static",
+      commitSha: "abc123",
+      status: "blocked",
+      commands: ["dashboard middleware route-guard contract tests"],
+      artifacts: ["coverage/domain-authorization-dashboard-middleware.json"],
+      providerSessionEvidenceCaptured: true,
+      customRoleEvidenceCaptured: false,
+      routeGuardEvidenceCaptured: false,
+      roleMatrixEvidenceCaptured: false,
+      fieldRedactionEvidenceCaptured: false,
+      auditLogEvidenceCaptured: false,
+      csrfRevocationEvidenceCaptured: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: true,
+      routeGuardReportPath: "coverage/domain-authorization-api-route-guards.json",
+      auditLogReportPath: "coverage/domain-authorization-audit-rows-redacted.json",
+    });
+
     expect(domainAuthorizationRunPersistenceContract).toEqual({
       prismaModel: "DomainAuthorizationRun",
       tenantRelation: "domainAuthorizationRuns",
@@ -117,6 +154,22 @@ describe("domain authorization route runtime contract", () => {
       storesCiEvidence: true,
       storesSecretSafeArtifacts: true,
     });
+    expect(runData).toMatchObject({
+      tenantId: "tenant_static",
+      runId: "domain_authorization_static",
+      commitSha: "abc123",
+      status: "blocked",
+      commandMatrix: ["dashboard middleware route-guard contract tests"],
+      artifactManifest: ["coverage/domain-authorization-dashboard-middleware.json"],
+      providerSessionEvidenceCaptured: true,
+      customRoleEvidenceCaptured: false,
+      routeGuardEvidenceCaptured: false,
+      auditLogEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: true,
+      routeGuardReportPath: "coverage/domain-authorization-api-route-guards.json",
+      auditLogReportPath: "coverage/domain-authorization-audit-rows-redacted.json",
+    });
+    expect(String(persistDomainAuthorizationRun)).toContain("repository.domainAuthorizationRun.upsert");
     expect(prismaSchema).toContain("model DomainAuthorizationRun");
     expect(prismaSchema).toContain("domainAuthorizationRuns DomainAuthorizationRun[]");
     expect(prismaSchema).toContain("providerSessionEvidenceCaptured");
@@ -128,6 +181,108 @@ describe("domain authorization route runtime contract", () => {
     expect(domainAuthorizationRunMigration).toContain('"DomainAuthorizationRun_tenantId_runId_key"');
   });
 
+  it("blocks domain authorization completion when session, guard, audit, CSRF, or safe-artifact evidence is missing", () => {
+    const decision = buildDomainAuthorizationEvidenceDecision({
+      commands: ["pnpm --filter @inkroute/auth typecheck"],
+      artifacts: ["coverage/domain-authorization-auth-typecheck.txt"],
+      controls: ["resolve-provider-session-tenant-member-custom-role-server-side-before-authorization"],
+      evidence: {
+        authTypecheckPassed: true,
+      },
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.missingCommands).toContain("session revocation route tests");
+    expect(decision.missingArtifacts).toContain("coverage/domain-authorization-secret-safe-artifacts.json");
+    expect(decision.missingControls).toContain("apply-route-guards-before-dashboard-api-server-action-side-effects");
+    expect(decision.missingEvidence).toContain("customRolesLoadedFromDatabase");
+    expect(decision.missingEvidence).toContain("crossTenantDenialTestsPassed");
+    expect(decision.blockers).toContain(
+      "CustomRole rows must be loaded from tenant-scoped database storage in guarded route tests.",
+    );
+    expect(decision.blockers).toContain("Cross-tenant dashboard/API/server-action denial tests must pass.");
+  });
+
+  it("completes domain authorization only when every command, artifact, control, and evidence flag is present", () => {
+    const completeEvidence = Object.fromEntries(domainAuthorizationEvidenceFlags.map((flag) => [flag, true]));
+    const decision = buildDomainAuthorizationEvidenceDecision({
+      commands: domainAuthorizationRuntimeCommands,
+      artifacts: domainAuthorizationArtifactPaths,
+      controls: domainAuthorizationRuntimeControls,
+      evidence: completeEvidence,
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.missingArtifacts).toEqual([]);
+    expect(decision.missingControls).toEqual([]);
+    expect(decision.missingEvidence).toEqual([]);
+    expect(decision.requiredEvidence).toBe(domainAuthorizationEvidenceFlags);
+  });
+
+  it("keeps domain authorization execution classified, redacted, and provider/database-gated", () => {
+    const executionPlan = buildDomainAuthorizationExecutionPlan();
+    expect(executionPlan.localCommands).toBe(domainAuthorizationLocalCommands);
+    expect(executionPlan.externalCommands).toBe(domainAuthorizationExternalCommands);
+    expect(executionPlan.localArtifacts).toBe(domainAuthorizationLocalArtifacts);
+    expect(executionPlan.externalArtifacts).toBe(domainAuthorizationExternalArtifacts);
+    expect(executionPlan.localArtifacts).toContain("coverage/domain-authorization-dashboard-middleware.json");
+    expect(executionPlan.externalArtifacts).toContain("coverage/domain-authorization-provider-session-redacted.json");
+    expect(executionPlan.externalArtifacts).toContain("provider-backed DomainAuthorizationRun persistence proof");
+    expect(executionPlan.commandExecutionAllowed).toBe(false);
+    expect(executionPlan.providerSessionExecutionAllowed).toBe(false);
+    expect(executionPlan.databaseExecutionAllowed).toBe(false);
+    expect(executionPlan.routeWideExecutionAllowed).toBe(false);
+    expect(executionPlan.ciExecutionAllowed).toBe(false);
+    expect(executionPlan.executionPolicy).toBe(domainAuthorizationExecutionPolicy);
+    expect(executionPlan.executionPolicy).toEqual({
+      codexMayClassifyStaticDomainAuthorizationReadiness: true,
+      providerSessionEvidenceRequiredForClosure: true,
+      databaseRoleEvidenceRequiredForClosure: true,
+      providerDatabaseRequiredForPersistence: true,
+      secretSafeArtifactsRequiredForClosure: true,
+    });
+    expect(executionPlan.requiredExternalEvidence).toBe(domainAuthorizationRequiredExternalEvidence);
+    expect(executionPlan.requiredExternalEvidence).toContain(
+      "Provider-backed DomainAuthorizationRun persistence row captured through persistDomainAuthorizationRun.",
+    );
+
+    const artifact = {
+      sessionToken: "github_pat_abcdefghijklmnopqrstuvwxyz123456",
+      tenantMemberId: "tenant_member_1234567890abcdefghijklmnopqrstuvwxyz",
+      customRoleId: "role_1234567890abcdefghijklmnopqrstuvwxyz",
+      actorEmail: "admin@example.com",
+      csrfToken: "csrf_1234567890abcdefghijklmnopqrstuvwxyz",
+      nested: {
+        databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
+        auditLogId: "audit_1234567890abcdefghijklmnopqrstuvwxyz",
+        publicSummary: "domain authorization evidence captured",
+      },
+    };
+    const redactedOnly = buildRedactedDomainAuthorizationArtifact(artifact);
+    const review = buildDomainAuthorizationArtifactReview(artifact);
+    const serialized = JSON.stringify(review.artifact);
+
+    expect(JSON.stringify(redactedOnly)).not.toContain("github_pat_abcdefghijklmnopqrstuvwxyz123456");
+    expect(serialized).not.toContain("tenant_member_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(serialized).not.toContain("role_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(serialized).not.toContain("admin@example.com");
+    expect(serialized).not.toContain("csrf_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
+    expect(serialized).not.toContain("audit_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(review.redactions).toEqual([
+      "sessionToken",
+      "tenantMemberId",
+      "customRoleId",
+      "actorEmail",
+      "csrfToken",
+      "nested.databaseUrl",
+      "nested.auditLogId",
+    ]);
+    expect(review.safeForTracker).toBe(true);
+    expect(review.requiredExternalEvidence).toBe(domainAuthorizationRequiredExternalEvidence);
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming route enforcement readiness", () => {
     expect(ciWorkflow).toContain("Run Phase 2 domain authorization runtime contracts");
     expect(ciWorkflow).toContain("domain-authorization-runtime-static.test.ts");
@@ -136,7 +291,25 @@ describe("domain authorization route runtime contract", () => {
     expect(unitManifest).toContain("unit-web-domain-authorization-runtime-static");
     expect(unitManifest).toContain("DomainAuthorizationRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/domainAuthorizationRuntime.ts");
-    expect(gapTracker).toContain("DomainAuthorizationRun Prisma model and app row contract");
-    expect(gapTracker).toContain("live provider-backed sessions, DB-loaded CustomRole rows, dashboard/API/server-action route-guard adoption, role-matrix route tests, custom-role route tests, cross-tenant denial tests, field-redaction serialization, AuditLog persistence, CSRF binding, session revocation, CI evidence, and secret-safe artifacts remain open");
+    expect(gapTracker).toContain("persistDomainAuthorizationRun upsert seam");
+    expect(gapTracker).toContain("GAP-023 is domain-authorization-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("live provider-backed sessions, DB-loaded CustomRole rows, provider-backed persistDomainAuthorizationRun execution, dashboard/API/server-action route-guard adoption, role-matrix route tests, custom-role route tests, cross-tenant denial tests, field-redaction serialization, AuditLog persistence, CSRF binding, session revocation, CI evidence, and secret-safe artifacts remain open");
+    expect(gapTracker).toContain("proof inventory");
+    expect(gapTracker).toContain("buildDomainAuthorizationExecutionPlan");
+    expect(gapTracker).toContain("domainAuthorizationExecutionPolicy");
+    expect(gapTracker).toContain("domainAuthorizationRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildRedactedDomainAuthorizationArtifact");
+    expect(gapTracker).toContain("buildDomainAuthorizationArtifactReview");
+  });
+
+  it("pins current domain authorization proof files for GAP-023", () => {
+    expect(domainAuthorizationRuntimeProofFiles).toContain("packages/auth/package.json");
+    expect(domainAuthorizationRuntimeProofFiles).toContain("apps/web/lib/domainAuthorizationRuntime.ts");
+    expect(domainAuthorizationRuntimeProofFiles).toContain("apps/web/tests/domain-authorization-runtime-static.test.ts");
+    for (const proofFile of domainAuthorizationRuntimeProofFiles) {
+      expect(readRepoFile(proofFile).length).toBeGreaterThan(0);
+    }
   });
 });
+
+

@@ -1,13 +1,368 @@
 {
-  "generatedAt": "2026-06-08T14:50:28.638Z",
+  "generatedAt": "2026-06-12T09:04:30.298Z",
   "source": "Phase 17 quality gate hardening",
-  "status": "pass",
-  "markdownFilesChecked": 69,
+  "status": "fail",
+  "markdownFilesChecked": 103,
   "totalLinks": 0,
   "relativeLinksChecked": 0,
-  "referencedPathsChecked": 1210,
+  "referencedPathsChecked": 2042,
   "findings": [],
-  "semanticFindings": [],
+  "semanticFindings": [
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "docs/spec",
+      "message": "Referenced repo path does not exist: docs/spec."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "DRIFT_CONTROL.md",
+      "message": "Referenced repo path does not exist: DRIFT_CONTROL.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "FLOW_CONTROL.md",
+      "message": "Referenced repo path does not exist: FLOW_CONTROL.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "GAP_PROTOCOL.md",
+      "message": "Referenced repo path does not exist: GAP_PROTOCOL.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "MANIFEST.md",
+      "message": "Referenced repo path does not exist: MANIFEST.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "PROVISIONING.md",
+      "message": "Referenced repo path does not exist: PROVISIONING.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "RUNBOOK.md",
+      "message": "Referenced repo path does not exist: RUNBOOK.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "AGENT_HARNESS.md",
+      "message": "Referenced repo path does not exist: AGENT_HARNESS.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "PROJECT_STATE.md",
+      "message": "Referenced repo path does not exist: PROJECT_STATE.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "Architecture.md",
+      "message": "Referenced repo path does not exist: Architecture.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "Roadmap.md",
+      "message": "Referenced repo path does not exist: Roadmap.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "HANDOFF.md",
+      "message": "Referenced repo path does not exist: HANDOFF.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "scripts/verify_markers.py",
+      "message": "Referenced repo path does not exist: scripts/verify_markers.py."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/regenerate_state.py",
+      "message": "Referenced repo path does not exist: scripts/regenerate_state.py."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/congruence_audit.py",
+      "message": "Referenced repo path does not exist: scripts/congruence_audit.py."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/verify_markers.py",
+      "message": "Referenced repo path does not exist: scripts/verify_markers.py."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/gap_lint.py",
+      "message": "Referenced repo path does not exist: scripts/gap_lint.py."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/ledger_lint.py",
+      "message": "Referenced repo path does not exist: scripts/ledger_lint.py."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/quarantine_import_lint.py",
+      "message": "Referenced repo path does not exist: scripts/quarantine_import_lint.py."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/escalation_monitor.py",
+      "message": "Referenced repo path does not exist: scripts/escalation_monitor.py."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "REPO_INVENTORY.md",
+      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "HANDOFF_QUEUE.md",
+      "message": "Referenced repo path does not exist: HANDOFF_QUEUE.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "PROJECT_STATE.md",
+      "message": "Referenced repo path does not exist: PROJECT_STATE.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "PROJECT_STATE.md",
+      "message": "Referenced repo path does not exist: PROJECT_STATE.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "REPO_INVENTORY.md",
+      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "HANDOFF_QUEUE.md",
+      "message": "Referenced repo path does not exist: HANDOFF_QUEUE.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "scripts/doctor.sh",
+      "message": "Referenced repo path does not exist: scripts/doctor.sh."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "PROJECT_STATE.md",
+      "message": "Referenced repo path does not exist: PROJECT_STATE.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "scripts/congruence_audit.py",
+      "message": "Referenced repo path does not exist: scripts/congruence_audit.py."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "HANDOFF.md",
+      "message": "Referenced repo path does not exist: HANDOFF.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "Architecture.md",
+      "message": "Referenced repo path does not exist: Architecture.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "Architecture.md",
+      "message": "Referenced repo path does not exist: Architecture.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "Architecture.md",
+      "message": "Referenced repo path does not exist: Architecture.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "REPO_INVENTORY.md",
+      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "PROJECT_STATE.md",
+      "message": "Referenced repo path does not exist: PROJECT_STATE.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "PROJECT_STATE.md",
+      "message": "Referenced repo path does not exist: PROJECT_STATE.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "HANDOFF.md",
+      "message": "Referenced repo path does not exist: HANDOFF.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "HANDOFF.md",
+      "message": "Referenced repo path does not exist: HANDOFF.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/kit/PROVISIONING.md",
+      "reference": "scripts/doctor.sh",
+      "message": "Referenced repo path does not exist: scripts/doctor.sh."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
+      "reference": "REPO_INVENTORY.md",
+      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
+      "reference": "REPO_INVENTORY.md",
+      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
+      "reference": "REPO_INVENTORY.md",
+      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
+      "reference": "REPO_INVENTORY.md",
+      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "REPO_INVENTORY.md",
+      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "REPO_INVENTORY.md",
+      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "docs/spec",
+      "message": "Referenced repo path does not exist: docs/spec."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "docs/spec",
+      "message": "Referenced repo path does not exist: docs/spec."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "REPO_INVENTORY.md",
+      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "HANDOFF_QUEUE.md",
+      "message": "Referenced repo path does not exist: HANDOFF_QUEUE.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "REPO_INVENTORY.md",
+      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "HANDOFF.md",
+      "message": "Referenced repo path does not exist: HANDOFF.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/ROLLBACK_PROTOCOL.md",
+      "reference": "HANDOFF_QUEUE.md",
+      "message": "Referenced repo path does not exist: HANDOFF_QUEUE.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
+      "reference": "scripts/congruence_audit.py",
+      "message": "Referenced repo path does not exist: scripts/congruence_audit.py."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
+      "reference": "accepted_deltas.yaml",
+      "message": "Referenced repo path does not exist: accepted_deltas.yaml."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
+      "reference": "HANDOFF.md",
+      "message": "Referenced repo path does not exist: HANDOFF.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
+      "reference": "PROJECT_STATE.md",
+      "message": "Referenced repo path does not exist: PROJECT_STATE.md."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
+      "reference": "scripts/verify_markers.py",
+      "message": "Referenced repo path does not exist: scripts/verify_markers.py."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/trinity/FLOW_CONTROL.md",
+      "reference": "scripts/quarantine_import_lint.py",
+      "message": "Referenced repo path does not exist: scripts/quarantine_import_lint.py."
+    },
+    {
+      "status": "fail",
+      "sourcePath": "spec/retrofit/trinity/GAP_PROTOCOL.md",
+      "reference": "scripts/gap_lint.py",
+      "message": "Referenced repo path does not exist: scripts/gap_lint.py."
+    }
+  ],
   "linkRecords": [],
   "referencedPathRecords": [
     {
@@ -164,11 +519,35 @@
     },
     {
       "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "packages/db/prisma/tenant-isolation-contract.json"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
       "reference": "GAP_TRACKER.md"
     },
     {
       "sourcePath": "DATABASE_SCHEMA.md",
       "reference": "packages/db/prisma/seed.ts"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "packages/db/prisma/seed-readiness.json"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "deployment/manifests/database-operations-evidence.json"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "packages/releases/src/index.ts"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": ".github/workflows/release-governance.yml"
     },
     {
       "sourcePath": "deployment/CI_CD_RUNBOOK.md",
@@ -187,6 +566,10 @@
       "reference": "deployment/manifests/environment-contract.json"
     },
     {
+      "sourcePath": "deployment/DATABASE_MIGRATION_GUIDE.md",
+      "reference": "deployment/manifests/database-operations-evidence.json"
+    },
+    {
       "sourcePath": "deployment/LOCAL_SETUP.md",
       "reference": "GAP_TRACKER.md"
     },
@@ -195,8 +578,24 @@
       "reference": "apps/mobile/eas.json"
     },
     {
+      "sourcePath": "deployment/MOBILE_BUILD_GUIDE.md",
+      "reference": "deployment/manifests/mobile-deployment-evidence.json"
+    },
+    {
+      "sourcePath": "deployment/PRODUCTION_LAUNCH_CHECKLIST.md",
+      "reference": "deployment/manifests/production-launch-evidence.json"
+    },
+    {
+      "sourcePath": "deployment/PRODUCTION_LAUNCH_CHECKLIST.md",
+      "reference": "deployment/manifests/launch-operations-evidence.json"
+    },
+    {
       "sourcePath": "deployment/PRODUCTION_LAUNCH_CHECKLIST.md",
       "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "deployment/PROVIDER_OPTIONS.md",
+      "reference": "deployment/manifests/provider-environment-evidence.json"
     },
     {
       "sourcePath": "deployment/README.md",
@@ -253,6 +652,30 @@
     {
       "sourcePath": "DEPLOYMENT.md",
       "reference": "deployment/scripts"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/manifests/provider-environment-evidence.json"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/manifests/secret-management-audit.json"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/manifests/mobile-deployment-evidence.json"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/manifests/database-operations-evidence.json"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/manifests/production-launch-evidence.json"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/manifests/launch-operations-evidence.json"
     },
     {
       "sourcePath": "DEPLOYMENT.md",
@@ -379,12 +802,24 @@
       "reference": "CLAUDE.md"
     },
     {
+      "sourcePath": "docs/db/SEED_READINESS.md",
+      "reference": "packages/db/prisma/seed-readiness.json"
+    },
+    {
       "sourcePath": "docs/handoff/AGENT_EXECUTION_QUEUE.md",
       "reference": "docs/handoff/manifests/agent-execution-queue.json"
     },
     {
       "sourcePath": "docs/handoff/AGENT_EXECUTION_QUEUE.md",
       "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/handoff/AGENT_EXECUTION_QUEUE.md",
+      "reference": "docs/handoff/manifests/agent-execution-ledger.json"
+    },
+    {
+      "sourcePath": "docs/handoff/AGENT_EXECUTION_QUEUE.md",
+      "reference": "docs/handoff/manifests/agent-task-tracking-sync.json"
     },
     {
       "sourcePath": "docs/handoff/AGENT_EXECUTION_QUEUE.md",
@@ -432,11 +867,75 @@
     },
     {
       "sourcePath": "docs/handoff/README.md",
+      "reference": "docs/handoff/manifests/handoff-tooling-readiness.json"
+    },
+    {
+      "sourcePath": "docs/handoff/README.md",
+      "reference": "docs/handoff/manifests/agent-task-tracking-sync.json"
+    },
+    {
+      "sourcePath": "docs/handoff/README.md",
       "reference": "docs/quality"
     },
     {
       "sourcePath": "docs/handoff/README.md",
       "reference": "scripts/quality"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "SECURITY.md"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "PRODUCT_REQUIREMENTS.md"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web/app/privacy/page.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web/app/terms/page.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web/app/consent-disclaimer/page.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web/app/aftercare/page.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web/app/booking/BookingFlowClient.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web/app/booking/deposit-preview/page.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/dashboard/app/forms/page.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/dashboard/app/payments/page.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/dashboard/app/templates/page.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "packages/db/prisma/seed.ts"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "docs/legal/manifests/legal-review-evidence.json"
     },
     {
       "sourcePath": "docs/phases/PHASE_0_PRODUCT_DEFINITION.md",
@@ -2148,7 +2647,23 @@
     },
     {
       "sourcePath": "docs/quality/README.md",
+      "reference": "docs/quality/manifests/documentation-consistency-audit.json"
+    },
+    {
+      "sourcePath": "docs/quality/README.md",
+      "reference": "docs/quality/manifests/documentation-inventory-audit.json"
+    },
+    {
+      "sourcePath": "docs/quality/README.md",
       "reference": "docs/quality/manifests/gap-evidence-audit.json"
+    },
+    {
+      "sourcePath": "docs/quality/README.md",
+      "reference": "docs/quality/manifests/repository-governance-audit.json"
+    },
+    {
+      "sourcePath": "docs/quality/README.md",
+      "reference": "docs/quality/manifests/required-checks-audit.json"
     },
     {
       "sourcePath": "docs/quality/README.md",
@@ -2200,7 +2715,19 @@
     },
     {
       "sourcePath": "docs/workspace/README.md",
+      "reference": "docs/workspace/manifests/runtime-evidence-audit.json"
+    },
+    {
+      "sourcePath": "docs/workspace/README.md",
       "reference": "docs/workspace/manifests/runtime-readiness.json"
+    },
+    {
+      "sourcePath": "docs/workspace/README.md",
+      "reference": "docs/workspace/manifests/workspace-required-checks-audit.json"
+    },
+    {
+      "sourcePath": "docs/workspace/README.md",
+      "reference": "docs/workspace/manifests/workspace-toolchain-readiness-audit.json"
     },
     {
       "sourcePath": "ENVIRONMENT_VARIABLES.md",
@@ -2209,6 +2736,10 @@
     {
       "sourcePath": "ENVIRONMENT_VARIABLES.md",
       "reference": "deployment/manifests/environment-contract.json"
+    },
+    {
+      "sourcePath": "ENVIRONMENT_VARIABLES.md",
+      "reference": "deployment/manifests/secret-management-audit.json"
     },
     {
       "sourcePath": "FILE_TREE.md",
@@ -2360,255 +2891,11 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "package.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/seed.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/seed.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/package.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "DATABASE_SCHEMA.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/auth/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/payments/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/api/webhooks/stripe/route.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/payments/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/lib/localRuntimeState.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/lib/localRuntimeState.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/lib/demo.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/config/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/package.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/next.config.mjs"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/eas.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/app.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/calendar/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/calendar/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/travel/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/notifications/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/validators/src/messaging.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/templates/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/messages/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/src/screens/NotificationsScreen.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/api/webhooks/email/route.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/api/webhooks/sms/route.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/observability/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "BUG_CRASH_REPORTING_PLAN.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/global-error.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/global-error.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/errors/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/src/screens/SystemStatusScreen.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "TESTING_PLAN.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/workflows/ci.yml"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "SECURITY.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/seed.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "DEPLOYMENT.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/workflows/ci.yml"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/workflows/release-governance.yml"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/deployment/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/deployment/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/eas.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/app.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/releases/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/releases/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/lib/releaseDemo.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/api/releases/route.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/api/feature-flags/route.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/workflows/release-governance.yml"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "RELEASE_AND_AUTO_UPDATE_PLAN.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/src/screens/SystemStatusScreen.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/eas.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/app.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/web/tests/booking-requests-contract.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2628,23 +2915,15 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/web/tests/booking-requests-contract.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/seed.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/seed.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/package.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "package.json"
+      "reference": "testing/manifests/unit-test-manifest.json"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2652,11 +2931,31 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/validators/tests/schemas.test.ts"
+      "reference": "packages/db/prisma/migrations/20260609034200_add_prisma_validation_runs/migration.sql"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/validators/package.json"
+      "reference": "apps/web/lib/prismaValidationRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/prisma-validation-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/security/tests/encryption-rotation.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/booking-requests-contract.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2676,23 +2975,27 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/booking-requests-contract.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/security/tests/encryption-rotation.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
+      "reference": "testing/manifests/unit-test-manifest.json"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
+      "reference": "apps/web/lib/privacyRetentionRuntime.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/auth/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
+      "reference": "apps/web/tests/privacy-retention-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2701,6 +3004,118 @@
     {
       "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/migrations/20260609034700_add_privacy_retention_runs/migration.sql"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/security/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/security/tests/upload-policy.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/privacyRetentionRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/privacy-retention-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/publicContentRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/public-content-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/reviews/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/review-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/publicContentRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/public-content-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/migrations/20260609034800_add_public_content_runs/migration.sql"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/src/prisma.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/security/privacy-requests/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/webBuildRuntimeVerification.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/web-build-runtime-verification-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/public/demo/portfolio"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/portfolioImagePerformanceRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/portfolio-image-performance-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/bookingContactRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/booking-contact-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2716,7 +3131,35 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/app/contact/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/localRuntimeState.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/bookingContactRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/booking-contact-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/migrations/20260609035100_add_booking_contact_runs/migration.sql"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/booking/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/booking/tests/booking-readiness.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2724,11 +3167,47 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/seoA11yPerformanceAuditRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/seo-a11y-performance-audit-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/seo/src/index.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/seo/tests/seo-engine.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/web/lib/seoEngine.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/seoA11yPerformanceAuditRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/seo-a11y-performance-audit-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/migrations/20260609035200_add_seo_a11y_performance_audit_runs/migration.sql"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2740,6 +3219,14 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "SEO_PLAN.md"
     },
     {
@@ -2748,7 +3235,27 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web"
+      "reference": "apps/web/lib/bookingFlowRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/booking-flow-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/booking-requests-contract.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/bookingFlowRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/booking-flow-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/localRuntimeState.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2768,7 +3275,71 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/migrations/20260609035300_add_booking_flow_runtime_runs/migration.sql"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/booking-requests-contract.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/bookingPersistenceApiRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/booking-persistence-api-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/booking-requests-contract.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/bookingPersistenceApiRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/booking-persistence-api-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/migrations/20260609035400_add_booking_persistence_api_runs/migration.sql"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/validators/src/booking.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/security/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/localRuntimeState.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2776,7 +3347,43 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/referenceUploadProviderRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/reference-upload-provider-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/secure-upload-intents-route.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/security/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/security/tests/upload-policy.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/security/tests/upload-policy.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/secure-upload-intents-route.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/reference-upload-provider-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2785,6 +3392,26 @@
     {
       "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/web/app/booking/confirmation/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/bookingProviderHandoffRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/booking-provider-handoff-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/booking-requests-contract.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/booking/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/booking/tests/booking-readiness.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2797,6 +3424,18 @@
     {
       "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/calendar/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/booking/tests/booking-readiness.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/booking-requests-contract.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/booking-provider-handoff-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2816,6 +3455,38 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/middleware.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/dashboardAuth.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/dashboardAuthGuardRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/layout.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/middleware.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/dashboardAuth.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/dashboardAuthGuardRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/dashboard-auth-guard-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/dashboard/lib/demo.ts"
     },
     {
@@ -2824,11 +3495,123 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/lib/demo.ts"
+      "reference": "packages/auth/tests/authorization.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/auth/tests/authorization.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/dashboard-auth-guard-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/dashboardDataLayerRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/config/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/config/tests/dashboard-data.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/dashboardDataLayerRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/dashboard-data-layer-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/dashboard/lib/demo.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/bookings/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/clients/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/payments/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/portfolio/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/travel/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/messages/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/seo/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/settings/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/calendar/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/reviews/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/booking-state-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/client-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/payment-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/portfolio-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/travel-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/message-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/seo-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/settings-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/calendar-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/review-read-route-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2836,7 +3619,43 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/config/tests/dashboard-data.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/dashboard-data-layer-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/dashboardMutationRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/booking/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/booking/tests/booking-readiness.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/dashboardMutationRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/dashboard-mutation-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/dashboard/components/DisabledActionPanel.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/booking-state-route-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2852,11 +3671,79 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/booking/tests/booking-readiness.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/booking-state-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/dashboard-mutation-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/dashboardBuildRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/dashboard/package.json"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/dashboard/next.config.mjs"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/dashboardBuildRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/dashboard-build-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/dashboard-build-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/dashboardPrivacyRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/security/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/security/tests/upload-policy.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/dashboardPrivacyRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/dashboard-privacy-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/demo.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/security/privacy-requests/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/security/trust-status/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/security-privacy-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/security-trust-route-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2868,11 +3755,99 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/messages/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/templates/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/portfolio/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/clients/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/payments/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/messages/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/settings/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/portfolio/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "SECURITY.md"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
       "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/security/tests/upload-policy.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/security-privacy-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/security-trust-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/dashboard-privacy-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/dashboardTestRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/testing/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/testing/tests/testing-manifest.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/dashboardTestRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/dashboard-test-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/dashboard-auth-guard-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/dashboard-data-layer-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/dashboard-mutation-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/dashboard-build-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2884,7 +3859,35 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/testing/tests/testing-manifest.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/dashboard-test-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileAuthRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileAuth.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileAuthRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/mobile/src/screens/AuthScreen.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-auth-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-auth-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2896,6 +3899,58 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/auth/tests/authorization.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/auth/tests/authorization.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-auth-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-auth-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileApiRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/mobile/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/mobile/tests/mobile-support.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileApiClient.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileApiRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/screens/HomeScreen.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/screens/BookingRequestsScreen.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-api-client-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-api-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/mobile/src/lib/mobileDemo.ts"
     },
     {
@@ -2904,11 +3959,19 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/src/screens/NotificationsScreen.tsx"
+      "reference": "packages/mobile/tests/mobile-support.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/src/lib/mobileDemo.ts"
+      "reference": "apps/mobile/tests/mobile-api-client-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-api-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobilePushRuntime.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2916,7 +3979,71 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/notifications/tests/delivery-plan.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobilePush.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobilePushRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/screens/NotificationsScreen.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-push-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-push-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileDemo.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/notifications/tests/delivery-plan.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-push-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-push-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/offlineSync.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/offlineSyncRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/mobile/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/mobile/tests/mobile-support.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/offlineSync.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/offlineSyncRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileApiClient.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2924,7 +4051,63 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/offline-sync-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/offline-sync-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileDemo.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/offline-sync-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/mobile/tests/mobile-support.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/offline-sync-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileCrash.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileCrashRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileCrash.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileCrashRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/mobile/src/screens/SystemStatusScreen.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-crash-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-crash-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2936,7 +4119,67 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/tests/redaction-report.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "BUG_CRASH_REPORTING_PLAN.md"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-crash-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/tests/redaction-report.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-crash-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileUpdates.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileUpdatesRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/releases/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/releases/tests/feature-flags.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileUpdates.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileUpdatesRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/screens/SystemStatusScreen.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-updates-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-updates-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2956,6 +4199,38 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-updates-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/releases/tests/feature-flags.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-updates-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/mobile-device-qa-checklist.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileQa.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileQaRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/mobile/src/index.ts"
     },
     {
@@ -2964,11 +4239,87 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileQa.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileQaRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-qa-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-qa-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/App.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/mobile-device-qa-checklist.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "TESTING_PLAN.md"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-qa-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/mobile/tests/mobile-support.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-qa-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/stripeCheckout.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/stripeCheckoutRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/payments/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/payments/tests/deposit-policy.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/stripeCheckout.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/stripeCheckoutRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/payment-routes.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/stripe-checkout-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/stripe-checkout-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -2976,59 +4327,31 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/api/webhooks/stripe/route.ts"
+      "reference": ".github/workflows/ci.yml"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/payments/src/index.ts"
+      "reference": "testing/manifests/unit-test-manifest.json"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
+      "reference": "apps/web/tests/stripe-checkout-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
+      "reference": "packages/payments/tests/deposit-policy.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/payments/src/index.ts"
+      "reference": "apps/web/tests/stripe-checkout-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/payments/page.tsx"
+      "reference": "apps/web/lib/stripeWebhook.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/payments/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/payments/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "TESTING_PLAN.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/booking/deposit-preview/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/payments/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "SECURITY.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "TESTING_PLAN.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/payments/src/index.ts"
+      "reference": "apps/web/lib/stripeWebhookRuntime.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3036,15 +4359,347 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/app/api/webhooks/stripe/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/stripeWebhook.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/stripeWebhookRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/payment-routes.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/stripe-webhook-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/stripe-webhook-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/payments/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/payments/tests/deposit-policy.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/stripe-webhook-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/payments/tests/deposit-policy.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/stripe-webhook-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/paymentPersistence.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/paymentPersistenceRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/payments/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/payments/tests/deposit-policy.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/paymentPersistence.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/paymentPersistenceRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/payment-persistence-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/payment-persistence-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/payments/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/payments/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/payment-persistence-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/payments/tests/deposit-policy.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/payment-persistence-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/paymentOperations.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/paymentOperationsRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/payments/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/payments/tests/deposit-policy.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/paymentOperations.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/paymentOperationsRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/payment-operations-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/payment-operations-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/payments/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "TESTING_PLAN.md"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/calendar/src/index.ts"
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/payment-operations-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/payments/tests/deposit-policy.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/payment-operations-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/paymentAutomatedTests.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/payment-automation-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/paymentAutomatedTestsRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/payments/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/payments/tests/deposit-policy.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/paymentAutomatedTests.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/paymentAutomatedTestsRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/payment-automation-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/payment-automation-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/payment-routes.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/app/api/webhooks/stripe/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/payment-automation-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/payment-automation-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/signedIcsFeeds.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/signed-ics-feed-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/signedIcsFeedsRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/signedIcsFeeds.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/signedIcsFeedsRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/signed-ics-feed-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/signed-ics-feed-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/ics-feed-route.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/calendar/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/calendar/tests/availability-conflicts.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/signed-ics-feed-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/signed-ics-feed-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/availabilityPersistence.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/calendar/holds/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/availability-persistence-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/availabilityPersistenceRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/calendar/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/calendar/tests/availability-conflicts.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/availabilityPersistence.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/availabilityPersistenceRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/calendar/holds/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/availability-persistence-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/availability-persistence-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3052,7 +4707,71 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/calendar/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/calendar-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/availability-persistence-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/availability-persistence-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/googleCalendarSync.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/calendar/google-sync/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/google-calendar-sync-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/googleCalendarSyncRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/calendar/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/calendar/tests/availability-conflicts.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/googleCalendarSync.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/googleCalendarSyncRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/calendar/google-sync/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/google-calendar-sync-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/google-calendar-sync-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3064,7 +4783,51 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/calendar/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/calendar-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/google-calendar-sync-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/google-calendar-sync-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/timezoneRecurrenceQa.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/calendar/timezone-qa/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/timezone-recurrence-qa-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/timezoneRecurrenceQaRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/calendar/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/calendar/tests/availability-conflicts.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3072,7 +4835,63 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/timezoneRecurrenceQa.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/timezoneRecurrenceQaRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/calendar/timezone-qa/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/timezone-recurrence-qa-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/timezone-recurrence-qa-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/calendar/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/calendar-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/timezone-recurrence-qa-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/timezone-recurrence-qa-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/calendarAutomatedTests.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/calendar-automation-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/calendarAutomatedTestsRuntime.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3080,11 +4899,83 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/calendar/tests/availability-conflicts.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/calendarAutomatedTests.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/calendarAutomatedTestsRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/calendar-automation-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/calendar-automation-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/ics-feed-route.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/availability-preview-route.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/dashboard/app/calendar/page.tsx"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/calendar-automation-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/calendar-automation-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/travelPublishRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/travel-publish-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/dashboard/app/travel/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/travel/publish/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/travelPublish.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/travelPublishRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/travel-publish-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/travel-publish-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3096,11 +4987,47 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/config/src/index.ts"
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/emailProviderRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/email-provider-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/emailProvider.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/notifications/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/notifications/tests/delivery-plan.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/emailProvider.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/emailProviderRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/email-provider-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/email-provider-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3108,7 +5035,23 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "ENVIRONMENT_VARIABLES.md"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/smsProviderRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/sms-provider-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3116,7 +5059,35 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/notifications/tests/delivery-plan.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/smsProvider.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/smsProviderRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/web/app/api/webhooks/sms/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/sms-provider-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/sms-provider-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3128,11 +5099,47 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobilePushRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-push-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/notifications/src/index.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/notifications/tests/delivery-plan.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobilePush.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobilePushRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/mobile/src/screens/NotificationsScreen.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-push-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-push-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3140,11 +5147,39 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/notificationPersistenceRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/notification-persistence-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/db/prisma/schema.prisma"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/types/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/auth/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/notifications/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/notifications/tests/delivery-plan.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/notificationPersistence.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/notificationPersistenceRuntime.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3152,11 +5187,91 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/messages/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/message-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/notification-persistence-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/notification-persistence-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/notificationSchedulerRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/notification-scheduler-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/notifications/src/index.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/notifications/tests/delivery-plan.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/notificationScheduler.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/notificationSchedulerRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/notifications/scheduler/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/dashboard/app/templates/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/notification-scheduler-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/notification-scheduler-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/providerWebhookRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/provider-webhook-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/providerWebhookReconciliation.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/providerWebhookRuntime.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3168,11 +5283,79 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/notifications/src/index.ts"
+      "reference": "apps/web/tests/provider-webhook-contracts.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/provider-webhook-routes.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/provider-webhook-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/notifications/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/notifications/tests/delivery-plan.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/preferenceCenterRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/preference-center-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/notifications/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/notifications/tests/delivery-plan.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/preferenceCenter.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/preferenceCenterRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/app/preferences/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/preference-center-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/preference-center-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/settings/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3180,11 +5363,67 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/messagingPrivacyRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/messaging-privacy-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/notifications/src/index.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/notifications/tests/delivery-plan.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/types/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/auth/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/messagingPrivacy.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/messagingPrivacyRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/dashboard/app/messages/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/messages/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/messages/privacy/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/message-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/messaging-privacy-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/messaging-privacy-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3192,55 +5431,167 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/notificationAutomatedTestsRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/notification-automation-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/notifications/src/index.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/validators/src/messaging.ts"
+      "reference": "packages/notifications/tests/delivery-plan.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/api/webhooks/email/route.ts"
+      "reference": "apps/web/lib/notificationAutomatedTests.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/api/webhooks/sms/route.ts"
+      "reference": "apps/web/lib/notificationAutomatedTestsRuntime.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/templates/page.tsx"
+      "reference": "apps/web/tests/notification-automation-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/messages/page.tsx"
+      "reference": "apps/web/tests/notification-automation-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/src/screens/NotificationsScreen.tsx"
+      "reference": "apps/web/tests/notification-messaging-routes.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/api/webhooks/email/route.ts"
+      "reference": "apps/web/tests/provider-webhook-routes.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/api/webhooks/sms/route.ts"
+      "reference": "apps/web/tests/provider-webhook-contracts.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/templates/page.tsx"
+      "reference": "apps/web/tests/preference-center-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/messages/page.tsx"
+      "reference": "apps/dashboard/tests/notification-scheduler-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/src/screens/NotificationsScreen.tsx"
+      "reference": "apps/dashboard/tests/notification-persistence-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/messaging-privacy-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-push-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/phase9AppRuntimeBuildRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/phase9-app-runtime-build-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/testing/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/testing/tests/testing-manifest.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/phase9AppRuntimeBuild.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/phase9AppRuntimeBuildRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/phase9-app-runtime-build-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/phase9-app-runtime-build-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/notification-messaging-routes.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/provider-webhook-routes.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/provider-webhook-contracts.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/booking-requests-contract.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/payment-routes.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/template-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/message-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/messaging-privacy-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-push-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/seoPublicationRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/seo-publication-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/seo/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/seo/tests/seo-engine.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3252,19 +5603,7 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/seo/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/lib/seoEngine.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/sitemap.ts"
+      "reference": "apps/dashboard/lib/seoPublicationRuntime.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3272,67 +5611,43 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/seo/src/index.ts"
+      "reference": "apps/dashboard/app/api/seo/route.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/lib/seoEngine.ts"
+      "reference": "apps/dashboard/tests/seo-read-route-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "SEO_PLAN.md"
+      "reference": "apps/dashboard/tests/seo-publication-route-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/seo/src/index.ts"
+      "reference": "apps/dashboard/tests/seo-publication-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/analytics/src/index.ts"
+      "reference": "apps/dashboard/app/api/reviews/route.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/seo/page.tsx"
+      "reference": "apps/dashboard/tests/review-read-route-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
+      "reference": ".github/workflows/ci.yml"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/seo/src/index.ts"
+      "reference": "testing/manifests/unit-test-manifest.json"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/seo/page.tsx"
+      "reference": "apps/web/lib/canonicalDomainRuntimeEvidence.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/lib/seoEngine.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/sitemap.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/seo/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/lib/seoDemo.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/seo/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/seo/tests/seo-engine.test.ts"
+      "reference": "apps/web/tests/canonical-domain-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3341,6 +5656,22 @@
     {
       "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/seo/tests/seo-engine.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/seoEngine.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/canonicalRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/canonicalDomainRuntimeEvidence.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/middleware.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3352,7 +5683,395 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/canonical-domain-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/structuredDataCrawlQa.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/structured-data-crawl-qa-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/seo/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/seo/tests/seo-engine.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/seoEngine.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/canonicalRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/structuredDataCrawlQa.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/components/JsonLdScript.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/app/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/app/about/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/app/portfolio/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/app/travel/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/app/faq/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/structured-data-crawl-qa-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/seoAnalyticsAttribution.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/seo-analytics-attribution-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/analytics/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/analytics/tests/attribution.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/seo/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/seoAnalyticsAttribution.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/middleware.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/seo-analytics-attribution-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/seo/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/searchConsoleRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/search-console-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/seo/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/seo/tests/seo-engine.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/searchConsoleRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/seo/search-console/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/seo/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/search-console-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/seo/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/seo-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/phase10SeoRuntimeBuild.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/phase10-seo-runtime-build-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/testing/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/testing/tests/testing-manifest.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/seoEngine.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/canonicalRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/structuredDataCrawlQa.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/phase10SeoRuntimeBuild.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/app/sitemap.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/sitemap-route.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/canonical-domain-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/structured-data-crawl-qa-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/phase10-seo-runtime-build-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/seo/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/seo/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/seo/search-console/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/seo-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/seo-publication-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/search-console-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/imageSeoPipeline.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/image-seo-pipeline-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/seo/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/seo/tests/seo-engine.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/imageSeoPipeline.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/portfolio/image-seo-pipeline/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/image-seo-pipeline-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/portfolio/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/portfolio-read-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/seoAutomatedTests.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/seo-automated-tests-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/seo/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/seo/tests/seo-engine.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/seoAutomatedTests.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/seo-automated-tests-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/app/sitemap.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/sitemap-route.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/canonical-domain-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/structured-data-crawl-qa-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/phase10-seo-runtime-build-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/search-console-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/image-seo-pipeline-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/observabilityRuntimeVerification.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/observability-runtime-verification-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/observability/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/tests/redaction-report.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/observabilityRuntimeVerification.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/observability-runtime-verification-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3372,51 +6091,31 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/observability/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "BUG_CRASH_REPORTING_PLAN.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/api/error-reports/route.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/web/app/api/webhooks/sentry/route.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "API_CONTRACTS.md"
+      "reference": "apps/web/tests/observability-routes.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/observability/src/index.ts"
+      "reference": "apps/dashboard/tests/error-report-route-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/errors/page.tsx"
+      "reference": ".github/workflows/ci.yml"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/observability/src/index.ts"
+      "reference": "testing/manifests/unit-test-manifest.json"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/observability/src/index.ts"
+      "reference": "apps/web/lib/sentryRuntime.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/errors/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "HANDOFF_TO_CODEX.md"
+      "reference": "apps/web/tests/sentry-sdk-runtime-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3428,47 +6127,95 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/api/webhooks/sentry/route.ts"
+      "reference": "apps/web/lib/sentryRuntime.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/errors/page.tsx"
+      "reference": "apps/web/instrumentation.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/releases/src/index.ts"
+      "reference": "apps/web/instrumentation-client.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/releases/page.tsx"
+      "reference": "apps/web/sentry.server.config.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/api/releases/route.ts"
+      "reference": "apps/web/sentry.edge.config.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/api/feature-flags/route.ts"
+      "reference": "apps/dashboard/lib/sentryRuntime.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/workflows/release-governance.yml"
+      "reference": "apps/dashboard/instrumentation.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/src/screens/SystemStatusScreen.tsx"
+      "reference": "apps/dashboard/instrumentation-client.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/releases/src/index.ts"
+      "reference": "apps/dashboard/sentry.server.config.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/api/releases/route.ts"
+      "reference": "apps/mobile/src/lib/sentryRuntime.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/api/feature-flags/route.ts"
+      "reference": "apps/mobile/src/lib/mobileCrash.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/sentry-sdk-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-crash-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "BUG_CRASH_REPORTING_PLAN.md"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/errorReportIngestHardening.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/error-report-ingest-hardening-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/errorReportIngestHardening.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/error-reports/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/error-report-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/error-report-ingest-hardening-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/observability-routes.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3476,7 +6223,303 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/tests/redaction-report.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/validators/src/observability.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/providerWebhookReconciliation.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/provider-webhook-reconciliation-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/providerWebhookReconciliation.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/app/api/webhooks/sentry/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/provider-webhook-reconciliation-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/observability-routes.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/tests/redaction-report.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/app/api/observability/alerts/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/alert-escalation-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/tests/redaction-report.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/app/api/observability/alerts/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/alert-escalation-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/errors/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/telemetryRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/telemetryRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/opentelemetry-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/tests/redaction-report.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/telemetryRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/middleware.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/opentelemetry-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/observability/github-issues/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/github-issue-automation-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/tests/redaction-report.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/observability/github-issues/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/github-issue-automation-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/errors/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "HANDOFF_TO_CODEX.md"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/observabilityAutomatedCoverage.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/observability-automated-coverage-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/tests/redaction-report.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/observabilityAutomatedCoverage.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/observability-routes.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/observability-ui-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/observability-automated-coverage-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/e2e/observability-global-error.spec.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/e2e/observability-triage.spec.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-crash-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-crash-proof-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/app/global-error.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/global-error.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/screens/SystemStatusScreen.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/releaseRuntimeVerification.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/release-runtime-verification-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/releases/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/releases/tests/feature-flags.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/releaseRuntimeVerification.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/release-runtime-verification-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/release-health-route.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "apps/dashboard/app/releases/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/releases/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/feature-flags/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/release-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/feature-flag-route-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3488,6 +6531,106 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/screens/SystemStatusScreen.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/releases/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/releases/tests/feature-flags.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/releaseControlPlane.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/releases/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/feature-flags/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/dashboardAuth.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/dashboard-release-rbac-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/release-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/feature-flag-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/release-persistence-rbac-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/releases/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/release-governance.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/releases/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/releases/tests/release-governance-workflow.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/cicdDeploymentAutomation.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/deployment/readiness/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/deployment-readiness-route-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/cicd-deployment-automation-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "DEPLOYMENT.md"
     },
     {
@@ -3496,7 +6639,31 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/featureFlagRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/releases/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/releases/tests/feature-flags.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/lib/featureFlagRuntime.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/feature-flag-runtime-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/web/tests/feature-flag-runtime-integration-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3512,55 +6679,19 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/releases/src/index.ts"
+      "reference": "apps/dashboard/tests/feature-flag-route-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/app.json"
+      "reference": ".github/workflows/ci.yml"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/eas.json"
+      "reference": "testing/manifests/unit-test-manifest.json"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/src/screens/SystemStatusScreen.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "RELEASE_AND_AUTO_UPDATE_PLAN.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/releases/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/workflows/release-governance.yml"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "DATABASE_SCHEMA.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/releases/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/observability/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/errors/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/releases/page.tsx"
+      "reference": "apps/mobile/src/lib/mobileOtaProduction.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3572,307 +6703,7 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/releases/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/api/releases/route.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/api/feature-flags/route.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/src/screens/SystemStatusScreen.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/workflows/release-governance.yml"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/security/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/auth/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/trust/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/api/security/trust-status/route.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/security/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/security/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "ENVIRONMENT_VARIABLES.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/tests/privacy-requests-public-route.test.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/tests/privacy-requests-dashboard-route.test.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/security/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/api/security/privacy-requests/route.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/privacy/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/tests/privacy-requests-public-route.test.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/tests/privacy-requests-dashboard-route.test.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/tests/privacy-requests-public-route.test.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/tests/privacy-requests-dashboard-route.test.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "SECURITY.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/security/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "DATABASE_SCHEMA.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/privacy/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/terms/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/consent-disclaimer/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/security/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "SECURITY.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "PRODUCT_REQUIREMENTS.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/security/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "ENVIRONMENT_VARIABLES.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/security/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/lib/securityDemo.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/lib/securityDemo.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/security/tests/upload-policy.test.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/security/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/security/tests/upload-policy.test.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "testing/manifests/security-checklist.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/trust/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "TESTING_PLAN.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/trust/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/privacy/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/terms/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/app/consent-disclaimer/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/trust/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/src/screens/SystemStatusScreen.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "package.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/workflows/ci.yml"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/web/tests/e2e/public-booking.spec.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/tests/e2e/dashboard-smoke.spec.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/schema.prisma"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/seed.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "testing/manifests/security-checklist.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "TESTING_PLAN.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/tests/mobile-static.test.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "testing/manifests/mobile-device-qa-checklist.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "testing/manifests/accessibility-checklist.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "testing/manifests/provider-test-plan.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/workflows/ci.yml"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "package.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "TESTING_PLAN.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "SEO_PLAN.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/deployment/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/deployment/tests/deployment-readiness.test.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/dashboard/app/deployment/page.tsx"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/workflows/ci.yml"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "deployment/PROVIDER_OPTIONS.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "deployment/CI_CD_RUNBOOK.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "deployment/MOBILE_BUILD_GUIDE.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "deployment/DATABASE_MIGRATION_GUIDE.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "DEPLOYMENT.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "ENVIRONMENT_VARIABLES.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "deployment/manifests/environment-contract.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "deployment/scripts/check-env.mjs"
+      "reference": "apps/mobile/app.json"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3880,11 +6711,31 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "apps/mobile/app.json"
+      "reference": "apps/mobile/src/lib/mobileDemo.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "deployment/MOBILE_BUILD_GUIDE.md"
+      "reference": "apps/mobile/src/lib/mobileUpdates.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/lib/mobileOtaProduction.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/src/screens/SystemStatusScreen.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-updates-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/mobile/tests/mobile-ota-production-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3892,11 +6743,43 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/migrationRuntimeDryRun.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
       "reference": "packages/releases/src/index.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "deployment/DATABASE_MIGRATION_GUIDE.md"
+      "reference": "packages/releases/tests/feature-flags.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/releases/tests/release-governance-workflow.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/migrationRuntimeDryRun.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/migration-runtime-dry-run-static.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/release-governance.yml"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": ".github/workflows/ci.yml"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3908,7 +6791,35 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/db/prisma/seed.ts"
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/src/index.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/observability/tests/redaction-report.test.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/errorDemo.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/lib/releaseIncidentLinkage.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/errors/page.tsx"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/app/api/observability/release-incidents/route.ts"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "apps/dashboard/tests/release-incident-linkage-static.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -3916,95 +6827,11 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "deployment/PRODUCTION_LAUNCH_CHECKLIST.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "deployment/manifests/production-launch-checklist.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "TESTING_PLAN.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "SECURITY.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "SEO_PLAN.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "GAP_TRACKER.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "HANDOFF_TO_CODEX.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "HANDOFF_TO_JULES.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "HANDOFF_TO_CLAUDE_CODE.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "docs/handoff/README.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "docs/handoff/AGENT_EXECUTION_QUEUE.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "docs/handoff/manifests/agent-execution-queue.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/handoff/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "deployment/PRODUCTION_LAUNCH_CHECKLIST.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "BUG_CRASH_REPORTING_PLAN.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "SECURITY.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "RELEASE_AND_AUTO_UPDATE_PLAN.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/handoff/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/handoff/tests/handoff-plan.test.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
       "reference": ".github/workflows/ci.yml"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "package.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "scripts/quality/audit-gap-evidence.mjs"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "docs/quality/manifests/gap-evidence-audit.json"
+      "reference": "testing/manifests/unit-test-manifest.json"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -4028,55 +6855,11 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "docs/quality/manifests/gap-evidence-audit.json"
+      "reference": "scripts/quality/audit-gap-tracker-diff.mjs"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/workflows/ci.yml"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "docs/handoff/manifests/agent-execution-queue.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "docs/handoff/AGENT_EXECUTION_QUEUE.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "scripts/quality/audit-doc-links.mjs"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "docs/quality/manifests/markdown-link-audit.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "scripts/handoff/verify-phase-docs.mjs"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "scripts/quality/audit-doc-links.mjs"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "docs/handoff/manifests/phase-documentation-audit.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "docs/quality/manifests/markdown-link-audit.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/PULL_REQUEST_TEMPLATE.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/ISSUE_TEMPLATE/gap_closure.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/workflows/ci.yml"
+      "reference": "scripts/quality/verify-pr-gap-diff-fixtures.mjs"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -4088,7 +6871,15 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "package.json"
+      "reference": "docs/quality/manifests/gap-evidence-audit.json"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "GAP_TRACKER.md",
+      "reference": "packages/db/prisma/migrations/20260609026000_add_pr_gap_evidence_enforcement_runs/migration.sql"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -4104,27 +6895,19 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "docs/quality/QUALITY_GATE_PROTOCOL.md"
+      "reference": "scripts/quality/audit-gap-tracker-diff.mjs"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/workflows/ci.yml"
+      "reference": "scripts/quality/verify-pr-gap-diff-fixtures.mjs"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "scripts/quality/audit-doc-links.mjs"
+      "reference": "packages/quality/src/index.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "docs/quality/manifests/markdown-link-audit.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/workflows/ci.yml"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/workflows/ci.yml"
+      "reference": "packages/quality/tests/quality-gates.test.ts"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
@@ -4132,67 +6915,15 @@
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/workspace/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/workspace/tests/workspace-audit.test.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "package.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
       "reference": ".github/workflows/ci.yml"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "scripts/workspace/audit-workspace-imports.mjs"
+      "reference": "packages/db/prisma/schema.prisma"
     },
     {
       "sourcePath": "GAP_TRACKER.md",
-      "reference": "packages/workspace/src/index.ts"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "docs/workspace/manifests/workspace-import-audit.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "package.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "docs/workspace/manifests/runtime-readiness.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "scripts/workspace/print-runtime-readiness.mjs"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "docs/workspace/manifests/runtime-readiness.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "GAP_TRACKER.md"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "package.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": ".github/workflows/ci.yml"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "package.json"
-    },
-    {
-      "sourcePath": "GAP_TRACKER.md",
-      "reference": "docs/workspace/WORKSPACE_AUDIT_PROTOCOL.md"
+      "reference": "packages/db/prisma/migrations/20260609030000_add_pr_diff_evidence_runs/migration.sql"
     },
     {
       "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
@@ -4432,6 +7163,14 @@
     },
     {
       "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": "deployment/manifests/mobile-deployment-evidence.json"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": "apps/mobile/app.json"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
       "reference": ".github/workflows/release-governance.yml"
     },
     {
@@ -4531,8 +7270,952 @@
       "reference": "GAP_TRACKER.md"
     },
     {
+      "sourcePath": "SECURITY.md",
+      "reference": "docs/legal/manifests/legal-review-evidence.json"
+    },
+    {
+      "sourcePath": "SECURITY.md",
+      "reference": "deployment/manifests/launch-operations-evidence.json"
+    },
+    {
       "sourcePath": "SEO_PLAN.md",
       "reference": "apps/web"
+    },
+    {
+      "sourcePath": "spec/HANDOFF_QUEUE.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "spec/PROJECT_STATE.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "spec/PROJECT_STATE.md",
+      "reference": "docs/ai/REPO_BRIEF.md"
+    },
+    {
+      "sourcePath": "spec/PROJECT_STATE.md",
+      "reference": "docs/ai/ARCHITECTURE_MAP.md"
+    },
+    {
+      "sourcePath": "spec/PROJECT_STATE.md",
+      "reference": "docs/ai/API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/analytics"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/auth"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/booking"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/calendar"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/deployment"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/handoff"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/mobile"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/notifications"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/observability"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/payments"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/quality"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/releases"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/security"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/seo"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/testing"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/ui"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/validators"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/workspace"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": ".github/workflows/release-governance.yml"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "package.json"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "turbo.json"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "package.json"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/quality/tests/quality-gates.test.ts"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "docs/spec"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "DRIFT_CONTROL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "FLOW_CONTROL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "GAP_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "MANIFEST.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "PROVISIONING.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "RUNBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "AGENT_HARNESS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "PROJECT_STATE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "Architecture.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "Roadmap.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "scripts/verify_markers.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/BUNDLE_MANIFEST.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_INSTRUCTIONS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/BUNDLE_MANIFEST.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_INSTRUCTIONS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/BUNDLE_MANIFEST.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_INSTRUCTIONS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_INSTRUCTIONS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/BUNDLE_MANIFEST.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_INSTRUCTIONS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/CODEX_INSTRUCTIONS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/CODEX_INSTRUCTIONS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/regenerate_state.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/congruence_audit.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/verify_markers.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/gap_lint.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/ledger_lint.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/quarantine_import_lint.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/escalation_monitor.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "HANDOFF_QUEUE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "PROJECT_STATE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "PROJECT_STATE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "HANDOFF_QUEUE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "scripts/doctor.sh"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "PROJECT_STATE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "scripts/congruence_audit.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_INSTRUCTIONS.md",
+      "reference": "AGENTS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "Architecture.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "Architecture.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "Architecture.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "PROJECT_STATE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "PROJECT_STATE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/kit/PROVISIONING.md",
+      "reference": "scripts/doctor.sh"
+    },
+    {
+      "sourcePath": "spec/retrofit/LEGACY_GAP_SCHEMA.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/LEGACY_GAP_SCHEMA.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
+      "reference": "REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
+      "reference": "REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
+      "reference": "REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
+      "reference": "REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "docs/spec"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "docs/spec"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "HANDOFF_QUEUE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ROLLBACK_PROTOCOL.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ROLLBACK_PROTOCOL.md",
+      "reference": "HANDOFF_QUEUE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
+      "reference": "scripts/congruence_audit.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
+      "reference": "accepted_deltas.yaml"
+    },
+    {
+      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
+      "reference": "HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
+      "reference": "PROJECT_STATE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
+      "reference": "scripts/verify_markers.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/trinity/FLOW_CONTROL.md",
+      "reference": "scripts/quarantine_import_lint.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/trinity/GAP_PROTOCOL.md",
+      "reference": "scripts/gap_lint.py"
     },
     {
       "sourcePath": "TESTING_PLAN.md",

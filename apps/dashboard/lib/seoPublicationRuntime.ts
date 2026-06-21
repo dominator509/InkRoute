@@ -17,6 +17,87 @@ export interface SeoPublicationRuntimeMatrixEntry {
   readonly status: SeoPublicationRuntimeStatus;
 }
 
+export type SeoPublicationLocalModel = "SeoCityPage" | "SeoStylePage" | "SeoRedirect";
+export type SeoPublicationLocalAction = "create" | "update" | "publish" | "archive";
+
+export interface SeoPublicationLocalMutation {
+  readonly tenantId: string;
+  readonly actorId: string;
+  readonly model: SeoPublicationLocalModel;
+  readonly action: SeoPublicationLocalAction;
+  readonly entityId: string;
+  readonly idempotencyKey: string;
+  readonly revalidationTags: readonly string[];
+  readonly relatedFaqIds?: readonly string[];
+  readonly relatedReviewIds?: readonly string[];
+  readonly relatedImageIds?: readonly string[];
+}
+
+export interface SeoPublicationLocalRepositorySnapshot {
+  readonly idempotencyKeys: readonly string[];
+  readonly entities: readonly { tenantId: string; model: SeoPublicationLocalModel; entityId: string; action: SeoPublicationLocalAction }[];
+  readonly revalidationJobs: readonly { tenantId: string; entityId: string; tags: readonly string[] }[];
+  readonly associations: readonly { tenantId: string; entityId: string; kind: "faq" | "review" | "image"; relatedId: string }[];
+  readonly auditLogs: readonly { tenantId: string; actorId: string; entityId: string; action: string; metadata: Record<string, unknown> }[];
+}
+
+export interface SeoPublicationLocalRepository {
+  claimIdempotencyKey(input: { tenantId: string; key: string }): "claimed" | "duplicate";
+  persistMutation(input: SeoPublicationLocalMutation): void;
+  persistRevalidationJob(input: SeoPublicationLocalMutation): void;
+  persistAssociations(input: SeoPublicationLocalMutation): void;
+  persistAuditLog(input: SeoPublicationLocalMutation): void;
+  snapshot(): SeoPublicationLocalRepositorySnapshot;
+}
+
+export interface SeoPublicationArtifactReview {
+  readonly status: "passed" | "blocked";
+  readonly redactedArtifacts: readonly unknown[];
+  readonly blockers: readonly string[];
+}
+
+export interface SeoPublicationExecutionPolicy {
+  readonly codexMayClassifyStaticSeoPublicationReadiness: boolean;
+  readonly localCommandEvidenceRequiredForClosure: boolean;
+  readonly seededPrismaRequiredForClosure: boolean;
+  readonly tenantIsolationRequiredForClosure: boolean;
+  readonly durableIdempotencyRequiredForClosure: boolean;
+  readonly durableRevalidationRequiredForClosure: boolean;
+  readonly durableAssociationPersistenceRequiredForClosure: boolean;
+  readonly dashboardBrowserFlowsRequiredForClosure: boolean;
+  readonly ciEvidenceRequiredForClosure: boolean;
+  readonly secretSafeArtifactsRequiredForClosure: boolean;
+}
+
+export interface SeoPublicationExecutionPlan {
+  readonly policy: typeof seoPublicationExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly seededPrismaExecutionAllowed: false;
+  readonly tenantIsolationExecutionAllowed: false;
+  readonly idempotencyExecutionAllowed: false;
+  readonly revalidationExecutionAllowed: false;
+  readonly associationExecutionAllowed: false;
+  readonly browserExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly artifactReviewExecutionAllowed: false;
+  readonly localCommands: typeof seoPublicationLocalCommands;
+  readonly externalCommands: typeof seoPublicationExternalCommands;
+  readonly requiredExternalEvidence: typeof seoPublicationRequiredExternalEvidence;
+}
+
+export const seoPublicationExecutionPolicy = {
+  codexMayClassifyStaticSeoPublicationReadiness: true,
+  localCommandEvidenceRequiredForClosure: true,
+  seededPrismaRequiredForClosure: true,
+  tenantIsolationRequiredForClosure: true,
+  durableIdempotencyRequiredForClosure: true,
+  durableRevalidationRequiredForClosure: true,
+  durableAssociationPersistenceRequiredForClosure: true,
+  dashboardBrowserFlowsRequiredForClosure: true,
+  ciEvidenceRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies SeoPublicationExecutionPolicy;
+
 export const seoPublicationRuntimeCommands = [
   "pnpm --filter @inkroute/seo typecheck",
   "pnpm --filter @inkroute/seo test",
@@ -49,6 +130,276 @@ export const seoPublicationArtifactPaths = [
   "coverage/seo-publication-secret-safe-artifacts.json",
   "test-results/seo-publication-runtime",
 ] as const;
+
+export const seoPublicationRuntimeProofFiles = [
+  "apps/dashboard/package.json",
+  "packages/seo/package.json",
+  "packages/seo/src/index.ts",
+  "packages/seo/tests/seo-engine.test.ts",
+  "apps/dashboard/app/seo/page.tsx",
+  "apps/dashboard/components/SeoPublicationActionPanel.tsx",
+  "apps/dashboard/lib/seoDemo.ts",
+  "apps/dashboard/lib/seoPublicationRuntime.ts",
+  "packages/db/prisma/schema.prisma",
+  "apps/dashboard/app/api/seo/route.ts",
+  "apps/dashboard/tests/seo-read-route-static.test.ts",
+  "apps/dashboard/tests/seo-publication-route-static.test.ts",
+  "apps/dashboard/tests/seo-publication-runtime-static.test.ts",
+  "apps/dashboard/app/api/reviews/route.ts",
+  "apps/dashboard/tests/review-read-route-static.test.ts",
+  ".github/workflows/ci.yml",
+  "testing/manifests/unit-test-manifest.json",
+] as const;
+
+export const seoPublicationRequiredExternalEvidence = [
+  "actual SEO publication command output",
+  "seeded SeoCityPage mutation integration tests",
+  "seeded SeoStylePage mutation integration tests",
+  "seeded SeoRedirect mutation integration tests",
+  "SEO tenant isolation tests",
+  "SEO publish RBAC denial tests",
+  "dedicated SEO publication idempotency store tests",
+  "dedicated SEO revalidation job persistence tests",
+  "normalized FAQ/review/image association join persistence tests",
+  "dashboard SEO publish/edit/archive browser flow evidence",
+  "CI SEO publication artifacts",
+  "secret-safe SEO publication artifact review",
+] as const;
+
+export const seoPublicationLocalCommands = [
+  "pnpm --filter @inkroute/seo typecheck",
+  "pnpm --filter @inkroute/seo test",
+  "pnpm --filter @inkroute/dashboard build",
+  "pnpm vitest run apps/dashboard/tests/seo-publication-runtime-static.test.ts apps/dashboard/tests/seo-publication-route-static.test.ts apps/dashboard/tests/seo-read-route-static.test.ts",
+] as const;
+
+export const seoPublicationExternalCommands = [
+  "SEO Prisma integration tests",
+  "SEO tenant isolation tests",
+  "dashboard SEO publish/edit/archive Playwright or route tests",
+  "GitHub Actions SEO publication runtime job",
+  "secret-safe SEO publication artifact review",
+] as const;
+
+export const buildSeoPublicationExecutionPlan = (): SeoPublicationExecutionPlan => ({
+  policy: seoPublicationExecutionPolicy,
+  commandExecutionAllowed: false,
+  seededPrismaExecutionAllowed: false,
+  tenantIsolationExecutionAllowed: false,
+  idempotencyExecutionAllowed: false,
+  revalidationExecutionAllowed: false,
+  associationExecutionAllowed: false,
+  browserExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  artifactReviewExecutionAllowed: false,
+  localCommands: seoPublicationLocalCommands,
+  externalCommands: seoPublicationExternalCommands,
+  requiredExternalEvidence: seoPublicationRequiredExternalEvidence,
+});
+
+const sensitiveSeoArtifactKeyPattern = /(token|secret|password|authorization|cookie|draft|body|copy|email|phone|searchconsole|provider|payload)/i;
+const sensitiveSeoArtifactValuePatterns = [
+  /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
+  /\+?\d[\d\s().-]{7,}\d/g,
+  /\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi,
+  /\b(?:searchconsole|provider|token|secret)[\w:./?=&-]*/gi,
+];
+
+export function buildRedactedSeoPublicationArtifact(input: unknown): unknown {
+  if (Array.isArray(input)) return input.map((value) => buildRedactedSeoPublicationArtifact(value));
+  if (!input || typeof input !== "object") {
+    if (typeof input !== "string") return input;
+    return sensitiveSeoArtifactValuePatterns.reduce((value, pattern) => value.replace(pattern, "[redacted]"), input);
+  }
+
+  return Object.fromEntries(
+    Object.entries(input as Record<string, unknown>).map(([key, value]) => [
+      key,
+      sensitiveSeoArtifactKeyPattern.test(key) ? "[redacted]" : buildRedactedSeoPublicationArtifact(value),
+    ]),
+  );
+}
+
+export function buildSeoPublicationArtifactReview(input: {
+  readonly artifacts: readonly unknown[];
+  readonly expectedArtifactPaths?: readonly string[];
+}): SeoPublicationArtifactReview {
+  const redactedArtifacts = input.artifacts.map((artifact) => buildRedactedSeoPublicationArtifact(artifact));
+  const serialized = JSON.stringify(redactedArtifacts);
+  const blockers = [
+    ...(input.artifacts.length === 0 ? ["No SEO publication artifacts were provided for review."] : []),
+    ...(/\b(secret|token|authorization|cookie|ari@example|206 555|searchconsole)\b/i.test(serialized)
+      ? ["SEO publication artifacts still contain secrets, provider payloads, draft copy, or PII."]
+      : []),
+    ...((input.expectedArtifactPaths ?? []).some((path) => !serialized.includes(path))
+      ? ["SEO publication artifact inventory is incomplete."]
+      : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "passed" : "blocked",
+    redactedArtifacts,
+    blockers,
+  };
+}
+
+export function createInMemorySeoPublicationRepository(): SeoPublicationLocalRepository {
+  const idempotencyKeys = new Set<string>();
+  const entities: { tenantId: string; model: SeoPublicationLocalModel; entityId: string; action: SeoPublicationLocalAction }[] = [];
+  const revalidationJobs: { tenantId: string; entityId: string; tags: readonly string[] }[] = [];
+  const associations: { tenantId: string; entityId: string; kind: "faq" | "review" | "image"; relatedId: string }[] = [];
+  const auditLogs: { tenantId: string; actorId: string; entityId: string; action: string; metadata: Record<string, unknown> }[] = [];
+
+  return {
+    claimIdempotencyKey(input) {
+      const scopedKey = `${input.tenantId}:${input.key}`;
+      if (idempotencyKeys.has(scopedKey)) return "duplicate";
+      idempotencyKeys.add(scopedKey);
+      return "claimed";
+    },
+    persistMutation(input) {
+      entities.push({ tenantId: input.tenantId, model: input.model, entityId: input.entityId, action: input.action });
+    },
+    persistRevalidationJob(input) {
+      revalidationJobs.push({ tenantId: input.tenantId, entityId: input.entityId, tags: input.revalidationTags });
+    },
+    persistAssociations(input) {
+      associations.push(
+        ...(input.relatedFaqIds ?? []).map((relatedId) => ({ tenantId: input.tenantId, entityId: input.entityId, kind: "faq" as const, relatedId })),
+        ...(input.relatedReviewIds ?? []).map((relatedId) => ({ tenantId: input.tenantId, entityId: input.entityId, kind: "review" as const, relatedId })),
+        ...(input.relatedImageIds ?? []).map((relatedId) => ({ tenantId: input.tenantId, entityId: input.entityId, kind: "image" as const, relatedId })),
+      );
+    },
+    persistAuditLog(input) {
+      auditLogs.push({
+        tenantId: input.tenantId,
+        actorId: input.actorId,
+        entityId: input.entityId,
+        action: `seo:${input.model}:${input.action}`,
+        metadata: buildRedactedSeoPublicationArtifact({
+          idempotencyKey: input.idempotencyKey,
+          revalidationTags: input.revalidationTags,
+          relatedFaqIds: input.relatedFaqIds ?? [],
+          relatedReviewIds: input.relatedReviewIds ?? [],
+          relatedImageIds: input.relatedImageIds ?? [],
+        }) as Record<string, unknown>,
+      });
+    },
+    snapshot() {
+      return {
+        idempotencyKeys: [...idempotencyKeys],
+        entities: [...entities],
+        revalidationJobs: [...revalidationJobs],
+        associations: [...associations],
+        auditLogs: [...auditLogs],
+      };
+    },
+  };
+}
+
+export function executeLocalSeoPublicationMutation(
+  repository: SeoPublicationLocalRepository,
+  input: SeoPublicationLocalMutation,
+): { readonly status: "processed" | "duplicate"; readonly snapshot: SeoPublicationLocalRepositorySnapshot } {
+  const claim = repository.claimIdempotencyKey({ tenantId: input.tenantId, key: input.idempotencyKey });
+  if (claim === "duplicate") return { status: "duplicate", snapshot: repository.snapshot() };
+
+  repository.persistMutation(input);
+  repository.persistRevalidationJob(input);
+  repository.persistAssociations(input);
+  repository.persistAuditLog(input);
+
+  return { status: "processed", snapshot: repository.snapshot() };
+}
+
+export type SeoPublicationEvidenceArtifact = (typeof seoPublicationArtifactPaths)[number];
+
+export interface SeoPublicationEvidenceInput {
+  readonly seoTypecheckPassed: boolean;
+  readonly seoTestsPassed: boolean;
+  readonly dashboardBuildPassed: boolean;
+  readonly staticContractPassed: boolean;
+  readonly cityPrismaIntegrationPassed: boolean;
+  readonly stylePrismaIntegrationPassed: boolean;
+  readonly redirectPrismaIntegrationPassed: boolean;
+  readonly tenantIsolationPassed: boolean;
+  readonly rbacDenialPassed: boolean;
+  readonly idempotencyStoreVerified: boolean;
+  readonly revalidationJobVerified: boolean;
+  readonly associationPersistenceVerified: boolean;
+  readonly auditLogVerified: boolean;
+  readonly dashboardPublishFlowPassed: boolean;
+  readonly dashboardEditFlowPassed: boolean;
+  readonly dashboardArchiveFlowPassed: boolean;
+  readonly ciEvidenceCaptured: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly SeoPublicationEvidenceArtifact[];
+}
+
+export interface SeoPublicationEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly SeoPublicationEvidenceArtifact[];
+  readonly requiredCommands: typeof seoPublicationRuntimeCommands;
+  readonly requiredEvidence: typeof seoPublicationDecisionRequiredEvidence;
+  readonly redactedSummary: {
+    readonly capturedArtifactCount: number;
+    readonly requiredArtifactCount: number;
+  };
+}
+
+export const seoPublicationDecisionRequiredEvidence = [
+  "seeded city, style, and redirect Prisma mutation evidence",
+  "SEO association, publish-state, and revalidation job persistence evidence",
+  "SEO Prisma integration, tenant isolation, and dashboard publish-flow test evidence",
+  "tenant-scoped transaction, audit, RBAC, and idempotency evidence",
+  "dashboard publish, edit, archive, and redirect browser flow evidence",
+  "secret-safe review of retained SEO publication artifacts",
+] as const;
+
+export const buildSeoPublicationEvidenceDecision = (
+  input: SeoPublicationEvidenceInput,
+): SeoPublicationEvidenceDecision => {
+  const captured = new Set(input.capturedArtifacts);
+  const missingArtifacts = seoPublicationArtifactPaths.filter((artifact) => !captured.has(artifact));
+  const blockers = [
+    ...(!input.seoTypecheckPassed ? ["@inkroute/seo typecheck evidence is missing."] : []),
+    ...(!input.seoTestsPassed ? ["@inkroute/seo test evidence is missing."] : []),
+    ...(!input.dashboardBuildPassed ? ["Dashboard build evidence is missing."] : []),
+    ...(!input.staticContractPassed ? ["SEO publication static contract evidence is missing."] : []),
+    ...(!input.cityPrismaIntegrationPassed ? ["Seeded SeoCityPage mutation evidence is missing."] : []),
+    ...(!input.stylePrismaIntegrationPassed ? ["Seeded SeoStylePage mutation evidence is missing."] : []),
+    ...(!input.redirectPrismaIntegrationPassed ? ["Seeded SeoRedirect mutation evidence is missing."] : []),
+    ...(!input.tenantIsolationPassed ? ["SEO tenant-isolation evidence is missing."] : []),
+    ...(!input.rbacDenialPassed ? ["SEO publish RBAC denial evidence is missing."] : []),
+    ...(!input.idempotencyStoreVerified ? ["SEO publication idempotency store evidence is missing."] : []),
+    ...(!input.revalidationJobVerified ? ["SEO revalidation job persistence evidence is missing."] : []),
+    ...(!input.associationPersistenceVerified
+      ? ["FAQ/review/image association persistence evidence is missing."]
+      : []),
+    ...(!input.auditLogVerified ? ["SEO publication AuditLog evidence is missing."] : []),
+    ...(!input.dashboardPublishFlowPassed ? ["Dashboard SEO publish flow evidence is missing."] : []),
+    ...(!input.dashboardEditFlowPassed ? ["Dashboard SEO edit flow evidence is missing."] : []),
+    ...(!input.dashboardArchiveFlowPassed ? ["Dashboard SEO archive/redirect flow evidence is missing."] : []),
+    ...(!input.ciEvidenceCaptured ? ["SEO publication CI evidence is missing."] : []),
+    ...(!input.secretSafeArtifactReviewPassed
+      ? ["Secret-safe SEO publication artifact review evidence is missing."]
+      : []),
+    ...(missingArtifacts.length > 0 ? ["All SEO publication artifacts must be captured."] : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: seoPublicationRuntimeCommands,
+    requiredEvidence: seoPublicationDecisionRequiredEvidence,
+    redactedSummary: {
+      capturedArtifactCount: captured.size,
+      requiredArtifactCount: seoPublicationArtifactPaths.length,
+    },
+  };
+};
 
 export const seoPublicationRuntimeMatrix = [
   { id: "seo-typecheck", command: "pnpm --filter @inkroute/seo typecheck", artifact: "coverage/seo-publication-seo-typecheck.txt", status: "wired" },
@@ -96,3 +447,5 @@ export const seoPublicationRuntimeReadiness = buildSeoPublicationRuntimeReadines
   tenantIsolationTestsPassed: false,
   dashboardPublishFlowTestsPassed: false,
 });
+
+

@@ -1,10 +1,25 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildPrivacyRetentionArtifactReview,
+  buildPrivacyRetentionEvidenceDecision,
+  buildPrivacyRetentionExecutionPlan,
+  buildPrivacyRetentionRunData,
+  buildRedactedPrivacyRetentionArtifact,
+  persistPrivacyRetentionRun,
   privacyRetentionArtifactPaths,
+  privacyRetentionEvidenceFlags,
+  privacyRetentionExternalArtifacts,
+  privacyRetentionExternalCommands,
+  privacyRetentionExecutionPolicy,
+  privacyRetentionLocalArtifacts,
+  privacyRetentionLocalCommands,
+  privacyRetentionRequiredExternalEvidence,
   privacyRetentionRuntimeCommands,
+  privacyRetentionRuntimeControls,
   privacyRetentionRuntimeMatrix,
+  privacyRetentionRuntimeProofFiles,
   privacyRetentionRuntimeReadiness,
   privacyRetentionRunPersistenceContract,
 } from "../lib/privacyRetentionRuntime";
@@ -47,6 +62,21 @@ describe("privacy retention dry-run runtime contract", () => {
     expect(privacyRetentionArtifactPaths).toContain("test-results/privacy-retention-runtime");
   });
 
+  it("pins privacy retention runtime control helper identity", () => {
+    const decision = buildPrivacyRetentionEvidenceDecision({
+      commands: privacyRetentionRuntimeCommands,
+      artifacts: privacyRetentionArtifactPaths,
+      controls: privacyRetentionRuntimeControls,
+      evidence: Object.fromEntries(privacyRetentionEvidenceFlags.map((flag) => [flag, true])) as Record<
+        (typeof privacyRetentionEvidenceFlags)[number],
+        true
+      >,
+    });
+
+    expect(decision.requiredControls).toBe(privacyRetentionRuntimeControls);
+    expect(gapTracker).toContain("privacyRetentionRuntimeControls");
+  });
+
   it("keeps security scripts, dry-run evidence helper, privacy tests, and audit persistence visible", () => {
     for (const scriptName of ["typecheck", "test"]) {
       expect(securityPackageJson).toContain(`"${scriptName}"`);
@@ -61,22 +91,9 @@ describe("privacy retention dry-run runtime contract", () => {
   it("keeps privacy retention evidence blocked until legal, worker, data, tombstone, CI, and redaction proof exists", () => {
     expect(privacyRetentionRuntimeReadiness.status).toBe("blocked");
     expect(privacyRetentionRuntimeReadiness.missingScripts).toEqual([]);
-    expect(privacyRetentionRuntimeReadiness.requiredCommands).toEqual([...privacyRetentionRuntimeCommands]);
-    expect(privacyRetentionRuntimeReadiness.requiredControls).toEqual([
-      "Verify requester identity before export, delete, anonymize, or rectify workers run.",
-      "Persist privacy case status, worker output metadata, tombstones, and audit events transactionally.",
-      "Execute Prisma and object-storage dry-runs only against non-production fixtures.",
-      "Enforce legal holds before any destructive action is planned or executed.",
-      "Replay deletion/anonymization tombstones after backup restore before restored data is queryable.",
-      "Keep all evidence artifacts redacted, secret-safe, and free of client PII or medical details.",
-    ]);
-    expect(privacyRetentionRuntimeReadiness.requiredEvidence).toEqual([
-      "attorney approval packet for retention schedule, legal holds, destructive actions, and notification templates",
-      "persisted identity, export, delete/anonymize, PrivacyRequest/PrivacyCase, tombstone, and AuditLog worker output",
-      "Prisma, object-storage, tenant-isolation, and legal-hold privacy dry-run transcripts",
-      "backup/restore tombstone replay drill output",
-      "redacted CI artifact bundle with retention report and no secrets or client PII",
-    ]);
+    expect(privacyRetentionRuntimeReadiness.requiredCommands).toBe(privacyRetentionRuntimeCommands);
+    expect(privacyRetentionRuntimeReadiness.requiredControls).toBe(privacyRetentionRuntimeControls);
+    expect(privacyRetentionRuntimeReadiness.requiredEvidence).toBe(privacyRetentionEvidenceFlags);
     expect(privacyRetentionRuntimeReadiness.blockers).toContain(
       "Attorney approval must be captured for retention, export, delete, anonymization, notification, and legal-hold behavior.",
     );
@@ -89,6 +106,26 @@ describe("privacy retention dry-run runtime contract", () => {
   });
 
   it("pins the PrivacyRetentionRun persistence model and migration", () => {
+    const runData = buildPrivacyRetentionRunData({
+      tenantId: "tenant_static",
+      runId: "privacy_retention_static",
+      commitSha: "abc123",
+      status: "blocked",
+      commands: ["privacy request worker integration tests"],
+      artifacts: ["coverage/privacy-retention-worker-output-redacted.json"],
+      attorneyApprovalEvidenceCaptured: false,
+      workerPersistenceEvidenceCaptured: true,
+      prismaDryRunEvidenceCaptured: false,
+      objectStorageDryRunEvidenceCaptured: false,
+      tenantIsolationEvidenceCaptured: false,
+      legalHoldEvidenceCaptured: false,
+      tombstoneReplayEvidenceCaptured: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: true,
+      retentionReportPath: "coverage/privacy-retention-runtime.json",
+      tombstoneReplayReportPath: "coverage/privacy-retention-tombstone-replay.json",
+    });
+
     expect(privacyRetentionRunPersistenceContract).toEqual({
       prismaModel: "PrivacyRetentionRun",
       tenantRelation: "privacyRetentionRuns",
@@ -108,6 +145,21 @@ describe("privacy retention dry-run runtime contract", () => {
       storesCiEvidence: true,
       storesSecretSafeArtifacts: true,
     });
+    expect(runData).toMatchObject({
+      tenantId: "tenant_static",
+      runId: "privacy_retention_static",
+      commitSha: "abc123",
+      status: "blocked",
+      commandMatrix: ["privacy request worker integration tests"],
+      artifactManifest: ["coverage/privacy-retention-worker-output-redacted.json"],
+      attorneyApprovalEvidenceCaptured: false,
+      workerPersistenceEvidenceCaptured: true,
+      tombstoneReplayEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: true,
+      retentionReportPath: "coverage/privacy-retention-runtime.json",
+      tombstoneReplayReportPath: "coverage/privacy-retention-tombstone-replay.json",
+    });
+    expect(String(persistPrivacyRetentionRun)).toContain("repository.privacyRetentionRun.upsert");
     expect(prismaSchema).toContain("model PrivacyRetentionRun");
     expect(prismaSchema).toContain("privacyRetentionRuns PrivacyRetentionRun[]");
     expect(prismaSchema).toContain("attorneyApprovalEvidenceCaptured");
@@ -119,6 +171,117 @@ describe("privacy retention dry-run runtime contract", () => {
     expect(privacyRetentionRunMigration).toContain('"PrivacyRetentionRun_tenantId_runId_key"');
   });
 
+  it("blocks privacy retention completion when legal approval, workers, tombstones, or safe evidence are missing", () => {
+    const decision = buildPrivacyRetentionEvidenceDecision({
+      commands: ["pnpm --filter @inkroute/security typecheck"],
+      artifacts: ["coverage/privacy-retention-security-typecheck.txt"],
+      controls: ["verify-requester-identity-before-privacy-workers-run"],
+      evidence: {
+        securityTypecheckPassed: true,
+      },
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.missingCommands).toContain("backup/restore tombstone replay drill");
+    expect(decision.missingArtifacts).toContain("coverage/privacy-retention-secret-safe-artifacts.json");
+    expect(decision.missingControls).toContain("enforce-legal-holds-before-destructive-actions");
+    expect(decision.missingEvidence).toContain("attorneyApprovalCaptured");
+    expect(decision.missingEvidence).toContain("deleteAnonymizeWorkerPersisted");
+    expect(decision.blockers).toContain(
+      "Attorney approval must be captured for retention, export, delete, anonymization, notification, and legal-hold behavior.",
+    );
+    expect(decision.blockers).toContain(
+      "Delete/anonymize worker dry-runs must persist tombstones, skipped legal holds, and audit events.",
+    );
+  });
+
+  it("completes privacy retention only when every command, artifact, control, and evidence flag is present", () => {
+    const completeEvidence = Object.fromEntries(privacyRetentionEvidenceFlags.map((flag) => [flag, true]));
+    const decision = buildPrivacyRetentionEvidenceDecision({
+      commands: privacyRetentionRuntimeCommands,
+      artifacts: privacyRetentionArtifactPaths,
+      controls: privacyRetentionRuntimeControls,
+      evidence: completeEvidence,
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.missingArtifacts).toEqual([]);
+    expect(decision.missingControls).toEqual([]);
+    expect(decision.missingEvidence).toEqual([]);
+    expect(decision.requiredEvidence).toBe(privacyRetentionEvidenceFlags);
+  });
+
+  it("keeps privacy retention execution classified, redacted, and attorney/worker-gated", () => {
+    const executionPlan = buildPrivacyRetentionExecutionPlan();
+    expect(executionPlan.localCommands).toBe(privacyRetentionLocalCommands);
+    expect(executionPlan.localCommands).toEqual([
+      "pnpm --filter @inkroute/security typecheck",
+      "pnpm --filter @inkroute/security test",
+    ]);
+    expect(executionPlan.externalCommands).toBe(privacyRetentionExternalCommands);
+    expect(executionPlan.localArtifacts).toBe(privacyRetentionLocalArtifacts);
+    expect(executionPlan.externalArtifacts).toBe(privacyRetentionExternalArtifacts);
+    expect(executionPlan.externalCommands).toContain("privacy request worker integration tests");
+    expect(executionPlan.externalCommands).toContain("provider-backed persistPrivacyRetentionRun execution proof");
+    expect(executionPlan.localArtifacts).toContain("coverage/privacy-retention-security-test.txt");
+    expect(executionPlan.externalArtifacts).toContain("coverage/privacy-retention-attorney-approval-redacted.json");
+    expect(executionPlan.externalArtifacts).toContain("provider-backed PrivacyRetentionRun persistence proof");
+    expect(executionPlan.commandExecutionAllowed).toBe(false);
+    expect(executionPlan.attorneyApprovalExecutionAllowed).toBe(false);
+    expect(executionPlan.privacyWorkerExecutionAllowed).toBe(false);
+    expect(executionPlan.storageExecutionAllowed).toBe(false);
+    expect(executionPlan.ciExecutionAllowed).toBe(false);
+    expect(executionPlan.providerPersistenceExecutionAllowed).toBe(false);
+    expect(executionPlan.executionPolicy).toBe(privacyRetentionExecutionPolicy);
+    expect(executionPlan.executionPolicy).toEqual({
+      codexMayClassifyStaticPrivacyRetentionReadiness: true,
+      attorneyApprovalRequiredForClosure: true,
+      nonProductionDryRunRequiredForClosure: true,
+      providerDatabaseRequiredForPersistence: true,
+      secretSafeArtifactsRequiredForClosure: true,
+    });
+    expect(executionPlan.requiredExternalEvidence).toBe(privacyRetentionRequiredExternalEvidence);
+    expect(executionPlan.requiredExternalEvidence).toContain(
+      "Provider-backed PrivacyRetentionRun persistence row captured through persistPrivacyRetentionRun.",
+    );
+
+    const artifact = {
+      attorneyEmail: "counsel@example.com",
+      clientEmail: "client@example.com",
+      medicalNote: "private medical note",
+      providerToken: "github_pat_abcdefghijklmnopqrstuvwxyz123456",
+      nested: {
+        objectStorageUrl: "s3://inkroute-private/client-file.png",
+        databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
+        tombstoneId: "tombstone_1234567890abcdefghijklmnopqrstuvwxyz",
+        publicSummary: "privacy retention evidence captured",
+      },
+    };
+    const redactedOnly = buildRedactedPrivacyRetentionArtifact(artifact);
+    const review = buildPrivacyRetentionArtifactReview(artifact);
+    const serialized = JSON.stringify(review.artifact);
+
+    expect(JSON.stringify(redactedOnly)).not.toContain("counsel@example.com");
+    expect(serialized).not.toContain("client@example.com");
+    expect(serialized).not.toContain("private medical note");
+    expect(serialized).not.toContain("github_pat_abcdefghijklmnopqrstuvwxyz123456");
+    expect(serialized).not.toContain("s3://inkroute-private/client-file.png");
+    expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
+    expect(serialized).not.toContain("tombstone_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(review.redactions).toEqual([
+      "attorneyEmail",
+      "clientEmail",
+      "medicalNote",
+      "providerToken",
+      "nested.objectStorageUrl",
+      "nested.databaseUrl",
+      "nested.tombstoneId",
+    ]);
+    expect(review.safeForTracker).toBe(true);
+    expect(review.requiredExternalEvidence).toBe(privacyRetentionRequiredExternalEvidence);
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming privacy retention production readiness", () => {
     expect(ciWorkflow).toContain("Run Phase 2 privacy retention runtime contracts");
     expect(ciWorkflow).toContain("privacy-retention-runtime-static.test.ts");
@@ -127,7 +290,26 @@ describe("privacy retention dry-run runtime contract", () => {
     expect(unitManifest).toContain("unit-web-privacy-retention-runtime-static");
     expect(unitManifest).toContain("PrivacyRetentionRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/privacyRetentionRuntime.ts");
-    expect(gapTracker).toContain("PrivacyRetentionRun Prisma model and app row contract");
-    expect(gapTracker).toContain("live attorney approval, persisted DB/storage privacy workers, production dry-run artifacts, backup/restore tombstone replay proof, notification approval, CI evidence, and secret-safe artifact review remain open");
+    expect(gapTracker).toContain("persistPrivacyRetentionRun upsert seam");
+    expect(gapTracker).toContain("GAP-025 is privacy-retention-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("live attorney approval, provider-backed persistPrivacyRetentionRun execution, persisted DB/storage privacy workers, production dry-run artifacts, backup/restore tombstone replay proof, notification approval, CI evidence, and secret-safe artifact review remain open");
+    expect(gapTracker).toContain("proof inventory");
+    expect(gapTracker).toContain("buildPrivacyRetentionExecutionPlan");
+    expect(gapTracker).toContain("privacyRetentionLocalCommands/privacyRetentionExternalCommands");
+    expect(gapTracker).toContain("privacyRetentionExecutionPolicy");
+    expect(gapTracker).toContain("privacyRetentionRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildRedactedPrivacyRetentionArtifact");
+    expect(gapTracker).toContain("buildPrivacyRetentionArtifactReview");
+  });
+
+  it("pins current privacy retention proof files for GAP-025", () => {
+    expect(privacyRetentionRuntimeProofFiles).toContain("packages/security/package.json");
+    expect(privacyRetentionRuntimeProofFiles).toContain("apps/web/lib/privacyRetentionRuntime.ts");
+    expect(privacyRetentionRuntimeProofFiles).toContain("apps/web/tests/privacy-retention-runtime-static.test.ts");
+    for (const proofFile of privacyRetentionRuntimeProofFiles) {
+      expect(readRepoFile(proofFile).length).toBeGreaterThan(0);
+    }
   });
 });
+
+

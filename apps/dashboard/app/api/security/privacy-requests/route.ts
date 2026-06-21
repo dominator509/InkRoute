@@ -34,6 +34,7 @@ const demoTenantId = "demo-studio-alpha";
 const allowedDashboardRoles = new Set(["owner", "studio_manager", "admin"]);
 const inMemoryPrivacyRequests: DemoPrivacyRequest[] = [];
 const rateLimitBuckets = new Map<string, { windowStart: number; count: number }>();
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 let requestCounter = 1;
 
 function isPrivacyRequestType(value: unknown): value is PrivacyRequestType {
@@ -102,19 +103,23 @@ function checkDashboardMutationRateLimit(request: NextRequest, actor: DashboardA
   return { allowed, remaining, retryAfterSeconds, maxRequests: rule.maxRequests };
 }
 
+function rateLimitHeaders(retryAfterSeconds: number) {
+  return { ...noStoreHeaders, "Retry-After": String(retryAfterSeconds) };
+}
+
 export async function POST(request: NextRequest) {
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "INVALID_JSON", message: "Privacy request body must be valid JSON." }, { status: 400, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ error: "INVALID_JSON", message: "Privacy request body must be valid JSON." }, { status: 400, headers: noStoreHeaders });
   }
 
   const input = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
   if (!isPrivacyRequestType(input.type) || typeof input.email !== "string" || !input.email.includes("@")) {
     return NextResponse.json(
       { error: "VALIDATION_FAILED", message: "Expected valid type and email for a privacy request." },
-      { status: 400, headers: { "Cache-Control": "no-store" } },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -129,7 +134,7 @@ export async function POST(request: NextRequest) {
   if (actorResolution.error) {
     return NextResponse.json(
       { ok: false, error: { code: actorResolution.error.code, message: actorResolution.error.message, gapIds: ["GAP-095", "GAP-098"] } },
-      { status: actorResolution.error.status, headers: { "Cache-Control": "no-store" } },
+      { status: actorResolution.error.status, headers: noStoreHeaders },
     );
   }
 
@@ -145,11 +150,64 @@ export async function POST(request: NextRequest) {
           details: { gapIds: ["GAP-095", "GAP-098", "GAP-101"], remaining: rateLimit.remaining, retryAfterSeconds: rateLimit.retryAfterSeconds },
         },
       },
-      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds), "Cache-Control": "no-store" } },
+      { status: 429, headers: rateLimitHeaders(rateLimit.retryAfterSeconds) },
     );
   }
 
   const redactedSubmission = redactRecord({ email: requestInput.email, details: requestInput.details ?? {} });
+  const dashboardPrivacyWorkflowEvidencePlan = buildDashboardPrivacyWorkflowEvidencePlan({
+    packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+    securityTestsPassed: false,
+    securityTypecheckPassed: false,
+    dashboardTypecheckPassed: false,
+    dashboardBuildPassed: false,
+    routeProjectionSurfaces: ["client_profile", "booking_request", "consent_form", "payment", "message", "file_asset"],
+    routeTestSurfaces: ["client_profile", "booking_request", "consent_form", "payment", "message", "file_asset"],
+    persistedPrivacyRequestStoreConfigured: false,
+    exportWorkflowIntegrationPassed: false,
+    deleteAnonymizeWorkflowIntegrationPassed: false,
+    privateStorageDeletionIntegrationPassed: false,
+    auditLogPersistencePassed: false,
+    legalApprovalCaptured: false,
+    consentMedicalDepositSmsCopyApproved: false,
+    sanitizedLogEvidenceCaptured: false,
+    sanitizedErrorEvidenceCaptured: false,
+    ciEvidenceCaptured: false,
+    secretSafeArtifactsCaptured: false,
+  });
+
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "DASHBOARD_PRIVACY_REQUEST_PERSISTENCE_NOT_CONFIGURED",
+          message:
+            "Production dashboard privacy requests require durable PrivacyRequest, audit log, export/delete worker, legal-hold, and sanitized artifact persistence; in-memory demo persistence is disabled.",
+          gapIds: ["GAP-013", "GAP-095", "GAP-098", "GAP-099", "GAP-100", "GAP-101"],
+        },
+        data: {
+          tenantId: actor.tenantId,
+          actor: {
+            userId: actor.userId,
+            role: actor.role,
+          },
+          draft: buildPrivacyRequestDraft(requestInput.type),
+          dashboardPrivacyWorkflowEvidencePlan,
+          redactedSubmission,
+          productionBoundary: {
+            inMemoryPrivacyRequestPersistenceDisabled: true,
+            requiresDurablePrivacyRequestStore: true,
+            requiresAuditLogPersistence: true,
+            requiresExportDeleteWorkers: true,
+            gapIds: ["GAP-013", "GAP-095", "GAP-098", "GAP-099", "GAP-100", "GAP-101"],
+          },
+        },
+      },
+      { status: 503, headers: noStoreHeaders },
+    );
+  }
+
   const persisted: DemoPrivacyRequest = {
     id: nextRequestId(),
     tenantId: actor.tenantId,
@@ -172,26 +230,7 @@ export async function POST(request: NextRequest) {
           role: actor.role,
         },
         draft: buildPrivacyRequestDraft(requestInput.type),
-        dashboardPrivacyWorkflowEvidencePlan: buildDashboardPrivacyWorkflowEvidencePlan({
-          packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
-          securityTestsPassed: false,
-          securityTypecheckPassed: false,
-          dashboardTypecheckPassed: false,
-          dashboardBuildPassed: false,
-          routeProjectionSurfaces: ["client_profile", "booking_request", "consent_form", "payment", "message", "file_asset"],
-          routeTestSurfaces: ["client_profile", "booking_request", "consent_form", "payment", "message", "file_asset"],
-          persistedPrivacyRequestStoreConfigured: false,
-          exportWorkflowIntegrationPassed: false,
-          deleteAnonymizeWorkflowIntegrationPassed: false,
-          privateStorageDeletionIntegrationPassed: false,
-          auditLogPersistencePassed: false,
-          legalApprovalCaptured: false,
-          consentMedicalDepositSmsCopyApproved: false,
-          sanitizedLogEvidenceCaptured: false,
-          sanitizedErrorEvidenceCaptured: false,
-          ciEvidenceCaptured: false,
-          secretSafeArtifactsCaptured: false,
-        }),
+        dashboardPrivacyWorkflowEvidencePlan,
         persisted: {
           id: persisted.id,
           requestType: persisted.requestType,
@@ -209,6 +248,6 @@ export async function POST(request: NextRequest) {
         gapIds: ["GAP-013", "GAP-098", "GAP-099", "GAP-100"],
       },
     },
-    { status: 201, headers: { "Cache-Control": "no-store" } },
+    { status: 201, headers: noStoreHeaders },
   );
 }

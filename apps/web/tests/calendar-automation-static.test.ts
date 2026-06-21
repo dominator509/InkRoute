@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { calendarAutomatedTestContract } from "../lib/calendarAutomatedTests";
+import {
+  buildCalendarAutomationSecretSafeArtifactReview,
+  buildRedactedCalendarAutomationArtifact,
+  calendarAutomatedTestContract,
+} from "../lib/calendarAutomatedTests";
 
 const repoRoot = resolve(__dirname, "../../..");
 
@@ -27,6 +31,63 @@ describe("calendar automated test contract", () => {
     expect(calendarAutomatedTestContract.ciArtifactPaths).toContain("coverage/google-provider-redacted.json");
     expect(calendarAutomatedTestContract.ciArtifactPaths).toContain("test-results/calendar");
     expect(calendarAutomatedTestContract.ciArtifactPaths).toContain("test-results/travel");
+  });
+
+  it("redacts provider tokens, signed feed tokens, PII, and private booking data from retained artifacts", () => {
+    const artifact = buildRedactedCalendarAutomationArtifact({
+      artifactId: "google-provider-redacted",
+      payload: {
+        googleAccessToken: "ya29.secret",
+        signedFeedToken: "feed_secret",
+        clientEmail: "client@example.com",
+        privateBookingNotes: "private schedule note",
+        eventCount: 2,
+      },
+    });
+
+    expect(artifact.payload).toEqual({
+      googleAccessToken: "[redacted]",
+      signedFeedToken: "[redacted]",
+      clientEmail: "[redacted]",
+      privateBookingNotes: "[redacted]",
+      eventCount: 2,
+    });
+    expect(JSON.stringify(artifact)).not.toContain("ya29.secret");
+    expect(JSON.stringify(artifact)).not.toContain("feed_secret");
+    expect(JSON.stringify(artifact)).not.toContain("client@example.com");
+    expect(JSON.stringify(artifact)).not.toContain("private schedule note");
+  });
+
+  it("recursively reviews retained calendar artifacts for secret-safe redaction", () => {
+    const review = buildCalendarAutomationSecretSafeArtifactReview({
+      artifacts: [
+        {
+          artifactId: "calendar-automation-secret-safe-artifacts",
+          payload: {
+            eventCount: 2,
+            google: {
+              googleRefreshToken: "refresh_secret",
+              attendees: [{ clientName: "Sensitive Client" }],
+            },
+            exports: [{ signedFeedToken: "signed_feed_secret", visibleStatus: "retained" }],
+          },
+        },
+      ],
+    });
+
+    expect(review.passed).toBe(true);
+    expect(review.reviewedArtifactIds).toEqual(["calendar-automation-secret-safe-artifacts"]);
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("refresh_secret");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("Sensitive Client");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("signed_feed_secret");
+    expect(JSON.stringify(review.redactedArtifacts)).toContain("retained");
+  });
+
+  it("blocks empty calendar artifact reviews", () => {
+    const review = buildCalendarAutomationSecretSafeArtifactReview({ artifacts: [] });
+
+    expect(review.passed).toBe(false);
+    expect(review.blockers).toContain("Calendar automation artifact review requires at least one retained artifact.");
   });
 
   it("keeps runtime proof blocked until DB, Google, timezone, Playwright, and artifact evidence actually pass", () => {

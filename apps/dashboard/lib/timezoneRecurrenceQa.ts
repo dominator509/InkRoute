@@ -31,6 +31,15 @@ export interface DashboardTimezoneRecurrenceQaContract {
   readiness: TimezoneRuntimeReadinessPlan;
 }
 
+export interface TimezoneRecurrenceLocalEvidence {
+  status: "ready" | "blocked";
+  blockers: readonly string[];
+  checkedCaseIds: readonly string[];
+  boundaryResults: readonly TimezoneBoundaryValidationResult[];
+  requiredChecksCovered: readonly TimezoneQaCheck[];
+  requiredTimezonesCovered: readonly string[];
+}
+
 export const requiredSchedulingTimezones = [
   "America/Los_Angeles",
   "America/New_York",
@@ -114,6 +123,65 @@ export function validateTimezoneBoundaries(
         : "Timezone must be trimmed and use a valid region-style IANA identifier before persistence or provider rendering.",
     };
   });
+}
+
+function isUtcInstant(value: string): boolean {
+  return value.endsWith("Z") && !Number.isNaN(Date.parse(value));
+}
+
+export function buildTimezoneRecurrenceLocalEvidence(input: {
+  readonly cases: readonly TimezoneQaCase[];
+  readonly boundaryInputs: readonly TimezoneBoundaryValidationInput[];
+}): TimezoneRecurrenceLocalEvidence {
+  const boundaryResults = validateTimezoneBoundaries(input.boundaryInputs);
+  const caseIds = input.cases.map((qaCase) => qaCase.id);
+  const requiredChecksCovered = requiredTimezoneChecks.filter((check) =>
+    input.cases.some((qaCase) => qaCase.check === check),
+  );
+  const requiredTimezonesCovered = requiredSchedulingTimezones.filter((timezone) =>
+    input.cases.some((qaCase) => qaCase.timezone === timezone),
+  );
+  const blockers = [
+    ...(boundaryResults.some((result) => !result.valid)
+      ? ["Route, persistence, and provider timezone boundaries must all use trimmed region-style IANA identifiers."]
+      : []),
+    ...(input.cases.some((qaCase) => !isValidIanaTimezone(qaCase.timezone))
+      ? ["Timezone QA cases must use valid trimmed region-style IANA identifiers."]
+      : []),
+    ...(input.cases.some((qaCase) => !isUtcInstant(qaCase.startsAt) || !isUtcInstant(qaCase.endsAt))
+      ? ["Timezone QA cases must store UTC instants with explicit IANA timezone identifiers."]
+      : []),
+    ...(requiredChecksCovered.length !== requiredTimezoneChecks.length
+      ? ["Timezone QA cases must cover IANA validation, DST, recurrence expansion, provider rendering, and all-day travel."]
+      : []),
+    ...(requiredTimezonesCovered.length !== requiredSchedulingTimezones.length
+      ? ["Timezone QA cases must cover all required scheduling timezones."]
+      : []),
+    ...(!input.cases.some((qaCase) => qaCase.id.includes("dst-spring"))
+      ? ["DST spring-forward QA case is missing."]
+      : []),
+    ...(!input.cases.some((qaCase) => qaCase.id.includes("dst-fall"))
+      ? ["DST fall-back QA case is missing."]
+      : []),
+    ...(!input.cases.some((qaCase) => qaCase.check === "recurrence_expansion" && qaCase.expandedOccurrenceCount && qaCase.expandedOccurrenceCount > 1)
+      ? ["Recurring availability expansion QA case must include multiple occurrences."]
+      : []),
+    ...(!input.cases.some((qaCase) => qaCase.check === "all_day_travel_window")
+      ? ["All-day travel-window QA case is missing."]
+      : []),
+    ...(!input.cases.some((qaCase) => qaCase.check === "provider_render_matrix")
+      ? ["Provider render-matrix QA case is missing."]
+      : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    blockers,
+    checkedCaseIds: caseIds,
+    boundaryResults,
+    requiredChecksCovered,
+    requiredTimezonesCovered,
+  };
 }
 
 export function buildDashboardTimezoneQaPlan(): TimezoneRecurrenceQaPlan {

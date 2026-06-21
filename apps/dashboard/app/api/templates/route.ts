@@ -26,24 +26,43 @@ function redactBodyPreview(value: string | null | undefined): string {
   return value.length > 0 ? "[redacted-notification-body]" : "";
 }
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
     assertPermission(actor, "notification:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read notification templates." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read notification templates." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const params = new URL(request.url).searchParams;
   const tenantId = params.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query notification templates for another tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query notification templates for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const limit = Math.min(Math.max(Number(params.get("limit") ?? 50), 1), 100);
   const templates = catalogRows();
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
+            message: "Production dashboard template reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
+            gapIds: ["GAP-007", "GAP-037", "GAP-040"],
+          },
+          productionBoundary: { localDashboardReadFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     return NextResponse.json(
       {
         ok: true,
@@ -59,7 +78,7 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-010", "GAP-064", "GAP-065", "GAP-066"],
         boundary: "Local fallback returns coded template previews and redacted provider-send drafts only; provider delivery remains credential-gated.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   }
 
@@ -163,7 +182,7 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-010", "GAP-064", "GAP-065", "GAP-066"],
         boundary: "Dashboard notification template reads expose coded template metadata plus tenant-scoped queue/delivery summaries only; message bodies, destination hashes, provider message IDs, and provider errors are redacted, and provider sends remain gated.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
@@ -175,10 +194,10 @@ export async function GET(request: NextRequest) {
           error: { code: "DATABASE_UNAVAILABLE", message: "Notification template reads require the dashboard database connection." },
           gapIds: ["GAP-010", "GAP-064", "GAP-065", "GAP-066"],
         },
-        { status: 503, headers: { "Cache-Control": "no-store" } },
+        { status: 503, headers: noStoreHeaders },
       );
     }
 
-    return NextResponse.json({ ok: false, error: { code: "NOTIFICATION_TEMPLATE_READ_FAILED", message: "Notification templates could not be loaded." } }, { status: 500 });
+    return NextResponse.json({ ok: false, error: { code: "NOTIFICATION_TEMPLATE_READ_FAILED", message: "Notification templates could not be loaded." } }, { status: 500, headers: noStoreHeaders });
   }
 }

@@ -29,6 +29,7 @@ import {
 import { prisma } from "@inkroute/db";
 
 type TenantResolution = { tenantId: string; source: "database" | "local-fallback" };
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
 const BOT_PROOF_HEADER = "x-inkroute-bot-proof";
 const BOT_PROOF_TTL_SECONDS = 300;
@@ -440,7 +441,7 @@ function buildReferenceUploadContract(tenantSlug: string, bookingRequestId: stri
       "Production should require authenticated user OR protected upload token and provider signature on intent creation.",
       isDbScope
         ? "Production should persist signed intent contract + queue message before upload is accepted."
-        : "Local runtime should persist intent stub and return signedUploadUrl/intent contract fields from local runtime state.",
+        : "Local runtime should persist intent contract and return signedUploadUrl/intent contract fields from local runtime state.",
     ],
     gapIds: ["GAP-005", "GAP-021", "GAP-033", "GAP-096", "GAP-097"],
   };
@@ -451,7 +452,7 @@ function buildNotificationQueueContract(input: BookingInput) {
   return {
     queued: true,
     consumer: "notification-worker",
-    contract: "notification-queue-stub",
+    contract: "notification-queue-local-contract",
     trigger: "booking_request_submitted",
     templateKeys: ["booking_request_received"],
     channels: ["email", "sms", "push", "in_app"],
@@ -472,7 +473,7 @@ function buildDepositQueueContract(input: BookingInput) {
     queued: false,
     status: "blocked",
     consumer: "checkout/session-worker",
-    contract: "deposit-policy-evaluation-stub",
+    contract: "deposit-policy-evaluation-local-contract",
     trigger: "booking_request_submitted",
     requiredBeforeEnablement: [
       "Artist/client policy acceptance and deposit policy snapshot persistence",
@@ -493,7 +494,7 @@ function buildCalendarQueueContract(input: BookingInput) {
     queued: false,
     status: "blocked",
     consumer: "calendar-sync-worker",
-    contract: "calendar-hold-stub",
+    contract: "calendar-hold-local-contract",
     trigger: "booking_request_submitted",
     requiredBeforeEnablement: [
       "Calendar hold creation under transaction",
@@ -699,7 +700,7 @@ async function persistBookingRequestToDatabase(
         actorUserId: null,
         type: "submitted",
         toStatus: booking.status,
-        note: "Booking request persisted from public route and workflow stubs recorded.",
+        note: "Booking request persisted from public route and workflow local contracts recorded.",
         metadata: { workflowCount },
       },
       select: { id: true, type: true, actorUserId: true, toStatus: true, note: true, createdAt: true, metadata: true },
@@ -913,7 +914,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           message: "Request body must be readable as UTF-8 text.",
         },
       },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -926,7 +927,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           message: "Request body is required and must be valid JSON.",
         },
       },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -942,7 +943,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           message: "Request body must be valid JSON.",
         },
       },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -957,7 +958,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           issues: parsed.error.flatten(),
         },
       },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -972,7 +973,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           message: "Booking submission is available only for tenant-known routes in DB-backed mode or demo local tenant.",
         },
       },
-      { status: 404 },
+      { status: 404, headers: noStoreHeaders },
     );
   }
 
@@ -999,7 +1000,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           },
         },
       },
-      { status: 403 },
+      { status: 403, headers: noStoreHeaders },
     );
   }
 
@@ -1030,7 +1031,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           },
         },
       },
-      { status: 503 },
+      { status: 503, headers: noStoreHeaders },
     );
   }
 
@@ -1048,7 +1049,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           },
         },
       },
-      { status: 503 },
+      { status: 503, headers: noStoreHeaders },
     );
   }
 
@@ -1085,7 +1086,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
               },
             },
           },
-          { status: 500 },
+          { status: 500, headers: noStoreHeaders },
         );
       }
 
@@ -1104,7 +1105,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
               },
             },
           },
-          { status: 503 },
+          { status: 503, headers: noStoreHeaders },
         );
       }
 
@@ -1139,12 +1140,29 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
       },
       {
         status: 429,
-        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+        headers: { ...noStoreHeaders, "Retry-After": String(rateLimit.retryAfterSeconds) },
       },
     );
   }
 
   if (resolvedTenant.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: {
+            code: "PROVIDER_BOOKING_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production booking submissions require database-backed tenant resolution and persistence; local runtime fallback is disabled.",
+            antiBot: buildBotProofFailureDetails(antiBot),
+            encryption: encryptionPolicy.status,
+            gapIds: ["GAP-006", "GAP-017", "GAP-021", "GAP-031", "GAP-032"],
+          },
+          productionBoundary: { localBookingRuntimeFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     return NextResponse.json(
       {
         ok: true,
@@ -1160,7 +1178,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           cacheVersion,
         ),
       },
-      { status: 201 },
+      { status: 201, headers: noStoreHeaders },
     );
   }
 
@@ -1240,10 +1258,26 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           gapIds: ["GAP-004", "GAP-017", "GAP-021", "GAP-031", "GAP-032", "GAP-033"],
         },
       },
-      { status: 201 },
+      { status: 201, headers: noStoreHeaders },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: {
+              code: "PROVIDER_BOOKING_PERSISTENCE_NOT_CONFIGURED",
+              message: "Production booking submissions require database-backed persistence; local runtime fallback is disabled.",
+              antiBot: buildBotProofFailureDetails(antiBot),
+              encryption: encryptionPolicy.status,
+              gapIds: ["GAP-006", "GAP-017", "GAP-021", "GAP-031", "GAP-032"],
+            },
+          },
+          { status: 503, headers: noStoreHeaders },
+        );
+      }
+
       return NextResponse.json(
         {
           ok: true,
@@ -1260,7 +1294,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           ),
           warning: "Database was temporarily unavailable; request persisted to local runtime.",
         },
-        { status: 201 },
+        { status: 201, headers: noStoreHeaders },
       );
     }
 
@@ -1276,7 +1310,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           ? error.message
           : undefined;
       if (knownCode) {
-        return NextResponse.json({ ok: false, error: { code: knownCode, message: knownMessages[knownCode], antiBot: buildBotProofFailureDetails(antiBot) } }, { status: 400 });
+        return NextResponse.json({ ok: false, error: { code: knownCode, message: knownMessages[knownCode], antiBot: buildBotProofFailureDetails(antiBot) } }, { status: 400, headers: noStoreHeaders });
       }
     }
 
@@ -1290,7 +1324,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           encryption: encryptionPolicy.status,
         },
       },
-      { status: 500 },
+      { status: 500, headers: noStoreHeaders },
     );
   }
 }

@@ -3,7 +3,7 @@ import { publicRateLimitRules, publicSecurityHeaderDrafts, publicTrustControls, 
 
 export const metadata: Metadata = {
   title: "Trust and Security Placeholder",
-  description: "InkRoute Suite public trust center placeholder showing security boundaries and production blockers.",
+  description: "InkRoute Suite public trust center showing local security contracts and production blockers.",
   robots: { index: false, follow: false },
 };
 
@@ -11,15 +11,15 @@ export default function PublicTrustPage() {
   return (
     <main>
       <section className="page-hero container narrow">
-        <p className="eyebrow">Phase 13 · Trust scaffold</p>
+        <p className="eyebrow">Phase 13 · Trust control center</p>
         <h1>Trust center preview.</h1>
-        <p>This public trust page is a placeholder. It documents the intended security posture without claiming production readiness. Auth, tenant isolation, secure uploads, privacy workflows, legal docs, and live provider controls remain gap-tracked.</p>
+        <p>This public trust page documents the local security contracts and production blockers without claiming production readiness. Auth, tenant isolation, secure uploads, privacy workflows, legal docs, and live provider controls remain gap-tracked.</p>
       </section>
       <section className="section compact container">
         <div className="stat-grid four">
           <article className="stat-card"><strong>{publicTrustSummary.total}</strong><span>Controls</span><p>{publicTrustSummary.blockers} still block production.</p></article>
           <article className="stat-card"><strong>{publicTrustSummary.implemented}</strong><span>Implemented</span><p>No production-ready security control is claimed.</p></article>
-          <article className="stat-card"><strong>{publicTrustSummary.scaffolded}</strong><span>Scaffolded</span><p>Helper contracts and route boundaries exist.</p></article>
+          <article className="stat-card"><strong>{publicTrustSummary.localContracts}</strong><span>Local contracts</span><p>Helper contracts and route boundaries exist.</p></article>
           <article className="stat-card"><strong>{publicTrustSummary.legal}</strong><span>Legal review</span><p>Policies and consent require attorney review.</p></article>
         </div>
       </section>

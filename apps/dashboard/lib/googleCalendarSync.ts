@@ -45,6 +45,18 @@ export interface GoogleCalendarSyncRepository {
   }): Promise<void>;
 }
 
+export interface InMemoryGoogleCalendarSyncRepositoryState {
+  readonly authorizedConnectionKeys: Set<string>;
+  readonly encryptedConnections: Map<string, { readonly refreshTokenEncrypted: boolean; readonly requiredScopesGranted: boolean }>;
+  readonly idempotencyKeys: Map<string, { readonly tenantId: string; readonly action: GoogleCalendarSyncAction; readonly requestId: string }>;
+  readonly transactions: {
+    readonly tenantId: string;
+    readonly action: GoogleCalendarSyncAction;
+    readonly writes: readonly GoogleCalendarSyncWrite[];
+    readonly providerResult: GoogleCalendarProviderResult | null;
+  }[];
+}
+
 export interface GoogleCalendarSyncMutationResult {
   status: "ready" | "blocked" | "duplicate";
   plan: GoogleCalendarProviderSyncPlan;
@@ -134,6 +146,120 @@ export function buildDashboardGoogleCalendarSyncContract(): DashboardGoogleCalen
   };
 }
 
+const googleCalendarPrivateProviderKeys = new Set([
+  "accessToken",
+  "refreshToken",
+  "authorization",
+  "clientSecret",
+  "providerEmail",
+  "attendeeEmail",
+  "calendarPrivateUrl",
+]);
+
+function redactGoogleCalendarProviderPayload(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactGoogleCalendarProviderPayload(entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+        key,
+        googleCalendarPrivateProviderKeys.has(key) ? "[redacted]" : redactGoogleCalendarProviderPayload(entry),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+export function sanitizeGoogleCalendarProviderResult(
+  result: GoogleCalendarProviderResult | null,
+): GoogleCalendarProviderResult | null {
+  if (!result) {
+    return null;
+  }
+
+  return {
+    providerCall: result.providerCall,
+    providerReference: result.providerReference,
+    nextSyncToken: result.nextSyncToken,
+    redactedPayload: redactGoogleCalendarProviderPayload(result.redactedPayload) as Record<string, unknown>,
+  };
+}
+
+function buildGoogleCalendarConnectionKey(input: {
+  readonly tenantId: string;
+  readonly artistId: string;
+  readonly calendarId: string;
+}): string {
+  return `${input.tenantId}:${input.artistId}:${input.calendarId}`;
+}
+
+function buildGoogleCalendarActionKey(input: {
+  readonly tenantId: string;
+  readonly artistId: string;
+  readonly calendarId: string;
+  readonly action: GoogleCalendarSyncAction;
+}): string {
+  return `${buildGoogleCalendarConnectionKey(input)}:${input.action}`;
+}
+
+function buildGoogleCalendarIdempotencyKey(input: { readonly tenantId: string; readonly key: string }): string {
+  return `${input.tenantId}:${input.key}`;
+}
+
+export function createInMemoryGoogleCalendarSyncRepository(
+  state: InMemoryGoogleCalendarSyncRepositoryState = {
+    authorizedConnectionKeys: new Set(),
+    encryptedConnections: new Map(),
+    idempotencyKeys: new Map(),
+    transactions: [],
+  },
+): GoogleCalendarSyncRepository & { readonly state: InMemoryGoogleCalendarSyncRepositoryState } {
+  return {
+    state,
+    async assertTenantArtistConnection(input) {
+      if (!state.authorizedConnectionKeys.has(buildGoogleCalendarActionKey(input))) {
+        throw new Error("GOOGLE_CALENDAR_CONNECTION_ACCESS_DENIED");
+      }
+    },
+    async loadEncryptedConnection(input) {
+      return state.encryptedConnections.get(buildGoogleCalendarConnectionKey(input)) ?? {
+        refreshTokenEncrypted: false,
+        requiredScopesGranted: false,
+      };
+    },
+    async claimIdempotencyKey(input) {
+      const key = buildGoogleCalendarIdempotencyKey(input);
+      const existing = state.idempotencyKeys.get(key);
+
+      if (!existing) {
+        state.idempotencyKeys.set(key, {
+          tenantId: input.tenantId,
+          action: input.action,
+          requestId: input.requestId,
+        });
+        return "claimed";
+      }
+
+      if (existing.action === input.action && existing.requestId === input.requestId) {
+        return "duplicate";
+      }
+
+      throw new Error("GOOGLE_CALENDAR_IDEMPOTENCY_KEY_CONFLICT");
+    },
+    async runGoogleCalendarTransaction(input) {
+      state.transactions.push({
+        tenantId: input.tenantId,
+        action: input.action,
+        writes: input.writes,
+        providerResult: input.providerResult,
+      });
+    },
+  };
+}
+
 export async function executeGoogleCalendarSyncMutation(
   input: GoogleCalendarSyncMutationInput,
   repository: GoogleCalendarSyncRepository,
@@ -173,7 +299,7 @@ export async function executeGoogleCalendarSyncMutation(
     return { status: "duplicate", plan, providerResult: null };
   }
 
-  const providerResult = executeProviderCall ? await executeProviderCall(plan) : null;
+  const providerResult = sanitizeGoogleCalendarProviderResult(executeProviderCall ? await executeProviderCall(plan) : null);
 
   await repository.runGoogleCalendarTransaction({
     tenantId: input.tenantId,

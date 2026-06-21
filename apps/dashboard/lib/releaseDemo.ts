@@ -60,8 +60,8 @@ export const releaseAuditDrafts = [
 export const releaseBoundaryCards = [
   {
     title: "Release persistence",
-    status: "scaffolded",
-    detail: "ReleaseRecord and FeatureFlag models exist, and Phase 12 helpers produce candidates, gates, audits, and rollbacks. Dashboard actions still return 501 until Prisma repositories and RBAC are wired.",
+    status: "control-plane",
+    detail: "ReleaseRecord and FeatureFlag models exist, Phase 12 helpers produce candidates, gates, audits, and rollbacks, and dashboard actions expose gated route contracts. Provider-backed persistence, protected environments, and CI/CD execution remain evidence-gated.",
   },
   {
     title: "CI/CD automation",

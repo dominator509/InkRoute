@@ -32,6 +32,7 @@ describe("release health route", () => {
     });
 
     expect(response.status).toBe(404);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     await expect(response.json()).resolves.toMatchObject({
       ok: false,
       error: { code: "TENANT_NOT_FOUND" },
@@ -55,12 +56,63 @@ describe("release health route", () => {
     expect(response.status).toBe(200);
     expect(payload.tenantSlug).toBe("inkroute-demo");
     expect(payload.source).toBe("local-fallback");
-    expect(payload.status).toBe("scaffolded");
+    expect(payload.status).toBe("local-preview");
     expect(payload.release.id).toContain("rel_");
     expect(payload.healthChecks.map((check) => check.id)).toEqual(["dependencies-installed", "production-gates", "rollback-plan"]);
     expect(payload.publicFeatureSnapshot.length).toBeGreaterThan(0);
     expect(payload.publicFeatureSnapshot.every((flag) => flag.reason === "local-fallback")).toBe(true);
     expect(payload.boundary).toContain("scoped fallback");
+  });
+
+  it("fail-closes production release health instead of returning local fallback release data", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      const response = await getReleaseHealth(new Request("https://local.test/api/public/inkroute-demo/release-health"), {
+        params: Promise.resolve({ tenantSlug: "inkroute-demo" }),
+      });
+      const payload = (await response.json()) as {
+        ok: boolean;
+        error: { code: string; gapIds: string[] };
+        productionBoundary: { localReleaseHealthDisabled: boolean };
+      };
+
+      expect(response.status).toBe(503);
+      expect(payload.ok).toBe(false);
+      expect(payload.error.code).toBe("PROVIDER_RELEASE_HEALTH_NOT_CONFIGURED");
+      expect(payload.error.gapIds).toContain("GAP-015");
+      expect(payload.error.gapIds).toContain("GAP-090");
+      expect(payload.productionBoundary.localReleaseHealthDisabled).toBe(true);
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
+  it("fail-closes production release health when persisted release reads are unavailable", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    dbMocks.tenantFindUnique.mockResolvedValue({ id: "tenant_release_test" });
+
+    try {
+      const response = await getReleaseHealth(new Request("https://local.test/api/public/inkroute-demo/release-health"), {
+        params: Promise.resolve({ tenantSlug: "inkroute-demo" }),
+      });
+      const payload = (await response.json()) as {
+        ok: boolean;
+        error: { code: string; gapIds: string[] };
+        productionBoundary: { scaffoldedReleaseHealthDisabled: boolean };
+      };
+
+      expect(response.status).toBe(503);
+      expect(payload.ok).toBe(false);
+      expect(payload.error.code).toBe("PROVIDER_RELEASE_HEALTH_NOT_CONFIGURED");
+      expect(JSON.stringify(payload)).toContain("local release-health fallback is disabled");
+      expect(payload.error.gapIds).toContain("GAP-087");
+      expect(payload.productionBoundary.scaffoldedReleaseHealthDisabled).toBe(true);
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
   });
 
   it("returns database-backed release records and feature decisions for known tenants", async () => {

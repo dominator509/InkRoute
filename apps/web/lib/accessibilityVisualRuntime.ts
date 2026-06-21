@@ -61,6 +61,22 @@ export interface AccessibilityVisualRunPersistenceContract {
   tenantIsolationKey: "tenantId";
 }
 
+export type AccessibilityVisualRunData = AccessibilityVisualRunPersistenceInput & {
+  commitSha: string | null;
+  triageArtifactPath: string | null;
+  ciRunUrl: string | null;
+};
+
+export interface AccessibilityVisualRunRepository {
+  readonly accessibilityVisualRun: {
+    upsert(args: {
+      where: { tenantId_runId: { tenantId: string; runId: string } };
+      create: AccessibilityVisualRunData;
+      update: AccessibilityVisualRunData;
+    }): unknown;
+  };
+}
+
 export const accessibilityVisualRuntimeArtifactPaths = [
   "coverage/accessibility-visual-runtime.json",
   "coverage/accessibility-web-a11y-results.json",
@@ -79,15 +95,260 @@ export const accessibilityVisualRuntimeArtifactPaths = [
   "test-results/accessibility-visual-runtime"
 ] as const;
 
+export const accessibilityVisualRuntimeProofFiles = [
+  "apps/web/lib/accessibilityVisualRuntime.ts",
+  "apps/web/tests/accessibility-visual-runtime-static.test.ts",
+  "packages/db/prisma/schema.prisma",
+  "packages/db/prisma/migrations/20260609012000_add_accessibility_visual_runs/migration.sql",
+  "testing/manifests/accessibility-checklist.json",
+  "testing/manifests/e2e-test-manifest.json",
+  "testing/manifests/unit-test-manifest.json",
+  "testing/scripts/verify-test-manifest.mjs",
+  "packages/testing/src/index.ts",
+  "packages/testing/tests/testing-manifest.test.ts",
+  "apps/web/tests/e2e/public-a11y.spec.ts",
+  "apps/dashboard/tests/e2e/dashboard-a11y.spec.ts",
+  ".github/workflows/ci.yml",
+] as const;
+
 export const accessibilityVisualRuntimeCommands = [
   "pnpm test:e2e --project=web-chromium --grep @a11y",
   "pnpm test:e2e --project=dashboard-chromium --grep @a11y",
+  "collect axe reports for public web and dashboard accessibility runs",
   "Lighthouse accessibility budget run for public and dashboard routes",
-  "contrast and responsive layout audit",
+  "contrast audit for public web, dashboard, and mobile high-risk surfaces",
+  "responsive layout audit for mobile, tablet, and desktop breakpoints",
   "visual regression baseline and diff review",
   "manual screen-reader and mobile accessibility QA pass",
   "GitHub Actions accessibility/visual job"
 ] as const;
+
+export const accessibilityVisualRuntimeRequiredExternalEvidence = [
+  "Web and dashboard Playwright @a11y proof",
+  "Axe, Lighthouse, contrast, and responsive audit proof",
+  "Manual screen-reader and mobile accessibility QA proof",
+  "Visual baseline and diff review proof",
+  "CI accessibility/visual job proof",
+  "Regression triage and fix evidence",
+  "Provider-backed AccessibilityVisualRun persistence proof",
+] as const;
+
+export type AccessibilityVisualRuntimeArtifact = (typeof accessibilityVisualRuntimeArtifactPaths)[number];
+
+export type AccessibilityVisualRuntimeCommand = (typeof accessibilityVisualRuntimeCommands)[number];
+
+export type AccessibilityVisualRuntimeExecutionPolicy = {
+  localMatrixOnly: true;
+  webDashboardA11yRequiresExternalEvidence: true;
+  runtimeAuditsRequireExternalEvidence: true;
+  manualQaRequiresExternalEvidence: true;
+  visualDiffRequiresExternalEvidence: true;
+  ciRequiresExternalEvidence: true;
+  persistenceRequiresExternalEvidence: true;
+  externalEvidenceRequired: typeof accessibilityVisualRuntimeRequiredExternalEvidence;
+};
+
+export type AccessibilityVisualRuntimeEvidenceInput = {
+  webA11ySpecPassed: boolean;
+  dashboardA11ySpecPassed: boolean;
+  axeReportsCollected: boolean;
+  lighthouseBudgetsPassed: boolean;
+  contrastAuditPassed: boolean;
+  responsiveChecksPassed: boolean;
+  screenReaderPassCompleted: boolean;
+  mobileAccessibilityQaPassed: boolean;
+  visualBaselinesCaptured: boolean;
+  visualDiffsReviewed: boolean;
+  artifactsRetained: boolean;
+  ciAccessibilityVisualPassed: boolean;
+  regressionsTriagedAndFixed: boolean;
+  requiredCommandsRun: readonly AccessibilityVisualRuntimeCommand[];
+  capturedArtifacts: readonly AccessibilityVisualRuntimeArtifact[];
+};
+
+export type AccessibilityVisualRuntimeEvidenceDecision = {
+  status: "complete" | "blocked";
+  blockers: string[];
+  missingArtifacts: AccessibilityVisualRuntimeArtifact[];
+  requiredCommands: typeof accessibilityVisualRuntimeCommands;
+  requiredEvidence: typeof accessibilityVisualRuntimeArtifactPaths;
+  qaPolicy: {
+    automatedAndManualProofRequired: true;
+    visualDiffsMustBeReviewed: true;
+    acceptedRegressionsMustBeDocumented: true;
+  };
+};
+
+export type AccessibilityVisualRuntimeExecutionPlan = {
+  status: "local-plan-ready";
+  policy: AccessibilityVisualRuntimeExecutionPolicy;
+  externalEvidenceRequired: typeof accessibilityVisualRuntimeRequiredExternalEvidence;
+  webA11yExecutionAllowed: false;
+  dashboardA11yExecutionAllowed: false;
+  auditExecutionAllowed: false;
+  manualQaExecutionAllowed: false;
+  visualDiffExecutionAllowed: false;
+  ciExecutionAllowed: false;
+  persistenceExecutionAllowed: false;
+  localCommands: typeof accessibilityVisualRuntimeLocalCommands;
+  externalCommands: typeof accessibilityVisualRuntimeCommands;
+  localArtifacts: typeof accessibilityVisualRuntimeLocalArtifacts;
+  externalArtifacts: typeof accessibilityVisualRuntimeExternalArtifacts;
+  disabledReasons: readonly string[];
+};
+
+export const accessibilityVisualRuntimeExecutionPolicy: AccessibilityVisualRuntimeExecutionPolicy = {
+  localMatrixOnly: true,
+  webDashboardA11yRequiresExternalEvidence: true,
+  runtimeAuditsRequireExternalEvidence: true,
+  manualQaRequiresExternalEvidence: true,
+  visualDiffRequiresExternalEvidence: true,
+  ciRequiresExternalEvidence: true,
+  persistenceRequiresExternalEvidence: true,
+  externalEvidenceRequired: accessibilityVisualRuntimeRequiredExternalEvidence,
+};
+
+export type AccessibilityVisualRuntimeArtifactReview = {
+  status: "redacted-review-ready";
+  redactedArtifact: unknown;
+  requiredArtifacts: typeof accessibilityVisualRuntimeArtifactPaths;
+  retainedExternalGates: readonly string[];
+};
+
+const accessibilityVisualSensitivePatterns = [
+  /(run[_-]?id['":=\s]+)[^"',\s}]+/gi,
+  /(commit[_-]?sha['":=\s]+)[^"',\s}]+/gi,
+  /(ci[_-]?run[_-]?url['":=\s]+)[^"',\s}]+/gi,
+  /(triage[_-]?artifact[_-]?path['":=\s]+)[^"',\s}]+/gi,
+  /(screenshot[_-]?path['":=\s]+)[^"',\s}]+/gi,
+  /(diff[_-]?path['":=\s]+)[^"',\s}]+/gi,
+  /(authorization:\s*bearer\s+)[A-Za-z0-9._-]+/gi,
+  /(token['":=\s]+)[^"',\s}]+/gi,
+  /(secret['":=\s]+)[^"',\s}]+/gi,
+  /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
+  /\+?\d[\d\s().-]{7,}\d/g,
+] as const;
+
+export function buildRedactedAccessibilityVisualArtifact(value: unknown): unknown {
+  if (typeof value === "string") {
+    return accessibilityVisualSensitivePatterns.reduce(
+      (redacted, pattern) => redacted.replace(pattern, (_match, prefix: string | undefined) => `${prefix ?? ""}[REDACTED]`),
+      value,
+    );
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => buildRedactedAccessibilityVisualArtifact(entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        /email|phone|token|secret|authorization|credential|password|rawBody|stack|ciRunUrl|commitSha|runId|triageArtifactPath|screenshot|diff|screenReaderNotes|mobileQaTranscript/i.test(key)
+          ? "[REDACTED]"
+          : buildRedactedAccessibilityVisualArtifact(entry),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+export const accessibilityVisualRuntimeLocalCommands = [] as const satisfies readonly AccessibilityVisualRuntimeCommand[];
+
+export const accessibilityVisualRuntimeLocalArtifacts = ["coverage/accessibility-visual-runtime.json"] as const;
+
+export const accessibilityVisualRuntimeExternalArtifacts = accessibilityVisualRuntimeArtifactPaths.filter(
+  (artifact) => artifact !== "coverage/accessibility-visual-runtime.json",
+) as readonly AccessibilityVisualRuntimeArtifact[];
+
+export function buildAccessibilityVisualRuntimeExecutionPlan(): AccessibilityVisualRuntimeExecutionPlan {
+  return {
+    status: "local-plan-ready",
+    policy: accessibilityVisualRuntimeExecutionPolicy,
+    externalEvidenceRequired: accessibilityVisualRuntimeRequiredExternalEvidence,
+    webA11yExecutionAllowed: false,
+    dashboardA11yExecutionAllowed: false,
+    auditExecutionAllowed: false,
+    manualQaExecutionAllowed: false,
+    visualDiffExecutionAllowed: false,
+    ciExecutionAllowed: false,
+    persistenceExecutionAllowed: false,
+    localCommands: accessibilityVisualRuntimeLocalCommands,
+    externalCommands: accessibilityVisualRuntimeCommands,
+    localArtifacts: accessibilityVisualRuntimeLocalArtifacts,
+    externalArtifacts: accessibilityVisualRuntimeExternalArtifacts,
+    disabledReasons: [
+      "Web and dashboard @a11y proof requires Playwright/browser execution.",
+      "Axe, Lighthouse, contrast, and responsive audit proof requires runtime audit execution.",
+      "Manual screen-reader and mobile accessibility QA require human/device review.",
+      "Visual baseline and diff proof requires captured screenshots and review.",
+      "CI accessibility/visual proof requires GitHub Actions execution.",
+      "AccessibilityVisualRun persistence proof requires provider-backed database execution.",
+    ],
+  };
+}
+
+export function buildAccessibilityVisualRuntimeArtifactReview(rawArtifact: unknown): AccessibilityVisualRuntimeArtifactReview {
+  return {
+    status: "redacted-review-ready",
+    redactedArtifact: buildRedactedAccessibilityVisualArtifact(rawArtifact),
+    requiredArtifacts: accessibilityVisualRuntimeArtifactPaths,
+    retainedExternalGates: [
+      "Web and dashboard Playwright @a11y proof",
+      "Axe, Lighthouse, contrast, and responsive audit proof",
+      "Manual screen-reader and mobile accessibility QA proof",
+      "Visual baseline and diff review proof",
+      "CI accessibility/visual job proof",
+      "Regression triage and fix evidence",
+      "Provider-backed AccessibilityVisualRun persistence proof",
+    ],
+  };
+}
+
+export function buildAccessibilityVisualRuntimeEvidenceDecision(
+  input: AccessibilityVisualRuntimeEvidenceInput,
+): AccessibilityVisualRuntimeEvidenceDecision {
+  const blockers = [
+    !input.webA11ySpecPassed && "Run web Playwright @a11y spec.",
+    !input.dashboardA11ySpecPassed && "Run dashboard Playwright @a11y spec.",
+    !input.axeReportsCollected && "Collect public and dashboard axe reports.",
+    !input.lighthouseBudgetsPassed && "Run Lighthouse accessibility budget checks.",
+    !input.contrastAuditPassed && "Run contrast audit.",
+    !input.responsiveChecksPassed && "Run responsive layout checks.",
+    !input.screenReaderPassCompleted && "Complete manual screen-reader pass.",
+    !input.mobileAccessibilityQaPassed && "Complete mobile accessibility QA.",
+    !input.visualBaselinesCaptured && "Capture visual baselines.",
+    !input.visualDiffsReviewed && "Review visual diffs.",
+    !input.artifactsRetained && "Retain accessibility and visual artifacts.",
+    !input.ciAccessibilityVisualPassed && "Capture CI accessibility/visual job proof.",
+    !input.regressionsTriagedAndFixed && "Triage and fix or document accessibility/visual regressions.",
+  ].filter(Boolean) as string[];
+
+  const missingArtifacts = accessibilityVisualRuntimeArtifactPaths.filter(
+    (artifact) => !input.capturedArtifacts.includes(artifact),
+  );
+  const missingCommands = accessibilityVisualRuntimeCommands.filter(
+    (command) => !input.requiredCommandsRun.includes(command),
+  );
+
+  return {
+    status: blockers.length === 0 && missingArtifacts.length === 0 && missingCommands.length === 0 ? "complete" : "blocked",
+    blockers: [
+      ...blockers,
+      ...missingCommands.map((command) => `Required command not recorded: ${command}`),
+    ],
+    missingArtifacts,
+    requiredCommands: accessibilityVisualRuntimeCommands,
+    requiredEvidence: accessibilityVisualRuntimeArtifactPaths,
+    qaPolicy: {
+      automatedAndManualProofRequired: true,
+      visualDiffsMustBeReviewed: true,
+      acceptedRegressionsMustBeDocumented: true,
+    },
+  };
+}
 
 export const accessibilityVisualRuntimeSpecFiles = [
   "apps/web/tests/e2e/public-a11y.spec.ts",
@@ -114,9 +375,21 @@ export const accessibilityVisualRuntimeMatrix: readonly AccessibilityVisualRunti
     status: "runtime-gated"
   },
   {
-    id: "lighthouse-contrast-responsive",
-    command: "Lighthouse accessibility budget run plus contrast and responsive layout audit",
+    id: "lighthouse-budgets",
+    command: "Lighthouse accessibility budget run for public and dashboard routes",
     artifact: "coverage/accessibility-lighthouse-budgets.json",
+    status: "runtime-gated"
+  },
+  {
+    id: "contrast-audit",
+    command: "contrast audit for public web, dashboard, and mobile high-risk surfaces",
+    artifact: "coverage/accessibility-contrast-audit.json",
+    status: "runtime-gated"
+  },
+  {
+    id: "responsive-layout",
+    command: "responsive layout audit for mobile, tablet, and desktop breakpoints",
+    artifact: "coverage/accessibility-responsive-layout.json",
     status: "runtime-gated"
   },
   {
@@ -166,6 +439,28 @@ export function buildAccessibilityVisualRunPersistenceContract(
   };
 }
 
+export function buildAccessibilityVisualRunData(input: AccessibilityVisualRunPersistenceInput): AccessibilityVisualRunData {
+  return {
+    ...input,
+    commitSha: input.commitSha ?? null,
+    triageArtifactPath: input.triageArtifactPath ?? null,
+    ciRunUrl: input.ciRunUrl ?? null,
+  };
+}
+
+export function persistAccessibilityVisualRun(
+  repository: AccessibilityVisualRunRepository,
+  input: AccessibilityVisualRunPersistenceInput,
+): unknown {
+  const data = buildAccessibilityVisualRunData(input);
+
+  return repository.accessibilityVisualRun.upsert({
+    where: { tenantId_runId: { tenantId: data.tenantId, runId: data.runId } },
+    create: data,
+    update: data,
+  });
+}
+
 export const accessibilityVisualRuntimeReadiness = buildAccessibilityVisualRuntimeReadinessPlan({
   rootScripts: ["test:e2e"],
   webA11ySpecPassed: false,
@@ -206,3 +501,4 @@ export const accessibilityVisualRunPersistencePreview = buildAccessibilityVisual
   regressionsTriagedAndFixed: false,
   triageArtifactPath: "coverage/accessibility-visual-regression-triage.md",
 });
+

@@ -6,6 +6,8 @@ import type { TravelStop } from "@inkroute/types";
 import { dashboardTravelPublishContract } from "../../../../lib/travelPublish";
 import { assertPermission, resolveDashboardActor } from "../../dashboardAuth";
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 const supportedActions = new Set<TravelPublishMutationAction>(dashboardTravelPublishContract.supportedActions);
 
 export async function POST(request: NextRequest) {
@@ -15,7 +17,7 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json(
       { ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to publish travel updates." } },
-      { status: 403, headers: { "Cache-Control": "no-store" } },
+      { status: 403, headers: noStoreHeaders },
     );
   }
 
@@ -24,7 +26,7 @@ export async function POST(request: NextRequest) {
   if (tenantId !== actor.tenantId) {
     return NextResponse.json(
       { ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot publish travel for another tenant." } },
-      { status: 403, headers: { "Cache-Control": "no-store" } },
+      { status: 403, headers: noStoreHeaders },
     );
   }
 
@@ -32,7 +34,27 @@ export async function POST(request: NextRequest) {
   if (!supportedActions.has(action as TravelPublishMutationAction)) {
     return NextResponse.json(
       { ok: false, error: { code: "UNSUPPORTED_TRAVEL_PUBLISH_ACTION", message: "Travel publish action is not supported." } },
-      { status: 400, headers: { "Cache-Control": "no-store" } },
+      { status: 400, headers: noStoreHeaders },
+    );
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "TRAVEL_PUBLISH_REPOSITORY_NOT_CONFIGURED",
+          message: "Production travel publish requires durable repository execution, cache revalidation, provider rollback handling, and transport evidence; demo-backed mutation planning is disabled.",
+          gapIds: ["GAP-060"],
+        },
+        productionBoundary: {
+          demoTravelPublishPlanDisabled: true,
+          requiresDurableTravelRepository: true,
+          requiresProviderRollbackEvidence: true,
+          requiresDashboardToPublicE2eEvidence: true,
+        },
+      },
+      { status: 503, headers: noStoreHeaders },
     );
   }
 
@@ -70,7 +92,7 @@ export async function POST(request: NextRequest) {
         readiness: dashboardTravelPublishContract.readiness,
         gapIds: ["GAP-060"],
       },
-      { status: 409, headers: { "Cache-Control": "no-store" } },
+      { status: 409, headers: noStoreHeaders },
     );
   }
 
@@ -83,6 +105,6 @@ export async function POST(request: NextRequest) {
       readiness: dashboardTravelPublishContract.readiness,
       gapIds: ["GAP-060"],
     },
-    { status: 501, headers: { "Cache-Control": "no-store" } },
+    { status: 202, headers: noStoreHeaders },
   );
 }

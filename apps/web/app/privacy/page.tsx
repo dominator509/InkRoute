@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       <section className="page-hero container narrow">
         <p className="eyebrow">Legal placeholder · Not final</p>
         <h1>Privacy policy placeholder.</h1>
-        <p>This page is scaffolded for Phase 13 only. It is not legal advice, not attorney-reviewed, and must not be published as a production privacy policy until the live data flows, vendors, retention rules, and jurisdiction-specific requirements are reviewed.</p>
+        <p>This page is a Phase 13 draft only. It is not legal advice, not attorney-reviewed, and must not be published as a production privacy policy until the live data flows, vendors, retention rules, and jurisdiction-specific requirements are reviewed.</p>
       </section>
       <section className="section compact container grid two align-start">
         <article className="panel-card">
@@ -28,7 +28,7 @@ export default function PrivacyPage() {
         <article className="warning-card">
           <p className="eyebrow">Privacy requests</p>
           <h2>Access, export, deletion.</h2>
-          <p>Privacy request flows are scaffolded only. Production must verify identity, separate legally retained records from deletable data, redact third-party information, and audit every action.</p>
+          <p>Privacy request intake is wired for demo-scope persistence and production fail-closed handling; production must still verify identity, separate legally retained records from deletable data, redact third-party information, and audit every worker action.</p>
           {publicPrivacyRequestDrafts.map((draft) => (
             <div className="pill-row" key={draft.id}><span className="pill">{draft.type}</span><span className="pill">{draft.status.replace(/_/g, " ")}</span></div>
           ))}

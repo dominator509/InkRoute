@@ -16,25 +16,45 @@ function formatBudgetRange(min?: number | null, max?: number | null): string {
   return `Up to ${currency.format((max ?? 0) / 100)}`;
 }
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 export async function GET(request: NextRequest, context: BookingDetailRouteContext) {
   const actor = resolveDashboardActor(request);
   try {
     assertPermission(actor, "booking:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read bookings." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read bookings." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const { bookingId } = await context.params;
   const params = new URL(request.url).searchParams;
   const tenantId = params.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a booking for another tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a booking for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          bookingId,
+          error: {
+            code: "PROVIDER_DASHBOARD_BOOKINGS_NOT_CONFIGURED",
+            message: "Production dashboard booking detail reads require DB-backed actor resolution and tenant-scoped BookingRequest reads; local fallback demo rows are disabled.",
+            gapIds: ["GAP-007", "GAP-031", "GAP-032", "GAP-037"],
+          },
+          productionBoundary: { localDashboardBookingFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     const booking = dashboardProjectedBookingRows.find((row) => row.id === bookingId);
     if (!booking) {
-      return NextResponse.json({ ok: false, error: { code: "BOOKING_NOT_FOUND", message: "Booking was not found for this tenant." } }, { status: 404 });
+      return NextResponse.json({ ok: false, error: { code: "BOOKING_NOT_FOUND", message: "Booking was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
     }
     return NextResponse.json(
       {
@@ -46,7 +66,7 @@ export async function GET(request: NextRequest, context: BookingDetailRouteConte
         gapIds: ["GAP-007", "GAP-037"],
         boundary: "Local fallback returns a tenant-projected demo booking only; database mode is required for live dashboard reads.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   }
 
@@ -103,7 +123,7 @@ export async function GET(request: NextRequest, context: BookingDetailRouteConte
     });
 
     if (result.status === "not_found") {
-      return NextResponse.json({ ok: false, error: { code: "BOOKING_NOT_FOUND", message: "Booking was not found for this tenant." } }, { status: 404 });
+      return NextResponse.json({ ok: false, error: { code: "BOOKING_NOT_FOUND", message: "Booking was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
     }
 
     const view = buildTenantDashboardView({
@@ -153,7 +173,7 @@ export async function GET(request: NextRequest, context: BookingDetailRouteConte
         gapIds: ["GAP-007", "GAP-037"],
         boundary: "Dashboard booking detail reads are tenant-scoped, redacted, no-store, and audited.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
@@ -166,10 +186,10 @@ export async function GET(request: NextRequest, context: BookingDetailRouteConte
           error: { code: "DATABASE_UNAVAILABLE", message: "Booking detail reads require the dashboard database connection." },
           gapIds: ["GAP-007", "GAP-037"],
         },
-        { status: 503, headers: { "Cache-Control": "no-store" } },
+        { status: 503, headers: noStoreHeaders },
       );
     }
 
-    return NextResponse.json({ ok: false, error: { code: "BOOKING_DETAIL_READ_FAILED", message: "Booking could not be loaded." } }, { status: 500 });
+    return NextResponse.json({ ok: false, error: { code: "BOOKING_DETAIL_READ_FAILED", message: "Booking could not be loaded." } }, { status: 500, headers: noStoreHeaders });
   }
 }

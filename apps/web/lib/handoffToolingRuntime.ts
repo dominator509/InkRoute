@@ -1,4 +1,4 @@
-import { buildHandoffToolingRuntimeReadinessPlan } from "@inkroute/handoff";
+﻿import { buildHandoffToolingRuntimeReadinessPlan } from "@inkroute/handoff";
 
 export type HandoffToolingRuntimeStatus =
   | "wired"
@@ -62,22 +62,262 @@ export const handoffToolingRuntimeCommands = [
   "pnpm handoff:next",
   "pnpm handoff:verify-ledger",
   "pnpm handoff:verify-tooling",
+  "pnpm handoff:verify-task-sync",
   "pnpm handoff:all",
 ] as const;
+
+export const handoffToolingRuntimeLocalCommands = [
+  "pnpm handoff:verify-docs",
+  "pnpm handoff:audit",
+  "pnpm handoff:next",
+  "pnpm handoff:verify-ledger",
+  "pnpm handoff:verify-tooling",
+  "pnpm handoff:verify-task-sync",
+] as const;
+
+const handoffToolingRuntimeLocalCommandSet = new Set<string>(handoffToolingRuntimeLocalCommands);
+
+export const handoffToolingRuntimeExternalCommands = handoffToolingRuntimeCommands.filter(
+  (command) => !handoffToolingRuntimeLocalCommandSet.has(command),
+);
+
+export type HandoffToolingRuntimeArtifact = (typeof handoffToolingRuntimeArtifactPaths)[number];
+
+export type HandoffToolingRuntimeCommand = (typeof handoffToolingRuntimeCommands)[number];
+
+export type HandoffToolingRuntimeEvidenceInput = {
+  dependenciesInstalled: boolean;
+  packageTypecheckPassed: boolean;
+  packageTestsPassed: boolean;
+  verifyDocsPassed: boolean;
+  handoffAuditPassed: boolean;
+  handoffNextPassed: boolean;
+  verifyLedgerPassed: boolean;
+  verifyToolingPassed: boolean;
+  verifyTaskSyncPassed: boolean;
+  handoffAllPassed: boolean;
+  queueLedgerParityVerified: boolean;
+  ciRunCaptured: boolean;
+  reportArtifactsCaptured: boolean;
+  requiredCommandsRun: readonly HandoffToolingRuntimeCommand[];
+  capturedArtifacts: readonly HandoffToolingRuntimeArtifact[];
+};
+
+export type HandoffToolingRuntimeEvidenceDecision = {
+  status: "complete" | "blocked";
+  blockers: string[];
+  missingArtifacts: HandoffToolingRuntimeArtifact[];
+  requiredCommands: typeof handoffToolingRuntimeCommands;
+  requiredEvidence: typeof handoffToolingRuntimeArtifactPaths;
+  toolingPolicy: {
+    installedDependenciesRequired: true;
+    handoffAllRequired: true;
+    ciAndReportArtifactsRequired: true;
+  };
+};
+
+export interface HandoffToolingRuntimeExecutionPlan {
+  readonly localCommands: typeof handoffToolingRuntimeLocalCommands;
+  readonly externalCommands: typeof handoffToolingRuntimeExternalCommands;
+  readonly localArtifacts: typeof handoffToolingRuntimeLocalArtifacts;
+  readonly externalArtifacts: typeof handoffToolingRuntimeExternalArtifacts;
+  readonly dependencyInstallExecutionAllowed: false;
+  readonly packageTypecheckExecutionAllowed: false;
+  readonly packageTestExecutionAllowed: false;
+  readonly verifyDocsExecutionAllowed: false;
+  readonly auditExecutionAllowed: false;
+  readonly nextExecutionAllowed: false;
+  readonly ledgerExecutionAllowed: false;
+  readonly toolingVerifierExecutionAllowed: false;
+  readonly taskSyncExecutionAllowed: false;
+  readonly handoffAllExecutionAllowed: false;
+  readonly ciArtifactExecutionAllowed: false;
+  readonly persistenceExecutionAllowed: false;
+  readonly executionPolicy: typeof handoffToolingRuntimeExecutionPolicy;
+  readonly externalEvidenceRequired: typeof handoffToolingRuntimeRequiredExternalEvidence;
+}
+
+export interface HandoffToolingRuntimeArtifactReview {
+  readonly artifactPath: HandoffToolingRuntimeArtifact | string;
+  readonly redactedArtifact: unknown;
+  readonly redactions: readonly string[];
+  readonly containsUnredactedSensitiveValues: false;
+  readonly externalEvidenceRequired: typeof handoffToolingRuntimeRequiredExternalEvidence;
+}
+
+export const handoffToolingRuntimeRequiredExternalEvidence = [
+  "Dependency install, package typecheck/test, handoff:all, CI run, and persisted run proof must be captured only after approved execution.",
+  "Handoff report artifacts must redact command output, environment values, provider URLs, run URLs, and raw logs.",
+  "Report artifacts must either be captured or explicitly documented as unavailable before runtime closure.",
+  "HandoffToolingRun persistence must execute only against an approved provider-backed database.",
+] as const;
+
+export type HandoffToolingRuntimeExecutionPolicy = {
+  readonly codexMayClassifyHandoffReports: true;
+  readonly installedDependenciesRequiredForRuntimeProof: true;
+  readonly handoffAllRequiredForClosure: true;
+  readonly reportArtifactsRequiredOrUnavailableDocumented: true;
+  readonly ciProviderRequiredForRuntimeArtifacts: true;
+  readonly providerDatabaseRequiredForPersistence: true;
+};
+
+export const handoffToolingRuntimeExecutionPolicy: HandoffToolingRuntimeExecutionPolicy = {
+  codexMayClassifyHandoffReports: true,
+  installedDependenciesRequiredForRuntimeProof: true,
+  handoffAllRequiredForClosure: true,
+  reportArtifactsRequiredOrUnavailableDocumented: true,
+  ciProviderRequiredForRuntimeArtifacts: true,
+  providerDatabaseRequiredForPersistence: true,
+};
+
+const sensitiveHandoffToolingKeyPattern =
+  /(token|secret|password|authorization|cookie|env|installOutput|stdout|stderr|command|artifactUrl|ciRunUrl|provider|tenantId|userId|runId|email|phone|report)/i;
+
+const sensitiveHandoffToolingStringPatterns: readonly [RegExp, string][] = [
+  [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
+  [/https?:\/\/[^\s"'<>]+/gi, "[REDACTED_URL]"],
+  [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
+  [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
+  [/\b(?:sk|pk|rk|ghp|gho|ghu|ghs|whsec)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
+  [/\b(?:tenant|user|project|provider|artifact|run|task|report)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+];
+
+export function buildHandoffToolingRuntimeEvidenceDecision(
+  input: HandoffToolingRuntimeEvidenceInput,
+): HandoffToolingRuntimeEvidenceDecision {
+  const blockers = [
+    !input.dependenciesInstalled && "Install workspace dependencies.",
+    !input.packageTypecheckPassed && "Run @inkroute/handoff typecheck.",
+    !input.packageTestsPassed && "Run @inkroute/handoff tests.",
+    !input.verifyDocsPassed && "Run handoff docs verification.",
+    !input.handoffAuditPassed && "Run handoff audit.",
+    !input.handoffNextPassed && "Run handoff next.",
+    !input.verifyLedgerPassed && "Run handoff ledger verification.",
+    !input.verifyToolingPassed && "Run handoff tooling verifier.",
+    !input.verifyTaskSyncPassed && "Run handoff task sync verifier.",
+    !input.handoffAllPassed && "Run handoff:all.",
+    !input.queueLedgerParityVerified && "Verify queue and ledger parity counts.",
+    !input.ciRunCaptured && "Capture CI handoff tooling evidence.",
+    !input.reportArtifactsCaptured && "Capture handoff report artifacts.",
+  ].filter(Boolean) as string[];
+
+  const missingArtifacts = handoffToolingRuntimeArtifactPaths.filter(
+    (artifact) => !input.capturedArtifacts.includes(artifact),
+  );
+  const missingCommands = handoffToolingRuntimeCommands.filter(
+    (command) => !input.requiredCommandsRun.includes(command),
+  );
+
+  return {
+    status: blockers.length === 0 && missingArtifacts.length === 0 && missingCommands.length === 0 ? "complete" : "blocked",
+    blockers: [
+      ...blockers,
+      ...missingCommands.map((command) => `Required command not recorded: ${command}`),
+    ],
+    missingArtifacts,
+    requiredCommands: handoffToolingRuntimeCommands,
+    requiredEvidence: handoffToolingRuntimeArtifactPaths,
+    toolingPolicy: {
+      installedDependenciesRequired: true,
+      handoffAllRequired: true,
+      ciAndReportArtifactsRequired: true,
+    },
+  };
+}
+
+export function buildHandoffToolingRuntimeExecutionPlan(): HandoffToolingRuntimeExecutionPlan {
+  return {
+    localCommands: handoffToolingRuntimeLocalCommands,
+    externalCommands: handoffToolingRuntimeExternalCommands,
+    localArtifacts: handoffToolingRuntimeLocalArtifacts,
+    externalArtifacts: handoffToolingRuntimeExternalArtifacts,
+    dependencyInstallExecutionAllowed: false,
+    packageTypecheckExecutionAllowed: false,
+    packageTestExecutionAllowed: false,
+    verifyDocsExecutionAllowed: false,
+    auditExecutionAllowed: false,
+    nextExecutionAllowed: false,
+    ledgerExecutionAllowed: false,
+    toolingVerifierExecutionAllowed: false,
+    taskSyncExecutionAllowed: false,
+    handoffAllExecutionAllowed: false,
+    ciArtifactExecutionAllowed: false,
+    persistenceExecutionAllowed: false,
+    executionPolicy: handoffToolingRuntimeExecutionPolicy,
+    externalEvidenceRequired: handoffToolingRuntimeRequiredExternalEvidence,
+  };
+}
+
+function redactHandoffToolingString(value: string, redactions: Set<string>): string {
+  return sensitiveHandoffToolingStringPatterns.reduce((current, [pattern, replacement]) => {
+    pattern.lastIndex = 0;
+    if (pattern.test(current)) {
+      redactions.add(replacement);
+    }
+    pattern.lastIndex = 0;
+    return current.replace(pattern, replacement);
+  }, value);
+}
+
+function redactHandoffToolingValue(value: unknown, redactions: Set<string>, key?: string): unknown {
+  if (key && sensitiveHandoffToolingKeyPattern.test(key)) {
+    redactions.add(key);
+    return `[REDACTED_${key.replace(/[^A-Za-z0-9]/g, "_").toUpperCase()}]`;
+  }
+
+  if (typeof value === "string") {
+    return redactHandoffToolingString(value, redactions);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactHandoffToolingValue(entry, redactions));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([entryKey, entryValue]) => [
+        entryKey,
+        redactHandoffToolingValue(entryValue, redactions, entryKey),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+export function buildRedactedHandoffToolingArtifact(artifact: unknown): unknown {
+  return redactHandoffToolingValue(artifact, new Set<string>());
+}
+
+export function buildHandoffToolingRuntimeArtifactReview(
+  artifactPath: HandoffToolingRuntimeArtifact | string,
+  artifact: unknown,
+): HandoffToolingRuntimeArtifactReview {
+  const redactions = new Set<string>();
+  const redactedArtifact = redactHandoffToolingValue(artifact, redactions);
+
+  return {
+    artifactPath,
+    redactedArtifact,
+    redactions: [...redactions].sort(),
+    containsUnredactedSensitiveValues: false,
+    externalEvidenceRequired: handoffToolingRuntimeRequiredExternalEvidence,
+  };
+}
 
 export const handoffToolingRequiredReports = [
   "docs/handoff/manifests/handoff-tooling-readiness.json",
   "docs/handoff/manifests/agent-execution-queue.json",
   "docs/handoff/manifests/agent-execution-ledger.json",
   "docs/handoff/manifests/agent-task-tracking-sync.json",
-  "docs/handoff/reports/handoff-audit.json",
-  "docs/handoff/reports/handoff-next.json",
+  "docs/handoff/manifests/gap-audit-report.json",
+  "docs/handoff/manifests/phase-documentation-audit.json",
 ] as const;
 
 export const handoffToolingRequiredScriptFiles = [
-  "scripts/handoff/verify-handoff-docs.mjs",
-  "scripts/handoff/audit-handoff.mjs",
-  "scripts/handoff/next-handoff-task.mjs",
+  "scripts/handoff/verify-phase-docs.mjs",
+  "scripts/handoff/audit-gap-tracker.mjs",
+  "scripts/handoff/print-next-agent-tasks.mjs",
   "scripts/handoff/verify-agent-execution-ledger.mjs",
   "scripts/handoff/verify-handoff-tooling.mjs",
   "scripts/handoff/verify-agent-task-sync.mjs",
@@ -109,9 +349,51 @@ export const handoffToolingRuntimeArtifactPaths = [
   "coverage/handoff-next.json",
   "coverage/handoff-ledger-verification.json",
   "coverage/handoff-tooling-verification.json",
+  "coverage/handoff-task-sync.json",
   "coverage/handoff-all-output.txt",
   "coverage/handoff-tooling-ci-run.json",
   "test-results/handoff-tooling-runtime",
+] as const;
+
+export const handoffToolingRuntimeLocalArtifacts = [
+  "coverage/handoff-tooling-runtime.json",
+  "coverage/handoff-verify-docs.json",
+  "coverage/handoff-audit.json",
+  "coverage/handoff-next.json",
+  "coverage/handoff-ledger-verification.json",
+  "coverage/handoff-tooling-verification.json",
+  "coverage/handoff-task-sync.json",
+  "test-results/handoff-tooling-runtime",
+] as const satisfies readonly HandoffToolingRuntimeArtifact[];
+
+export const handoffToolingRuntimeExternalArtifacts = [
+  "coverage/handoff-tooling-install-output.txt",
+  "coverage/handoff-tooling-package-typecheck.txt",
+  "coverage/handoff-tooling-package-test.txt",
+  "coverage/handoff-all-output.txt",
+  "coverage/handoff-tooling-ci-run.json",
+] as const satisfies readonly HandoffToolingRuntimeArtifact[];
+
+export const handoffToolingRuntimeProofFiles = [
+  "packages/handoff/package.json",
+  "packages/handoff/src/index.ts",
+  "packages/handoff/tests/handoff-plan.test.ts",
+  "docs/handoff/manifests/handoff-tooling-readiness.json",
+  "scripts/handoff/verify-handoff-tooling.mjs",
+  "scripts/handoff/verify-phase-docs.mjs",
+  "scripts/handoff/audit-gap-tracker.mjs",
+  "scripts/handoff/print-next-agent-tasks.mjs",
+  "scripts/handoff/verify-agent-execution-ledger.mjs",
+  "scripts/handoff/verify-agent-task-sync.mjs",
+  "docs/handoff/manifests/agent-execution-queue.json",
+  "docs/handoff/manifests/agent-execution-ledger.json",
+  "apps/web/lib/handoffToolingRuntime.ts",
+  "apps/web/tests/handoff-tooling-runtime-static.test.ts",
+  ".github/workflows/ci.yml",
+  "packages/db/prisma/schema.prisma",
+  "packages/db/prisma/migrations/20260609024000_add_handoff_tooling_runs/migration.sql",
+  "testing/manifests/unit-test-manifest.json",
+  "package.json"
 ] as const;
 
 export const handoffToolingRuntimeMatrix = [
@@ -134,10 +416,46 @@ export const handoffToolingRuntimeMatrix = [
     status: "wired",
   },
   {
-    id: "handoff-script-suite",
-    command: "pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next && pnpm handoff:verify-ledger && pnpm handoff:verify-tooling && pnpm handoff:all",
+    id: "handoff-verify-docs",
+    command: "pnpm handoff:verify-docs",
+    artifact: "coverage/handoff-verify-docs.json",
+    status: "wired",
+  },
+  {
+    id: "handoff-audit",
+    command: "pnpm handoff:audit",
+    artifact: "coverage/handoff-audit.json",
+    status: "wired",
+  },
+  {
+    id: "handoff-next",
+    command: "pnpm handoff:next",
+    artifact: "coverage/handoff-next.json",
+    status: "wired",
+  },
+  {
+    id: "handoff-verify-ledger",
+    command: "pnpm handoff:verify-ledger",
+    artifact: "coverage/handoff-ledger-verification.json",
+    status: "wired",
+  },
+  {
+    id: "handoff-verify-tooling",
+    command: "pnpm handoff:verify-tooling",
     artifact: "coverage/handoff-tooling-verification.json",
     status: "wired",
+  },
+  {
+    id: "handoff-verify-task-sync",
+    command: "pnpm handoff:verify-task-sync",
+    artifact: "coverage/handoff-task-sync.json",
+    status: "wired",
+  },
+  {
+    id: "handoff-all",
+    command: "pnpm handoff:all",
+    artifact: "coverage/handoff-all-output.txt",
+    status: "runtime-gated",
   },
   {
     id: "ci-evidence",
@@ -184,23 +502,23 @@ export const handoffToolingRunPersistenceContract: HandoffToolingRunPersistenceC
 };
 
 export const handoffToolingRuntimeReadiness = buildHandoffToolingRuntimeReadinessPlan({
-  requiredRootScripts: [...handoffToolingRequiredRootScripts],
+  requiredRootScripts: handoffToolingRequiredRootScripts,
   rootScripts: {
-    "handoff:verify-docs": "node scripts/handoff/verify-handoff-docs.mjs",
-    "handoff:audit": "node scripts/handoff/audit-handoff.mjs",
-    "handoff:next": "node scripts/handoff/next-handoff-task.mjs",
+    "handoff:verify-docs": "node scripts/handoff/verify-phase-docs.mjs",
+    "handoff:audit": "node scripts/handoff/audit-gap-tracker.mjs",
+    "handoff:next": "node scripts/handoff/print-next-agent-tasks.mjs",
     "handoff:verify-ledger": "node scripts/handoff/verify-agent-execution-ledger.mjs",
     "handoff:verify-tooling": "node scripts/handoff/verify-handoff-tooling.mjs",
     "handoff:verify-task-sync": "node scripts/handoff/verify-agent-task-sync.mjs",
     "handoff:all": "pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next && pnpm handoff:verify-ledger && pnpm handoff:verify-tooling && pnpm handoff:verify-task-sync",
   },
-  requiredReports: [...handoffToolingRequiredReports],
+  requiredReports: handoffToolingRequiredReports,
   existingReports: [...handoffToolingRequiredReports],
-  requiredScriptFiles: [...handoffToolingRequiredScriptFiles],
+  requiredScriptFiles: handoffToolingRequiredScriptFiles,
   existingScriptFiles: [...handoffToolingRequiredScriptFiles],
-  requiredDocs: [...handoffToolingRequiredDocs],
+  requiredDocs: handoffToolingRequiredDocs,
   existingDocs: [...handoffToolingRequiredDocs],
-  requiredCiEvidence: [...handoffToolingRequiredCiEvidence],
+  requiredCiEvidence: handoffToolingRequiredCiEvidence,
   ciWorkflowText: "Verify Phase 16 handoff manifests Run Phase 16 handoff tooling runtime contracts handoff:verify-tooling handoff-tooling-runtime-artifacts",
   handoffPackageScripts: {
     typecheck: "tsc --noEmit",
@@ -216,3 +534,4 @@ export const handoffToolingRuntimeReadiness = buildHandoffToolingRuntimeReadines
   ciRunCaptured: false,
   reportArtifactsCaptured: false,
 });
+

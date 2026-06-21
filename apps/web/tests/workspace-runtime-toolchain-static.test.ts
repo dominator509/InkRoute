@@ -1,13 +1,27 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   workspaceRuntimeToolchainArtifactPaths,
   workspaceRuntimeToolchainCommands,
+  workspaceRuntimeToolchainExternalArtifacts,
+  workspaceRuntimeToolchainExternalCommands,
+  workspaceRuntimeToolchainExecutionPolicy,
   workspaceRuntimeToolchainGeneratedReports,
+  workspaceRuntimeToolchainLocalArtifacts,
+  workspaceRuntimeToolchainLocalCommands,
   workspaceRuntimeToolchainMatrix,
+  workspaceRuntimeToolchainProofFiles,
   workspaceRuntimeToolchainReadiness,
+  workspaceRuntimeToolchainReadinessRequiredEvidence,
+  workspaceRuntimeToolchainRequiredExternalEvidence,
+  workspaceRuntimeToolchainRequiredEvidence,
   workspaceRuntimeToolchainRunPersistenceContract,
+  buildWorkspaceRuntimeToolchainDecisionRequiredEvidence,
+  buildWorkspaceRuntimeToolchainEvidenceDecision,
+  buildRedactedWorkspaceRuntimeToolchainArtifact,
+  buildWorkspaceRuntimeToolchainArtifactReview,
+  buildWorkspaceRuntimeToolchainExecutionPlan,
 } from "../lib/workspaceRuntimeToolchain";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -36,6 +50,7 @@ describe("workspace runtime toolchain contract", () => {
       "pnpm --filter @inkroute/web build",
       "pnpm --filter @inkroute/dashboard build",
       "GitHub Actions Phase 18 workspace runtime readiness job",
+      "runtime readiness report keeps production blockers visible",
     ]);
     expect(workspaceRuntimeToolchainGeneratedReports).toContain("docs/workspace/manifests/runtime-readiness.json");
     expect(workspaceRuntimeToolchainMatrix.map((entry) => entry.id)).toEqual([
@@ -97,15 +112,8 @@ describe("workspace runtime toolchain contract", () => {
   it("keeps generated reports present while runtime command evidence remains gated", () => {
     expect(workspaceRuntimeToolchainReadiness.status).toBe("blocked");
     expect(workspaceRuntimeToolchainReadiness.missingGeneratedReports).toEqual([]);
-    expect(workspaceRuntimeToolchainReadiness.requiredCommands).toEqual([...workspaceRuntimeToolchainCommands]);
-    expect(workspaceRuntimeToolchainReadiness.requiredEvidence).toEqual([
-      "@inkroute/workspace package typecheck and test output.",
-      "workspace:toolchain and workspace:all output.",
-      "Generated workspace import, package-script, runtime-evidence, runtime-readiness, required-checks, and toolchain-readiness reports.",
-      "Dependency install evidence and CI workspace job evidence.",
-      "Web/dashboard build evidence before launch readiness claims.",
-      "Runtime readiness report showing production blockers remain visible.",
-    ]);
+    expect(workspaceRuntimeToolchainReadiness.requiredCommands).toBe(workspaceRuntimeToolchainCommands);
+    expect(workspaceRuntimeToolchainReadiness.requiredEvidence).toBe(workspaceRuntimeToolchainReadinessRequiredEvidence);
     expect(workspaceRuntimeToolchainReadiness.blockers).toEqual([
       "@inkroute/workspace typecheck must pass.",
       "@inkroute/workspace tests must pass.",
@@ -118,6 +126,97 @@ describe("workspace runtime toolchain contract", () => {
     ]);
   });
 
+  it("blocks workspace runtime closure until package, command, install, build, CI, persistence, artifact, and report evidence exist", () => {
+    const decision = buildWorkspaceRuntimeToolchainEvidenceDecision({
+      toolchainAuditPassed: true,
+      packageTypecheckPassed: false,
+      packageTestsPassed: false,
+      workspaceToolchainPassed: true,
+      workspaceAllPassed: false,
+      dependencyInstallEvidenceCaptured: false,
+      webBuildEvidenceCaptured: false,
+      dashboardBuildEvidenceCaptured: false,
+      ciWorkspaceJobPassed: false,
+      ciEvidenceCaptured: false,
+      productionBlockersVisible: true,
+      workspaceRuntimeToolchainRunPersisted: false,
+      capturedReports: [
+        "docs/workspace/manifests/workspace-import-audit.json",
+        "docs/workspace/manifests/package-script-audit.json",
+      ],
+      capturedArtifacts: [
+        "coverage/workspace-runtime-toolchain.json",
+        "coverage/workspace-toolchain-output.txt",
+        "coverage/workspace-production-blockers.json",
+      ],
+      completedCommands: ["pnpm workspace:toolchain"],
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.missingReports).toEqual([
+      "docs/workspace/manifests/runtime-evidence-audit.json",
+      "docs/workspace/manifests/runtime-readiness.json",
+      "docs/workspace/manifests/workspace-required-checks-audit.json",
+      "docs/workspace/manifests/workspace-toolchain-readiness-audit.json",
+    ]);
+    expect(decision.missingArtifacts).toEqual([
+      "coverage/workspace-package-typecheck.txt",
+      "coverage/workspace-package-test.txt",
+      "coverage/workspace-all-output.txt",
+      "coverage/workspace-install-output.txt",
+      "coverage/workspace-web-build-output.txt",
+      "coverage/workspace-dashboard-build-output.txt",
+      "coverage/workspace-ci-job.json",
+      "test-results/workspace-runtime-toolchain",
+    ]);
+    expect(decision.missingCommands).toEqual([
+      "pnpm --filter @inkroute/workspace typecheck",
+      "pnpm --filter @inkroute/workspace test",
+      "pnpm workspace:all",
+      "pnpm install",
+      "pnpm --filter @inkroute/web build",
+      "pnpm --filter @inkroute/dashboard build",
+      "GitHub Actions Phase 18 workspace runtime readiness job",
+      "runtime readiness report keeps production blockers visible",
+    ]);
+    expect(decision.requiredReports).toBe(workspaceRuntimeToolchainGeneratedReports);
+    expect(decision.requiredArtifacts).toBe(workspaceRuntimeToolchainArtifactPaths);
+    expect(decision.requiredCommands).toBe(workspaceRuntimeToolchainCommands);
+    expect(decision.requiredEvidence).toEqual(
+      buildWorkspaceRuntimeToolchainDecisionRequiredEvidence(workspaceRuntimeToolchainReadinessRequiredEvidence),
+    );
+    expect(decision.requiredEvidence).toBe(workspaceRuntimeToolchainRequiredEvidence);
+    expect(decision.blockers).toContain("@inkroute/workspace typecheck must pass.");
+    expect(decision.blockers).toContain("WorkspaceRuntimeToolchainRun persistence row must be captured for durable auditability.");
+    expect(decision.blockers).toContain("Every required workspace runtime report must be captured.");
+  });
+
+  it("completes workspace runtime closure when reports, commands, install, builds, CI, persistence, and artifacts are proven", () => {
+    const decision = buildWorkspaceRuntimeToolchainEvidenceDecision({
+      toolchainAuditPassed: true,
+      packageTypecheckPassed: true,
+      packageTestsPassed: true,
+      workspaceToolchainPassed: true,
+      workspaceAllPassed: true,
+      dependencyInstallEvidenceCaptured: true,
+      webBuildEvidenceCaptured: true,
+      dashboardBuildEvidenceCaptured: true,
+      ciWorkspaceJobPassed: true,
+      ciEvidenceCaptured: true,
+      productionBlockersVisible: true,
+      workspaceRuntimeToolchainRunPersisted: true,
+      capturedReports: workspaceRuntimeToolchainGeneratedReports,
+      capturedArtifacts: workspaceRuntimeToolchainArtifactPaths,
+      completedCommands: workspaceRuntimeToolchainCommands,
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.missingReports).toEqual([]);
+    expect(decision.missingArtifacts).toEqual([]);
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.blockers).toEqual([]);
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming runtime install/build proof", () => {
     expect(ciWorkflow).toContain("Run Phase 18 workspace runtime toolchain contracts");
     expect(ciWorkflow).toContain("workspace-runtime-toolchain-static.test.ts");
@@ -127,5 +226,125 @@ describe("workspace runtime toolchain contract", () => {
     expect(gapTracker).toContain("WorkspaceRuntimeToolchainRun");
     expect(gapTracker).toContain("apps/web/lib/workspaceRuntimeToolchain.ts");
     expect(gapTracker).toContain("live package typecheck/test, workspace commands, install/build, CI, and artifact proof remain open");
+    expect(gapTracker).toContain("GAP-130 is workspace-runtime-toolchain-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("buildWorkspaceRuntimeToolchainExecutionPlan");
+    expect(gapTracker).toContain("workspaceRuntimeToolchainExecutionPolicy");
+    expect(gapTracker).toContain("workspaceRuntimeToolchainReadinessRequiredEvidence");
+    expect(gapTracker).toContain("workspaceRuntimeToolchainRequiredEvidence");
+    expect(gapTracker).toContain("workspaceRuntimeToolchainRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildWorkspaceRuntimeToolchainArtifactReview");
+  });
+
+  it("pins current workspace runtime toolchain proof files for GAP-130", () => {
+    expect(workspaceRuntimeToolchainProofFiles).toEqual(
+      expect.arrayContaining([
+      "docs/workspace/README.md",
+      "docs/workspace/WORKSPACE_AUDIT_PROTOCOL.md",
+      "packages/quality/src/index.ts",
+      "packages/quality/tests/quality-gates.test.ts",
+      "scripts/quality/print-quality-gates.mjs",
+      "scripts/workspace/audit-package-scripts.mjs",
+      "scripts/workspace/audit-workspace-imports.mjs",
+      "scripts/workspace/print-runtime-readiness.mjs",
+      "apps/dashboard/package.json",
+      "apps/web/package.json",
+        "packages/workspace/package.json",
+        "packages/workspace/src/index.ts",
+        "packages/workspace/tests/workspace-audit.test.ts",
+        "docs/workspace/manifests/runtime-readiness.json",
+        "apps/web/lib/workspaceRuntimeToolchain.ts",
+        "apps/web/tests/workspace-runtime-toolchain-static.test.ts",
+        "packages/db/prisma/migrations/20260609032100_add_workspace_runtime_toolchain_runs/migration.sql",
+        ".github/workflows/ci.yml"
+      ])
+    );
+    for (const file of workspaceRuntimeToolchainProofFiles) {
+      expect(readRepoFile(file).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps GAP-130 execution policy non-executing while separating install, build, CI, and persistence proof", () => {
+    const plan = buildWorkspaceRuntimeToolchainExecutionPlan();
+
+    expect(plan.localCommands).toBe(workspaceRuntimeToolchainLocalCommands);
+    expect(plan.externalCommands).toBe(workspaceRuntimeToolchainExternalCommands);
+    expect(plan.localArtifacts).toBe(workspaceRuntimeToolchainLocalArtifacts);
+    expect(plan.externalArtifacts).toBe(workspaceRuntimeToolchainExternalArtifacts);
+    expect(plan.localArtifacts).toContain("coverage/workspace-production-blockers.json");
+    expect(plan.externalArtifacts).toEqual([
+      "coverage/workspace-install-output.txt",
+      "coverage/workspace-web-build-output.txt",
+      "coverage/workspace-dashboard-build-output.txt",
+      "coverage/workspace-ci-job.json",
+      "test-results/workspace-runtime-toolchain",
+    ]);
+    expect(plan).toMatchObject({
+      packageTypecheckExecutionAllowed: false,
+      packageTestExecutionAllowed: false,
+      workspaceToolchainExecutionAllowed: false,
+      workspaceAllExecutionAllowed: false,
+      dependencyInstallExecutionAllowed: false,
+      webBuildExecutionAllowed: false,
+      dashboardBuildExecutionAllowed: false,
+      ciWorkspaceJobExecutionAllowed: false,
+      productionBlockerVisibilityExecutionAllowed: false,
+      persistenceExecutionAllowed: false,
+    });
+    expect(plan.executionPolicy).toBe(workspaceRuntimeToolchainExecutionPolicy);
+    expect(plan.executionPolicy).toEqual({
+      codexMayClassifyStaticWorkspaceToolchain: true,
+      packageRuntimeProofRequiredForClosure: true,
+      installAndBuildEvidenceRequiredForClosure: true,
+      ciWorkspaceEvidenceRequiredForClosure: true,
+      productionBlockerVisibilityRequiredForClosure: true,
+      providerDatabaseRequiredForPersistence: true,
+    });
+    expect(plan.requiredExternalEvidence).toBe(workspaceRuntimeToolchainRequiredExternalEvidence);
+    expect(plan.requiredExternalEvidence).toContain("pnpm install evidence captured after dependency resolution.");
+    expect(plan.requiredExternalEvidence).toContain("Durable WorkspaceRuntimeToolchainRun persistence row captured from the target database.");
+  });
+
+  it("redacts workspace runtime toolchain artifacts before tracker or handoff use", () => {
+    const artifact = {
+      runId: "workspace_toolchain_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/27171288295",
+      installOutput: "resolved for engineer@example.com using token github_pat_1234567890ABCDEFGHIJKLMNOP",
+      persistence: {
+        tenantId: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
+        databaseUrl: "postgres://inkroute:secret@example.neon.tech/inkroute",
+      },
+      blockerContact: "+1 (555) 867-5309",
+    };
+
+    expect(buildRedactedWorkspaceRuntimeToolchainArtifact(artifact)).toEqual({
+      runId: "[REDACTED]",
+      ciRunUrl: "[REDACTED]",
+      installOutput: "resolved for [REDACTED] using token [REDACTED]",
+      persistence: {
+        tenantId: "[REDACTED]",
+        databaseUrl: "[REDACTED]",
+      },
+      blockerContact: "[REDACTED]",
+    });
+
+    const review = buildWorkspaceRuntimeToolchainArtifactReview(artifact);
+    expect(review.safeForTracker).toBe(true);
+    expect(review.requiredExternalEvidence).toBe(workspaceRuntimeToolchainRequiredExternalEvidence);
+    expect(review.redactions).toEqual(
+      expect.arrayContaining([
+        "runId",
+        "ciRunUrl",
+        "installOutput",
+        "persistence.tenantId",
+        "persistence.databaseUrl",
+        "blockerContact",
+      ]),
+    );
+    expect(review.requiredExternalEvidence).toContain(
+      "Runtime readiness report keeps production blockers visible in redacted evidence.",
+    );
   });
 });
+
+
+

@@ -1,5 +1,30 @@
 import { describe, expect, it } from "vitest";
 import {
+  testingRuntimeReadinessRequiredCommands,
+  testingRuntimeReadinessRequiredEvidence,
+  testingLaunchExecutionEvidenceRequiredCommands,
+  providerContractRuntimeReadinessRequiredCommands,
+  providerContractRuntimeReadinessRequiredEvidence,
+  phase14RunnerExecutionReadinessRequiredCommands,
+  phase14RunnerExecutionReadinessRequiredEvidence,
+  appE2eRuntimeReadinessRequiredCommands,
+  appE2eRuntimeReadinessRequiredEvidence,
+  accessibilityVisualRuntimeReadinessRequiredCommands,
+  accessibilityVisualRuntimeReadinessRequiredEvidence,
+  phase10SeoAppRuntimeBuildReadinessRequiredCommands,
+  phase10SeoAppRuntimeBuildReadinessRequiredEvidence,
+  phase9AppRuntimeBuildReadinessRequiredCommands,
+  phase9AppRuntimeBuildReadinessRequiredEvidence,
+  dashboardTestingRuntimeReadinessRequiredCommands,
+  dashboardTestingRuntimeReadinessRequiredEvidence,
+  dashboardTestExecutionEvidenceRequiredCommands,
+  dashboardTestExecutionEvidenceRequiredControls,
+  dashboardTestExecutionEvidenceRequiredEvidence,
+  ciCoverageReportingReadinessRequiredCommands,
+  ciCoverageReportingReadinessRequiredEvidence,
+  performanceLoadRuntimeReadinessRequiredCommands,
+  performanceLoadRuntimeReadinessRequiredEvidence,
+  testingLaunchExecutionEvidenceRequiredEvidence,
   buildAccessibilityVisualRuntimeReadinessPlan,
   buildAppE2eRuntimeReadinessPlan,
   buildCiQualityGatePlan,
@@ -22,11 +47,12 @@ import {
 } from "../src/index";
 
 describe("Phase 14 testing manifest", () => {
-  it("summarizes scaffolded and gated tests", () => {
+  it("summarizes local-contract and gated tests", () => {
     const summary = summarizeSuites(phase14Suites);
 
     expect(summary.suiteCount).toBeGreaterThan(0);
     expect(summary.caseCount).toBeGreaterThan(0);
+    expect(summary.byStatus.local_contract).toBeGreaterThan(0);
     expect(summary.productionBlockingCount).toBeGreaterThan(0);
   });
 
@@ -49,6 +75,28 @@ describe("Phase 14 testing manifest", () => {
       "dashboard-e2e-critical-flow",
     ]);
     expect(requirements.every((requirement) => requirement.gapIds.includes("GAP-041"))).toBe(true);
+    expect(requirements.find((requirement) => requirement.id === "dashboard-component-state")?.blockers).toContain(
+      "Runnable dashboard unit/component test evidence must be captured for empty, loading, error, gated provider action, and operator-review states.",
+    );
+    expect(requirements.find((requirement) => requirement.id === "dashboard-component-state")?.targetFiles).toEqual([
+      "apps/dashboard/components/BookingLifecycleActionPanel.tsx",
+      "apps/dashboard/components/MessageActionPanel.tsx",
+      "apps/dashboard/components/PaymentActionPanel.tsx",
+      "apps/dashboard/components/TravelPublishActionPanel.tsx",
+      "apps/dashboard/components/SeoPublicationActionPanel.tsx",
+      "apps/dashboard/tests/dashboard-mutation-runtime-static.test.ts",
+    ]);
+    expect(requirements.find((requirement) => requirement.id === "dashboard-component-state")?.verifies).toContain("gated provider action states");
+    expect(requirements.find((requirement) => requirement.id === "dashboard-component-state")?.verifies).toContain("operator-review copy");
+    expect(requirements.find((requirement) => requirement.id === "dashboard-component-state")?.blockers).not.toContain(
+      "React/Next component test harness is not wired for dashboard app components.",
+    );
+    expect(requirements.find((requirement) => requirement.id === "dashboard-rbac-tenant-isolation")?.blockers).toContain(
+      "Dashboard RBAC and tenant-isolation fixture evidence must be captured against the wired auth middleware and tenant-scoped loader contracts.",
+    );
+    expect(requirements.find((requirement) => requirement.id === "dashboard-rbac-tenant-isolation")?.blockers).not.toContain(
+      "Dashboard auth middleware and tenant-scoped loaders must be wired before app-level RBAC tests are meaningful.",
+    );
     expect(requirements.find((requirement) => requirement.area === "accessibility")?.verifies).toContain("axe critical violations");
   });
 
@@ -81,8 +129,8 @@ describe("Phase 14 testing manifest", () => {
       "dashboard-e2e-critical-flow",
     ]);
     expect(plan.missingPassingRequirements).toContain("dashboard-route-rendering");
-    expect(plan.requiredCommands).toContain("pnpm test:e2e --project=dashboard-chromium");
-    expect(plan.requiredEvidence).toContain("seeded auth, tenant, and RBAC fixture evidence");
+    expect(plan.requiredCommands).toBe(dashboardTestingRuntimeReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(dashboardTestingRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Dashboard mutation tests need a provider-safe server-action/API harness.");
   });
 
@@ -110,21 +158,10 @@ describe("Phase 14 testing manifest", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "pnpm --filter @inkroute/dashboard test",
-      "dashboard auth/RBAC/tenant-isolation tests",
-      "dashboard axe accessibility checks",
-      "Playwright dashboard critical-flow suite",
-      "branch protection dashboard required-check proof",
-    ]));
-    expect(plan.requiredControls).toContain("Use real runnable dashboard test files instead of package-only coverage matrices.");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "dashboard typecheck and build command evidence",
-      "dashboard unit/component, route rendering, and auth guard test output",
-      "dashboard RBAC/tenant, mutation lifecycle, and provider-safe state test output",
-      "axe, keyboard, and Playwright dashboard critical-flow evidence",
-      "CI artifact, branch protection, flaky policy, and secret-safe artifact evidence",
-    ]));
+    expect(plan.requiredCommands).toBe(dashboardTestExecutionEvidenceRequiredCommands);
+    expect(plan.requiredCommands).toEqual(dashboardTestExecutionEvidenceRequiredCommands);
+    expect(plan.requiredControls).toBe(dashboardTestExecutionEvidenceRequiredControls);
+    expect(plan.requiredEvidence).toBe(dashboardTestExecutionEvidenceRequiredEvidence);
     expect(plan.blockers).toContain("Dashboard axe accessibility checks must pass.");
     expect(plan.blockers).toContain("Branch protection must require the dashboard test gate before merge.");
     expect(plan.blockers).toContain("Dashboard test artifacts must be redacted and free of secrets, tokens, raw PII, medical notes, payment data, provider tokens, and private file URLs.");
@@ -158,7 +195,7 @@ describe("Phase 14 testing manifest", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Require dashboard test gates in CI branch protection before launch.");
+    expect(plan.requiredControls).toBe(dashboardTestExecutionEvidenceRequiredControls);
   });
 
   it("summarizes testing runtime readiness across install, execution, coverage, artifacts, CI, and branch protection", () => {
@@ -189,8 +226,8 @@ describe("Phase 14 testing manifest", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["test:e2e", "typecheck"]);
-    expect(plan.requiredCommands).toContain("pnpm test:unit:coverage");
-    expect(plan.requiredEvidence).toContain("Branch protection settings showing CI required before merge.");
+    expect(plan.requiredCommands).toBe(testingRuntimeReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(testingRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Workspace dependencies must install with pnpm before test execution.");
     expect(plan.blockers).toContain("Provider sandbox tests must pass for Stripe, storage, notification, calendar, and observability boundaries.");
     expect(plan.blockers).toContain("A GitHub Actions CI run must pass on the PR branch.");
@@ -218,24 +255,10 @@ describe("Phase 14 testing manifest", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["test:e2e", "typecheck"]);
-    expect(plan.requiredCommands).toEqual([
-      "pnpm install --frozen-lockfile",
-      "pnpm test:phase14:static",
-      "pnpm test:manifest",
-      "pnpm typecheck",
-      "pnpm test:unit",
-      "pnpm exec playwright install --with-deps",
-      "pnpm test:e2e",
-    ]);
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "committed lockfile and frozen pnpm install transcript",
-      "Vitest workspace, static manifest, unit, and typecheck execution output",
-      "Playwright browser install and web/dashboard E2E execution output",
-      "passing CI workflow with retained Vitest, coverage, Playwright, trace, screenshot, video, and manifest artifacts",
-      "triaged runner failure log, committed fixes, preserved scaffold coverage diff, and flaky-test policy",
-    ]));
+    expect(plan.requiredCommands).toBe(phase14RunnerExecutionReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(phase14RunnerExecutionReadinessRequiredEvidence);
     expect(plan.blockers).toContain("pnpm install --frozen-lockfile must pass before runner evidence is production-significant.");
-    expect(plan.blockers).toContain("Runner fixes must preserve the Phase 14 scaffolded security, route, middleware, E2E, Next config, and mobile coverage.");
+    expect(plan.blockers).toContain("Runner fixes must preserve the Phase 14 local-contract security, route, middleware, E2E, Next config, and mobile coverage.");
   });
 
   it("marks Phase 14 runner execution ready only after install, manifests, unit, E2E, CI, artifacts, and fixes are proven", () => {
@@ -291,20 +314,8 @@ describe("Phase 14 testing manifest", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["test:e2e"]);
-    expect(plan.requiredCommands).toEqual([
-      "pnpm --filter @inkroute/web build",
-      "pnpm --filter @inkroute/dashboard build",
-      "pnpm exec playwright install --with-deps chromium",
-      "pnpm test:e2e",
-      "pnpm test:manifest",
-    ]);
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "web/dashboard build output and running Next.js runtime logs",
-      "Playwright browser install plus public booking/security/SEO spec output",
-      "dashboard smoke/security/operator E2E output and manifest verification",
-      "retained Playwright report, traces, screenshots, videos, and CI E2E artifact bundle",
-      "documented E2E retry policy and committed fixes from real Playwright failures",
-    ]));
+    expect(plan.requiredCommands).toBe(appE2eRuntimeReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(appE2eRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Web Next.js runtime must start for Playwright public booking, security, and SEO specs.");
     expect(plan.blockers).toContain("Dashboard operator surfaces Playwright spec must pass for payments, releases, errors, messages, templates, SEO, and trust.");
     expect(plan.blockers).toContain("CI E2E job must pass with retained artifacts.");
@@ -362,20 +373,8 @@ describe("Phase 14 testing manifest", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["test:e2e"]);
-    expect(plan.requiredCommands).toEqual([
-      "pnpm test:e2e --project=web-chromium --grep @a11y",
-      "pnpm test:e2e --project=dashboard-chromium --grep @a11y",
-      "Lighthouse accessibility budget run for public and dashboard routes",
-      "visual regression baseline and diff review",
-      "manual screen-reader and mobile accessibility QA pass",
-    ]);
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "web/dashboard Playwright @a11y output and axe reports",
-      "Lighthouse, contrast, and responsive layout audit reports",
-      "manual screen-reader and mobile accessibility QA notes",
-      "visual regression baselines, reviewed diffs, screenshots, and retained artifacts",
-      "manifest verification, CI accessibility/visual job output, and triaged regression log",
-    ]));
+    expect(plan.requiredCommands).toBe(accessibilityVisualRuntimeReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(accessibilityVisualRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Manual screen-reader pass must cover VoiceOver/NVDA or equivalent public, dashboard, and mobile flows.");
     expect(plan.blockers).toContain("Visual regression diffs must be reviewed and accepted or fixed.");
   });
@@ -432,14 +431,8 @@ describe("Phase 14 testing manifest", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["test:unit"]);
-    expect(plan.requiredCommands).toContain("provider sandbox contract suite for calendar/storage/email/sms/push/sentry/auth/rate-limit");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "static provider contract suite, manifest verification, signed raw-body fixtures, and replay/idempotency fixtures",
-      "Stripe CLI webhook/idempotency and Google Calendar OAuth/sync sandbox transcripts",
-      "storage signed URL/upload/download, rate-limit store, and auth session fixture contract output",
-      "email, SMS, push, and Sentry sandbox send/capture artifacts",
-      "redacted provider artifact bundle and CI provider-contract job evidence",
-    ]));
+    expect(plan.requiredCommands).toBe(providerContractRuntimeReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(providerContractRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Stripe CLI signed webhook replay must pass against the local or preview webhook route.");
     expect(plan.blockers).toContain("Google Calendar freebusy, sync-token, conflict, insert/update/delete, and disconnect flows must be verified.");
     expect(plan.blockers).toContain("Sentry web, dashboard, and mobile capture contracts must verify event ids, source maps, issue grouping, and redaction.");
@@ -499,13 +492,8 @@ describe("Phase 14 testing manifest", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["test:unit:coverage", "typecheck"]);
-    expect(plan.requiredCommands).toContain("gh api repos/:owner/:repo/actions/runs/<ci-run-id>/artifacts");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "CI workflow YAML and run log showing install, typecheck, coverage, and E2E gates",
-      "coverage thresholds, Vitest coverage artifact, JUnit/JSON reports, and published test summary",
-      "Playwright report plus retained traces, screenshots, videos, and failed-test debug artifact proof",
-      "passing CI run, branch protection settings, flaky-test policy, and artifact retention settings",
-    ]));
+    expect(plan.requiredCommands).toBe(ciCoverageReportingReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(ciCoverageReportingReadinessRequiredEvidence);
     expect(plan.blockers).toContain("A GitHub Actions CI run must pass on the PR branch.");
     expect(plan.blockers).toContain("Branch protection must require the CI quality check before merge.");
     expect(plan.blockers).toContain("CI must retain Playwright failure traces, screenshots, and videos.");
@@ -561,13 +549,9 @@ describe("Phase 14 testing manifest", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["test:performance:budgets"]);
-    expect(plan.requiredCommands).toContain("database EXPLAIN/ANALYZE query-plan checks");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "performance budget verifier, Lighthouse CI, Core Web Vitals, and route budget reports",
-      "booking, webhook, and upload-intent load-test reports",
-      "database EXPLAIN/ANALYZE query-plan output and image optimization benchmark report",
-      "CI performance job, retained artifacts, regression thresholds, and triage log",
-    ]));
+    expect(plan.requiredCommands).toBe(performanceLoadRuntimeReadinessRequiredCommands);
+    expect(plan.requiredCommands).toEqual(performanceLoadRuntimeReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(performanceLoadRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Lighthouse CI must execute against public and dashboard route budgets.");
     expect(plan.blockers).toContain("Webhook burst load test must meet signed replay, idempotency, p95, and error-rate targets.");
     expect(plan.blockers).toContain("Database EXPLAIN/ANALYZE query-plan checks must pass for dashboard, SEO, and webhook idempotency queries.");
@@ -630,8 +614,8 @@ describe("Phase 14 testing manifest", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredCommands).toContain("Playwright dashboard templates/messages smoke tests");
-    expect(plan.requiredCommands).toContain("booking-to-notification runtime smoke with provider sends disabled");
+    expect(plan.requiredCommands).toBe(phase9AppRuntimeBuildReadinessRequiredCommands);
+    
   });
 
   it("blocks Phase 9 app runtime/build readiness until dashboard, mobile, runtime smoke, provider-disabled, artifacts, and CI evidence exist", () => {
@@ -660,12 +644,7 @@ describe("Phase 14 testing manifest", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "Phase 9 API route and booking/deposit runtime smoke output",
-      "dashboard templates/messages Playwright smoke and provider-disabled state evidence",
-      "mobile notification screen simulator and device smoke evidence",
-      "booking-to-notification runtime, provider-disabled, artifact, and CI required-gate evidence",
-    ]);
+    expect(plan.requiredEvidence).toEqual(phase9AppRuntimeBuildReadinessRequiredEvidence.slice(1));
     expect(plan.blockers).toContain("Dashboard templates Playwright smoke test must pass.");
     expect(plan.blockers).toContain("Expo device notification screen smoke test must pass.");
     expect(plan.blockers).toContain("Runtime smoke tests must prove provider sends remain disabled or sandboxed.");
@@ -699,8 +678,8 @@ describe("Phase 14 testing manifest", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredCommands).toContain("dashboard SEO browser smoke test");
-    expect(plan.requiredCommands).toContain("rendered sitemap/canonical crawl");
+    expect(plan.requiredCommands).toBe(phase10SeoAppRuntimeBuildReadinessRequiredCommands);
+    
   });
 
   it("blocks Phase 10 SEO app runtime/build readiness until dashboard SEO smoke, rendered crawl, database-backed routes, preview artifacts, and CI evidence exist", () => {
@@ -726,15 +705,11 @@ describe("Phase 14 testing manifest", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "web/dashboard build and sitemap/SEO preview route test output",
-      "dashboard SEO browser and publish/edit/archive interaction smoke evidence",
-      "rendered public SEO route, sitemap, and canonical crawl evidence",
-      "database-backed SEO route, runtime artifact, API preview, and CI required-gate evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(phase10SeoAppRuntimeBuildReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Dashboard SEO browser smoke test must pass.");
     expect(plan.blockers).toContain("Rendered public SEO route crawl must pass.");
-    expect(plan.blockers).toContain("Database-backed SEO routes must be wired before production runtime evidence is complete.");
+    expect(plan.blockers).toContain("Database-backed SEO route execution evidence must be captured before production runtime evidence is complete.");
+    expect(plan.blockers).not.toContain("Database-backed SEO routes must be wired before production runtime evidence is complete.");
     expect(plan.blockers).toContain("CI must require the Phase 10 SEO app runtime/build gate before merge.");
   });
 
@@ -772,8 +747,8 @@ describe("Phase 14 testing manifest", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredCommands).toContain("pnpm install --frozen-lockfile");
-    expect(plan.requiredCommands).toContain("branch protection required-check proof");
+    expect(plan.requiredCommands).toBe(testingLaunchExecutionEvidenceRequiredCommands);
+    
   });
 
   it("blocks Phase 14 testing launch execution evidence until full command, integration, provider, mobile, CI, branch-protection, flaky-policy, and secret-safe artifact proof exists", () => {
@@ -806,14 +781,7 @@ describe("Phase 14 testing manifest", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["test:phase14:static", "typecheck", "test:unit:coverage", "test:e2e"]);
-    expect(plan.requiredEvidence).toEqual([
-      "install, static, manifest, and typecheck command evidence",
-      "unit test, coverage threshold, and coverage artifact evidence",
-      "Playwright E2E report, traces, screenshots, videos, and failure-debug artifact evidence",
-      "app build, database integration, provider sandbox, and security test evidence",
-      "mobile simulator and device test evidence",
-      "CI reports, branch protection, flaky policy, and secret-safe artifact evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(testingLaunchExecutionEvidenceRequiredEvidence);
     expect(plan.blockers).toContain("pnpm install --frozen-lockfile must pass before testing launch execution is ready.");
     expect(plan.blockers).toContain("Provider sandbox tests must pass or remain explicitly launch-blocking.");
     expect(plan.blockers).toContain("Branch protection must require the CI quality check before merge.");

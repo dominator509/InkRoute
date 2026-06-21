@@ -1,7 +1,7 @@
-import type { HTMLAttributes } from "react";
+import type { InputHTMLAttributes } from "react";
 import clsx from "clsx";
 
-type InputProps = Omit<HTMLAttributes<HTMLInputElement>, "size"> & {
+type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "size"> & {
   id?: string;
 };
 

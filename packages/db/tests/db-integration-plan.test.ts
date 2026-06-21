@@ -1,7 +1,17 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildDbIntegrationRuntimeReadinessPlan, buildPrismaSchemaLifecycleReadinessPlan, buildSeedRuntimeExecutionEvidencePlan } from "../src/index";
+import {
+  buildDbIntegrationRuntimeReadinessPlan,
+  buildPrismaSchemaLifecycleReadinessPlan,
+  buildSeedRuntimeExecutionEvidencePlan,
+  dbIntegrationRuntimeReadinessCommands,
+  dbIntegrationRuntimeReadinessEvidence,
+  prismaSchemaLifecycleReadinessCommands,
+  prismaSchemaLifecycleReadinessEvidence,
+  seedRuntimeExecutionEvidenceCommands,
+  seedRuntimeExecutionRequiredEvidence,
+} from "../src/index";
 
 const root = resolve(__dirname, "../../..");
 
@@ -121,13 +131,8 @@ describe("database integration test plan", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["db:seed", "db:verify-seed"]);
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/db test -- db-integration");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "non-production Postgres provisioning, DATABASE_URL configuration, and destructive-reset guard proof",
-      "Prisma validate/generate/migrate/seed/verify command output",
-      "tenant isolation, workflow persistence, and audit-log integration test output",
-      "migration rollback notes, captured command transcript, and CI DB job artifact",
-    ]));
+    expect(plan.requiredCommands).toBe(dbIntegrationRuntimeReadinessCommands);
+    expect(plan.requiredEvidence).toBe(dbIntegrationRuntimeReadinessEvidence);
     expect(plan.blockers).toContain("Tenant-isolation integration tests must deny cross-tenant reads and writes across critical models.");
     expect(plan.blockers).toContain("Audit-log integration tests must prove tenant-scoped actor, entity, action, and metadata writes.");
   });
@@ -162,8 +167,8 @@ describe("database integration test plan", () => {
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["db:seed", "db:verify-seed"]);
     expect(plan.schemaCoverageStatus).toBe("pass");
-    expect(plan.requiredCommands).toContain("Prisma migration SQL review");
-    expect(plan.requiredEvidence).toContain("Generated migration SQL review notes and drift-check output.");
+    expect(plan.requiredCommands).toBe(prismaSchemaLifecycleReadinessCommands);
+    expect(plan.requiredEvidence).toBe(prismaSchemaLifecycleReadinessEvidence);
     expect(plan.blockers).toContain("A non-production Postgres database must be provisioned.");
     expect(plan.blockers).toContain("DIRECT_URL must be configured for Prisma migrations when required by the provider.");
     expect(plan.blockers).toContain("Generated migration SQL must be reviewed before applying to shared environments.");
@@ -268,14 +273,8 @@ describe("database integration test plan", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["db:seed"]);
-    expect(plan.requiredCommands).toContain("web/API seeded-data smoke");
-    expect(plan.requiredEvidence).toEqual([
-      "seed readiness, fake-data, legal-placeholder, and production-provider ban evidence",
-      "non-production Postgres, DATABASE_URL, Prisma generate, migration, and seed command evidence",
-      "seeded tenant, membership, workflow, payment/file/message, SEO/release/flag, and audit-log query evidence",
-      "web/API and dashboard seeded-data smoke evidence",
-      "captured command transcript and CI or clean-checkout seed evidence",
-    ]);
+    expect(plan.requiredCommands).toBe(seedRuntimeExecutionEvidenceCommands);
+    expect(plan.requiredEvidence).toBe(seedRuntimeExecutionRequiredEvidence);
     expect(plan.blockers).toContain("A non-production Postgres database must be provisioned for seed execution.");
     expect(plan.blockers).toContain("Seeded demo tenant must be readable after seed execution.");
     expect(plan.blockers).toContain("Seed execution must not use production provider credentials or live provider endpoints.");

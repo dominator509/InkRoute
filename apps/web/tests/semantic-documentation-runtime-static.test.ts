@@ -1,13 +1,26 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildSemanticDocumentationDecisionRequiredEvidence,
   semanticDocumentationChecks,
   semanticDocumentationRuntimeArtifactPaths,
   semanticDocumentationRuntimeCommands,
+  semanticDocumentationRuntimeExternalArtifacts,
+  semanticDocumentationRuntimeExternalCommands,
+  semanticDocumentationRuntimeExecutionPolicy,
+  semanticDocumentationRuntimeLocalArtifacts,
+  semanticDocumentationRuntimeLocalCommands,
   semanticDocumentationRuntimeMatrix,
+  semanticDocumentationRuntimeProofFiles,
   semanticDocumentationRuntimeReadiness,
+  semanticDocumentationRuntimeRequiredExternalEvidence,
+  semanticDocumentationRuntimeRequiredEvidence,
   semanticDocumentationRunPersistenceContract,
+  buildSemanticDocumentationEvidenceDecision,
+  buildSemanticDocumentationRuntimeArtifactReview,
+  buildSemanticDocumentationRuntimeExecutionPlan,
+  buildRedactedSemanticDocumentationArtifact,
 } from "../lib/semanticDocumentationRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -29,6 +42,9 @@ describe("semantic documentation runtime contract", () => {
       "node scripts/quality/verify-documentation-consistency.mjs",
       "node scripts/quality/verify-documentation-inventory.mjs",
       "GitHub Actions CI quality job",
+      "document that semantic docs are not runtime build or live route proof",
+      "document that provider readiness proof stays separate from wording checks",
+      "document that legal review proof stays separate from wording checks",
     ]);
     expect(semanticDocumentationChecks).toEqual([
       "structural-links",
@@ -68,17 +84,93 @@ describe("semantic documentation runtime contract", () => {
   it("keeps semantic checks wired while CI evidence remains gated", () => {
     expect(semanticDocumentationRuntimeReadiness.status).toBe("blocked");
     expect(semanticDocumentationRuntimeReadiness.failedSemanticChecks).toEqual([]);
-    expect(semanticDocumentationRuntimeReadiness.requiredCommands).toEqual([...semanticDocumentationRuntimeCommands]);
-    expect(semanticDocumentationRuntimeReadiness.requiredEvidence).toEqual([
-      "Markdown link/path audit output with no broken relative links or missing concrete repo paths.",
-      "Documentation consistency audit output for production-readiness claims, API route references, provider language, and legal language.",
-      "Documentation inventory audit output proving documented apps/packages match workspace members.",
-      "CI evidence for quality:docs.",
-      "Explicit notes that runtime build proof, provider proof, and legal review remain separate evidence gates.",
-    ]);
+    expect(semanticDocumentationRuntimeReadiness.requiredCommands).toBe(semanticDocumentationRuntimeCommands);
+    expect(semanticDocumentationRuntimeReadiness.requiredEvidence).toBe(semanticDocumentationRuntimeRequiredEvidence);
     expect(semanticDocumentationRuntimeReadiness.blockers).toEqual([
       "CI evidence for semantic documentation audits must be captured.",
     ]);
+  });
+
+  it("blocks semantic documentation closure until CI, proof-boundary, persistence, artifact, and command evidence exist", () => {
+    const decision = buildSemanticDocumentationEvidenceDecision({
+      qualityDocsPassed: true,
+      structuralLinksPassed: true,
+      concreteRepoPathsPassed: true,
+      productionReadinessClaimsPassed: true,
+      apiRouteReferencesPassed: true,
+      providerReadinessLanguagePassed: true,
+      legalReadinessLanguagePassed: true,
+      appPackageInventoryPassed: true,
+      documentationInventoryContractCurrent: true,
+      ciQualityDocsEvidenceCaptured: false,
+      runtimeProofSeparated: true,
+      providerProofSeparated: false,
+      legalReviewSeparated: false,
+      semanticDocumentationRunPersisted: false,
+      capturedArtifacts: [
+        "coverage/semantic-documentation-runtime.json",
+        "coverage/semantic-documentation-link-path-output.txt",
+        "coverage/semantic-documentation-consistency-output.txt",
+        "coverage/semantic-documentation-inventory-output.txt",
+      ],
+      completedCommands: [
+        "pnpm quality:docs",
+        "node scripts/quality/audit-doc-links.mjs",
+        "node scripts/quality/verify-documentation-consistency.mjs",
+        "node scripts/quality/verify-documentation-inventory.mjs",
+      ],
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.missingArtifacts).toEqual([
+      "coverage/semantic-documentation-ci-quality-docs.json",
+      "coverage/semantic-documentation-runtime-proof-boundary.json",
+      "coverage/semantic-documentation-provider-proof-boundary.json",
+      "coverage/semantic-documentation-legal-review-boundary.json",
+      "test-results/semantic-documentation-runtime",
+    ]);
+    expect(decision.missingCommands).toEqual([
+      "GitHub Actions CI quality job",
+      "document that semantic docs are not runtime build or live route proof",
+      "document that provider readiness proof stays separate from wording checks",
+      "document that legal review proof stays separate from wording checks",
+    ]);
+    expect(decision.requiredArtifacts).toBe(semanticDocumentationRuntimeArtifactPaths);
+    expect(decision.requiredCommands).toBe(semanticDocumentationRuntimeCommands);
+    expect(decision.requiredEvidence).toEqual(
+      buildSemanticDocumentationDecisionRequiredEvidence(semanticDocumentationRuntimeReadiness.requiredEvidence),
+    );
+    expect(decision.requiredEvidence).toBe(semanticDocumentationRuntimeRequiredEvidence);
+    expect(decision.blockers).toContain("CI evidence for semantic documentation audits must be captured.");
+    expect(decision.blockers).toContain("Semantic documentation audit must keep provider readiness proof separate from static wording checks.");
+    expect(decision.blockers).toContain("SemanticDocumentationRun persistence row must be captured for durable auditability.");
+    expect(decision.blockers).toContain("Every required semantic documentation artifact must be captured.");
+  });
+
+  it("completes semantic documentation closure when semantic checks, CI, boundaries, persistence, artifacts, and commands are proven", () => {
+    const decision = buildSemanticDocumentationEvidenceDecision({
+      qualityDocsPassed: true,
+      structuralLinksPassed: true,
+      concreteRepoPathsPassed: true,
+      productionReadinessClaimsPassed: true,
+      apiRouteReferencesPassed: true,
+      providerReadinessLanguagePassed: true,
+      legalReadinessLanguagePassed: true,
+      appPackageInventoryPassed: true,
+      documentationInventoryContractCurrent: true,
+      ciQualityDocsEvidenceCaptured: true,
+      runtimeProofSeparated: true,
+      providerProofSeparated: true,
+      legalReviewSeparated: true,
+      semanticDocumentationRunPersisted: true,
+      capturedArtifacts: semanticDocumentationRuntimeArtifactPaths,
+      completedCommands: semanticDocumentationRuntimeCommands,
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.missingArtifacts).toEqual([]);
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.blockers).toEqual([]);
   });
 
   it("wires CI, manifest, tracker, and artifacts while keeping runtime/provider/legal proof separate", () => {
@@ -87,7 +179,41 @@ describe("semantic documentation runtime contract", () => {
     expect(ciWorkflow).toContain("semantic-documentation-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-semantic-documentation-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/semanticDocumentationRuntime.ts");
-    expect(gapTracker).toContain("live CI quality-docs evidence remains open while runtime, provider, and legal proof remain separate gates");
+    expect(gapTracker).toContain("live CI quality-docs evidence, persisted run rows, and full artifact/command capture remain gated while runtime, provider, and legal proof remain separate gates");
+    expect(gapTracker).toContain("GAP-128 is semantic-documentation-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("buildSemanticDocumentationDecisionRequiredEvidence");
+    expect(gapTracker).toContain("semanticDocumentationRuntimeRequiredEvidence");
+    expect(gapTracker).toContain("buildSemanticDocumentationRuntimeExecutionPlan");
+    expect(gapTracker).toContain("semanticDocumentationRuntimeExecutionPolicy");
+    expect(gapTracker).toContain("semanticDocumentationRuntimeRequiredExternalEvidence");
+    expect(gapTracker).toContain("semanticDocumentationRuntimeLocalArtifacts");
+    expect(gapTracker).toContain("semanticDocumentationRuntimeExternalArtifacts");
+    expect(gapTracker).toContain("buildSemanticDocumentationRuntimeArtifactReview");
+  });
+
+  it("pins current semantic documentation runtime proof files for GAP-128", () => {
+    expect(semanticDocumentationRuntimeProofFiles).toEqual(
+      expect.arrayContaining([
+      "docs/quality/manifests/documentation-consistency-audit.json",
+      "docs/quality/manifests/documentation-consistency-contract.json",
+      "docs/quality/manifests/documentation-inventory-audit.json",
+      "docs/quality/manifests/documentation-inventory-contract.json",
+      "docs/quality/manifests/markdown-link-audit.json",
+      "docs/quality/manifests/quality-gates.json",
+      "packages/quality/src/index.ts",
+      "scripts/quality/print-quality-gates.mjs",
+        "scripts/quality/audit-doc-links.mjs",
+        "scripts/quality/verify-documentation-consistency.mjs",
+        "scripts/quality/verify-documentation-inventory.mjs",
+        "apps/web/lib/semanticDocumentationRuntime.ts",
+        "apps/web/tests/semantic-documentation-runtime-static.test.ts",
+        "packages/db/prisma/migrations/20260609031000_add_semantic_documentation_runs/migration.sql",
+        ".github/workflows/ci.yml"
+      ])
+    );
+    for (const file of semanticDocumentationRuntimeProofFiles) {
+      expect(readRepoFile(file).length).toBeGreaterThan(0);
+    }
   });
 
   it("pins durable SemanticDocumentationRun persistence for semantic docs and proof-boundary evidence", () => {
@@ -122,4 +248,82 @@ describe("semantic documentation runtime contract", () => {
     expect(unitManifest).toContain("SemanticDocumentationRun Prisma model and app row contract");
     expect(gapTracker).toContain("packages/db/prisma/migrations/20260609031000_add_semantic_documentation_runs/migration.sql");
   });
+
+  it("keeps GAP-128 execution policy non-executing while separating CI, runtime, provider, and legal proof", () => {
+    const plan = buildSemanticDocumentationRuntimeExecutionPlan();
+
+    expect(plan.localCommands).toBe(semanticDocumentationRuntimeLocalCommands);
+    expect(plan.externalCommands).toBe(semanticDocumentationRuntimeExternalCommands);
+    expect(plan.localArtifacts).toBe(semanticDocumentationRuntimeLocalArtifacts);
+    expect(plan.externalArtifacts).toBe(semanticDocumentationRuntimeExternalArtifacts);
+    expect(plan.localArtifacts).toEqual([
+      "coverage/semantic-documentation-runtime.json",
+      "coverage/semantic-documentation-link-path-output.txt",
+      "coverage/semantic-documentation-consistency-output.txt",
+      "coverage/semantic-documentation-inventory-output.txt",
+      "coverage/semantic-documentation-runtime-proof-boundary.json",
+      "coverage/semantic-documentation-provider-proof-boundary.json",
+      "coverage/semantic-documentation-legal-review-boundary.json",
+    ]);
+    expect(plan.externalArtifacts).toEqual([
+      "coverage/semantic-documentation-ci-quality-docs.json",
+      "test-results/semantic-documentation-runtime",
+    ]);
+    expect(plan).toMatchObject({
+      qualityDocsExecutionAllowed: false,
+      linkAuditExecutionAllowed: false,
+      consistencyAuditExecutionAllowed: false,
+      inventoryAuditExecutionAllowed: false,
+      ciQualityDocsExecutionAllowed: false,
+      runtimeBoundaryExecutionAllowed: false,
+      providerBoundaryExecutionAllowed: false,
+      legalBoundaryExecutionAllowed: false,
+      persistenceExecutionAllowed: false,
+    });
+    expect(plan.executionPolicy).toBe(semanticDocumentationRuntimeExecutionPolicy);
+    expect(plan.executionPolicy).toEqual({
+      codexMayClassifyStaticSemanticDocumentation: true,
+      ciQualityDocsEvidenceRequiredForClosure: true,
+      providerProofMustRemainSeparate: true,
+      legalReviewMustRemainSeparate: true,
+      runtimeProofMustRemainSeparate: true,
+      providerDatabaseRequiredForPersistence: true,
+    });
+    expect(plan.requiredExternalEvidence).toBe(semanticDocumentationRuntimeRequiredExternalEvidence);
+    expect(plan.requiredExternalEvidence).toContain("Runtime build and live route proof captured outside semantic documentation wording checks.");
+    expect(plan.requiredExternalEvidence).toContain("Legal review proof captured outside semantic documentation wording checks.");
+  });
+
+  it("redacts semantic documentation runtime artifacts before tracker or handoff use", () => {
+    const artifact = {
+      runId: "sem_doc_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      ciUrl: "https://github.com/dominator509/InkRoute/actions/runs/27171288295",
+      claimLog: "provider proof from artist@example.com and +1 (555) 867-5309",
+      providerEvidence: {
+        providerUrl: "https://provider.example.com/dashboard/tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      },
+      legalReview: {
+        clientId: "client_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      },
+    };
+
+    expect(buildRedactedSemanticDocumentationArtifact(artifact)).toEqual({
+      runId: "[REDACTED]",
+      ciUrl: "[REDACTED]",
+      claimLog: "provider proof from [REDACTED] and [REDACTED]",
+      providerEvidence: "[REDACTED]",
+      legalReview: "[REDACTED]",
+    });
+
+    const review = buildSemanticDocumentationRuntimeArtifactReview(artifact);
+    expect(review.safeForTracker).toBe(true);
+    expect(review.requiredExternalEvidence).toBe(semanticDocumentationRuntimeRequiredExternalEvidence);
+    expect(review.redactions).toEqual(
+      expect.arrayContaining(["runId", "ciUrl", "claimLog", "providerEvidence", "legalReview"]),
+    );
+    expect(review.requiredExternalEvidence).toContain("Provider readiness proof captured outside semantic documentation wording checks.");
+  });
 });
+
+
+

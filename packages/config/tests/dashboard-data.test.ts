@@ -4,6 +4,11 @@ import {
   buildDashboardRepositoryRouteEvidencePlan,
   buildTenantDashboardView,
   dashboardDataCollections,
+  dashboardDataRuntimeRequiredCommands,
+  dashboardDataRuntimeRequiredEvidence,
+  dashboardRepositoryRouteRequiredCommands,
+  dashboardRepositoryRouteRequiredControls,
+  dashboardRepositoryRouteRequiredEvidence,
   findMissingDashboardCollections,
   type DashboardScopedRecord,
 } from "../src/index";
@@ -127,8 +132,10 @@ describe("tenant dashboard data projections", () => {
       "settings",
     ]);
     expect(plan.missingRouteWiring).toContain("clients");
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/dashboard build");
-    expect(plan.requiredEvidence).toContain("tenant isolation and redaction test output for dashboard repositories/APIs");
+    expect(plan.requiredCommands).toBe(dashboardDataRuntimeRequiredCommands);
+    expect(plan.requiredEvidence).toBe(dashboardDataRuntimeRequiredEvidence);
+    expect(plan.blockers).toContain("Repository-backed dashboard route wiring is required for: clients, payments, appointments, portfolio, travel, seo, templates, errors, releases, settings.");
+    expect(plan.blockers).not.toContain("Dashboard routes are not wired to repository loaders for: clients, payments, appointments, portfolio, travel, seo, templates, errors, releases, settings.");
     expect(plan.blockers).toContain("Dashboard route data dependencies must no longer read static demo arrays for production surfaces.");
   });
 
@@ -158,20 +165,9 @@ describe("tenant dashboard data projections", () => {
     expect(plan.missingPrismaLoaders).toContain("payments");
     expect(plan.missingRouteWiring).toContain("clients");
     expect(plan.remainingStaticDemoImports).toContain("payments");
-    expect(plan.requiredCommands).toEqual(expect.arrayContaining([
-      "seeded database dashboard route smoke",
-      "dashboard repository/API tenant-isolation tests",
-      "dashboard repository/API RBAC and redaction tests",
-      "dashboard sensitive-read AuditLog persistence tests",
-    ]));
-    expect(plan.requiredControls).toContain("Apply RBAC guards before repository reads and dashboard serialization.");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "Prisma loader, route wiring, and static-demo import removal matrix for all dashboard collections",
-      "seeded database dashboard route smoke plus repository/API test output",
-      "tenant isolation, RBAC guard, and redaction test output",
-      "no-store cache and sensitive-read AuditLog evidence",
-      "dashboard typecheck/build, CI, and secret-safe artifact evidence",
-    ]));
+    expect(plan.requiredCommands).toBe(dashboardRepositoryRouteRequiredCommands);
+    expect(plan.requiredControls).toBe(dashboardRepositoryRouteRequiredControls);
+    expect(plan.requiredEvidence).toBe(dashboardRepositoryRouteRequiredEvidence);
     expect(plan.blockers).toContain("Tenant-isolation tests must reject cross-tenant dashboard data reads.");
     expect(plan.blockers).toContain("Dashboard data artifacts must be redacted and free of secrets, raw PII, medical notes, payment data, provider tokens, and private object keys.");
   });
@@ -206,6 +202,7 @@ describe("tenant dashboard data projections", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Use no-store caching for protected dashboard data responses.");
+    expect(plan.requiredCommands).toBe(dashboardRepositoryRouteRequiredCommands);
+    expect(plan.requiredControls).toBe(dashboardRepositoryRouteRequiredControls);
   });
 });

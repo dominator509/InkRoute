@@ -13,6 +13,9 @@ import {
   Surface,
   buildUiPackageAdoptionEvidencePlan,
   inkrouteTheme,
+  uiPackageAdoptionRequiredCommands,
+  uiPackageAdoptionRequiredControls,
+  uiPackageAdoptionRequiredEvidence,
 } from "../src/index";
 
 describe("ui design-system contract", () => {
@@ -60,8 +63,8 @@ describe("ui design-system contract", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredCommands).toContain("Storybook or visual smoke capture");
-    expect(plan.requiredControls).toContain("Preserve existing app visual language while adopting shared primitives incrementally.");
+    expect(plan.requiredCommands).toBe(uiPackageAdoptionRequiredCommands);
+    expect(plan.requiredControls).toBe(uiPackageAdoptionRequiredControls);
   });
 
   it("blocks UI package adoption evidence until package checks, app adoption, accessibility, visual smoke, builds, documentation, and safe artifacts exist", () => {
@@ -89,14 +92,7 @@ describe("ui design-system contract", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "UI package typecheck, test, and export-contract evidence",
-      "web/dashboard primitive adoption evidence for forms, navigation, surfaces, and dialogs",
-      "accessibility, keyboard, and focus-visible smoke evidence",
-      "Storybook or visual smoke/regression evidence and style-regression review",
-      "web/dashboard build and app smoke evidence after UI adoption",
-      "design-token documentation and secret-safe visual artifact evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(uiPackageAdoptionRequiredEvidence);
     expect(plan.blockers).toContain("Web app must adopt shared UI primitives on at least one production-relevant surface.");
     expect(plan.blockers).toContain("Storybook or equivalent visual smoke coverage must be configured.");
     expect(plan.blockers).toContain("UI screenshots, visual artifacts, and reports must be free of secrets, tokens, raw PII, medical, or payment data.");

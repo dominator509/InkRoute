@@ -1,11 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildRedactedReleaseAutomatedCoverageArtifact,
+  buildReleaseAutomatedCoverageEvidenceDecision,
+  buildReleaseAutomatedCoverageArtifactReview,
+  buildReleaseAutomatedCoverageExecutionPlan,
   buildProviderBackedReleaseRouteIntegrationPlan,
   providerBackedReleaseRouteIntegrationPlan,
   releaseAutomatedCoverageArtifactPaths,
   releaseAutomatedCoverageCommands,
   releaseAutomatedCoverageContract,
+  releaseAutomatedCoverageDecisionRequiredEvidence,
+  releaseAutomatedCoverageExternalCommands,
+  releaseAutomatedCoverageExternalArtifacts,
+  releaseAutomatedCoverageExecutionPolicy,
+  releaseAutomatedCoverageLocalArtifacts,
+  releaseAutomatedCoverageLocalCommands,
   releaseAutomatedCoverageMatrix,
+  releaseAutomatedCoverageProofFiles,
+  releaseAutomatedCoverageRequiredExternalEvidence,
 } from "../lib/releaseAutomatedCoverage";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -72,6 +84,91 @@ describe("GAP-094 release automated coverage contracts", () => {
     );
   });
 
+  it("pins current release automated coverage proof files for GAP-094", () => {
+    expect(releaseAutomatedCoverageProofFiles).toEqual(
+      expect.arrayContaining([
+      "apps/dashboard/package.json",
+        "packages/releases/package.json",
+        "packages/releases/src/index.ts",
+        "packages/releases/tests/feature-flags.test.ts",
+        "packages/releases/tests/release-governance-workflow.test.ts",
+        "apps/web/lib/releaseAutomatedCoverage.ts",
+        "apps/web/tests/release-health-route.test.ts",
+        "apps/web/tests/release-automation-static.test.ts",
+        "apps/web/tests/release-automated-coverage-static.test.ts",
+        "apps/dashboard/tests/e2e/release-dashboard.spec.ts",
+        "apps/mobile/tests/mobile-static.test.ts",
+        "apps/dashboard/app/releases/page.tsx",
+        "apps/dashboard/components/ReleaseActionPanel.tsx",
+        "apps/dashboard/app/api/releases/route.ts",
+        "apps/dashboard/app/api/feature-flags/route.ts",
+        "apps/dashboard/tests/release-route-static.test.ts",
+        "apps/dashboard/tests/feature-flag-route-static.test.ts",
+        ".github/workflows/release-governance.yml",
+        ".github/workflows/ci.yml",
+        "testing/manifests/unit-test-manifest.json",
+      ]),
+    );
+    for (const file of releaseAutomatedCoverageProofFiles) {
+      expect(readWorkspaceFile(file).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("classifies GAP-094 release automated coverage evidence as blocked until Playwright, provider, Expo, workflow, and secret proof is captured", () => {
+    const blocked = buildReleaseAutomatedCoverageEvidenceDecision({
+      releasePackageTestsPassed: true,
+      releaseWorkflowTestsPassed: true,
+      releaseHealthRouteTestsPassed: true,
+      releaseAutomationStaticTestsPassed: true,
+      mobileStaticTestsPassed: true,
+      dashboardTypecheckPassed: false,
+      playwrightDashboardReleaseSmokePassed: false,
+      providerBackedRouteIntegrationTestsPassed: false,
+      expoRenderTestsPassed: false,
+      expoDeviceTestsPassed: false,
+      githubActionsWorkflowExecutionEvidenceCaptured: false,
+      realSecretsAndEnvironmentsConfigured: false,
+      ciArtifactsCaptured: false,
+      capturedArtifacts: ["coverage/release-automated-coverage.json"],
+    });
+
+    expect(blocked.status).toBe("blocked");
+    expect(blocked.blockers).toEqual(
+      expect.arrayContaining([
+        "Playwright dashboard release smoke evidence is required.",
+        "Provider-backed release/feature-flag route integration evidence is required.",
+        "Expo device/OTA proof evidence is required.",
+        "GitHub Actions release-governance workflow execution evidence is required.",
+        "Real CI secret/protected environment evidence is required.",
+      ]),
+    );
+    expect(blocked.missingArtifacts).toContain("coverage/release-dashboard-playwright-smoke.json");
+    expect(blocked.requiredCommands).toBe(releaseAutomatedCoverageCommands);
+    expect(blocked.requiredEvidence).toBe(releaseAutomatedCoverageDecisionRequiredEvidence);
+
+    const complete = buildReleaseAutomatedCoverageEvidenceDecision({
+      releasePackageTestsPassed: true,
+      releaseWorkflowTestsPassed: true,
+      releaseHealthRouteTestsPassed: true,
+      releaseAutomationStaticTestsPassed: true,
+      mobileStaticTestsPassed: true,
+      dashboardTypecheckPassed: true,
+      playwrightDashboardReleaseSmokePassed: true,
+      providerBackedRouteIntegrationTestsPassed: true,
+      expoRenderTestsPassed: true,
+      expoDeviceTestsPassed: true,
+      githubActionsWorkflowExecutionEvidenceCaptured: true,
+      realSecretsAndEnvironmentsConfigured: true,
+      ciArtifactsCaptured: true,
+      capturedArtifacts: releaseAutomatedCoverageArtifactPaths,
+    });
+
+    expect(complete.status).toBe("complete");
+    expect(complete.blockers).toEqual([]);
+    expect(complete.missingArtifacts).toEqual([]);
+    expect(complete.redactedSummary).toContain("CI-safe redacted artifacts captured");
+  });
+
   it("pins CI and tracker references for the release automated coverage seam", () => {
     const ci = readWorkspaceFile(".github/workflows/ci.yml");
     const tracker = readWorkspaceFile("GAP_TRACKER.md");
@@ -81,6 +178,80 @@ describe("GAP-094 release automated coverage contracts", () => {
     expect(ci).toContain("release-automated-coverage-artifacts");
     expect(tracker).toContain("GAP-094");
     expect(tracker).toContain("apps/web/lib/releaseAutomatedCoverage.ts");
-    expect(tracker).toContain("Playwright/Expo/provider workflow proof remains open");
+    expect(tracker).toContain("Release automated coverage evidence classifier wired and execution-gated");
+    expect(tracker).toContain("releaseAutomatedCoverageDecisionRequiredEvidence");
+    expect(tracker).toContain("releaseAutomatedCoverageLocalArtifacts");
+    expect(tracker).toContain("releaseAutomatedCoverageExternalArtifacts");
+    expect(tracker).toContain("Playwright/Expo/provider workflow proof");
+  });
+
+  it("keeps GAP-094 live execution disabled locally while publishing the release coverage plan", () => {
+    const plan = buildReleaseAutomatedCoverageExecutionPlan();
+
+    expect(plan.playwrightExecutionAllowed).toBe(false);
+    expect(plan.expoExecutionAllowed).toBe(false);
+    expect(plan.providerBackedRouteExecutionAllowed).toBe(false);
+    expect(plan.githubActionsExecutionAllowed).toBe(false);
+    expect(plan.secretEnvironmentExecutionAllowed).toBe(false);
+    expect(plan.policy).toBe(releaseAutomatedCoverageExecutionPolicy);
+    expect(plan.policy).toEqual({
+      executePlaywright: false,
+      executeExpo: false,
+      executeProviderBackedRoutes: false,
+      executeGithubActions: false,
+      useRealSecretsOrProtectedEnvironments: false,
+      executeCi: false,
+    });
+    expect(plan.localCommands).toBe(releaseAutomatedCoverageLocalCommands);
+    expect(plan.externalCommands).toBe(releaseAutomatedCoverageExternalCommands);
+    expect(plan.localArtifacts).toBe(releaseAutomatedCoverageLocalArtifacts);
+    expect(plan.externalArtifacts).toBe(releaseAutomatedCoverageExternalArtifacts);
+    expect(plan.localArtifacts).toEqual([
+      "coverage/release-automated-coverage.json",
+      "test-results/release-automated",
+    ]);
+    expect(plan.externalArtifacts).toEqual(expect.arrayContaining([
+      "coverage/release-dashboard-playwright-smoke.json",
+      "coverage/release-provider-backed-route-integration.json",
+      "coverage/release-expo-device-ota-proof-redacted.json",
+      "coverage/release-github-actions-execution-redacted.json",
+      "coverage/release-real-secrets-environments-redacted.json",
+    ]));
+    expect(plan.requiredExternalEvidence).toBe(releaseAutomatedCoverageRequiredExternalEvidence);
+    expect(plan.requiredExternalEvidence).toEqual([
+      "Playwright dashboard release smoke artifact",
+      "Provider-backed release/feature-flag route integration artifact",
+      "Expo render and physical-device release/OTA proof",
+      "GitHub Actions release-governance workflow execution proof",
+      "Real secret/protected environment proof and CI artifact capture",
+    ]);
+    expect(plan.disabledReasons.join(" ")).toContain("Real secret/protected environment proof cannot be generated without credentials.");
+  });
+
+  it("redacts GAP-094 release automated coverage artifacts before review", () => {
+    const rawArtifact = {
+      githubToken: "ghp_1234567890abcdef",
+      expo_token: "expo-secret-token",
+      providerPayload: { rawBody: "{\"email\":\"artist@example.com\",\"phone\":\"+1 555 222 1010\"}" },
+      nested: ["Authorization: Bearer secret-release-token", "contact artist@example.com at +1 (555) 333-4444"],
+      stack: "Error: provider failed",
+    };
+
+    const redacted = buildRedactedReleaseAutomatedCoverageArtifact(rawArtifact);
+    const review = buildReleaseAutomatedCoverageArtifactReview(rawArtifact);
+    const serialized = JSON.stringify({ redacted, review });
+
+    expect(serialized).not.toContain("ghp_1234567890abcdef");
+    expect(serialized).not.toContain("expo-secret-token");
+    expect(serialized).not.toContain("artist@example.com");
+    expect(serialized).not.toContain("+1 555 222 1010");
+    expect(serialized).not.toContain("secret-release-token");
+    expect(serialized).toContain("[REDACTED]");
+    expect(review.requiredArtifacts).toBe(releaseAutomatedCoverageArtifactPaths);
+    expect(review.retainedExternalGates).toEqual(expect.arrayContaining([
+      "Playwright dashboard release smoke artifact",
+      "Provider-backed release/feature-flag route integration artifact",
+      "GitHub Actions release-governance execution artifact",
+    ]));
   });
 });

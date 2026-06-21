@@ -1,4 +1,18 @@
-﻿import { notificationAutomatedTestContract, notificationAutomatedTestSuites } from "./notificationAutomatedTests";
+﻿import {
+  buildNotificationAutomationArtifactReview,
+  buildNotificationAutomatedTestExecutionPlan,
+  buildRedactedNotificationAutomationArtifact,
+  notificationAutomatedTestContract,
+  notificationAutomatedTestRequiredArtifacts,
+  notificationAutomatedTestSuites,
+} from "./notificationAutomatedTests";
+
+export {
+  buildNotificationAutomationArtifactReview,
+  buildNotificationAutomatedTestExecutionPlan,
+  buildRedactedNotificationAutomationArtifact,
+  notificationAutomatedTestRequiredArtifacts,
+};
 
 export type NotificationAutomationRuntimeStatus =
   | "wired"
@@ -17,6 +31,49 @@ export interface NotificationAutomationRuntimeMatrixEntry {
   readonly status: NotificationAutomationRuntimeStatus;
 }
 
+export interface NotificationAutomationExecutionPolicy {
+  readonly codexMayClassifyStaticNotificationAutomationReadiness: boolean;
+  readonly localPackageAndRouteEvidenceRequiredForClosure: boolean;
+  readonly queueIntegrationRequiredForClosure: boolean;
+  readonly dashboardPlaywrightRequiredForClosure: boolean;
+  readonly mobileDeviceQaRequiredForClosure: boolean;
+  readonly providerSandboxRequiredForClosure: boolean;
+  readonly preferenceStopRetentionRequiredForClosure: boolean;
+  readonly bookingDepositAftercareTravelE2eRequiredForClosure: boolean;
+  readonly ciEvidenceRequiredForClosure: boolean;
+  readonly secretSafeArtifactsRequiredForClosure: boolean;
+}
+
+export interface NotificationAutomationExecutionPlan {
+  readonly policy: typeof notificationAutomationExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly queueExecutionAllowed: false;
+  readonly playwrightExecutionAllowed: false;
+  readonly mobileDeviceExecutionAllowed: false;
+  readonly providerSandboxExecutionAllowed: false;
+  readonly persistenceExecutionAllowed: false;
+  readonly e2eExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly artifactReviewExecutionAllowed: false;
+  readonly localCommands: typeof notificationAutomationLocalCommands;
+  readonly externalCommands: typeof notificationAutomationExternalCommands;
+  readonly requiredExternalEvidence: typeof notificationAutomationRequiredExternalEvidence;
+  readonly suitePlan: ReturnType<typeof buildNotificationAutomatedTestExecutionPlan>;
+}
+
+export const notificationAutomationExecutionPolicy = {
+  codexMayClassifyStaticNotificationAutomationReadiness: true,
+  localPackageAndRouteEvidenceRequiredForClosure: true,
+  queueIntegrationRequiredForClosure: true,
+  dashboardPlaywrightRequiredForClosure: true,
+  mobileDeviceQaRequiredForClosure: true,
+  providerSandboxRequiredForClosure: true,
+  preferenceStopRetentionRequiredForClosure: true,
+  bookingDepositAftercareTravelE2eRequiredForClosure: true,
+  ciEvidenceRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies NotificationAutomationExecutionPolicy;
+
 export const notificationAutomationRuntimeCommands = [
   "pnpm --filter @inkroute/notifications typecheck",
   "pnpm --filter @inkroute/notifications test",
@@ -28,6 +85,56 @@ export const notificationAutomationRuntimeCommands = [
   "provider sandbox email/SMS/push receipt tests",
   "booking-to-deposit/aftercare/travel notification E2E tests",
 ] as const;
+
+export const notificationAutomationLocalCommands = [
+  "pnpm --filter @inkroute/notifications typecheck",
+  "pnpm --filter @inkroute/notifications test",
+  "pnpm vitest run apps/web/tests/notification-automation-runtime-static.test.ts apps/web/tests/notification-automation-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts",
+] as const;
+
+export const notificationAutomationExternalCommands = [
+  "notification queue integration test command",
+  "Playwright dashboard templates/messages smoke tests",
+  "Expo iOS/Android push device QA",
+  "provider sandbox email/SMS/push receipt tests",
+  "preference opt-out persistence tests",
+  "SMS STOP persistence tests",
+  "retention/export/delete integration tests",
+  "booking-to-deposit/aftercare/travel notification E2E tests",
+  "GitHub Actions notification/messaging lifecycle job",
+  "secret-safe notification automation artifact review",
+] as const;
+
+export const notificationAutomationRequiredExternalEvidence = [
+  "actual notification automation command output",
+  "notification queue integration test evidence",
+  "dashboard Playwright templates/messages smoke evidence",
+  "mobile notification smoke evidence",
+  "Expo iOS/Android push device QA evidence",
+  "provider sandbox email/SMS/push receipt evidence",
+  "preference opt-out and SMS STOP persistence evidence",
+  "retention/export/delete integration evidence",
+  "booking/deposit/aftercare/travel notification E2E evidence",
+  "CI Phase 9 notification automation artifacts",
+  "secret-safe notification automation artifact review",
+] as const;
+
+export const buildNotificationAutomationExecutionPlan = (): NotificationAutomationExecutionPlan => ({
+  policy: notificationAutomationExecutionPolicy,
+  commandExecutionAllowed: false,
+  queueExecutionAllowed: false,
+  playwrightExecutionAllowed: false,
+  mobileDeviceExecutionAllowed: false,
+  providerSandboxExecutionAllowed: false,
+  persistenceExecutionAllowed: false,
+  e2eExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  artifactReviewExecutionAllowed: false,
+  localCommands: notificationAutomationLocalCommands,
+  externalCommands: notificationAutomationExternalCommands,
+  requiredExternalEvidence: notificationAutomationRequiredExternalEvidence,
+  suitePlan: buildNotificationAutomatedTestExecutionPlan(),
+});
 
 export const notificationAutomationArtifactPaths = [
   "coverage/notification-automation-runtime.json",
@@ -54,6 +161,117 @@ export const notificationAutomationArtifactPaths = [
   "test-results/notification-automation-runtime",
 ] as const;
 
+export const notificationAutomationRuntimeProofFiles = [
+  "packages/notifications/package.json",
+  "packages/notifications/src/index.ts",
+  "packages/notifications/tests/delivery-plan.test.ts",
+  "apps/web/lib/notificationAutomatedTests.ts",
+  "apps/web/lib/notificationAutomatedTestsRuntime.ts",
+  "apps/web/tests/notification-automation-static.test.ts",
+  "apps/web/tests/notification-automation-runtime-static.test.ts",
+  "apps/web/tests/notification-messaging-routes.test.ts",
+  "apps/web/tests/provider-webhook-routes.test.ts",
+  "apps/web/tests/provider-webhook-contracts.test.ts",
+  "apps/web/tests/preference-center-static.test.ts",
+  "apps/dashboard/tests/notification-scheduler-static.test.ts",
+  "apps/dashboard/tests/notification-persistence-static.test.ts",
+  "apps/dashboard/tests/messaging-privacy-static.test.ts",
+  "apps/mobile/tests/mobile-push-static.test.ts",
+  ".github/workflows/ci.yml",
+  "testing/manifests/unit-test-manifest.json",
+] as const;
+
+export type NotificationAutomationEvidenceArtifact = (typeof notificationAutomationArtifactPaths)[number];
+
+export interface NotificationAutomationEvidenceInput {
+  readonly notificationsTypecheckPassed: boolean;
+  readonly notificationsTestsPassed: boolean;
+  readonly publicRoutesPassed: boolean;
+  readonly providerWebhookRoutesPassed: boolean;
+  readonly queueIntegrationPassed: boolean;
+  readonly dashboardTemplateSmokePassed: boolean;
+  readonly dashboardMessageSmokePassed: boolean;
+  readonly mobileNotificationSmokePassed: boolean;
+  readonly expoDeviceQaPassed: boolean;
+  readonly providerEmailSandboxPassed: boolean;
+  readonly providerSmsSandboxPassed: boolean;
+  readonly providerPushReceiptSandboxPassed: boolean;
+  readonly preferenceOptOutPersistencePassed: boolean;
+  readonly smsStopPersistencePassed: boolean;
+  readonly retentionExportDeletePassed: boolean;
+  readonly bookingDepositE2ePassed: boolean;
+  readonly aftercareE2ePassed: boolean;
+  readonly travelWaitlistE2ePassed: boolean;
+  readonly ciEvidenceCaptured: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly NotificationAutomationEvidenceArtifact[];
+}
+
+export interface NotificationAutomationEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly NotificationAutomationEvidenceArtifact[];
+  readonly requiredCommands: typeof notificationAutomationRuntimeCommands;
+  readonly requiredEvidence: typeof notificationAutomationDecisionRequiredEvidence;
+  readonly redactedSummary: {
+    readonly capturedArtifactCount: number;
+    readonly requiredArtifactCount: number;
+  };
+}
+
+export const notificationAutomationDecisionRequiredEvidence = [
+  "queue, opt-out, STOP, and retention/export/delete integration test evidence",
+  "dashboard/mobile smoke and Expo device QA evidence",
+  "email, SMS, and push provider sandbox evidence",
+  "booking, deposit, aftercare, and travel notification E2E evidence",
+  "CI Phase 9 notification job and published artifact evidence",
+  "secret-safe review of retained notification automation artifacts",
+] as const;
+
+export const buildNotificationAutomationEvidenceDecision = (
+  input: NotificationAutomationEvidenceInput,
+): NotificationAutomationEvidenceDecision => {
+  const captured = new Set(input.capturedArtifacts);
+  const missingArtifacts = notificationAutomationArtifactPaths.filter((artifact) => !captured.has(artifact));
+  const blockers = [
+    ...(!input.notificationsTypecheckPassed ? ["Notifications package typecheck evidence is missing."] : []),
+    ...(!input.notificationsTestsPassed ? ["Notifications package test evidence is missing."] : []),
+    ...(!input.publicRoutesPassed ? ["Public notification route evidence is missing."] : []),
+    ...(!input.providerWebhookRoutesPassed ? ["Provider webhook route evidence is missing."] : []),
+    ...(!input.queueIntegrationPassed ? ["Notification queue integration evidence is missing."] : []),
+    ...(!input.dashboardTemplateSmokePassed ? ["Dashboard template Playwright smoke evidence is missing."] : []),
+    ...(!input.dashboardMessageSmokePassed ? ["Dashboard message Playwright smoke evidence is missing."] : []),
+    ...(!input.mobileNotificationSmokePassed ? ["Mobile notification smoke evidence is missing."] : []),
+    ...(!input.expoDeviceQaPassed ? ["Expo iOS/Android push device QA evidence is missing."] : []),
+    ...(!input.providerEmailSandboxPassed ? ["Email provider sandbox evidence is missing."] : []),
+    ...(!input.providerSmsSandboxPassed ? ["SMS provider sandbox evidence is missing."] : []),
+    ...(!input.providerPushReceiptSandboxPassed ? ["Push receipt provider sandbox evidence is missing."] : []),
+    ...(!input.preferenceOptOutPersistencePassed ? ["Preference opt-out persistence evidence is missing."] : []),
+    ...(!input.smsStopPersistencePassed ? ["SMS STOP persistence evidence is missing."] : []),
+    ...(!input.retentionExportDeletePassed ? ["Retention/export/delete integration evidence is missing."] : []),
+    ...(!input.bookingDepositE2ePassed ? ["Booking-to-deposit notification E2E evidence is missing."] : []),
+    ...(!input.aftercareE2ePassed ? ["Aftercare notification E2E evidence is missing."] : []),
+    ...(!input.travelWaitlistE2ePassed ? ["Travel waitlist notification E2E evidence is missing."] : []),
+    ...(!input.ciEvidenceCaptured ? ["Phase 9 notification automation CI evidence is missing."] : []),
+    ...(!input.secretSafeArtifactReviewPassed
+      ? ["Secret-safe notification automation artifact review evidence is missing."]
+      : []),
+    ...(missingArtifacts.length > 0 ? ["All notification automation artifacts must be captured."] : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: notificationAutomationRuntimeCommands,
+    requiredEvidence: notificationAutomationDecisionRequiredEvidence,
+    redactedSummary: {
+      capturedArtifactCount: captured.size,
+      requiredArtifactCount: notificationAutomationArtifactPaths.length,
+    },
+  };
+};
+
 export const notificationAutomationRuntimeMatrix = [
   { id: "notifications-typecheck", command: "pnpm --filter @inkroute/notifications typecheck", artifact: "coverage/notification-automation-notifications-typecheck.txt", status: "wired" },
   { id: "notifications-tests", command: "pnpm --filter @inkroute/notifications test", artifact: "coverage/notification-automation-notifications-test.txt", status: "wired" },
@@ -79,3 +297,5 @@ export const notificationAutomationRuntimeMatrix = [
 
 export const notificationAutomationRuntimeReadiness = notificationAutomatedTestContract;
 export const notificationAutomationRuntimeSuiteIds = notificationAutomatedTestSuites.map((suite) => suite.id);
+
+

@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { dashboardReviewQueue } from "../../lib/demo";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 function redactReviewBody(value: string | null | undefined): string {
   if (!value) return "";
   return value.length > 0 ? "[redacted-review-body]" : "";
@@ -19,13 +21,13 @@ export async function GET(request: NextRequest) {
   try {
     assertPermission(actor, "review:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read reviews." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read reviews." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const params = new URL(request.url).searchParams;
   const tenantId = params.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query reviews for another tenant." } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query reviews for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const limit = Math.min(Math.max(Number(params.get("limit") ?? 50), 1), 100);
@@ -34,6 +36,23 @@ export async function GET(request: NextRequest) {
   const statusFilter: ReviewStatus | null = allowedStatuses.has(status as ReviewStatus) ? (status as ReviewStatus) : null;
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
+            message: "Production dashboard review reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
+            gapIds: ["GAP-026", "GAP-037", "GAP-071"],
+          },
+          productionBoundary: { localDashboardReadFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     const reviews = dashboardReviewQueue
       .filter((review) => !statusFilter || review.status === statusFilter)
       .slice(0, limit)
@@ -57,7 +76,7 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-026", "GAP-037", "GAP-071"],
         boundary: "Local fallback returns redacted demo review metadata only; database mode is required for live moderation and publication reads.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   }
 
@@ -130,7 +149,7 @@ export async function GET(request: NextRequest) {
         gapIds: ["GAP-026", "GAP-037", "GAP-071"],
         boundary: "Dashboard review reads are tenant-scoped, no-store, audit-logged, and redact raw review body plus private client/booking references; publication workflows remain gated.",
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { headers: noStoreHeaders },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
@@ -142,10 +161,10 @@ export async function GET(request: NextRequest) {
           error: { code: "DATABASE_UNAVAILABLE", message: "Review reads require the dashboard database connection." },
           gapIds: ["GAP-026", "GAP-037", "GAP-071"],
         },
-        { status: 503, headers: { "Cache-Control": "no-store" } },
+        { status: 503, headers: noStoreHeaders },
       );
     }
 
-    return NextResponse.json({ ok: false, error: { code: "REVIEW_READ_FAILED", message: "Reviews could not be loaded." } }, { status: 500, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, error: { code: "REVIEW_READ_FAILED", message: "Reviews could not be loaded." } }, { status: 500, headers: noStoreHeaders });
   }
 }

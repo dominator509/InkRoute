@@ -23,7 +23,12 @@ describe("dashboard message read route contract", () => {
       expect(source).toContain("tenantId !== actor.tenantId");
       expect(source).toContain('code: "TENANT_MISMATCH"');
       expect(source).toContain('"Cache-Control": "no-store"');
+      expect(source).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+      expect(source).not.toContain('}, { status: 403 });');
+      expect(source).not.toContain('}, { status: 500 });');
     }
+    expect(detailRouteSource).not.toContain('}, { status: 404 });');
+    expect(listRouteSource).not.toContain('}, { status: 400 });');
   });
 
   it("uses Prisma message-thread reads with body/provider/contact redaction and audit logs", () => {
@@ -47,8 +52,15 @@ describe("dashboard message read route contract", () => {
     for (const source of [listRouteSource, detailRouteSource]) {
       expect(source).toContain("dashboardRedactedMessageThreadDrafts");
       expect(source).toContain('persistence: "local-fallback"');
+      expect(source).toContain("PROVIDER_DASHBOARD_READS_NOT_CONFIGURED");
+      expect(source).toContain("localDashboardReadFallbackDisabled");
       expect(source).toContain('code: "DATABASE_UNAVAILABLE"');
     }
+  });
+
+  it("disables local fallback message write plans in production", () => {
+    expect(listRouteSource).toContain("PROVIDER_DASHBOARD_WRITES_NOT_CONFIGURED");
+    expect(listRouteSource).toContain("localDashboardWriteFallbackDisabled");
   });
 
   it("documents that message reads are wired while provider sends remain gated", () => {

@@ -42,6 +42,15 @@ packages/ui owns React UI primitives.
 
 Avoid duplicating business contracts inside app folders when a shared `packages/*` boundary exists.
 
+## Navigation and Memory Policy
+
+Use `docs/ai/SERENA_OBSIDIAN_WORKFLOW.md` for repo navigation discipline.
+
+- Serena should identify owning symbols, exported contracts, references, and route-to-service flow before broad reads.
+- Scoped RTK search is the fallback when Serena is unavailable, ambiguous, or when searching non-code text.
+- Obsidian should only retrieve or append targeted InkRoute project memory that changes a decision, review, or handoff.
+- Current source, tests, trackers, and committed docs override Obsidian notes.
+
 ## Data Flow
 
 Current broad state:

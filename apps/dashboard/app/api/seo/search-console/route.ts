@@ -1,4 +1,4 @@
-﻿import { prisma } from "@inkroute/db";
+import { prisma } from "@inkroute/db";
 import type { SearchConsoleOperation } from "@inkroute/seo";
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -27,8 +27,10 @@ function numberValue(value: unknown, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 function json(payload: Record<string, unknown>, status = 200) {
-  return NextResponse.json(payload, { status, headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json(payload, { status, headers: noStoreHeaders });
 }
 
 export async function GET(request: NextRequest) {
@@ -89,6 +91,23 @@ export async function POST(request: NextRequest) {
     propertyOwnerTenantId: stringValue(body.propertyOwnerTenantId) ?? tenantId,
   });
 
+  if (process.env.NODE_ENV === "production" && actor.source === "local-fallback") {
+    return json(
+      {
+        ok: false,
+        source: actor.source,
+        tenantId,
+        error: {
+          code: "PROVIDER_SEARCH_CONSOLE_AUDIT_NOT_CONFIGURED",
+          message: "Production Search Console operations require DB-backed actor resolution and auditable operation metadata; local fallback planning is disabled.",
+          gapIds: ["GAP-075"],
+        },
+        productionBoundary: { localSearchConsolePlanFallbackDisabled: true },
+      },
+      503,
+    );
+  }
+
   let auditId: string | null = null;
   if (actor.source !== "local-fallback") {
     try {
@@ -112,6 +131,22 @@ export async function POST(request: NextRequest) {
       });
       auditId = audit.id;
     } catch (error) {
+      if (process.env.NODE_ENV === "production" && isDatabaseUnavailable(error)) {
+        return json(
+          {
+            ok: false,
+            source: actor.source,
+            tenantId,
+            error: {
+              code: "PROVIDER_SEARCH_CONSOLE_AUDIT_NOT_CONFIGURED",
+              message: "Production Search Console operations require dashboard database audit persistence; unaudited provider operation plans are disabled.",
+              gapIds: ["GAP-075"],
+            },
+            productionBoundary: { localSearchConsolePlanFallbackDisabled: true },
+          },
+          503,
+        );
+      }
       if (!isDatabaseUnavailable(error)) throw error;
     }
   }

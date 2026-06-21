@@ -5,6 +5,9 @@ import {
   derivePortfolioBookingAttribution,
   normalizeAnalyticsEvent,
   parseUtmAttribution,
+  seoAnalyticsRuntimeRequiredCommands,
+  seoAnalyticsRuntimeRequiredControls,
+  seoAnalyticsRuntimeRequiredEvidence,
 } from "../src/index";
 
 describe("analytics attribution helpers", () => {
@@ -132,8 +135,8 @@ describe("analytics attribution helpers", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Propagate tenant-scoped portfolio attribution into BookingRequest persistence without crossing tenants.");
-    expect(plan.requiredCommands).toContain("Playwright portfolio-to-booking attribution test");
+    expect(plan.requiredCommands).toBe(seoAnalyticsRuntimeRequiredCommands);
+    expect(plan.requiredControls).toBe(seoAnalyticsRuntimeRequiredControls);
   });
 
   it("blocks SEO analytics runtime readiness until ingestion, persistence, Search Console import, dashboard reporting, privacy controls, and E2E evidence exist", () => {
@@ -162,16 +165,14 @@ describe("analytics attribution helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "public UTM capture, ingestion API, event persistence, and campaign tracking evidence",
-      "portfolio click-through and persisted BookingRequest attribution evidence",
-      "Search Console credential, import job, and import test evidence",
-      "tenant-scoped dashboard SEO analytics reporting evidence",
-      "privacy redaction, idempotency, and attribution-window configuration evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(seoAnalyticsRuntimeRequiredEvidence);
     expect(plan.blockers).toContain("Public routes must capture UTM and portfolio attribution context.");
+    expect(plan.blockers).toContain("Analytics ingestion API evidence must be captured before SEO analytics readiness.");
     expect(plan.blockers).toContain("BookingRequest attribution persistence must be available.");
     expect(plan.blockers).toContain("Search Console import job must be configured.");
+    expect(plan.blockers).toContain("SEO analytics dashboard reporting evidence must be captured before SEO analytics readiness.");
+    expect(plan.blockers).not.toContain("Analytics ingestion API must be implemented.");
+    expect(plan.blockers).not.toContain("SEO analytics dashboard reporting must be implemented.");
     expect(plan.blockers).toContain("Dashboard analytics reporting tests must pass.");
   });
 });

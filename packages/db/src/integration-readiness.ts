@@ -1,3 +1,70 @@
+export const dbIntegrationRuntimeReadinessCommands = [
+  "pnpm --filter @inkroute/db db:validate",
+  "pnpm --filter @inkroute/db db:generate",
+  "pnpm --filter @inkroute/db db:migrate",
+  "pnpm --filter @inkroute/db db:seed",
+  "pnpm --filter @inkroute/db db:verify-seed",
+  "pnpm --filter @inkroute/db test -- db-integration",
+] as const;
+
+export const prismaSchemaLifecycleReadinessCommands = [
+  "pnpm --filter @inkroute/db db:validate",
+  "pnpm --filter @inkroute/db db:generate",
+  "pnpm --filter @inkroute/db db:migrate",
+  "pnpm db:verify-seed",
+  "pnpm --filter @inkroute/db db:seed",
+  "Prisma migration SQL review",
+  "Prisma migration drift check",
+  "prove destructive migrate/reset commands are guarded from production URLs",
+  "GitHub Actions DB lifecycle evidence job",
+] as const;
+
+export const prismaSchemaLifecycleReadinessEvidence = [
+  "Phase 2 schema model/enum coverage remains intact.",
+  "Non-production Postgres provisioning plus DATABASE_URL and DIRECT_URL configuration proof.",
+  "Prisma validate/generate/migrate command output.",
+  "Generated migration SQL review notes and drift-check output.",
+  "Seed readiness and seed execution output using fake/demo data only.",
+  "Production URL destructive-command guard proof.",
+  "CI or clean-checkout Prisma lifecycle evidence.",
+] as const;
+
+export type PrismaSchemaLifecycleReadinessEvidence =
+  (typeof prismaSchemaLifecycleReadinessEvidence)[number];
+
+export const dbIntegrationRuntimeReadinessEvidence = [
+  "non-production Postgres provisioning, DATABASE_URL configuration, and destructive-reset guard proof",
+  "Prisma validate/generate/migrate/seed/verify command output",
+  "tenant isolation, workflow persistence, and audit-log integration test output",
+  "migration rollback notes, captured command transcript, and CI DB job artifact",
+] as const;
+
+export type DbIntegrationRuntimeReadinessEvidence =
+  (typeof dbIntegrationRuntimeReadinessEvidence)[number];
+
+export const seedRuntimeExecutionEvidenceCommands = [
+  "pnpm db:verify-seed",
+  "pnpm --filter @inkroute/db db:validate",
+  "pnpm --filter @inkroute/db db:generate",
+  "pnpm --filter @inkroute/db db:migrate",
+  "pnpm --filter @inkroute/db db:seed",
+  "seeded demo tenant query smoke",
+  "web/API seeded-data smoke",
+  "dashboard seeded-data smoke",
+  "GitHub Actions seed execution evidence job",
+] as const;
+
+export const seedRuntimeExecutionRequiredEvidence = [
+  "seed readiness, fake-data, legal-placeholder, and production-provider ban evidence",
+  "non-production Postgres, DATABASE_URL, Prisma generate, migration, and seed command evidence",
+  "seeded tenant, membership, workflow, payment/file/message, SEO/release/flag, and audit-log query evidence",
+  "web/API and dashboard seeded-data smoke evidence",
+  "captured command transcript and CI or clean-checkout seed evidence",
+] as const;
+
+export type SeedRuntimeExecutionRequiredEvidence =
+  (typeof seedRuntimeExecutionRequiredEvidence)[number];
+
 export interface DbIntegrationRuntimeReadinessInput {
   packageScripts: Readonly<Record<string, string>>;
   postgresProvisioned: boolean;
@@ -19,8 +86,8 @@ export interface DbIntegrationRuntimeReadinessInput {
 export interface DbIntegrationRuntimeReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof dbIntegrationRuntimeReadinessCommands;
+  requiredEvidence: readonly DbIntegrationRuntimeReadinessEvidence[];
   blockers: readonly string[];
 }
 
@@ -50,8 +117,8 @@ export interface PrismaSchemaLifecycleReadinessPlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
   schemaCoverageStatus: "pass" | "blocked";
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof prismaSchemaLifecycleReadinessCommands;
+  requiredEvidence: typeof prismaSchemaLifecycleReadinessEvidence;
   blockers: readonly string[];
 }
 
@@ -80,8 +147,8 @@ export interface SeedRuntimeExecutionEvidenceInput {
 export interface SeedRuntimeExecutionEvidencePlan {
   status: "ready" | "blocked";
   missingScripts: readonly string[];
-  requiredCommands: readonly string[];
-  requiredEvidence: readonly string[];
+  requiredCommands: typeof seedRuntimeExecutionEvidenceCommands;
+  requiredEvidence: readonly SeedRuntimeExecutionRequiredEvidence[];
   blockers: readonly string[];
 }
 
@@ -91,7 +158,7 @@ export function buildDbIntegrationRuntimeReadinessPlan(
   const requiredScripts = ["db:validate", "db:generate", "db:migrate", "db:seed", "db:verify-seed"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: DbIntegrationRuntimeReadinessEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/db package script is missing ${script}.`);
   if (!input.postgresProvisioned) blockers.push("A non-production Postgres database must be provisioned for integration tests.");
@@ -110,30 +177,26 @@ export function buildDbIntegrationRuntimeReadinessPlan(
   if (!input.ciDbJobPassed) blockers.push("CI database integration job must pass or publish an explicit non-production DB evidence artifact.");
 
   if (!input.postgresProvisioned || !input.databaseUrlConfigured || !input.destructiveResetGuarded) {
-    requiredEvidence.push("non-production Postgres provisioning, DATABASE_URL configuration, and destructive-reset guard proof");
+    requiredEvidence.push(dbIntegrationRuntimeReadinessEvidence[0]);
   }
   if (!input.prismaValidatePassed || !input.prismaGeneratePassed || !input.prismaMigratePassed || !input.prismaSeedPassed || !input.seedVerificationPassed) {
-    requiredEvidence.push("Prisma validate/generate/migrate/seed/verify command output");
+    requiredEvidence.push(dbIntegrationRuntimeReadinessEvidence[1]);
   }
   if (!input.tenantIsolationTestsPassed || !input.workflowPersistenceTestsPassed || !input.auditLogIntegrationTestsPassed) {
-    requiredEvidence.push("tenant isolation, workflow persistence, and audit-log integration test output");
+    requiredEvidence.push(dbIntegrationRuntimeReadinessEvidence[2]);
   }
   if (!input.migrationRollbackDocumented || !input.commandOutputCaptured || !input.ciDbJobPassed) {
-    requiredEvidence.push("migration rollback notes, captured command transcript, and CI DB job artifact");
+    requiredEvidence.push(dbIntegrationRuntimeReadinessEvidence[3]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm --filter @inkroute/db db:validate",
-      "pnpm --filter @inkroute/db db:generate",
-      "pnpm --filter @inkroute/db db:migrate",
-      "pnpm --filter @inkroute/db db:seed",
-      "pnpm --filter @inkroute/db db:verify-seed",
-      "pnpm --filter @inkroute/db test -- db-integration",
-    ],
-    requiredEvidence,
+    requiredCommands: dbIntegrationRuntimeReadinessCommands,
+    requiredEvidence:
+      requiredEvidence.length === dbIntegrationRuntimeReadinessEvidence.length
+        ? dbIntegrationRuntimeReadinessEvidence
+        : requiredEvidence,
     blockers,
   };
 }
@@ -171,25 +234,8 @@ export function buildPrismaSchemaLifecycleReadinessPlan(
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
     schemaCoverageStatus,
-    requiredCommands: [
-      "pnpm --filter @inkroute/db db:validate",
-      "pnpm --filter @inkroute/db db:generate",
-      "pnpm --filter @inkroute/db db:migrate",
-      "pnpm db:verify-seed",
-      "pnpm --filter @inkroute/db db:seed",
-      "Prisma migration SQL review",
-      "Prisma migration drift check",
-      "GitHub Actions DB lifecycle evidence job",
-    ],
-    requiredEvidence: [
-      "Phase 2 schema model/enum coverage remains intact.",
-      "Non-production Postgres provisioning plus DATABASE_URL and DIRECT_URL configuration proof.",
-      "Prisma validate/generate/migrate command output.",
-      "Generated migration SQL review notes and drift-check output.",
-      "Seed readiness and seed execution output using fake/demo data only.",
-      "Production URL destructive-command guard proof.",
-      "CI or clean-checkout Prisma lifecycle evidence.",
-    ],
+    requiredCommands: prismaSchemaLifecycleReadinessCommands,
+    requiredEvidence: prismaSchemaLifecycleReadinessEvidence,
     blockers,
   };
 }
@@ -200,7 +246,7 @@ export function buildSeedRuntimeExecutionEvidencePlan(
   const requiredScripts = ["db:validate", "db:generate", "db:migrate", "db:seed", "db:verify-seed"];
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
   const blockers: string[] = [];
-  const requiredEvidence: string[] = [];
+  const requiredEvidence: SeedRuntimeExecutionRequiredEvidence[] = [];
 
   for (const script of missingScripts) blockers.push(`@inkroute/db package script is missing ${script}.`);
   if (!input.seedReadinessVerifierPassed) blockers.push("Seed readiness verifier must pass before runtime seed execution.");
@@ -223,35 +269,25 @@ export function buildSeedRuntimeExecutionEvidencePlan(
   if (!input.ciOrCleanCheckoutEvidenceCaptured) blockers.push("CI or clean-checkout seed execution evidence must be captured.");
 
   if (!input.seedReadinessVerifierPassed || !input.fakeDataOnlyVerified || !input.noProductionProviderCredentialsUsed) {
-    requiredEvidence.push("seed readiness, fake-data, legal-placeholder, and production-provider ban evidence");
+    requiredEvidence.push(seedRuntimeExecutionRequiredEvidence[0]);
   }
   if (!input.postgresProvisioned || !input.databaseUrlConfigured || !input.prismaClientGenerated || !input.migrationApplied || !input.seedCommandPassed) {
-    requiredEvidence.push("non-production Postgres, DATABASE_URL, Prisma generate, migration, and seed command evidence");
+    requiredEvidence.push(seedRuntimeExecutionRequiredEvidence[1]);
   }
   if (!input.seededTenantFound || !input.seededTenantMembersFound || !input.seededBookingWorkflowFound || !input.seededPaymentsFilesMessagesFound || !input.seededSeoReleaseFlagsFound || !input.auditLogsCreated) {
-    requiredEvidence.push("seeded tenant, membership, workflow, payment/file/message, SEO/release/flag, and audit-log query evidence");
+    requiredEvidence.push(seedRuntimeExecutionRequiredEvidence[2]);
   }
   if (!input.webApiSeededDataSmokePassed || !input.dashboardSeededDataSmokePassed) {
-    requiredEvidence.push("web/API and dashboard seeded-data smoke evidence");
+    requiredEvidence.push(seedRuntimeExecutionRequiredEvidence[3]);
   }
   if (!input.commandEvidenceCaptured || !input.ciOrCleanCheckoutEvidenceCaptured) {
-    requiredEvidence.push("captured command transcript and CI or clean-checkout seed evidence");
+    requiredEvidence.push(seedRuntimeExecutionRequiredEvidence[4]);
   }
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
-    requiredCommands: [
-      "pnpm db:verify-seed",
-      "pnpm --filter @inkroute/db db:validate",
-      "pnpm --filter @inkroute/db db:generate",
-      "pnpm --filter @inkroute/db db:migrate",
-      "pnpm --filter @inkroute/db db:seed",
-      "seeded demo tenant query smoke",
-      "web/API seeded-data smoke",
-      "dashboard seeded-data smoke",
-      "GitHub Actions seed execution evidence job",
-    ],
+    requiredCommands: seedRuntimeExecutionEvidenceCommands,
     requiredEvidence,
     blockers,
   };

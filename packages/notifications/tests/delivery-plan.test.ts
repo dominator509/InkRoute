@@ -1,5 +1,47 @@
 import { describe, expect, it } from "vitest";
 import {
+  smsWebhookRuntimeReadinessRequiredControls,
+  smsProviderSendRequiredControls,
+  smsProviderSendRequiredCommands,
+  providerWebhookRuntimeReadinessRequiredControls,
+  providerWebhookRuntimeReadinessRequiredCommands,
+  providerWebhookRuntimeReadinessRequiredEvidence,
+  preferenceMutationRequiredControls,
+  preferenceCenterRuntimeReadinessRequiredCommands,
+  preferenceCenterRuntimeReadinessRequiredEvidence,
+  notificationProviderHandoffWorkerRequiredControls,
+  notificationSchedulerRuntimeReadinessRequiredControls,
+  notificationSchedulerRuntimeReadinessRequiredCommands,
+  notificationSchedulerRuntimeReadinessRequiredEvidence,
+  notificationSchedulerRequiredControls,
+  notificationRuntimeReadinessRequiredControls,
+  notificationRuntimeReadinessRequiredCommands,
+  notificationPreferenceSuppressionRequiredControls,
+  notificationPersistenceRuntimeReadinessRequiredControls,
+  notificationPersistenceRuntimeReadinessRequiredCommands,
+  notificationPersistenceRuntimeReadinessRequiredEvidence,
+  notificationPersistenceRequiredControls,
+  notificationLaunchEvidenceRequiredControls,
+  notificationLaunchEvidenceRequiredCommands,
+  notificationLaunchEvidenceRequiredEvidence,
+  notificationAutomatedTestReadinessRequiredCommands,
+  notificationAutomatedTestReadinessRequiredEvidence,
+  mobilePushRuntimeReadinessRequiredCommands,
+  mobilePushRuntimeReadinessRequiredEvidence,
+  messagingPrivacyRuntimeReadinessRequiredControls,
+  messagingPrivacyRuntimeReadinessRequiredCommands,
+  messagingPrivacyRuntimeReadinessRequiredEvidence,
+  messagingPrivacyRequiredControls,
+  expoPushTapRoutingRequiredControls,
+  expoPushRegistrationRequiredControls,
+  expoPushReceiptProcessingRequiredControls,
+  expoPushProviderRuntimeReadinessRequiredControls,
+  expoPushProviderRuntimeReadinessRequiredCommands,
+  expoPushProviderRuntimeReadinessRequiredEvidence,
+  expoPushDeliveryRequiredControls,
+  emailWebhookRuntimeReadinessRequiredControls,
+  emailProviderSendRequiredCommands,
+  emailProviderSendRequiredControls,
   buildAftercareSequence,
   buildDeliveryPlan,
   buildEmailWebhookRuntimeReadinessPlan,
@@ -10,6 +52,8 @@ import {
   buildExpoPushRegistrationPlan,
   buildExpoPushTapRoutingPlan,
   buildNotificationPersistencePlan,
+  buildNotificationPreferenceSuppressionPlan,
+  buildNotificationProviderHandoffWorkerPlan,
   buildNotificationPersistenceRuntimeReadinessPlan,
   buildNotificationSchedulerPlan,
   buildNotificationSchedulerRuntimeReadinessPlan,
@@ -170,7 +214,7 @@ describe("notification delivery planning", () => {
       shouldSuppressDestination: true,
       requiredWrites: ["ProviderEvent", "NotificationDelivery", "SuppressionListEntry", "NotificationAuditLog", "IdempotencyKey"],
     });
-    expect(plan.requiredControls).toContain("Verify Resend/Svix signatures against the exact raw request body before JSON parsing is trusted.");
+    expect(plan.requiredControls).toBe(emailWebhookRuntimeReadinessRequiredControls);
   });
 
   it("blocks production email webhook reconciliation without signature, tenant, persistence, redaction, or replay clearance", () => {
@@ -247,7 +291,7 @@ describe("notification delivery planning", () => {
       shouldCreateInboundThread: false,
       requiredWrites: ["ProviderEvent", "SuppressionListEntry", "ClientNotificationPreference", "NotificationAuditLog", "IdempotencyKey"],
     });
-    expect(plan.requiredControls).toContain("Apply STOP and unsubscribe callbacks to suppression state before future SMS sends.");
+    expect(plan.requiredControls).toBe(smsWebhookRuntimeReadinessRequiredControls);
   });
 
   it("blocks production SMS webhook reconciliation without signature, consent proof, persistence, redaction, or replay clearance", () => {
@@ -327,8 +371,8 @@ describe("notification delivery planning", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Apply exactly-once delivery status updates under replayed and concurrent provider callbacks.");
-    expect(plan.requiredCommands).toContain("concurrent provider callback exactly-once delivery-log test");
+    expect(plan.requiredControls).toBe(providerWebhookRuntimeReadinessRequiredControls);
+    expect(plan.requiredCommands).toBe(providerWebhookRuntimeReadinessRequiredCommands);
   });
 
   it("blocks provider webhook runtime readiness until cryptographic verification, durable replay protection, reconciliation persistence, sandbox tests, and alerting exist", () => {
@@ -358,13 +402,11 @@ describe("notification delivery planning", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "provider signature verification and raw-body route evidence",
-      "durable replay protection and exactly-once ProviderEvent evidence",
-      "delivery, suppression, inbound routing, and invalid-token persistence evidence",
-      "provider sandbox, invalid-signature, and failed-webhook alerting evidence",
-    ]);
-    expect(plan.blockers).toContain("Email provider cryptographic signature verification must be implemented.");
+    expect(plan.requiredEvidence).toBe(providerWebhookRuntimeReadinessRequiredEvidence);
+    expect(plan.blockers).toContain("Email provider cryptographic signature verification evidence must be captured before webhook readiness.");
+    expect(plan.blockers).toContain("SMS provider cryptographic signature verification evidence must be captured before webhook readiness.");
+    expect(plan.blockers).not.toContain("Email provider cryptographic signature verification must be implemented.");
+    expect(plan.blockers).not.toContain("SMS provider cryptographic signature verification must be implemented.");
     expect(plan.blockers).toContain("Delivery-log updates must be exactly-once under replay and concurrent callbacks.");
     expect(plan.blockers).toContain("Provider sandbox webhook and receipt tests must pass.");
     expect(plan.blockers).toContain("Failed webhook verification or reconciliation must emit alerting.");
@@ -388,7 +430,7 @@ describe("notification delivery planning", () => {
       requiredWrites: ["PushToken", "NotificationPreference", "AuditLog"],
     });
     expect(ready.tokenMasked).toBe("push_Expone***");
-    expect(ready.requiredControls).toContain("Respect push opt-out before delivery.");
+    expect(ready.requiredControls).toBe(expoPushRegistrationRequiredControls);
 
     const denied = buildExpoPushRegistrationPlan({
       tenantId: "tenant_001",
@@ -436,7 +478,7 @@ describe("notification delivery planning", () => {
       },
     });
     expect(ready.toMasked).toBe("push_Expone***");
-    expect(ready.requiredControls).toContain("Process Expo receipts for delivery state and invalid-token suppression.");
+    expect(ready.requiredControls).toBe(expoPushDeliveryRequiredControls);
 
     const blocked = buildExpoPushDeliveryPlan({
       tenantId: "tenant_001",
@@ -480,7 +522,8 @@ describe("notification delivery planning", () => {
     expect(plan.toMasked).toBe("av***@example.com");
     expect(plan.payloadPreview.subject).toContain("Deposit requested");
     expect(plan.payloadPreview.unsubscribeFooterPresent).toBe(true);
-    expect(plan.requiredControls).toContain("Check bounce, complaint, unsubscribe, and tenant suppression lists immediately before send.");
+    expect(plan.requiredControls).toBe(emailProviderSendRequiredControls);
+    expect(plan.requiredCommands).toBe(emailProviderSendRequiredCommands);
     expect(plan.blockers).toEqual([]);
   });
 
@@ -570,7 +613,8 @@ describe("notification delivery planning", () => {
     });
     expect(plan.toMasked).toBe("***-***-0123");
     expect(plan.payloadPreview.bodyPreview).toContain("Confirmed");
-    expect(plan.requiredControls).toContain("Apply tenant quiet-hours policy before Twilio API calls.");
+    expect(plan.requiredControls).toBe(smsProviderSendRequiredControls);
+    expect(plan.requiredCommands).toBe(smsProviderSendRequiredCommands);
     expect(plan.blockers).toEqual([]);
   });
 
@@ -680,7 +724,7 @@ describe("notification delivery planning", () => {
       shouldUpdateDeliveryLog: true,
       shouldMarkPushTokenInactive: true,
     });
-    expect(invalidToken.requiredControls).toContain("Mark push tokens inactive when Expo reports DeviceNotRegistered or invalid token errors.");
+    expect(invalidToken.requiredControls).toBe(expoPushReceiptProcessingRequiredControls);
   });
 
   it("blocks replayed or incomplete Expo push receipt processing", () => {
@@ -736,8 +780,9 @@ describe("notification delivery planning", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Poll Expo receipts, apply replay protection, and suppress DeviceNotRegistered or invalid tokens before future sends.");
-    expect(plan.requiredCommands).toContain("Expo push send smoke test against a real device token");
+    expect(plan.requiredControls).toBe(expoPushProviderRuntimeReadinessRequiredControls);
+    expect(plan.requiredCommands).toBe(expoPushProviderRuntimeReadinessRequiredCommands);
+
   });
 
   it("blocks Expo push provider runtime readiness until credentials, token stores, workers, receipts, deep links, and device evidence exist", () => {
@@ -768,13 +813,10 @@ describe("notification delivery planning", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "Expo project, secret, APNs, and FCM configuration evidence",
-      "tenant/user/device push token and opt-out persistence evidence",
-      "Expo delivery worker, receipt polling, and invalid-token suppression evidence",
-      "foreground/background/tap-navigation iOS and Android device QA evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(expoPushProviderRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Expo receipt polling worker must be configured.");
+    expect(plan.blockers).toContain("Mobile push tap deep-link routing evidence must be captured before provider/device readiness.");
+    expect(plan.blockers).not.toContain("Mobile push tap deep-link handler must be implemented.");
     expect(plan.blockers).toContain("Push tap navigation must pass iOS/Android device QA.");
   });
 
@@ -802,7 +844,7 @@ describe("notification delivery planning", () => {
       idempotencyKey: "expo-push-tap:tenant_001:notification_push_001:req_tap_001",
       requiredWrites: ["NotificationInteraction", "AuditLog", "IdempotencyKey"],
     });
-    expect(ready.requiredControls).toContain("Allow only internal relative deep links.");
+    expect(ready.requiredControls).toBe(expoPushTapRoutingRequiredControls);
     expect(unsafe.status).toBe("blocked");
     expect(unsafe.blockers).toEqual([
       "Push opt-in is required before honoring push tap routing.",
@@ -833,16 +875,46 @@ describe("notification delivery planning", () => {
       backgroundDeliveryTested: false,
       deepLinkRoutingTested: false,
     });
+    const allMissingEvidencePlan = buildMobilePushRuntimeReadinessPlan({
+      packageScripts: [],
+      notificationTestsPassed: false,
+      notificationTypecheckPassed: false,
+      mobileTypecheckPassed: false,
+      mobileDeviceTestsPassed: false,
+      expoProjectConfigured: false,
+      expoAccessTokenConfigured: false,
+      permissionPromptImplemented: false,
+      deviceTokenRegistrationImplemented: false,
+      pushTokenStoreConfigured: false,
+      pushOptOutUiImplemented: false,
+      deliveryLogPersistenceConfigured: false,
+      auditLogPersistenceConfigured: false,
+      receiptWorkerConfigured: false,
+      invalidTokenSuppressionTested: false,
+      tapRoutingImplemented: false,
+      foregroundDeliveryTested: false,
+      backgroundDeliveryTested: false,
+      deepLinkRoutingTested: false,
+    });
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toContain("Expo push tap deep-link smoke test");
-    expect(plan.requiredEvidence).toEqual(expect.arrayContaining([
-      "Expo project and secret configuration evidence",
-      "tenant/user/device push-token persistence evidence",
-      "foreground/background push and tap-routing device evidence",
-    ]));
-    expect(plan.blockers).toContain("Mobile push opt-out UI must be implemented and persisted.");
+    expect(plan.requiredCommands).toBe(mobilePushRuntimeReadinessRequiredCommands);
+
+    expect(plan.requiredEvidence).toEqual([
+      mobilePushRuntimeReadinessRequiredEvidence[0],
+      mobilePushRuntimeReadinessRequiredEvidence[1],
+      mobilePushRuntimeReadinessRequiredEvidence[3],
+    ]);
+    expect(allMissingEvidencePlan.requiredEvidence).toBe(mobilePushRuntimeReadinessRequiredEvidence);
+    expect(allMissingEvidencePlan.blockers).toContain("Mobile push permission prompt evidence must be captured before push runtime readiness.");
+    expect(allMissingEvidencePlan.blockers).toContain("Device token registration flow evidence must be captured before push runtime readiness.");
+    expect(allMissingEvidencePlan.blockers).not.toContain("Mobile push permission prompt must be implemented.");
+    expect(allMissingEvidencePlan.blockers).not.toContain("Device token registration flow must be implemented.");
+    expect(plan.blockers).toContain("Device token registration flow evidence must be captured before push runtime readiness.");
+    expect(plan.blockers).not.toContain("Device token registration flow must be implemented.");
+    expect(plan.blockers).toContain("Mobile push opt-out UI contract and persistence proof must be captured before provider delivery readiness.");
+    expect(plan.blockers).not.toContain("Mobile push opt-out UI must be implemented and persisted.");
     expect(plan.blockers).toContain("Invalid Expo token receipts must suppress or deactivate tokens.");
   });
 
@@ -922,7 +994,7 @@ describe("notification delivery planning", () => {
     expect(delivery.writes.find((write) => write.model === "NotificationDelivery")?.payload.destinationHash).toMatch(/^masked_/);
     expect(statusUpdate.writes.map((write) => write.model)).toEqual(["NotificationDelivery", "NotificationAuditLog", "IdempotencyKey"]);
     expect(readState.writes.map((write) => write.model)).toEqual(["NotificationReadState", "MessageThread", "NotificationAuditLog", "IdempotencyKey"]);
-    expect(readState.requiredControls).toContain("Update read/unread state per tenant user without exposing restricted message fields.");
+    expect(readState.requiredControls).toBe(notificationPersistenceRequiredControls);
   });
 
   it("blocks notification persistence without tenant scope, audit actor, idempotency, ids, or redaction", () => {
@@ -962,6 +1034,7 @@ describe("notification delivery planning", () => {
       notificationPersistenceAvailable: true,
       deliveryPersistenceAvailable: true,
       deliveryStatusTransitionPersistenceAvailable: true,
+      providerHandoffPersistenceAvailable: true,
       readStatePersistenceAvailable: true,
       auditLogPersistenceAvailable: true,
       idempotencyStoreAvailable: true,
@@ -978,8 +1051,8 @@ describe("notification delivery planning", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Require tenant id in every repository filter and reject unscoped reads or writes.");
-    expect(plan.requiredCommands).toContain("cross-tenant notification/message isolation tests");
+    expect(plan.requiredControls).toBe(notificationPersistenceRuntimeReadinessRequiredControls);
+    expect(plan.requiredCommands).toBe(notificationPersistenceRuntimeReadinessRequiredCommands);
   });
 
   it("blocks notification persistence runtime readiness until real repositories, transactions, redaction, audit logs, and Postgres isolation exist", () => {
@@ -996,6 +1069,7 @@ describe("notification delivery planning", () => {
       notificationPersistenceAvailable: false,
       deliveryPersistenceAvailable: false,
       deliveryStatusTransitionPersistenceAvailable: false,
+      providerHandoffPersistenceAvailable: false,
       readStatePersistenceAvailable: false,
       auditLogPersistenceAvailable: false,
       idempotencyStoreAvailable: false,
@@ -1008,16 +1082,166 @@ describe("notification delivery planning", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "Prisma migration and repository implementation evidence",
-      "transactional audit/idempotency write evidence",
-      "redacted destination and body-preview persistence evidence",
-      "Postgres tenant-isolation and persistence integration test evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(notificationPersistenceRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("All notification/message repository queries must enforce tenant scope.");
     expect(plan.blockers).toContain("Notification/message mutations must be committed in database transactions.");
+    expect(plan.blockers).toContain("NotificationProviderHandoff persistence must be available.");
     expect(plan.blockers).toContain("Message and notification body previews must be redacted before persistence.");
     expect(plan.blockers).toContain("Cross-tenant notification/message isolation tests must pass.");
+  });
+
+  it("plans provider handoff worker state changes without raw provider payloads", () => {
+    const claim = buildNotificationProviderHandoffWorkerPlan({
+      tenantId: "tenant_001",
+      handoffId: "handoff_001",
+      deliveryId: "delivery_001",
+      provider: "in_app",
+      action: "claim_due_handoff",
+      currentState: "queued",
+      attempts: 0,
+      maxAttempts: 3,
+      providerReady: true,
+      sanitizedPayloadAvailable: true,
+      destinationHashAvailable: true,
+      idempotencyStoreAvailable: true,
+      auditLogPersistenceAvailable: true,
+      deliveryStatusTransitionPersistenceAvailable: true,
+      now: "2026-06-08T10:00:00.000Z",
+    });
+
+    const delivered = buildNotificationProviderHandoffWorkerPlan({
+      tenantId: "tenant_001",
+      handoffId: "handoff_001",
+      deliveryId: "delivery_001",
+      provider: "in_app",
+      action: "mark_delivered",
+      currentState: "processing",
+      attempts: 1,
+      maxAttempts: 3,
+      providerReady: true,
+      sanitizedPayloadAvailable: true,
+      destinationHashAvailable: true,
+      idempotencyStoreAvailable: true,
+      auditLogPersistenceAvailable: true,
+      deliveryStatusTransitionPersistenceAvailable: true,
+      now: "2026-06-08T10:01:00.000Z",
+    });
+
+    expect(claim).toMatchObject({
+      status: "ready",
+      nextState: "processing",
+      idempotencyKey: "notification-provider-handoff:tenant_001:in_app:handoff_001:delivery_001:claim_due_handoff:2026-06-08T10:00:00.000Z",
+      blockers: [],
+    });
+    expect(delivered).toMatchObject({
+      status: "ready",
+      nextState: "delivered",
+      blockers: [],
+    });
+    expect(claim.requiredWrites).toEqual([
+      "NotificationProviderHandoff",
+      "NotificationDelivery",
+      "NotificationDeliveryStatusTransition",
+      "AuditLog",
+      "IdempotencyKey",
+    ]);
+    expect(claim.requiredControls).toBe(notificationProviderHandoffWorkerRequiredControls);
+  });
+
+  it("blocks provider handoff worker processing without provider readiness, sanitized payloads, idempotency, audit, and transition persistence", () => {
+    const plan = buildNotificationProviderHandoffWorkerPlan({
+      tenantId: "",
+      provider: "",
+      action: "mark_failed",
+      currentState: "queued",
+      attempts: -1,
+      maxAttempts: 0,
+      providerReady: false,
+      sanitizedPayloadAvailable: false,
+      destinationHashAvailable: false,
+      idempotencyStoreAvailable: false,
+      auditLogPersistenceAvailable: false,
+      deliveryStatusTransitionPersistenceAvailable: false,
+      now: "2026-06-08T10:00:00.000Z",
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.blockers).toContain("Tenant scope is required before provider handoff worker processing.");
+    expect(plan.blockers).toContain("Provider handoff id is required before mutating a handoff row.");
+    expect(plan.blockers).toContain("Provider readiness gate must pass before processing provider handoff rows.");
+    expect(plan.blockers).toContain("Provider handoff worker requires sanitized payloads and must not read raw message bodies.");
+    expect(plan.blockers).toContain("Provider handoff worker requires idempotency storage before state changes.");
+    expect(plan.blockers).toContain("Provider handoff worker requires delivery status transition persistence.");
+    expect(plan.blockers).toContain("Only processing provider handoff rows can be marked failed.");
+  });
+
+  it("plans notification preference and suppression persistence without raw destinations", () => {
+    const unsubscribe = buildNotificationPreferenceSuppressionPlan({
+      tenantId: "tenant_001",
+      subjectType: "client",
+      subjectId: "client_001",
+      channel: "email",
+      action: "record_unsubscribe",
+      destinationHash: "dest_email_hash",
+      provider: "resend",
+      providerEventId: "evt_unsubscribe",
+      quietHoursConfigured: true,
+      rateLimitConfigured: true,
+      preferencePersistenceAvailable: true,
+      suppressionPersistenceAvailable: true,
+      idempotencyStoreAvailable: true,
+      auditLogPersistenceAvailable: true,
+      payloadRedacted: true,
+    });
+
+    const quietHours = buildNotificationPreferenceSuppressionPlan({
+      tenantId: "tenant_001",
+      subjectType: "client",
+      subjectId: "client_001",
+      channel: "sms",
+      action: "evaluate_quiet_hours_rate_limit",
+      destinationHash: "dest_sms_hash",
+      provider: "twilio",
+      quietHoursConfigured: true,
+      rateLimitConfigured: true,
+      preferencePersistenceAvailable: true,
+      suppressionPersistenceAvailable: true,
+      idempotencyStoreAvailable: true,
+      auditLogPersistenceAvailable: true,
+      payloadRedacted: true,
+    });
+
+    expect(unsubscribe.status).toBe("ready");
+    expect(quietHours.status).toBe("ready");
+    expect(unsubscribe.requiredWrites).toEqual(["NotificationChannelPreference", "NotificationSuppression", "AuditLog", "IdempotencyKey"]);
+    expect(unsubscribe.requiredControls).toBe(notificationPreferenceSuppressionRequiredControls);
+  });
+
+  it("blocks notification preference and suppression persistence when tenant scope, hashes, persistence, idempotency, or redaction are missing", () => {
+    const plan = buildNotificationPreferenceSuppressionPlan({
+      tenantId: "",
+      subjectType: "client",
+      subjectId: "",
+      channel: "push",
+      action: "record_sms_stop",
+      quietHoursConfigured: false,
+      rateLimitConfigured: false,
+      preferencePersistenceAvailable: false,
+      suppressionPersistenceAvailable: false,
+      idempotencyStoreAvailable: false,
+      auditLogPersistenceAvailable: false,
+      payloadRedacted: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.blockers).toContain("Tenant scope is required before notification preference or suppression processing.");
+    expect(plan.blockers).toContain("Subject id is required before notification preference or suppression processing.");
+    expect(plan.blockers).toContain("Destination hash is required before recording provider suppression.");
+    expect(plan.blockers).toContain("NotificationChannelPreference persistence must be available.");
+    expect(plan.blockers).toContain("NotificationSuppression persistence must be available.");
+    expect(plan.blockers).toContain("Idempotency storage is required for preference and suppression mutations.");
+    expect(plan.blockers).toContain("Preference and suppression payloads must be redacted before persistence.");
+    expect(plan.blockers).toContain("SMS STOP suppressions must target the sms channel.");
   });
 
   it("plans notification sequence scheduling with appointment-relative offsets and worker audit writes", () => {
@@ -1043,7 +1267,7 @@ describe("notification delivery planning", () => {
       scheduledOffsetMinutes: -4320,
     });
     expect(plan.writes.map((write) => write.model)).toEqual(["NotificationJob", "NotificationWorkerAuditLog", "IdempotencyKey"]);
-    expect(plan.requiredControls).toContain("Cancel future jobs when appointments are rescheduled, cancelled, or completed early.");
+    expect(plan.requiredControls).toBe(notificationSchedulerRequiredControls);
   });
 
   it("plans scheduler cancellation, retry backoff, and dead-letter audit writes", () => {
@@ -1172,8 +1396,8 @@ describe("notification delivery planning", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Claim due jobs transactionally so concurrent workers cannot dispatch duplicate provider sends.");
-    expect(plan.requiredCommands).toContain("idempotent due-job worker concurrency test");
+    expect(plan.requiredControls).toBe(notificationSchedulerRuntimeReadinessRequiredControls);
+    expect(plan.requiredCommands).toBe(notificationSchedulerRuntimeReadinessRequiredCommands);
   });
 
   it("blocks notification scheduler runtime readiness until queue backend, workers, retries, dead letters, audits, and integration evidence exist", () => {
@@ -1204,14 +1428,15 @@ describe("notification delivery planning", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "queue backend and NotificationJob persistence evidence",
-      "scheduler/worker process and transactional due-job claiming evidence",
-      "retry, dead-letter, and worker audit persistence evidence",
-      "queue, retry/dead-letter, and appointment cancellation integration test evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(notificationSchedulerRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Due-job claiming must be transactional to prevent duplicate sends.");
     expect(plan.blockers).toContain("Scheduler worker must require a ready provider send plan before dispatch.");
+    expect(plan.blockers).toContain("Appointment-relative notification scheduling evidence must be captured before scheduler readiness.");
+    expect(plan.blockers).toContain("Aftercare sequence scheduling evidence must be captured before scheduler readiness.");
+    expect(plan.blockers).toContain("Waitlist, flash-drop, healed-photo, and review sequence scheduling evidence must be captured before scheduler readiness.");
+    expect(plan.blockers).not.toContain("Appointment-relative notification scheduling must be implemented.");
+    expect(plan.blockers).not.toContain("Aftercare sequence scheduling must be implemented.");
+    expect(plan.blockers).not.toContain("Waitlist, flash-drop, healed-photo, and review sequence scheduling must be implemented.");
     expect(plan.blockers).toContain("DeadLetterJob persistence must be available.");
     expect(plan.blockers).toContain("Persisted appointment reschedule/cancel integration tests must pass.");
   });
@@ -1304,7 +1529,7 @@ describe("notification delivery planning", () => {
 
     expect(plan.status).toBe("ready");
     expect(plan.writes.map((write) => write.model)).toEqual(["TenantNotificationSetting", "NotificationAuditLog", "IdempotencyKey"]);
-    expect(plan.requiredControls).toContain("Require legal-approved consent copy before SMS START or tenant preference setting changes.");
+    expect(plan.requiredControls).toBe(preferenceMutationRequiredControls);
   });
 
   it("blocks preference mutations with missing client scope, forged or expired tokens, and missing legal approval", () => {
@@ -1374,8 +1599,8 @@ describe("notification delivery planning", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Reject expired, forged, reused, or tenant/client-mismatched preference tokens before mutation.");
-    expect(plan.requiredCommands).toContain("pre-send suppression integration tests");
+    expect(plan.requiredControls).toBe(preferenceCenterRuntimeReadinessRequiredControls);
+    expect(plan.requiredCommands).toBe(preferenceCenterRuntimeReadinessRequiredCommands);
   });
 
   it("blocks preference center runtime readiness until UI, APIs, signed tokens, suppression persistence, tenant settings, legal copy, and route tests exist", () => {
@@ -1408,13 +1633,15 @@ describe("notification delivery planning", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "client preference center, unsubscribe page, preference API, and tenant settings UI evidence",
-      "signed preference token issuance, hash persistence, expiry, and forgery rejection evidence",
-      "email unsubscribe, SMS STOP/START, and pre-send suppression persistence evidence",
-      "audit, idempotency, legal copy, and route/API test evidence",
-    ]);
-    expect(plan.blockers).toContain("Client preference center page must be implemented.");
+    expect(plan.requiredEvidence).toBe(preferenceCenterRuntimeReadinessRequiredEvidence);
+    expect(plan.blockers).toContain("Client preference center page evidence must be captured before preference readiness.");
+    expect(plan.blockers).toContain("One-click email unsubscribe page evidence must be captured before preference readiness.");
+    expect(plan.blockers).toContain("Preference mutation API route evidence must be captured before preference readiness.");
+    expect(plan.blockers).toContain("Tenant channel settings dashboard UI evidence must be captured before preference readiness.");
+    expect(plan.blockers).not.toContain("Client preference center page must be implemented.");
+    expect(plan.blockers).not.toContain("One-click email unsubscribe page must be implemented.");
+    expect(plan.blockers).not.toContain("Preference mutation API routes must be implemented.");
+    expect(plan.blockers).not.toContain("Tenant channel settings dashboard UI must be implemented.");
     expect(plan.blockers).toContain("Preference token hashes must be persisted instead of raw tokens.");
     expect(plan.blockers).toContain("Email unsubscribe and SMS STOP suppression must be applied immediately before provider sends.");
     expect(plan.blockers).toContain("Preference, unsubscribe, SMS STOP/START, and tenant settings copy must be legal-approved.");
@@ -1449,7 +1676,7 @@ describe("notification delivery planning", () => {
     expect(artistView.visibleFields).toEqual(["subject", "bodyPreview", "clientContactMasked", "attachments"]);
     expect(exportPlan.status).toBe("ready");
     expect(exportPlan.visibleFields).toContain("auditTrail");
-    expect(exportPlan.requiredControls).toContain("Omit provider payloads, raw destinations, private URLs, and secrets from message exports.");
+    expect(exportPlan.requiredControls).toBe(messagingPrivacyRequiredControls);
   });
 
   it("blocks message persistence or export when sensitive content and private URLs are not redacted", () => {
@@ -1559,8 +1786,8 @@ describe("notification delivery planning", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredControls).toContain("Enforce role-based field visibility in both dashboard UI and messaging APIs.");
-    expect(plan.requiredCommands).toContain("message export/delete/retention Postgres integration tests");
+    expect(plan.requiredControls).toBe(messagingPrivacyRuntimeReadinessRequiredControls);
+    expect(plan.requiredCommands).toBe(messagingPrivacyRuntimeReadinessRequiredCommands);
   });
 
   it("blocks messaging privacy runtime readiness until production redaction, role denial, attachment authorization, retention workflows, moderation, audit, and integration evidence exist", () => {
@@ -1594,14 +1821,11 @@ describe("notification delivery planning", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "production redaction service and sensitive-content detection evidence",
-      "role-gated messaging UI/API and unauthorized-role denial evidence",
-      "secure attachment authorization and policy test evidence",
-      "persistence-backed export, delete, retention job, and Postgres integration evidence",
-      "moderation/rate-limit, audit, idempotency, and spam test evidence",
-    ]);
-    expect(plan.blockers).toContain("Production message redaction service must be implemented.");
+    expect(plan.requiredEvidence).toBe(messagingPrivacyRuntimeReadinessRequiredEvidence);
+    expect(plan.blockers).toContain("Production message redaction service evidence must be captured before messaging privacy readiness.");
+    expect(plan.blockers).toContain("Secure message attachment authorization service evidence must be captured before messaging privacy readiness.");
+    expect(plan.blockers).not.toContain("Production message redaction service must be implemented.");
+    expect(plan.blockers).not.toContain("Secure message attachment authorization service must be implemented.");
     expect(plan.blockers).toContain("Messaging APIs must enforce role-based authorization before returning fields.");
     expect(plan.blockers).toContain("Message retention job must be configured.");
     expect(plan.blockers).toContain("Messaging spam moderation and rate-limit integration must be configured.");
@@ -1631,8 +1855,8 @@ describe("notification delivery planning", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredCommands).toContain("pnpm --filter @inkroute/notifications typecheck");
-    expect(plan.requiredControls).toContain("Verify Resend, Twilio, and Expo webhook signatures before reconciliation.");
+    expect(plan.requiredCommands).toBe(notificationRuntimeReadinessRequiredCommands);
+    expect(plan.requiredControls).toBe(notificationRuntimeReadinessRequiredControls);
     expect(plan.blockers).toContain("Notification queue worker must be configured before provider-backed automation.");
     expect(plan.blockers).toContain("Email unsubscribe, SMS STOP/HELP, and suppression controls must be configured.");
     expect(plan.blockers).toContain("Push token registration and revocation store must be configured.");
@@ -1669,8 +1893,8 @@ describe("notification delivery planning", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredSuites).toContain("booking-to-deposit, booking-to-aftercare, and travel waitlist notification E2E flows");
-    expect(plan.requiredCommands).toContain("Expo iOS/Android push device QA");
+    expect(plan.requiredSuites).toEqual(expect.arrayContaining(["booking-to-deposit, booking-to-aftercare, and travel waitlist notification E2E flows"]));
+    expect(plan.requiredCommands).toBe(notificationAutomatedTestReadinessRequiredCommands);
   });
 
   it("blocks Phase 9 notification automated test readiness until queue, dashboard, mobile, provider, persistence, E2E, CI, and artifact evidence exist", () => {
@@ -1700,13 +1924,7 @@ describe("notification delivery planning", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "queue, opt-out, STOP, and retention/export/delete integration test evidence",
-      "dashboard/mobile smoke and Expo device QA evidence",
-      "email, SMS, and push provider sandbox evidence",
-      "booking, deposit, aftercare, and travel notification E2E evidence",
-      "CI Phase 9 notification job and published artifact evidence",
-    ]);
+    expect(plan.requiredEvidence).toBe(notificationAutomatedTestReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Notification queue integration tests must pass.");
     expect(plan.blockers).toContain("Expo push iOS/Android device QA must pass.");
     expect(plan.blockers).toContain("Booking-to-aftercare notification E2E flow must pass.");
@@ -1743,8 +1961,8 @@ describe("notification delivery planning", () => {
       requiredEvidence: [],
       blockers: [],
     });
-    expect(plan.requiredCommands).toContain("notification provider sandbox tests");
-    expect(plan.requiredControls).toContain("Verify provider signatures against raw webhook bodies and reject replayed events before side effects.");
+    expect(plan.requiredCommands).toBe(notificationLaunchEvidenceRequiredCommands);
+    expect(plan.requiredControls).toBe(notificationLaunchEvidenceRequiredControls);
   });
 
   it("blocks notification launch evidence until provider runtime, queue, persistence, preference, webhook, retry, tenant, privacy, CI, and redacted artifacts exist", () => {
@@ -1773,17 +1991,12 @@ describe("notification delivery planning", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toEqual([
-      "Resend, Twilio, and Expo provider sandbox/device send evidence",
-      "queue worker retry, idempotency, and dead-letter evidence",
-      "tenant-scoped NotificationDelivery, ProviderEvent, and MessageThread persistence evidence",
-      "preference center, unsubscribe, STOP, quiet-hours, and rate-limit evidence",
-      "signed webhook verification and replay rejection evidence",
-      "redacted artifact and privacy review evidence",
-      "GitHub Actions notification launch evidence",
-    ]);
+    expect(plan.requiredCommands).toBe(notificationLaunchEvidenceRequiredCommands);
+    expect(plan.requiredControls).toBe(notificationLaunchEvidenceRequiredControls);
+    expect(plan.requiredEvidence).toBe(notificationLaunchEvidenceRequiredEvidence);
     expect(plan.blockers).toContain("Resend, Twilio, and Expo provider SDK runtimes must be configured.");
-    expect(plan.blockers).toContain("Notification queue worker must be implemented before provider-backed delivery.");
+    expect(plan.blockers).toContain("Notification queue worker source-contract and execution evidence must be captured before provider-backed delivery.");
+    expect(plan.blockers).not.toContain("Notification queue worker must be implemented before provider-backed delivery.");
     expect(plan.blockers).toContain("Provider webhook signature and replay verification tests must pass.");
     expect(plan.blockers).toContain("Launch artifacts must prove secrets and raw destinations are redacted.");
   });

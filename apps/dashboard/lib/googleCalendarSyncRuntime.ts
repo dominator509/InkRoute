@@ -1,4 +1,4 @@
-import { buildGoogleCalendarRuntimeReadinessPlan } from "@inkroute/calendar";
+﻿import { buildGoogleCalendarRuntimeReadinessPlan } from "@inkroute/calendar";
 
 export type GoogleCalendarSyncRuntimeStatus =
   | "wired"
@@ -52,6 +52,251 @@ export const googleCalendarSyncArtifactPaths = [
   "coverage/google-calendar-sync-secret-safe-artifacts.json",
   "test-results/google-calendar-sync-runtime",
 ] as const;
+
+export const googleCalendarSyncRuntimeProofFiles = [
+  "packages/calendar/package.json",
+  "packages/calendar/src/index.ts",
+  "packages/calendar/tests/availability-conflicts.test.ts",
+  "apps/dashboard/lib/googleCalendarSync.ts",
+  "apps/dashboard/lib/googleCalendarSyncRuntime.ts",
+  "apps/dashboard/app/api/calendar/google-sync/route.ts",
+  "apps/dashboard/app/api/calendar/route.ts",
+  "apps/dashboard/tests/google-calendar-sync-static.test.ts",
+  "apps/dashboard/tests/google-calendar-sync-runtime-static.test.ts",
+  "apps/dashboard/tests/calendar-read-route-static.test.ts",
+  "testing/manifests/unit-test-manifest.json",
+  ".github/workflows/ci.yml",
+] as const;
+
+export type GoogleCalendarSyncEvidenceArtifact = (typeof googleCalendarSyncArtifactPaths)[number];
+
+export interface GoogleCalendarSyncExecutionPolicy {
+  readonly codexMayClassifyStaticGoogleCalendarSyncReadiness: true;
+  readonly googleSdkClientRequiredForClosure: true;
+  readonly oauthProviderRequiredForClosure: true;
+  readonly encryptedTokenPersistenceRequiredForClosure: true;
+  readonly providerWorkerRequiredForClosure: true;
+  readonly pushWebhookRequiredForClosure: true;
+  readonly googleTestCalendarRequiredForClosure: true;
+  readonly secretSafeArtifactsRequiredForClosure: true;
+}
+
+export interface GoogleCalendarSyncExecutionPlan {
+  readonly policy: typeof googleCalendarSyncExecutionPolicy;
+  readonly commandExecutionAllowed: false;
+  readonly googleProviderExecutionAllowed: false;
+  readonly oauthExecutionAllowed: false;
+  readonly encryptedTokenExecutionAllowed: false;
+  readonly pushWebhookExecutionAllowed: false;
+  readonly tenantIsolationExecutionAllowed: false;
+  readonly ciExecutionAllowed: false;
+  readonly localCommands: typeof googleCalendarSyncLocalCommands;
+  readonly externalCommands: typeof googleCalendarSyncExternalCommands;
+  readonly requiredExternalEvidence: typeof googleCalendarSyncRequiredExternalEvidence;
+}
+
+export interface GoogleCalendarSyncArtifactReview {
+  readonly artifact: unknown;
+  readonly redactedArtifact: unknown;
+  readonly redactedPaths: readonly string[];
+  readonly secretSafe: boolean;
+  readonly requiredExternalEvidence: typeof googleCalendarSyncRequiredExternalEvidence;
+}
+
+export interface GoogleCalendarSyncEvidenceInput {
+  readonly calendarTypecheckPassed: boolean;
+  readonly calendarTestsPassed: boolean;
+  readonly sdkClientVerified: boolean;
+  readonly oauthAppVerified: boolean;
+  readonly oauthCallbackSmokePassed: boolean;
+  readonly requiredScopesVerified: boolean;
+  readonly encryptedTokenRepositoryVerified: boolean;
+  readonly providerWorkerVerified: boolean;
+  readonly freebusySmokePassed: boolean;
+  readonly eventCrudSmokePassed: boolean;
+  readonly fullIncrementalSyncVerified: boolean;
+  readonly invalidTokenRecoveryVerified: boolean;
+  readonly pushRenewalVerified: boolean;
+  readonly pushWebhookVerified: boolean;
+  readonly retryBackoffVerified: boolean;
+  readonly idempotencyStoreVerified: boolean;
+  readonly calendarAuditLogVerified: boolean;
+  readonly tenantIsolationVerified: boolean;
+  readonly googleTestCalendarArtifactsCaptured: boolean;
+  readonly secretSafeArtifactReviewPassed: boolean;
+  readonly capturedArtifacts: readonly GoogleCalendarSyncEvidenceArtifact[];
+}
+
+export interface GoogleCalendarSyncEvidenceDecision {
+  readonly status: "complete" | "blocked";
+  readonly blockers: readonly string[];
+  readonly missingArtifacts: readonly GoogleCalendarSyncEvidenceArtifact[];
+  readonly requiredCommands: typeof googleCalendarSyncRuntimeCommands;
+  readonly requiredEvidence: typeof googleCalendarSyncDecisionRequiredEvidence;
+  readonly redactedSummary: {
+    readonly capturedArtifactCount: number;
+    readonly requiredArtifactCount: number;
+  };
+}
+
+export const googleCalendarSyncExecutionPolicy = {
+  codexMayClassifyStaticGoogleCalendarSyncReadiness: true,
+  googleSdkClientRequiredForClosure: true,
+  oauthProviderRequiredForClosure: true,
+  encryptedTokenPersistenceRequiredForClosure: true,
+  providerWorkerRequiredForClosure: true,
+  pushWebhookRequiredForClosure: true,
+  googleTestCalendarRequiredForClosure: true,
+  secretSafeArtifactsRequiredForClosure: true,
+} as const satisfies GoogleCalendarSyncExecutionPolicy;
+
+export const googleCalendarSyncRequiredExternalEvidence = [
+  "Google SDK/client dependency proof",
+  "Google OAuth app/callback smoke evidence",
+  "encrypted token persistence proof",
+  "Google provider worker execution proof",
+  "Google FreeBusy test-calendar smoke",
+  "Google event insert/update/delete smoke",
+  "Google invalid sync-token full-resync smoke",
+  "Google push channel renewal/webhook smoke",
+  "tenant-isolation evidence",
+  "CI Google Calendar sync evidence",
+  "secret-safe Google Calendar sync artifact review",
+] as const;
+
+export const googleCalendarSyncDecisionRequiredEvidence = [
+  "Google SDK/client setup plus OAuth app, scopes, and callback route evidence",
+  "encrypted provider-token repository and real provider-worker execution evidence",
+  "Google test calendar FreeBusy and event insert/update/delete smoke-test output",
+  "full/incremental sync, invalid-token recovery, push renewal, and webhook evidence",
+  "retry/idempotency, tenant-isolation, and Google test-calendar artifact evidence",
+  "secret-safe review of retained Google Calendar sync artifacts",
+] as const;
+
+export const googleCalendarSyncLocalCommands = [
+  "pnpm --filter @inkroute/calendar typecheck",
+  "pnpm --filter @inkroute/calendar test",
+  "pnpm vitest run apps/dashboard/tests/google-calendar-sync-static.test.ts",
+  "static local Google sync repository and provider-result sanitizer review",
+] as const;
+
+export const googleCalendarSyncExternalCommands = [
+  "Google OAuth callback smoke test",
+  "Google FreeBusy test-calendar smoke",
+  "Google event insert/update/delete smoke",
+  "Google invalid sync-token full-resync smoke",
+  "Google push channel renewal/webhook smoke",
+  "tenant-isolation evidence",
+  "GitHub Actions Google Calendar sync evidence job",
+] as const;
+
+const sensitiveGoogleCalendarSyncArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|google|oauth|calendar|freebusy|event|sync|push|channel|webhook|artist|email|phone|medical|payment|customer)/i;
+
+const redactGoogleCalendarSyncArtifactValue = (
+  value: unknown,
+  path: string,
+  redactedPaths: string[],
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) => redactGoogleCalendarSyncArtifactValue(entry, `${path}.${index}`, redactedPaths));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        if (sensitiveGoogleCalendarSyncArtifactKey.test(key)) {
+          redactedPaths.push(nextPath);
+          return [key, "[REDACTED]"];
+        }
+        return [key, redactGoogleCalendarSyncArtifactValue(entry, nextPath, redactedPaths)];
+      }),
+    );
+  }
+
+  return value;
+};
+
+export const buildGoogleCalendarSyncExecutionPlan = (): GoogleCalendarSyncExecutionPlan => ({
+  policy: googleCalendarSyncExecutionPolicy,
+  commandExecutionAllowed: false,
+  googleProviderExecutionAllowed: false,
+  oauthExecutionAllowed: false,
+  encryptedTokenExecutionAllowed: false,
+  pushWebhookExecutionAllowed: false,
+  tenantIsolationExecutionAllowed: false,
+  ciExecutionAllowed: false,
+  localCommands: googleCalendarSyncLocalCommands,
+  externalCommands: googleCalendarSyncExternalCommands,
+  requiredExternalEvidence: googleCalendarSyncRequiredExternalEvidence,
+});
+
+export const buildRedactedGoogleCalendarSyncArtifact = (artifact: unknown): Pick<GoogleCalendarSyncArtifactReview, "redactedArtifact" | "redactedPaths"> => {
+  const redactedPaths: string[] = [];
+  return {
+    redactedArtifact: redactGoogleCalendarSyncArtifactValue(artifact, "", redactedPaths),
+    redactedPaths,
+  };
+};
+
+export const buildGoogleCalendarSyncArtifactReview = (artifact: unknown): GoogleCalendarSyncArtifactReview => {
+  const redacted = buildRedactedGoogleCalendarSyncArtifact(artifact);
+  return {
+    artifact,
+    redactedArtifact: redacted.redactedArtifact,
+    redactedPaths: redacted.redactedPaths,
+    secretSafe: redacted.redactedPaths.length > 0,
+    requiredExternalEvidence: googleCalendarSyncRequiredExternalEvidence,
+  };
+};
+
+export const buildGoogleCalendarSyncEvidenceDecision = (
+  input: GoogleCalendarSyncEvidenceInput,
+): GoogleCalendarSyncEvidenceDecision => {
+  const captured = new Set(input.capturedArtifacts);
+  const missingArtifacts = googleCalendarSyncArtifactPaths.filter((artifact) => !captured.has(artifact));
+  const blockers = [
+    ...(!input.calendarTypecheckPassed ? ["Calendar package typecheck evidence is missing."] : []),
+    ...(!input.calendarTestsPassed ? ["Calendar package test evidence is missing."] : []),
+    ...(!input.sdkClientVerified ? ["Google Calendar SDK/client evidence is missing."] : []),
+    ...(!input.oauthAppVerified ? ["Google OAuth app evidence is missing."] : []),
+    ...(!input.oauthCallbackSmokePassed ? ["Google OAuth callback smoke evidence is missing."] : []),
+    ...(!input.requiredScopesVerified ? ["Google Calendar required-scope evidence is missing."] : []),
+    ...(!input.encryptedTokenRepositoryVerified
+      ? ["Encrypted Google provider-token repository evidence is missing."]
+      : []),
+    ...(!input.providerWorkerVerified ? ["Google provider worker execution evidence is missing."] : []),
+    ...(!input.freebusySmokePassed ? ["Google FreeBusy test-calendar smoke evidence is missing."] : []),
+    ...(!input.eventCrudSmokePassed ? ["Google event insert/update/delete smoke evidence is missing."] : []),
+    ...(!input.fullIncrementalSyncVerified ? ["Google full/incremental sync evidence is missing."] : []),
+    ...(!input.invalidTokenRecoveryVerified ? ["Google invalid sync-token recovery evidence is missing."] : []),
+    ...(!input.pushRenewalVerified ? ["Google push channel renewal evidence is missing."] : []),
+    ...(!input.pushWebhookVerified ? ["Google push webhook handler evidence is missing."] : []),
+    ...(!input.retryBackoffVerified ? ["Google provider retry/backoff evidence is missing."] : []),
+    ...(!input.idempotencyStoreVerified ? ["Google sync idempotency-store evidence is missing."] : []),
+    ...(!input.calendarAuditLogVerified ? ["Google sync CalendarAuditLog evidence is missing."] : []),
+    ...(!input.tenantIsolationVerified ? ["Google provider tenant-isolation evidence is missing."] : []),
+    ...(!input.googleTestCalendarArtifactsCaptured
+      ? ["Redacted Google test-calendar artifact bundle is missing."]
+      : []),
+    ...(!input.secretSafeArtifactReviewPassed
+      ? ["Secret-safe Google Calendar sync artifact review evidence is missing."]
+      : []),
+    ...(missingArtifacts.length > 0 ? ["All Google Calendar sync artifacts must be captured."] : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "complete" : "blocked",
+    blockers,
+    missingArtifacts,
+    requiredCommands: googleCalendarSyncRuntimeCommands,
+    requiredEvidence: googleCalendarSyncDecisionRequiredEvidence,
+    redactedSummary: {
+      capturedArtifactCount: captured.size,
+      requiredArtifactCount: googleCalendarSyncArtifactPaths.length,
+    },
+  };
+};
 
 export const googleCalendarSyncRuntimeMatrix = [
   {
@@ -202,3 +447,5 @@ export const googleCalendarSyncRuntimeReadiness = buildGoogleCalendarRuntimeRead
   tenantIsolationTestsPassed: false,
   googleTestCalendarEvidenceAttached: false,
 });
+
+

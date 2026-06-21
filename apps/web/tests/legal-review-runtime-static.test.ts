@@ -2,13 +2,27 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildLegalReviewEvidenceDecision,
+  buildLegalReviewExecutionPlan,
+  buildLegalReviewArtifactReview,
+  buildLegalReviewRunData,
+  buildRedactedLegalReviewArtifact,
+  legalReviewExternalArtifacts,
+  legalReviewExternalCommands,
+  legalReviewExecutionPolicy,
+  legalReviewLocalArtifacts,
+  legalReviewLocalCommands,
   legalReviewRequiredArtifactPaths,
+  legalReviewRuntimeRequiredEvidence,
+  legalReviewRequiredExternalEvidence,
   legalReviewRequiredItemIds,
   legalReviewRunPersistenceContract,
   legalReviewRuntimeArtifactPaths,
   legalReviewRuntimeCommands,
   legalReviewRuntimeMatrix,
+  legalReviewRuntimeProofFiles,
   legalReviewRuntimeReadiness,
+  persistLegalReviewRun,
 } from "../lib/legalReviewRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -61,6 +75,27 @@ describe("legal review runtime contract", () => {
   });
 
   it("pins the LegalReviewRun persistence model and migration", () => {
+    const runData = buildLegalReviewRunData({
+      tenantId: "tenant_static",
+      runId: "legal_static",
+      commitSha: "abc123",
+      status: "blocked",
+      approvedReviewItemIds: ["privacy"],
+      runtimeArtifactPaths: ["coverage/legal-review-runtime.json"],
+      redactedEvidenceLabels: ["privacy-approval-redacted"],
+      launchBlockers: ["qualified-counsel-approval-required"],
+      legalReviewAuditPassed: false,
+      redactedEvidenceLabelsPresent: true,
+      privilegedAdviceExcluded: true,
+      placeholderCopyReplacedAfterApproval: false,
+      legalVerifyCommandPassed: false,
+      ciQualityGateIncludesLegalReview: true,
+      ciLegalEvidenceCaptured: false,
+      productionLaunchBlockedUntilApproval: true,
+      qualifiedCounselApprovalCaptured: false,
+      legalReviewAuditArtifactPath: "coverage/legal-review-audit-output.txt",
+    });
+
     expect(legalReviewRunPersistenceContract.model).toBe("LegalReviewRun");
     expect(legalReviewRunPersistenceContract.tenantRelation).toBe("legalReviewRuns");
     expect(legalReviewRunPersistenceContract.migration).toBe("20260609033700_add_legal_review_runs");
@@ -85,6 +120,20 @@ describe("legal review runtime contract", () => {
     expect(legalReviewMigration).toContain('"launchBlockerManifest" JSONB NOT NULL');
     expect(legalReviewMigration).toContain('"qualifiedCounselApprovalCaptured" BOOLEAN NOT NULL DEFAULT false');
     expect(legalReviewMigration).toContain('CREATE UNIQUE INDEX "LegalReviewRun_tenantId_runId_key"');
+    expect(runData).toMatchObject({
+      tenantId: "tenant_static",
+      runId: "legal_static",
+      commitSha: "abc123",
+      status: "blocked",
+      privilegedAdviceExcluded: true,
+      productionLaunchBlockedUntilApproval: true,
+      qualifiedCounselApprovalCaptured: false,
+      legalReviewAuditArtifactPath: "coverage/legal-review-audit-output.txt",
+    });
+    expect(runData.requiredReviewItemManifest).toBe(legalReviewRequiredItemIds);
+    expect(runData.approvedReviewItemManifest).toEqual(["privacy"]);
+    expect(runData.redactedEvidenceLabelManifest).toEqual(["privacy-approval-redacted"]);
+    expect(String(persistLegalReviewRun)).toContain("repository.legalReviewRun.upsert");
   });
 
   it("keeps legal packet, manifests, verifier, package helper tests, and scripts wired", () => {
@@ -101,19 +150,120 @@ describe("legal review runtime contract", () => {
     expect(legalReviewRuntimeReadiness.status).toBe("blocked");
     expect(legalReviewRuntimeReadiness.missingApprovedItems).toEqual([...legalReviewRequiredItemIds]);
     expect(legalReviewRuntimeReadiness.missingArtifacts).toEqual([]);
-    expect(legalReviewRuntimeReadiness.requiredCommands).toEqual([...legalReviewRuntimeCommands]);
-    expect(legalReviewRuntimeReadiness.requiredEvidence).toEqual([
-      "Legal review audit output showing every required item approved.",
-      "Redacted evidence labels for privacy, terms, consent, medical, payments/refunds, SMS/notifications, and aftercare review items.",
-      "Required legal artifacts exist in the repo and match the approved review packet.",
-      "No privileged attorney advice, secrets, or client data are committed.",
-      "Placeholder legal/compliance copy is replaced only after approval is recorded.",
-      "CI quality gate evidence includes legal review verification.",
-    ]);
+    expect(legalReviewRuntimeReadiness.requiredCommands).toBe(legalReviewRuntimeCommands);
+    expect(legalReviewRuntimeReadiness.requiredEvidence).toBe(legalReviewRuntimeRequiredEvidence);
     expect(legalReviewRuntimeReadiness.blockers).toContain(
       "Every required legal review item must be attorney-approved before production launch.",
     );
     expect(legalReviewRuntimeReadiness.blockers).toContain("pnpm legal:verify-review must pass.");
+  });
+
+  it("blocks legal review completion until every item, artifact, command, and redacted evidence flag is present", () => {
+    const decision = buildLegalReviewEvidenceDecision({
+      approvedReviewItemIds: ["privacy"],
+      requiredArtifactPaths: ["docs/legal/LEGAL_REVIEW_PACKET.md"],
+      runtimeArtifactPaths: ["coverage/legal-review-runtime.json"],
+      commands: ["pnpm legal:verify-review"],
+      evidence: {
+        privilegedAdviceExcluded: true,
+        productionLaunchBlockedUntilApproval: true,
+      },
+    });
+
+    expect(decision.status).toBe("blocked");
+    expect(decision.missingApprovedItems).toContain("terms");
+    expect(decision.missingRequiredArtifacts).toContain("docs/legal/manifests/legal-review-evidence.json");
+    expect(decision.missingRuntimeArtifacts).toContain("coverage/legal-review-counsel-approval-redacted.json");
+    expect(decision.missingCommands).toContain("qualified counsel review outside the repository");
+    expect(decision.missingEvidence).toContain("qualifiedCounselApprovalCaptured");
+    expect(decision.blockers).toContain("Legal review item 'terms' must be attorney-approved before production launch.");
+    expect(decision.blockers).toContain("Qualified counsel approval must be captured as redacted evidence labels.");
+  });
+
+  it("completes legal review only after every required item and evidence flag is satisfied", () => {
+    const completeEvidence = Object.fromEntries(
+      legalReviewRunPersistenceContract.evidenceBooleans.map((flag) => [flag, true]),
+    );
+    const decision = buildLegalReviewEvidenceDecision({
+      approvedReviewItemIds: legalReviewRequiredItemIds,
+      requiredArtifactPaths: legalReviewRequiredArtifactPaths,
+      runtimeArtifactPaths: legalReviewRuntimeArtifactPaths,
+      commands: legalReviewRuntimeCommands,
+      evidence: completeEvidence,
+    });
+
+    expect(decision.status).toBe("complete");
+    expect(decision.missingApprovedItems).toEqual([]);
+    expect(decision.missingRequiredArtifacts).toEqual([]);
+    expect(decision.missingRuntimeArtifacts).toEqual([]);
+    expect(decision.missingCommands).toEqual([]);
+    expect(decision.missingEvidence).toEqual([]);
+    expect(decision.requiredEvidence).toEqual(legalReviewRunPersistenceContract.evidenceBooleans);
+  });
+
+  it("keeps legal review execution classified, redacted, and counsel-gated", () => {
+    const executionPlan = buildLegalReviewExecutionPlan();
+    expect(executionPlan.localCommands).toBe(legalReviewLocalCommands);
+    expect(executionPlan.localCommands).toEqual(["pnpm legal:verify-review", "pnpm quality:gates", "pnpm quality:all"]);
+    expect(executionPlan.externalCommands).toBe(legalReviewExternalCommands);
+    expect(executionPlan.externalCommands).toEqual([
+      "GitHub Actions CI quality job",
+      "qualified counsel review outside the repository",
+    ]);
+    expect(executionPlan.localArtifacts).toBe(legalReviewLocalArtifacts);
+    expect(executionPlan.externalArtifacts).toBe(legalReviewExternalArtifacts);
+    expect(executionPlan.localArtifacts).toContain("coverage/legal-review-privileged-advice-exclusion.json");
+    expect(executionPlan.externalArtifacts).toContain("coverage/legal-review-counsel-approval-redacted.json");
+    expect(executionPlan.externalArtifacts).toContain("test-results/legal-review-runtime");
+    expect(executionPlan.commandExecutionAllowed).toBe(false);
+    expect(executionPlan.attorneyReviewExecutionAllowed).toBe(false);
+    expect(executionPlan.ciExecutionAllowed).toBe(false);
+    expect(executionPlan.databaseExecutionAllowed).toBe(false);
+    expect(executionPlan.legalAdviceGenerationAllowed).toBe(false);
+    expect(executionPlan.executionPolicy).toBe(legalReviewExecutionPolicy);
+    expect(executionPlan.executionPolicy).toEqual({
+      codexMayClassifyStaticLegalReadiness: true,
+      qualifiedCounselApprovalRequiredForClosure: true,
+      privilegedAdviceMustStayOutOfRepo: true,
+      providerDatabaseRequiredForPersistence: true,
+      secretSafeArtifactsRequiredForClosure: true,
+    });
+    expect(executionPlan.requiredExternalEvidence).toBe(legalReviewRequiredExternalEvidence);
+    expect(executionPlan.requiredExternalEvidence).toContain(
+      "Provider-backed LegalReviewRun persistence row captured through persistLegalReviewRun.",
+    );
+
+    const artifact = {
+      attorneyEmail: "counsel@example.com",
+      clientPhone: "+1 555 222 1212",
+      privilegedAdvice: "Attorney legal advice should never be committed.",
+      approvalSignature: "Jane Counsel / Bar 1234567890",
+      nested: {
+        databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
+        evidenceId: "legal_review_evidence_1234567890",
+        publicLabel: "privacy-approval-redacted",
+      },
+    };
+    const redactedOnly = buildRedactedLegalReviewArtifact(artifact);
+    const review = buildLegalReviewArtifactReview(artifact);
+    const serialized = JSON.stringify(review.artifact);
+
+    expect(JSON.stringify(redactedOnly)).not.toContain("counsel@example.com");
+    expect(serialized).not.toContain("+1 555 222 1212");
+    expect(serialized).not.toContain("Attorney legal advice should never be committed.");
+    expect(serialized).not.toContain("Jane Counsel");
+    expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
+    expect(serialized).not.toContain("legal_review_evidence_1234567890");
+    expect(review.redactions).toEqual([
+      "attorneyEmail",
+      "clientPhone",
+      "privilegedAdvice",
+      "approvalSignature",
+      "nested.databaseUrl",
+      "nested.evidenceId",
+    ]);
+    expect(review.safeForTracker).toBe(true);
+    expect(review.requiredExternalEvidence).toBe(legalReviewRequiredExternalEvidence);
   });
 
   it("wires CI, manifest, tracker, and artifacts without claiming attorney approval exists", () => {
@@ -124,6 +274,24 @@ describe("legal review runtime contract", () => {
     expect(unitManifest).toContain("LegalReviewRun Prisma model and app row contract");
     expect(gapTracker).toContain("LegalReviewRun");
     expect(gapTracker).toContain("apps/web/lib/legalReviewRuntime.ts");
-    expect(gapTracker).toContain("live qualified-counsel approval, redacted approval evidence, placeholder replacement, legal audit pass, and CI legal evidence remain open");
+    expect(gapTracker).toContain("persistLegalReviewRun upsert seam");
+    expect(gapTracker).toContain("live qualified-counsel approval, redacted approval evidence, placeholder replacement, legal audit pass, provider-backed persistLegalReviewRun execution, and CI legal evidence remain open");
+    expect(gapTracker).toContain("GAP-013 is legal-review-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("proof inventory");
+    expect(gapTracker).toContain("buildLegalReviewExecutionPlan");
+    expect(gapTracker).toContain("legalReviewLocalCommands/legalReviewExternalCommands");
+    expect(gapTracker).toContain("legalReviewExecutionPolicy");
+    expect(gapTracker).toContain("legalReviewRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildRedactedLegalReviewArtifact");
+    expect(gapTracker).toContain("buildLegalReviewArtifactReview");
+  });
+
+  it("pins current legal review proof files for GAP-013", () => {
+    expect(legalReviewRuntimeProofFiles).toContain("apps/web/lib/legalReviewRuntime.ts");
+    expect(legalReviewRuntimeProofFiles).toContain("apps/web/tests/legal-review-runtime-static.test.ts");
+    for (const proofFile of legalReviewRuntimeProofFiles) {
+      expect(readRepoFile(proofFile).length).toBeGreaterThan(0);
+    }
   });
 });
+

@@ -1,4 +1,4 @@
-﻿import { prisma } from "@inkroute/db";
+import { prisma } from "@inkroute/db";
 import { type ObservabilityReportDraft } from "@inkroute/observability";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -13,8 +13,10 @@ export const runtime = "nodejs";
 
 type RuntimeEnvironment = "development" | "preview" | "production" | "test";
 
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
 function json(data: unknown, status = 200) {
-  return NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json(data, { status, headers: noStoreHeaders });
 }
 
 function normalizeEnvironment(value: unknown): RuntimeEnvironment {
@@ -87,6 +89,23 @@ export async function POST(request: NextRequest) {
   const tenantCommunicationOwner = typeof body.tenantCommunicationOwner === "string" ? body.tenantCommunicationOwner : process.env.RELEASE_INCIDENT_OWNER;
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_RELEASE_INCIDENT_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production release incident linkage requires DB-backed actor resolution and tenant-scoped ErrorReport/AuditLog persistence; local fallback incident plans are disabled.",
+            gapIds: ["GAP-081", "GAP-093"],
+          },
+          productionBoundary: { localReleaseIncidentFallbackDisabled: true },
+        },
+        503,
+      );
+    }
+
     const fallback = buildReleaseIncidentPlanFromReports({
       releaseId,
       releaseVersion,
@@ -106,6 +125,11 @@ export async function POST(request: NextRequest) {
         orderBy: { createdAt: "desc" },
         take: 25,
         select: { id: true, tenantId: true, severity: true, status: true, source: true, message: true, stackHash: true, release: true, route: true, metadata: true, createdAt: true },
+      });
+      const releaseRecord = await tx.releaseRecord.findFirst({
+        where: { tenantId, version: releaseVersion },
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
       });
       const reports = rows.map((row) => rowToReport(row, environment));
       const linkage = buildReleaseIncidentPlanFromReports({ releaseId, releaseVersion, environment, tenantId, reports, rollbackRequested, tenantCommunicationOwner });
@@ -130,16 +154,58 @@ export async function POST(request: NextRequest) {
         select: { id: true },
       });
 
+      const releaseIncidentLinkIds: string[] = [];
       for (const report of linkage.plan.linkedReports) {
+        const releaseIncidentLink = await tx.releaseIncidentLink.upsert({
+          where: { tenantId_releaseId_errorReportId: { tenantId, releaseId, errorReportId: report.id } },
+          create: {
+            tenantId,
+            releaseRecordId: releaseRecord?.id ?? null,
+            releaseId,
+            releaseVersion,
+            environment,
+            errorReportId: report.id,
+            auditLogId: audit.id,
+            incidentStatus: linkage.plan.incidentStatus,
+            rollbackRequested,
+            tenantCommunicationOwner: linkage.tenantCommunicationOwner.owner,
+            rollbackCommunicationHandoffPersisted: true,
+            tenantScopedIncidentIsolationVerified: true,
+            sanitizedPayloadsVerified: true,
+            liveProviderEvidenceCaptured: false,
+            rawPayloadStored: false,
+            artifactPaths: releaseIncidentLinkageArtifactPaths,
+          },
+          update: {
+            releaseRecordId: releaseRecord?.id ?? null,
+            releaseVersion,
+            environment,
+            auditLogId: audit.id,
+            incidentStatus: linkage.plan.incidentStatus,
+            rollbackRequested,
+            tenantCommunicationOwner: linkage.tenantCommunicationOwner.owner,
+            rollbackCommunicationHandoffPersisted: true,
+            tenantScopedIncidentIsolationVerified: true,
+            sanitizedPayloadsVerified: true,
+            liveProviderEvidenceCaptured: false,
+            rawPayloadStored: false,
+            artifactPaths: releaseIncidentLinkageArtifactPaths,
+          },
+          select: { id: true },
+        });
+        releaseIncidentLinkIds.push(releaseIncidentLink.id);
         await tx.errorReport.update({
           where: { id: report.id },
           data: {
             metadata: {
+              ...report.redactedMetadata,
               releaseIncidentLinkage: {
                 releaseId,
                 releaseVersion,
                 incidentStatus: linkage.plan.incidentStatus,
                 auditLogId: audit.id,
+                releaseIncidentLinkId: releaseIncidentLink.id,
+                releaseRecordId: releaseRecord?.id ?? null,
                 fingerprint: report.fingerprint,
                 rawPayloadStored: false,
               },
@@ -148,12 +214,56 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      return { linkage, auditId: audit.id };
+      return { linkage, auditId: audit.id, releaseRecordId: releaseRecord?.id ?? null, releaseIncidentLinkIds };
     });
 
-    return json({ ok: result.linkage.plan.status === "ready", source: actor.source, tenantId, persistence: "database", auditId: result.auditId, ...result.linkage, artifactPaths: releaseIncidentLinkageArtifactPaths }, result.linkage.plan.status === "ready" ? 202 : 200);
+    if (process.env.NODE_ENV === "production" && result.linkage.readiness.status !== "ready") {
+      return json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          persistence: "database",
+          auditId: result.auditId,
+          releaseRecordId: result.releaseRecordId,
+          releaseIncidentLinkIds: result.releaseIncidentLinkIds,
+          error: {
+            code: "RELEASE_INCIDENT_PROVIDER_EVIDENCE_NOT_CONFIGURED",
+            message: "Production release incident linkage requires live Sentry and incident-provider evidence before accepting the incident link.",
+            gapIds: ["GAP-081", "GAP-093"],
+          },
+          productionBoundary: {
+            liveReleaseIncidentProviderEvidenceRequired: true,
+            blockers: result.linkage.readiness.blockers,
+            requiredEvidence: result.linkage.readiness.requiredEvidence,
+          },
+          ...result.linkage,
+          artifactPaths: releaseIncidentLinkageArtifactPaths,
+        },
+        503,
+      );
+    }
+
+    return json({ ok: result.linkage.plan.status === "ready", source: actor.source, tenantId, persistence: "database", auditId: result.auditId, releaseRecordId: result.releaseRecordId, releaseIncidentLinkIds: result.releaseIncidentLinkIds, ...result.linkage, artifactPaths: releaseIncidentLinkageArtifactPaths }, result.linkage.plan.status === "ready" ? 202 : 200);
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
+      if (process.env.NODE_ENV === "production") {
+        return json(
+          {
+            ok: false,
+            source: actor.source,
+            tenantId,
+            error: {
+              code: "PROVIDER_RELEASE_INCIDENT_PERSISTENCE_NOT_CONFIGURED",
+              message: "Production release incident linkage requires the dashboard database connection; unpersisted fallback incident plans are disabled.",
+              gapIds: ["GAP-081", "GAP-093"],
+            },
+            productionBoundary: { localReleaseIncidentFallbackDisabled: true },
+          },
+          503,
+        );
+      }
+
       const fallback = buildReleaseIncidentPlanFromReports({
         releaseId,
         releaseVersion,

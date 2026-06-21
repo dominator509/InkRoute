@@ -1,13 +1,30 @@
 {
-  "generatedAt": null,
+  "generatedAt": "2026-06-12T09:04:33.415Z",
   "source": "GAP-133 required workspace checks",
-  "status": "not-run",
-  "findings": [],
-  "rootScriptsChecked": 0,
-  "workspaceAllTermsChecked": 0,
-  "ciTermsChecked": 0,
-  "prEnforcementTermsChecked": 0,
-  "requiredBranchProtectionChecks": [],
-  "externalSettingsStillRequired": [],
-  "note": "Placeholder manifest committed so workspace required-check references are concrete; scripts/workspace/verify-workspace-required-checks.mjs overwrites this file during pnpm workspace:required-checks."
+  "status": "fail",
+  "findings": [
+    {
+      "status": "fail",
+      "rule": "ci-term",
+      "term": "pnpm workspace:runtime-evidence",
+      "message": "CI workflow is missing workspace required term: pnpm workspace:runtime-evidence."
+    }
+  ],
+  "rootScriptsChecked": 9,
+  "workspaceAllTermsChecked": 6,
+  "ciTermsChecked": 6,
+  "prEnforcementTermsChecked": 2,
+  "requiredBranchProtectionChecks": [
+    "CI / quality",
+    "Verify Phase 18 workspace runtime readiness",
+    "Verify PR GAP tracker diff evidence",
+    "Verify Phase 17 quality gates"
+  ],
+  "externalSettingsStillRequired": [
+    "main branch protection",
+    "required status checks",
+    "required workspace audit status",
+    "required PR gap-diff evidence check",
+    "failing workspace-audit PR merge-block proof"
+  ]
 }

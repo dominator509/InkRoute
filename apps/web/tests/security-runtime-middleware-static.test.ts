@@ -22,6 +22,9 @@ describe("web security runtime middleware wiring", () => {
     expect(source).toContain("x-csrf-token");
     expect(source).toContain("inkroute_csrf");
     expect(source).toContain("cookieAuthenticatedMutation");
+    expect(source).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(source).toContain("headers: noStoreHeaders");
+    expect(source).not.toContain('headers: { "Cache-Control": "no-store" }');
     expect(source).toContain("request.cookies.has(name)");
   });
 

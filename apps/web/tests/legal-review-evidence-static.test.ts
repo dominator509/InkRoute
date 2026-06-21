@@ -1,12 +1,23 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildRedactedLegalReviewArtifact,
+  buildLegalReviewArtifactReview,
+  buildLegalReviewEvidenceDecision,
+  buildLegalReviewExecutionPlan,
   buildLegalVersionAcceptancePersistenceContract,
   legalDocumentRuntimeContract,
   legalReviewArtifactPaths,
   legalReviewCommands,
   legalReviewEvidencePreview,
+  legalReviewExternalArtifacts,
+  legalReviewExternalCommands,
+  legalReviewExecutionPolicy,
+  legalReviewLocalArtifacts,
+  legalReviewLocalCommands,
+  legalReviewProofFiles,
+  legalReviewRequiredExternalEvidence,
   legalVersionAcceptancePersistencePreview,
   paymentPolicyLegalRuntimeContract,
 } from "../lib/legalReviewEvidence";
@@ -96,6 +107,12 @@ describe("GAP-100 legal review evidence contract", () => {
         "Rollback plan must document how to restore prior approved legal copy and acceptance versions.",
       ]),
     );
+    expect(legalDocumentRuntimeContract.blockers).not.toContain(
+      "LegalDocumentVersion persistence must be configured for consent and studio policy versions.",
+    );
+    expect(legalDocumentRuntimeContract.blockers).not.toContain(
+      "LegalAcceptanceAudit persistence must be configured before production acceptance collection.",
+    );
     expect(paymentPolicyLegalRuntimeContract.status).toBe("blocked");
     expect(paymentPolicyLegalRuntimeContract.blockers).toEqual(
       expect.arrayContaining([
@@ -104,6 +121,12 @@ describe("GAP-100 legal review evidence contract", () => {
         "Reviewed SMS consent, STOP, HELP, and quiet-hours copy must be committed.",
         "Terms, privacy, consent, and studio policy documents must be updated with reviewed payment policy language.",
       ]),
+    );
+    expect(paymentPolicyLegalRuntimeContract.blockers).not.toContain(
+      "Acceptance audit persistence must be configured for reviewed payment policy acknowledgements.",
+    );
+    expect(paymentPolicyLegalRuntimeContract.blockers).not.toContain(
+      "Policy versioning must be configured before payment policy copy can be claimed production-ready.",
     );
   });
 
@@ -122,6 +145,183 @@ describe("GAP-100 legal review evidence contract", () => {
     expect(ci).toContain("legal-review-evidence-artifacts");
     expect(manifest).toContain("unit-web-legal-review-evidence-static");
     expect(tracker).toContain("apps/web/lib/legalReviewEvidence.ts");
-    expect(tracker).toContain("attorney approval and reviewed-copy proof remain open");
+    expect(tracker).toContain("Legal review evidence classifier wired and attorney reviewed-copy proof gated");
+    expect(tracker).toContain("legalReviewLocalArtifacts");
+    expect(tracker).toContain("legalReviewExternalArtifacts");
+  });
+
+  it("pins current legal review proof files for GAP-100", () => {
+    expect(legalReviewProofFiles).toEqual(
+      expect.arrayContaining([
+      "packages/security/package.json",
+        "apps/web/lib/legalReviewEvidence.ts",
+        "apps/web/tests/legal-review-evidence-static.test.ts",
+        "apps/web/app/privacy/page.tsx",
+        "apps/web/app/terms/page.tsx",
+        "apps/web/app/consent-disclaimer/page.tsx",
+        "apps/web/app/trust/page.tsx",
+        "apps/dashboard/app/trust/page.tsx",
+        "docs/legal/LEGAL_REVIEW_PACKET.md",
+        "packages/db/prisma/schema.prisma",
+        "packages/db/prisma/migrations/20260609003000_add_legal_document_acceptance/migration.sql",
+        "packages/security/src/index.ts",
+        "packages/security/tests/upload-policy.test.ts",
+        "SECURITY.md",
+        "PRODUCT_REQUIREMENTS.md",
+        ".github/workflows/ci.yml",
+        "testing/manifests/unit-test-manifest.json",
+      ]),
+    );
+    for (const file of legalReviewProofFiles) {
+      expect(readWorkspaceFile(file).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("classifies GAP-100 evidence as blocked until attorney approval and reviewed-copy proof is captured", () => {
+    const blockedDecision = buildLegalReviewEvidenceDecision({
+      packetScaffoldCaptured: true,
+      attorneyApprovalsCaptured: false,
+      jurisdictionPolicyVersionsCaptured: false,
+      consentVersionPersistenceCaptured: true,
+      reviewedPublicPageSmokeCaptured: false,
+      noindexRemovedAfterApprovalCaptured: false,
+      acceptanceAuditPersistenceCaptured: true,
+      dashboardAcceptanceUiCaptured: true,
+      paymentPolicyReviewCaptured: false,
+      rollbackPlanCaptured: true,
+      requiredCommandsRun: legalReviewCommands.filter(
+        (command) =>
+          command !== "legal page route smoke tests" &&
+          command !== "payment policy reviewed-copy E2E smoke" &&
+          command !== "legal copy rollback drill",
+      ),
+      capturedArtifacts: [
+        "coverage/legal-review-packet.json",
+        "coverage/legal-consent-version-persistence.json",
+        "coverage/legal-acceptance-audit-persistence.json",
+        "coverage/legal-dashboard-acceptance-ui.json",
+        "coverage/legal-copy-rollback-plan.md",
+        "test-results/legal-review",
+      ],
+    });
+
+    expect(blockedDecision.status).toBe("blocked");
+    expect(blockedDecision.blockers).toEqual(
+      expect.arrayContaining([
+        "Capture qualified attorney approval metadata evidence.",
+        "Capture jurisdiction-specific studio policy version evidence.",
+        "Capture reviewed public legal page smoke evidence.",
+        "Capture noindex removal after approval evidence.",
+        "Capture payment policy legal and tax review evidence.",
+        "Required command not recorded: legal page route smoke tests",
+        "Required command not recorded: payment policy reviewed-copy E2E smoke",
+        "Required command not recorded: legal copy rollback drill",
+      ]),
+    );
+    expect(blockedDecision.missingArtifacts).toEqual(
+      expect.arrayContaining([
+        "coverage/legal-attorney-approvals-redacted.json",
+        "coverage/legal-jurisdiction-policy-versions.json",
+        "coverage/legal-public-page-smoke.json",
+        "coverage/legal-noindex-removal-after-approval.json",
+        "coverage/legal-payment-policy-review-redacted.json",
+      ]),
+    );
+    expect(blockedDecision.publicationPolicy).toEqual({
+      noindexRemovedOnlyAfterApproval: true,
+      placeholderCopyRemovedOnlyAfterReview: true,
+      acceptanceAuditsUseRedactedHashes: true,
+    });
+
+    const completeDecision = buildLegalReviewEvidenceDecision({
+      packetScaffoldCaptured: true,
+      attorneyApprovalsCaptured: true,
+      jurisdictionPolicyVersionsCaptured: true,
+      consentVersionPersistenceCaptured: true,
+      reviewedPublicPageSmokeCaptured: true,
+      noindexRemovedAfterApprovalCaptured: true,
+      acceptanceAuditPersistenceCaptured: true,
+      dashboardAcceptanceUiCaptured: true,
+      paymentPolicyReviewCaptured: true,
+      rollbackPlanCaptured: true,
+      requiredCommandsRun: legalReviewCommands,
+      capturedArtifacts: legalReviewArtifactPaths,
+    });
+
+    expect(completeDecision.status).toBe("complete");
+    expect(completeDecision.blockers).toEqual([]);
+    expect(completeDecision.missingArtifacts).toEqual([]);
+    expect(completeDecision.requiredCommands).toBe(legalReviewCommands);
+    expect(completeDecision.requiredEvidence).toBe(legalReviewArtifactPaths);
+  });
+
+  it("keeps GAP-100 attorney approval and publication execution disabled in the local plan", () => {
+    const plan = buildLegalReviewExecutionPlan();
+
+    expect(plan.attorneyApprovalExecutionAllowed).toBe(false);
+    expect(plan.reviewedCopyPublicationAllowed).toBe(false);
+    expect(plan.noindexRemovalAllowed).toBe(false);
+    expect(plan.acceptancePersistenceExecutionAllowed).toBe(false);
+    expect(plan.paymentPolicyReviewExecutionAllowed).toBe(false);
+    expect(plan.rollbackDrillExecutionAllowed).toBe(false);
+    expect(plan.policy).toBe(legalReviewExecutionPolicy);
+    expect(plan.externalEvidenceRequired).toBe(legalReviewRequiredExternalEvidence);
+    expect(legalReviewExecutionPolicy.externalEvidenceRequired).toBe(legalReviewRequiredExternalEvidence);
+    expect(legalReviewRequiredExternalEvidence).toEqual(expect.arrayContaining([
+      "Qualified attorney approval metadata evidence",
+      "Jurisdiction-specific studio policy version evidence",
+      "Reviewed public legal page smoke evidence",
+      "Payment policy legal and tax review evidence",
+      "Legal copy rollback drill evidence",
+    ]));
+    expect(plan.localCommands).toBe(legalReviewLocalCommands);
+    expect(plan.externalCommands).toBe(legalReviewExternalCommands);
+    expect(plan.localArtifacts).toBe(legalReviewLocalArtifacts);
+    expect(plan.externalArtifacts).toBe(legalReviewExternalArtifacts);
+    expect(plan.externalArtifacts).toEqual(expect.arrayContaining([
+      "coverage/legal-attorney-approvals-redacted.json",
+      "coverage/legal-jurisdiction-policy-versions.json",
+      "coverage/legal-public-page-smoke.json",
+      "coverage/legal-noindex-removal-after-approval.json",
+      "coverage/legal-payment-policy-review-redacted.json",
+    ]));
+    expect(plan.disabledReasons.join(" ")).toContain("Qualified attorney approval cannot be generated by local code.");
+  });
+
+  it("redacts GAP-100 attorney, acceptance, and legal evidence artifacts before review", () => {
+    const rawArtifact = {
+      reviewerName: "Attorney Name",
+      reviewerFirm: "Law Firm PLLC",
+      reviewedCopyHash: "sha256:private-reviewed-copy",
+      subjectEmailHash: "sha256:subject-email",
+      ipHash: "sha256:ip-address",
+      userAgentHash: "sha256:user-agent",
+      evidenceObjectKey: "legal/tenant_demo/terms/private-review.json",
+      contact: "lawyer@example.com +1 555 999 1212",
+      headers: ["Authorization: Bearer legal-secret-token"],
+      stack: "Error: legal review evidence failed",
+    };
+
+    const redacted = buildRedactedLegalReviewArtifact(rawArtifact);
+    const review = buildLegalReviewArtifactReview(rawArtifact);
+    const serialized = JSON.stringify({ redacted, review });
+
+    expect(serialized).not.toContain("Attorney Name");
+    expect(serialized).not.toContain("Law Firm PLLC");
+    expect(serialized).not.toContain("sha256:private-reviewed-copy");
+    expect(serialized).not.toContain("sha256:subject-email");
+    expect(serialized).not.toContain("sha256:ip-address");
+    expect(serialized).not.toContain("legal/tenant_demo/terms/private-review.json");
+    expect(serialized).not.toContain("lawyer@example.com");
+    expect(serialized).not.toContain("+1 555 999 1212");
+    expect(serialized).not.toContain("legal-secret-token");
+    expect(serialized).toContain("[REDACTED]");
+    expect(review.requiredArtifacts).toBe(legalReviewArtifactPaths);
+    expect(review.retainedExternalGates).toEqual(expect.arrayContaining([
+      "Qualified attorney approval metadata evidence",
+      "Payment policy legal and tax review evidence",
+      "Legal copy rollback drill evidence",
+    ]));
   });
 });
+

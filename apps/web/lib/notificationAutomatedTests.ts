@@ -28,6 +28,23 @@ export type NotificationAutomatedTestSuite = {
   secretPolicy: "redacted-only";
 };
 
+export type NotificationAutomatedTestExecutionPlan = {
+  suites: readonly {
+    id: NotificationAutomatedTestSuiteId;
+    command: string;
+    artifacts: readonly string[];
+    requiresProviderOrDevice: boolean;
+  }[];
+  requiredArtifacts: readonly string[];
+  blockedExternalSuites: readonly NotificationAutomatedTestSuiteId[];
+};
+
+export type NotificationArtifactReview = {
+  status: "passed" | "blocked";
+  redactedArtifacts: readonly unknown[];
+  blockers: readonly string[];
+};
+
 export const notificationAutomatedTestSuites: NotificationAutomatedTestSuite[] = [
   {
     id: "notification-package-unit",
@@ -140,6 +157,89 @@ export const notificationCiArtifactPaths = [
   "test-results/notifications",
   "test-results/messaging",
 ] as const;
+
+export const notificationAutomatedTestRequiredArtifacts = notificationAutomatedTestSuites.flatMap(
+  (suite) => suite.artifacts,
+);
+
+const externalSuiteIds = new Set<NotificationAutomatedTestSuiteId>([
+  "notification-queue-integration",
+  "dashboard-template-smoke",
+  "dashboard-message-smoke",
+  "mobile-notification-smoke",
+  "expo-push-device-qa",
+  "provider-sandbox-email",
+  "provider-sandbox-sms",
+  "provider-sandbox-push-receipt",
+  "preference-opt-out-persistence",
+  "sms-stop-persistence",
+  "retention-export-delete",
+  "booking-deposit-aftercare-travel-e2e",
+]);
+
+const sensitiveArtifactKeyPattern = /(token|secret|password|authorization|cookie|provider|payload|email|phone|expo|twilio|resend|receipt|device|push|sms)/i;
+const sensitiveArtifactValuePatterns = [
+  /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
+  /\+?\d[\d\s().-]{7,}\d/g,
+  /\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi,
+  /\b(?:expo|twilio|resend|push|sms|receipt|device)[\w:./?=&-]*/gi,
+];
+
+export function buildRedactedNotificationAutomationArtifact(input: unknown): unknown {
+  if (Array.isArray(input)) return input.map((value) => buildRedactedNotificationAutomationArtifact(value));
+  if (!input || typeof input !== "object") {
+    if (typeof input !== "string") return input;
+    return sensitiveArtifactValuePatterns.reduce((value, pattern) => value.replace(pattern, "[redacted]"), input);
+  }
+
+  return Object.fromEntries(
+    Object.entries(input as Record<string, unknown>).map(([key, value]) => [
+      key,
+      sensitiveArtifactKeyPattern.test(key) ? "[redacted]" : buildRedactedNotificationAutomationArtifact(value),
+    ]),
+  );
+}
+
+export function buildNotificationAutomatedTestExecutionPlan(
+  suites: readonly NotificationAutomatedTestSuite[] = notificationAutomatedTestSuites,
+): NotificationAutomatedTestExecutionPlan {
+  return {
+    suites: suites.map((suite) => ({
+      id: suite.id,
+      command: suite.command,
+      artifacts: suite.artifacts,
+      requiresProviderOrDevice: externalSuiteIds.has(suite.id),
+    })),
+    requiredArtifacts:
+      suites === notificationAutomatedTestSuites
+        ? notificationAutomatedTestRequiredArtifacts
+        : suites.flatMap((suite) => suite.artifacts),
+    blockedExternalSuites: suites.filter((suite) => externalSuiteIds.has(suite.id)).map((suite) => suite.id),
+  };
+}
+
+export function buildNotificationAutomationArtifactReview(input: {
+  artifacts: readonly unknown[];
+  expectedArtifactPaths?: readonly string[];
+}): NotificationArtifactReview {
+  const redactedArtifacts = input.artifacts.map((artifact) => buildRedactedNotificationAutomationArtifact(artifact));
+  const serialized = JSON.stringify(redactedArtifacts);
+  const blockers = [
+    ...(input.artifacts.length === 0 ? ["No notification automation artifacts were provided for review."] : []),
+    ...(/\b(secret|token|authorization|cookie|ari@example|206 555|twilio|resend|expo_push_token)\b/i.test(serialized)
+      ? ["Notification automation artifacts still contain provider credentials, tokens, or PII."]
+      : []),
+    ...((input.expectedArtifactPaths ?? []).some((path) => !serialized.includes(path))
+      ? ["Notification automation artifact inventory is incomplete."]
+      : []),
+  ];
+
+  return {
+    status: blockers.length === 0 ? "passed" : "blocked",
+    redactedArtifacts,
+    blockers,
+  };
+}
 
 export function buildNotificationAutomatedTestContract(): NotificationAutomatedTestReadinessPlan {
   return buildNotificationAutomatedTestReadinessPlan({
