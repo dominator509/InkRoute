@@ -1949,8 +1949,6 @@ jobs:
       - name: Run Phase 9 notification and messaging lifecycle contracts
         run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/email-provider-static.test.ts apps/web/tests/sms-provider-static.test.ts apps/web/tests/preference-center-static.test.ts apps/web/tests/notification-automation-static.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/notification-persistence-static.test.ts apps/dashboard/tests/notification-scheduler-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
 
-
-
       - name: Run Phase 10 SEO publication runtime contracts
         run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/dashboard/tests/seo-publication-runtime-static.test.ts apps/dashboard/tests/seo-publication-route-static.test.ts apps/dashboard/tests/seo-read-route-static.test.ts
 
@@ -3269,29 +3267,29 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-            name: mobile-push-runtime-artifacts
-            path: |
-              coverage/mobile-push-runtime.json
-              coverage/mobile-push-notifications-typecheck.txt
-              coverage/mobile-push-notifications-test.txt
-              coverage/mobile-push-app-typecheck.txt
-              coverage/mobile-push-expo-project-redacted.json
-              coverage/mobile-push-native-credentials-redacted.json
-              coverage/mobile-push-token-persistence.json
-              coverage/mobile-push-opt-out-persistence.json
-              coverage/mobile-push-delivery-worker.json
-              coverage/mobile-push-delivery-log-persistence.json
-              coverage/mobile-push-provider-event-persistence.json
-              coverage/mobile-push-notification-interaction.json
-              coverage/mobile-push-audit-log.json
-              coverage/mobile-push-receipt-worker.json
-              coverage/mobile-push-invalid-token-suppression.json
-              coverage/mobile-push-tap-routing.json
-              coverage/mobile-push-ios-device-qa-redacted.json
-              coverage/mobile-push-android-device-qa-redacted.json
-              coverage/mobile-push-secret-safe-artifacts.json
-              test-results/mobile-push-runtime
-            if-no-files-found: warn
+          name: mobile-push-runtime-artifacts
+          path: |
+            coverage/mobile-push-runtime.json
+            coverage/mobile-push-notifications-typecheck.txt
+            coverage/mobile-push-notifications-test.txt
+            coverage/mobile-push-app-typecheck.txt
+            coverage/mobile-push-expo-project-redacted.json
+            coverage/mobile-push-native-credentials-redacted.json
+            coverage/mobile-push-token-persistence.json
+            coverage/mobile-push-opt-out-persistence.json
+            coverage/mobile-push-delivery-worker.json
+            coverage/mobile-push-delivery-log-persistence.json
+            coverage/mobile-push-provider-event-persistence.json
+            coverage/mobile-push-notification-interaction.json
+            coverage/mobile-push-audit-log.json
+            coverage/mobile-push-receipt-worker.json
+            coverage/mobile-push-invalid-token-suppression.json
+            coverage/mobile-push-tap-routing.json
+            coverage/mobile-push-ios-device-qa-redacted.json
+            coverage/mobile-push-android-device-qa-redacted.json
+            coverage/mobile-push-secret-safe-artifacts.json
+            test-results/mobile-push-runtime
+          if-no-files-found: warn
 
       - name: Run Phase 9 app runtime/build runtime contracts
         run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/phase9-app-runtime-build-runtime-static.test.ts apps/web/tests/phase9-app-runtime-build-static.test.ts
@@ -3373,58 +3371,3 @@ jobs:
             coverage/playwright-junit.xml
             test-results
           if-no-files-found: warn
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
