@@ -1222,7 +1222,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Verify Phase 18 workspace runtime readiness
-        run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness && pnpm workspace:required-checks && pnpm workspace:toolchain
+        run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness && pnpm workspace:runtime-evidence && pnpm workspace:required-checks && pnpm workspace:toolchain
       - name: Run Phase 17 quality gate runtime contracts
         run: pnpm --filter @inkroute/quality test && pnpm vitest run apps/web/tests/quality-gate-runtime-static.test.ts
 
