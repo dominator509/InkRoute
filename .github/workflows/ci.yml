@@ -782,7 +782,6 @@ jobs:
 
       - name: Run Phase 3 public web launch runtime contracts
         run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/web/tests/public-web-launch-runtime-static.test.ts
-
       - name: Upload Phase 3 public web launch runtime artifacts
         if: always()
         uses: actions/upload-artifact@v4
