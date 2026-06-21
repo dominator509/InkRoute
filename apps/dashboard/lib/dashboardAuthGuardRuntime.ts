@@ -1,7 +1,7 @@
 import {
   buildDashboardAuthGuardEvidencePlan,
   dashboardAuthGuardRequiredControls,
-} from  @inkroute/auth;
+} from "@inkroute/auth";
 
 export { dashboardAuthGuardRequiredControls as dashboardAuthGuardRuntimeRequiredControls };
 
