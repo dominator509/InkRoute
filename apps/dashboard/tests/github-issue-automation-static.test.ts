@@ -14,7 +14,7 @@ import {
   githubIssueAutomationProofFiles,
   githubIssueAutomationRequiredExternalEvidence,
   githubIssueAutomationRequiredEvidence,
-} from "../app/api/observability/github-issues/route";
+} from "../app/api/observability/github-issues/runtime";
 
 const root = join(__dirname, "..", "..");
 const routeSource = readFileSync(join(root, "apps/dashboard/app/api/observability/github-issues/route.ts"), "utf8");
