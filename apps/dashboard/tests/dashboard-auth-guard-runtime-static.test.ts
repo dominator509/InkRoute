@@ -95,6 +95,7 @@ describe("dashboard auth guard runtime contract", () => {
     expect(dashboardAuthApi).not.toContain('headers: { "Cache-Control": "no-store" }');
     expect(dashboardAuthApi).toContain("function normalizeHeaderValue(value: string | null): string | null");
     expect(dashboardAuthApi).toContain("const fallbackRole = \"assistant\";");
+    expect(dashboardAuthApi).toContain("role: fallbackRole");
     expect(dashboardAuthApi).toContain("actorUserId,");
     expect(dashboardAuthApi).toContain('const normalizedRole = normalizeHeaderValue(value)?.toLowerCase()');
   });

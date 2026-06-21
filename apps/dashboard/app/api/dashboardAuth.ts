@@ -87,7 +87,7 @@ export function getLocalDashboardActor(): DashboardActorContext {
   return {
     tenantId: inkrouteDemoTenant.id,
     actorUserId: FALLBACK_ACTOR_ID,
-    role: "owner",
+    role: fallbackRole,
     source: "local-fallback",
   };
 }
