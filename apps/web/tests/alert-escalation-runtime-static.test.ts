@@ -13,7 +13,7 @@ import {
   buildAlertEscalationEvidenceDecision,
   buildAlertEscalationExecutionPlan,
   buildRedactedAlertEscalationArtifact,
-} from "../app/api/observability/alerts/route";
+} from "../lib/alertEscalationRuntime";
 
 const root = join(__dirname, "..", "..");
 const routeSource = readFileSync(join(root, "apps/web/app/api/observability/alerts/route.ts"), "utf8");
