@@ -4,18 +4,22 @@ import fs from "node:fs";
 import { execSync } from "node:child_process";
 import path from "node:path";
 
-const [, , messageFile] = process.argv;
+const normalizeArg = (value) => {
+  if (!value) return value;
+  return value.replace(/^"|"$/g, "").replace(/^'|'$/g, "");
+};
+
+const [, , rawMessageFile] = process.argv;
+const messageFile = normalizeArg(rawMessageFile);
 const resolveGitDir = () => {
   try {
-    const rawGitDir = execSync("git rev-parse --git-dir", {
+    const rawGitDir = execSync("git rev-parse --absolute-git-dir", {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
       cwd: process.cwd(),
     }).trim();
 
-    return path.isAbsolute(rawGitDir)
-      ? rawGitDir
-      : path.join(process.cwd(), rawGitDir);
+    return rawGitDir;
   } catch {
     return path.join(process.cwd(), ".git");
   }
