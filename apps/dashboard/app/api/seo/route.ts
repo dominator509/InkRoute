@@ -1,7 +1,7 @@
 ﻿import { buildSeoPublicationMutationPlan, type SeoPublicationAction, type SeoPublishableModel, type SeoRouteRecord } from "@inkroute/seo";
 import { prisma } from "@inkroute/db";
 import { NextRequest, NextResponse } from "next/server";
-import { dashboardSeoRouteRecords } from "../../lib/seoDemo";
+import { dashboardSeoRouteRecords } from "../../../lib/seoDemo";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 
 function jsonObject(value: unknown): Record<string, unknown> | unknown[] | null {

@@ -1,7 +1,7 @@
 import { buildTenantDashboardView } from "@inkroute/config";
 import { prisma } from "@inkroute/db";
 import { NextRequest, NextResponse } from "next/server";
-import { dashboardProjectedClients } from "../../lib/demo";
+import { dashboardProjectedClients } from "../../../lib/demo";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 
 function formatLocation(city?: string | null, region?: string | null, country?: string | null): string {

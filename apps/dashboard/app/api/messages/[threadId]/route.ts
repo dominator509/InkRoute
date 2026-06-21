@@ -1,6 +1,6 @@
 import { prisma } from "@inkroute/db";
 import { NextRequest, NextResponse } from "next/server";
-import { dashboardRedactedMessageThreadDrafts } from "../../../lib/demo";
+import { dashboardRedactedMessageThreadDrafts } from "../../../../lib/demo";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../../dashboardAuth";
 
 interface MessageThreadDetailRouteContext {

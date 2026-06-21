@@ -1,7 +1,7 @@
 ﻿import { NextResponse, type NextRequest } from "next/server";
 import type { MessagingPrivacyAction, MessagingRole } from "@inkroute/notifications";
 import { assertPermission, resolveDashboardActor } from "../../dashboardAuth";
-import { buildMessagingPrivacyPlanFromRequest, messagingPrivacyContract } from "../../../lib/messagingPrivacy";
+import { buildMessagingPrivacyPlanFromRequest, messagingPrivacyContract } from "../../../../lib/messagingPrivacy";
 
 const actions: readonly MessagingPrivacyAction[] = ["redact_message", "authorize_message_view", "export_thread", "delete_thread", "apply_retention", "moderate_message"];
 const roles: readonly MessagingRole[] = ["client", "artist", "assistant", "studio_manager", "admin"];

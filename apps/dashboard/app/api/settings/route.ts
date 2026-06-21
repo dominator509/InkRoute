@@ -1,7 +1,7 @@
 import { rolePermissions } from "@inkroute/auth";
 import { prisma } from "@inkroute/db";
 import { NextRequest, NextResponse } from "next/server";
-import { dashboardFeatureFlags, dashboardShellContext } from "../../lib/demo";
+import { dashboardFeatureFlags, dashboardShellContext } from "../../../lib/demo";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 
 function redactEmail(value: string | null | undefined): string | null {

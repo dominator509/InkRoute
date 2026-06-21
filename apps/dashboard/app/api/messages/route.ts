@@ -1,7 +1,6 @@
-﻿import { prisma } from "@inkroute/db";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@inkroute/db";
-import { dashboardRedactedMessageThreadDrafts } from "../../lib/demo";
+import { dashboardRedactedMessageThreadDrafts } from "../../../lib/demo";
 import { buildDashboardMessagePersistencePlan, dashboardNotificationPersistenceContract } from "../../../lib/notificationPersistence";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 

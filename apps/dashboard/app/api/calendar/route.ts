@@ -1,6 +1,6 @@
 import { prisma } from "@inkroute/db";
 import { NextRequest, NextResponse } from "next/server";
-import { dashboardAppointments, dashboardAvailabilitySlots, dashboardCalendarSyncPlans } from "../../lib/demo";
+import { dashboardAppointments, dashboardAvailabilitySlots, dashboardCalendarSyncPlans } from "../../../lib/demo";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 
 function redactProviderPayload(value: unknown): Record<string, unknown> | null {

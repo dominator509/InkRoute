@@ -1,7 +1,7 @@
 import { prisma } from "@inkroute/db";
 import type { ReviewStatus } from "@inkroute/types";
 import { NextRequest, NextResponse } from "next/server";
-import { dashboardReviewQueue } from "../../lib/demo";
+import { dashboardReviewQueue } from "../../../lib/demo";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;

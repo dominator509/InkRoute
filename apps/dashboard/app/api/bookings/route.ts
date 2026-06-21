@@ -1,7 +1,7 @@
 import { buildTenantDashboardView } from "@inkroute/config";
 import { prisma } from "@inkroute/db";
 import { NextRequest, NextResponse } from "next/server";
-import { dashboardProjectedBookingRows } from "../../lib/demo";
+import { dashboardProjectedBookingRows } from "../../../lib/demo";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 
 function formatBudgetRange(min?: number | null, max?: number | null): string {

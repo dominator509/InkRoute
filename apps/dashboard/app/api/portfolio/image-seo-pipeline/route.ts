@@ -6,7 +6,7 @@ import {
   imageSeoDerivativeMetadata,
   imageSeoPipelineArtifactPaths,
   imageSeoPipelineRuntimeContract,
-} from "../../../lib/imageSeoPipeline";
+} from "../../../../lib/imageSeoPipeline";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../../dashboardAuth";
 
 function stringValue(value: unknown): string | undefined {

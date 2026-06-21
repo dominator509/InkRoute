@@ -7,7 +7,7 @@ import {
   dashboardProviderBoundaryMatrix,
   dashboardRedactedProviderSendDrafts,
   dashboardTemplates,
-} from "../../lib/demo";
+} from "../../../lib/demo";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 
 function catalogRows() {
