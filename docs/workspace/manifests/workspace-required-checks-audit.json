@@ -1,15 +1,8 @@
 {
-  "generatedAt": "2026-06-12T09:04:33.415Z",
+  "generatedAt": "2026-06-21T22:10:17.494Z",
   "source": "GAP-133 required workspace checks",
-  "status": "fail",
-  "findings": [
-    {
-      "status": "fail",
-      "rule": "ci-term",
-      "term": "pnpm workspace:runtime-evidence",
-      "message": "CI workflow is missing workspace required term: pnpm workspace:runtime-evidence."
-    }
-  ],
+  "status": "pass",
+  "findings": [],
   "rootScriptsChecked": 9,
   "workspaceAllTermsChecked": 6,
   "ciTermsChecked": 6,
