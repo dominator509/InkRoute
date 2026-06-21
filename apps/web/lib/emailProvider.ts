@@ -149,10 +149,11 @@ export function buildEmailWebhookReadinessFromPayload(input: {
   alreadyProcessedEventIds?: readonly string[];
 }): EmailWebhookRuntimeReadinessPlan {
   return buildEmailWebhookRuntimeReadinessPlan({
-    tenantId: input.tenantId,
+    tenantId: input.tenantId ?? "",
     eventId: input.eventId,
     eventType: input.eventType,
     ...(input.providerMessageId ? { providerMessageId: input.providerMessageId } : {}),
+    ...(input.alreadyProcessedEventIds ? { alreadyProcessedEventIds: input.alreadyProcessedEventIds } : {}),
     rawBodyCaptured: input.rawBodyCaptured,
     signatureHeaderPresent: input.signatureHeaderPresent,
     signatureVerifierConfigured: false,
@@ -164,7 +165,6 @@ export function buildEmailWebhookReadinessFromPayload(input: {
     suppressionPersistenceAvailable: false,
     idempotencyStoreAvailable: false,
     payloadRedacted: true,
-    alreadyProcessedEventIds: input.alreadyProcessedEventIds,
   });
 }
 

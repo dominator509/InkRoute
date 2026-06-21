@@ -269,7 +269,13 @@ export async function executePreferenceMutation(
   if (claim === "duplicate") return { status: "duplicate", plan };
 
   if (plan.action === "issue_preference_token" && plan.tokenHash) {
-    await repository.issuePreferenceToken({ tenantId, clientId: String(plan.writes[0].payload.clientId ?? "missing_client"), tokenHash: plan.tokenHash, expiresAt: String(plan.writes[0].payload.expiresAt ?? "") });
+    const issueTokenPayload = plan.writes[0]?.payload;
+    await repository.issuePreferenceToken({
+      tenantId,
+      clientId: String(issueTokenPayload?.clientId ?? "missing_client"),
+      tokenHash: plan.tokenHash,
+      expiresAt: String(issueTokenPayload?.expiresAt ?? ""),
+    });
   }
   if (plan.writes.some((write) => write.model === "ClientNotificationPreference")) await repository.persistClientPreference({ tenantId, plan });
   if (plan.writes.some((write) => write.model === "SuppressionListEntry")) await repository.persistSuppression({ tenantId, plan, reason: plan.action });

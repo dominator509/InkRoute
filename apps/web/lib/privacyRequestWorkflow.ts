@@ -77,6 +77,7 @@ export const privacyWorkflowArtifactPaths = [
   "coverage/privacy-legal-hold-denial.json",
   "coverage/privacy-notification-version-redacted.json",
   "coverage/privacy-audit-log-persistence.json",
+  "coverage/privacy-requester-mismatch-denial.json",
   "test-results/privacy-request-workflow",
 ] as const;
 
@@ -136,7 +137,7 @@ export const privacyWorkflowExternalArtifacts = [
   "coverage/privacy-identity-proof-redacted.json",
   "coverage/privacy-tenant-relationship-proof.json",
   "coverage/privacy-export-artifact-redacted.json",
-  "coverage/privacy-delete-anonymize-worker.json",
+  "coverage/privacy-delete-anonymize-tombstones.json",
   "coverage/privacy-storage-export-delete.json",
   "coverage/privacy-legal-hold-denial.json",
   "coverage/privacy-notification-version-redacted.json",

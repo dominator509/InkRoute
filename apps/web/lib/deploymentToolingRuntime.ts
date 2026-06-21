@@ -1,4 +1,4 @@
-﻿import { buildDeploymentToolingRuntimeVerificationPlan } from "@inkroute/deployment";
+import { buildDeploymentToolingRuntimeVerificationPlan } from "@inkroute/deployment";
 
 export type DeploymentToolingRuntimeStatus =
   | "wired"
@@ -16,7 +16,7 @@ export interface DeploymentToolingRuntimeMatrixEntry {
 export interface DeploymentToolingRunPersistenceInput {
   tenantId: string;
   runId: string;
-  commitSha?: string;
+  commitSha?: string | null;
   status: "blocked" | "running" | "passed" | "failed" | "dashboard_gated";
   runtimeMatrix: readonly DeploymentToolingRuntimeMatrixEntry[];
   artifactManifest: readonly string[];
@@ -34,8 +34,8 @@ export interface DeploymentToolingRunPersistenceInput {
   productionApprovalBoundaryVerified: boolean;
   ciDeploymentReportsCaptured: boolean;
   blockerOwnersDocumented: boolean;
-  blockerOwnerArtifactPath?: string;
-  ciRunUrl?: string;
+  blockerOwnerArtifactPath?: string | null;
+  ciRunUrl?: string | null;
 }
 
 export interface DeploymentToolingRunPersistenceContract {
@@ -545,3 +545,4 @@ export const deploymentToolingRunPersistencePreview = buildDeploymentToolingRunP
   blockerOwnersDocumented: true,
   blockerOwnerArtifactPath: "coverage/deployment-blocker-owner-list.json",
 });
+

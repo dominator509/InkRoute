@@ -464,7 +464,7 @@ function buildProviderEventClaimKey(input: { readonly tenantId: string; readonly
 }
 
 function buildDeliveryUpdateKey(input: { readonly tenantId: string; readonly reconciliation: ProviderEventReconciliationPlan }): string {
-  return `${input.tenantId}:${input.reconciliation.provider}:${input.reconciliation.providerMessageId ?? input.reconciliation.eventId}`;
+  return `${input.tenantId}:${input.reconciliation.provider}:${input.reconciliation.eventId}`;
 }
 
 export function createInMemoryProviderWebhookPersistenceRepository(

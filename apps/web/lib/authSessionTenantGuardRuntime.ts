@@ -340,7 +340,7 @@ export const authGuardAuditLogPlan = buildAuthGuardAuditLogPlan({
 
 export function buildAuthSessionTenantGuardCoverageContract() {
   return buildAuthSessionTenantGuardRuntimeReadinessPlan({
-    packageScripts: ["test", "typecheck"],
+    packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
     authTestsPassed: false,
     authTypecheckPassed: false,
     authProviderSelected: false,

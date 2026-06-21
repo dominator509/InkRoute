@@ -107,7 +107,7 @@ export function evaluatePublicCanonicalRequest(input: { host: string; path: stri
   const redirectDecision = buildSeoRedirectDecision({
     tenantId: inkrouteDemoTenant.id,
     path: policy.canonicalPath,
-    route,
+    ...(route ? { route } : {}),
     rules: publicSeoRedirectRules,
   });
 
@@ -132,7 +132,7 @@ export function evaluateCanonicalRequestWithRepository(
     requestPath: input.path,
     tenantSlug: input.tenantSlug ?? inkrouteDemoTenant.slug,
     tenantId,
-    domains: repository.listTenantDomains(tenantId),
+    domains: [...repository.listTenantDomains(tenantId)],
     routes: allPublicSeoRoutes,
     protocol: input.protocol,
   });
@@ -140,8 +140,8 @@ export function evaluateCanonicalRequestWithRepository(
   const redirectDecision = buildSeoRedirectDecision({
     tenantId,
     path: policy.canonicalPath,
-    route,
-    rules: repository.listSeoRedirectRules(tenantId),
+    ...(route ? { route } : {}),
+    rules: [...repository.listSeoRedirectRules(tenantId)],
   });
   const result = {
     policy,

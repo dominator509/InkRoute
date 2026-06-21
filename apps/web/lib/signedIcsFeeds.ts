@@ -217,8 +217,8 @@ export async function evaluateSignedIcsFeedRequest(input: {
 
   const decision = evaluateSignedIcsFeedAccess({
     ...(input.token ? { token: input.token } : {}),
-    ...(durableRecord || !tokenHash
-      ? { record: durableRecord ?? undefined }
+    ...(durableRecord
+      ? { record: durableRecord }
       : input.tenantSlug === localDemoFeedTokenRecord.tenantSlug &&
           input.artistSlug === localDemoFeedTokenRecord.artistSlug &&
           tokenHash === localDemoFeedTokenRecord.tokenHash

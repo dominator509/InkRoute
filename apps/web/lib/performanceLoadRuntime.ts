@@ -1,4 +1,4 @@
-﻿import { buildPerformanceLoadRuntimeReadinessPlan } from "@inkroute/testing";
+import { buildPerformanceLoadRuntimeReadinessPlan } from "@inkroute/testing";
 
 export type PerformanceLoadRuntimeStatus =
   | "wired"
@@ -16,7 +16,7 @@ export interface PerformanceLoadRuntimeMatrixEntry {
 export interface PerformanceLoadRunPersistenceInput {
   tenantId: string;
   runId: string;
-  commitSha?: string;
+  commitSha?: string | null;
   status: "blocked" | "running" | "passed" | "failed" | "database_gated";
   runtimeMatrix: readonly PerformanceLoadRuntimeMatrixEntry[];
   artifactManifest: readonly string[];
@@ -34,8 +34,8 @@ export interface PerformanceLoadRunPersistenceInput {
   performanceArtifactsRetained: boolean;
   ciPerformanceJobPassed: boolean;
   regressionsTriagedAndFixed: boolean;
-  triageArtifactPath?: string;
-  ciRunUrl?: string;
+  triageArtifactPath?: string | null;
+  ciRunUrl?: string | null;
 }
 
 export interface PerformanceLoadRunPersistenceContract {
@@ -539,3 +539,4 @@ export const performanceLoadRunPersistencePreview = buildPerformanceLoadRunPersi
   regressionsTriagedAndFixed: false,
   triageArtifactPath: "coverage/performance-regression-triage.md",
 });
+

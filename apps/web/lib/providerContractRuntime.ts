@@ -1,4 +1,4 @@
-﻿import { buildProviderContractRuntimeReadinessPlan } from "@inkroute/testing";
+import { buildProviderContractRuntimeReadinessPlan } from "@inkroute/testing";
 
 export type ProviderContractRuntimeStatus =
   | "wired"
@@ -16,7 +16,7 @@ export interface ProviderContractRuntimeMatrixEntry {
 export interface ProviderContractRunPersistenceInput {
   tenantId: string;
   runId: string;
-  commitSha?: string;
+  commitSha?: string | null;
   status: "blocked" | "running" | "passed" | "failed" | "provider_gated";
   runtimeMatrix: readonly ProviderContractRuntimeMatrixEntry[];
   artifactManifest: readonly string[];
@@ -38,7 +38,7 @@ export interface ProviderContractRunPersistenceInput {
   rateLimitStorePassed: boolean;
   redactedArtifactsRetained: boolean;
   ciProviderContractPassed: boolean;
-  ciRunUrl?: string;
+  ciRunUrl?: string | null;
 }
 
 export interface ProviderContractRunPersistenceContract {
@@ -557,3 +557,4 @@ export const providerContractRunPersistencePreview = buildProviderContractRunPer
   redactedArtifactsRetained: true,
   ciProviderContractPassed: false,
 });
+

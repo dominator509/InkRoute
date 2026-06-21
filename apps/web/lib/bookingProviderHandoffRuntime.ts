@@ -1,7 +1,7 @@
 import {
   buildBookingProviderHandoffRuntimeEvidencePlan,
   bookingProviderHandoffRuntimeRequiredControls,
-} from  @inkroute/booking;
+} from "@inkroute/booking";
 
 export { bookingProviderHandoffRuntimeRequiredControls };
 

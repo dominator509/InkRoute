@@ -1,4 +1,4 @@
-﻿import { buildAppE2eRuntimeReadinessPlan } from "@inkroute/testing";
+import { buildAppE2eRuntimeReadinessPlan } from "@inkroute/testing";
 
 export type AppE2eRuntimeStatus =
   | "wired"
@@ -16,7 +16,7 @@ export interface AppE2eRuntimeMatrixEntry {
 export interface AppE2eRuntimeRunPersistenceInput {
   tenantId: string;
   runId: string;
-  commitSha?: string;
+  commitSha?: string | null;
   status: "blocked" | "running" | "passed" | "failed" | "ci_gated";
   runtimeMatrix: readonly AppE2eRuntimeMatrixEntry[];
   specFiles: readonly string[];
@@ -35,8 +35,8 @@ export interface AppE2eRuntimeRunPersistenceInput {
   ciE2ePassed: boolean;
   flakyRetriesConfigured: boolean;
   hardenedFailuresCommitted: boolean;
-  failureHardeningArtifactPath?: string;
-  ciRunUrl?: string;
+  failureHardeningArtifactPath?: string | null;
+  ciRunUrl?: string | null;
 }
 
 export interface AppE2eRuntimeRunPersistenceContract {
@@ -525,4 +525,5 @@ export const appE2eRuntimeRunPersistencePreview = buildAppE2eRuntimeRunPersisten
   hardenedFailuresCommitted: false,
   failureHardeningArtifactPath: "coverage/app-e2e-runtime.json",
 });
+
 

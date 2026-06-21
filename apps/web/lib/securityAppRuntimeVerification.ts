@@ -13,7 +13,7 @@ export interface SecurityAppRuntimeTarget {
 export interface SecurityAppRuntimeRunPersistenceInput {
   tenantId: string;
   runId: string;
-  commitSha?: string;
+  commitSha?: string | null;
   status: "blocked" | "running" | "passed" | "failed" | "device_gated";
   targetMatrix: readonly SecurityAppRuntimeTarget[];
   artifactManifest: readonly string[];
@@ -27,7 +27,7 @@ export interface SecurityAppRuntimeRunPersistenceInput {
   browserRuntimeSmokePassed: boolean;
   mobileDeviceSmokePassed: boolean;
   deviceGatedTargets: readonly string[];
-  ciRunUrl?: string;
+  ciRunUrl?: string | null;
 }
 
 export interface SecurityAppRuntimeRunPersistenceContract {
@@ -456,3 +456,4 @@ export const securityAppRuntimeRunPersistencePreview = buildSecurityAppRuntimeRu
   mobileDeviceSmokePassed: false,
   deviceGatedTargets: securityAppRuntimeTargets.filter((target) => target.status === "device-gated").map((target) => target.id),
 });
+

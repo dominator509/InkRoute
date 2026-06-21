@@ -1,4 +1,4 @@
-﻿import { buildPhase14RunnerExecutionReadinessPlan } from "@inkroute/testing";
+import { buildPhase14RunnerExecutionReadinessPlan } from "@inkroute/testing";
 
 export type Phase14RunnerExecutionStatus =
   | "wired"
@@ -16,7 +16,7 @@ export interface Phase14RunnerExecutionMatrixEntry {
 export interface Phase14RunnerRunPersistenceInput {
   tenantId: string;
   runId: string;
-  commitSha?: string;
+  commitSha?: string | null;
   status: "blocked" | "running" | "passed" | "failed" | "ci_gated";
   commandMatrix: readonly Phase14RunnerExecutionMatrixEntry[];
   artifactManifest: readonly string[];
@@ -33,10 +33,10 @@ export interface Phase14RunnerRunPersistenceInput {
   runnerFixesCommitted: boolean;
   scaffoldCoveragePreserved: boolean;
   flakyPolicyDocumented: boolean;
-  triageArtifactPath?: string;
-  scaffoldDiffArtifactPath?: string;
-  flakyPolicyArtifactPath?: string;
-  ciRunUrl?: string;
+  triageArtifactPath?: string | null;
+  scaffoldDiffArtifactPath?: string | null;
+  flakyPolicyArtifactPath?: string | null;
+  ciRunUrl?: string | null;
 }
 
 export interface Phase14RunnerRunPersistenceContract {
@@ -515,3 +515,4 @@ export const phase14RunnerRunPersistencePreview = buildPhase14RunnerRunPersisten
   scaffoldDiffArtifactPath: "coverage/phase14-scaffold-coverage-diff.json",
   flakyPolicyArtifactPath: "coverage/phase14-flaky-policy.md",
 });
+

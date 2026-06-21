@@ -22,17 +22,17 @@ export interface SecurityCoverageSuiteTarget {
 export interface SecurityCoverageRunPersistenceInput {
   tenantId: string;
   runId: string;
-  commitSha?: string;
+  commitSha?: string | null;
   status: "blocked" | "running" | "passed" | "failed" | "provider_gated";
   suiteMatrix: readonly SecurityCoverageSuiteTarget[];
   providerGatedSuites: readonly string[];
   artifactManifest: readonly string[];
-  failureFixturesPath?: string;
+  failureFixturesPath?: string | null;
   dbIsolationCovered: boolean;
   storageNegativeCovered: boolean;
   privacyWorkflowCovered: boolean;
   roleBoundaryCovered: boolean;
-  ciRunUrl?: string;
+  ciRunUrl?: string | null;
 }
 
 export interface SecurityCoverageRunPersistenceContract {
@@ -467,3 +467,4 @@ export const securityCoverageRunPersistencePreview = buildSecurityCoverageRunPer
   privacyWorkflowCovered: false,
   roleBoundaryCovered: false,
 });
+

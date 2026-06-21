@@ -320,36 +320,39 @@ function parseTraceparent(traceparent: string | null): { traceId?: string; spanI
   }
 
   const [, traceId, spanId] = traceparent.split("-");
+  const parsedTraceId = traceId && /^[a-f0-9]{32}$/i.test(traceId) ? traceId : undefined;
+  const parsedSpanId = spanId && /^[a-f0-9]{16}$/i.test(spanId) ? spanId : undefined;
+
   return {
-    traceId: traceId && /^[a-f0-9]{32}$/i.test(traceId) ? traceId : undefined,
-    spanId: spanId && /^[a-f0-9]{16}$/i.test(spanId) ? spanId : undefined,
+    ...(parsedTraceId ? { traceId: parsedTraceId } : {}),
+    ...(parsedSpanId ? { spanId: parsedSpanId } : {}),
   };
 }
 
 export function buildWebTelemetryRuntime(request: NextRequest) {
-  const incomingRequestId = request.headers.get("x-request-id") ?? request.headers.get("x-correlation-id") ?? undefined;
+  const incomingRequestId = request.headers.get("x-request-id") ?? request.headers.get("x-correlation-id") ?? "request-id-missing";
   const incomingTrace = parseTraceparent(request.headers.get("traceparent"));
   const rawMetadata = {
     method: request.method,
     path: request.nextUrl.pathname,
     host: request.headers.get("host") ?? "unknown",
     userAgentFamily: request.headers.get("user-agent")?.split("/")[0] ?? "unknown",
-    tenantId: request.headers.get("x-inkroute-tenant-id") ?? undefined,
+    tenantId: request.headers.get("x-inkroute-tenant-id") ?? "tenant-id-missing",
   };
   const redactedMetadata = redactMetadata(rawMetadata).metadata;
   const plan = buildTelemetryPipelinePlan({
     serviceName: "web",
     environment: runtimeEnvironment(),
     requestId: incomingRequestId,
-    traceId: incomingTrace.traceId,
-    spanId: incomingTrace.spanId,
+    traceId: incomingTrace.traceId ?? "trace-id-missing",
+    spanId: incomingTrace.spanId ?? "span-id-missing",
     route: request.nextUrl.pathname,
-    tenantId: request.headers.get("x-inkroute-tenant-id") ?? undefined,
+    tenantId: request.headers.get("x-inkroute-tenant-id") ?? "tenant-id-missing",
     otlpEndpointConfigured: Boolean(process.env.OTEL_EXPORTER_OTLP_ENDPOINT),
     structuredLoggingEnabled: true,
     requestIdPropagationEnabled: true,
     traceContextPropagationEnabled: true,
-    samplingRate: Number(process.env.OTEL_TRACES_SAMPLER_ARG ?? "0.1"),
+    sampleRate: Number(process.env.OTEL_TRACES_SAMPLER_ARG ?? "0.1"),
     attributes: redactedMetadata,
   });
   const readiness = buildOpenTelemetryRuntimeReadinessPlan({
@@ -399,7 +402,7 @@ export interface TelemetryRuntimePlanInput {
   readonly tenantId?: string;
   readonly environment?: RuntimeEnvironment;
   readonly otlpEndpointConfigured?: boolean;
-  readonly samplingRate?: number;
+  readonly sampleRate?: number;
 }
 
 export interface TelemetryErrorReportCorrelationInput extends TelemetryRuntimePlanInput {
@@ -426,21 +429,21 @@ function buildServiceTelemetryRuntimePlan(
   const redactedMetadata = redactMetadata({
     serviceName,
     route,
-    tenantId: input.tenantId,
+    tenantId: input.tenantId ?? "tenant-id-missing",
   }).metadata;
   const plan = buildTelemetryPipelinePlan({
     serviceName,
     environment: input.environment ?? runtimeEnvironment(),
-    requestId: input.requestId,
-    traceId: input.traceId,
-    spanId: input.spanId,
+    requestId: input.requestId ?? "request-id-missing",
+    traceId: input.traceId ?? "trace-id-missing",
+    spanId: input.spanId ?? "span-id-missing",
     route,
-    tenantId: input.tenantId,
+    tenantId: input.tenantId ?? "tenant-id-missing",
     otlpEndpointConfigured: input.otlpEndpointConfigured ?? Boolean(process.env.OTEL_EXPORTER_OTLP_ENDPOINT),
     structuredLoggingEnabled: true,
     requestIdPropagationEnabled: true,
     traceContextPropagationEnabled: true,
-    samplingRate: input.samplingRate ?? Number(process.env.OTEL_TRACES_SAMPLER_ARG ?? "0.1"),
+    sampleRate: input.sampleRate ?? Number(process.env.OTEL_TRACES_SAMPLER_ARG ?? "0.1"),
     attributes: redactedMetadata,
   });
   const readiness = buildOpenTelemetryRuntimeReadinessPlan({
@@ -528,8 +531,8 @@ export async function persistErrorReportTelemetryCorrelation(
 export function applyTelemetryHeaders(response: NextResponse, request: NextRequest): NextResponse {
   const telemetry = buildWebTelemetryRuntime(request);
 
-  response.headers.set("x-request-id", telemetry.plan.propagationHeaders["x-request-id"]);
-  response.headers.set("traceparent", telemetry.plan.propagationHeaders.traceparent);
+  response.headers.set("x-request-id", telemetry.plan.propagationHeaders["x-request-id"] ?? "request-id-missing");
+  response.headers.set("traceparent", telemetry.plan.propagationHeaders.traceparent ?? "00-00000000000000000000000000000000-0000000000000000-00");
   response.headers.set("x-inkroute-telemetry-status", telemetry.plan.status);
   response.headers.set("x-inkroute-otel-runtime", telemetry.readiness.status);
   response.headers.set("x-inkroute-telemetry-export", telemetry.plan.status === "ready" && telemetry.plan.exporter.configured ? "allowed" : "suppressed");

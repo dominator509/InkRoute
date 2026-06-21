@@ -1,4 +1,4 @@
-﻿import { buildSeedRuntimeExecutionEvidencePlan } from "@inkroute/db/integration-readiness";
+import { buildSeedRuntimeExecutionEvidencePlan } from "@inkroute/db";
 
 export type SeedRuntimeExecutionStatus =
   | "wired"
@@ -496,6 +496,8 @@ export const seedRuntimeExecutionReadiness = buildSeedRuntimeExecutionEvidencePl
   commandEvidenceCaptured: true,
   ciOrCleanCheckoutEvidenceCaptured: true,
 });
+
+
 
 
 

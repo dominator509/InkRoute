@@ -140,18 +140,20 @@ export function buildStripeWebhookRouteContract(input: {
   const providerAmountCents = extractAmount(input.payload);
   const providerCurrency = extractCurrency(input.payload);
   const moneyMatch = verifyStripeWebhookMoneyMatch({
-    providerAmountCents,
-    providerCurrency,
-    expected: input.expectedMoney,
+    ...(providerAmountCents !== undefined ? { providerAmountCents } : {}),
+    ...(providerCurrency ? { providerCurrency } : {}),
+    ...(input.expectedMoney ? { expected: input.expectedMoney } : {}),
   });
+  const providerPaymentIntentId = extractProviderId(input.payload, "payment_intent");
+  const providerChargeId = extractProviderId(input.payload, "charge");
   const reconciliation = buildStripeWebhookReconciliationPlan({
     eventId: input.eventId,
     eventType: input.eventType,
-    providerPaymentIntentId: extractProviderId(input.payload, "payment_intent"),
-    providerChargeId: extractProviderId(input.payload, "charge"),
-    amountCents: providerAmountCents,
-    currency: providerCurrency,
-    alreadyProcessedEventIds: input.alreadyProcessedEventIds,
+    ...(providerPaymentIntentId ? { providerPaymentIntentId } : {}),
+    ...(providerChargeId ? { providerChargeId } : {}),
+    ...(providerAmountCents !== undefined ? { amountCents: providerAmountCents } : {}),
+    ...(providerCurrency ? { currency: providerCurrency } : {}),
+    ...(input.alreadyProcessedEventIds ? { alreadyProcessedEventIds: input.alreadyProcessedEventIds } : {}),
   });
 
   const runtimeReadiness = buildStripeWebhookRuntimeReadinessPlan({
@@ -212,7 +214,7 @@ export async function reconcileStripeWebhookWithAdapters(input: {
     eventType: input.eventType,
     eventId: input.eventId,
     alreadyProcessedEventIds: alreadyProcessed ? [input.eventId] : [],
-    expectedMoney: input.expectedMoney,
+    ...(input.expectedMoney ? { expectedMoney: input.expectedMoney } : {}),
   });
 
   await input.adapter.persistPaymentAuditLog({

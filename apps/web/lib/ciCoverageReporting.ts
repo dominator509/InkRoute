@@ -1,4 +1,4 @@
-﻿import { buildCiCoverageReportingReadinessPlan } from "@inkroute/testing";
+import { buildCiCoverageReportingReadinessPlan } from "@inkroute/testing";
 
 export type CiCoverageReportingStatus =
   | "wired"
@@ -15,7 +15,7 @@ export interface CiCoverageReportingMatrixEntry {
 export interface CiCoverageRunPersistenceInput {
   tenantId: string;
   runId: string;
-  commitSha?: string;
+  commitSha?: string | null;
   status: "blocked" | "running" | "passed" | "failed" | "repository_gated";
   reportingMatrix: readonly CiCoverageReportingMatrixEntry[];
   artifactManifest: readonly string[];
@@ -33,8 +33,8 @@ export interface CiCoverageRunPersistenceInput {
   flakyPolicyDocumented: boolean;
   ciRunPassed: boolean;
   branchProtectionRequiresCi: boolean;
-  branchProtectionArtifactPath?: string;
-  ciRunUrl?: string;
+  branchProtectionArtifactPath?: string | null;
+  ciRunUrl?: string | null;
 }
 
 export interface CiCoverageRunPersistenceContract {
@@ -486,3 +486,4 @@ export const ciCoverageRunPersistencePreview = buildCiCoverageRunPersistenceCont
   branchProtectionRequiresCi: false,
   branchProtectionArtifactPath: "coverage/ci-branch-protection-redacted.json",
 });
+

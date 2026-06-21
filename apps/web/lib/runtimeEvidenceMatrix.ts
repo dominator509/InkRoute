@@ -405,6 +405,7 @@ const runtimeEvidenceRequirements = runtimeEvidenceMatrix
     id: entry.id,
     command: entry.command,
     requiredForProduction: entry.requiredForProduction,
+    gapIds: [],
   }));
 
 export const runtimeEvidenceReadiness = buildRuntimeEvidenceReadinessPlan({

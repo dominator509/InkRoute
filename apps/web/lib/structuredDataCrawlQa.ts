@@ -285,7 +285,7 @@ export function buildStructuredDataLocalCrawlArtifacts(
       supportedTypes,
       unsupportedTypes,
       missingExpectedTypes,
-      canonicalUrl: snapshot.canonicalUrl,
+      canonicalUrl: snapshot.canonicalUrl ?? "",
       canonicalMatchesInventory: !route?.expectedCanonicalUrl || snapshot.canonicalUrl === route.expectedCanonicalUrl,
       sitemapMatchesInventory: snapshot.inSitemap === undefined || snapshot.inSitemap === route?.shouldIndex,
       noindexMatchesInventory: route ? noindexPresent === !route.shouldIndex : false,

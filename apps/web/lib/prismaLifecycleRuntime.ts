@@ -1,4 +1,4 @@
-﻿import { buildPrismaSchemaLifecycleReadinessPlan } from "@inkroute/db/integration-readiness";
+import { buildPrismaSchemaLifecycleReadinessPlan } from "@inkroute/db";
 
 export type PrismaLifecycleRuntimeStatus =
   | "wired"
@@ -558,4 +558,6 @@ export async function persistPrismaLifecycleRun(
     update,
   });
 }
+
+
 
