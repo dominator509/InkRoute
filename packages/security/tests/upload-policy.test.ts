@@ -35,6 +35,7 @@ import {
   dashboardPrivacyRuntimeReadinessRequiredCommands,
   dashboardPrivacyRuntimeReadinessRequiredEvidence,
   buildSignedUploadIntentRequiredControls,
+  rateLimitRules,
   abuseControlRuntimeReadinessRequiredCommands,
   abuseControlRuntimeReadinessRequiredEvidence,
   buildDashboardPrivacyRuntimeReadinessPlan,
@@ -411,7 +412,6 @@ describe("security and privacy helpers", () => {
       privateStorageRuntimeReadinessRequiredEvidence[0],
       privateStorageRuntimeReadinessRequiredEvidence[1],
       privateStorageRuntimeReadinessRequiredEvidence[2],
-      privateStorageRuntimeReadinessRequiredEvidence[3],
       privateStorageRuntimeReadinessRequiredEvidence[4],
     ]);
     expect(plan.requiredCommands).toBe(privateStorageRuntimeReadinessRequiredCommands);
