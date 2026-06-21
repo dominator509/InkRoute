@@ -20,6 +20,60 @@ function redactAssetMetadata(metadata: unknown): Record<string, unknown> {
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
+type PortfolioStyleRow = {
+  slug: string | null;
+  label: string | null;
+};
+
+type PortfolioBookingRequestRow = {
+  id: string;
+  status: string;
+  clientNameSnapshot: string | null;
+};
+
+type PortfolioImageAssetRow = {
+  id: string;
+  kind: string;
+  visibility: string;
+  bucket: string | null;
+  objectKey: string | null;
+  checksumSha256: string | null;
+  publicUrl: string | null;
+  signedUrlExpiresAt: Date | null;
+  metadata: Record<string, unknown> | null;
+};
+
+type PortfolioImageRow = {
+  id: string;
+  imageUrl: string;
+  altText: string;
+  width: number;
+  height: number;
+  isPrimary: boolean;
+  sortOrder: number;
+  fileAsset: PortfolioImageAssetRow | null;
+};
+
+type PortfolioDetailRow = {
+  id: string;
+  tenantId: string;
+  title: string;
+  slug: string;
+  caption: string | null;
+  placement: string | null;
+  freshness: string | null;
+  city: string | null;
+  completedAt: Date | null;
+  sessionCount: number;
+  isPublic: boolean;
+  isFeatured: boolean;
+  publishedAt: Date | null;
+  attributionKey: string | null;
+  styles: PortfolioStyleRow[];
+  attributedBookingRequests: PortfolioBookingRequestRow[];
+  images: PortfolioImageRow[];
+};
+
 export async function GET(request: NextRequest, context: PortfolioDetailRouteContext) {
   const actor = resolveDashboardActor(request);
   try {
@@ -72,9 +126,12 @@ export async function GET(request: NextRequest, context: PortfolioDetailRouteCon
     );
   }
 
-  try {
+    try {
     const result = await prisma.$transaction(async (tx) => {
-      const row = await tx.portfolioItem.findFirst({
+      const portfolioItemModel = tx.portfolioItem as {
+        findFirst: (args: unknown) => Promise<PortfolioDetailRow | null>;
+      };
+      const row = await portfolioItemModel.findFirst({
         where: { id: portfolioId, tenantId },
         select: {
           id: true,
@@ -169,8 +226,8 @@ export async function GET(request: NextRequest, context: PortfolioDetailRouteCon
           publishedAt: result.row.publishedAt?.toISOString() ?? null,
           attributionKey: result.row.attributionKey,
           attributionCount: result.row.attributedBookingRequests.length,
-          styles: result.row.styles.map((style) => style.slug || style.label),
-          attributedBookings: result.row.attributedBookingRequests.map((booking) => ({
+          styles: result.row.styles.map((style: PortfolioStyleRow) => style.slug || style.label),
+          attributedBookings: result.row.attributedBookingRequests.map((booking: PortfolioBookingRequestRow) => ({
             id: booking.id,
             status: booking.status,
             clientName: "[redacted-dashboard-field]",

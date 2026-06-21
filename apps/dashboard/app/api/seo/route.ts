@@ -55,10 +55,14 @@ function canonicalPathFor(model: SeoPublishableModel, payload: Record<string, un
 function routeRecordFor(model: SeoPublishableModel, action: SeoPublicationAction, payload: Record<string, unknown>): SeoRouteRecord {
   const canonicalPath = canonicalPathFor(model, payload);
   const status = pageStatus(action, payload.status);
+  const kind: SeoRouteRecord["kind"] = model === "SeoStylePage" ? "style" : model === "SeoCityPage" ? "city" : "static";
+  const city = optionalString(payload.city);
+  const region = optionalString(payload.region);
+  const style = optionalString(payload.styleName);
   return {
     path: canonicalPath,
     canonicalPath,
-    kind: model === "SeoStylePage" ? "style" : model === "SeoCityPage" ? "city" : "custom",
+    kind,
     title: stringValue(payload.title, "Draft SEO page"),
     description: stringValue(payload.metaDescription, "Draft SEO metadata pending editorial review."),
     status,
@@ -66,15 +70,62 @@ function routeRecordFor(model: SeoPublishableModel, action: SeoPublicationAction
     priority: 0.7,
     changeFrequency: "monthly",
     lastModified: new Date().toISOString(),
-    city: optionalString(payload.city),
-    region: optionalString(payload.region),
-    style: optionalString(payload.styleName),
+    ...(city ? { city } : {}),
+    ...(region ? { region } : {}),
+    ...(style ? { style } : {}),
     relatedPortfolioIds: stringArray(payload.featuredPortfolioIds),
     revalidationTags: [`seo:${model}:${canonicalPath}`],
   };
 }
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+type SeoPageStatus = "draft" | "published" | "archived";
+type SeoCityPageRow = {
+  id: string;
+  tenantId: string;
+  slug: string;
+  city: string;
+  region: string;
+  country: string;
+  title: string;
+  metaDescription: string | null;
+  canonicalPath: string | null;
+  status: SeoPageStatus;
+  heroCopy: string | null;
+  faq: unknown;
+  internalLinks: unknown;
+  publishedAt: Date | null;
+  updatedAt: Date;
+  featuredPortfolio: { id: string; title: string; slug: string; isPublic: boolean }[];
+};
+
+type SeoStylePageRow = {
+  id: string;
+  tenantId: string;
+  slug: string;
+  styleName: string;
+  title: string;
+  metaDescription: string | null;
+  canonicalPath: string | null;
+  status: SeoPageStatus;
+  bodyCopy: string | null;
+  faq: unknown;
+  internalLinks: unknown;
+  publishedAt: Date | null;
+  updatedAt: Date;
+  featuredPortfolio: { id: string; title: string; slug: string; isPublic: boolean }[];
+};
+
+type SeoRedirectRow = {
+  id: string;
+  tenantId: string;
+  fromPath: string;
+  toPath: string;
+  statusCode: number;
+  isActive: boolean;
+  updatedAt: Date;
+};
 
 function mutationResponse(plan: ReturnType<typeof buildSeoPublicationMutationPlan>, status = 200, extra: Record<string, unknown> = {}) {
   return NextResponse.json(
@@ -141,7 +192,7 @@ export async function GET(request: NextRequest) {
   try {
     const result = await prisma.$transaction(async (tx) => {
       const [cityPages, stylePages, redirects] = await Promise.all([
-        tx.seoCityPage.findMany({
+        (tx.seoCityPage as { findMany: (args: unknown) => Promise<SeoCityPageRow[]> }).findMany({
           where: { tenantId },
           orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
           take: limit,
@@ -164,7 +215,7 @@ export async function GET(request: NextRequest) {
             featuredPortfolio: { select: { id: true, title: true, slug: true, isPublic: true } },
           },
         }),
-        tx.seoStylePage.findMany({
+        (tx.seoStylePage as { findMany: (args: unknown) => Promise<SeoStylePageRow[]> }).findMany({
           where: { tenantId },
           orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
           take: limit,
@@ -185,7 +236,7 @@ export async function GET(request: NextRequest) {
             featuredPortfolio: { select: { id: true, title: true, slug: true, isPublic: true } },
           },
         }),
-        tx.seoRedirect.findMany({
+        (tx.seoRedirect as { findMany: (args: unknown) => Promise<SeoRedirectRow[]> }).findMany({
           where: { tenantId },
           orderBy: { updatedAt: "desc" },
           take: limit,
@@ -213,7 +264,7 @@ export async function GET(request: NextRequest) {
       return { cityPages, stylePages, redirects, audit };
     });
 
-    const cityRoutes = result.cityPages.map((page) => ({
+    const cityRoutes = result.cityPages.map((page: SeoCityPageRow) => ({
       id: page.id,
       tenantId: page.tenantId,
       kind: "city",
@@ -229,11 +280,11 @@ export async function GET(request: NextRequest) {
       heroCopy: page.heroCopy,
       faq: jsonObject(page.faq),
       internalLinks: jsonObject(page.internalLinks),
-      featuredPortfolio: page.featuredPortfolio.filter((item) => item.isPublic).map((item) => ({ id: item.id, title: item.title, slug: item.slug })),
+      featuredPortfolio: page.featuredPortfolio.filter((item: { id: string; isPublic: boolean; title: string; slug: string }) => item.isPublic).map((item) => ({ id: item.id, title: item.title, slug: item.slug })),
       publishedAt: page.publishedAt?.toISOString() ?? null,
       updatedAt: page.updatedAt.toISOString(),
     }));
-    const styleRoutes = result.stylePages.map((page) => ({
+    const styleRoutes = result.stylePages.map((page: SeoStylePageRow) => ({
       id: page.id,
       tenantId: page.tenantId,
       kind: "style",
@@ -247,7 +298,7 @@ export async function GET(request: NextRequest) {
       bodyCopy: page.bodyCopy,
       faq: jsonObject(page.faq),
       internalLinks: jsonObject(page.internalLinks),
-      featuredPortfolio: page.featuredPortfolio.filter((item) => item.isPublic).map((item) => ({ id: item.id, title: item.title, slug: item.slug })),
+      featuredPortfolio: page.featuredPortfolio.filter((item: { id: string; isPublic: boolean; title: string; slug: string }) => item.isPublic).map((item) => ({ id: item.id, title: item.title, slug: item.slug })),
       publishedAt: page.publishedAt?.toISOString() ?? null,
       updatedAt: page.updatedAt.toISOString(),
     }));
@@ -260,7 +311,7 @@ export async function GET(request: NextRequest) {
         persistence: "database",
         count: cityRoutes.length + styleRoutes.length,
         routes: [...cityRoutes, ...styleRoutes],
-        redirects: result.redirects.map((redirect) => ({
+        redirects: result.redirects.map((redirect: SeoRedirectRow) => ({
           id: redirect.id,
           tenantId: redirect.tenantId,
           fromPath: redirect.fromPath,
@@ -319,6 +370,8 @@ async function mutateSeoPublication(request: NextRequest) {
   const model = publicationModel(body.model);
   const route = routeRecordFor(model, action, body);
   const idempotencyKey = optionalString(request.headers.get("idempotency-key")) ?? optionalString(body.idempotencyKey);
+  const redirectFromPath = optionalString(body.fromPath);
+  const redirectToPath = optionalString(body.toPath);
   const plan = buildSeoPublicationMutationPlan({
     action,
     model,
@@ -328,12 +381,12 @@ async function mutateSeoPublication(request: NextRequest) {
     route,
     now: new Date().toISOString(),
     targetStatus: pageStatus(action, body.status),
-    idempotencyKey,
+    ...(idempotencyKey ? { idempotencyKey } : {}),
     relatedFaqIds: stringArray(body.relatedFaqIds),
     relatedReviewIds: stringArray(body.relatedReviewIds),
     relatedImageIds: stringArray(body.relatedImageIds),
-    redirectFromPath: optionalString(body.fromPath),
-    redirectToPath: optionalString(body.toPath),
+    ...(redirectFromPath ? { redirectFromPath } : {}),
+    ...(redirectToPath ? { redirectToPath } : {}),
   });
 
   if (!plan.canCommit) {

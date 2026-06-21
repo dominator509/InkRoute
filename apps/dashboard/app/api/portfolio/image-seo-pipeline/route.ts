@@ -63,7 +63,12 @@ export async function POST(request: NextRequest) {
 
   const portfolioItemId = stringValue(body.portfolioItemId) ?? demoPortfolioItems[0]?.id;
   const demoItem = demoPortfolioItems.find((item) => item.id === portfolioItemId && item.tenantId === inkrouteDemoTenant.id);
-  const plan = buildDashboardImageSeoPipelinePlan({ portfolioItemId, item: demoItem, cdnBaseUrl: stringValue(body.cdnBaseUrl) });
+  const cdnBaseUrl = stringValue(body.cdnBaseUrl);
+  const plan = buildDashboardImageSeoPipelinePlan({
+    ...(cdnBaseUrl ? { cdnBaseUrl } : {}),
+    ...(portfolioItemId ? { portfolioItemId } : {}),
+    ...(demoItem ? { item: demoItem } : {}),
+  });
   const derivativeMetadata = imageSeoDerivativeMetadata(plan);
   const primaryDerivative = derivativeMetadata.find((derivative) => derivative.width === 1280 && derivative.format === "webp") ?? derivativeMetadata[0];
   const requestedWidth = numberValue(body.width) ?? primaryDerivative?.width ?? 1280;

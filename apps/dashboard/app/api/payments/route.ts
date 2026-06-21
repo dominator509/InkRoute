@@ -17,6 +17,37 @@ function redactPaymentMetadata(metadata: unknown): Record<string, unknown> {
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
+type PaymentListBookingRequestRow = {
+  clientNameSnapshot: string | null;
+};
+
+type PaymentListRefundRow = {
+  id: string;
+  status: string;
+  amountCents: number;
+};
+
+type PaymentListRow = {
+  id: string;
+  tenantId: string;
+  bookingRequestId: string | null;
+  depositId: string | null;
+  provider: string;
+  providerPaymentId: string | null;
+  providerSessionId: string | null;
+  status: string;
+  amountCents: number;
+  currency: string;
+  description: string | null;
+  receiptUrl: string | null;
+  paidAt: Date | null;
+  failedAt: Date | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: Date;
+  bookingRequest: PaymentListBookingRequestRow | null;
+  refunds: PaymentListRefundRow[];
+};
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
@@ -68,7 +99,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const rows = await tx.payment.findMany({
+      const paymentModel = tx.payment as { findMany: (args: unknown) => Promise<PaymentListRow[]> };
+      const rows = await paymentModel.findMany({
         where: { tenantId },
         orderBy: { createdAt: "desc" },
         take: limit,
@@ -112,7 +144,7 @@ export async function GET(request: NextRequest) {
       });
 
       await Promise.all(
-        rows.map((row) =>
+        rows.map((row: PaymentListRow) =>
           tx.paymentAuditLog.create({
             data: {
               tenantId,
@@ -139,7 +171,7 @@ export async function GET(request: NextRequest) {
       collection: "payments",
       tenantId,
       source: "repository",
-      records: result.rows.map((row) => ({
+      records: result.rows.map((row: PaymentListRow) => ({
         id: row.id,
         tenantId: row.tenantId,
         clientName: row.bookingRequest?.clientNameSnapshot ?? "Unassigned client",
@@ -158,7 +190,7 @@ export async function GET(request: NextRequest) {
         receiptUrl: row.receiptUrl,
         metadata: redactPaymentMetadata(row.metadata),
         refundCount: row.refunds.length,
-        refundedAmountCents: row.refunds.reduce((sum, refund) => sum + refund.amountCents, 0),
+        refundedAmountCents: row.refunds.reduce((sum: number, refund: PaymentListRefundRow) => sum + refund.amountCents, 0),
       })),
       redactedFields: ["providerPaymentId", "providerSessionId", "receiptUrl", "metadata", "checkoutClientReferenceId", "checkoutIdempotencyKey"],
     });

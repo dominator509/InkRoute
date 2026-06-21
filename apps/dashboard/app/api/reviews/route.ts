@@ -6,6 +6,21 @@ import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
+type ReviewQueueItem = {
+  id: string;
+  tenantId: string;
+  artistId: string | null;
+  status: string;
+  rating: number;
+  title: string | null;
+  body: string | null;
+  publicDisplayName: string | null;
+  source: string;
+  publishedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 function redactReviewBody(value: string | null | undefined): string {
   if (!value) return "";
   return value.length > 0 ? "[redacted-review-body]" : "";
@@ -82,7 +97,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const rows = await tx.review.findMany({
+      const reviewModel = tx.review as { findMany: (args: unknown) => Promise<ReviewQueueItem[]> };
+      const rows = await reviewModel.findMany({
         where: {
           tenantId,
           ...(statusFilter ? { status: statusFilter } : {}),
@@ -131,7 +147,7 @@ export async function GET(request: NextRequest) {
         tenantId,
         persistence: "database",
         count: result.rows.length,
-        reviews: result.rows.map((review) => ({
+        reviews: result.rows.map((review: ReviewQueueItem) => ({
           id: review.id,
           tenantId: review.tenantId,
           artistId: review.artistId,

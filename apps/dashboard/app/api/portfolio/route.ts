@@ -16,6 +16,55 @@ function redactAssetMetadata(metadata: unknown): Record<string, unknown> {
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
+type PortfolioStyleRow = {
+  slug: string | null;
+  label: string | null;
+};
+
+type PortfolioBookingRequestRow = {
+  id: string;
+};
+
+type PortfolioImageAssetRow = {
+  id: string;
+  kind: string;
+  visibility: string;
+  bucket: string | null;
+  objectKey: string | null;
+  checksumSha256: string | null;
+  publicUrl: string | null;
+  signedUrlExpiresAt: Date | null;
+  metadata: Record<string, unknown> | null;
+};
+
+type PortfolioImageRow = {
+  id: string;
+  imageUrl: string;
+  altText: string;
+  width: number;
+  height: number;
+  isPrimary: boolean;
+  fileAsset: PortfolioImageAssetRow | null;
+};
+
+type PortfolioListRow = {
+  id: string;
+  tenantId: string;
+  title: string;
+  slug: string;
+  caption: string | null;
+  placement: string | null;
+  freshness: string | null;
+  city: string | null;
+  isPublic: boolean;
+  isFeatured: boolean;
+  publishedAt: Date | null;
+  attributionKey: string | null;
+  styles: PortfolioStyleRow[];
+  attributedBookingRequests: PortfolioBookingRequestRow[];
+  images: PortfolioImageRow[];
+};
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
@@ -67,7 +116,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const rows = await tx.portfolioItem.findMany({
+      const portfolioItemModel = tx.portfolioItem as { findMany: (args: unknown) => Promise<PortfolioListRow[]> };
+      const rows = await portfolioItemModel.findMany({
         where: { tenantId },
         orderBy: [{ isFeatured: "desc" }, { updatedAt: "desc" }],
         take: limit,
@@ -138,7 +188,7 @@ export async function GET(request: NextRequest) {
       collection: "portfolio",
       tenantId,
       source: "repository",
-      records: result.rows.map((row) => ({
+      records: result.rows.map((row: PortfolioListRow) => ({
         id: row.id,
         tenantId: row.tenantId,
         title: row.title,
@@ -152,9 +202,9 @@ export async function GET(request: NextRequest) {
         publishedAt: row.publishedAt?.toISOString() ?? null,
         attributionKey: row.attributionKey,
         attributionCount: row.attributedBookingRequests.length,
-        styles: row.styles.map((style) => style.slug || style.label),
-        needsAltTextReview: row.images.some((image) => image.altText.trim().length < 24),
-        images: row.images.map((image) => ({
+        styles: row.styles.map((style: PortfolioStyleRow) => style.slug || style.label),
+        needsAltTextReview: row.images.some((image: PortfolioImageRow) => image.altText.trim().length < 24),
+        images: row.images.map((image: PortfolioImageRow) => ({
           id: image.id,
           imageUrl: image.fileAsset?.visibility === "public" ? image.imageUrl : "[redacted-dashboard-field]",
           altText: image.altText,

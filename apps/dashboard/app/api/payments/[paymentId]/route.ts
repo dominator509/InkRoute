@@ -21,6 +21,40 @@ function redactPaymentMetadata(metadata: unknown): Record<string, unknown> {
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
+type PaymentDetailRefundRow = {
+  id: string;
+  status: string;
+  amountCents: number;
+  reason: string | null;
+  createdAt: Date;
+};
+
+type PaymentDetailBookingRequestRow = {
+  clientNameSnapshot: string | null;
+  status: string;
+};
+
+type PaymentDetailRow = {
+  id: string;
+  tenantId: string;
+  bookingRequestId: string | null;
+  depositId: string | null;
+  provider: string;
+  providerPaymentId: string | null;
+  providerSessionId: string | null;
+  status: string;
+  amountCents: number;
+  currency: string;
+  description: string | null;
+  receiptUrl: string | null;
+  paidAt: Date | null;
+  failedAt: Date | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: Date;
+  bookingRequest: PaymentDetailBookingRequestRow | null;
+  refunds: PaymentDetailRefundRow[];
+};
+
 export async function GET(request: NextRequest, context: PaymentDetailRouteContext) {
   const actor = resolveDashboardActor(request);
   try {
@@ -75,7 +109,8 @@ export async function GET(request: NextRequest, context: PaymentDetailRouteConte
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const row = await tx.payment.findFirst({
+      const paymentModel = tx.payment as { findFirst: (args: unknown) => Promise<(PaymentDetailRow & { bookingRequest: PaymentDetailBookingRequestRow | null; refunds: PaymentDetailRefundRow[] }) | null> };
+      const row = await paymentModel.findFirst({
         where: { id: paymentId, tenantId },
         select: {
           id: true,
@@ -166,7 +201,7 @@ export async function GET(request: NextRequest, context: PaymentDetailRouteConte
           providerSessionId: result.row.providerSessionId,
           receiptUrl: result.row.receiptUrl,
           metadata: redactPaymentMetadata(result.row.metadata),
-          refunds: result.row.refunds.map((refund) => ({
+          refunds: result.row.refunds.map((refund: PaymentDetailRefundRow) => ({
             id: refund.id,
             status: refund.status,
             amountCents: refund.amountCents,
