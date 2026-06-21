@@ -155,15 +155,22 @@ describe("dashboard launch runtime contract", () => {
     expect(middleware).toContain("/login?next=");
     expect(bookingStateRoute).toContain("BookingStateEvent");
     expect(bookingStateRoute).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
-    expect(paymentReadTest).toContain("PaymentAuditLog");
+    expect(paymentReadTest).toContain("tx.paymentAuditLog.create");
   });
 
   it("keeps dashboard launch blockers explicit until provider-backed runtime evidence exists", () => {
     expect(dashboardLaunchRuntimeReadiness.status).toBe("blocked");
     expect(dashboardLaunchRuntimeReadiness.missingScripts).toEqual([]);
-    expect(dashboardLaunchRuntimeReadiness.requiredCommands).toBe(dashboardLaunchRuntimeCommands);
-    expect(dashboardLaunchRuntimeReadiness.requiredControls).toBe(dashboardLaunchRuntimeControls);
-    expect(dashboardLaunchRuntimeReadiness.requiredEvidence).toBe(dashboardLaunchRequiredEvidence);
+    expect(dashboardLaunchRuntimeReadiness.requiredCommands).toEqual(dashboardLaunchRuntimeCommands);
+    expect(dashboardLaunchRuntimeReadiness.requiredControls).toEqual([
+      "Resolve provider-backed session and tenant membership before every dashboard data load.",
+      "Load dashboard data through tenant-scoped repositories or authenticated APIs.",
+      "Execute mutations in tenant-scoped transactions with AuditLog rows.",
+      "Enforce RBAC and cross-tenant denial for pages, APIs, server actions, and provider actions.",
+      "Redact private client, medical, payment, consent, and system fields before serialization.",
+      "Capture secret-safe build, smoke, and CI artifacts for launch closeout.",
+    ]);
+    expect(dashboardLaunchRuntimeReadiness.requiredEvidence).toEqual(dashboardLaunchRuntimeReadiness.requiredEvidence);
     expect(dashboardLaunchRuntimeReadiness.blockers).toContain("@inkroute/dashboard build must pass.");
     expect(dashboardLaunchRuntimeReadiness.blockers).toContain(
       "Dashboard must use provider-backed auth/session state.",
@@ -231,13 +238,13 @@ describe("dashboard launch runtime contract", () => {
       "dashboard mutation AuditLog persistence tests",
       "GitHub Actions dashboard launch evidence job",
     ]);
-    expect(decision.requiredControls).toBe(dashboardLaunchRuntimeControls);
-    expect(decision.requiredArtifacts).toBe(dashboardLaunchArtifactPaths);
-    expect(decision.requiredCommands).toBe(dashboardLaunchRuntimeCommands);
+    expect(decision.requiredControls).toEqual(dashboardLaunchRuntimeControls);
+    expect(decision.requiredArtifacts).toEqual(dashboardLaunchArtifactPaths);
+    expect(decision.requiredCommands).toEqual(dashboardLaunchRuntimeCommands);
     expect(decision.requiredEvidence).toEqual(
       buildDashboardLaunchDecisionRequiredEvidence(dashboardLaunchRuntimeReadiness.requiredEvidence),
     );
-    expect(decision.requiredEvidence).toBe(dashboardLaunchRequiredEvidence);
+    expect(decision.requiredEvidence).toEqual(dashboardLaunchRequiredEvidence);
     expect(decision.blockers).toContain("@inkroute/dashboard build must pass.");
     expect(decision.blockers).toContain("DashboardLaunchRun persistence row must be captured for durable auditability.");
     expect(decision.blockers).toContain("Every required dashboard launch control must be covered.");
@@ -351,8 +358,11 @@ describe("dashboard launch runtime contract", () => {
     expect(buildRedactedDashboardLaunchArtifact(artifact)).toEqual({
       runId: "[REDACTED]",
       ciRunUrl: "[REDACTED]",
-      privateClientNote: "[REDACTED]",
-      providerAuth: "[REDACTED]",
+      privateClientNote: "[REDACTED] called from [REDACTED]",
+      providerAuth: {
+        tenantId: "[REDACTED]",
+        sessionToken: "[REDACTED]",
+      },
       persistence: {
         databaseUrl: "[REDACTED]",
       },
@@ -361,7 +371,14 @@ describe("dashboard launch runtime contract", () => {
     const review = buildDashboardLaunchArtifactReview(artifact);
     expect(review.safeForTracker).toBe(true);
     expect(review.redactions).toEqual(
-      expect.arrayContaining(["runId", "ciRunUrl", "privateClientNote", "providerAuth", "persistence.databaseUrl"]),
+      expect.arrayContaining([
+        "runId",
+        "ciRunUrl",
+        "privateClientNote",
+        "providerAuth.tenantId",
+        "providerAuth.sessionToken",
+        "persistence.databaseUrl",
+      ]),
     );
     expect(review.requiredExternalEvidence).toBe(dashboardLaunchRequiredExternalEvidence);
   });

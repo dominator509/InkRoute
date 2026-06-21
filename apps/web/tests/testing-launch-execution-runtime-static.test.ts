@@ -168,8 +168,8 @@ describe("testing launch execution runtime contract", () => {
   it("keeps launch execution blocked until real command, provider, mobile, CI, and artifact evidence exists", () => {
     expect(testingLaunchExecutionRuntimeReadiness.status).toBe("blocked");
     expect(testingLaunchExecutionRuntimeReadiness.missingScripts).toEqual([]);
-    expect(testingLaunchExecutionRuntimeReadiness.requiredCommands).toBe(testingLaunchExecutionRuntimeCommands);
-    expect(testingLaunchExecutionRuntimeReadiness.requiredEvidence).toBe(testingLaunchExecutionEvidenceRequiredEvidence);
+    expect(testingLaunchExecutionRuntimeReadiness.requiredCommands).toEqual(testingLaunchExecutionRuntimeCommands);
+    expect(testingLaunchExecutionRuntimeReadiness.requiredEvidence).toEqual(testingLaunchExecutionEvidenceRequiredEvidence);
     expect(testingLaunchExecutionRuntimeReadiness.blockers).toContain(
       "pnpm install --frozen-lockfile must pass before testing launch execution is ready.",
     );
