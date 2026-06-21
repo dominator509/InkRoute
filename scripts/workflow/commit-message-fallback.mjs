@@ -5,8 +5,25 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 
 const [, , messageFile] = process.argv;
-const targetMessageFile =
-  messageFile || path.join(process.cwd(), ".git", "COMMIT_EDITMSG");
+const resolveGitDir = () => {
+  try {
+    const rawGitDir = execSync("git rev-parse --git-dir", {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      cwd: process.cwd(),
+    }).trim();
+
+    return path.isAbsolute(rawGitDir)
+      ? rawGitDir
+      : path.join(process.cwd(), rawGitDir);
+  } catch {
+    return path.join(process.cwd(), ".git");
+  }
+};
+
+const targetMessageFile = messageFile
+  ? messageFile
+  : path.join(resolveGitDir(), "COMMIT_EDITMSG");
 
 if (!messageFile) {
   // Some clients invoke core.editor without passing the temporary file path.
