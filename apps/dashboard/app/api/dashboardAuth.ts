@@ -7,6 +7,68 @@ import type { NextRequest } from "next/server";
 const FALLBACK_ACTOR_ID = "dashboard-demo-user";
 const allowedRoles: ReadonlyArray<Role> = ["owner", "artist", "assistant", "studio_manager", "admin"];
 const fallbackRole = "assistant";
+const dashboardRouteMethodPermissionWrite: Record<string, Permission> = {
+  bookings: "booking:write",
+  clients: "client:write",
+  payments: "payment:write",
+  portfolio: "portfolio:write",
+  travel: "travel:write",
+  messages: "message:write",
+  templates: "form:write",
+  calendar: "calendar:write",
+  reviews: "review:write",
+  seo: "seo:write",
+  releases: "release:write",
+  errors: "tenant:write",
+  forms: "form:write",
+  trust: "tenant:write",
+};
+
+const dashboardRouteMethodPermissionRead: Record<string, Permission> = {
+  bookings: "booking:read",
+  clients: "client:read",
+  payments: "payment:read",
+  portfolio: "portfolio:read",
+  travel: "travel:read",
+  messages: "message:read",
+  templates: "form:read",
+  calendar: "calendar:read",
+  reviews: "review:read",
+  seo: "seo:read",
+  releases: "release:read",
+  errors: "tenant:read",
+  forms: "form:read",
+  trust: "tenant:read",
+  settings: "settings:write",
+};
+
+const mutatingMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+function normalizeDashboardRouteSegment(pathname: string): string {
+  const segments = pathname
+    .split("?")[0]
+    .split("#")[0]
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => segment.toLowerCase());
+
+  if (segments[0] === "dashboard") {
+    return segments[1] ?? "";
+  }
+
+  return segments[0] ?? "";
+}
+
+export function resolveDashboardPermissionForRoute(pathname: string, method?: string): Permission {
+  const segment = normalizeDashboardRouteSegment(pathname);
+  const mutating = Boolean(method && mutatingMethods.has(method.toUpperCase()));
+
+  if (mutating && segment) {
+    return dashboardRouteMethodPermissionWrite[segment] ?? "tenant:write";
+  }
+
+  return dashboardRouteMethodPermissionRead[segment] ?? "tenant:read";
+}
 
 function normalizeHeaderValue(value: string | null): string | null {
   const normalized = value?.trim();

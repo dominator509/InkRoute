@@ -5,7 +5,11 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import { dashboardShellContext } from "../lib/demo";
-import { getLocalDashboardActor, toTenantAccessContext } from "./api/dashboardAuth";
+import {
+  getLocalDashboardActor,
+  resolveDashboardPermissionForRoute,
+  toTenantAccessContext,
+} from "./api/dashboardAuth";
 import "./globals.css";
 
 export const metadata = {
@@ -19,10 +23,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const requestHeaders = await headers();
   const routePath = requestHeaders.get("x-matched-path") ?? requestHeaders.get("x-invoke-path") ?? "/dashboard";
   const actor = getLocalDashboardActor();
+  const permission = resolveDashboardPermissionForRoute(routePath);
   const guard = evaluateDashboardRouteGuard({
     context: toTenantAccessContext(actor),
     tenantId: actor.tenantId,
-    permission: "booking:read",
+    permission,
     routePath,
     now: new Date().toISOString(),
     loginPath: "/login",

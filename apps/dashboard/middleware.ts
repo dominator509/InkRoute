@@ -1,11 +1,11 @@
 import { evaluateDashboardRouteGuard } from "@inkroute/auth";
 import { buildSecurityRuntimeEnforcementPlan } from "@inkroute/security";
 import { NextResponse, type NextRequest } from "next/server";
-import { resolveDashboardActor, toTenantAccessContext } from "./app/api/dashboardAuth";
+import { resolveDashboardActor, resolveDashboardPermissionForRoute, toTenantAccessContext } from "./app/api/dashboardAuth";
 
 type RuntimeEnvironment = "development" | "preview" | "production";
 
-const guardedPathPattern = /^\/(bookings|clients|payments|portfolio|travel|messages|templates|settings|calendar|reviews|seo)(\/|$)/;
+const guardedPathPattern = /^\/(dashboard\/)?(bookings|clients|payments|portfolio|travel|messages|templates|settings|calendar|reviews|seo|forms|errors|releases|trust)(\/|$)/;
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 const csrfCookieName = "inkroute_dashboard_csrf";
 const csrfHeaderName = "x-csrf-token";
@@ -91,10 +91,11 @@ export function middleware(request: NextRequest) {
 
   try {
     const actor = resolveDashboardActor(request);
+    const permission = resolveDashboardPermissionForRoute(path, request.method);
     const guard = evaluateDashboardRouteGuard({
       context: toTenantAccessContext(actor),
       tenantId: actor.tenantId,
-      permission: "booking:read",
+      permission,
       routePath: path,
       now: new Date().toISOString(),
       loginPath: "/login",
