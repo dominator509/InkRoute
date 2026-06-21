@@ -95,7 +95,7 @@ describe("dashboard data layer runtime contract", () => {
 
     expect(readRepoFile("apps/dashboard/tests/booking-state-route-static.test.ts")).toContain("tx.auditLog.create");
     expect(readRepoFile("apps/dashboard/tests/client-read-route-static.test.ts")).toContain("buildTenantDashboardView");
-    expect(readRepoFile("apps/dashboard/tests/payment-read-route-static.test.ts")).toContain("stripe");
+    expect(readRepoFile("apps/dashboard/tests/payment-read-route-static.test.ts")).toContain("providerPaymentId");
     expect(readRepoFile("apps/dashboard/tests/portfolio-read-route-static.test.ts")).toContain("storage-key redaction");
     expect(readRepoFile("apps/dashboard/tests/message-read-route-static.test.ts")).toContain("uses Prisma message-thread reads with body/provider/contact redaction and audit logs");
     expect(dashboardDemo).toContain("Dashboard read and mutation contracts added");

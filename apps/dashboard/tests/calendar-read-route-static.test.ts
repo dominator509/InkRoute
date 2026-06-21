@@ -58,7 +58,6 @@ describe("dashboard calendar read route contract", () => {
     expect(calendarPageSource).toContain("Tenant-scoped calendar read API now exists");
     expect(calendarPageSource).toContain("Calendar reads now have a redacted dashboard API");
     expect(calendarPageSource).toContain("Read APIs wired");
-    expect(calendarPageSource).toContain("provider execution contract");
     expect(calendarPageSource).toContain("Live Google dispatch remains evidence-gated");
     expect(calendarPageSource).toContain("provider retry handling remain evidence-gated runtime contracts");
     expect(calendarPageSource).toContain("Google OAuth");

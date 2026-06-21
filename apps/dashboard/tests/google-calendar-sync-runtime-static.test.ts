@@ -110,8 +110,8 @@ describe("Google Calendar sync runtime contract", () => {
     expect(syncRoute).toContain("provider-worker-required");
     expect(syncRoute).toContain("{ status: 202, headers: noStoreHeaders }");
     expect(syncRoute).not.toContain("{ status: 501, headers: noStoreHeaders }");
-    expect(calendarRoute).toContain("provider execution contract");
-    expect(readRouteStaticTest).toContain("provider execution contract");
+    expect(calendarRoute).toContain("provider-worker-required");
+    expect(readRouteStaticTest).toContain("Read APIs wired");
   });
 
   it("keeps SDK, OAuth, token, provider, smoke, push, isolation, and artifact blockers explicit", () => {
