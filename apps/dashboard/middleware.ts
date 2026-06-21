@@ -32,6 +32,31 @@ function hasSessionCookie(request: NextRequest): boolean {
   return sessionCookieNames.some((name) => request.cookies.has(name));
 }
 
+function buildUnauthenticatedDashboardResponse(
+  request: NextRequest,
+  status: 302 | 403,
+  body?: {
+    code: string;
+    reason?: string;
+    auditAction?: string;
+  },
+) {
+  if (status === 302) {
+    const response = NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(request.nextUrl.pathname)}`, request.url));
+    response.headers.set("Cache-Control", "no-store");
+    response.headers.set("x-inkroute-dashboard-auth-guard", body?.auditAction ?? "dashboard:auth-required");
+    return applySecurityHeaders(response, request);
+  }
+
+  return applySecurityHeaders(
+    NextResponse.json(
+      { ok: false, error: { code: body?.code ?? "FORBIDDEN", reason: body?.reason, auditAction: body?.auditAction } },
+      { status: 403, headers: noStoreHeaders },
+    ),
+    request,
+  );
+}
+
 function csrfTokenIsValid(request: NextRequest): { present: boolean; valid: boolean } {
   const headerToken = request.headers.get(csrfHeaderName);
   const cookieToken = request.cookies.get(csrfCookieName)?.value;
@@ -110,26 +135,17 @@ export function middleware(request: NextRequest) {
     }
 
     if (guard.action === "redirect_login" || guard.action === "redirect_tenant_switch") {
-      const redirectUrl = new URL(guard.redirectTo ?? "/login", request.url);
-      const response = NextResponse.redirect(redirectUrl);
-      response.headers.set("Cache-Control", "no-store");
-      response.headers.set("x-inkroute-dashboard-auth-guard", guard.auditAction);
-      return applySecurityHeaders(response, request);
+      return buildUnauthenticatedDashboardResponse(request, 302, { code: "AUTH_REQUIRED", auditAction: guard.auditAction });
     }
 
-    return applySecurityHeaders(
-      NextResponse.json(
-        { ok: false, error: { code: "FORBIDDEN", reason: guard.reason, auditAction: guard.auditAction } },
-        { status: 403, headers: noStoreHeaders },
-      ),
-      request,
-    );
+    return buildUnauthenticatedDashboardResponse(request, 403, {
+      code: "FORBIDDEN",
+      reason: guard.reason,
+      auditAction: guard.auditAction,
+    });
   } catch (error) {
     if (error instanceof Error && error.message === "AUTH_REQUIRED") {
-      const response = NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(path)}`, request.url));
-      response.headers.set("Cache-Control", "no-store");
-      response.headers.set("x-inkroute-dashboard-auth-guard", "dashboard:auth-required");
-      return applySecurityHeaders(response, request);
+      return buildUnauthenticatedDashboardResponse(request, 302, { code: "AUTH_REQUIRED", auditAction: "dashboard:auth-required" });
     }
 
     throw error;

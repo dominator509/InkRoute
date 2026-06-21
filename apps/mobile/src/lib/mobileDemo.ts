@@ -339,6 +339,9 @@ export const mobileRollbackPlan = demoRollbackPlan;
 
 export const mobileSecurityControls = buildTrustCenterChecklist();
 export const mobileSecuritySummary = summarizeSecurityPosture(mobileSecurityControls);
+export const mobileSecurityReadiness = {
+  productionReady: mobileSecuritySummary.blockers === 0,
+};
 export const mobileTenantIsolationFixtures = buildTenantIsolationFixtures();
 export const mobilePrivacyDraft = buildPrivacyRequestDraft("export");
 export const mobileUploadValidationPreview = validateUploadDraft({
