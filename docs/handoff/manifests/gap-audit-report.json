@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-21T11:34:51.292Z",
-  "status": "warn",
-  "totalGaps": 112,
-  "blockingGaps": 112,
+  "generatedAt": "2026-06-21T11:38:27.313Z",
+  "status": "pass",
+  "totalGaps": 133,
+  "blockingGaps": 133,
   "criticalBlockingGapIds": [
     "GAP-001",
     "GAP-002",
@@ -58,103 +58,27 @@
   ],
   "bySeverity": {
     "Critical": 51,
-    "High": 46,
+    "High": 67,
     "Medium": 15
   },
   "byPhase": {
-    "Gap": 19,
+    "Gap": 21,
     "Phase 7": 7,
     "Phase 1": 4,
     "Phase 3": 4,
+    "Phase 5": 8,
     "Phase 6": 5,
-    "Phase 9": 11,
-    "Phase 11": 10,
-    "Phase 12": 9,
+    "Phase 8": 7,
+    "Phase 9": 12,
+    "Phase 11": 11,
+    "Phase 14": 6,
+    "Phase 15": 5,
+    "Phase 12": 11,
     "Phase 2": 7,
     "Phase 4": 5,
-    "Phase 10": 8,
+    "Phase 10": 9,
     "Phase 4/7": 1,
-    "Phase 5": 4,
-    "Phase 8": 3,
-    "Phase 13": 9,
-    "Phase 14": 3,
-    "Phase 15": 3
+    "Phase 13": 10
   },
-  "findings": [
-    {
-      "status": "warn",
-      "gapId": "GAP-004",
-      "message": "Expected sequential GAP-003."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-008",
-      "message": "Expected sequential GAP-007."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-010",
-      "message": "Expected sequential GAP-009."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-013",
-      "message": "Expected sequential GAP-012."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-015",
-      "message": "Expected sequential GAP-014."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-024",
-      "message": "Expected sequential GAP-023."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-037",
-      "message": "Expected sequential GAP-036."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-043",
-      "message": "Expected sequential GAP-041."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-058",
-      "message": "Expected sequential GAP-056."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-060",
-      "message": "Expected sequential GAP-059."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-071",
-      "message": "Expected sequential GAP-070."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-077",
-      "message": "Expected sequential GAP-076."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-096",
-      "message": "Expected sequential GAP-095."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-107",
-      "message": "Expected sequential GAP-106."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-114",
-      "message": "Expected sequential GAP-109."
-    }
-  ]
+  "findings": []
 }
