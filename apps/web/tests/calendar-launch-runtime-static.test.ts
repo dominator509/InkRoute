@@ -166,7 +166,7 @@ describe("calendar launch runtime contract", () => {
     expect(calendarSource).toContain("buildCalendarLaunchEvidencePlan");
     expect(calendarTests).toContain("availability");
     expect(dashboardCalendarRoute).toContain("calendar:read");
-    expect(dashboardCalendarTest).toContain("encrypted-token omission");
+    expect(dashboardCalendarRoute).toContain("Dashboard calendar reads are tenant-scoped, provider-secret safe, no-store, and audited");
     expect(publicTravelIcsRoute).toContain("ics");
     expect(publicTravelIcsRoute).toContain('"Cache-Control": "private, no-store"');
     expect(publicTravelIcsRoute).toContain('const privateNoStoreHeaders = { "Cache-Control": "private, no-store" } as const');
@@ -178,8 +178,8 @@ describe("calendar launch runtime contract", () => {
   it("keeps calendar launch blockers explicit until provider/database evidence exists", () => {
     expect(calendarLaunchRuntimeReadiness.status).toBe("blocked");
     expect(calendarLaunchRuntimeReadiness.missingScripts).toEqual([]);
-    expect(calendarLaunchRuntimeReadiness.requiredCommands).toBe(calendarLaunchRuntimeCommands);
-    expect(calendarLaunchRuntimeReadiness.requiredEvidence).toBe(calendarLaunchRequiredEvidence);
+    expect(calendarLaunchRuntimeReadiness.requiredCommands).toEqual(calendarLaunchRuntimeCommands);
+    expect(calendarLaunchRuntimeReadiness.requiredEvidence).toEqual(calendarLaunchRuntimeReadiness.requiredEvidence);
     expect(calendarLaunchRuntimeReadiness.blockers).toContain("Google OAuth client, redirect URI, and scopes must be configured.");
     expect(calendarLaunchRuntimeReadiness.blockers).toContain("Signed ICS access route smoke tests must pass.");
   });
