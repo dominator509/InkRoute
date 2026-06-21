@@ -1888,7 +1888,7 @@
       "file": "apps/web/tests/ci-coverage-reporting-static.test.ts",
       "priority": "high",
       "verifies": [
-        "GAP-111 CI coverage/reporting matrix covers frozen install, typecheck, unit coverage, Playwright E2E, Vitest thresholds/reporters, Playwright HTML/JSON/JUnit reports, traces, screenshots, videos, test summaries, artifact retention, branch protection evidence, flaky policy, failed-test debug artifacts, and CiCoverageRun Prisma model/app row contract are wired",
+        "GAP-111 CI coverage/reporting matrix covers frozen install, typecheck, unit coverage, Playwright E2E, Vitest thresholds/reporters, Playwright HTML/JSON/JUnit reports, traces, screenshots, videos, test summaries, artifact retention, branch protection evidence, flaky policy, failed-test debug artifacts, and CiCoverageRun Prisma model and app row contract are wired",
         "GAP-111 package scripts, Vitest workspace, Playwright config, static checker, CI workflow, and readiness blockers stay aligned before live CI proof",
         "GAP-111 CI retains coverage/reporting contract and artifact paths without claiming passing CI or branch protection proof has been captured"
       ],

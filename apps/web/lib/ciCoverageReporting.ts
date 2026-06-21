@@ -444,25 +444,34 @@ export function persistCiCoverageRun(
   });
 }
 
-export const ciCoverageReportingReadiness = buildCiCoverageReportingReadinessPlan({
-  rootScripts: ["test:unit:coverage", "test:e2e", "typecheck"],
-  ciWorkflowRunsInstall: true,
-  ciWorkflowRunsTypecheck: true,
-  ciWorkflowRunsUnitCoverage: true,
-  ciWorkflowRunsE2e: true,
-  coverageThresholdsConfigured: true,
-  vitestCoverageArtifactUploaded: true,
-  playwrightReportArtifactUploaded: true,
-  playwrightTracesScreenshotsVideosUploaded: true,
-  junitJsonReportsPublished: true,
-  ciRunPassed: false,
-  branchProtectionRequiresCi: false,
-  flakyRetryPolicyConfigured: true,
-  flakyQuarantineDocumented: false,
-  testReportSummaryPublished: true,
-  artifactRetentionConfigured: true,
-  failureDebugArtifactsVerified: false
-});
+export const ciCoverageReportingReadiness = {
+  ...buildCiCoverageReportingReadinessPlan({
+    rootScripts: ["test:unit:coverage", "test:e2e", "typecheck"],
+    ciWorkflowRunsInstall: true,
+    ciWorkflowRunsTypecheck: true,
+    ciWorkflowRunsUnitCoverage: true,
+    ciWorkflowRunsE2e: true,
+    coverageThresholdsConfigured: true,
+    vitestCoverageArtifactUploaded: true,
+    playwrightReportArtifactUploaded: true,
+    playwrightTracesScreenshotsVideosUploaded: true,
+    junitJsonReportsPublished: true,
+    ciRunPassed: false,
+    branchProtectionRequiresCi: false,
+    flakyRetryPolicyConfigured: true,
+    flakyQuarantineDocumented: false,
+    testReportSummaryPublished: true,
+    artifactRetentionConfigured: true,
+    failureDebugArtifactsVerified: false,
+  }),
+  requiredCommands: ciCoverageReportingCommands,
+  requiredEvidence: [
+    "Playwright report plus retained traces, screenshots, videos, and failed-test debug artifact proof",
+    "passing CI run, branch protection settings, flaky-test policy, and artifact retention settings",
+    "CI workflow YAML and run log showing install, typecheck, coverage, and E2E gates",
+    "coverage thresholds, Vitest coverage artifact, JUnit/JSON reports, and published test summary",
+  ],
+} as const;
 
 export const ciCoverageRunPersistencePreview = buildCiCoverageRunPersistenceContract({
   tenantId: "tenant_demo",
