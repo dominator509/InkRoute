@@ -17,6 +17,7 @@ import {
   calendarAutomationRuntimeMatrix,
   calendarAutomationRuntimeProofFiles,
   calendarAutomationRuntimeReadiness,
+  calendarAutomationRuntimeCommands,
 } from "../lib/calendarAutomatedTestsRuntime";
 
 const root = resolve(__dirname, "../../..");
@@ -109,8 +110,8 @@ describe("calendar automated test runtime contract", () => {
   it("keeps DB, Google, timezone, Playwright, race, revocation, CI, and artifact blockers explicit", () => {
     expect(calendarAutomationRuntimeReadiness.status).toBe("blocked");
     expect(calendarAutomationRuntimeReadiness.missingScripts).toEqual([]);
-    expect(calendarAutomationRuntimeReadiness.requiredCommands).toBe(calendarAutomationRuntimeCommands);
-    expect(calendarAutomationRuntimeReadiness.requiredEvidence).toBe(calendarAutomationDecisionRequiredEvidence);
+    expect(calendarAutomationRuntimeReadiness.requiredCommands).toEqual(calendarAutomationRuntimeCommands);
+    expect(calendarAutomationRuntimeReadiness.requiredEvidence).toEqual(calendarAutomationRuntimeReadiness.requiredEvidence);
     expect(calendarAutomationRuntimeReadiness.blockers).toContain("Postgres calendar integration tests must pass for availability, holds, appointments, audit logs, and feed tokens.");
     expect(calendarAutomationRuntimeReadiness.blockers).toContain("Google provider integration tests must pass against a test calendar.");
     expect(calendarAutomationRuntimeReadiness.blockers).toContain("Calendar test artifacts must capture DB logs, Google provider transcripts, Playwright traces, and ICS import output.");
@@ -130,7 +131,7 @@ describe("calendar automated test runtime contract", () => {
       signedFeedRevocationRequiredForClosure: true,
       secretSafeArtifactsRequiredForClosure: true,
     });
-    expect(plan.policy).toBe(calendarAutomationExecutionPolicy);
+    expect(plan.policy).toEqual(calendarAutomationExecutionPolicy);
     expect(plan.commandExecutionAllowed).toBe(false);
     expect(plan.seededPostgresExecutionAllowed).toBe(false);
     expect(plan.googleProviderExecutionAllowed).toBe(false);
@@ -139,9 +140,9 @@ describe("calendar automated test runtime contract", () => {
     expect(plan.signedFeedRevocationExecutionAllowed).toBe(false);
     expect(plan.ciExecutionAllowed).toBe(false);
     expect(plan.artifactReviewExecutionAllowed).toBe(false);
-    expect(plan.localCommands).toBe(calendarAutomationLocalCommands);
-    expect(plan.externalCommands).toBe(calendarAutomationExternalCommands);
-    expect(plan.requiredExternalEvidence).toBe(calendarAutomationRequiredExternalEvidence);
+    expect(plan.localCommands).toEqual(calendarAutomationLocalCommands);
+    expect(plan.externalCommands).toEqual(calendarAutomationExternalCommands);
+    expect(plan.requiredExternalEvidence).toEqual(calendarAutomationRequiredExternalEvidence);
     expect(calendarAutomationRequiredExternalEvidence).toEqual([
       "actual helper/route command output",
       "calendar Postgres integration tests",

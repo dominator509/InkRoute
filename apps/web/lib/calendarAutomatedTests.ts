@@ -111,6 +111,8 @@ const calendarAutomationPrivateArtifactKeys = [
   "clientName",
   "privateBookingNotes",
   "locationPrivateNotes",
+  "bookingPrivateNotes",
+  "travelAddress",
 ] as const;
 
 type CalendarAutomationArtifactPayload = Record<string, unknown>;
