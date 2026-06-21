@@ -2,7 +2,10 @@ import { rolePermissions } from "@inkroute/auth";
 import { prisma } from "@inkroute/db";
 import { NextRequest, NextResponse } from "next/server";
 import { dashboardFeatureFlags, dashboardShellContext } from "../../../lib/demo";
-import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
+import {
+  evaluateDashboardApiGuard,
+  isDatabaseUnavailable,
+} from "../dashboardAuth";
 
 function redactEmail(value: string | null | undefined): string | null {
   if (!value) return null;
@@ -31,15 +34,29 @@ function settingsMutationBody(value: unknown) {
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
-export async function GET(request: NextRequest) {
-  const actor = resolveDashboardActor(request);
-  try {
-    assertPermission(actor, "tenant:read");
-  } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read tenant settings." } }, { status: 403, headers: noStoreHeaders });
+function settingsGuardFailureResponse(guard: ReturnType<typeof evaluateDashboardApiGuard>) {
+  const safeReason = `${guard.status}:${guard.action}`;
+  if (guard.action === "reject_401" || guard.action === "reject_419") {
+    return NextResponse.json(
+      { ok: false, error: { code: guard.status === "csrf_failed" ? "CSRF_TOKEN_REQUIRED" : "UNAUTHENTICATED", reason: safeReason } },
+      { status: guard.statusCode, headers: noStoreHeaders },
+    );
   }
 
-  const params = new URL(request.url).searchParams;
+  if (guard.action === "reject_409") {
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", reason: safeReason } }, { status: 409, headers: noStoreHeaders });
+  }
+
+  return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", reason: safeReason } }, { status: 403, headers: noStoreHeaders });
+}
+
+export async function GET(request: NextRequest) {
+  const { actor, guard } = evaluateDashboardApiGuard(request, "tenant:read", "/dashboard/settings");
+  if (!guard.allowed) {
+    return settingsGuardFailureResponse(guard);
+  }
+  try {
+    const params = new URL(request.url).searchParams;
   const tenantId = params.get("tenantId") ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
     return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query settings for another tenant." } }, { status: 403, headers: noStoreHeaders });
@@ -241,29 +258,28 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const actor = resolveDashboardActor(request);
+  const routePath = new URL(request.url).pathname;
+  const { actor, guard } = evaluateDashboardApiGuard(request, "settings:write", routePath);
+  if (!guard.allowed) {
+    return settingsGuardFailureResponse(guard);
+  }
+
   try {
-    assertPermission(actor, "tenant:write");
-    assertPermission(actor, "settings:write");
-  } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to update tenant settings." } }, { status: 403, headers: noStoreHeaders });
-  }
+    const body = settingsMutationBody(await request.json().catch(() => ({})));
+    const tenantId = body.tenantId ?? actor.tenantId;
+    if (tenantId !== actor.tenantId) {
+      return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot update settings for another tenant." } }, { status: 403, headers: noStoreHeaders });
+    }
 
-  const body = settingsMutationBody(await request.json().catch(() => ({})));
-  const tenantId = body.tenantId ?? actor.tenantId;
-  if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot update settings for another tenant." } }, { status: 403, headers: noStoreHeaders });
-  }
+    const update = {
+      ...(body.publicSiteName ? { publicSiteName: body.publicSiteName } : {}),
+      ...(body.primaryLocale ? { primaryLocale: body.primaryLocale } : {}),
+      ...(body.defaultTimezone ? { defaultTimezone: body.defaultTimezone } : {}),
+    };
 
-  const update = {
-    ...(body.publicSiteName ? { publicSiteName: body.publicSiteName } : {}),
-    ...(body.primaryLocale ? { primaryLocale: body.primaryLocale } : {}),
-    ...(body.defaultTimezone ? { defaultTimezone: body.defaultTimezone } : {}),
-  };
-
-  if (Object.keys(update).length === 0) {
-    return NextResponse.json({ ok: false, error: { code: "VALIDATION_FAILED", message: "At least one safe tenant setting is required." } }, { status: 400, headers: noStoreHeaders });
-  }
+    if (Object.keys(update).length === 0) {
+      return NextResponse.json({ ok: false, error: { code: "VALIDATION_FAILED", message: "At least one safe tenant setting is required." } }, { status: 400, headers: noStoreHeaders });
+    }
 
   if (actor.source === "local-fallback") {
     if (process.env.NODE_ENV === "production") {

@@ -8,7 +8,8 @@ const settingsActionPanelSource = readFileSync(join(process.cwd(), "apps/dashboa
 
 describe("dashboard settings read route contract", () => {
   it("guards settings reads with tenant RBAC, tenant scope, and no-store cache policy", () => {
-    expect(routeSource).toContain('assertPermission(actor, "tenant:read")');
+    expect(routeSource).toContain('evaluateDashboardApiGuard(request, "tenant:read"');
+    expect(routeSource).toContain("settingsGuardFailureResponse(guard)");
     expect(routeSource).toContain('code: "FORBIDDEN"');
     expect(routeSource).toContain("tenantId !== actor.tenantId");
     expect(routeSource).toContain('code: "TENANT_MISMATCH"');
@@ -64,8 +65,8 @@ describe("dashboard settings read route contract", () => {
 
   it("guards safe settings writes with RBAC, tenant scope, transactions, audit logs, and production fail-close", () => {
     expect(routeSource).toContain("export async function PATCH");
-    expect(routeSource).toContain('assertPermission(actor, "tenant:write")');
-    expect(routeSource).toContain('assertPermission(actor, "settings:write")');
+    expect(routeSource).toContain('evaluateDashboardApiGuard(request, "settings:write"');
+    expect(routeSource).toContain("settingsGuardFailureResponse(guard)");
     expect(routeSource).toContain("tenantId !== actor.tenantId");
     expect(routeSource).toContain("prisma.$transaction");
     expect(routeSource).toContain("tx.tenant.update");

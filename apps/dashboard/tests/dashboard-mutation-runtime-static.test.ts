@@ -151,7 +151,7 @@ describe("dashboard mutation runtime contract", () => {
     expect(imageSeoActionPanel).toContain("Generate derivative draft");
     expect(imageSeoTest).toContain("wires the portfolio dashboard action through the gated image SEO route");
     expect(settingsRoute).toContain("export async function PATCH");
-    expect(settingsRoute).toContain('assertPermission(actor, "settings:write")');
+    expect(settingsRoute).toContain('evaluateDashboardApiGuard(request, "settings:write"');
     expect(settingsRoute).toContain('dashboardMutationAction: "update_settings"');
     expect(settingsRoute).toContain("PROVIDER_SETTINGS_PERSISTENCE_NOT_CONFIGURED");
     expect(settingsActionPanel).toContain('fetch("/api/settings"');
