@@ -137,6 +137,7 @@ describe("messaging privacy contract", () => {
     expect(routeSource).toContain('assertPermission(actor, "message:write")');
     expect(routeSource).toContain('code: "TENANT_MISMATCH"');
     expect(routeSource).toContain("buildMessagingPrivacyPlanFromRequest");
+    expect(routeSource).toContain("role: parseRole(body.role, actor.role)");
     expect(routeSource).toContain("MESSAGING_PRIVACY_WORKFLOW_PERSISTENCE_NOT_CONFIGURED");
     expect(routeSource).toContain("messagingPrivacyLocalContractFallbackDisabled");
     expect(routeSource).toContain("Messaging privacy POST returns the local redaction/export/delete/retention/moderation contract");

@@ -7,11 +7,18 @@ const actions: readonly MessagingPrivacyAction[] = ["redact_message", "authorize
 const roles: readonly MessagingRole[] = ["client", "artist", "assistant", "studio_manager", "admin"];
 
 function parseAction(value: unknown): MessagingPrivacyAction {
-  return typeof value === "string" && actions.includes(value as MessagingPrivacyAction) ? (value as MessagingPrivacyAction) : "authorize_message_view";
+  if (typeof value !== "string") return "authorize_message_view";
+  const normalized = value.trim().toLowerCase();
+  return actions.includes(normalized as MessagingPrivacyAction) ? (normalized as MessagingPrivacyAction) : "authorize_message_view";
 }
 
-function parseRole(value: unknown): MessagingRole {
-  return typeof value === "string" && roles.includes(value as MessagingRole) ? (value as MessagingRole) : "artist";
+function parseRole(value: unknown, fallback: unknown): MessagingRole {
+  const parseRoleFromValue = (raw: unknown): MessagingRole | undefined =>
+    typeof raw === "string" && roles.includes(raw.trim().toLowerCase() as MessagingRole)
+      ? (raw.trim().toLowerCase() as MessagingRole)
+      : undefined;
+
+  return parseRoleFromValue(value) ?? parseRoleFromValue(fallback) ?? "artist";
 }
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
@@ -53,7 +60,7 @@ export async function POST(request: NextRequest) {
   const plan = buildMessagingPrivacyPlanFromRequest({
     tenantId,
     action: parseAction(body.action),
-    role: parseRole(body.role ?? actor.role),
+    role: parseRole(body.role, actor.role),
     actorId: actor.actorUserId,
     ...(typeof body.threadId === "string" ? { threadId: body.threadId } : {}),
     ...(typeof body.messageId === "string" ? { messageId: body.messageId } : {}),
