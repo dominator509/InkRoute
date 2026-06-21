@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { defaultFeatureFlags, evaluateFeatureFlags, type FeatureFlagDefinition } from "@inkroute/releases";
 import { featureFlagPatchInputSchema } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
-import { assertPermissionWithTenantMembership, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
+import { assertPermissionWithTenantMembership } from "../dashboardAuthMembership";
+import { isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 import {
   buildOptimisticConcurrencyMetadata,
   buildTenantMembershipLookupMetadata,

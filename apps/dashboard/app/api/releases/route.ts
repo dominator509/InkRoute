@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createReleaseCandidate, createRollbackPlan, demoReleaseCandidate, buildReleaseHealthChecks } from "@inkroute/releases";
 import { releaseCreateInputSchema } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
-import { assertPermission, assertPermissionWithTenantMembership, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
+import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
+import { assertPermissionWithTenantMembership } from "../dashboardAuthMembership";
 import {
   buildOptimisticConcurrencyMetadata,
   buildReleaseWorkflowOrchestrationMetadata,

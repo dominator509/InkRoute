@@ -20,7 +20,12 @@ function normalizeFormAction(value: unknown): "archive_form_version" | null {
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
-export async function GET(request: NextRequest, { params }: { params: { formId: string } }) {
+interface DashboardFormRouteContext {
+  params: Promise<{ formId: string }>;
+}
+
+export async function GET(request: NextRequest, context: DashboardFormRouteContext) {
+  const { params } = await context;
   const actor = resolveDashboardActor(request);
   try {
     assertPermission(actor, "form:read");
@@ -196,7 +201,8 @@ export async function GET(request: NextRequest, { params }: { params: { formId: 
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { formId: string } }) {
+export async function PATCH(request: NextRequest, context: DashboardFormRouteContext) {
+  const { params } = await context;
   const actor = resolveDashboardActor(request);
   try {
     assertPermission(actor, "form:write");

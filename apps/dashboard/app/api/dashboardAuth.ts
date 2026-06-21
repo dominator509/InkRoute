@@ -1,6 +1,5 @@
 import { evaluateApiRouteGuard, hasPermission, type TenantAccessContext } from "@inkroute/auth";
 import { inkrouteDemoTenant } from "@inkroute/config";
-import { prisma } from "@inkroute/db";
 import type { Permission, Role } from "@inkroute/types";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -93,56 +92,6 @@ export function assertPermission(context: DashboardActorContext, permission: Per
   if (!hasPermission(context.role, permission)) {
     throw new Error("FORBIDDEN");
   }
-}
-
-export async function resolveDashboardTenantMembership(
-  context: DashboardActorContext,
-  client: Pick<typeof prisma, "tenantMember"> = prisma,
-): Promise<DashboardMembershipLookupMetadata> {
-  if (context.source === "local-fallback") {
-    return {
-      tenantId: context.tenantId,
-      actorUserId: context.actorUserId,
-      actorRole: context.role,
-      source: "local-fallback",
-      status: "local-fallback",
-      membershipId: null,
-      customRoleId: null,
-      requiredNextStep: null,
-    };
-  }
-
-  const membership = await client.tenantMember.findUnique({
-    where: { tenantId_userId: { tenantId: context.tenantId, userId: context.actorUserId } },
-    select: { id: true, role: true, status: true, customRoleId: true },
-  });
-
-  if (!membership || membership.status !== "active") {
-    throw new Error("FORBIDDEN");
-  }
-
-  return {
-    tenantId: context.tenantId,
-    actorUserId: context.actorUserId,
-    actorRole: membership.role,
-    source: "database-tenant-member",
-    status: "active",
-    membershipId: membership.id,
-    customRoleId: membership.customRoleId,
-    requiredNextStep: null,
-  };
-}
-
-export async function assertPermissionWithTenantMembership(
-  context: DashboardActorContext,
-  permission: Permission,
-  client: Pick<typeof prisma, "tenantMember"> = prisma,
-): Promise<DashboardMembershipLookupMetadata> {
-  const membershipLookup = await resolveDashboardTenantMembership(context, client);
-  if (!hasPermission(membershipLookup.actorRole, permission)) {
-    throw new Error("FORBIDDEN");
-  }
-  return membershipLookup;
 }
 
 export function evaluateDashboardApiGuard(request: NextRequest, permission: Permission, routePath = request.nextUrl.pathname) {
