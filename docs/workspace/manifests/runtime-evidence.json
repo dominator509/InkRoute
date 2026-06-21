@@ -4,35 +4,43 @@
   "records": [
     {
       "id": "dependency-install",
-      "status": "missing"
+      "status": "passed",
+      "evidence": "pnpm install --frozen-lockfile completed successfully (dependency resolution and lockfile sync validated)."
     },
     {
       "id": "workspace-all",
-      "status": "missing"
+      "status": "failed",
+      "evidence": "pnpm workspace:all executed through imports/scripts/runtime-evidence; stopped on runtime evidence fail until all required evidence rows are passed."
     },
     {
       "id": "handoff-all",
-      "status": "missing"
+      "status": "failed",
+      "evidence": "pnpm handoff:all failed while evaluating phase docs/ledger/task tooling and blocked at pnpm workspace:all runtime evidence fail."
     },
     {
       "id": "quality-all",
-      "status": "missing"
+      "status": "failed",
+      "evidence": "pnpm quality:all failed in quality:docs/doc-links stage; quality gates remain blocked."
     },
     {
       "id": "typecheck",
-      "status": "missing"
+      "status": "failed",
+      "evidence": "pnpm typecheck exited non-zero (turbo/typecheck wrapper returned exit code 1 after TypeScript command invocation)."
     },
     {
       "id": "unit-tests",
-      "status": "missing"
+      "status": "failed",
+      "evidence": "pnpm test:unit failed with 170 failed suites (1961 tests; runtime-contract assertions not yet met)."
     },
     {
       "id": "web-build",
-      "status": "missing"
+      "status": "failed",
+      "evidence": "pnpm --filter @inkroute/web build failed on Next.js type-check errors in observability route command metadata export."
     },
     {
       "id": "dashboard-build",
-      "status": "missing"
+      "status": "failed",
+      "evidence": "pnpm --filter @inkroute/dashboard build failed on strictOptionalPropertyTypes check for search-console operation plan input."
     }
   ],
   "note": "Populate records with redacted pass/fail evidence labels only after commands actually run. Do not paste secrets, tokens, raw database URLs, or private client data."
