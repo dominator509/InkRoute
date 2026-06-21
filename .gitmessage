@@ -1,13 +1,6 @@
-chore: 
+chore: update
 
-# Optional structured sections for Codex/Serena workflow work
-# (remove placeholders and replace with a concise change summary before committing)
-#
-# Impact:
-# - key behavior or doc update
-#
-# Validation:
-# - tests/checks run or "not run"
-#
-# Risks:
-# - any residual risk or "none"
+# Optional structure for Codex/Serena commits. Replace this line and sections before committing.
+# Impact: concise change summary
+# Validation: tests/checks run (or not run)
+# Risks: residual risk (or none)
