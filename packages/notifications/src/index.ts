@@ -589,6 +589,7 @@ export interface MessagingPrivacyRuntimeReadinessInput {
   privateUrlExportOmissionEnforced: boolean;
   moderationRateLimitIntegrationConfigured: boolean;
   spamModerationTestsPassed: boolean;
+  secretSafeArtifactsReviewed: boolean;
   auditLogPersistenceAvailable: boolean;
   idempotencyStoreAvailable: boolean;
   postgresRetentionIntegrationTestsPassed: boolean;
@@ -2041,11 +2042,12 @@ export const messagingPrivacyRuntimeReadinessRequiredControls = [
     ] as const;
 
 export const messagingPrivacyRuntimeReadinessRequiredEvidence = [
-      "production redaction service and sensitive-content detection evidence",
       "role-gated messaging UI/API and unauthorized-role denial evidence",
       "secure attachment authorization and policy test evidence",
       "persistence-backed export, delete, retention job, and Postgres integration evidence",
+      "provider payload/private URL omission evidence",
       "moderation/rate-limit, audit, idempotency, and spam test evidence",
+      "secret-safe review of retained messaging privacy artifacts",
     ] as const;
 
 export type MessagingPrivacyRuntimeReadinessRequiredEvidence = typeof messagingPrivacyRuntimeReadinessRequiredEvidence[number];
@@ -2055,6 +2057,9 @@ export function buildMessagingPrivacyRuntimeReadinessPlan(input: MessagingPrivac
   const missingScripts = requiredScripts.filter((script) => !input.packageScripts.includes(script));
   const blockers: string[] = [];
   const requiredEvidence: MessagingPrivacyRuntimeReadinessRequiredEvidence[] = [];
+  const addRequiredEvidence = (entry: MessagingPrivacyRuntimeReadinessRequiredEvidence): void => {
+    if (!requiredEvidence.includes(entry)) requiredEvidence.push(entry);
+  };
 
   for (const script of missingScripts) blockers.push(`Missing @inkroute/notifications ${script} script.`);
   if (!input.notificationTestsPassed) blockers.push("@inkroute/notifications messaging privacy tests must pass.");
@@ -2080,22 +2085,26 @@ export function buildMessagingPrivacyRuntimeReadinessPlan(input: MessagingPrivac
   if (!input.spamModerationTestsPassed) blockers.push("Messaging spam moderation and rate-limit tests must pass.");
   if (!input.auditLogPersistenceAvailable) blockers.push("Messaging privacy audit-log persistence must be available.");
   if (!input.idempotencyStoreAvailable) blockers.push("Messaging privacy idempotency store must be available.");
+  if (!input.secretSafeArtifactsReviewed) blockers.push("Secret-safe messaging privacy artifact review evidence must be captured.");
   if (!input.postgresRetentionIntegrationTestsPassed) blockers.push("Postgres retention/delete/export integration tests must pass.");
 
-  if (!input.redactionServiceImplemented || !input.piiDetectionConfigured || !input.medicalPaymentPrivateUrlDetectionConfigured || !input.bodyPreviewRedactionEnforced) {
-    requiredEvidence.push(messagingPrivacyRuntimeReadinessRequiredEvidence[0]);
-  }
   if (!input.roleGatedMessageUiImplemented || !input.roleGatedApiAuthorizationEnforced || !input.unauthorizedRoleDenialTestsPassed) {
-    requiredEvidence.push(messagingPrivacyRuntimeReadinessRequiredEvidence[1]);
+    addRequiredEvidence(messagingPrivacyRuntimeReadinessRequiredEvidence[0]);
   }
   if (!input.secureAttachmentAuthorizationImplemented || !input.attachmentPolicyTestsPassed) {
-    requiredEvidence.push(messagingPrivacyRuntimeReadinessRequiredEvidence[2]);
+    addRequiredEvidence(messagingPrivacyRuntimeReadinessRequiredEvidence[1]);
   }
   if (!input.exportWorkflowPersistenceAvailable || !input.deleteWorkflowPersistenceAvailable || !input.retentionWorkflowPersistenceAvailable || !input.retentionJobConfigured || !input.postgresRetentionIntegrationTestsPassed) {
-    requiredEvidence.push(messagingPrivacyRuntimeReadinessRequiredEvidence[3]);
+    addRequiredEvidence(messagingPrivacyRuntimeReadinessRequiredEvidence[2]);
+  }
+  if (!input.providerPayloadExportOmissionEnforced || !input.privateUrlExportOmissionEnforced) {
+    addRequiredEvidence(messagingPrivacyRuntimeReadinessRequiredEvidence[3]);
   }
   if (!input.moderationRateLimitIntegrationConfigured || !input.spamModerationTestsPassed || !input.auditLogPersistenceAvailable || !input.idempotencyStoreAvailable) {
-    requiredEvidence.push(messagingPrivacyRuntimeReadinessRequiredEvidence[4]);
+    addRequiredEvidence(messagingPrivacyRuntimeReadinessRequiredEvidence[4]);
+  }
+  if (!input.secretSafeArtifactsReviewed) {
+    addRequiredEvidence(messagingPrivacyRuntimeReadinessRequiredEvidence[5]);
   }
 
   return {
@@ -2742,6 +2751,21 @@ export interface MessagingPrivacyPlan {
   status: "ready" | "blocked";
   action: MessagingPrivacyAction;
   role: MessagingRole;
+  tenantId: string;
+  actorId?: string;
+  threadId?: string;
+  messageId?: string;
+  body?: string;
+  bodyRedacted?: boolean;
+  attachmentUrl?: string;
+  attachmentPolicyApproved?: boolean;
+  retentionDays?: number;
+  exportIncludesProviderPayloads?: boolean;
+  exportIncludesPrivateUrls?: boolean;
+  deleteRequestedAt?: string;
+  spamScore?: number;
+  rateLimitAllowed?: boolean;
+  idempotencyKey?: string;
   visibleFields: readonly string[];
   redactionFindings: readonly string[];
   requiredWrites: readonly string[];
@@ -3043,6 +3067,21 @@ export function buildMessagingPrivacyPlan(input: MessagingPrivacyPlanInput): Mes
 
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
+    tenantId: input.tenantId,
+    actorId: input.actorId,
+    threadId: input.threadId,
+    messageId: input.messageId,
+    body: input.body,
+    bodyRedacted: input.bodyRedacted,
+    attachmentUrl: input.attachmentUrl,
+    attachmentPolicyApproved: input.attachmentPolicyApproved,
+    retentionDays: input.retentionDays,
+    exportIncludesProviderPayloads: input.exportIncludesProviderPayloads,
+    exportIncludesPrivateUrls: input.exportIncludesPrivateUrls,
+    deleteRequestedAt: input.deleteRequestedAt,
+    spamScore: input.spamScore,
+    rateLimitAllowed: input.rateLimitAllowed,
+    idempotencyKey: input.idempotencyKey,
     action: input.action,
     role: input.role,
     visibleFields,

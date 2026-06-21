@@ -11,9 +11,22 @@ export interface MessagingPrivacyRepository {
   claimIdempotencyKey(input: { tenantId: string; key: string; action: MessagingPrivacyAction }): Promise<"claimed" | "duplicate">;
   persistPrivacyEvent(input: { tenantId: string; plan: MessagingPrivacyPlan; redactedMetadata: Record<string, unknown> }): Promise<void>;
   persistRedactedMessage(input: { tenantId: string; messageId: string; bodyPreview: string; findings: readonly string[] }): Promise<void>;
-  persistExportWorkflow(input: { tenantId: string; plan: MessagingPrivacyPlan }): Promise<void>;
-  persistDeleteWorkflow(input: { tenantId: string; plan: MessagingPrivacyPlan }): Promise<void>;
-  persistRetentionWorkflow(input: { tenantId: string; plan: MessagingPrivacyPlan }): Promise<void>;
+  persistExportWorkflow(input: {
+    tenantId: string;
+    plan: MessagingPrivacyPlan;
+    threadId?: string;
+  }): Promise<void>;
+  persistDeleteWorkflow(input: {
+    tenantId: string;
+    plan: MessagingPrivacyPlan;
+    threadId?: string;
+  }): Promise<void>;
+  persistRetentionWorkflow(input: {
+    tenantId: string;
+    plan: MessagingPrivacyPlan;
+    threadId?: string;
+    retentionDays?: number;
+  }): Promise<void>;
   authorizeAttachment(input: { tenantId: string; threadId: string; role: MessagingRole; attachmentUrl: string }): Promise<"allowed" | "denied">;
   persistModerationDecision(input: { tenantId: string; plan: MessagingPrivacyPlan; spamScore: number }): Promise<void>;
   persistAuditLog(input: { tenantId: string; plan: MessagingPrivacyPlan; redactedMetadata: Record<string, unknown> }): Promise<void>;
@@ -88,12 +101,13 @@ export function buildMessagingPrivacyContract(): MessagingPrivacyContract {
       deleteWorkflowPersistenceAvailable: false,
       retentionWorkflowPersistenceAvailable: false,
       retentionJobConfigured: false,
-      providerPayloadExportOmissionEnforced: true,
-      privateUrlExportOmissionEnforced: true,
+      providerPayloadExportOmissionEnforced: false,
+      privateUrlExportOmissionEnforced: false,
       moderationRateLimitIntegrationConfigured: true,
       spamModerationTestsPassed: false,
       auditLogPersistenceAvailable: false,
       idempotencyStoreAvailable: false,
+      secretSafeArtifactsReviewed: false,
       postgresRetentionIntegrationTestsPassed: false,
     }),
     redactPlan: buildMessagingPrivacyPlan({
@@ -208,15 +222,40 @@ export async function executeMessagingPrivacyPlan(
 ): Promise<{ status: "processed" | "blocked" | "duplicate"; plan: MessagingPrivacyPlan }> {
   if (plan.status === "blocked") return { status: "blocked", plan };
   const idempotencyKey = `${plan.action}:${input.threadId ?? input.messageId ?? "unknown"}`;
-  const claim = await repository.claimIdempotencyKey({ tenantId: input.tenantId, key: idempotencyKey, action: plan.action });
+  const effectiveThreadId = input.threadId ?? plan.threadId;
+  const effectiveRetentionDays = plan.retentionDays;
+
+  const claim = await repository.claimIdempotencyKey({
+    tenantId: input.tenantId,
+    key: plan.idempotencyKey ?? idempotencyKey,
+    action: plan.action,
+  });
   if (claim === "duplicate") return { status: "duplicate", plan };
 
   await repository.persistPrivacyEvent({ tenantId: input.tenantId, plan, redactedMetadata: { action: plan.action, findings: plan.redactionFindings } });
   if (plan.action === "redact_message" && input.messageId) await repository.persistRedactedMessage({ tenantId: input.tenantId, messageId: input.messageId, bodyPreview: "[redacted-message-body]", findings: plan.redactionFindings });
-  if (plan.action === "export_thread") await repository.persistExportWorkflow({ tenantId: input.tenantId, plan });
-  if (plan.action === "delete_thread") await repository.persistDeleteWorkflow({ tenantId: input.tenantId, plan });
-  if (plan.action === "apply_retention") await repository.persistRetentionWorkflow({ tenantId: input.tenantId, plan });
-  if (input.attachmentUrl && input.threadId) await repository.authorizeAttachment({ tenantId: input.tenantId, threadId: input.threadId, role: plan.role, attachmentUrl: input.attachmentUrl });
+  if (plan.action === "export_thread") {
+    await repository.persistExportWorkflow({ tenantId: input.tenantId, plan, threadId: effectiveThreadId });
+  }
+  if (plan.action === "delete_thread") {
+    await repository.persistDeleteWorkflow({ tenantId: input.tenantId, plan, threadId: effectiveThreadId });
+  }
+  if (plan.action === "apply_retention") {
+    await repository.persistRetentionWorkflow({
+      tenantId: input.tenantId,
+      plan,
+      threadId: effectiveThreadId,
+      retentionDays: effectiveRetentionDays,
+    });
+  }
+  if (input.attachmentUrl && effectiveThreadId) {
+    await repository.authorizeAttachment({
+      tenantId: input.tenantId,
+      threadId: effectiveThreadId,
+      role: plan.role,
+      attachmentUrl: input.attachmentUrl,
+    });
+  }
   if (plan.action === "moderate_message") await repository.persistModerationDecision({ tenantId: input.tenantId, plan, spamScore: input.spamScore ?? 0 });
   await repository.persistAuditLog({ tenantId: input.tenantId, plan, redactedMetadata: { visibleFields: plan.visibleFields, requiredWrites: plan.requiredWrites } });
   return { status: "processed", plan };
@@ -258,17 +297,25 @@ export function createInMemoryMessagingPrivacyRepository(): MessagingPrivacyRepo
       });
     },
     async persistExportWorkflow(input) {
-      exportWorkflows.push({ tenantId: input.tenantId, action: input.plan.action, threadId: input.plan.threadId });
+      exportWorkflows.push({
+        tenantId: input.tenantId,
+        action: input.plan.action,
+        threadId: input.threadId ?? input.plan.threadId,
+      });
     },
     async persistDeleteWorkflow(input) {
-      deleteWorkflows.push({ tenantId: input.tenantId, action: input.plan.action, threadId: input.plan.threadId });
+      deleteWorkflows.push({
+        tenantId: input.tenantId,
+        action: input.plan.action,
+        threadId: input.threadId ?? input.plan.threadId,
+      });
     },
     async persistRetentionWorkflow(input) {
       retentionWorkflows.push({
         tenantId: input.tenantId,
         action: input.plan.action,
-        threadId: input.plan.threadId,
-        retentionDays: input.plan.retentionDays,
+        threadId: input.threadId ?? input.plan.threadId,
+        retentionDays: input.retentionDays ?? input.plan.retentionDays,
       });
     },
     async authorizeAttachment(input) {
