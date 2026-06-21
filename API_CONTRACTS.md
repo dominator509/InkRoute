@@ -46,13 +46,13 @@ All route handlers must:
 
 | Method | Route | Purpose | Validator | Auth | Status |
 | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/public/:tenantSlug/portfolio` | Public portfolio items | Query validator pending | No | Planned |
-| `GET` | `/api/public/:tenantSlug/travel` | Public travel schedule/city availability | Query validator pending | No | Planned |
+| `GET` | `api/public/:tenantSlug/portfolio` | Public portfolio items | Query validator pending | No | Planned |
+| `GET` | `api/public/:tenantSlug/travel` | Public travel schedule/city availability | Query validator pending | No | Planned |
 | `POST` | `/api/public/:tenantSlug/booking-requests` | Create booking request | `bookingRequestInputSchema` | No, DB path requires bot proof + queue handoff readiness | Tenant-scoped validation, local + DB persistence path, anti-bot proof enforcement for DB writes, encryption-policy/rotation metadata, and signed reference-upload handoff contract in response. |
-| `POST` | `/api/public/:tenantSlug/waitlists` | City waitlist signup | Planned | No, rate-limited | Planned |
-| `GET` | `/api/public/:tenantSlug/seo/cities/:citySlug` | City SEO page data | `seoCityPageInputSchema` for admin writes | No | Planned |
-| `GET` | `/api/public/:tenantSlug/seo/styles/:styleSlug` | Style SEO page data | `seoStylePageInputSchema` for admin writes | No | Planned |
-| `GET` | `/api/public/:tenantSlug/reviews` | Approved public testimonials | Query validator pending | No | Planned |
+| `POST` | `api/public/:tenantSlug/waitlists` | City waitlist signup | Planned | No, rate-limited | Planned |
+| `GET` | `api/public/:tenantSlug/seo/cities/:citySlug` | City SEO page data | `seoCityPageInputSchema` for admin writes | No | Planned |
+| `GET` | `api/public/:tenantSlug/seo/styles/:styleSlug` | Style SEO page data | `seoStylePageInputSchema` for admin writes | No | Planned |
+| `GET` | `api/public/:tenantSlug/reviews` | Approved public testimonials | Query validator pending | No | Planned |
 | `GET` | `/api/public/:tenantSlug/notification-previews` | Static notification/template delivery-plan previews | Static Phase 9 helper output | No | Scaffolded preview route; no send/queue |
 | `POST` | `/api/public/:tenantSlug/messages` | Public client message/contact thread draft | Manual minimal shape in Phase 9; future `messageInputSchema` | No, must be rate-limited before production | Local runtime draft persistence and routing draft returned |
 | `POST` | `/api/public/:tenantSlug/error-reports` | Public fallback client error-report draft | Manual minimal Phase 11 shape; future observability validator | No, must be rate-limited/bot-protected before production | Local runtime redacted draft persistence and preview response |
@@ -61,33 +61,33 @@ All route handlers must:
 
 | Method | Route | Purpose | Permission | Validator | Status |
 | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/dashboard/metrics` | Tenant overview metrics | `analytics:read` | Query validator pending | Planned |
-| `GET` | `/api/dashboard/bookings` | Booking inbox | `booking:read` | Query validator pending | Planned |
-| `GET` | `/api/dashboard/bookings/:id` | Booking detail with timeline | `booking:read` | Params validator pending | Planned |
-| `PATCH` | `/api/dashboard/bookings/:id/status` | Accept/decline/reschedule state changes | `booking:write` | `bookingStatusUpdateSchema` | Planned |
-| `POST` | `/api/dashboard/appointments` | Create appointment from booking | `booking:write` | `appointmentInputSchema` | Planned |
-| `GET` | `/api/dashboard/clients/:id` | Client profile/timeline | `client:read` | Params validator pending | Planned |
-| `POST` | `/api/dashboard/clients` | Create client profile | `client:write` | `clientInputSchema` | Planned |
-| `POST` | `/api/dashboard/portfolio` | Create portfolio item | `portfolio:write` | `portfolioItemInputSchema` | Planned |
-| `POST` | `/api/dashboard/portfolio/:id/images` | Attach portfolio image metadata | `portfolio:write` | `portfolioImageInputSchema` | Planned |
-| `POST` | `/api/dashboard/files/signed-upload` | Create signed upload request | Permission varies by file kind | `fileAssetInputSchema` boundary | Planned |
-| `POST` | `/api/dashboard/travel/cities` | Create managed travel city | `travel:write` | `travelCityInputSchema` | Planned |
-| `POST` | `/api/dashboard/travel/schedules` | Create travel schedule/guest spot | `travel:write` | `travelScheduleInputSchema` | Planned |
-| `POST` | `/api/dashboard/availability` | Create availability window | `travel:write` | `availabilityWindowInputSchema` | Planned |
-| `POST` | `/api/dashboard/payments/deposit-session` | Create Stripe deposit session | `payment:write` | `depositInputSchema` | Planned |
-| `POST` | `/api/dashboard/refunds` | Create/refund payment record | `payment:write` | `refundInputSchema` | Planned |
-| `POST` | `/api/dashboard/intake/forms` | Create intake form | `settings:write` | `intakeFormInputSchema` | Planned |
-| `POST` | `/api/dashboard/consent/forms` | Create consent form | `settings:write` | `consentFormInputSchema` | Planned |
-| `GET` | `/api/dashboard/errors` | Error/crash reports | `error:read` | Query validator pending | Planned |
+| `GET` | `api/metrics` | Tenant overview metrics | `analytics:read` | Query validator pending | Planned |
+| `GET` | `/api/bookings` | Booking inbox | `booking:read` | Query validator pending | Planned |
+| `GET` | `/api/bookings/:bookingId` | Booking detail with timeline | `booking:read` | Params validator pending | Planned |
+| `PATCH` | `/api/bookings/:bookingId/state` | Accept/decline/reschedule state changes | `booking:write` | `bookingStatusUpdateSchema` | Planned |
+| `POST` | `api/appointments` | Create appointment from booking | `booking:write` | `appointmentInputSchema` | Planned |
+| `GET` | `/api/clients/:clientId` | Client profile/timeline | `client:read` | Params validator pending | Planned |
+| `POST` | `/api/clients` | Create client profile | `client:write` | `clientInputSchema` | Planned |
+| `POST` | `/api/portfolio` | Create portfolio item | `portfolio:write` | `portfolioItemInputSchema` | Planned |
+| `POST` | `api/portfolio/:id/images` | Attach portfolio image metadata | `portfolio:write` | `portfolioImageInputSchema` | Planned |
+| `POST` | `api/files/signed-upload` | Create signed upload request | Permission varies by file kind | `fileAssetInputSchema` boundary | Planned |
+| `POST` | `api/travel/cities` | Create managed travel city | `travel:write` | `travelCityInputSchema` | Planned |
+| `POST` | `api/travel/schedules` | Create travel schedule/guest spot | `travel:write` | `travelScheduleInputSchema` | Planned |
+| `POST` | `api/availability` | Create availability window | `travel:write` | `availabilityWindowInputSchema` | Planned |
+| `POST` | `api/payments/deposit-session` | Create Stripe deposit session | `payment:write` | `depositInputSchema` | Planned |
+| `POST` | `api/refunds` | Create/refund payment record | `payment:write` | `refundInputSchema` | Planned |
+| `POST` | `api/intake/forms` | Create intake form | `settings:write` | `intakeFormInputSchema` | Planned |
+| `POST` | `api/consent/forms` | Create consent form | `settings:write` | `consentFormInputSchema` | Planned |
+| `GET` | `/api/error-reports` | Error/crash reports | `error:read` | Query validator pending | Planned |
 | `GET` | `/api/error-reports` | Tenant-scoped error report API boundary | `error:read` | Query validator pending | Scaffolded route returns `501`; auth/Prisma missing |
 | `POST` | `/api/error-reports` | Authenticated dashboard error-report ingest boundary | `error:write` | Phase 11 draft shape; future validator | Scaffolded route returns `501`; auth/Prisma missing |
-| `POST` | `/api/dashboard/releases` | Create release note | `release:write` | Release validator pending | Planned |
-| `PATCH` | `/api/dashboard/feature-flags/:key` | Toggle tenant feature flag | `settings:write` | Feature flag validator pending | Planned |
-| `GET` | `/api/dashboard/messages` | Tenant message threads and delivery logs | `client:read` | Query validator pending | Planned |
-| `POST` | `/api/dashboard/messages/:threadId/replies` | Reply to client thread | `client:write` | `messageInputSchema` | Planned |
-| `POST` | `/api/dashboard/notifications/preview` | Preview template delivery plan | `settings:write` | `notificationPreviewInputSchema` | Planned |
-| `POST` | `/api/dashboard/notifications/queue` | Queue consent-aware notification | `settings:write` or domain permission | `notificationInputSchema` plus delivery plan | Planned |
-| `PATCH` | `/api/dashboard/notification-preferences/:clientId` | Update preferences/suppression state | `client:write` | `notificationConsentInputSchema` | Planned |
+| `POST` | `/api/releases` | Create release note | `release:write` | Release validator pending | Planned |
+| `PATCH` | `/api/feature-flags` | Toggle tenant feature flag | `settings:write` | Feature flag validator pending | Planned |
+| `GET` | `/api/messages` | Tenant message threads and delivery logs | `client:read` | Query validator pending | Planned |
+| `POST` | `/api/messages/:threadId` | Reply to client thread | `client:write` | `messageInputSchema` | Planned |
+| `POST` | `api/notifications/preview` | Preview template delivery plan | `settings:write` | `notificationPreviewInputSchema` | Planned |
+| `POST` | `api/notifications/queue` | Queue consent-aware notification | `settings:write` or domain permission | `notificationInputSchema` plus delivery plan | Planned |
+| `PATCH` | `api/notification-preferences/:clientId` | Update preferences/suppression state | `client:write` | `notificationConsentInputSchema` | Planned |
 
 ## Mobile API use
 
@@ -111,7 +111,7 @@ Examples:
 
 - `submitted -> accepted` requires `booking:write`.
 - `accepted -> deposit_pending` requires a deposit record.
-- `deposit_pending -> deposit_paid` should be driven by verified Stripe webhook in production.
+- `deposit_pending -> deposit_paid` should be driven by verified Stripe webhook in production (gated/proof pending).
 - `deposit_paid -> scheduled` requires an appointment record.
 - `scheduled -> completed` should trigger aftercare notification scheduling.
 - `scheduled -> no_show` should preserve no-show audit metadata.
@@ -163,7 +163,7 @@ Status: **Local-runtime draft implemented; production SDK flow remains credentia
 Purpose:
 - Calculate a deposit policy preview for an accepted booking or signed deposit handoff.
 - Return a Stripe Checkout session draft with reconciliation metadata.
-- Avoid live payment collection until auth/signed-token, Stripe credentials, persistence, and webhooks are wired.
+Avoid live payment collection until auth/signed-token, Stripe credentials, persistence, and webhooks are wired (gated/proof pending).
 
 Current implementation:
 - Parses JSON manually in `apps/web/app/api/public/[tenantSlug]/deposit-sessions/route.ts`.
@@ -175,7 +175,7 @@ Production requirements:
 1. Require authenticated dashboard action or a signed short-lived deposit token generated only after artist acceptance.
 2. Resolve tenant and booking from database.
 3. Verify amount/currency against persisted `Deposit.policySnapshot`.
-4. Create Stripe Checkout Session or PaymentIntent using test/live credentials.
+4. Create Stripe Checkout Session or PaymentIntent using test/live credentials (staged environment only, evidence pending).
 5. Persist provider session ID, idempotency key, and payment audit log before returning redirect URL.
 6. Rate-limit and monitor abuse.
 

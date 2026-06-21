@@ -1,440 +1,13 @@
 {
-  "generatedAt": "2026-06-21T22:09:19.449Z",
+  "generatedAt": "2026-06-21T23:30:24.984Z",
   "source": "Phase 17 quality gate hardening",
-  "status": "fail",
-  "markdownFilesChecked": 132,
+  "status": "pass",
+  "markdownFilesChecked": 161,
   "totalLinks": 0,
   "relativeLinksChecked": 0,
   "referencedPathsChecked": 1078,
   "findings": [],
-  "semanticFindings": [
-    {
-      "status": "fail",
-      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Command-Center.md",
-      "message": "Referenced repo path does not exist: Command-Center.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Exact-Seam-Protocol.md",
-      "message": "Referenced repo path does not exist: Exact-Seam-Protocol.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Tool-Admission.md",
-      "message": "Referenced repo path does not exist: Tool-Admission.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Current-Work.md",
-      "message": "Referenced repo path does not exist: Current-Work.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Workflow-Routing.md",
-      "message": "Referenced repo path does not exist: Workflow-Routing.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "One-Shot-Protocol.md",
-      "message": "Referenced repo path does not exist: One-Shot-Protocol.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "CI-Fix-Intake.md",
-      "message": "Referenced repo path does not exist: CI-Fix-Intake.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Agent-Handoff-Intake.md",
-      "message": "Referenced repo path does not exist: Agent-Handoff-Intake.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Decisions.md",
-      "message": "Referenced repo path does not exist: Decisions.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Codex-Reviews.md",
-      "message": "Referenced repo path does not exist: Codex-Reviews.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "DeepSeek-Handoffs.md",
-      "message": "Referenced repo path does not exist: DeepSeek-Handoffs.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Gap-Closure-Dashboard.md",
-      "message": "Referenced repo path does not exist: Gap-Closure-Dashboard.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "docs/spec",
-      "message": "Referenced repo path does not exist: docs/spec."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "DRIFT_CONTROL.md",
-      "message": "Referenced repo path does not exist: DRIFT_CONTROL.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "FLOW_CONTROL.md",
-      "message": "Referenced repo path does not exist: FLOW_CONTROL.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "GAP_PROTOCOL.md",
-      "message": "Referenced repo path does not exist: GAP_PROTOCOL.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "MANIFEST.md",
-      "message": "Referenced repo path does not exist: MANIFEST.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "PROVISIONING.md",
-      "message": "Referenced repo path does not exist: PROVISIONING.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "RUNBOOK.md",
-      "message": "Referenced repo path does not exist: RUNBOOK.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "AGENT_HARNESS.md",
-      "message": "Referenced repo path does not exist: AGENT_HARNESS.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "PROJECT_STATE.md",
-      "message": "Referenced repo path does not exist: PROJECT_STATE.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "Architecture.md",
-      "message": "Referenced repo path does not exist: Architecture.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "Roadmap.md",
-      "message": "Referenced repo path does not exist: Roadmap.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "HANDOFF.md",
-      "message": "Referenced repo path does not exist: HANDOFF.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "scripts/verify_markers.py",
-      "message": "Referenced repo path does not exist: scripts/verify_markers.py."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
-      "reference": "scripts/regenerate_state.py",
-      "message": "Referenced repo path does not exist: scripts/regenerate_state.py."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
-      "reference": "scripts/congruence_audit.py",
-      "message": "Referenced repo path does not exist: scripts/congruence_audit.py."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
-      "reference": "scripts/verify_markers.py",
-      "message": "Referenced repo path does not exist: scripts/verify_markers.py."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
-      "reference": "scripts/gap_lint.py",
-      "message": "Referenced repo path does not exist: scripts/gap_lint.py."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
-      "reference": "scripts/ledger_lint.py",
-      "message": "Referenced repo path does not exist: scripts/ledger_lint.py."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
-      "reference": "scripts/quarantine_import_lint.py",
-      "message": "Referenced repo path does not exist: scripts/quarantine_import_lint.py."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
-      "reference": "scripts/escalation_monitor.py",
-      "message": "Referenced repo path does not exist: scripts/escalation_monitor.py."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "REPO_INVENTORY.md",
-      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "HANDOFF_QUEUE.md",
-      "message": "Referenced repo path does not exist: HANDOFF_QUEUE.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "PROJECT_STATE.md",
-      "message": "Referenced repo path does not exist: PROJECT_STATE.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "PROJECT_STATE.md",
-      "message": "Referenced repo path does not exist: PROJECT_STATE.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "REPO_INVENTORY.md",
-      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "HANDOFF_QUEUE.md",
-      "message": "Referenced repo path does not exist: HANDOFF_QUEUE.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "scripts/doctor.sh",
-      "message": "Referenced repo path does not exist: scripts/doctor.sh."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "PROJECT_STATE.md",
-      "message": "Referenced repo path does not exist: PROJECT_STATE.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "scripts/congruence_audit.py",
-      "message": "Referenced repo path does not exist: scripts/congruence_audit.py."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "HANDOFF.md",
-      "message": "Referenced repo path does not exist: HANDOFF.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
-      "reference": "Architecture.md",
-      "message": "Referenced repo path does not exist: Architecture.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
-      "reference": "Architecture.md",
-      "message": "Referenced repo path does not exist: Architecture.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
-      "reference": "Architecture.md",
-      "message": "Referenced repo path does not exist: Architecture.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
-      "reference": "REPO_INVENTORY.md",
-      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
-      "reference": "PROJECT_STATE.md",
-      "message": "Referenced repo path does not exist: PROJECT_STATE.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
-      "reference": "PROJECT_STATE.md",
-      "message": "Referenced repo path does not exist: PROJECT_STATE.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
-      "reference": "HANDOFF.md",
-      "message": "Referenced repo path does not exist: HANDOFF.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
-      "reference": "HANDOFF.md",
-      "message": "Referenced repo path does not exist: HANDOFF.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/kit/PROVISIONING.md",
-      "reference": "scripts/doctor.sh",
-      "message": "Referenced repo path does not exist: scripts/doctor.sh."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
-      "reference": "REPO_INVENTORY.md",
-      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
-      "reference": "REPO_INVENTORY.md",
-      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
-      "reference": "REPO_INVENTORY.md",
-      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
-      "reference": "REPO_INVENTORY.md",
-      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
-      "reference": "REPO_INVENTORY.md",
-      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
-      "reference": "REPO_INVENTORY.md",
-      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
-      "reference": "docs/spec",
-      "message": "Referenced repo path does not exist: docs/spec."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
-      "reference": "docs/spec",
-      "message": "Referenced repo path does not exist: docs/spec."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
-      "reference": "REPO_INVENTORY.md",
-      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
-      "reference": "HANDOFF_QUEUE.md",
-      "message": "Referenced repo path does not exist: HANDOFF_QUEUE.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
-      "reference": "REPO_INVENTORY.md",
-      "message": "Referenced repo path does not exist: REPO_INVENTORY.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
-      "reference": "HANDOFF.md",
-      "message": "Referenced repo path does not exist: HANDOFF.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/ROLLBACK_PROTOCOL.md",
-      "reference": "HANDOFF_QUEUE.md",
-      "message": "Referenced repo path does not exist: HANDOFF_QUEUE.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
-      "reference": "scripts/congruence_audit.py",
-      "message": "Referenced repo path does not exist: scripts/congruence_audit.py."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
-      "reference": "accepted_deltas.yaml",
-      "message": "Referenced repo path does not exist: accepted_deltas.yaml."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
-      "reference": "HANDOFF.md",
-      "message": "Referenced repo path does not exist: HANDOFF.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
-      "reference": "PROJECT_STATE.md",
-      "message": "Referenced repo path does not exist: PROJECT_STATE.md."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
-      "reference": "scripts/verify_markers.py",
-      "message": "Referenced repo path does not exist: scripts/verify_markers.py."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/trinity/FLOW_CONTROL.md",
-      "reference": "scripts/quarantine_import_lint.py",
-      "message": "Referenced repo path does not exist: scripts/quarantine_import_lint.py."
-    },
-    {
-      "status": "fail",
-      "sourcePath": "spec/retrofit/trinity/GAP_PROTOCOL.md",
-      "reference": "scripts/gap_lint.py",
-      "message": "Referenced repo path does not exist: scripts/gap_lint.py."
-    }
-  ],
+  "semanticFindings": [],
   "linkRecords": [],
   "referencedPathRecords": [
     {
@@ -995,51 +568,51 @@
     },
     {
       "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Command-Center.md"
+      "reference": "docs/ai/Command-Center.md"
     },
     {
       "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Exact-Seam-Protocol.md"
+      "reference": "docs/ai/Exact-Seam-Protocol.md"
     },
     {
       "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Tool-Admission.md"
+      "reference": "docs/ai/Tool-Admission.md"
     },
     {
       "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Current-Work.md"
+      "reference": "docs/ai/Current-Work.md"
     },
     {
       "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Workflow-Routing.md"
+      "reference": "docs/ai/Workflow-Routing.md"
     },
     {
       "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "One-Shot-Protocol.md"
+      "reference": "docs/ai/One-Shot-Protocol.md"
     },
     {
       "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "CI-Fix-Intake.md"
+      "reference": "docs/ai/CI-Fix-Intake.md"
     },
     {
       "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Agent-Handoff-Intake.md"
+      "reference": "docs/ai/Agent-Handoff-Intake.md"
     },
     {
       "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Decisions.md"
+      "reference": "docs/ai/Decisions.md"
     },
     {
       "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Codex-Reviews.md"
+      "reference": "docs/ai/Codex-Reviews.md"
     },
     {
       "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "DeepSeek-Handoffs.md"
+      "reference": "docs/ai/DeepSeek-Handoffs.md"
     },
     {
       "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "reference": "Gap-Closure-Dashboard.md"
+      "reference": "docs/ai/Gap-Closure-Dashboard.md"
     },
     {
       "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
@@ -3675,35 +3248,35 @@
     },
     {
       "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "DRIFT_CONTROL.md"
+      "reference": "spec/retrofit/DRIFT_CONTROL.md"
     },
     {
       "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "FLOW_CONTROL.md"
+      "reference": "spec/retrofit/FLOW_CONTROL.md"
     },
     {
       "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "GAP_PROTOCOL.md"
+      "reference": "spec/retrofit/GAP_PROTOCOL.md"
     },
     {
       "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "MANIFEST.md"
+      "reference": "spec/retrofit/MANIFEST.md"
     },
     {
       "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "PROVISIONING.md"
+      "reference": "spec/retrofit/PROVISIONING.md"
     },
     {
       "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "RUNBOOK.md"
+      "reference": "spec/retrofit/RUNBOOK.md"
     },
     {
       "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "AGENT_HARNESS.md"
+      "reference": "spec/retrofit/AGENT_HARNESS.md"
     },
     {
       "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "PROJECT_STATE.md"
+      "reference": "spec/retrofit/PROJECT_STATE.md"
     },
     {
       "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
@@ -3711,15 +3284,15 @@
     },
     {
       "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "Architecture.md"
+      "reference": "spec/retrofit/Architecture.md"
     },
     {
       "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "Roadmap.md"
+      "reference": "spec/retrofit/Roadmap.md"
     },
     {
       "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
-      "reference": "HANDOFF.md"
+      "reference": "spec/retrofit/HANDOFF.md"
     },
     {
       "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
@@ -4151,15 +3724,15 @@
     },
     {
       "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "REPO_INVENTORY.md"
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
     },
     {
       "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "HANDOFF_QUEUE.md"
+      "reference": "spec/retrofit/HANDOFF_QUEUE.md"
     },
     {
       "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "PROJECT_STATE.md"
+      "reference": "spec/retrofit/PROJECT_STATE.md"
     },
     {
       "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
@@ -4171,7 +3744,7 @@
     },
     {
       "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "PROJECT_STATE.md"
+      "reference": "spec/retrofit/PROJECT_STATE.md"
     },
     {
       "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
@@ -4179,11 +3752,11 @@
     },
     {
       "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "REPO_INVENTORY.md"
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
     },
     {
       "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "HANDOFF_QUEUE.md"
+      "reference": "spec/retrofit/HANDOFF_QUEUE.md"
     },
     {
       "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
@@ -4203,7 +3776,7 @@
     },
     {
       "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "PROJECT_STATE.md"
+      "reference": "spec/retrofit/PROJECT_STATE.md"
     },
     {
       "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
@@ -4211,7 +3784,7 @@
     },
     {
       "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
-      "reference": "HANDOFF.md"
+      "reference": "spec/retrofit/HANDOFF.md"
     },
     {
       "sourcePath": "spec/retrofit/CODEX_INSTRUCTIONS.md",
@@ -4219,35 +3792,35 @@
     },
     {
       "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
-      "reference": "Architecture.md"
+      "reference": "spec/retrofit/Architecture.md"
     },
     {
       "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
-      "reference": "Architecture.md"
+      "reference": "spec/retrofit/Architecture.md"
     },
     {
       "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
-      "reference": "Architecture.md"
+      "reference": "spec/retrofit/Architecture.md"
     },
     {
       "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
-      "reference": "REPO_INVENTORY.md"
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
     },
     {
       "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
-      "reference": "PROJECT_STATE.md"
+      "reference": "spec/retrofit/PROJECT_STATE.md"
     },
     {
       "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
-      "reference": "PROJECT_STATE.md"
+      "reference": "spec/retrofit/PROJECT_STATE.md"
     },
     {
       "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
-      "reference": "HANDOFF.md"
+      "reference": "spec/retrofit/HANDOFF.md"
     },
     {
       "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
-      "reference": "HANDOFF.md"
+      "reference": "spec/retrofit/HANDOFF.md"
     },
     {
       "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
@@ -4275,15 +3848,15 @@
     },
     {
       "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
-      "reference": "REPO_INVENTORY.md"
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
     },
     {
       "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
-      "reference": "REPO_INVENTORY.md"
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
     },
     {
       "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
-      "reference": "REPO_INVENTORY.md"
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
     },
     {
       "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
@@ -4291,7 +3864,7 @@
     },
     {
       "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
-      "reference": "REPO_INVENTORY.md"
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
     },
     {
       "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
@@ -4299,7 +3872,7 @@
     },
     {
       "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
-      "reference": "REPO_INVENTORY.md"
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
     },
     {
       "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
@@ -4323,7 +3896,7 @@
     },
     {
       "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
-      "reference": "REPO_INVENTORY.md"
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
     },
     {
       "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
@@ -4339,11 +3912,11 @@
     },
     {
       "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
-      "reference": "REPO_INVENTORY.md"
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
     },
     {
       "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
-      "reference": "HANDOFF_QUEUE.md"
+      "reference": "spec/retrofit/HANDOFF_QUEUE.md"
     },
     {
       "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
@@ -4391,11 +3964,11 @@
     },
     {
       "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
-      "reference": "REPO_INVENTORY.md"
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
     },
     {
       "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
-      "reference": "HANDOFF.md"
+      "reference": "spec/retrofit/HANDOFF.md"
     },
     {
       "sourcePath": "spec/retrofit/ROLLBACK_PROTOCOL.md",
@@ -4403,7 +3976,7 @@
     },
     {
       "sourcePath": "spec/retrofit/ROLLBACK_PROTOCOL.md",
-      "reference": "HANDOFF_QUEUE.md"
+      "reference": "spec/retrofit/HANDOFF_QUEUE.md"
     },
     {
       "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
@@ -4411,15 +3984,15 @@
     },
     {
       "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
-      "reference": "accepted_deltas.yaml"
+      "reference": "spec/retrofit/trinity/accepted_deltas.yaml"
     },
     {
       "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
-      "reference": "HANDOFF.md"
+      "reference": "spec/retrofit/trinity/HANDOFF.md"
     },
     {
       "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
-      "reference": "PROJECT_STATE.md"
+      "reference": "spec/retrofit/trinity/PROJECT_STATE.md"
     },
     {
       "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
