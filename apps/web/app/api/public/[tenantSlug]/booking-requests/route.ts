@@ -535,13 +535,20 @@ async function resolveTenantScope(tenantSlug: string): Promise<TenantResolution 
   const normalizedSlug = normalizeTenantSlug(tenantSlug);
 
   try {
-    const tenant = await prisma.tenant.findUnique({
-      where: { slug: normalizedSlug },
-      select: { id: true },
-    });
+    if (prisma.tenant) {
+      const tenantModel = prisma as unknown as {
+        tenant: {
+          findUnique: (options: { where: { slug: string }; select: { id: true } }) => Promise<{ id: string } | null>;
+        };
+      };
+      const tenant = await tenantModel.tenant.findUnique({
+        where: { slug: normalizedSlug },
+        select: { id: true },
+      });
 
-    if (tenant?.id) {
-      return { tenantId: tenant.id, source: "database" };
+      if (tenant?.id) {
+        return { tenantId: tenant.id, source: "database" };
+      }
     }
   } catch (error) {
     if (!isDatabaseUnavailable(error)) {

@@ -145,7 +145,7 @@ export default function HomePage() {
               </Field>
               <Field>
                 <FieldLabel htmlFor="notes-preview">Artist notes</FieldLabel>
-                <Textarea id="notes-preview" name="notes-preview" defaultValue="Client wants healed-work examples and Seattle travel dates." readOnly aria-describedby="notes-preview-hint" />
+                <Textarea id="notes-preview" defaultValue="Client wants healed-work examples and Seattle travel dates." aria-describedby="notes-preview-hint" />
                 <FieldHint id="notes-preview-hint">Demo-safe copy only; no medical, payment, or private client data.</FieldHint>
               </Field>
             </div>

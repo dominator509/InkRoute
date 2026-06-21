@@ -53,16 +53,16 @@ function normalizeEventInput(body: Record<string, unknown>): ObservabilityEventI
   return {
     source: body.source === "dashboard" || body.source === "mobile" || body.source === "api" || body.source === "worker" || body.source === "webhook" ? body.source : "web",
     message: typeof body.message === "string" ? body.message : "Synthetic alert escalation event",
-    stack: typeof body.stack === "string" ? body.stack : undefined,
-    route: typeof body.route === "string" ? body.route : "/api/observability/alerts",
-    userAgent: typeof body.userAgent === "string" ? body.userAgent : undefined,
-    release: typeof body.release === "string" ? body.release : "unknown",
-    environment: body.environment === "production" || body.environment === "preview" || body.environment === "test" ? body.environment : "development",
-    runtime: body.runtime === "browser" || body.runtime === "edge" || body.runtime === "react-native" || body.runtime === "node-worker" || body.runtime === "provider-webhook" ? body.runtime : "server",
+    ...(typeof body.stack === "string" ? { stack: body.stack } : {}),
+    ...(typeof body.route === "string" ? { route: body.route } : { route: "/api/observability/alerts" }),
+    ...(typeof body.userAgent === "string" ? { userAgent: body.userAgent } : {}),
+    ...(typeof body.release === "string" ? { release: body.release } : {}),
+    ...(body.environment === "production" || body.environment === "preview" || body.environment === "test" ? { environment: body.environment } : {}),
+    ...(body.runtime === "browser" || body.runtime === "edge" || body.runtime === "react-native" || body.runtime === "node-worker" || body.runtime === "provider-webhook" ? { runtime: body.runtime } : {}),
     statusCode: typeof body.statusCode === "number" ? body.statusCode : 500,
     handled: typeof body.handled === "boolean" ? body.handled : false,
-    metadata: body.metadata && typeof body.metadata === "object" ? (body.metadata as Record<string, unknown>) : {},
-    tags: body.tags && typeof body.tags === "object" ? Object.fromEntries(Object.entries(body.tags as Record<string, unknown>).filter(([, value]) => typeof value === "string")) as Record<string, string> : {},
+    ...(body.metadata && typeof body.metadata === "object" ? { metadata: body.metadata as Record<string, unknown> } : {}),
+    ...(body.tags && typeof body.tags === "object" ? { tags: Object.fromEntries(Object.entries(body.tags as Record<string, unknown>).filter(([, value]) => typeof value === "string")) as Record<string, string> } : {}),
     ...(typeof body.tenantId === "string" ? { tenantId: body.tenantId } : {}),
   };
 }
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
     slackWebhookConfigured: Boolean(process.env.SLACK_WEBHOOK_URL),
     emailProviderConfigured: Boolean(process.env.ALERT_EMAIL_PROVIDER),
     pagerProviderConfigured: Boolean(process.env.PAGERDUTY_ROUTING_KEY),
-    onCallOwner: process.env.ALERT_ON_CALL_OWNER,
+    ...(process.env.ALERT_ON_CALL_OWNER ? { onCallOwner: process.env.ALERT_ON_CALL_OWNER } : {}),
     quietHoursActive: readBooleanEnv("ALERT_QUIET_HOURS_ACTIVE"),
     humanAcknowledgementMinutes: report.severity === "critical" ? 15 : 60,
   });

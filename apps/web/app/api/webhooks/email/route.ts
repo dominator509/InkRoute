@@ -45,14 +45,14 @@ export async function POST(request: NextRequest) {
     tenantId: tenantSlug,
     eventId,
     eventType,
-    providerMessageId,
+    ...(providerMessageId ? { providerMessageId } : {}),
     rawBodyCaptured: true,
     signatureHeaderPresent: true,
   });
   const reconciliation = buildEmailProviderReconciliation({
     eventId,
     eventType,
-    providerMessageId,
+    ...(providerMessageId ? { providerMessageId } : {}),
   });
   const providerWebhookBoundary = buildProviderWebhookRouteBoundary({
     source: "email",

@@ -34,7 +34,12 @@ function isDatabaseUnavailable(error: unknown): boolean {
 async function resolveTenantScope(tenantSlug: string): Promise<TenantResolution | null> {
   const normalizedSlug = decodeURIComponent(tenantSlug).toLowerCase().trim();
   try {
-    const tenant = await prisma.tenant.findUnique({
+    const prismaRuntime = prisma as unknown as {
+      tenant: {
+        findUnique: (options: { where: { slug: string }; select: { id: true } }) => Promise<{ id: string } | null>;
+      };
+    };
+    const tenant = await prismaRuntime.tenant.findUnique({
       where: { slug: normalizedSlug },
       select: { id: true },
     });

@@ -29,6 +29,10 @@ export async function POST(request: Request, context: { params: Promise<{ tenant
   if (!name || !allowedEvents.has(name)) {
     return NextResponse.json({ ok: false, error: { code: "INVALID_EVENT", message: "Unsupported SEO analytics event." } }, { status: 400, headers: noStoreHeaders });
   }
+  const portfolioItemId = stringValue(body.portfolioItemId);
+  const city = stringValue(body.city);
+  const style = stringValue(body.style);
+  const bookingRequestId = stringValue(body.bookingRequestId);
 
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json(
@@ -58,10 +62,10 @@ export async function POST(request: Request, context: { params: Promise<{ tenant
     tenantId: inkrouteDemoTenant.id,
     name,
     url,
-    portfolioItemId: stringValue(body.portfolioItemId),
-    city: stringValue(body.city),
-    style: stringValue(body.style),
-    bookingRequestId: stringValue(body.bookingRequestId),
+    ...(portfolioItemId ? { portfolioItemId } : {}),
+    ...(city ? { city } : {}),
+    ...(style ? { style } : {}),
+    ...(bookingRequestId ? { bookingRequestId } : {}),
   });
   const idempotencyKey = request.headers.get("idempotency-key") ?? `seo-analytics:${inkrouteDemoTenant.id}:${name}:${event.payload.createdAt}`;
 

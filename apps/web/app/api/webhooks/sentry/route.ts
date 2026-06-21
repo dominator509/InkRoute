@@ -47,6 +47,7 @@ async function persistProviderWebhookReconciliation(input: {
   if (!input.tenantId) {
     return {
       persistence: "tenant-unresolved",
+      providerWebhookDeliveryId: null,
       auditLogId: null,
       matchedErrorReportId: null,
       statusMutated: false,
@@ -237,7 +238,7 @@ export async function POST(request: NextRequest) {
   const reconciliationPlan = buildSentryReconciliationPlan({
     event,
     data,
-    fallbackTenantId: typeof data.tenantId === "string" ? data.tenantId : undefined,
+    ...(typeof data.tenantId === "string" ? { fallbackTenantId: data.tenantId } : {}),
   });
   const persistenceResult = await persistProviderWebhookReconciliation({
     tenantId: reconciliationPlan.ownership.tenantId,

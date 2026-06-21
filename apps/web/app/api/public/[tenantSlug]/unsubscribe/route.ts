@@ -7,13 +7,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   const { tenantSlug } = await context.params;
   const tokenHash = request.nextUrl.searchParams.get("tokenHash") ?? request.headers.get("x-preference-token-hash") ?? undefined;
   const email = request.nextUrl.searchParams.get("email") ?? undefined;
+  const tokenExpiresAt = request.nextUrl.searchParams.get("tokenExpiresAt") ?? undefined;
   const plan = buildPreferencePlanFromRequest({
     tenantId: tenantSlug,
     action: "unsubscribe_email",
     clientId: request.nextUrl.searchParams.get("clientId") ?? "missing_client",
     ...(email ? { email } : {}),
     ...(tokenHash ? { tokenHash } : {}),
-    ...(request.nextUrl.searchParams.get("tokenExpiresAt") ? { tokenExpiresAt: request.nextUrl.searchParams.get("tokenExpiresAt") ?? undefined } : {}),
+    ...(tokenExpiresAt ? { tokenExpiresAt } : {}),
     now: new Date().toISOString(),
     idempotencyKey: `unsubscribe:${tenantSlug}:${tokenHash ?? "missing"}`,
     emailOptIn: false,

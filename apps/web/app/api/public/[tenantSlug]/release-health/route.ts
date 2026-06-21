@@ -70,7 +70,12 @@ function extractReleaseBoundaryNotes(value: unknown): string[] | undefined {
 async function resolveTenantScope(tenantSlug: string): Promise<TenantResolution | null> {
   const normalizedSlug = decodeURIComponent(tenantSlug).toLowerCase().trim();
   try {
-    const tenant = await prisma.tenant.findUnique({
+    const prismaRuntime = prisma as unknown as {
+      tenant: {
+        findUnique: (options: { where: { slug: string }; select: { id: true } }) => Promise<{ id: string } | null>;
+      };
+    };
+    const tenant = await prismaRuntime.tenant.findUnique({
       where: { slug: normalizedSlug },
       select: { id: true },
     });
@@ -121,8 +126,12 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
   }
 
   try {
-    const [releaseRecords, featureFlags] = await Promise.all([
-      prisma.releaseRecord.findMany({
+    const prismaRuntime = prisma as unknown as {
+      releaseRecord: { findMany: (options: Record<string, unknown>) => Promise<readonly unknown[]> };
+      featureFlag: { findMany: (options: Record<string, unknown>) => Promise<readonly unknown[]> };
+    };
+    const [releaseRecordsRaw, featureFlagsRaw] = await Promise.all([
+      prismaRuntime.releaseRecord.findMany({
         where: { tenantId: tenantResolution.tenantId },
         orderBy: { createdAt: "desc" },
         take: 20,
@@ -135,12 +144,21 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
           createdAt: true,
         },
       }),
-      prisma.featureFlag.findMany({
+      prismaRuntime.featureFlag.findMany({
         where: { OR: [{ tenantId: tenantResolution.tenantId }, { tenantId: null }] },
         orderBy: { createdAt: "desc" },
         take: 200,
       }),
     ]);
+
+    const releaseRecords = releaseRecordsRaw as Array<{ id: string; version: string; channel: string; commitSha: string | null; notes: string; createdAt: Date }>;
+    const featureFlags = featureFlagsRaw as Array<{
+      key: string;
+      description: string;
+      scope: "global" | "tenant" | "user";
+      enabled: boolean;
+      rules: Record<string, unknown> | null;
+    }>;
 
     const mergedDefinitions: FeatureFlagDefinition[] = defaultFeatureFlags.map((definition) => ({ ...definition }));
     const byKey = new Map<string, FeatureFlagDefinition>(mergedDefinitions.map((definition) => [definition.key, definition]));

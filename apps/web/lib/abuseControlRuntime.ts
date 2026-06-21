@@ -403,6 +403,7 @@ export const abuseControlRuntimePreview = buildAbuseControlRuntimeContract({
   redisConfigured: false,
   botChallengeConfigured: false,
   alertingConfigured: false,
+  providerWebhook: false,
 });
 
 export const abuseControlKnownRateLimitRules = rateLimitRules.map((rule) => ({
