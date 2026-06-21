@@ -496,28 +496,34 @@ export const agentExecutionLedgerRunPersistenceContract: AgentExecutionLedgerRun
 };
 
 export const agentExecutionLedgerRuntimeReadiness = buildAgentExecutionLedgerReadinessPlan({
-  queueTasks: agentExecutionLedgerTaskIds.map((id, index) => ({
-    id,
-    title: id,
-    target: agentExecutionLedgerTargets[index],
-    priority: index < 3 ? "critical" : "high",
-    phase: "Phase 16",
-    files: ["GAP_TRACKER.md"],
-    gapIds: ["GAP-119"],
-    commandPlan: ["pnpm handoff:verify-ledger"],
-    acceptanceEvidence: ["redacted execution evidence"],
-    prompt: "Import redacted agent execution result.",
-  })),
-  executions: agentExecutionLedgerTaskIds.map((id, index) => ({
-    taskId: id,
-    status: "not_executed",
-    assignedAgent: agentExecutionLedgerTargets[index],
-    commandsRun: [],
-    filesChanged: [],
-    evidenceArtifacts: [],
-    remainingGaps: ["GAP-119"],
-    secretSafety: "no_evidence_recorded",
-  })),
+  queueTasks: agentExecutionLedgerTaskIds.map((id, index) => {
+    const target = agentExecutionLedgerTargets[index] ?? "Local terminal";
+    return {
+      id,
+      title: id,
+      target,
+      priority: index < 3 ? "critical" : "high",
+      phase: "Phase 16",
+      files: ["GAP_TRACKER.md"],
+      gapIds: ["GAP-119"],
+      commandPlan: ["pnpm handoff:verify-ledger"],
+      acceptanceEvidence: ["redacted execution evidence"],
+      prompt: "Import redacted agent execution result.",
+    };
+  }),
+  executions: agentExecutionLedgerTaskIds.map((id, index) => {
+    const assignedAgent = agentExecutionLedgerTargets[index] ?? "Local terminal";
+    return {
+      taskId: id,
+      status: "not_executed",
+      assignedAgent,
+      commandsRun: [],
+      filesChanged: [],
+      evidenceArtifacts: [],
+      remainingGaps: ["GAP-119"],
+      secretSafety: "no_evidence_recorded",
+    };
+  }),
   verifierPassed: false,
   handoffAuditPassed: false,
   gapTrackerUpdated: false,

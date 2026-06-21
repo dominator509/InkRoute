@@ -16,7 +16,7 @@ export interface AccessibilityVisualRuntimeMatrixEntry {
 export interface AccessibilityVisualRunPersistenceInput {
   tenantId: string;
   runId: string;
-  commitSha?: string;
+  commitSha?: string | null;
   status: "blocked" | "running" | "passed" | "failed" | "manual_gated";
   runtimeMatrix: readonly AccessibilityVisualRuntimeMatrixEntry[];
   specFiles: readonly string[];
@@ -34,8 +34,8 @@ export interface AccessibilityVisualRunPersistenceInput {
   artifactsRetained: boolean;
   ciAccessibilityVisualPassed: boolean;
   regressionsTriagedAndFixed: boolean;
-  triageArtifactPath?: string;
-  ciRunUrl?: string;
+  triageArtifactPath?: string | null;
+  ciRunUrl?: string | null;
 }
 
 export interface AccessibilityVisualRunPersistenceContract {

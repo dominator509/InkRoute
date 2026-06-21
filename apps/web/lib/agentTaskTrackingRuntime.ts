@@ -422,18 +422,22 @@ export const agentTaskTrackingRunPersistenceContract: AgentTaskTrackingRunPersis
   ],
 };
 
-const queueTasks = agentTaskTrackingTaskIds.map((id, index) => ({
-  id,
-  title: id,
-  target: agentTaskTrackingTargets[index],
-  priority: agentTaskTrackingPriorities[index],
-  phase: "Phase 16",
-  files: ["docs/handoff/manifests/agent-execution-queue.json"],
-  gapIds: [...agentTaskTrackingGapIds[index]],
-  commandPlan: ["pnpm handoff:verify-task-sync"],
-  acceptanceEvidence: ["redacted issue label", "project item label", "gap evidence fields", "status traceability"],
-  prompt: "Create or sync redacted tracking evidence for the queued agent task.",
-}));
+const queueTasks = agentTaskTrackingTaskIds.map((id, index) => {
+  const gapIds = agentTaskTrackingGapIds[index];
+  const target = agentTaskTrackingTargets[index] ?? "Local terminal";
+  return {
+    id,
+    title: id,
+    target,
+    priority: agentTaskTrackingPriorities[index] ?? "high",
+    phase: "Phase 16",
+    files: ["docs/handoff/manifests/agent-execution-queue.json"],
+    gapIds: Array.isArray(gapIds) ? [...gapIds] : [],
+    commandPlan: ["pnpm handoff:verify-task-sync"],
+    acceptanceEvidence: ["redacted issue label", "project item label", "gap evidence fields", "status traceability"],
+    prompt: "Create or sync redacted tracking evidence for the queued agent task.",
+  };
+});
 
 const plannedIssues = queueTasks.map((task, index) => ({
   taskId: task.id,

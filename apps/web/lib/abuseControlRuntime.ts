@@ -341,6 +341,7 @@ export function buildAbuseControlRuntimeContract(input: {
   windowSeconds: number;
   userAgent?: string;
   routePath: string;
+  providerWebhook: boolean;
   providerSignatureValid?: boolean;
   redisConfigured: boolean;
   botChallengeConfigured: boolean;
@@ -357,7 +358,7 @@ export function buildAbuseControlRuntimeContract(input: {
     "fail-closed-on-limiter-error",
   ];
 
-  if (plan.challengeRequired) actions.push("apply-bot-challenge");
+  if (plan.action === "challenge") actions.push("apply-bot-challenge");
   if (input.providerSignatureValid === true) actions.push("bypass-valid-provider-webhook");
   if (input.providerSignatureValid === false) actions.push("reject-invalid-provider-webhook");
 
