@@ -1,10 +1,10 @@
-chore: [summary]
+chore: <summary>
 
-Why:
-- [details]
+# Why:
+# - <details>
 
-Validation:
-- [tests/checks run]
+# Validation:
+# - <tests/checks run>
 
-Risk:
-- [risk or "none"]
+# Risk:
+# - <risk or "none">
