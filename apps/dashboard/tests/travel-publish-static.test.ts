@@ -8,6 +8,7 @@ import {
   dashboardTravelPublishContract,
   executeTravelPublishMutation,
 } from "../lib/travelPublish";
+import { demoTravelStops } from "@inkroute/config";
 
 const repoRoot = resolve(__dirname, "../../..");
 const pageSource = readFileSync(resolve(repoRoot, "apps/dashboard/app/travel/page.tsx"), "utf8");
@@ -41,8 +42,7 @@ describe("dashboard travel publish contract", () => {
   });
 
   it("executes a local travel publish repository contract for tenant scope, idempotency, waitlist effects, and transactions", async () => {
-    const samplePlan = dashboardTravelPublishContract.samplePlans[0];
-    const sampleStop = samplePlan.stop;
+    const sampleStop = demoTravelStops[0];
     const repository = createInMemoryTravelPublishRepository();
     repository.state.authorizedActorKeys.add(`${sampleStop.tenantId}:${sampleStop.artistId}:operator_demo:publish`);
     repository.state.waitlistClientIds.set(
@@ -87,7 +87,7 @@ describe("dashboard travel publish contract", () => {
 
   it("rolls back local travel publish mutations when post-commit effects fail", async () => {
     const samplePlan = dashboardTravelPublishContract.samplePlans[1];
-    const sampleStop = samplePlan.stop;
+    const sampleStop = demoTravelStops[0];
     const repository = createInMemoryTravelPublishRepository();
     repository.state.authorizedActorKeys.add(`${sampleStop.tenantId}:${sampleStop.artistId}:operator_demo:update`);
     repository.state.previousStops.set(`${sampleStop.tenantId}:${sampleStop.artistId}:${sampleStop.id}`, sampleStop);

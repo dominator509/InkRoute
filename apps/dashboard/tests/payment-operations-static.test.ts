@@ -15,6 +15,7 @@ import {
 } from "../lib/paymentOperations";
 
 const repoRoot = resolve(__dirname, "../../..");
+const operationSource = readFileSync(resolve(repoRoot, "apps/dashboard/lib/paymentOperations.ts"), "utf8");
 
 describe("dashboard payment operation contract", () => {
   it("covers refund, no-show, dispute, receipt, and export actions", () => {
@@ -32,7 +33,6 @@ describe("dashboard payment operation contract", () => {
   it("requires authorization, idempotency, audit logging, and provider redaction controls", () => {
     const controls = dashboardPaymentOperationsContract.samplePlans.flatMap((plan) => plan.requiredControls);
 
-    const operationSource = readFileSync(resolve(repoRoot, "apps/dashboard/lib/paymentOperations.ts"), "utf8");
     expect(operationSource).toContain("buildPaymentOperationPreflightDecision");
     expect(operationSource).toContain("PaymentOperationPreflightDecision");
     expect(operationSource).toContain("PaymentAuditLog persistence must be ready");
@@ -296,13 +296,18 @@ describe("dashboard payment operation contract", () => {
     } as Parameters<typeof executePaymentOperationMutation>[1];
     const mutationInput = {
       tenantId: "tenant_demo",
+      bookingRequestId: "booking_demo",
+      currency: "USD",
       actorId: "artist_demo",
       paymentId: "payment_demo",
       action: "execute_refund",
       amountCents: 2500,
+      refundAmountCents: 2500,
       provider: "stripe",
+      occurredAt: "2026-06-09T12:00:00.000Z",
       idempotencyKey: "refund:tenant_demo:payment_demo:2500",
       requestId: "request_demo",
+      providerChargeId: "ch_demo_refund",
       stripeRefundsEnabled: true,
       paymentAuditLogReady: true,
     } as Parameters<typeof executePaymentOperationMutation>[0];
@@ -357,8 +362,9 @@ describe("dashboard payment operation contract", () => {
 
     expect(pageSource).toContain("dashboardPaymentOperationsContract");
     expect(pageSource).toContain("Payment operation write contract");
-    expect(pageSource).toContain("execute_refund");
-    expect(pageSource).toContain("create_accounting_export");
+    expect(pageSource).toContain("dashboardPaymentOperationsContract.supportedActions");
+    expect(pageSource).toContain("dashboardPaymentOperationsContract");
+    expect(pageSource).toContain("supportedActions.map");
     expect(pageSource).toContain("PaymentActionPanel");
     expect(pageSource).toContain("Local verifier wired; endpoint-secret proof pending");
     expect(pageSource).toContain("Stripe events mapped behind signature verification");

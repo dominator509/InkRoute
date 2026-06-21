@@ -66,7 +66,8 @@ describe("dashboard message read route contract", () => {
   it("documents that message reads are wired while provider sends remain gated", () => {
     expect(messagesPageSource).toContain("Tenant-scoped redacted message read APIs now exist");
     expect(messagesPageSource).toContain("Read APIs wired");
-    expect(messagesPageSource).toContain("Thread reads now have authenticated redacted APIs");
-    expect(messagesPageSource).toContain("provider workers");
+    expect(messagesPageSource).toContain("Message thread reads now enforce message RBAC");
+    expect(messagesPageSource).toContain("tenant scope");
+    expect(messagesPageSource).toContain("Production sends still require inbound email/SMS routing");
   });
 });
