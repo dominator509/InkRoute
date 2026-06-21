@@ -9,7 +9,7 @@
     "start": "next start --port 3001",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "playwright test --project=dashboard-chromium"
+    "test": "playwright test --config ../../playwright.config.ts --project=dashboard-chromium"
   },
   "dependencies": {
     "@inkroute/auth": "workspace:*",
@@ -40,3 +40,4 @@
     "vitest": "^2.1.0"
   }
 }
+
