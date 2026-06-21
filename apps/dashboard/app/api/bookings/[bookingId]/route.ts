@@ -149,7 +149,7 @@ export async function GET(request: NextRequest, context: BookingDetailRouteConte
           createdAt: result.row.createdAt.toISOString(),
           portfolioAttribution: result.row.portfolioAttributionId ?? "Unattributed",
           assignedToUserId: result.row.assignedToUserId,
-          stateEvents: result.row.stateEvents.map((event) => ({
+          stateEvents: result.row.stateEvents.map((event: { id: string; type: string; fromStatus: string | null; toStatus: string | null; note: string | null; createdAt: Date }) => ({
             id: event.id,
             type: event.type,
             fromStatus: event.fromStatus,

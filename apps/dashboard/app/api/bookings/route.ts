@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
       collection: "bookings",
       tenantId,
       source: "repository",
-      records: result.rows.map((row) => ({
+      records: result.rows.map((row: { id: string; tenantId: string; clientNameSnapshot: string; clientEmailSnapshot: string | null; clientPhoneSnapshot: string | null; preferredCity: string | null; preferredDate: Date | null; style: string | null; placement: string | null; sizeEstimate: string | null; budgetMinCents: number | null; budgetMaxCents: number | null; ideaSummary: string | null; status: string; readinessScore: number | null; createdAt: Date; portfolioAttributionId: string | null; assignedToUserId: string | null }) => ({
         id: row.id,
         tenantId: row.tenantId,
         clientName: row.clientNameSnapshot,

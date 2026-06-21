@@ -1,6 +1,6 @@
 type PrismaRuntimeClient = {
-  readonly [delegate: string]: unknown;
-  $transaction<T>(operation: (tx: PrismaRuntimeClient) => Promise<T>): Promise<T>;
+  readonly [delegate: string]: Record<string, (...args: unknown[]) => Promise<any>>;
+  $transaction<T>(operation: (tx: Record<string, any>) => Promise<T>): Promise<T>;
 };
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaRuntimeClient };

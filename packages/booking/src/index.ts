@@ -572,6 +572,9 @@ export function buildBookingProviderFailurePlan(input: BookingProviderFailurePla
 
 export type DashboardMutationAction =
   | BookingLifecycleAction
+  | "mark_deposit_paid"
+  | "confirm_appointment"
+  | "request_changes"
   | "create_reference_upload_intent"
   | "create_deposit_session"
   | "send_client_notification"
@@ -608,7 +611,7 @@ export type DashboardMutationWriteModel =
 export interface DashboardMutationPlanInput {
   tenantId: string;
   actorId?: string;
-  actorType?: "owner" | "artist" | "assistant" | "studio_manager" | "system";
+  actorType?: "owner" | "artist" | "assistant" | "studio_manager" | "system" | "admin";
   bookingRequestId?: string;
   currentStatus?: BookingStatus;
   action: DashboardMutationAction;

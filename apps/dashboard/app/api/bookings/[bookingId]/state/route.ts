@@ -148,6 +148,7 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
       }
 
       const idempotencyKey = normalizeIdempotencyKey(input.idempotencyKey);
+      const reason = normalizeNote(input.note);
       const dashboardMutationPlan = buildDashboardMutationPlan({
         tenantId,
         actorId: actor.actorUserId,
@@ -156,9 +157,9 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
         bookingRequestId: booking.id,
         currentStatus: booking.status as BookingStatus,
         occurredAt: new Date().toISOString(),
-        idempotencyKey,
+        ...(idempotencyKey ? { idempotencyKey } : {}),
       });
-      const plan = createBookingTransitionPlan({
+      const transitionPlanInput = {
         tenantId,
         bookingRequestId: booking.id,
         from: booking.status as BookingStatus,
@@ -166,9 +167,12 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
         actorId: actor.actorUserId,
         actorType: actor.role === "admin" ? "admin" : "artist",
         occurredAt: new Date().toISOString(),
-        reason: normalizeNote(input.note),
-        idempotencyKey,
-      });
+        ...(reason ? { reason } : {}),
+      } as const;
+      if (idempotencyKey !== undefined) {
+        (transitionPlanInput as typeof transitionPlanInput & { idempotencyKey: string }).idempotencyKey = idempotencyKey;
+      }
+      const plan = createBookingTransitionPlan(transitionPlanInput as Parameters<typeof createBookingTransitionPlan>[0]);
 
       if (!plan.canCommit || !plan.transition) {
         return { status: "invalid_transition" as const, plan, dashboardMutationPlan };
