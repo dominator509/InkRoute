@@ -140,7 +140,7 @@ describe("provider session runtime contract", () => {
       authTypecheckArtifactPath: "coverage/provider-session-auth-typecheck.txt",
       authTestArtifactPath: "coverage/provider-session-auth-test.txt",
     });
-    expect(runData.commandMatrix).toBe(providerSessionRuntimeMatrix);
+    expect(runData.commandMatrix).toEqual(providerSessionRuntimeMatrix);
     expect(runData.controlManifest).toEqual(["provider-identity-to-user-mapping", "cross-tenant-session-denial"]);
     expect(String(persistProviderSessionRun)).toContain("repository.providerSessionRun.upsert");
   });
@@ -151,15 +151,27 @@ describe("provider session runtime contract", () => {
     expect(authSource).toContain("buildProviderSessionStoreReadinessPlan");
     expect(authTests).toContain("buildProviderSessionStoreReadinessPlan");
     expect(dashboardMiddleware).toContain("/login?next=");
-    expect(dashboardMiddlewareTest).toContain("AUTH_REQUIRED");
+    expect(dashboardMiddlewareTest).toContain('code: "CSRF_TOKEN_REQUIRED"');
   });
 
   it("keeps provider-backed auth blockers explicit until real provider evidence exists", () => {
     expect(providerSessionRuntimeReadiness.status).toBe("blocked");
     expect(providerSessionRuntimeReadiness.missingScripts).toEqual([]);
-    expect(providerSessionRuntimeReadiness.requiredCommands).toBe(providerSessionRuntimeCommands);
-    expect(providerSessionRuntimeReadiness.requiredControls).toBe(providerSessionRuntimeControls);
-    expect(providerSessionRuntimeReadiness.requiredEvidence).toBe(providerSessionRequiredEvidence);
+    expect(providerSessionRuntimeReadiness.requiredCommands).toEqual(providerSessionRuntimeCommands);
+    expect(providerSessionRuntimeReadiness.requiredControls).toEqual([
+      "Map provider identity to application User records without trusting client headers.",
+      "Resolve TenantMember and CustomRole rows server-side for every guarded request.",
+      "Persist active sessions and revocations before route authorization.",
+      "Use secure dashboard cookies and secure mobile token storage with logout/revocation clearing.",
+      "Write redacted AuditLog rows for auth lifecycle and authorization decisions.",
+      "Deny cross-tenant provider sessions in dashboard, API, and mobile surfaces.",
+    ]);
+    expect(providerSessionRuntimeReadiness.requiredEvidence).toEqual([
+      "provider selection, redacted environment/callback configuration, and login/logout/session callback evidence",
+      "provider identity mapping plus persisted user, TenantMember, CustomRole, and session lookup evidence",
+      "revocation, secure dashboard cookie, and mobile secure-token storage evidence",
+      "audit-log, provider-backed auth test, cross-tenant smoke, and command-output evidence",
+    ]);
     expect(providerSessionRuntimeReadiness.blockers).toContain(
       "Auth provider must be selected before provider-backed sessions can be claimed.",
     );
@@ -168,10 +180,10 @@ describe("provider session runtime contract", () => {
   it("blocks provider session closure until provider, persistence, security, smoke, artifacts, controls, and commands are proven", () => {
     const executionPlan = buildProviderSessionExecutionPlan();
 
-    expect(executionPlan.localCommands).toBe(providerSessionRuntimeCommands);
-    expect(executionPlan.controls).toBe(providerSessionRuntimeControls);
-    expect(executionPlan.artifactPaths).toBe(providerSessionRuntimeArtifactPaths);
-    expect(executionPlan.proofFiles).toBe(providerSessionRuntimeProofFiles);
+    expect(executionPlan.localCommands).toEqual(providerSessionRuntimeCommands);
+    expect(executionPlan.controls).toEqual(providerSessionRuntimeControls);
+    expect(executionPlan.artifactPaths).toEqual(providerSessionRuntimeArtifactPaths);
+    expect(executionPlan.proofFiles).toEqual(providerSessionRuntimeProofFiles);
     expect(executionPlan.commandExecutionAllowed).toBe(false);
     expect(executionPlan.providerExecutionAllowed).toBe(false);
     expect(executionPlan.databaseExecutionAllowed).toBe(false);
@@ -187,7 +199,7 @@ describe("provider session runtime contract", () => {
       mobileRevocationSmokeRequiredForClosure: true,
       providerPersistenceRequiredForClosure: true,
     });
-    expect(executionPlan.requiredExternalEvidence).toBe(providerSessionRequiredExternalEvidence);
+    expect(executionPlan.requiredExternalEvidence).toEqual(providerSessionRequiredExternalEvidence);
     expect(executionPlan.requiredExternalEvidence).toContain(
       "Provider-backed persistProviderSessionRun execution evidence.",
     );
@@ -260,13 +272,13 @@ describe("provider session runtime contract", () => {
       "dashboard/API tenant isolation smoke tests",
       "mobile session storage/revocation smoke tests",
     ]);
-    expect(decision.requiredControls).toBe(providerSessionRuntimeControls);
-    expect(decision.requiredArtifacts).toBe(providerSessionRuntimeArtifactPaths);
-    expect(decision.requiredCommands).toBe(providerSessionRuntimeCommands);
+    expect(decision.requiredControls).toEqual(providerSessionRuntimeControls);
+    expect(decision.requiredArtifacts).toEqual(providerSessionRuntimeArtifactPaths);
+    expect(decision.requiredCommands).toEqual(providerSessionRuntimeCommands);
     expect(decision.requiredEvidence).toEqual(
       buildProviderSessionDecisionRequiredEvidence(providerSessionRuntimeReadiness.requiredEvidence),
     );
-    expect(decision.requiredEvidence).toBe(providerSessionRequiredEvidence);
+    expect(decision.requiredEvidence).toEqual(providerSessionRequiredEvidence);
     expect(decision.blockers).toContain("Auth provider must be selected before provider-backed sessions can be claimed.");
     expect(decision.blockers).toContain("ProviderSessionRun persistence row must be captured for durable auditability.");
     expect(decision.blockers).toContain("Every required provider session control must be covered.");
