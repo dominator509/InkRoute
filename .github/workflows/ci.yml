@@ -806,172 +806,172 @@ jobs:
             coverage/public-web-secret-safe-artifacts.json
             test-results/public-web-launch-runtime
           if-no-files-found: warn
-        - name: Run Phase 5 dashboard auth guard runtime contracts
-          run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/dashboard/tests/dashboard-auth-guard-runtime-static.test.ts
+      - name: Run Phase 5 dashboard auth guard runtime contracts
+        run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/dashboard/tests/dashboard-auth-guard-runtime-static.test.ts
 
-        - name: Upload Phase 5 dashboard auth guard runtime artifacts
-          if: always()
-          uses: actions/upload-artifact@v4
-          with:
-            name: dashboard-auth-guard-runtime-artifacts
-            path: |
-              coverage/dashboard-auth-guard-runtime.json
-              coverage/dashboard-auth-auth-typecheck.txt
-              coverage/dashboard-auth-auth-test.txt
-              coverage/dashboard-auth-dashboard-typecheck.txt
-              coverage/dashboard-auth-dashboard-build.txt
-              coverage/dashboard-auth-middleware-guard.json
-              coverage/dashboard-auth-layout-guard.json
-              coverage/dashboard-auth-api-helper-guard.json
-              coverage/dashboard-auth-provider-session-redacted.json
-              coverage/dashboard-auth-tenantmember-customrole-redacted.json
-              coverage/dashboard-auth-unauthorized-states.json
-              coverage/dashboard-auth-auditlog-redacted.json
-              coverage/dashboard-auth-browser-login-logout.json
-              coverage/dashboard-auth-browser-tenant-switch.json
-              coverage/dashboard-auth-browser-cross-tenant-denial.json
-              coverage/dashboard-auth-no-store-cache.json
-              coverage/dashboard-auth-ci-evidence.json
-              coverage/dashboard-auth-secret-safe-artifacts.json
-              test-results/dashboard-auth-guard-runtime
-            if-no-files-found: warn
-        - name: Run Phase 5 dashboard data layer runtime contracts
-          run: pnpm --filter @inkroute/config test && pnpm vitest run apps/dashboard/tests/dashboard-data-layer-runtime-static.test.ts apps/dashboard/tests/booking-state-route-static.test.ts apps/dashboard/tests/client-read-route-static.test.ts apps/dashboard/tests/payment-read-route-static.test.ts apps/dashboard/tests/portfolio-read-route-static.test.ts apps/dashboard/tests/travel-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/seo-read-route-static.test.ts apps/dashboard/tests/settings-read-route-static.test.ts apps/dashboard/tests/calendar-read-route-static.test.ts apps/dashboard/tests/review-read-route-static.test.ts
+      - name: Upload Phase 5 dashboard auth guard runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-auth-guard-runtime-artifacts
+          path: |
+            coverage/dashboard-auth-guard-runtime.json
+            coverage/dashboard-auth-auth-typecheck.txt
+            coverage/dashboard-auth-auth-test.txt
+            coverage/dashboard-auth-dashboard-typecheck.txt
+            coverage/dashboard-auth-dashboard-build.txt
+            coverage/dashboard-auth-middleware-guard.json
+            coverage/dashboard-auth-layout-guard.json
+            coverage/dashboard-auth-api-helper-guard.json
+            coverage/dashboard-auth-provider-session-redacted.json
+            coverage/dashboard-auth-tenantmember-customrole-redacted.json
+            coverage/dashboard-auth-unauthorized-states.json
+            coverage/dashboard-auth-auditlog-redacted.json
+            coverage/dashboard-auth-browser-login-logout.json
+            coverage/dashboard-auth-browser-tenant-switch.json
+            coverage/dashboard-auth-browser-cross-tenant-denial.json
+            coverage/dashboard-auth-no-store-cache.json
+            coverage/dashboard-auth-ci-evidence.json
+            coverage/dashboard-auth-secret-safe-artifacts.json
+            test-results/dashboard-auth-guard-runtime
+          if-no-files-found: warn
+      - name: Run Phase 5 dashboard data layer runtime contracts
+        run: pnpm --filter @inkroute/config test && pnpm vitest run apps/dashboard/tests/dashboard-data-layer-runtime-static.test.ts apps/dashboard/tests/booking-state-route-static.test.ts apps/dashboard/tests/client-read-route-static.test.ts apps/dashboard/tests/payment-read-route-static.test.ts apps/dashboard/tests/portfolio-read-route-static.test.ts apps/dashboard/tests/travel-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/seo-read-route-static.test.ts apps/dashboard/tests/settings-read-route-static.test.ts apps/dashboard/tests/calendar-read-route-static.test.ts apps/dashboard/tests/review-read-route-static.test.ts
 
-        - name: Upload Phase 5 dashboard data layer runtime artifacts
-          if: always()
-          uses: actions/upload-artifact@v4
-          with:
-            name: dashboard-data-layer-runtime-artifacts
-            path: |
-              coverage/dashboard-data-layer-runtime.json
-              coverage/dashboard-data-config-typecheck.txt
-              coverage/dashboard-data-config-test.txt
-              coverage/dashboard-data-dashboard-typecheck.txt
-              coverage/dashboard-data-dashboard-build.txt
-              coverage/dashboard-data-prisma-loader-matrix.json
-              coverage/dashboard-data-route-wiring-matrix.json
-              coverage/dashboard-data-static-demo-removal.json
-              coverage/dashboard-data-seeded-db-smoke.json
-              coverage/dashboard-data-tenant-isolation.json
-              coverage/dashboard-data-rbac-redaction.json
-              coverage/dashboard-data-sensitive-read-auditlog.json
-              coverage/dashboard-data-no-store-cache.json
-              coverage/dashboard-data-ci-evidence.json
-              coverage/dashboard-data-secret-safe-artifacts.json
-              test-results/dashboard-data-layer-runtime
-            if-no-files-found: warn
-        - name: Run Phase 5 dashboard mutation runtime contracts
-          run: pnpm --filter @inkroute/booking test && pnpm vitest run apps/dashboard/tests/dashboard-mutation-runtime-static.test.ts apps/dashboard/tests/booking-state-route-static.test.ts
+      - name: Upload Phase 5 dashboard data layer runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-data-layer-runtime-artifacts
+          path: |
+            coverage/dashboard-data-layer-runtime.json
+            coverage/dashboard-data-config-typecheck.txt
+            coverage/dashboard-data-config-test.txt
+            coverage/dashboard-data-dashboard-typecheck.txt
+            coverage/dashboard-data-dashboard-build.txt
+            coverage/dashboard-data-prisma-loader-matrix.json
+            coverage/dashboard-data-route-wiring-matrix.json
+            coverage/dashboard-data-static-demo-removal.json
+            coverage/dashboard-data-seeded-db-smoke.json
+            coverage/dashboard-data-tenant-isolation.json
+            coverage/dashboard-data-rbac-redaction.json
+            coverage/dashboard-data-sensitive-read-auditlog.json
+            coverage/dashboard-data-no-store-cache.json
+            coverage/dashboard-data-ci-evidence.json
+            coverage/dashboard-data-secret-safe-artifacts.json
+            test-results/dashboard-data-layer-runtime
+          if-no-files-found: warn
+      - name: Run Phase 5 dashboard mutation runtime contracts
+        run: pnpm --filter @inkroute/booking test && pnpm vitest run apps/dashboard/tests/dashboard-mutation-runtime-static.test.ts apps/dashboard/tests/booking-state-route-static.test.ts
 
-        - name: Upload Phase 5 dashboard mutation runtime artifacts
-          if: always()
-          uses: actions/upload-artifact@v4
-          with:
-            name: dashboard-mutation-runtime-artifacts
-            path: |
-              coverage/dashboard-mutation-runtime.json
-              coverage/dashboard-mutation-booking-typecheck.txt
-              coverage/dashboard-mutation-booking-test.txt
-              coverage/dashboard-mutation-dashboard-typecheck.txt
-              coverage/dashboard-mutation-dashboard-build.txt
-              coverage/dashboard-mutation-action-route-matrix.json
-              coverage/dashboard-mutation-server-action-matrix.json
-              coverage/dashboard-mutation-booking-state-route.json
-              coverage/dashboard-mutation-prisma-transactions.json
-              coverage/dashboard-mutation-idempotency.json
-              coverage/dashboard-mutation-auditlog.json
-              coverage/dashboard-mutation-tenant-rbac-denial.json
-              coverage/dashboard-mutation-provider-rollback-retry.json
-              coverage/dashboard-mutation-gated-ui-feedback.json
-              coverage/dashboard-mutation-ci-evidence.json
-              coverage/dashboard-mutation-secret-safe-artifacts.json
-              test-results/dashboard-mutation-runtime
-            if-no-files-found: warn
-        - name: Run Phase 5 dashboard build/runtime verification contracts
-          run: pnpm vitest run apps/dashboard/tests/dashboard-build-runtime-static.test.ts
+      - name: Upload Phase 5 dashboard mutation runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-mutation-runtime-artifacts
+          path: |
+            coverage/dashboard-mutation-runtime.json
+            coverage/dashboard-mutation-booking-typecheck.txt
+            coverage/dashboard-mutation-booking-test.txt
+            coverage/dashboard-mutation-dashboard-typecheck.txt
+            coverage/dashboard-mutation-dashboard-build.txt
+            coverage/dashboard-mutation-action-route-matrix.json
+            coverage/dashboard-mutation-server-action-matrix.json
+            coverage/dashboard-mutation-booking-state-route.json
+            coverage/dashboard-mutation-prisma-transactions.json
+            coverage/dashboard-mutation-idempotency.json
+            coverage/dashboard-mutation-auditlog.json
+            coverage/dashboard-mutation-tenant-rbac-denial.json
+            coverage/dashboard-mutation-provider-rollback-retry.json
+            coverage/dashboard-mutation-gated-ui-feedback.json
+            coverage/dashboard-mutation-ci-evidence.json
+            coverage/dashboard-mutation-secret-safe-artifacts.json
+            test-results/dashboard-mutation-runtime
+          if-no-files-found: warn
+      - name: Run Phase 5 dashboard build/runtime verification contracts
+        run: pnpm vitest run apps/dashboard/tests/dashboard-build-runtime-static.test.ts
 
-        - name: Upload Phase 5 dashboard build/runtime artifacts
-          if: always()
-          uses: actions/upload-artifact@v4
-          with:
-            name: dashboard-build-runtime-artifacts
-            path: |
-              coverage/dashboard-build-runtime.json
-              coverage/dashboard-install-output.txt
-              coverage/dashboard-next-react-types.txt
-              coverage/dashboard-typecheck.txt
-              coverage/dashboard-build.txt
-              coverage/dashboard-test.txt
-              coverage/dashboard-browser-home.json
-              coverage/dashboard-browser-bookings.json
-              coverage/dashboard-browser-clients.json
-              coverage/dashboard-browser-payments.json
-              coverage/dashboard-browser-portfolio.json
-              coverage/dashboard-browser-travel.json
-              coverage/dashboard-browser-messages.json
-              coverage/dashboard-browser-settings.json
-              coverage/dashboard-next15-runtime-smoke.json
-              coverage/dashboard-build-ci-evidence.json
-              coverage/dashboard-build-secret-safe-artifacts.json
-              test-results/dashboard-build-runtime
-            if-no-files-found: warn
-        - name: Run Phase 5 dashboard privacy runtime contracts
-          run: pnpm --filter @inkroute/security test && pnpm vitest run apps/dashboard/tests/dashboard-privacy-runtime-static.test.ts apps/dashboard/tests/security-privacy-route-static.test.ts apps/dashboard/tests/security-trust-route-static.test.ts
+      - name: Upload Phase 5 dashboard build/runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-build-runtime-artifacts
+          path: |
+            coverage/dashboard-build-runtime.json
+            coverage/dashboard-install-output.txt
+            coverage/dashboard-next-react-types.txt
+            coverage/dashboard-typecheck.txt
+            coverage/dashboard-build.txt
+            coverage/dashboard-test.txt
+            coverage/dashboard-browser-home.json
+            coverage/dashboard-browser-bookings.json
+            coverage/dashboard-browser-clients.json
+            coverage/dashboard-browser-payments.json
+            coverage/dashboard-browser-portfolio.json
+            coverage/dashboard-browser-travel.json
+            coverage/dashboard-browser-messages.json
+            coverage/dashboard-browser-settings.json
+            coverage/dashboard-next15-runtime-smoke.json
+            coverage/dashboard-build-ci-evidence.json
+            coverage/dashboard-build-secret-safe-artifacts.json
+            test-results/dashboard-build-runtime
+          if-no-files-found: warn
+      - name: Run Phase 5 dashboard privacy runtime contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/dashboard/tests/dashboard-privacy-runtime-static.test.ts apps/dashboard/tests/security-privacy-route-static.test.ts apps/dashboard/tests/security-trust-route-static.test.ts
 
-        - name: Upload Phase 5 dashboard privacy runtime artifacts
-          if: always()
-          uses: actions/upload-artifact@v4
-          with:
-            name: dashboard-privacy-runtime-artifacts
-            path: |
-              coverage/dashboard-privacy-runtime.json
-              coverage/dashboard-privacy-security-typecheck.txt
-              coverage/dashboard-privacy-security-test.txt
-              coverage/dashboard-privacy-dashboard-typecheck.txt
-              coverage/dashboard-privacy-dashboard-build.txt
-              coverage/dashboard-privacy-route-projection-matrix.json
-              coverage/dashboard-privacy-route-tests.json
-              coverage/dashboard-privacy-request-store.json
-              coverage/dashboard-privacy-export-workflow.json
-              coverage/dashboard-privacy-delete-anonymize-workflow.json
-              coverage/dashboard-privacy-private-file-deletion.json
-              coverage/dashboard-privacy-auditlog-redacted.json
-              coverage/dashboard-privacy-sanitized-logs.json
-              coverage/dashboard-privacy-sanitized-errors.json
-              coverage/dashboard-privacy-legal-approval-redacted.json
-              coverage/dashboard-privacy-ci-evidence.json
-              coverage/dashboard-privacy-secret-safe-artifacts.json
-              test-results/dashboard-privacy-runtime
-            if-no-files-found: warn
-        - name: Run Phase 5 dashboard test execution runtime contracts
-          run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/dashboard/tests/dashboard-test-runtime-static.test.ts apps/dashboard/tests/dashboard-auth-guard-runtime-static.test.ts apps/dashboard/tests/dashboard-data-layer-runtime-static.test.ts apps/dashboard/tests/dashboard-mutation-runtime-static.test.ts apps/dashboard/tests/dashboard-build-runtime-static.test.ts
+      - name: Upload Phase 5 dashboard privacy runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-privacy-runtime-artifacts
+          path: |
+            coverage/dashboard-privacy-runtime.json
+            coverage/dashboard-privacy-security-typecheck.txt
+            coverage/dashboard-privacy-security-test.txt
+            coverage/dashboard-privacy-dashboard-typecheck.txt
+            coverage/dashboard-privacy-dashboard-build.txt
+            coverage/dashboard-privacy-route-projection-matrix.json
+            coverage/dashboard-privacy-route-tests.json
+            coverage/dashboard-privacy-request-store.json
+            coverage/dashboard-privacy-export-workflow.json
+            coverage/dashboard-privacy-delete-anonymize-workflow.json
+            coverage/dashboard-privacy-private-file-deletion.json
+            coverage/dashboard-privacy-auditlog-redacted.json
+            coverage/dashboard-privacy-sanitized-logs.json
+            coverage/dashboard-privacy-sanitized-errors.json
+            coverage/dashboard-privacy-legal-approval-redacted.json
+            coverage/dashboard-privacy-ci-evidence.json
+            coverage/dashboard-privacy-secret-safe-artifacts.json
+            test-results/dashboard-privacy-runtime
+          if-no-files-found: warn
+      - name: Run Phase 5 dashboard test execution runtime contracts
+        run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/dashboard/tests/dashboard-test-runtime-static.test.ts apps/dashboard/tests/dashboard-auth-guard-runtime-static.test.ts apps/dashboard/tests/dashboard-data-layer-runtime-static.test.ts apps/dashboard/tests/dashboard-mutation-runtime-static.test.ts apps/dashboard/tests/dashboard-build-runtime-static.test.ts
 
-        - name: Upload Phase 5 dashboard test execution runtime artifacts
-          if: always()
-          uses: actions/upload-artifact@v4
-          with:
-            name: dashboard-test-runtime-artifacts
-            path: |
-              coverage/dashboard-test-runtime.json
-              coverage/dashboard-test-testing-typecheck.txt
-              coverage/dashboard-test-testing-test.txt
-              coverage/dashboard-test-dashboard-typecheck.txt
-              coverage/dashboard-test-dashboard-build.txt
-              coverage/dashboard-test-dashboard-unit.txt
-              coverage/dashboard-test-route-rendering.json
-              coverage/dashboard-test-auth-rbac-tenant.json
-              coverage/dashboard-test-booking-mutation-lifecycle.json
-              coverage/dashboard-test-provider-safe-states.json
-              coverage/dashboard-test-axe-accessibility.json
-              coverage/dashboard-test-keyboard-navigation.json
-              coverage/dashboard-test-playwright-critical-flow.json
-              coverage/dashboard-test-ci-artifacts.json
-              coverage/dashboard-test-branch-protection.json
-              coverage/dashboard-test-flaky-policy.json
-              coverage/dashboard-test-secret-safe-artifacts.json
-              test-results/dashboard-test-runtime
-            if-no-files-found: warn
+      - name: Upload Phase 5 dashboard test execution runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-test-runtime-artifacts
+          path: |
+            coverage/dashboard-test-runtime.json
+            coverage/dashboard-test-testing-typecheck.txt
+            coverage/dashboard-test-testing-test.txt
+            coverage/dashboard-test-dashboard-typecheck.txt
+            coverage/dashboard-test-dashboard-build.txt
+            coverage/dashboard-test-dashboard-unit.txt
+            coverage/dashboard-test-route-rendering.json
+            coverage/dashboard-test-auth-rbac-tenant.json
+            coverage/dashboard-test-booking-mutation-lifecycle.json
+            coverage/dashboard-test-provider-safe-states.json
+            coverage/dashboard-test-axe-accessibility.json
+            coverage/dashboard-test-keyboard-navigation.json
+            coverage/dashboard-test-playwright-critical-flow.json
+            coverage/dashboard-test-ci-artifacts.json
+            coverage/dashboard-test-branch-protection.json
+            coverage/dashboard-test-flaky-policy.json
+            coverage/dashboard-test-secret-safe-artifacts.json
+            test-results/dashboard-test-runtime
+          if-no-files-found: warn
 
       - name: Run Phase 5 dashboard launch runtime contracts
         run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/dashboard-launch-runtime-static.test.ts
@@ -3263,13 +3263,13 @@ jobs:
             coverage/validator-secret-safe-artifacts.json
             test-results/validator-launch-adoption-runtime
           if-no-files-found: warn
-        - name: Run Phase 9 mobile push runtime contracts
-          run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/mobile/tests/mobile-push-runtime-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
+      - name: Run Phase 9 mobile push runtime contracts
+        run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/mobile/tests/mobile-push-runtime-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
 
-        - name: Upload Phase 9 mobile push runtime artifacts
-          if: always()
-          uses: actions/upload-artifact@v4
-          with:
+      - name: Upload Phase 9 mobile push runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
             name: mobile-push-runtime-artifacts
             path: |
               coverage/mobile-push-runtime.json
