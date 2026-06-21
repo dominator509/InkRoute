@@ -116,7 +116,7 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     expect(deploymentToolingRuntimeReadiness.status).toBe("blocked");
     expect(deploymentToolingRuntimeReadiness.missingPackageScripts).toEqual([]);
     expect(deploymentToolingRuntimeReadiness.missingRootScripts).toEqual([]);
-    expect(deploymentToolingRuntimeReadiness.requiredCommands).toBe(deploymentToolingRuntimeCommands);
+    expect(deploymentToolingRuntimeReadiness.requiredCommands).toStrictEqual(deploymentToolingRuntimeCommands);
     expect(deploymentToolingRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "Dependency install output plus @inkroute/deployment typecheck and test output.",
@@ -215,7 +215,7 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     expect(ciWorkflow).toContain("coverage/deployment-tooling-runtime.json");
     expect(ciWorkflow).toContain("test-results/deployment-tooling-runtime");
     expect(unitManifest).toContain("unit-web-deployment-tooling-runtime-static");
-    expect(unitManifest).toContain("DeploymentToolingRun Prisma model and app row contract are wired");
+    expect(unitManifest).toContain("GAP-113 CI retains deployment tooling runtime contract and artifact paths without claiming full deployment execution has passed");
     expect(gapTracker).toContain("apps/web/lib/deploymentToolingRuntime.ts");
     expect(gapTracker).toContain("Deployment tooling evidence classifier wired and execution proof gated");
     expect(gapTracker).toContain("GAP-113 is deployment-tooling-runtime-matrix wired with evidence classifier");
