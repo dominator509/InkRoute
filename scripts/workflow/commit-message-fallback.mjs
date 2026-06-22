@@ -42,18 +42,15 @@ for (let i = 0; i < normalizeArgs.length; i += 1) {
 }
 
 const resolveMessageFile = () => {
-  const maybeFileArg = possibleMessageArgs.find((arg) => {
-    if (!arg) return false;
-    const resolved = path.resolve(process.cwd(), arg);
-    return (
-      fs.existsSync(resolved) ||
-      /[\\/]COMMIT_EDITMSG$/i.test(arg) ||
-      /[\\/]COMMIT_EDITMSG$/i.test(resolved)
-    );
-  });
+  const explicitFileArg = possibleMessageArgs.find(
+    (arg) => Boolean(arg) && /[\\/]COMMIT_EDITMSG$/i.test(arg)
+  );
+  const maybeCandidate = explicitFileArg || possibleMessageArgs[0];
+  if (maybeCandidate) {
+    return path.resolve(process.cwd(), maybeCandidate);
+  }
 
-  if (!maybeFileArg) return null;
-  return path.resolve(process.cwd(), maybeFileArg);
+  return null;
 };
 
 const messageFile = resolveMessageFile();
