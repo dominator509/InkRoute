@@ -13,11 +13,36 @@ const normalizeArg = (value) => {
 const normalizeArgs = process.argv
   .slice(2)
   .map(normalizeArg)
-  .filter(Boolean)
-  .filter((arg) => !arg.startsWith("-"));
+  .filter(Boolean);
+
+const parseMessageArg = (arg, nextArg) => {
+  if (!arg) return null;
+  if (arg === "--file" || arg === "-f") {
+    return nextArg;
+  }
+  const fileFlagMatch = arg.match(/^--(?:file=|path=)(.+)$/i);
+  return fileFlagMatch ? fileFlagMatch[1] : null;
+};
+
+const possibleMessageArgs = [];
+for (let i = 0; i < normalizeArgs.length; i += 1) {
+  const rawArg = normalizeArgs[i];
+  const messageArg = parseMessageArg(rawArg, normalizeArgs[i + 1]);
+  if (messageArg) {
+    possibleMessageArgs.push(messageArg);
+    if (rawArg === "--file" || rawArg === "-f") {
+      i += 1;
+    }
+    continue;
+  }
+
+  if (!rawArg.startsWith("-")) {
+    possibleMessageArgs.push(rawArg);
+  }
+}
 
 const resolveMessageFile = () => {
-  const maybeFileArg = normalizeArgs.find((arg) => {
+  const maybeFileArg = possibleMessageArgs.find((arg) => {
     if (!arg) return false;
     const resolved = path.resolve(process.cwd(), arg);
     return (
