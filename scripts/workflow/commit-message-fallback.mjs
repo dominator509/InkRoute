@@ -17,7 +17,7 @@ const normalizeArgs = process.argv
 
 const parseMessageArg = (arg, nextArg) => {
   if (!arg) return null;
-  if (arg === "--file" || arg === "-f") {
+  if (arg === "--file" || arg === "-f" || arg === "-F") {
     return nextArg;
   }
   const fileFlagMatch = arg.match(/^--(?:file=|path=)(.+)$/i);
