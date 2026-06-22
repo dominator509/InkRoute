@@ -10,6 +10,16 @@ const normalizeArg = (value) => {
   return value.replace(/^"|"$/g, "").replace(/^'|'$/g, "");
 };
 
+const normalizeWindowsPath = (value) => {
+  if (!value) return value;
+  const normalized = normalizeArg(value).trim();
+  if (/^\/[A-Za-z]:[\\/]/.test(normalized)) {
+    return `${normalized[1]}:\\${normalized.slice(3)}`;
+  }
+
+  return normalized;
+};
+
 const normalizeArgs = process.argv
   .slice(2)
   .map(normalizeArg)
@@ -20,9 +30,17 @@ const parseMessageArg = (arg, nextArg) => {
   if (arg === "--file" || arg === "-f" || arg === "-F") {
     return nextArg;
   }
+  const conciseFileMatch = arg.match(/^-[fF](.+)$/);
+  if (conciseFileMatch) {
+    return conciseFileMatch[1];
+  }
+
   const fileFlagMatch = arg.match(/^--(?:file=|path=)(.+)$/i);
   return fileFlagMatch ? fileFlagMatch[1] : null;
 };
+
+const isCommitEditMsgFile = (value) =>
+  Boolean(value && /[\\/]COMMIT_EDITMSG$/i.test(value));
 
 const possibleMessageArgs = [];
 for (let i = 0; i < normalizeArgs.length; i += 1) {
@@ -40,7 +58,7 @@ for (let i = 0; i < normalizeArgs.length; i += 1) {
     continue;
   }
 
-  if (!rawArg.startsWith("-")) {
+  if (!rawArg.startsWith("-") && isCommitEditMsgFile(rawArg)) {
     possibleMessageArgs.push(rawArg);
   }
 }
@@ -51,8 +69,10 @@ const resolveMessageFile = () => {
   );
   const maybeCandidate = explicitFileArg || possibleMessageArgs[0];
   if (maybeCandidate) {
-    const normalized = normalizeArg(maybeCandidate);
-    return path.isAbsolute(normalized) ? path.normalize(normalized) : path.resolve(process.cwd(), normalized);
+    const normalized = normalizeWindowsPath(maybeCandidate);
+    return path.isAbsolute(normalized)
+      ? path.normalize(normalized)
+      : path.resolve(process.cwd(), normalized);
   }
 
   return null;
@@ -94,7 +114,7 @@ const resolveGitDir = () => {
 };
 
 const targetMessageFile = messageFile
-  ? path.resolve(process.cwd(), messageFile)
+  ? messageFile
   : path.join(resolveGitDir(), "COMMIT_EDITMSG");
 
 if (!messageFile) {
