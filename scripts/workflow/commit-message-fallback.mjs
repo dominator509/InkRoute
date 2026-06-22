@@ -30,7 +30,11 @@ for (let i = 0; i < normalizeArgs.length; i += 1) {
   const messageArg = parseMessageArg(rawArg, normalizeArgs[i + 1]);
   if (messageArg) {
     possibleMessageArgs.push(messageArg);
-    if (rawArg === "--file" || rawArg === "-f") {
+    if (
+      rawArg === "--file" ||
+      rawArg === "-f" ||
+      rawArg === "-F"
+    ) {
       i += 1;
     }
     continue;
@@ -47,7 +51,8 @@ const resolveMessageFile = () => {
   );
   const maybeCandidate = explicitFileArg || possibleMessageArgs[0];
   if (maybeCandidate) {
-    return path.resolve(process.cwd(), maybeCandidate);
+    const normalized = normalizeArg(maybeCandidate);
+    return path.isAbsolute(normalized) ? path.normalize(normalized) : path.resolve(process.cwd(), normalized);
   }
 
   return null;
