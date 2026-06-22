@@ -18,6 +18,7 @@ import {
   dashboardPrivacyRuntimeReadiness,
   dashboardPrivacySurfaces,
 } from "../lib/dashboardPrivacyRuntime";
+import { dashboardPrivacyWorkflowEvidenceRequiredEvidence } from "@inkroute/security";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
@@ -129,7 +130,7 @@ describe("dashboard privacy runtime contract", () => {
     expect(dashboardPrivacyRuntimeReadiness.missingProjectionSurfaces).toEqual([]);
     expect(dashboardPrivacyRuntimeReadiness.missingRouteTestSurfaces).toEqual([]);
     expect(dashboardPrivacyRuntimeReadiness.requiredCommands).toEqual(dashboardPrivacyRuntimeCommands);
-    expect(dashboardPrivacyRuntimeReadiness.requiredEvidence).toEqual(dashboardPrivacyEvidenceFlags);
+    expect(dashboardPrivacyRuntimeReadiness.requiredEvidence).toEqual(dashboardPrivacyWorkflowEvidenceRequiredEvidence);
     expect(dashboardPrivacyRuntimeReadiness.blockers).toContain("Persisted privacy request/case store must back dashboard export/delete workflows.");
     expect(dashboardPrivacyRuntimeReadiness.blockers).toContain("Attorney/product approval must be captured for dashboard privacy behavior.");
   });

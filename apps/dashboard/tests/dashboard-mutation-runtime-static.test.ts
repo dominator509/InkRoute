@@ -18,6 +18,7 @@ import {
   dashboardMutationRuntimeProofFiles,
   dashboardMutationRuntimeReadiness,
 } from "../lib/dashboardMutationRuntime";
+import { dashboardMutationExecutionRequiredEvidence } from "@inkroute/booking";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
@@ -199,7 +200,7 @@ describe("dashboard mutation runtime contract", () => {
     expect(dashboardMutationRuntimeReadiness.missingServerActions).toContain("create_reference_upload_intent");
     expect(dashboardMutationRuntimeReadiness.missingRouteTests).not.toContain("update_settings");
     expect(dashboardMutationRuntimeReadiness.requiredCommands).toEqual(dashboardMutationRuntimeCommands);
-    expect(dashboardMutationRuntimeReadiness.requiredEvidence).toEqual(dashboardMutationEvidenceFlags);
+    expect(dashboardMutationRuntimeReadiness.requiredEvidence).toEqual(dashboardMutationExecutionRequiredEvidence);
     expect(dashboardMutationRuntimeReadiness.blockers).toContain("Dashboard mutation surfaces must expose gated action UI and explicit feedback states before runtime readiness.");
     expect(dashboardMutationRuntimeReadiness.blockers).not.toContain("Dashboard mutation surfaces must expose gated actions instead of disabled placeholder copy before runtime readiness.");
     expect(disabledActionPanel).toContain("disabled");

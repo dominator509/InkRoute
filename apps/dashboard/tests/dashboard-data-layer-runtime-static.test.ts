@@ -19,6 +19,7 @@ import {
   dashboardDataLayerRuntimeProofFiles,
   dashboardDataLayerRuntimeReadiness,
 } from "../lib/dashboardDataLayerRuntime";
+import { dashboardRepositoryRouteRequiredEvidence } from "@inkroute/config";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
@@ -96,7 +97,7 @@ describe("dashboard data layer runtime contract", () => {
     expect(readRepoFile("apps/dashboard/tests/booking-state-route-static.test.ts")).toContain("tx.auditLog.create");
     expect(readRepoFile("apps/dashboard/tests/client-read-route-static.test.ts")).toContain("buildTenantDashboardView");
     expect(readRepoFile("apps/dashboard/tests/payment-read-route-static.test.ts")).toContain("providerPaymentId");
-    expect(readRepoFile("apps/dashboard/tests/portfolio-read-route-static.test.ts")).toContain("storage-key redaction");
+    expect(readRepoFile("apps/dashboard/tests/portfolio-read-route-static.test.ts")).toContain("Portfolio reads now redact storage keys");
     expect(readRepoFile("apps/dashboard/tests/message-read-route-static.test.ts")).toContain("uses Prisma message-thread reads with body/provider/contact redaction and audit logs");
     expect(dashboardDemo).toContain("Dashboard read and mutation contracts added");
     expect(dashboardDemo).toContain("Booking flow and tenant-scoped API contract wired");
@@ -121,7 +122,7 @@ describe("dashboard data layer runtime contract", () => {
     expect(dashboardDataLayerRuntimeReadiness.missingRouteWiring).toEqual([]);
     expect(dashboardDataLayerRuntimeReadiness.remainingStaticDemoImports).toEqual([]);
     expect(dashboardDataLayerRuntimeReadiness.requiredCommands).toEqual(dashboardDataLayerRuntimeCommands);
-    expect(dashboardDataLayerRuntimeReadiness.requiredEvidence).toEqual(dashboardDataLayerEvidenceFlags);
+    expect(dashboardDataLayerRuntimeReadiness.requiredEvidence).toEqual(dashboardRepositoryRouteRequiredEvidence);
     expect(dashboardDataLayerRuntimeReadiness.blockers).toContain("Seeded database dashboard route smoke must pass.");
     expect(dashboardDataLayerRuntimeReadiness.blockers).toContain("Tenant-isolation tests must reject cross-tenant dashboard data reads.");
     expect(dashboardDataLayerRuntimeReadiness.blockers).toContain("Dashboard data artifacts must be redacted and free of secrets, raw PII, medical notes, payment data, provider tokens, and private object keys.");
