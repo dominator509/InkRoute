@@ -17,10 +17,35 @@ export interface OfflineStoreAdapter {
   appendAudit(event: OfflineSyncAuditEvent): Promise<void>;
 }
 
+export interface OfflineSecureStoreDriver {
+  getItemAsync(key: string): Promise<string | null>;
+  setItemAsync(key: string, value: string): Promise<void>;
+  deleteItemAsync?(key: string): Promise<void>;
+}
+
+export interface OfflineEncryptedSqliteAuditDriver {
+  appendAuditEvent(event: OfflineSyncAuditEvent): Promise<void>;
+}
+
+export interface PersistentOfflineStoreOptions {
+  secureStore: OfflineSecureStoreDriver;
+  queueKey: string;
+  auditKey: string;
+  name?: "expo-secure-store" | "encrypted-sqlite";
+  auditStore?: OfflineEncryptedSqliteAuditDriver;
+  seed?: readonly OfflineQueueItem[];
+}
+
 export type OfflineSyncTransport = (
   session: MobileApiSession,
   request: MobileApiClientRequest,
 ) => Promise<MobileApiResponseEnvelope<unknown>>;
+
+export interface OfflineConnectivityAdapter {
+  readonly name: "expo-network" | "react-native-netinfo" | "manual-test";
+  isOnline(): Promise<boolean>;
+  subscribe(listener: (online: boolean) => void): () => void;
+}
 
 export interface OfflineSyncRunResult {
   plan: OfflineSyncPlan;
@@ -28,6 +53,12 @@ export interface OfflineSyncRunResult {
   syncedItemIds: readonly string[];
   failedItemIds: readonly string[];
   blockedItemIds: readonly string[];
+}
+
+export interface OfflineReconnectSyncController {
+  readonly reconnectWorkerConfigured: true;
+  start(): Promise<void>;
+  stop(): void;
 }
 
 export function createMemoryOfflineStore(seed: readonly OfflineQueueItem[] = offlineQueueItems): OfflineStoreAdapter {
@@ -49,6 +80,40 @@ export function createMemoryOfflineStore(seed: readonly OfflineQueueItem[] = off
   };
 }
 
+export function createPersistentOfflineStore(options: PersistentOfflineStoreOptions): OfflineStoreAdapter {
+  const name = options.name ?? "expo-secure-store";
+  const seed = options.seed?.map((item) => ({ ...item })) ?? [];
+
+  const readJsonArray = async <T>(key: string): Promise<T[]> => {
+    const stored = await options.secureStore.getItemAsync(key);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [];
+  };
+
+  return {
+    name,
+    encryptedAtRest: true,
+    async loadQueue() {
+      const items = await readJsonArray<OfflineQueueItem>(options.queueKey);
+      if (items.length > 0 || seed.length === 0) {
+        return items.map((item) => ({ ...item }));
+      }
+      await options.secureStore.setItemAsync(options.queueKey, JSON.stringify(seed));
+      return seed.map((item) => ({ ...item }));
+    },
+    async saveQueue(nextItems) {
+      await options.secureStore.setItemAsync(options.queueKey, JSON.stringify(nextItems));
+    },
+    async appendAudit(event) {
+      await options.auditStore?.appendAuditEvent(event);
+      const events = await readJsonArray<OfflineSyncAuditEvent>(options.auditKey);
+      events.push(event);
+      await options.secureStore.setItemAsync(options.auditKey, JSON.stringify(events));
+    },
+  };
+}
+
 export function buildOfflineSyncTransportFailureAuditEvent(
   item: OfflineQueueItem,
   idempotencyKey: string,
@@ -61,6 +126,55 @@ export function buildOfflineSyncTransportFailureAuditEvent(
     sensitive: item.sensitive,
     occurredAt,
     redactedDetail: "Offline sync transport failed. Payload, response body, and credentials redacted.",
+  };
+}
+
+export function createOfflineReconnectSyncController(input: {
+  connectivity: OfflineConnectivityAdapter;
+  store: OfflineStoreAdapter;
+  session: MobileApiSession;
+  now: () => string;
+  transport?: OfflineSyncTransport;
+}): OfflineReconnectSyncController {
+  let unsubscribe: (() => void) | null = null;
+  let lastOnline = false;
+  let syncInFlight: Promise<OfflineSyncRunResult> | null = null;
+
+  const scheduleSync = () => {
+    if (!syncInFlight) {
+      syncInFlight = runOfflineSyncOnce({
+        store: input.store,
+        session: input.session,
+        generatedAt: input.now(),
+        ...(input.transport ? { transport: input.transport } : {}),
+      }).finally(() => {
+        syncInFlight = null;
+      });
+    }
+    return syncInFlight;
+  };
+
+  const handleConnectivity = (online: boolean) => {
+    const reconnected = online && !lastOnline;
+    lastOnline = online;
+    if (reconnected) {
+      void scheduleSync();
+    }
+  };
+
+  return {
+    reconnectWorkerConfigured: true,
+    async start() {
+      lastOnline = await input.connectivity.isOnline();
+      unsubscribe = input.connectivity.subscribe(handleConnectivity);
+      if (lastOnline) {
+        await scheduleSync();
+      }
+    },
+    stop() {
+      unsubscribe?.();
+      unsubscribe = null;
+    },
   };
 }
 
@@ -152,7 +266,8 @@ export async function runOfflineSyncOnce(input: {
 }
 
 export const offlineSyncPreview = {
-  adapter: "encrypted-store-required",
+  adapter: "persistent-encrypted-store-factory-wired",
+  reconnectWorker: "offline-to-online scheduler contract wired",
   idempotencyExample: buildOfflineIdempotencyKey({
     id: "offline_preview",
     kind: "booking_note",
@@ -165,5 +280,5 @@ export const offlineSyncPreview = {
     entityId: "booking_preview",
   }),
   boundary:
-    "Offline sync now has an app-side adapter/worker contract with redacted audit events; encrypted device storage and reconnect smoke evidence remain runtime-gated.",
+    "Offline sync now has an app-side persistent encrypted-store factory, offline-to-online reconnect scheduler, and worker contract with redacted audit events; native encrypted device storage binding and reconnect smoke evidence remain runtime-gated.",
 };

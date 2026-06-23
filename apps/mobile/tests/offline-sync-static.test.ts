@@ -15,6 +15,11 @@ describe("mobile offline sync static contract", () => {
 
   it("defines an encrypted-store adapter boundary and queue persistence calls", () => {
     expect(offlineSource).toContain("OfflineStoreAdapter");
+    expect(offlineSource).toContain("OfflineSecureStoreDriver");
+    expect(offlineSource).toContain("OfflineEncryptedSqliteAuditDriver");
+    expect(offlineSource).toContain("createPersistentOfflineStore");
+    expect(offlineSource).toContain("secureStore.getItemAsync");
+    expect(offlineSource).toContain("secureStore.setItemAsync");
     expect(offlineSource).toContain("encryptedAtRest");
     expect(offlineSource).toContain("loadQueue()");
     expect(offlineSource).toContain("saveQueue");
@@ -31,6 +36,10 @@ describe("mobile offline sync static contract", () => {
   it("replays ready items through the mobile API client with idempotency keys", () => {
     expect(offlineSource).toContain("mobileApiFetch");
     expect(offlineSource).toContain("transport?: OfflineSyncTransport");
+    expect(offlineSource).toContain("OfflineConnectivityAdapter");
+    expect(offlineSource).toContain("createOfflineReconnectSyncController");
+    expect(offlineSource).toContain("reconnectWorkerConfigured: true");
+    expect(offlineSource).toContain("void scheduleSync()");
     expect(offlineSource).toContain("buildOfflineIdempotencyKey(item)");
     expect(offlineSource).toContain('method: "PATCH"');
     expect(offlineSource).toContain("/api/mobile/offline/");
@@ -56,9 +65,11 @@ describe("mobile offline sync static contract", () => {
     expect(screenSource).toContain("offlineSyncPreview");
     expect(screenSource).toContain("Sync worker contract");
     expect(screenSource).toContain("Offline queue contract");
-    expect(screenSource).toContain("app-side adapter, sync worker, idempotent replay, retry state, and redacted audit events are wired");
+    expect(screenSource).toContain("app-side adapter, offline-to-online reconnect scheduler, sync worker, idempotent replay, retry state, and redacted audit events are wired");
     expect(screenSource).toContain("encrypted device storage");
     expect(screenSource).toContain("reconnect smoke");
+    expect(offlineSource).toContain("persistent encrypted-store factory");
+    expect(offlineSource).toContain("native encrypted device storage binding and reconnect smoke evidence remain runtime-gated");
     expect(screenSource).not.toContain("Static queue model");
     expect(screenSource).not.toContain("not implemented yet");
   });

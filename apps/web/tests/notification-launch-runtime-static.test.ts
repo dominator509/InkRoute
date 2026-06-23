@@ -51,6 +51,9 @@ describe("notification launch runtime contract", () => {
   const notificationLaunchMigration = readRepoFile(
     "packages/db/prisma/migrations/20260609033400_add_notification_launch_runs/migration.sql",
   );
+  const notificationWorkerMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260623093000_add_notification_worker_jobs/migration.sql",
+  );
   const providerEventMigration = readRepoFile("packages/db/prisma/migrations/20260613001100_add_provider_events/migration.sql");
   const preferenceSuppressionMigration = readRepoFile("packages/db/prisma/migrations/20260613001200_add_notification_preferences_suppressions/migration.sql");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
@@ -152,6 +155,12 @@ describe("notification launch runtime contract", () => {
     expect(prismaSchema).toContain("model NotificationLaunchRun");
     expect(prismaSchema).toContain("model ProviderEvent");
     expect(prismaSchema).toContain("providerEvents ProviderEvent[]");
+    expect(prismaSchema).toContain("model NotificationJob");
+    expect(prismaSchema).toContain("model DeadLetterJob");
+    expect(prismaSchema).toContain("model NotificationWorkerAuditLog");
+    expect(prismaSchema).toContain("notificationJobs NotificationJob[]");
+    expect(prismaSchema).toContain("deadLetterJobs   DeadLetterJob[]");
+    expect(prismaSchema).toContain("notificationWorkerAuditLogs NotificationWorkerAuditLog[]");
     expect(prismaSchema).toContain("model NotificationChannelPreference");
     expect(prismaSchema).toContain("model NotificationSuppression");
     expect(prismaSchema).toContain("notificationChannelPreferences NotificationChannelPreference[]");
@@ -168,6 +177,12 @@ describe("notification launch runtime contract", () => {
     expect(notificationLaunchMigration).toContain('"suppressionManifest" JSONB NOT NULL');
     expect(notificationLaunchMigration).toContain('"secretSafeArtifactsCaptured" BOOLEAN NOT NULL DEFAULT false');
     expect(notificationLaunchMigration).toContain('CREATE UNIQUE INDEX "NotificationLaunchRun_tenantId_runId_key"');
+    expect(notificationWorkerMigration).toContain('CREATE TABLE "NotificationJob"');
+    expect(notificationWorkerMigration).toContain('CREATE TABLE "DeadLetterJob"');
+    expect(notificationWorkerMigration).toContain('CREATE TABLE "NotificationWorkerAuditLog"');
+    expect(notificationWorkerMigration).toContain(
+      'CREATE UNIQUE INDEX "NotificationJob_tenantId_idempotencyKey_sourceAction_key"',
+    );
     expect(runData).toMatchObject({
       tenantId: "tenant_static",
       runId: "notification_static",
@@ -460,7 +475,8 @@ describe("notification launch runtime contract", () => {
     expect(gapTracker).toContain("NotificationLaunchRun");
     expect(gapTracker).toContain("apps/web/lib/notificationLaunchRuntime.ts");
     expect(gapTracker).toContain("persistNotificationLaunchRun upsert seam");
-    expect(gapTracker).toContain("live notification typecheck/tests, provider SDK configuration, sandbox/device sends, live provider-backed queue execution, delivery/provider/message persistence integration, live provider-driven preference/STOP/quiet-hours suppression execution, live provider signed-webhook execution, live cross-tenant Postgres isolation proof, live CI secret-safe redaction/privacy artifact review, CI evidence, provider-backed persistNotificationLaunchRun execution, and secret-safe artifacts remain open");
+    expect(gapTracker).toContain("preference/unsubscribe DB-first route persistence is credited through GAP-067");
+    expect(gapTracker).toContain("live notification typecheck/tests, provider SDK configuration, sandbox/device sends, live provider-backed queue execution and retry/dead-letter execution evidence, delivery/provider/message persistence integration, live provider-driven STOP/quiet-hours suppression execution, signed webhook replay source controls, tenant isolation, live CI secret-safe redaction/privacy artifact review, CI evidence, provider-backed persistNotificationLaunchRun execution, and secret-safe artifacts remain open");
     expect(gapTracker).toContain("GAP-010 is notification-launch-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("proof inventory");
     expect(gapTracker).toContain("buildNotificationLaunchDecisionRequiredEvidence");
@@ -471,10 +487,13 @@ describe("notification launch runtime contract", () => {
     expect(gapTracker).toContain("notificationLaunchRequiredExternalEvidence");
     expect(gapTracker).toContain("buildRedactedNotificationLaunchArtifact");
     expect(gapTracker).toContain("buildNotificationLaunchArtifactReview");
+    expect(gapTracker).toContain("durable NotificationJob/DeadLetterJob/NotificationWorkerAuditLog migration");
+    expect(gapTracker).toContain("live provider-backed queue execution and retry/dead-letter execution evidence");
   });
 
   it("pins current notification launch proof files for GAP-010", () => {
     expect(notificationLaunchRuntimeProofFiles).toContain("packages/notifications/package.json");
+    expect(notificationLaunchRuntimeProofFiles).toContain("packages/db/prisma/migrations/20260623093000_add_notification_worker_jobs/migration.sql");
     expect(notificationLaunchRuntimeProofFiles).toContain("packages/db/prisma/migrations/20260613001100_add_provider_events/migration.sql");
     expect(notificationLaunchRuntimeProofFiles).toContain("packages/db/prisma/migrations/20260613001200_add_notification_preferences_suppressions/migration.sql");
     expect(notificationLaunchRuntimeProofFiles).toContain("apps/web/lib/notificationRedactionPrivacyContract.ts");

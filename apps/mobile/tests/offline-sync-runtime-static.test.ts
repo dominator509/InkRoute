@@ -60,6 +60,10 @@ describe("mobile offline sync runtime contract", () => {
       "airplane-mode-reconnect",
       "ci-secret-safe-evidence",
     ]);
+    expect(offlineSyncRuntimeMatrix.find((entry) => entry.id === "encrypted-store-adapter")?.command).toBe(
+      "wire persistent encrypted-store adapter factory for Expo SecureStore/encrypted SQLite",
+    );
+    expect(offlineSyncRuntimeMatrix.find((entry) => entry.id === "encrypted-store-adapter")?.status).toBe("wired");
     expect(offlineSyncArtifactPaths).toContain("coverage/mobile-offline-sync-runtime.json");
     expect(offlineSyncArtifactPaths).toContain("test-results/mobile-offline-sync-runtime");
   });
@@ -71,8 +75,17 @@ describe("mobile offline sync runtime contract", () => {
     expect(mobileSupportSource).toContain("planOfflineSync");
     expect(mobileSupportTests).toContain("buildOfflineRuntimeReadinessPlan");
     expect(offlineSyncSource).toContain("OfflineStoreAdapter");
+    expect(offlineSyncSource).toContain("OfflineSecureStoreDriver");
+    expect(offlineSyncSource).toContain("OfflineEncryptedSqliteAuditDriver");
+    expect(offlineSyncSource).toContain("PersistentOfflineStoreOptions");
+    expect(offlineSyncSource).toContain("createPersistentOfflineStore");
+    expect(offlineSyncSource).toContain("persistent encrypted-store factory");
     expect(offlineSyncSource).toContain("encryptedAtRest");
     expect(offlineSyncSource).toContain("runOfflineSyncOnce");
+    expect(offlineSyncSource).toContain("OfflineConnectivityAdapter");
+    expect(offlineSyncSource).toContain("createOfflineReconnectSyncController");
+    expect(offlineSyncSource).toContain("reconnectWorkerConfigured: true");
+    expect(offlineSyncSource).toContain("void scheduleSync()");
     expect(offlineSyncSource).toContain("mobileApiFetch");
     expect(offlineSyncSource).toContain("OfflineSyncTransport");
     expect(offlineSyncSource).toContain("failedItemIds");
@@ -88,9 +101,9 @@ describe("mobile offline sync runtime contract", () => {
     expect(offlineSyncRuntimeReadiness.missingScripts).toEqual([]);
     expect(offlineSyncRuntimeReadiness.requiredCommands).toBe(offlineSyncRuntimeCommands);
     expect(offlineSyncRuntimeReadiness.requiredEvidence).toBe(offlineSyncEvidenceFlags);
-    expect(offlineSyncRuntimeReadiness.requiredEvidence).toEqual(offlineSyncEvidenceFlags);
+    expect(offlineSyncRuntimeReadiness.blockers).not.toContain("Offline storage adapter must be selected before runtime readiness.");
     expect(offlineSyncRuntimeReadiness.blockers).toContain("Encrypted offline store must be configured for sensitive queue items.");
-    expect(offlineSyncRuntimeReadiness.blockers).toContain("Runtime offline sync worker must be configured.");
+    expect(offlineSyncRuntimeReadiness.blockers).not.toContain("Runtime offline sync worker must be configured.");
     expect(offlineSyncRuntimeReadiness.blockers).toContain("Airplane-mode queue and reconnect sync must be verified on device or simulator.");
   });
 
@@ -130,19 +143,22 @@ describe("mobile offline sync runtime contract", () => {
     expect(plan.policy.codexMayClassifyStaticOfflineSyncReadiness).toBe(true);
     expect(plan.policy.encryptedStoreRequiredForClosure).toBe(true);
     expect(plan.policy.restartPersistenceRequiredForClosure).toBe(true);
-    expect(plan.policy.reconnectWorkerRequiredForClosure).toBe(true);
+    expect(plan.policy.reconnectWorkerSchedulingContractRequiredForClosure).toBe(true);
+    expect(plan.policy.reconnectDeviceSmokeRequiredForClosure).toBe(true);
     expect(plan.policy.serverConflictTestsRequiredForClosure).toBe(true);
     expect(plan.policy.auditPersistenceRequiredForClosure).toBe(true);
     expect(plan.policy.secretSafeArtifactsRequiredForClosure).toBe(true);
     expect(plan.commandExecutionAllowed).toBe(false);
     expect(plan.encryptedStoreExecutionAllowed).toBe(false);
     expect(plan.deviceRestartExecutionAllowed).toBe(false);
-    expect(plan.reconnectWorkerExecutionAllowed).toBe(false);
+    expect(plan.reconnectWorkerSchedulingContractAvailable).toBe(true);
+    expect(plan.reconnectDeviceSmokeExecutionAllowed).toBe(false);
     expect(plan.serverConflictExecutionAllowed).toBe(false);
     expect(plan.auditPersistenceExecutionAllowed).toBe(false);
     expect(plan.ciExecutionAllowed).toBe(false);
     expect(plan.localCommands).toBe(offlineSyncLocalCommands);
     expect(plan.externalCommands).toBe(offlineSyncExternalCommands);
+    expect(plan.reconnectSchedulingContract).toBe("createOfflineReconnectSyncController");
     expect(plan.requiredExternalEvidence).toBe(offlineSyncRequiredExternalEvidence);
     expect(plan.requiredExternalEvidence).toContain("secret-safe offline sync artifact review");
   });
@@ -185,7 +201,8 @@ describe("mobile offline sync runtime contract", () => {
     expect(review.secretSafe).toBe(true);
     expect(review.redactedPaths).toEqual(["auditPayload"]);
     expect(review.requiredExternalEvidence).toBe(offlineSyncRequiredExternalEvidence);
-    expect(review.requiredExternalEvidence).toContain("airplane-mode reconnect evidence");
+    expect(review.requiredExternalEvidence).toContain("offline-to-online reconnect scheduling contract proof");
+    expect(review.requiredExternalEvidence).toContain("airplane-mode reconnect device smoke evidence");
   });
 
   it("pins current offline sync proof files for GAP-045", () => {
@@ -216,6 +233,7 @@ describe("mobile offline sync runtime contract", () => {
     expect(gapTracker).toContain("apps/mobile/src/lib/offlineSyncRuntime.ts");
     expect(gapTracker).toContain("GAP-045 is mobile-offline-sync-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("buildOfflineSyncExecutionPlan");
+    expect(gapTracker).toContain("createOfflineReconnectSyncController");
     expect(gapTracker).toContain("offlineSyncExecutionPolicy");
     expect(gapTracker).toContain("offlineSyncRequiredExternalEvidence");
     expect(gapTracker).toContain("buildRedactedOfflineSyncArtifact");

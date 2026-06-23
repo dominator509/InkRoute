@@ -85,7 +85,8 @@ export interface OfflineSyncExecutionPolicy {
   readonly codexMayClassifyStaticOfflineSyncReadiness: true;
   readonly encryptedStoreRequiredForClosure: true;
   readonly restartPersistenceRequiredForClosure: true;
-  readonly reconnectWorkerRequiredForClosure: true;
+  readonly reconnectWorkerSchedulingContractRequiredForClosure: true;
+  readonly reconnectDeviceSmokeRequiredForClosure: true;
   readonly serverConflictTestsRequiredForClosure: true;
   readonly auditPersistenceRequiredForClosure: true;
   readonly secretSafeArtifactsRequiredForClosure: true;
@@ -96,13 +97,15 @@ export interface OfflineSyncExecutionPlan {
   readonly commandExecutionAllowed: false;
   readonly encryptedStoreExecutionAllowed: false;
   readonly deviceRestartExecutionAllowed: false;
-  readonly reconnectWorkerExecutionAllowed: false;
+  readonly reconnectWorkerSchedulingContractAvailable: true;
+  readonly reconnectDeviceSmokeExecutionAllowed: false;
   readonly serverConflictExecutionAllowed: false;
   readonly auditPersistenceExecutionAllowed: false;
   readonly ciExecutionAllowed: false;
   readonly localCommands: typeof offlineSyncLocalCommands;
   readonly externalCommands: typeof offlineSyncExternalCommands;
   readonly requiredExternalEvidence: typeof offlineSyncRequiredExternalEvidence;
+  readonly reconnectSchedulingContract: "createOfflineReconnectSyncController";
 }
 
 export interface OfflineSyncArtifactReview {
@@ -134,7 +137,8 @@ export const offlineSyncExecutionPolicy = {
   codexMayClassifyStaticOfflineSyncReadiness: true,
   encryptedStoreRequiredForClosure: true,
   restartPersistenceRequiredForClosure: true,
-  reconnectWorkerRequiredForClosure: true,
+  reconnectWorkerSchedulingContractRequiredForClosure: true,
+  reconnectDeviceSmokeRequiredForClosure: true,
   serverConflictTestsRequiredForClosure: true,
   auditPersistenceRequiredForClosure: true,
   secretSafeArtifactsRequiredForClosure: true,
@@ -144,11 +148,11 @@ export const offlineSyncRequiredExternalEvidence = [
   "real Expo SecureStore/encrypted SQLite adapter proof",
   "encrypted at-rest offline queue proof",
   "device restart persistence proof",
-  "reconnect worker scheduling proof",
+  "offline-to-online reconnect scheduling contract proof",
+  "airplane-mode reconnect device smoke evidence",
   "server stale-mutation conflict test output",
   "idempotency persistence proof",
   "offline sync audit persistence proof",
-  "airplane-mode reconnect evidence",
   "mobile typecheck/test output",
   "CI offline sync evidence",
   "secret-safe offline sync artifact review",
@@ -181,9 +185,9 @@ export const offlineSyncRuntimeMatrix = [
   },
   {
     id: "encrypted-store-adapter",
-    command: "replace memory adapter with Expo SecureStore/encrypted SQLite adapter",
+    command: "wire persistent encrypted-store adapter factory for Expo SecureStore/encrypted SQLite",
     artifact: "coverage/mobile-offline-sync-encrypted-store-redacted.json",
-    status: "storage-gated",
+    status: "wired",
   },
   {
     id: "sensitive-at-rest-proof",
@@ -250,11 +254,11 @@ export const offlineSyncRuntimeReadiness = buildOfflineRuntimeReadinessPlan({
   mobileSupportTypecheckPassed: false,
   mobileTypecheckPassed: false,
   mobileDeviceTestsPassed: false,
-  storageAdapterSelected: false,
+  storageAdapterSelected: true,
   encryptedStoreConfigured: false,
   sensitiveItemsEncryptedAtRest: false,
   deviceRestartPersistenceTested: false,
-  syncWorkerConfigured: false,
+  syncWorkerConfigured: true,
   retryBackoffWorkerTested: false,
   conflictResolutionConfigured: false,
   serverConflictTestsPassed: false,
@@ -320,13 +324,15 @@ export const buildOfflineSyncExecutionPlan = (): OfflineSyncExecutionPlan => ({
   commandExecutionAllowed: false,
   encryptedStoreExecutionAllowed: false,
   deviceRestartExecutionAllowed: false,
-  reconnectWorkerExecutionAllowed: false,
+  reconnectWorkerSchedulingContractAvailable: true,
+  reconnectDeviceSmokeExecutionAllowed: false,
   serverConflictExecutionAllowed: false,
   auditPersistenceExecutionAllowed: false,
   ciExecutionAllowed: false,
   localCommands: offlineSyncLocalCommands,
   externalCommands: offlineSyncExternalCommands,
   requiredExternalEvidence: offlineSyncRequiredExternalEvidence,
+  reconnectSchedulingContract: "createOfflineReconnectSyncController",
 });
 
 export const buildRedactedOfflineSyncArtifact = (artifact: unknown): Pick<OfflineSyncArtifactReview, "redactedArtifact" | "redactedPaths"> => {

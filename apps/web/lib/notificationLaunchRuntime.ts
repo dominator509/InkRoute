@@ -177,6 +177,7 @@ export const notificationLaunchRuntimeProofFiles = [
   "apps/web/tests/notification-launch-runtime-static.test.ts",
   "packages/db/prisma/schema.prisma",
   "packages/db/prisma/migrations/20260609033400_add_notification_launch_runs/migration.sql",
+  "packages/db/prisma/migrations/20260623093000_add_notification_worker_jobs/migration.sql",
   "packages/db/prisma/migrations/20260613001100_add_provider_events/migration.sql",
   "packages/db/prisma/migrations/20260613001200_add_notification_preferences_suppressions/migration.sql",
   "apps/web/lib/notificationRedactionPrivacyContract.ts",
