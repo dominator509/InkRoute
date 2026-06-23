@@ -111,12 +111,13 @@ export function buildMobileQaExecutionContract(): MobileQaExecutionContract {
     blockingItemIds: summary.blockingItemIds,
     artifactPolicy: [
       "Keep screenshots, simulator logs, provider receipts, and device transcripts free of secrets, PII, medical details, payment data, and raw push tokens.",
+      "Keep apps/mobile/tests/mobile-render-contract.test.ts aligned with every registered screen before simulator/device QA.",
       "Attach one artifact bundle per checklist id and keep GAP-048/GAP-108 references in the manifest.",
       "Retain each checklist bundle at coverage/mobile-qa-artifacts/<checklist-id>.redacted.json after redaction review.",
       "Do not mark mobile runtime QA ready until iOS, Android, physical-device, accessibility, offline, push, crash, and OTA artifacts are all present.",
     ],
     boundary:
-      "Mobile QA now has an app-side execution contract mapping every registered screen to static, runtime, and device evidence slots; actual simulator/device artifacts remain gated.",
+      "Mobile QA now has an app-side execution contract plus dependency-light React element smoke coverage for every registered screen; command output and actual simulator/device artifacts remain gated.",
   };
 }
 

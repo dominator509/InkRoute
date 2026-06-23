@@ -36,7 +36,7 @@ export const signedIcsFeedExternalCommands = [
   "pnpm --filter @inkroute/web typecheck",
   "signed ICS token DB integration tests",
   "Apple/Google/Outlook ICS import smoke tests",
-  "revocation dashboard UI/API proof",
+  "revocation dashboard UI smoke and API proof",
   "GitHub Actions signed ICS feed evidence job",
 ] as const;
 
@@ -69,6 +69,8 @@ export const signedIcsFeedRuntimeProofFiles = [
   "packages/calendar/tests/availability-conflicts.test.ts",
   "apps/web/lib/signedIcsFeeds.ts",
   "apps/web/lib/signedIcsFeedsRuntime.ts",
+  "apps/dashboard/components/SignedIcsFeedRevocationPanel.tsx",
+  "apps/dashboard/app/calendar/page.tsx",
   "apps/web/tests/signed-ics-feed-static.test.ts",
   "apps/web/tests/signed-ics-feed-runtime-static.test.ts",
   "apps/web/tests/ics-feed-route.test.ts",
@@ -156,7 +158,7 @@ export const signedIcsFeedExecutionPolicy = {
 
 export const signedIcsFeedRequiredExternalEvidence = [
   "durable Prisma token table/repository execution proof",
-  "revocation dashboard UI proof",
+  "revocation dashboard UI smoke evidence",
   "revocation API proof",
   "revoked-token DB route rejection tests",
   "signed feed access-log persistence proof",
@@ -393,7 +395,7 @@ export const signedIcsFeedRuntimeReadiness = buildSignedIcsFeedRuntimeReadinessP
   tokenCreationImplemented: true,
   hashedTokenPersistenceConfigured: true,
   expiryRotationPersistenceConfigured: true,
-  revocationUiImplemented: false,
+  revocationUiImplemented: true,
   revocationApiImplemented: true,
   revokedTokenRouteRejectionTested: false,
   tenantArtistScopeEnforced: true,

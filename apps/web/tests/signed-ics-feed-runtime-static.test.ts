@@ -29,6 +29,8 @@ describe("signed ICS feed runtime contract", () => {
   const calendarSource = readWorkspaceFile("packages/calendar/src/index.ts");
   const calendarTests = readWorkspaceFile("packages/calendar/tests/availability-conflicts.test.ts");
   const signedFeedSource = readWorkspaceFile("apps/web/lib/signedIcsFeeds.ts");
+  const signedFeedRevocationPanel = readWorkspaceFile("apps/dashboard/components/SignedIcsFeedRevocationPanel.tsx");
+  const dashboardCalendarPage = readWorkspaceFile("apps/dashboard/app/calendar/page.tsx");
   const signedFeedStaticTest = readWorkspaceFile("apps/web/tests/signed-ics-feed-static.test.ts");
   const routeSource = readWorkspaceFile("apps/web/app/api/public/[tenantSlug]/calendar/[artistSlug]/travel.ics/route.ts");
   const icsRouteTest = readWorkspaceFile("apps/web/tests/ics-feed-route.test.ts");
@@ -76,6 +78,8 @@ describe("signed ICS feed runtime contract", () => {
       "packages/calendar/tests/availability-conflicts.test.ts",
       "apps/web/lib/signedIcsFeeds.ts",
       "apps/web/lib/signedIcsFeedsRuntime.ts",
+      "apps/dashboard/components/SignedIcsFeedRevocationPanel.tsx",
+      "apps/dashboard/app/calendar/page.tsx",
       "apps/web/tests/signed-ics-feed-static.test.ts",
       "apps/web/tests/signed-ics-feed-runtime-static.test.ts",
       "apps/web/tests/ics-feed-route.test.ts",
@@ -100,6 +104,11 @@ describe("signed ICS feed runtime contract", () => {
     expect(signedFeedSource).toContain("createPrismaSignedIcsFeedRepository");
     expect(signedFeedSource).toContain("persistAccessLog");
     expect(signedFeedSource).toContain("evaluateSignedIcsFeedRequest");
+    expect(signedFeedSource).toContain("revocationUiImplemented: true");
+    expect(signedFeedRevocationPanel).toContain("Plan revocation payload");
+    expect(signedFeedRevocationPanel).toContain("already-hashed signed-feed token");
+    expect(signedFeedRevocationPanel).toContain("never raw feed tokens");
+    expect(dashboardCalendarPage).toContain("SignedIcsFeedRevocationPanel");
     expect(signedFeedStaticTest).toContain("plans hashed token creation and revocation");
     expect(signedFeedStaticTest).toContain("executes a local signed-feed repository contract");
     expect(routeSource).toContain("evaluateSignedIcsFeedRequest");
@@ -112,7 +121,7 @@ describe("signed ICS feed runtime contract", () => {
     expect(signedIcsFeedRuntimeReadiness.missingScripts).toEqual([]);
     expect(signedIcsFeedRuntimeReadiness.requiredCommands).toBe(signedIcsFeedRuntimeCommands);
     expect(signedIcsFeedRuntimeReadiness.requiredEvidence).toBe(signedIcsFeedDecisionRequiredEvidence);
-    expect(signedIcsFeedRuntimeReadiness.blockers).toContain("Feed-token revocation UI/API proof must be captured before signed ICS feed readiness.");
+    expect(signedIcsFeedRuntimeReadiness.blockers).not.toContain("Feed-token revocation UI/API proof must be captured before signed ICS feed readiness.");
     expect(signedIcsFeedRuntimeReadiness.blockers).not.toContain("Feed-token revocation UI must be implemented.");
     expect(signedIcsFeedRuntimeReadiness.blockers).toContain("Route tests must reject revoked tokens loaded from durable storage.");
     expect(signedIcsFeedRuntimeReadiness.blockers).toContain("Outlook Calendar import smoke test must pass.");

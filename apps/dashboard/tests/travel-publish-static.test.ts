@@ -15,6 +15,7 @@ const pageSource = readFileSync(resolve(repoRoot, "apps/dashboard/app/travel/pag
 const actionPanelSource = readFileSync(resolve(repoRoot, "apps/dashboard/components/TravelPublishActionPanel.tsx"), "utf8");
 const travelCityRouteSource = readFileSync(resolve(repoRoot, "apps/dashboard/app/api/travel/cities/route.ts"), "utf8");
 const travelScheduleRouteSource = readFileSync(resolve(repoRoot, "apps/dashboard/app/api/travel/schedules/route.ts"), "utf8");
+const publicTravelApiRouteSource = readFileSync(resolve(repoRoot, "apps/web/app/api/public/[tenantSlug]/travel/route.ts"), "utf8");
 
 describe("dashboard travel publish contract", () => {
   it("covers publish, update, unpublish, and rollback actions", () => {
@@ -116,12 +117,12 @@ describe("dashboard travel publish contract", () => {
     expect(repository.state.rollbacks[0].reason).toBe("TRAVEL_PUBLISH_POST_COMMIT_EFFECT_FAILED");
   });
 
-  it("keeps runtime readiness blocked until public API, provider queue, rollback tests, tenant isolation, and E2E proof exist", () => {
+  it("keeps runtime readiness blocked until provider queue, rollback tests, tenant isolation, and E2E proof exist", () => {
     const readiness = buildDashboardTravelPublishReadiness();
 
     expect(readiness.status).toBe("blocked");
     expect(readiness.blockers).toContain("@inkroute/calendar travel publish tests must pass.");
-    expect(readiness.blockers).toContain("Public travel data API must read committed travel publish state.");
+    expect(readiness.blockers).not.toContain("Public travel data API must read committed travel publish state.");
     expect(readiness.blockers).toContain("Notification provider queue execution must be tested for travel publish jobs.");
     expect(readiness.blockers).toContain("Failed provider action rollback tests must pass.");
     expect(readiness.blockers).toContain("Cross-tenant travel publish mutation tests must be denied.");
@@ -151,6 +152,9 @@ describe("dashboard travel publish contract", () => {
     expect(routeSource).toContain("TRAVEL_PUBLISH_REPOSITORY_NOT_CONFIGURED");
     expect(routeSource).toContain("demoTravelPublishPlanDisabled");
     expect(routeSource).toContain("requiresProviderRollbackEvidence");
+    expect(publicTravelApiRouteSource).toContain("readPublicTravelStops");
+    expect(publicTravelApiRouteSource).toContain('persistence: "database"');
+    expect(publicTravelApiRouteSource).toContain("PROVIDER_PUBLIC_CONTENT_NOT_CONFIGURED");
     expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(routeSource).toContain("headers: noStoreHeaders");
     expect(routeSource).not.toContain('headers: { "Cache-Control": "no-store" }');

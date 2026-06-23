@@ -28,6 +28,7 @@ describe("public content runtime evidence contract", () => {
   const configSource = readRepoFile("packages/config/src/index.ts");
   const configTests = readRepoFile("packages/config/tests/public-content.test.ts");
   const validatorSource = readRepoFile("packages/validators/src/common.ts");
+  const publicContentApiSource = readRepoFile("apps/web/lib/publicContentApi.ts");
   const publicPortfolioRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/portfolio/route.ts");
   const publicTravelRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/travel/route.ts");
   const publicReviewsRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/reviews/route.ts");
@@ -78,6 +79,8 @@ describe("public content runtime evidence contract", () => {
     expect(publicContentApiSource).toContain("export async function readPublicTravelStops");
     expect(publicContentApiSource).toContain("export async function readPublicTestimonials");
     expect(publicContentApiSource).toContain("resolvePublicTenantScope");
+    expect(publicContentApiSource).toContain("prismaRuntime.tenant.findUnique");
+    expect(publicContentApiSource).toContain('source: "database"');
     for (const routeSource of [publicPortfolioRoute, publicTravelRoute, publicReviewsRoute, publicFaqRoute]) {
       expect(routeSource).toContain("publicReadQuerySchema.safeParse");
       expect(routeSource).toContain('code: "VALIDATION_FAILED"');

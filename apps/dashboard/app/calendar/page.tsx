@@ -1,5 +1,6 @@
 import { DashboardPageHeader } from "../../components/DashboardPageHeader";
 import { IntegrationBoundaryCard } from "../../components/IntegrationBoundaryCard";
+import { SignedIcsFeedRevocationPanel } from "../../components/SignedIcsFeedRevocationPanel";
 import { StatusPill } from "../../components/StatusPill";
 import {
   dashboardAppointments,
@@ -103,6 +104,7 @@ export default function CalendarPage() {
             <span>{dashboardSignedIcsFeedDraft.path}</span>
           </div>
         </article>
+        <SignedIcsFeedRevocationPanel />
         <article className="card">
           <h2>Google Calendar drafts</h2>
           <p>These payload shapes mirror the provider execution contract. Live Google dispatch remains evidence-gated until OAuth, encrypted tokens, sync workers, and provider smokes are captured.</p>

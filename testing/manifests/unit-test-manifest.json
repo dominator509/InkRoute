@@ -969,16 +969,16 @@
       "file": "apps/dashboard/tests/google-calendar-sync-static.test.ts",
       "priority": "critical",
       "verifies": [
-        "GAP-057 Google Calendar sync contract covers OAuth, FreeBusy, event upsert/delete, full sync, incremental sync, and push renewal",
+        "GAP-057 Google Calendar sync contract covers OAuth, FreeBusy, event upsert/delete, full sync, incremental sync, push renewal, and source-wired push webhook handling",
         "GAP-057 Google Calendar sync requires encrypted tokens, idempotency, invalid sync-token recovery, push channel validation, and CalendarAuditLog persistence",
         "GAP-057 dashboard Google sync API blocks or returns provider-worker-required instead of executing unconfigured Google calls",
-        "GAP-057 readiness remains blocked on SDK/OAuth configuration, smoke tests, tenant isolation, push webhook, and Google test-calendar artifacts"
+        "GAP-057 readiness remains blocked on SDK/OAuth configuration, smoke tests, tenant isolation, Google push webhook smoke, and Google test-calendar artifacts"
       ],
       "blockedBy": [
         "Static Google calendar sync test execution pending",
         "Google SDK/client dependency pending",
         "OAuth app credentials and callback smoke pending",
-        "Google FreeBusy/event/push/recovery smoke artifacts pending",
+        "Google FreeBusy/event/push webhook/recovery smoke artifacts pending",
         "Tenant isolation tests pending"
       ]
     },
@@ -2387,12 +2387,12 @@
       "priority": "high",
       "verifies": [
         "GAP-009 CalendarLaunchRun Prisma model and app row contract plus calendar launch runtime matrix covers calendar typecheck/tests, tenant-scoped availability repositories, Postgres integration, concurrent hold race tests, tenant isolation, Google OAuth, encrypted refresh token persistence, Google sync worker, FreeBusy/event sync smoke, push/incremental recovery, signed ICS token persistence, route access, Apple/Google/Outlook imports, timezone/DST QA, provider render matrix, travel publish persistence/rollback, cache revalidation, dashboard/public smoke, CI evidence, and secret-safe artifacts",
-        "GAP-009 calendar helper/tests, dashboard calendar read redaction, public travel ICS route, CI labels, artifact paths, and tracker row remain wired without claiming provider/runtime readiness",
+        "GAP-009 calendar helper/tests, source-wired availability repository contract, dashboard calendar read redaction, public travel ICS route, CI labels, artifact paths, and tracker row remain wired without claiming provider/runtime readiness",
         "GAP-009 readiness keeps database, Google, ICS, timezone, smoke, CI, and artifact evidence explicit blockers"
       ],
       "blockedBy": [
         "Static calendar launch runtime test execution pending",
-        "Provider-backed CalendarLaunchRun transaction plus calendar typecheck/tests and Postgres availability integration proof pending",
+        "Provider-backed CalendarLaunchRun transaction plus calendar typecheck/tests and Postgres availability integration proof beyond source-wired repositories pending",
         "Google OAuth/sync, signed ICS, timezone/provider matrix, and travel publish proof pending",
         "dashboard/public smoke, CI, and secret-safe artifact proof pending"
       ]
@@ -3054,13 +3054,13 @@
       "priority": "high",
       "verifies": [
         "GAP-055 signed ICS feed runtime matrix covers calendar typecheck/tests, web typecheck, route tests, token hash creation, token persistence, expiry/rotation, revocation UI/API, revoked-token route rejection, tenant/artist scope, durable access logs, private cache headers, Apple/Google/Outlook import smoke tests, CI evidence, and secret-safe artifacts",
-        "GAP-055 signed feed contract remains wired for hashed token creation, rotation/revocation planning, repository methods, durable access logging seam, local demo token fallback, private cache decisions, and travel ICS route evaluation",
-        "GAP-055 readiness keeps durable token repository/table, revocation dashboard UI, revoked-token DB route tests, persisted access logs, client import smoke artifacts, command evidence, CI, and redacted artifact proof explicit until evidence exists"
+        "GAP-055 signed feed contract remains wired for hashed token creation, rotation/revocation planning, hash-only dashboard revocation panel, repository methods, durable access logging seam, local demo token fallback, private cache decisions, and travel ICS route evaluation",
+        "GAP-055 readiness keeps durable token repository/table, revocation dashboard UI smoke evidence, revoked-token DB route tests, persisted access logs, client import smoke artifacts, command evidence, CI, and redacted artifact proof explicit until evidence exists"
       ],
       "blockedBy": [
         "Static signed ICS feed runtime test execution pending",
         "Durable token table/repository and revoked-token route rejection tests pending",
-        "Revocation dashboard UI, access-log persistence, and web typecheck proof pending",
+        "Revocation dashboard UI smoke, access-log persistence, and web typecheck proof pending",
         "Apple/Google/Outlook import smoke artifacts, CI evidence, and secret-safe artifact proof pending"
       ]
     },

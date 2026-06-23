@@ -118,6 +118,7 @@ describe("calendar availability", () => {
     const draft = buildSignedIcsFeedDraft({ tenantSlug: "mara-vale", artistSlug: "mara", expiresInDays: 30 });
 
     expect(draft.path).toContain("/calendar/mara/travel.ics");
+    expect(draft.tokenStorage).toBe("hashed_database_token");
     expect(draft.gapIds).toEqual(expect.arrayContaining(["GAP-055"]))
   });
 
@@ -204,7 +205,7 @@ describe("calendar availability", () => {
       tokenCreationImplemented: false,
       hashedTokenPersistenceConfigured: false,
       expiryRotationPersistenceConfigured: false,
-      revocationUiImplemented: false,
+      revocationUiImplemented: true,
       revocationApiImplemented: false,
       revokedTokenRouteRejectionTested: false,
       tenantArtistScopeEnforced: true,
@@ -246,7 +247,7 @@ describe("calendar availability", () => {
     ]);
     expect(allMissingEvidencePlan.requiredEvidence).toBe(signedIcsFeedRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Hashed signed-feed token persistence must be configured.");
-    expect(plan.blockers).toContain("Feed-token revocation UI/API proof must be captured before signed ICS feed readiness.");
+    expect(plan.blockers).not.toContain("Feed-token revocation UI/API proof must be captured before signed ICS feed readiness.");
     expect(plan.blockers).not.toContain("Feed-token revocation UI must be implemented.");
     expect(plan.blockers).toContain("Feed-token revocation API proof must be captured before signed ICS feed readiness.");
     expect(plan.blockers).not.toContain("Feed-token revocation API must be implemented.");
@@ -593,7 +594,7 @@ describe("calendar availability", () => {
       incrementalSyncTokenPersisted: false,
       invalidSyncTokenFullResyncTested: false,
       pushChannelRenewalImplemented: false,
-      pushWebhookHandlerImplemented: false,
+      pushWebhookHandlerImplemented: true,
       retryBackoffConfigured: false,
       idempotencyStoreConfigured: false,
       calendarAuditLogPersistenceConfigured: false,

@@ -32,6 +32,7 @@ describe("Google Calendar sync runtime contract", () => {
   const syncSource = readWorkspaceFile("apps/dashboard/lib/googleCalendarSync.ts");
   const syncStaticTest = readWorkspaceFile("apps/dashboard/tests/google-calendar-sync-static.test.ts");
   const syncRoute = readWorkspaceFile("apps/dashboard/app/api/calendar/google-sync/route.ts");
+  const webhookRoute = readWorkspaceFile("apps/web/app/api/webhooks/calendar/route.ts");
   const calendarRoute = readWorkspaceFile("apps/dashboard/app/api/calendar/route.ts");
   const readRouteStaticTest = readWorkspaceFile("apps/dashboard/tests/calendar-read-route-static.test.ts");
   const ciWorkflow = readWorkspaceFile(".github/workflows/ci.yml");
@@ -96,6 +97,7 @@ describe("Google Calendar sync runtime contract", () => {
       "apps/dashboard/lib/googleCalendarSync.ts",
       "apps/dashboard/lib/googleCalendarSyncRuntime.ts",
       "apps/dashboard/app/api/calendar/google-sync/route.ts",
+      "apps/web/app/api/webhooks/calendar/route.ts",
       "apps/dashboard/app/api/calendar/route.ts",
       "apps/dashboard/tests/google-calendar-sync-static.test.ts",
       "apps/dashboard/tests/google-calendar-sync-runtime-static.test.ts",
@@ -126,6 +128,10 @@ describe("Google Calendar sync runtime contract", () => {
     expect(syncRoute).toContain("provider-worker-required");
     expect(syncRoute).toContain("{ status: 202, headers: noStoreHeaders }");
     expect(syncRoute).not.toContain("{ status: 501, headers: noStoreHeaders }");
+    expect(webhookRoute).toContain("MISSING_GOOGLE_CALENDAR_WEBHOOK_HEADERS");
+    expect(webhookRoute).toContain("buildGoogleCalendarProviderSyncPlan");
+    expect(webhookRoute).toContain("PROVIDER_GOOGLE_CALENDAR_WEBHOOK_NOT_CONFIGURED");
+    expect(syncSource).toContain("pushWebhookHandlerImplemented: true");
     expect(calendarRoute).toContain("provider-worker-required");
     expect(readRouteStaticTest).toContain("Read APIs wired");
   });

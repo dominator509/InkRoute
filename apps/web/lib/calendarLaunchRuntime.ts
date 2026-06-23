@@ -637,7 +637,7 @@ export const calendarLaunchRuntimeReadiness = buildCalendarLaunchEvidencePlan({
   },
   calendarTypecheckPassed: false,
   calendarTestsPassed: false,
-  availabilityRepositoriesImplemented: false,
+  availabilityRepositoriesImplemented: true,
   availabilityPostgresIntegrationPassed: false,
   concurrentHoldRaceTestsPassed: false,
   tenantIsolationTestsPassed: false,

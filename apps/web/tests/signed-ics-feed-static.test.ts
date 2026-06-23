@@ -248,12 +248,12 @@ describe("signed ICS feed web contract", () => {
     expect(result.tokenHash).toBe(signedIcsFeedContract.demoTokenRecord.tokenHash);
   });
 
-  it("keeps launch readiness blocked on route tests, revocation UI, and calendar-client import proof", () => {
+  it("keeps launch readiness blocked on route tests, revoked-token DB rejection, and calendar-client import proof", () => {
     const readiness = buildSignedIcsFeedReadiness();
 
     expect(readiness.status).toBe("blocked");
     expect(readiness.blockers).toContain("@inkroute/calendar signed ICS tests must pass.");
-    expect(readiness.blockers).toContain("Feed-token revocation UI/API proof must be captured before signed ICS feed readiness.");
+    expect(readiness.blockers).not.toContain("Feed-token revocation UI/API proof must be captured before signed ICS feed readiness.");
     expect(readiness.blockers).not.toContain("Feed-token revocation UI must be implemented.");
     expect(readiness.blockers).toContain("Route tests must reject revoked tokens loaded from durable storage.");
     expect(readiness.blockers).toContain("Apple Calendar import smoke test must pass.");

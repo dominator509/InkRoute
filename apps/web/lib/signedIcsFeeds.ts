@@ -129,7 +129,7 @@ export function buildSignedIcsFeedReadiness(): SignedIcsFeedRuntimeReadinessPlan
     tokenCreationImplemented: true,
     hashedTokenPersistenceConfigured: true,
     expiryRotationPersistenceConfigured: true,
-    revocationUiImplemented: false,
+    revocationUiImplemented: true,
     revocationApiImplemented: true,
     revokedTokenRouteRejectionTested: false,
     tenantArtistScopeEnforced: true,

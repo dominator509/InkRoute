@@ -194,6 +194,7 @@ describe("calendar launch runtime contract", () => {
       calendarLaunchRequiredEvidence,
     );
     expect(calendarLaunchRuntimeReadiness.blockers).toContain("Google OAuth client, redirect URI, and scopes must be configured.");
+    expect(calendarLaunchRuntimeReadiness.blockers).not.toContain("Tenant-scoped calendar repositories are not configured.");
     expect(calendarLaunchRuntimeReadiness.blockers).not.toContain(
       "Signed ICS token hash, expiry, rotation, and revocation persistence must be configured.",
     );

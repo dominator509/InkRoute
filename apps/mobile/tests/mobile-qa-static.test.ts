@@ -16,6 +16,7 @@ describe("mobile QA execution static contract", () => {
   const bookingScreen = readWorkspaceFile("apps/mobile/src/screens/BookingRequestsScreen.tsx");
   const travelUpdateScreen = readWorkspaceFile("apps/mobile/src/screens/TravelUpdateScreen.tsx");
   const portfolioUploadScreen = readWorkspaceFile("apps/mobile/src/screens/PortfolioUploadScreen.tsx");
+  const renderContractTest = readWorkspaceFile("apps/mobile/tests/mobile-render-contract.test.ts");
 
   it("maps every registered screen to an app render contract", () => {
     for (const screen of mobileScreenRegistry) {
@@ -78,8 +79,18 @@ describe("mobile QA execution static contract", () => {
     expect(qaSource).toContain('"provider-receipt"');
     expect(qaSource).toContain('"redaction-review-required"');
     expect(qaSource).toContain("free of secrets, PII, medical details, payment data, and raw push tokens");
+    expect(qaSource).toContain("Keep apps/mobile/tests/mobile-render-contract.test.ts aligned with every registered screen");
     expect(qaSource).toContain("Retain each checklist bundle");
     expect(qaSource).toContain("Do not mark mobile runtime QA ready");
+  });
+
+  it("pins dependency-light executable screen element smoke coverage before simulator/device QA", () => {
+    expect(renderContractTest).toContain("createElement");
+    expect(renderContractTest).toContain("mobileScreenRenderContracts");
+    expect(renderContractTest).toContain("without simulator or device services");
+    for (const screen of mobileScreenRegistry) {
+      expect(renderContractTest).toContain(`screenId: "${screen.id}"`);
+    }
   });
 
   it("keeps App.tsx switch coverage aligned with the screen registry", () => {

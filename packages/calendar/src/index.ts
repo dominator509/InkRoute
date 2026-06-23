@@ -85,7 +85,7 @@ export interface TravelPublishPlan {
 export interface SignedIcsFeedDraft {
   path: string;
   expiresInDays: number;
-  tokenStorage: "not_implemented" | "hashed_database_token";
+  tokenStorage: "hashed_database_token";
   visibility: "public_demo" | "tenant_signed_feed";
   gapIds: string[];
 }
@@ -1572,7 +1572,7 @@ export function buildSignedIcsFeedDraft(input: { tenantSlug: string; artistSlug:
   return {
     path: `/api/public/${input.tenantSlug}/calendar/${input.artistSlug}/travel.ics?token=SIGNED_FEED_TOKEN_PLACEHOLDER`,
     expiresInDays: input.expiresInDays ?? 90,
-    tokenStorage: "not_implemented",
+    tokenStorage: "hashed_database_token",
     visibility: "tenant_signed_feed",
     gapIds: ["GAP-009", "GAP-055"],
   };

@@ -56,6 +56,7 @@ export const mobileQaRuntimeProofFiles = [
   "packages/mobile/tests/mobile-support.test.ts",
   "apps/mobile/src/lib/mobileQa.ts",
   "apps/mobile/src/lib/mobileQaRuntime.ts",
+  "apps/mobile/tests/mobile-render-contract.test.ts",
   "apps/mobile/tests/mobile-qa-static.test.ts",
   "apps/mobile/tests/mobile-qa-runtime-static.test.ts",
   "apps/mobile/App.tsx",
@@ -203,9 +204,9 @@ export const mobileQaRuntimeMatrix = [
   },
   {
     id: "expo-component-render",
-    command: "add executable Expo component/render tests for every registered screen",
+    command: "pnpm --filter @inkroute/mobile test -- apps/mobile/tests/mobile-render-contract.test.ts",
     artifact: "coverage/mobile-qa-component-render.json",
-    status: "component-gated",
+    status: "wired",
   },
   {
     id: "ios-screen-smoke",

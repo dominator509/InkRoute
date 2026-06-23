@@ -129,7 +129,7 @@ export function buildDashboardGoogleCalendarReadiness(): GoogleCalendarRuntimeRe
     incrementalSyncTokenPersisted: true,
     invalidSyncTokenFullResyncTested: false,
     pushChannelRenewalImplemented: true,
-    pushWebhookHandlerImplemented: false,
+    pushWebhookHandlerImplemented: true,
     retryBackoffConfigured: true,
     idempotencyStoreConfigured: true,
     calendarAuditLogPersistenceConfigured: true,

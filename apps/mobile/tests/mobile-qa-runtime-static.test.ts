@@ -204,6 +204,7 @@ describe("mobile QA runtime contract", () => {
       "packages/mobile/tests/mobile-support.test.ts",
       "apps/mobile/src/lib/mobileQa.ts",
       "apps/mobile/src/lib/mobileQaRuntime.ts",
+      "apps/mobile/tests/mobile-render-contract.test.ts",
       "apps/mobile/tests/mobile-qa-static.test.ts",
       "apps/mobile/tests/mobile-qa-runtime-static.test.ts",
       "apps/mobile/App.tsx",
@@ -222,6 +223,7 @@ describe("mobile QA runtime contract", () => {
     expect(ciWorkflow).toContain("mobile-qa-runtime-artifacts");
     expect(unitManifest).toContain("unit-mobile-qa-runtime-static");
     expect(gapTracker).toContain("apps/mobile/src/lib/mobileQaRuntime.ts");
+    expect(gapTracker).toContain("apps/mobile/tests/mobile-render-contract.test.ts");
     expect(gapTracker).toContain("GAP-048 is mobile-qa-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("buildMobileQaExecutionPlan");
     expect(gapTracker).toContain("mobileQaExecutionPolicy");
