@@ -11,6 +11,8 @@ describe("dashboard release route contract", () => {
   it("guards release reads with RBAC, tenant scope, and no-store cache policy", () => {
     expect(routeSource).toContain('assertPermission(actor, "release:read")');
     expect(routeSource).toContain('code: "FORBIDDEN"');
+    expect(routeSource).toContain("releaseTenantQuerySchema.safeParse");
+    expect(routeSource).toContain("Release query failed validation.");
     expect(routeSource).toContain("tenantId !== actor.tenantId");
     expect(routeSource).toContain('code: "TENANT_MISMATCH"');
     expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
@@ -30,9 +32,21 @@ describe("dashboard release route contract", () => {
   it("keeps write and provider automation boundaries explicit", () => {
     expect(routeSource).toContain('assertPermission(actor, "release:write")');
     expect(routeSource).toContain("releaseCreateInputSchema.safeParse");
+    expect(routeSource).toContain("releaseRollbackInputSchema.safeParse");
+    expect(routeSource).toContain("tx.idempotencyKey.upsert");
+    expect(routeSource).toContain("tx.idempotencyKey.update");
+    expect(routeSource).toContain("idempotencyKeyId");
+    expect(routeSource).toContain('dashboardMutationAction: "rollback_release"');
+    expect(routeSource).toContain("dashboard-release-rollback");
+    expect(routeSource).toContain('action: "release:rollback:intent"');
+    expect(routeSource).toContain("providerRollbackExecuted: false");
+    expect(routeSource).toContain("deploymentJobTriggered: false");
+    expect(routeSource).toContain("protectedEnvironmentTouched: false");
+    expect(routeSource).toContain("PROVIDER_RELEASE_ROLLBACK_NOT_CONFIGURED");
     expect(routeSource).toContain("RELEASE_UNIQUENESS_CONFLICT");
     expect(routeSource).toContain("PROVIDER_RELEASE_PERSISTENCE_NOT_CONFIGURED");
     expect(routeSource).toContain("localReleaseFallbackDisabled");
+    expect(routeSource).toContain("localReleaseRollbackFallbackDisabled");
     expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(routeSource).toContain("{ status: 201, headers: noStoreHeaders }");
     expect(routeSource).toContain("{ status: 409, headers: noStoreHeaders }");

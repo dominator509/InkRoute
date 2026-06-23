@@ -16,6 +16,46 @@ export interface PreferenceRepository {
   persistPreferenceAudit(input: { tenantId: string; plan: PreferenceMutationPlan; redactedMetadata: Record<string, unknown> }): Promise<void>;
 }
 
+export interface PreferencePrismaClient {
+  readonly preferenceToken: {
+    create(input: {
+      readonly data: { readonly tenantId: string; readonly clientId: string; readonly tokenHash: string; readonly expiresAt: Date };
+    }): Promise<unknown>;
+  };
+  readonly idempotencyKey: {
+    findUnique(input: {
+      readonly where: { readonly tenantId_scope_key: { readonly tenantId: string; readonly scope: string; readonly key: string } };
+    }): Promise<{ readonly metadata?: unknown } | null>;
+    create(input: {
+      readonly data: { readonly tenantId: string; readonly scope: string; readonly key: string; readonly status: "claimed"; readonly metadata: Record<string, unknown> };
+    }): Promise<unknown>;
+  };
+  readonly notificationChannelPreference: {
+    upsert(input: {
+      readonly where: { readonly tenantId_subjectType_subjectId_channel: { readonly tenantId: string; readonly subjectType: string; readonly subjectId: string; readonly channel: "email" | "sms" | "push" | "in_app" } };
+      readonly create: Record<string, unknown>;
+      readonly update: Record<string, unknown>;
+    }): Promise<unknown>;
+  };
+  readonly notificationSuppression: {
+    upsert(input: {
+      readonly where: { readonly tenantId_channel_destinationHash_reason: { readonly tenantId: string; readonly channel: "email" | "sms" | "push" | "in_app"; readonly destinationHash: string; readonly reason: string } };
+      readonly create: Record<string, unknown>;
+      readonly update: Record<string, unknown>;
+    }): Promise<unknown>;
+  };
+  readonly tenantNotificationSetting: {
+    upsert(input: {
+      readonly where: { readonly tenantId_channel: { readonly tenantId: string; readonly channel: "email" | "sms" | "push" | "in_app" } };
+      readonly create: Record<string, unknown>;
+      readonly update: Record<string, unknown>;
+    }): Promise<unknown>;
+  };
+  readonly auditLog: {
+    create(input: { readonly data: Record<string, unknown> }): Promise<unknown>;
+  };
+}
+
 export interface InMemoryPreferenceRepositoryState {
   readonly preferenceTokens: { readonly tenantId: string; readonly clientId: string; readonly tokenHash: string; readonly expiresAt: string }[];
   readonly idempotencyKeys: Map<string, { readonly tenantId: string; readonly action: PreferenceMutationAction }>;
@@ -71,6 +111,102 @@ export function buildRedactedPreferenceMetadata(metadata: Record<string, unknown
 
 function buildPreferenceIdempotencyKey(input: { readonly tenantId: string; readonly key: string }): string {
   return `${input.tenantId}:${input.key}`;
+}
+
+function metadataAction(metadata: unknown): PreferenceMutationAction | null {
+  if (!metadata || typeof metadata !== "object") return null;
+  const action = (metadata as { action?: unknown }).action;
+  return typeof action === "string" ? (action as PreferenceMutationAction) : null;
+}
+
+function preferenceChannelForAction(action: PreferenceMutationAction): "email" | "sms" | "push" | "in_app" {
+  if (action === "record_sms_stop" || action === "record_sms_start") return "sms";
+  return "email";
+}
+
+function preferenceSubjectId(plan: PreferenceMutationPlan): string {
+  const payload = plan.writes[0]?.payload as { clientId?: unknown } | undefined;
+  return typeof payload?.clientId === "string" ? payload.clientId : "anonymous";
+}
+
+function preferenceOptIn(plan: PreferenceMutationPlan): boolean {
+  if (plan.action === "unsubscribe_email" || plan.action === "record_sms_stop") return false;
+  return true;
+}
+
+export function createPrismaPreferenceRepository(client: PreferencePrismaClient): PreferenceRepository {
+  return {
+    async issuePreferenceToken(input) {
+      await client.preferenceToken.create({
+        data: {
+          tenantId: input.tenantId,
+          clientId: input.clientId,
+          tokenHash: input.tokenHash,
+          expiresAt: new Date(input.expiresAt),
+        },
+      });
+    },
+    async claimIdempotencyKey(input) {
+      const scope = "preference-center";
+      const existing = await client.idempotencyKey.findUnique({
+        where: { tenantId_scope_key: { tenantId: input.tenantId, scope, key: input.key } },
+      });
+      const existingAction = metadataAction(existing?.metadata);
+
+      if (!existing) {
+        await client.idempotencyKey.create({
+          data: {
+            tenantId: input.tenantId,
+            scope,
+            key: input.key,
+            status: "claimed",
+            metadata: { action: input.action },
+          },
+        });
+        return "claimed";
+      }
+
+      if (existingAction === input.action) return "duplicate";
+      throw new Error("PREFERENCE_CENTER_IDEMPOTENCY_KEY_CONFLICT");
+    },
+    async persistClientPreference(input) {
+      const channel = preferenceChannelForAction(input.plan.action);
+      const subjectId = preferenceSubjectId(input.plan);
+      const optedIn = preferenceOptIn(input.plan);
+      await client.notificationChannelPreference.upsert({
+        where: { tenantId_subjectType_subjectId_channel: { tenantId: input.tenantId, subjectType: "client", subjectId, channel } },
+        create: { tenantId: input.tenantId, subjectType: "client", subjectId, channel, optedIn, source: "preference_center" },
+        update: { optedIn, source: "preference_center" },
+      });
+    },
+    async persistSuppression(input) {
+      const channel = preferenceChannelForAction(input.plan.action);
+      const destinationHash = input.plan.tokenHash ?? `${input.tenantId}:${input.reason}`;
+      await client.notificationSuppression.upsert({
+        where: { tenantId_channel_destinationHash_reason: { tenantId: input.tenantId, channel, destinationHash, reason: input.reason } },
+        create: { tenantId: input.tenantId, channel, destinationHash, reason: input.reason, source: "preference_center", active: true },
+        update: { active: true, source: "preference_center" },
+      });
+    },
+    async persistTenantChannelSettings(input) {
+      const channel = preferenceChannelForAction(input.plan.action);
+      await client.tenantNotificationSetting.upsert({
+        where: { tenantId_channel: { tenantId: input.tenantId, channel } },
+        create: { tenantId: input.tenantId, channel, metadata: buildRedactedPreferenceMetadata({ action: input.plan.action }) },
+        update: { metadata: buildRedactedPreferenceMetadata({ action: input.plan.action }) },
+      });
+    },
+    async persistPreferenceAudit(input) {
+      await client.auditLog.create({
+        data: {
+          tenantId: input.tenantId,
+          action: `preference.${input.plan.action}`,
+          entityType: "PreferenceCenter",
+          metadata: buildRedactedPreferenceMetadata(input.redactedMetadata),
+        },
+      });
+    },
+  };
 }
 
 export function createInMemoryPreferenceRepository(
@@ -162,19 +298,19 @@ export function buildPreferenceCenterContract(): PreferenceCenterContract {
       unsubscribePageImplemented: true,
       preferenceApiImplemented: true,
       signedPreferenceTokensIssued: true,
-      preferenceTokenHashPersistenceAvailable: false,
+      preferenceTokenHashPersistenceAvailable: true,
       tokenExpiryEnforced: true,
       forgedTokenRejectionTested: false,
       listUnsubscribeHeadersConfigured: true,
-      emailUnsubscribePersistenceAvailable: false,
-      smsStopPersistenceAvailable: false,
-      smsStartPersistenceAvailable: false,
+      emailUnsubscribePersistenceAvailable: true,
+      smsStopPersistenceAvailable: true,
+      smsStartPersistenceAvailable: true,
       tenantChannelSettingsUiImplemented: true,
-      tenantChannelSettingsPersistenceAvailable: false,
+      tenantChannelSettingsPersistenceAvailable: true,
       transactionalVsMarketingControlsEnforced: true,
       suppressionAppliedBeforeSend: false,
-      auditLogPersistenceAvailable: false,
-      idempotencyStoreAvailable: false,
+      auditLogPersistenceAvailable: true,
+      idempotencyStoreAvailable: true,
       legalApprovedPreferenceCopyAvailable: false,
       routeApiTestsPassed: false,
     }),

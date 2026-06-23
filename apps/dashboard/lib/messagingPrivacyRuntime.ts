@@ -236,6 +236,8 @@ export const messagingPrivacyRuntimeProofFiles = [
   "apps/dashboard/tests/message-read-route-static.test.ts",
   "apps/dashboard/tests/messaging-privacy-static.test.ts",
   "apps/dashboard/tests/messaging-privacy-runtime-static.test.ts",
+  "packages/db/prisma/schema.prisma",
+  "packages/db/prisma/migrations/20260622192000_add_message_privacy_events/migration.sql",
   "testing/manifests/unit-test-manifest.json",
   ".github/workflows/ci.yml",
   "SECURITY.md",

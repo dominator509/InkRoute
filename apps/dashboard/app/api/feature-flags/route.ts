@@ -1,6 +1,7 @@
+import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { defaultFeatureFlags, evaluateFeatureFlags, type FeatureFlagDefinition } from "@inkroute/releases";
-import { featureFlagPatchInputSchema } from "@inkroute/validators";
+import { featureFlagPatchInputSchema, featureFlagReadQuerySchema } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
 import { assertPermissionWithTenantMembership } from "../dashboardAuthMembership";
 import { isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
@@ -52,6 +53,28 @@ type FeatureFlagRepository = {
     findMany(filter: FeatureFlagFindManyFilter): Promise<FeatureFlagRow[]>;
   };
 };
+
+function toJsonValue(value: unknown) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function hashFeatureFlagSubject(value: unknown): string {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+function resultRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+function resultString(value: unknown, key: string): string | null {
+  const result = resultRecord(value);
+  return typeof result?.[key] === "string" ? result[key] : null;
+}
+
+function resultBoolean(value: unknown, key: string): boolean | null {
+  const result = resultRecord(value);
+  return typeof result?.[key] === "boolean" ? result[key] : null;
+}
 
 function normalizeEnvironment(value: string | null): FeatureFlagChannel {
   const normalized = value?.toLowerCase().trim();
@@ -237,14 +260,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read feature flags." } }, { status: 403, headers: noStoreHeaders });
   }
 
-  const params = new URL(request.url).searchParams;
-  const tenantId = params.get("tenantId") ?? actor.tenantId;
+  const query = featureFlagReadQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
+  if (!query.success) {
+    return NextResponse.json(
+      { ok: false, error: { code: "VALIDATION_FAILED", message: "Feature flag query failed validation.", issues: query.error.flatten() } },
+      { status: 400, headers: noStoreHeaders },
+    );
+  }
+
+  const tenantId = query.data.tenantId ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
     return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query feature flags for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
-  const environment = normalizeEnvironment(params.get("environment"));
-  const role = params.get("role");
+  const environment = query.data.environment;
+  const role = query.data.role;
   const context = buildDecisionContext(membershipLookup.actorRole, tenantId, environment, role);
 
   if (actor.source === "local-fallback") {
@@ -466,7 +496,77 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const requestHash = hashFeatureFlagSubject({
+      tenantId,
+      key: input.key,
+      enabled: input.enabled,
+      scope: input.scope,
+      description: input.description ?? null,
+      rules: persistedRules,
+    });
+    const idempotencyKey =
+      request.headers.get("idempotency-key") ??
+      (typeof (body as Record<string, unknown>).idempotencyKey === "string" && (body as Record<string, unknown>).idempotencyKey.trim()
+        ? (body as Record<string, unknown>).idempotencyKey.trim()
+        : null) ??
+      `feature-flag-update:${tenantId}:${input.key}:${requestHash}`;
     const persisted = await prisma.$transaction(async (tx) => {
+      const membershipMetadata = buildTenantMembershipLookupMetadata({ ...membershipLookup, actorSource: membershipLookup.source });
+      const idempotency = await tx.idempotencyKey.upsert({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-feature-flag-update", key: idempotencyKey } },
+        create: {
+          tenantId,
+          scope: "dashboard-feature-flag-update",
+          key: idempotencyKey,
+          requestHash,
+          status: "claimed",
+          metadata: toJsonValue({
+            route: "/api/feature-flags",
+            action: "feature_flag:update",
+            key: input.key,
+            enabled: input.enabled,
+            scope: input.scope,
+            membershipLookup: membershipMetadata,
+            rawProviderPayloadStored: false,
+          }),
+        },
+        update: {
+          metadata: toJsonValue({
+            route: "/api/feature-flags",
+            action: "feature_flag:update",
+            key: input.key,
+            enabled: input.enabled,
+            scope: input.scope,
+            membershipLookup: membershipMetadata,
+            replayObserved: true,
+            rawProviderPayloadStored: false,
+          }),
+        },
+        select: { id: true, key: true, requestHash: true, status: true, result: true },
+      });
+      if (idempotency.requestHash !== requestHash) {
+        return { status: "idempotency_conflict" as const, idempotency };
+      }
+      if (idempotency.status === "completed") {
+        const previousEnabled = resultBoolean(idempotency.result, "previousEnabled");
+        const previousScope = resultString(idempotency.result, "previousScope");
+        return {
+          status: "replayed" as const,
+          featureFlag: {
+            id: resultString(idempotency.result, "featureFlagId") ?? input.key,
+            key: input.key,
+            enabled: resultBoolean(idempotency.result, "enabled") ?? input.enabled,
+            scope: (resultString(idempotency.result, "scope") as DbFeatureScope | null) ?? input.scope,
+            description: input.description ?? "Tenant-defined feature flag.",
+            rules: persistedRules,
+          },
+          audit: { id: resultString(idempotency.result, "auditId") },
+          existing: previousScope || previousEnabled !== null ? { enabled: previousEnabled, scope: previousScope } : null,
+          concurrency: buildOptimisticConcurrencyMetadata({ expectedVersion: expectedVersionHeader, currentVersion: resultString(idempotency.result, "featureFlagId"), recordId: resultString(idempotency.result, "featureFlagId") }),
+          membershipLookup: membershipMetadata,
+          idempotency,
+        };
+      }
       const existing = await tx.featureFlag.findUnique({
         where: { tenantId_key: { tenantId, key: input.key } },
         select: { id: true, scope: true, enabled: true, description: true },
@@ -475,7 +575,6 @@ export async function POST(request: NextRequest) {
       if (concurrency.conflict) {
         throw Object.assign(new Error("FEATURE_FLAG_CONCURRENCY_CONFLICT"), { code: "FEATURE_FLAG_CONCURRENCY_CONFLICT", concurrency });
       }
-      const membershipMetadata = buildTenantMembershipLookupMetadata({ ...membershipLookup, actorSource: membershipLookup.source });
       const featureFlag = await tx.featureFlag.upsert({
         where: { tenantId_key: { tenantId, key: input.key } },
         update: {
@@ -509,6 +608,8 @@ export async function POST(request: NextRequest) {
             previousScope: existing?.scope ?? null,
             concurrency,
             membershipLookup: membershipMetadata,
+            idempotencyKey,
+            idempotencyKeyId: idempotency.id,
             approvalState: "settings-write-approved",
             orchestrationHook: "feature-flag-runtime-invalidation-applied",
             invalidation: buildFeatureFlagRuntimeInvalidationMetadata({ tenantId, key: input.key }),
@@ -516,8 +617,39 @@ export async function POST(request: NextRequest) {
           },
         },
       });
-      return { featureFlag, audit, existing, concurrency, membershipLookup: membershipMetadata };
+      await tx.idempotencyKey.update({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-feature-flag-update", key: idempotencyKey } },
+        data: {
+          status: "completed",
+          result: toJsonValue({
+            featureFlagId: featureFlag.id,
+            auditId: audit.id,
+            key: input.key,
+            enabled: featureFlag.enabled,
+            scope: featureFlag.scope,
+            previousEnabled: existing?.enabled ?? null,
+            previousScope: existing?.scope ?? null,
+            rawProviderPayloadStored: false,
+          }),
+        },
+        select: { id: true },
+      });
+      return { status: "persisted" as const, featureFlag, audit, existing, concurrency, membershipLookup: membershipMetadata, idempotency };
     });
+
+    if (persisted.status === "idempotency_conflict") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: { code: "IDEMPOTENCY_CONFLICT", message: "Idempotency key was already used for a different feature-flag payload." },
+          idempotencyKeyId: persisted.idempotency.id,
+          gapIds: ["GAP-088", "GAP-090", "GAP-093"],
+        },
+        { status: 409, headers: noStoreHeaders },
+      );
+    }
 
     return NextResponse.json({
       ok: true,
@@ -532,6 +664,8 @@ export async function POST(request: NextRequest) {
         rules: persisted.featureFlag.rules ?? rules,
       },
       auditId: persisted.audit.id,
+      idempotencyKeyId: persisted.idempotency.id,
+      idempotencyReplay: persisted.status === "replayed",
       concurrency: persisted.concurrency,
       membershipLookup: persisted.membershipLookup,
       approval: { state: "settings-write-approved" },
@@ -546,7 +680,7 @@ export async function POST(request: NextRequest) {
           }
         : null,
       gapIds: ["GAP-088", "GAP-090", "GAP-093"],
-      boundary: "Feature-flag writes now persist with RBAC and audit metadata.",
+      boundary: "Feature-flag writes now persist with RBAC, idempotency, and audit metadata.",
     }, { status: 201, headers: noStoreHeaders });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "FEATURE_FLAG_CONCURRENCY_CONFLICT") {

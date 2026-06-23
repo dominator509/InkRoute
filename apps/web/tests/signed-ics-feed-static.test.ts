@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import {
   buildSignedIcsFeedReadiness,
   createInMemorySignedIcsFeedRepository,
+  createPrismaSignedIcsFeedRepository,
   evaluateSignedIcsFeedRequest,
   localDemoFeedToken,
   planSignedIcsFeedTokenCreation,
@@ -146,6 +147,92 @@ describe("signed ICS feed web contract", () => {
     });
 
     expect(revoked.decision.allowed).toBe(false);
+  });
+
+  it("maps the Prisma signed-feed repository to hash-only token storage and access logs", async () => {
+    const tokenRows: {
+      tenantSlug: string;
+      artistSlug: string;
+      tokenHash: string;
+      expiresAt: Date;
+      revokedAt: Date | null;
+    }[] = [];
+    const accessLogs: unknown[] = [];
+    const repository = createPrismaSignedIcsFeedRepository({
+      signedIcsFeedToken: {
+        create: async ({ data }) => {
+          const row = { ...data, revokedAt: null };
+          tokenRows.push(row);
+          return row;
+        },
+        findFirst: async ({ where }) =>
+          tokenRows.find((row) =>
+            row.tenantSlug === where.tenantSlug &&
+            row.artistSlug === where.artistSlug &&
+            row.tokenHash === where.tokenHash
+          ) ?? null,
+        update: async ({ where, data }) => {
+          const row = tokenRows.find((candidate) =>
+            candidate.tenantSlug === where.tenantSlug_artistSlug_tokenHash.tenantSlug &&
+            candidate.artistSlug === where.tenantSlug_artistSlug_tokenHash.artistSlug &&
+            candidate.tokenHash === where.tenantSlug_artistSlug_tokenHash.tokenHash
+          );
+          if (!row) throw new Error("token row missing");
+          row.revokedAt = data.revokedAt;
+          return row;
+        },
+        updateMany: async ({ where, data }) => {
+          for (const row of tokenRows) {
+            if (
+              row.tenantSlug === where.tenantSlug &&
+              row.artistSlug === where.artistSlug &&
+              row.tokenHash === where.tokenHash &&
+              row.revokedAt === where.revokedAt
+            ) {
+              row.revokedAt = data.revokedAt;
+            }
+          }
+          return { count: 1 };
+        },
+      },
+      signedIcsFeedAccessLog: {
+        create: async ({ data }) => {
+          accessLogs.push(data);
+          return data;
+        },
+      },
+    });
+    const creation = planSignedIcsFeedTokenCreation({
+      tenantSlug: "tenant-db",
+      artistSlug: "artist-db",
+      token: "raw-token-db",
+      expiresAt: "2026-07-01T00:00:00.000Z",
+      createdBy: "operator-db",
+    });
+
+    await repository.createToken({ ...creation, token: "raw-token-db", createdBy: "operator-db" });
+
+    expect(JSON.stringify(tokenRows)).not.toContain("raw-token-db");
+
+    const allowed = await evaluateSignedIcsFeedRequest({
+      token: "raw-token-db",
+      tenantSlug: "tenant-db",
+      artistSlug: "artist-db",
+      now: "2026-06-09T00:00:00.000Z",
+      repository,
+      userAgent: "calendar-client",
+      ipHash: "ip_hash",
+    });
+
+    expect(allowed.decision.allowed).toBe(true);
+    expect(accessLogs).toEqual([
+      expect.objectContaining({
+        tenantSlug: "tenant-db",
+        artistSlug: "artist-db",
+        allowed: true,
+        userAgent: "calendar-client",
+      }),
+    ]);
   });
 
   it("accepts the local demo token through the shared evaluator while durable storage is wired later", async () => {

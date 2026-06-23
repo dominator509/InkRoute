@@ -105,7 +105,10 @@ describe("email provider runtime contract", () => {
     expect(providerSource).toContain("buildRedactedEmailWebhookPayload");
     expect(providerSource).toContain("persistWebhookReconciliation");
     expect(providerSource).toContain("buildEmailProviderReconciliation");
+    expect(providerSource).toContain("verifyEmailWebhookSignature");
     expect(routeSource).toContain("buildEmailWebhookReadinessFromPayload");
+    expect(routeSource).toContain("verifyEmailWebhookSignature");
+    expect(routeSource).toContain("INVALID_EMAIL_PROVIDER_SIGNATURE");
     expect(routeSource).toContain("resend-signature");
     expect(routeSource).toContain("PROVIDER_EMAIL_WEBHOOK_RECONCILIATION_NOT_CONFIGURED");
     expect(routeSource).toContain("localEmailWebhookPersistenceDisabled");
@@ -121,7 +124,7 @@ describe("email provider runtime contract", () => {
     expect(emailProviderRuntimeReadiness.requiredEvidence).toBe(emailProviderRuntimeReadinessRequiredEvidence);
     expect(emailProviderRuntimeReadiness.requiredControls).toBe(emailProviderRuntimeReadinessRequiredControls);
     expect(emailProviderRuntimeReadiness.blockers).toContain("Real Resend SDK/API key must be configured in a secret store before provider-backed sends.");
-    expect(emailProviderRuntimeReadiness.blockers).toContain("Email webhook route must verify Resend/Svix signatures cryptographically against raw bodies.");
+    expect(emailProviderRuntimeReadiness.blockers).toContain("Email webhook route signature verification and invalid-signature rejection evidence must be captured.");
     expect(emailProviderRuntimeReadiness.blockers).toContain("Delivered, bounced, complained, and unsubscribe provider events must be tested against the sandbox.");
   });
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createReleaseCandidate, createRollbackPlan, demoReleaseCandidate, buildReleaseHealthChecks } from "@inkroute/releases";
-import { releaseCreateInputSchema } from "@inkroute/validators";
+import { releaseCreateInputSchema, releaseRollbackInputSchema, releaseTenantQuerySchema } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 import { assertPermissionWithTenantMembership } from "../dashboardAuthMembership";
@@ -11,6 +11,8 @@ import {
   releasePersistenceRbacArtifactPaths,
   resolveReleaseApprovalState,
 } from "../../../lib/releaseControlPlane";
+
+export const runtime = "nodejs";
 
 type PersistedReleaseSummary = {
   id: string;
@@ -73,6 +75,10 @@ function toReleaseSummary(record: { id: string; version: string; channel: string
   };
 }
 
+function toJsonValue(value: unknown) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 function buildReleaseFallback(actor: ReturnType<typeof resolveDashboardActor>) {
   return {
     ok: true,
@@ -107,8 +113,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read release records." } }, { status: 403, headers: noStoreHeaders });
   }
 
-  const params = new URL(request.url).searchParams;
-  const tenantId = params.get("tenantId") ?? actor.tenantId;
+  const query = releaseTenantQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
+  if (!query.success) {
+    return NextResponse.json(
+      { ok: false, error: { code: "VALIDATION_FAILED", message: "Release query failed validation.", issues: query.error.flatten() } },
+      { status: 400, headers: noStoreHeaders },
+    );
+  }
+
+  const tenantId = query.data.tenantId ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
     return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query release records for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
@@ -314,7 +327,47 @@ export async function POST(request: NextRequest) {
 
   try {
     const persistedChannel = normalizeDbChannel(input.channel);
+    const idempotencyKey =
+      request.headers.get("idempotency-key") ??
+      (typeof rawInput.idempotencyKey === "string" && rawInput.idempotencyKey.trim() ? rawInput.idempotencyKey.trim() : null) ??
+      `release-create:${tenantId}:${input.version}:${persistedChannel}`;
     const persisted = await prisma.$transaction(async (tx) => {
+      const idempotency = await tx.idempotencyKey.upsert({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-release-create", key: idempotencyKey } },
+        create: {
+          tenantId,
+          scope: "dashboard-release-create",
+          key: idempotencyKey,
+          status: "claimed",
+          metadata: toJsonValue({
+            route: "/api/releases",
+            action: "release:create",
+            version: input.version,
+            channel: input.channel,
+            persistedChannel,
+            commitSha: input.commitSha ?? null,
+            approvalState,
+            membershipLookup: membershipMetadata,
+            rawProviderPayloadStored: false,
+          }),
+        },
+        update: {
+          metadata: toJsonValue({
+            route: "/api/releases",
+            action: "release:create",
+            version: input.version,
+            channel: input.channel,
+            persistedChannel,
+            commitSha: input.commitSha ?? null,
+            approvalState,
+            membershipLookup: membershipMetadata,
+            replayObserved: true,
+            rawProviderPayloadStored: false,
+          }),
+        },
+        select: { id: true, key: true },
+      });
+
       const existingVersion = await tx.releaseRecord.findFirst({
         where: { tenantId, version: input.version },
         select: { id: true, version: true },
@@ -349,12 +402,31 @@ export async function POST(request: NextRequest) {
             approvalState,
             membershipLookup: membershipMetadata,
             concurrency,
+            idempotencyKey,
+            idempotencyKeyId: idempotency.id,
             orchestration: buildReleaseWorkflowOrchestrationMetadata({ approvalState, channel: input.channel, recordId: created.id }),
             artifactPaths: releasePersistenceRbacArtifactPaths,
           },
         },
       });
-      return { created, audit, concurrency };
+      await tx.idempotencyKey.update({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-release-create", key: idempotencyKey } },
+        data: {
+          status: "completed",
+          result: toJsonValue({
+            releaseRecordId: created.id,
+            auditId: audit.id,
+            version: input.version,
+            channel: input.channel,
+            persistedChannel,
+            approvalState,
+            concurrencyConflict: false,
+            rawProviderPayloadStored: false,
+          }),
+        },
+        select: { id: true },
+      });
+      return { created, audit, concurrency, idempotency };
     });
 
     const warning = input.channel === "staging" ? `Staging channel writes are persisted as ${STAGING_PERSISTENCE_CHANNEL} in ReleaseRecord until a native staging enum exists.` : undefined;
@@ -370,6 +442,7 @@ export async function POST(request: NextRequest) {
         persistedAt: persisted.created.createdAt.toISOString(),
       },
       auditId: persisted.audit.id,
+      idempotencyKeyId: persisted.idempotency.id,
       approval: { state: approvalState, membershipLookup: membershipMetadata },
       membershipLookup: membershipMetadata,
       concurrency: persisted.concurrency,
@@ -378,7 +451,7 @@ export async function POST(request: NextRequest) {
       rollback: createRollbackPlan(releaseCandidate, "0.11.0-phase11"),
       healthChecks: buildReleaseHealthChecks(releaseCandidate),
       ...(warning ? { warning } : {}),
-      boundary: "Release create path persists candidate and audit metadata under tenant and actor context.",
+      boundary: "Release create path persists idempotency-backed candidate and audit metadata under tenant and actor context; deployment automation remains external.",
     }, { status: 201, headers: noStoreHeaders });
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
@@ -416,6 +489,216 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { ok: false, error: { code: "RELEASE_UNIQUENESS_CONFLICT", message: "A release with that version already exists for this tenant." } },
         { status: 409, headers: noStoreHeaders },
+      );
+    }
+
+    throw error;
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  const actor = resolveDashboardActor(request);
+  let membershipLookup;
+  try {
+    membershipLookup = await assertPermissionWithTenantMembership(actor, "release:write");
+  } catch {
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to request release rollback." } }, { status: 403, headers: noStoreHeaders });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Release rollback request body must be valid JSON." } }, { status: 400, headers: noStoreHeaders });
+  }
+
+  const parsed = releaseRollbackInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { ok: false, error: { code: "VALIDATION_FAILED", message: "Release rollback payload failed validation.", issues: parsed.error.flatten() } },
+      { status: 400, headers: noStoreHeaders },
+    );
+  }
+
+  const input = parsed.data;
+  const tenantId = input.tenantId ?? actor.tenantId;
+  if (tenantId !== actor.tenantId) {
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot request release rollback for a different tenant." } }, { status: 403, headers: noStoreHeaders });
+  }
+
+  const rollbackSource = createReleaseCandidate({
+    version: input.fromVersion,
+    channel: input.channel,
+    surfaces: ["web", "dashboard", "mobile", "database"],
+    commitSha: `rollback-source-${input.fromVersion}`,
+    releaseNotes: [input.reason],
+    createdBy: "dashboard-operator",
+    createdAt: new Date().toISOString(),
+  });
+  const rollbackPlan = createRollbackPlan(rollbackSource, input.targetVersion);
+  const membershipMetadata = buildTenantMembershipLookupMetadata({ ...membershipLookup, actorSource: membershipLookup.source });
+  const idempotencyKey =
+    request.headers.get("idempotency-key") ??
+    input.idempotencyKey ??
+    `release-rollback:${tenantId}:${input.channel}:${input.fromVersion}:${input.targetVersion}`;
+
+  if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_RELEASE_ROLLBACK_NOT_CONFIGURED",
+            message: "Production rollback requests require DB-backed dashboard auth, idempotency, audit persistence, and protected-environment provider evidence; local fallback rollback intents are disabled.",
+            gapIds: ["GAP-038", "GAP-088", "GAP-093", "GAP-094"],
+          },
+          productionBoundary: { localReleaseRollbackFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId,
+        persistence: "local-fallback",
+        dashboardMutationAction: "rollback_release",
+        rollback: rollbackPlan,
+        providerRollbackExecuted: false,
+        deploymentJobTriggered: false,
+        protectedEnvironmentTouched: false,
+        boundary: "Local fallback returns a rollback intent contract only; provider rollback execution remains externally gated.",
+      },
+      { headers: noStoreHeaders },
+    );
+  }
+
+  try {
+    const persisted = await prisma.$transaction(async (tx) => {
+      const idempotency = await tx.idempotencyKey.upsert({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-release-rollback", key: idempotencyKey } },
+        create: {
+          tenantId,
+          scope: "dashboard-release-rollback",
+          key: idempotencyKey,
+          status: "claimed",
+          metadata: toJsonValue({
+            route: "/api/releases",
+            action: "release:rollback:intent",
+            fromVersion: input.fromVersion,
+            targetVersion: input.targetVersion,
+            channel: input.channel,
+            providerRollbackExecuted: false,
+            protectedEnvironmentTouched: false,
+          }),
+        },
+        update: {
+          metadata: toJsonValue({
+            route: "/api/releases",
+            action: "release:rollback:intent",
+            fromVersion: input.fromVersion,
+            targetVersion: input.targetVersion,
+            channel: input.channel,
+            replayObserved: true,
+            providerRollbackExecuted: false,
+            protectedEnvironmentTouched: false,
+          }),
+        },
+        select: { id: true, status: true, result: true },
+      });
+
+      if (idempotency.status === "completed" && idempotency.result) {
+        return { status: "replayed" as const, idempotency };
+      }
+
+      const sourceRecord = await tx.releaseRecord.findFirst({
+        where: { tenantId, version: input.fromVersion, channel: normalizeDbChannel(input.channel) },
+        select: { id: true, version: true, channel: true, commitSha: true, createdAt: true },
+      });
+      const audit = await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorUserId: actor.actorUserId,
+          action: "release:rollback:intent",
+          entityType: "ReleaseRecord",
+          entityId: sourceRecord?.id ?? null,
+          metadata: {
+            source: "dashboard-api",
+            dashboardMutationAction: "rollback_release",
+            fromVersion: input.fromVersion,
+            targetVersion: input.targetVersion,
+            channel: input.channel,
+            reason: input.reason,
+            membershipLookup: membershipMetadata,
+            rollbackPlan,
+            sourceRecordFound: Boolean(sourceRecord),
+            providerRollbackExecuted: false,
+            deploymentJobTriggered: false,
+            protectedEnvironmentTouched: false,
+            providerEvidenceRequired: ["protected environment approval", "deployment rollback job", "post-rollback release health"],
+          },
+        },
+        select: { id: true, createdAt: true },
+      });
+
+      await tx.idempotencyKey.update({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-release-rollback", key: idempotencyKey } },
+        data: {
+          status: "completed",
+          result: toJsonValue({
+            auditId: audit.id,
+            sourceReleaseRecordId: sourceRecord?.id ?? null,
+            fromVersion: input.fromVersion,
+            targetVersion: input.targetVersion,
+            providerRollbackExecuted: false,
+            deploymentJobTriggered: false,
+            protectedEnvironmentTouched: false,
+          }),
+        },
+        select: { id: true },
+      });
+
+      return { status: "created" as const, idempotency, audit, sourceRecord };
+    });
+
+    const replayResult =
+      persisted.status === "replayed" && persisted.idempotency.result && typeof persisted.idempotency.result === "object"
+        ? (persisted.idempotency.result as Record<string, unknown>)
+        : null;
+
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId,
+        persistence: "database",
+        dashboardMutationAction: "rollback_release",
+        idempotencyKeyId: persisted.idempotency.id,
+        idempotencyReplay: persisted.status === "replayed",
+        auditId: persisted.status === "created" ? persisted.audit.id : replayResult?.auditId ?? null,
+        rollback: rollbackPlan,
+        providerRollbackExecuted: false,
+        deploymentJobTriggered: false,
+        protectedEnvironmentTouched: false,
+        boundary: "Rollback intent is tenant-scoped, idempotency-backed, and audited locally; provider rollback execution remains externally gated.",
+      },
+      { headers: noStoreHeaders },
+    );
+  } catch (error) {
+    if (isDatabaseUnavailable(error)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: { code: "DATABASE_UNAVAILABLE", message: "Release rollback intent requires the dashboard database connection." },
+          gapIds: ["GAP-038", "GAP-088", "GAP-093", "GAP-094"],
+        },
+        { status: 503, headers: noStoreHeaders },
       );
     }
 

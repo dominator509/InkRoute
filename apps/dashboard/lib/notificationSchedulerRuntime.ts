@@ -230,6 +230,8 @@ export const notificationSchedulerRuntimeProofFiles = [
   "packages/notifications/package.json",
   "packages/notifications/src/index.ts",
   "packages/notifications/tests/delivery-plan.test.ts",
+  "packages/db/prisma/schema.prisma",
+  "packages/db/prisma/migrations/20260623093000_add_notification_worker_jobs/migration.sql",
   "apps/dashboard/lib/notificationScheduler.ts",
   "apps/dashboard/lib/notificationSchedulerRuntime.ts",
   "apps/dashboard/app/api/notifications/scheduler/route.ts",

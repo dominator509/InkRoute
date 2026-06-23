@@ -20,6 +20,7 @@ import {
   deploymentLaunchEvidenceRuntimeProofFiles,
   deploymentLaunchEvidenceRuntimeReadiness,
   deploymentLaunchEvidenceRunPersistenceContract,
+  deploymentLaunchEvidenceSurfaceContract,
   persistDeploymentLaunchEvidenceRun,
 } from "../lib/deploymentLaunchEvidenceRuntime";
 
@@ -67,6 +68,18 @@ describe("deployment launch evidence runtime contract", () => {
       "mobile-eas-preview-native-ota",
       "ci-sentry-release-upload",
       "rollback-launch-packet-artifact-safety",
+    ]);
+    expect(deploymentLaunchEvidenceSurfaceContract.map((entry) => entry.surfaceId)).toEqual([
+      "deployment-package-gates",
+      "provider-projects-and-preview",
+      "protected-environments-secrets-approval",
+      "production-dry-run-strict-env",
+      "database-storage-operations",
+      "mobile-eas-preview-native-ota",
+      "ci-sentry-release-upload",
+      "rollback-launch-packet",
+      "protected-approval-proof",
+      "provider-artifact-safety",
     ]);
     expect(deploymentLaunchEvidenceArtifactPaths).toContain("coverage/deployment-launch-evidence-runtime.json");
     expect(deploymentLaunchEvidenceArtifactPaths).toContain("coverage/deployment-provider-artifact-safety.json");
@@ -221,6 +234,35 @@ describe("deployment launch evidence runtime contract", () => {
     expect(executionPlan.mobileProviderExecutionAllowed).toBe(false);
     expect(executionPlan.ciExecutionAllowed).toBe(false);
     expect(executionPlan.productionExecutionAllowed).toBe(false);
+    expect(executionPlan.surfaceContract).toBe(deploymentLaunchEvidenceSurfaceContract);
+    expect(executionPlan.surfaceContract).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          surfaceId: "provider-projects-and-preview",
+          requiredCommand: "pnpm deploy:verify-provider-envs",
+          requiredArtifact: "coverage/deployment-provider-envs-redacted.json",
+          launchBoundary: "provider-env",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "protected-approval-proof",
+          requiredCommand: "GitHub protected environment approval proof",
+          requiredArtifact: "coverage/deployment-github-environment-approval-redacted.json",
+          launchBoundary: "production-approval",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "provider-artifact-safety",
+          requiredCommand: "pnpm deploy:verify-launch-evidence",
+          requiredArtifact: "coverage/deployment-provider-artifact-safety.json",
+          launchBoundary: "artifact-safety",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+      ]),
+    );
     expect(executionPlan.executionPolicy).toBe(deploymentLaunchEvidenceExecutionPolicy);
     expect(executionPlan.executionPolicy).toEqual({
       codexMayClassifyStaticDeploymentLaunchReadiness: true,
@@ -283,8 +325,10 @@ describe("deployment launch evidence runtime contract", () => {
     expect(gapTracker).toContain("deploymentLaunchEvidenceLocalCommands/deploymentLaunchEvidenceExternalCommands");
     expect(gapTracker).toContain("deploymentLaunchEvidenceExecutionPolicy");
     expect(gapTracker).toContain("deploymentLaunchEvidenceRequiredExternalEvidence");
+    expect(gapTracker).toContain("deploymentLaunchEvidenceSurfaceContract");
     expect(gapTracker).toContain("buildRedactedDeploymentLaunchEvidenceArtifact");
     expect(gapTracker).toContain("buildDeploymentLaunchEvidenceArtifactReview");
+    expect(gapTracker).toContain("Deployment launch evidence identity assertions pin exported local/external commands, artifacts, required external evidence, policy, surface contract, and readiness evidence helpers");
   });
 
   it("pins current deployment launch evidence proof files for GAP-014", () => {

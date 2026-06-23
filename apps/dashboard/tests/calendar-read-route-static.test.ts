@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const routeSource = readFileSync(join(process.cwd(), "apps/dashboard/app/api/calendar/route.ts"), "utf8");
+const holdRouteSource = readFileSync(join(process.cwd(), "apps/dashboard/app/api/calendar/holds/route.ts"), "utf8");
 const calendarPageSource = readFileSync(join(process.cwd(), "apps/dashboard/app/calendar/page.tsx"), "utf8");
 const authSource = readFileSync(join(process.cwd(), "packages/auth/src/index.ts"), "utf8");
 const typesSource = readFileSync(join(process.cwd(), "packages/types/src/index.ts"), "utf8");
@@ -63,5 +64,23 @@ describe("dashboard calendar read route contract", () => {
     expect(calendarPageSource).toContain("Google OAuth");
     expect(calendarPageSource).not.toContain("not sent to Google in this scaffold");
     expect(calendarPageSource).not.toContain("provider retry handling remain planned work");
+  });
+
+  it("persists calendar holds with idempotency proof and fail-closed production fallback", () => {
+    expect(holdRouteSource).toContain('export const runtime = "nodejs"');
+    expect(holdRouteSource).toContain('assertPermission(actor, "calendar:write")');
+    expect(holdRouteSource).toContain("buildAvailabilityPersistencePlan");
+    expect(holdRouteSource).toContain("tx.idempotencyKey.upsert");
+    expect(holdRouteSource).toContain("requestHash: true");
+    expect(holdRouteSource).toContain('idempotency.status === "completed"');
+    expect(holdRouteSource).toContain('status: "idempotency_conflict"');
+    expect(holdRouteSource).toContain('code: "IDEMPOTENCY_CONFLICT"');
+    expect(holdRouteSource).toContain("tx.availabilityWindow.create");
+    expect(holdRouteSource).toContain("tx.auditLog.create");
+    expect(holdRouteSource).toContain("tx.idempotencyKey.update");
+    expect(holdRouteSource).toContain("idempotencyKeyId");
+    expect(holdRouteSource).toContain("idempotencyReplay");
+    expect(holdRouteSource).toContain("localCalendarHoldFallbackDisabled");
+    expect(holdRouteSource).toContain("PROVIDER_CALENDAR_HOLD_PERSISTENCE_NOT_CONFIGURED");
   });
 });

@@ -2,7 +2,41 @@ import { Text, View } from "react-native";
 import { MobileCard } from "../components/MobileCard";
 import { MobilePill } from "../components/MobilePill";
 import { MobileScreen } from "../components/MobileScreen";
+import { mobileApiFetch, type MobileApiResponseEnvelope, type MobileApiSession } from "../lib/mobileApiClient";
 import { mobileTravelPublishContract, mobileTravelStops } from "../lib/mobileDemo";
+
+export interface MobileTravelStopSummary {
+  id: string;
+  city: string;
+  region: string;
+  bookingStatus: string;
+}
+
+export function loadMobileTravelStops(
+  session: MobileApiSession,
+  requestId = `mobile-travel:${session.tenantId}`,
+): Promise<MobileApiResponseEnvelope<MobileTravelStopSummary[]>> {
+  return mobileApiFetch<MobileTravelStopSummary[]>(session, {
+    domain: "travel",
+    method: "GET",
+    path: "/api/mobile/travel-stops",
+    requestId,
+  });
+}
+
+export function publishMobileTravelStop(
+  session: MobileApiSession,
+  input: { travelStopId: string; idempotencyKey: string; requestId?: string },
+): Promise<MobileApiResponseEnvelope<{ travelStopId: string; status: string }>> {
+  return mobileApiFetch<{ travelStopId: string; status: string }>(session, {
+    domain: "travel",
+    method: "PATCH",
+    path: `/api/mobile/travel-stops/${encodeURIComponent(input.travelStopId)}/publish`,
+    requestId: input.requestId ?? `mobile-travel-publish:${input.travelStopId}`,
+    idempotencyKey: input.idempotencyKey,
+    body: { action: "publish" },
+  });
+}
 
 export function TravelUpdateScreen() {
   return (

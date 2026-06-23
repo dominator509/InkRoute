@@ -34,6 +34,7 @@ import {
   canonicalDomainRuntimeRequiredEvidence,
   createCanonicalUrl,
   createSeoRouteRecord,
+  extractRenderedJsonLdScriptsFromHtml,
   publicWebLaunchEvidenceRequiredCommands,
   publicWebLaunchEvidenceRequiredEvidence,
   publicWebReadinessRequiredCommands,
@@ -344,6 +345,19 @@ describe("SEO engine helpers", () => {
     expect(failing.findings.some((finding) => finding.code === "DUPLICATE_SITEMAP_URL")).toBe(true);
     expect(failing.findings.some((finding) => finding.code === "CITY_CONTEXT_MISSING")).toBe(true);
     expect(failing.findings.some((finding) => finding.code === "JSON_LD_ITEM_TYPE_MISSING")).toBe(true);
+  });
+  it("extracts rendered JSON-LD scripts from HTML as shared package evidence", () => {
+    const extraction = extractRenderedJsonLdScriptsFromHtml(
+      '<html><head><script type="application/ld+json">[{&quot;@type&quot;:&quot;FAQPage&quot;},{"@type":"ImageObject"}]</script></head></html>',
+    );
+
+    expect(extraction.status).toBe("ready");
+    expect(extraction.scriptCount).toBe(1);
+    expect(extraction.graphs.map((graph) => graph["@type"])).toEqual(["FAQPage", "ImageObject"]);
+
+    const invalid = extractRenderedJsonLdScriptsFromHtml('<script type="application/ld+json">not-json</script>');
+    expect(invalid.status).toBe("blocked");
+    expect(invalid.blockers).toContain("One or more rendered JSON-LD scripts could not be parsed into object graph entries.");
   });
   it("summarizes structured-data crawl QA readiness across rendered JSON-LD extraction, rich-result checks, sitemap/canonical crawl, artifacts, and closeout evidence", () => {
     const plan = buildStructuredDataCrawlQaReadinessPlan({

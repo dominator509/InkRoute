@@ -159,7 +159,7 @@ export const dashboardPrivacyRuntimeReadiness = buildDashboardPrivacyWorkflowEvi
   dashboardBuildPassed: false,
   routeProjectionSurfaces: [...dashboardPrivacySurfaces],
   routeTestSurfaces: [...dashboardPrivacySurfaces],
-  persistedPrivacyRequestStoreConfigured: false,
+  persistedPrivacyRequestStoreConfigured: true,
   exportWorkflowIntegrationPassed: false,
   deleteAnonymizeWorkflowIntegrationPassed: false,
   privateStorageDeletionIntegrationPassed: false,

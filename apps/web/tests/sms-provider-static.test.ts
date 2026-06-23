@@ -1,5 +1,6 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import { createHmac } from "node:crypto";
 import { resolve } from "node:path";
 
 import {
@@ -12,6 +13,7 @@ import {
   sampleSmsContext,
   sanitizeSmsProviderSendResult,
   smsProviderContract,
+  verifySmsWebhookSignature,
 } from "../lib/smsProvider";
 
 const repoRoot = resolve(__dirname, "../../..");
@@ -168,6 +170,41 @@ describe("sms provider contract", () => {
     expect(readiness.blockers).toContain("ProviderEvent persistence must be available for SMS callback replay protection.");
   });
 
+  it("verifies Twilio webhook signatures from request URL and form body parameters", () => {
+    const requestUrl = "https://example.test/api/webhooks/sms";
+    const rawBody = "Body=STOP&From=%2B12065550142&MessageSid=SMdemo";
+    const authToken = "twilio-auth-token";
+    const baseString = `${requestUrl}BodySTOPFrom+12065550142MessageSidSMdemo`;
+    const signature = createHmac("sha1", authToken).update(baseString).digest("base64");
+
+    const verified = verifySmsWebhookSignature({
+      requestUrl,
+      rawBody,
+      signatureHeader: signature,
+      authToken,
+      contentType: "application/x-www-form-urlencoded",
+    });
+    const mismatched = verifySmsWebhookSignature({
+      requestUrl,
+      rawBody,
+      signatureHeader: "invalid",
+      authToken,
+      contentType: "application/x-www-form-urlencoded",
+    });
+
+    expect(verified).toMatchObject({
+      verifierConfigured: true,
+      twilioAuthTokenConfigured: true,
+      requestUrlValidated: true,
+      verified: true,
+      reason: "verified",
+    });
+    expect(mismatched).toMatchObject({
+      verified: false,
+      reason: "signature-mismatch",
+    });
+  });
+
   it("routes HELP and client replies into inbound thread reconciliation instead of suppression", () => {
     const reconciliation = buildSmsProviderReconciliation({
       eventId: "evt_help_demo",
@@ -186,6 +223,8 @@ describe("sms provider contract", () => {
     const routeSource = readFileSync(resolve(repoRoot, "apps/web/app/api/webhooks/sms/route.ts"), "utf8");
 
     expect(routeSource).toContain("buildSmsWebhookReadinessFromPayload");
+    expect(routeSource).toContain("verifySmsWebhookSignature");
+    expect(routeSource).toContain("INVALID_SMS_PROVIDER_SIGNATURE");
     expect(routeSource).toContain("buildSmsProviderReconciliation");
     expect(routeSource).toContain("smsProviderContract");
     expect(routeSource).toContain("PROVIDER_SMS_WEBHOOK_RECONCILIATION_NOT_CONFIGURED");
@@ -194,3 +233,4 @@ describe("sms provider contract", () => {
     expect(routeSource).toContain("requiredWrites");
   });
 });
+

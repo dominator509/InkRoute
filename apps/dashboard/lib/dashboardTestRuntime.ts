@@ -48,9 +48,12 @@ export const dashboardTestArtifactPaths = [
   "coverage/dashboard-test-ci-artifacts.json",
   "coverage/dashboard-test-branch-protection.json",
   "coverage/dashboard-test-flaky-policy.json",
+  "coverage/dashboard-test-run-payload.json",
   "coverage/dashboard-test-secret-safe-artifacts.json",
   "test-results/dashboard-test-runtime",
 ] as const;
+
+export type DashboardTestArtifactPath = (typeof dashboardTestArtifactPaths)[number];
 
 export const dashboardTestRuntimeProofFiles = [
   "apps/dashboard/lib/dashboardTestRuntime.ts",
@@ -100,10 +103,71 @@ export const dashboardTestEvidenceFlags = [
   "ciArtifactsUploaded",
   "branchProtectionRequiresDashboardGate",
   "flakyDashboardPolicyDocumented",
+  "dashboardTestRunPayloadCaptured",
   "secretSafeArtifactsCaptured",
 ] as const;
 
 export type DashboardTestEvidenceFlag = (typeof dashboardTestEvidenceFlags)[number];
+
+export interface DashboardTestSurfaceCoverageContractEntry {
+  readonly surfaceId: string;
+  readonly requiredCommand: (typeof dashboardTestRuntimeCommands)[number];
+  readonly requiredArtifact: DashboardTestArtifactPath;
+  readonly evidenceFlag: DashboardTestEvidenceFlag;
+  readonly runBoundary: "local-static" | "dashboard-runtime" | "browser-runtime" | "ci-provider";
+  readonly redactedArtifactRequired: true;
+}
+
+export const dashboardTestSurfaceCoverageContract: readonly DashboardTestSurfaceCoverageContractEntry[] = [
+  {
+    surfaceId: "route-read-contracts",
+    requiredCommand: "dashboard route rendering tests",
+    requiredArtifact: "coverage/dashboard-test-route-rendering.json",
+    evidenceFlag: "dashboardRouteRenderingTestsPassed",
+    runBoundary: "dashboard-runtime",
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "auth-rbac-tenant-denial",
+    requiredCommand: "dashboard auth/RBAC/tenant-isolation tests",
+    requiredArtifact: "coverage/dashboard-test-auth-rbac-tenant.json",
+    evidenceFlag: "dashboardRbacTenantIsolationTestsPassed",
+    runBoundary: "dashboard-runtime",
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "booking-mutation-lifecycle",
+    requiredCommand: "dashboard booking mutation lifecycle tests",
+    requiredArtifact: "coverage/dashboard-test-booking-mutation-lifecycle.json",
+    evidenceFlag: "dashboardMutationLifecycleTestsPassed",
+    runBoundary: "dashboard-runtime",
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "provider-safe-state-smoke",
+    requiredCommand: "dashboard provider-safe state tests",
+    requiredArtifact: "coverage/dashboard-test-provider-safe-states.json",
+    evidenceFlag: "dashboardProviderSafeStateTestsPassed",
+    runBoundary: "dashboard-runtime",
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "accessibility-keyboard",
+    requiredCommand: "dashboard keyboard navigation checks",
+    requiredArtifact: "coverage/dashboard-test-keyboard-navigation.json",
+    evidenceFlag: "dashboardKeyboardChecksPassed",
+    runBoundary: "browser-runtime",
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "ci-artifact-retention",
+    requiredCommand: "GitHub Actions dashboard test artifact upload",
+    requiredArtifact: "coverage/dashboard-test-ci-artifacts.json",
+    evidenceFlag: "ciArtifactsUploaded",
+    runBoundary: "ci-provider",
+    redactedArtifactRequired: true,
+  },
+] as const;
 
 export interface DashboardTestEvidenceInput {
   readonly commands?: readonly string[];
@@ -189,6 +253,12 @@ export const dashboardTestRuntimeMatrix = [
     artifact: "coverage/dashboard-test-ci-artifacts.json",
     status: "ci-gated",
   },
+  {
+    id: "run-payload",
+    command: "persist associated dashboard test run payload",
+    artifact: "coverage/dashboard-test-run-payload.json",
+    status: "ci-gated",
+  },
 ] as const satisfies readonly DashboardTestRuntimeMatrixEntry[];
 
 export const dashboardTestRuntimeReadiness = buildDashboardTestExecutionEvidencePlan({
@@ -257,6 +327,7 @@ export interface DashboardTestExecutionPlan {
   readonly localCommands: typeof dashboardTestLocalCommands;
   readonly externalCommands: typeof dashboardTestExternalCommands;
   readonly requiredExternalEvidence: typeof dashboardTestRuntimeRequiredExternalEvidence;
+  readonly surfaceCoverageContract: typeof dashboardTestSurfaceCoverageContract;
   readonly commandExecutionAllowed: false;
   readonly dashboardTestExecutionAllowed: false;
   readonly accessibilityExecutionAllowed: false;
@@ -273,6 +344,19 @@ export interface DashboardTestArtifactReview {
   readonly secretSafe: boolean;
 }
 
+export interface DashboardTestRunPayload {
+  readonly payloadId: "gap-041-dashboard-test-run-payload";
+  readonly requiredArtifact: "coverage/dashboard-test-run-payload.json";
+  readonly dashboardRuntimeEvidenceRequired: true;
+  readonly browserEvidenceRequired: true;
+  readonly ciEvidenceRequired: true;
+  readonly branchProtectionEvidenceRequired: true;
+  readonly localPersistenceExecutionAllowed: false;
+  readonly redactionRequired: true;
+  readonly requiredExternalEvidence: typeof dashboardTestRuntimeRequiredExternalEvidence;
+  readonly surfaceCoverageContract: typeof dashboardTestSurfaceCoverageContract;
+}
+
 export const dashboardTestRuntimeRequiredExternalEvidence = [
   "dashboard unit component and route rendering test output",
   "dashboard auth guard fixture test output",
@@ -285,6 +369,7 @@ export const dashboardTestRuntimeRequiredExternalEvidence = [
   "CI dashboard test artifact upload proof",
   "branch protection dashboard required-check proof",
   "flaky dashboard test policy evidence",
+  "persisted dashboard test run payload",
   "secret-safe dashboard test artifact review",
 ] as const;
 
@@ -326,6 +411,7 @@ export const buildDashboardTestExecutionPlan = (): DashboardTestExecutionPlan =>
   localCommands: dashboardTestLocalCommands,
   externalCommands: dashboardTestExternalCommands,
   requiredExternalEvidence: dashboardTestRuntimeRequiredExternalEvidence,
+  surfaceCoverageContract: dashboardTestSurfaceCoverageContract,
   commandExecutionAllowed: false,
   dashboardTestExecutionAllowed: false,
   accessibilityExecutionAllowed: false,
@@ -333,6 +419,19 @@ export const buildDashboardTestExecutionPlan = (): DashboardTestExecutionPlan =>
   ciExecutionAllowed: false,
   branchProtectionExecutionAllowed: false,
   executionPolicy: dashboardTestRuntimeExecutionPolicy,
+});
+
+export const buildDashboardTestRunPayload = (): DashboardTestRunPayload => ({
+  payloadId: "gap-041-dashboard-test-run-payload",
+  requiredArtifact: "coverage/dashboard-test-run-payload.json",
+  dashboardRuntimeEvidenceRequired: true,
+  browserEvidenceRequired: true,
+  ciEvidenceRequired: true,
+  branchProtectionEvidenceRequired: true,
+  localPersistenceExecutionAllowed: false,
+  redactionRequired: true,
+  requiredExternalEvidence: dashboardTestRuntimeRequiredExternalEvidence,
+  surfaceCoverageContract: dashboardTestSurfaceCoverageContract,
 });
 
 const dashboardTestSensitiveArtifactKeyPattern =

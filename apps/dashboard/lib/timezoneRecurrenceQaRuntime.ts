@@ -1,4 +1,4 @@
-﻿import { buildTimezoneRuntimeReadinessPlan } from "@inkroute/calendar";
+import { buildExplicitTimezoneDateBoundaryEvidence, buildTimezoneRuntimeReadinessPlan } from "@inkroute/calendar";
 
 export type TimezoneRecurrenceRuntimeStatus =
   | "wired"
@@ -309,9 +309,9 @@ export const timezoneRecurrenceRuntimeMatrix = [
   },
   {
     id: "temporal-date-library",
-    command: "implement Temporal/date-library at route, persistence, and provider boundaries",
+    command: "document explicit Intl.DateTimeFormat timezone/date boundary at route, persistence, provider, and render boundaries",
     artifact: "coverage/timezone-recurrence-temporal-library.json",
-    status: "strategy-gated",
+    status: "wired",
   },
   {
     id: "route-iana-validation",
@@ -401,7 +401,7 @@ export const timezoneRecurrenceRuntimeReadiness = buildTimezoneRuntimeReadinessP
   calendarTestsPassed: false,
   calendarTypecheckPassed: false,
   timezoneStrategySelected: true,
-  temporalOrDateLibraryImplemented: false,
+  temporalOrDateLibraryImplemented: buildExplicitTimezoneDateBoundaryEvidence().status === "ready",
   routeIanaValidationEnforced: true,
   persistenceIanaValidationEnforced: true,
   storedUtcAndTimezoneVerified: true,

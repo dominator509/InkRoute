@@ -98,6 +98,7 @@ export const documentationAuditRuntimeArtifactPaths = [
   "coverage/documentation-legal-review-redacted.json",
   "coverage/documentation-stale-provider-status-redacted.json",
   "coverage/documentation-ci-quality-docs.json",
+  "coverage/documentation-audit-redacted-evidence-bundle.json",
   "test-results/documentation-audit-runtime",
 ] as const;
 
@@ -219,11 +220,26 @@ export interface DocumentationAuditRuntimeArtifactReview {
   readonly externalEvidenceRequired: typeof documentationAuditRuntimeRequiredExternalEvidence;
 }
 
+export interface DocumentationAuditRuntimeRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly sourceArtifactPath: DocumentationAuditRuntimeArtifact | string;
+  readonly artifactPath: "coverage/documentation-audit-redacted-evidence-bundle.json";
+  readonly review: DocumentationAuditRuntimeArtifactReview;
+  readonly requiredArtifacts: typeof documentationAuditRuntimeArtifactPaths;
+  readonly externalEvidenceRequired: typeof documentationAuditRuntimeRequiredExternalEvidence;
+  readonly ciQualityDocsExecutionAllowed: false;
+  readonly providerReviewExecutionAllowed: false;
+  readonly legalReviewExecutionAllowed: false;
+  readonly staleProviderStatusExecutionAllowed: false;
+  readonly persistenceExecutionAllowed: false;
+}
+
 export const documentationAuditRuntimeRequiredExternalEvidence = [
   "CI quality-docs evidence must be captured from GitHub Actions with run URLs and logs redacted.",
   "Provider readiness review evidence must include redacted labels only and keep provider resource IDs out of repository artifacts.",
   "Legal readiness review evidence must redact attorney/reviewer contact details and privileged communications.",
   "Stale provider status proof and DocumentationAuditRun persistence must remain external until approved evidence exists.",
+  "Redacted documentation audit evidence bundle must omit raw CI logs, provider resource IDs, reviewer contacts, privileged communications, stale-provider URLs, and run URLs.",
 ] as const;
 
 export type DocumentationAuditRuntimeExecutionPolicy = {
@@ -333,6 +349,25 @@ export function buildDocumentationAuditRuntimeArtifactReview(
   };
 }
 
+export function buildDocumentationAuditRuntimeRedactedEvidenceBundle(
+  artifactPath: DocumentationAuditRuntimeArtifact | string,
+  artifact: unknown,
+): DocumentationAuditRuntimeRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    sourceArtifactPath: artifactPath,
+    artifactPath: "coverage/documentation-audit-redacted-evidence-bundle.json",
+    review: buildDocumentationAuditRuntimeArtifactReview(artifactPath, artifact),
+    requiredArtifacts: documentationAuditRuntimeArtifactPaths,
+    externalEvidenceRequired: documentationAuditRuntimeRequiredExternalEvidence,
+    ciQualityDocsExecutionAllowed: false,
+    providerReviewExecutionAllowed: false,
+    legalReviewExecutionAllowed: false,
+    staleProviderStatusExecutionAllowed: false,
+    persistenceExecutionAllowed: false,
+  };
+}
+
 export const documentationAuditRuntimeMatrix = [
   {
     id: "markdown-link-path-audit",
@@ -380,6 +415,12 @@ export const documentationAuditRuntimeMatrix = [
     id: "stale-provider-status-proof",
     command: "stale provider status proof review",
     artifact: "coverage/documentation-stale-provider-status-redacted.json",
+    status: "evidence-gated",
+  },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted documentation audit evidence bundle",
+    artifact: "coverage/documentation-audit-redacted-evidence-bundle.json",
     status: "evidence-gated",
   },
 ] as const satisfies readonly DocumentationAuditRuntimeMatrixEntry[];

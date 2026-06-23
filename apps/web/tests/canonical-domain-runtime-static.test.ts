@@ -3,9 +3,13 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  buildSeoRedirectRulesFromRows,
+  buildTenantCanonicalDomainsFromRows,
   canonicalUrlForPath,
+  createPrismaCanonicalDomainRepository,
   createInMemoryCanonicalDomainRepository,
   evaluateCanonicalRequestWithRepository,
+  evaluateCanonicalRequestWithPersistedRepository,
   evaluatePublicCanonicalRequest,
   publicSeoRedirectRules,
   publicTenantCanonicalDomains,
@@ -81,6 +85,59 @@ describe("GAP-072 canonical/domain runtime wiring", () => {
         destinationPath: "/styles/blackwork",
       },
     ]);
+  });
+
+  it("maps Prisma TenantDomain and SeoRedirect rows into tenant-scoped canonical policy", async () => {
+    const tenantDomains = buildTenantCanonicalDomainsFromRows([
+      { tenantId: "tenant-db", hostname: "www.db.example", status: "verified", isPrimary: false },
+      { tenantId: "tenant-db", hostname: "db.example", status: "verified", isPrimary: true },
+      { tenantId: "tenant-db", hostname: "pending.db.example", status: "pending", isPrimary: false },
+    ]);
+    const redirects = buildSeoRedirectRulesFromRows([
+      { tenantId: "tenant-db", fromPath: "/blackwork", toPath: "/styles/blackwork", statusCode: 308, isActive: true },
+      { tenantId: "tenant-db", fromPath: "/inactive", toPath: "/styles/blackwork", statusCode: 301, isActive: false },
+    ]);
+
+    expect(tenantDomains).toEqual([
+      {
+        tenantId: "tenant-db",
+        tenantSlug: "tenant-db",
+        primaryHost: "db.example",
+        allowedHosts: ["db.example", "www.db.example"],
+        forceHttps: true,
+      },
+    ]);
+    expect(redirects).toEqual([
+      { tenantId: "tenant-db", fromPath: "/blackwork", toPath: "/styles/blackwork", statusCode: 308, isActive: true },
+    ]);
+
+    const repository = createPrismaCanonicalDomainRepository({
+      tenantDomain: {
+        findMany: async () => [
+          { tenantId: "tenant-db", hostname: "db.example", status: "verified", isPrimary: true },
+          { tenantId: "tenant-db", hostname: "www.db.example", status: "verified", isPrimary: false },
+        ],
+      },
+      seoRedirect: {
+        findMany: async () => [
+          { tenantId: "tenant-db", fromPath: "/blackwork", toPath: "/styles/blackwork", statusCode: 308, isActive: true },
+        ],
+      },
+    });
+
+    const redirect = await evaluateCanonicalRequestWithPersistedRepository(repository, {
+      tenantId: "tenant-db",
+      tenantSlug: "tenant-db",
+      host: "www.db.example",
+      path: "/blackwork",
+      protocol: "http",
+    });
+
+    expect(redirect.policy.hostAllowed).toBe(true);
+    expect(redirect.policy.shouldForceHttps).toBe(true);
+    expect(redirect.policy.shouldRedirectHost).toBe(true);
+    expect(redirect.statusCode).toBe(308);
+    expect(redirect.destinationPath).toBe("/styles/blackwork");
   });
 
   it("reviews canonical/domain artifacts with recursive DNS verification, provider token, and PII redaction", () => {
@@ -204,9 +261,6 @@ describe("GAP-072 canonical/domain runtime wiring", () => {
     );
     expect(canonicalDomainRuntimeReadiness.blockers).toEqual(
       expect.arrayContaining([
-        "TenantDomain repository runtime evidence must be captured before canonical-domain readiness.",
-        "SeoRedirect repository runtime evidence must be captured before canonical-domain readiness.",
-        "Persisted SeoRedirect records must execute at runtime.",
         "Runtime sitemap must exclude draft, archived, private, and noindex content.",
         "Custom-domain route tests must pass.",
         "Duplicate canonical runtime tests must pass.",
@@ -215,6 +269,9 @@ describe("GAP-072 canonical/domain runtime wiring", () => {
     );
     expect(canonicalDomainRuntimeReadiness.blockers).not.toContain("Tenant domain repository must be implemented.");
     expect(canonicalDomainRuntimeReadiness.blockers).not.toContain("SeoRedirect repository must be implemented.");
+    expect(canonicalDomainRuntimeReadiness.blockers).not.toContain("TenantDomain repository runtime evidence must be captured before canonical-domain readiness.");
+    expect(canonicalDomainRuntimeReadiness.blockers).not.toContain("SeoRedirect repository runtime evidence must be captured before canonical-domain readiness.");
+    expect(canonicalDomainRuntimeReadiness.blockers).not.toContain("Persisted SeoRedirect records must execute at runtime.");
   });
 
   it("classifies GAP-072 canonical/domain evidence as blocked until every artifact is captured", () => {
@@ -276,6 +333,7 @@ describe("GAP-072 canonical/domain runtime wiring", () => {
     expect(unitManifest).toContain("unit-web-canonical-domain-runtime-static");
     expect(unitManifest).toContain("apps/web/lib/canonicalDomainRuntimeEvidence.ts");
     expect(gapTracker).toContain("local in-memory canonical domain repository contract");
+    expect(gapTracker).toContain("createPrismaCanonicalDomainRepository");
     expect(gapTracker).toContain("canonicalDomainDecisionRequiredEvidence");
     expect(gapTracker).toContain("buildCanonicalDomainExecutionPlan");
     expect(gapTracker).toContain("buildRedactedCanonicalDomainArtifact");
@@ -299,6 +357,7 @@ describe("GAP-072 canonical/domain runtime wiring", () => {
       "apps/web/app/styles/[styleSlug]/page.tsx",
       "apps/web/tests/sitemap-route.test.ts",
       "apps/web/tests/canonical-domain-runtime-static.test.ts",
+      "packages/db/src/prisma.ts",
       "packages/db/prisma/schema.prisma",
       ".github/workflows/ci.yml",
       "testing/manifests/unit-test-manifest.json",

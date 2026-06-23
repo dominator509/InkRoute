@@ -23,4 +23,9 @@ describe('dashboard permission resolver', () => {
     expect(resolveDashboardPermissionForRoute('/bookings/123', 'DELETE')).toBe('booking:write');
     expect(resolveDashboardPermissionForRoute('/calendar/event')).toBe('calendar:read');
   });
+
+  it('defaults unknown mutating methods to read-only tenant scope', () => {
+    expect(resolveDashboardPermissionForRoute('/dashboard/bookings', 'TRACE')).toBe('booking:read');
+    expect(resolveDashboardPermissionForRoute('/dashboard/unknown', 'TRACE')).toBe('tenant:read');
+  });
 });

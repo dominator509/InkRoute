@@ -142,6 +142,7 @@ export const runtimeEvidenceArtifactPaths = [
   "coverage/runtime-evidence-dashboard-build-output.txt",
   "coverage/runtime-evidence-ci-job.json",
   "coverage/runtime-evidence-production-blockers.json",
+  "coverage/runtime-evidence-redacted-evidence-bundle.json",
   "test-results/runtime-evidence-matrix",
 ] as const;
 
@@ -190,6 +191,7 @@ export interface RuntimeEvidenceDecisionInput {
   readonly redactedEvidenceLabelsCaptured: boolean;
   readonly productionBlockersVisible: boolean;
   readonly runtimeEvidenceRunPersisted: boolean;
+  readonly redactedEvidenceBundleCaptured: boolean;
   readonly passedRequirementIds: readonly RuntimeEvidenceRequirementId[];
   readonly capturedArtifacts: readonly RuntimeEvidenceArtifact[];
   readonly completedCommands: readonly RuntimeEvidenceCommand[];
@@ -235,6 +237,15 @@ export interface RuntimeEvidenceArtifactReview {
   readonly safeForTracker: boolean;
 }
 
+export interface RuntimeEvidenceRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly artifactPath: "coverage/runtime-evidence-redacted-evidence-bundle.json";
+  readonly review: RuntimeEvidenceArtifactReview;
+  readonly requiredArtifacts: typeof runtimeEvidenceArtifactPaths;
+  readonly requiredExternalEvidence: typeof runtimeEvidenceRequiredExternalEvidence;
+  readonly providerExecutionAllowed: false;
+}
+
 export const runtimeEvidenceLocalCommands = [
   "runtime evidence report keeps production blockers visible",
 ] as const satisfies readonly RuntimeEvidenceCommand[];
@@ -258,6 +269,7 @@ export const runtimeEvidenceRequiredExternalEvidence = [
   "GitHub Actions Phase 18 runtime readiness job URL and conclusion.",
   "Durable RuntimeEvidenceRun persistence row captured from the target database.",
   "Production blockers remain visible in runtime evidence until resolved.",
+  "Redacted runtime evidence bundle captured without raw command logs, CI URLs, database URLs, tokens, or operator identifiers.",
 ] as const;
 
 export const runtimeEvidenceLocalArtifacts = [
@@ -276,6 +288,7 @@ export const runtimeEvidenceExternalArtifacts = [
   "coverage/runtime-evidence-web-build-output.txt",
   "coverage/runtime-evidence-dashboard-build-output.txt",
   "coverage/runtime-evidence-ci-job.json",
+  "coverage/runtime-evidence-redacted-evidence-bundle.json",
   "test-results/runtime-evidence-matrix",
 ] as const satisfies readonly RuntimeEvidenceArtifact[];
 
@@ -397,6 +410,13 @@ export const runtimeEvidenceMatrix = [
     status: "production-blocker-visible",
     requiredForProduction: true,
   },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted runtime evidence bundle",
+    artifact: "coverage/runtime-evidence-redacted-evidence-bundle.json",
+    status: "ci-gated",
+    requiredForProduction: true,
+  },
 ] as const satisfies readonly RuntimeEvidenceMatrixEntry[];
 
 const runtimeEvidenceRequirements = runtimeEvidenceMatrix
@@ -465,6 +485,9 @@ export function buildRuntimeEvidenceDecision(input: RuntimeEvidenceDecisionInput
   }
   if (!input.runtimeEvidenceRunPersisted) {
     blockers.push("RuntimeEvidenceRun persistence row must be captured for durable auditability.");
+  }
+  if (!input.redactedEvidenceBundleCaptured) {
+    blockers.push("Redacted runtime evidence bundle must be captured.");
   }
   if (missingRequirementIds.length > 0) {
     blockers.push("Every required runtime evidence requirement must have passing evidence.");
@@ -568,6 +591,19 @@ export function buildRuntimeEvidenceArtifactReview(artifact: unknown): RuntimeEv
     redactions,
     requiredExternalEvidence: runtimeEvidenceRequiredExternalEvidence,
     safeForTracker: true,
+  };
+}
+
+export function buildRuntimeEvidenceRedactedEvidenceBundle(
+  artifact: unknown,
+): RuntimeEvidenceRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    artifactPath: "coverage/runtime-evidence-redacted-evidence-bundle.json",
+    review: buildRuntimeEvidenceArtifactReview(artifact),
+    requiredArtifacts: runtimeEvidenceArtifactPaths,
+    requiredExternalEvidence: runtimeEvidenceRequiredExternalEvidence,
+    providerExecutionAllowed: false,
   };
 }
 

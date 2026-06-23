@@ -29,6 +29,7 @@ describe("availability persistence runtime contract", () => {
   const calendarTests = readWorkspaceFile("packages/calendar/tests/availability-conflicts.test.ts");
   const persistenceSource = readWorkspaceFile("apps/dashboard/lib/availabilityPersistence.ts");
   const persistenceStaticTest = readWorkspaceFile("apps/dashboard/tests/availability-persistence-static.test.ts");
+  const availabilityRoute = readWorkspaceFile("apps/dashboard/app/api/availability/route.ts");
   const holdRoute = readWorkspaceFile("apps/dashboard/app/api/calendar/holds/route.ts");
   const calendarRoute = readWorkspaceFile("apps/dashboard/app/api/calendar/route.ts");
   const readRouteStaticTest = readWorkspaceFile("apps/dashboard/tests/calendar-read-route-static.test.ts");
@@ -106,6 +107,28 @@ describe("availability persistence runtime contract", () => {
     expect(persistenceStaticTest).toContain("covers every persisted availability mutation action");
     expect(persistenceStaticTest).toContain("executes a local availability repository contract");
     expect(persistenceStaticTest).toContain("blocks slot holds when local persisted conflict and existing hold lookups find rows");
+    expect(availabilityRoute).toContain('export const runtime = "nodejs"');
+    expect(availabilityRoute).toContain("dashboard-availability-create");
+    expect(availabilityRoute).toContain("const availabilityTransactionOptions");
+    expect(availabilityRoute).toContain('isolationLevel: "Serializable"');
+    expect(availabilityRoute).toContain("}, availabilityTransactionOptions)");
+    expect(availabilityRoute).toContain("tx.idempotencyKey.upsert");
+    expect(availabilityRoute).toContain("idempotency.status === \"completed\"");
+    expect(availabilityRoute).toContain("tx.availabilityWindow.findFirst");
+    expect(availabilityRoute).toContain("startsAt: { lt: endsAt }");
+    expect(availabilityRoute).toContain("endsAt: { gt: startsAt }");
+    expect(availabilityRoute).toContain("availability_conflict");
+    expect(availabilityRoute).toContain("AVAILABILITY_CONFLICT");
+    expect(availabilityRoute).toContain("tx.availabilityWindow.create");
+    expect(availabilityRoute).toContain("tx.auditLog.create");
+    expect(availabilityRoute).toContain("tx.idempotencyKey.update");
+    expect(availabilityRoute).toContain("rawNotesStoredInResult: false");
+    expect(availabilityRoute).toContain("persistedOverlapGuardRequired: true");
+    expect(availabilityRoute).toContain("persistedOverlapGuardApplied: true");
+    expect(availabilityRoute).toContain("concurrentHoldProtectionConfigured: true");
+    expect(availabilityRoute).toContain("concurrentHoldProtectionVerified: false");
+    expect(availabilityRoute).toContain("idempotencyKeyId");
+    expect(availabilityRoute).toContain("idempotencyReplay");
     expect(holdRoute).toContain("AVAILABILITY_HOLD_BLOCKED");
     expect(holdRoute).toContain("{ status: 202, headers: noStoreHeaders }");
     expect(holdRoute).not.toContain("{ status: 501, headers: noStoreHeaders }");
@@ -116,7 +139,7 @@ describe("availability persistence runtime contract", () => {
   it("keeps transaction, persisted conflict, concurrent hold, tenant isolation, seeded DB, and CI blockers explicit", () => {
     expect(availabilityPersistenceRuntimeReadiness.status).toBe("blocked");
     expect(availabilityPersistenceRuntimeReadiness.missingScripts).toEqual([]);
-    expect(availabilityPersistenceRuntimeReadiness.requiredCommands).toEqual(availabilityPersistenceRuntimeCommands);
+    expect(availabilityPersistenceRuntimeReadiness.requiredCommands).toBe(availabilityPersistenceRuntimeCommands);
     expect(availabilityPersistenceRuntimeReadiness.requiredEvidence).toEqual([
       "persisted conflict detection and concurrent hold rejection evidence",
       "seeded Postgres tenant isolation and availability lifecycle integration test output",
@@ -171,7 +194,7 @@ describe("availability persistence runtime contract", () => {
       "coverage/availability-persistence-secret-safe-artifacts.json",
     );
     expect(blockedDecision.requiredCommands).toBe(availabilityPersistenceRuntimeCommands);
-    expect(blockedDecision.requiredEvidence).toEqual(availabilityPersistenceDecisionRequiredEvidence);
+    expect(blockedDecision.requiredEvidence).toBe(availabilityPersistenceDecisionRequiredEvidence);
     expect(blockedDecision.redactedSummary).toEqual({
       capturedArtifactCount: 7,
       requiredArtifactCount: availabilityPersistenceArtifactPaths.length,

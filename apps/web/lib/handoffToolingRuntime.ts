@@ -145,11 +145,24 @@ export interface HandoffToolingRuntimeArtifactReview {
   readonly externalEvidenceRequired: typeof handoffToolingRuntimeRequiredExternalEvidence;
 }
 
+export interface HandoffToolingRuntimeRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly sourceArtifactPath: HandoffToolingRuntimeArtifact | string;
+  readonly artifactPath: "coverage/handoff-tooling-redacted-evidence-bundle.json";
+  readonly review: HandoffToolingRuntimeArtifactReview;
+  readonly requiredArtifacts: typeof handoffToolingRuntimeArtifactPaths;
+  readonly externalEvidenceRequired: typeof handoffToolingRuntimeRequiredExternalEvidence;
+  readonly handoffAllExecutionAllowed: false;
+  readonly persistenceExecutionAllowed: false;
+  readonly ciArtifactExecutionAllowed: false;
+}
+
 export const handoffToolingRuntimeRequiredExternalEvidence = [
   "Dependency install, package typecheck/test, handoff:all, CI run, and persisted run proof must be captured only after approved execution.",
   "Handoff report artifacts must redact command output, environment values, provider URLs, run URLs, and raw logs.",
   "Report artifacts must either be captured or explicitly documented as unavailable before runtime closure.",
   "HandoffToolingRun persistence must execute only against an approved provider-backed database.",
+  "Redacted handoff tooling evidence bundle captured without raw command output, environment values, provider URLs, run URLs, raw logs, report IDs, or actor identifiers.",
 ] as const;
 
 export type HandoffToolingRuntimeExecutionPolicy = {
@@ -305,6 +318,23 @@ export function buildHandoffToolingRuntimeArtifactReview(
   };
 }
 
+export function buildHandoffToolingRuntimeRedactedEvidenceBundle(
+  artifactPath: HandoffToolingRuntimeArtifact | string,
+  artifact: unknown,
+): HandoffToolingRuntimeRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    sourceArtifactPath: artifactPath,
+    artifactPath: "coverage/handoff-tooling-redacted-evidence-bundle.json",
+    review: buildHandoffToolingRuntimeArtifactReview(artifactPath, artifact),
+    requiredArtifacts: handoffToolingRuntimeArtifactPaths,
+    externalEvidenceRequired: handoffToolingRuntimeRequiredExternalEvidence,
+    handoffAllExecutionAllowed: false,
+    persistenceExecutionAllowed: false,
+    ciArtifactExecutionAllowed: false,
+  };
+}
+
 export const handoffToolingRequiredReports = [
   "docs/handoff/manifests/handoff-tooling-readiness.json",
   "docs/handoff/manifests/agent-execution-queue.json",
@@ -352,6 +382,7 @@ export const handoffToolingRuntimeArtifactPaths = [
   "coverage/handoff-task-sync.json",
   "coverage/handoff-all-output.txt",
   "coverage/handoff-tooling-ci-run.json",
+  "coverage/handoff-tooling-redacted-evidence-bundle.json",
   "test-results/handoff-tooling-runtime",
 ] as const;
 
@@ -372,6 +403,7 @@ export const handoffToolingRuntimeExternalArtifacts = [
   "coverage/handoff-tooling-package-test.txt",
   "coverage/handoff-all-output.txt",
   "coverage/handoff-tooling-ci-run.json",
+  "coverage/handoff-tooling-redacted-evidence-bundle.json",
 ] as const satisfies readonly HandoffToolingRuntimeArtifact[];
 
 export const handoffToolingRuntimeProofFiles = [
@@ -462,6 +494,12 @@ export const handoffToolingRuntimeMatrix = [
     command: "GitHub Actions CI captures Phase 16 handoff tooling checks",
     artifact: "coverage/handoff-tooling-ci-run.json",
     status: "ci-gated",
+  },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted handoff tooling evidence bundle",
+    artifact: "coverage/handoff-tooling-redacted-evidence-bundle.json",
+    status: "artifact-gated",
   },
   {
     id: "report-artifacts",

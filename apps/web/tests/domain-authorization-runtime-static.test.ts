@@ -1,13 +1,15 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   buildDomainAuthorizationArtifactReview,
   buildDomainAuthorizationEvidenceDecision,
   buildDomainAuthorizationExecutionPlan,
+  buildDomainAuthorizationRedactedEvidenceBundle,
   buildDomainAuthorizationRunData,
   buildRedactedDomainAuthorizationArtifact,
   persistDomainAuthorizationRun,
+  domainAuthorizationAuditSignatureContract,
   domainAuthorizationArtifactPaths,
   domainAuthorizationEvidenceFlags,
   domainAuthorizationExternalArtifacts,
@@ -22,6 +24,7 @@ import {
   domainAuthorizationRuntimeProofFiles,
   domainAuthorizationRuntimeReadiness,
   domainAuthorizationRunPersistenceContract,
+  domainAuthorizationSurfaceContract,
 } from "../lib/domainAuthorizationRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -62,9 +65,22 @@ describe("domain authorization route runtime contract", () => {
       "field-redaction-audit-rows",
       "csrf-session-revocation",
       "ci-secret-safe-artifacts",
+      "redacted-evidence-bundle",
+    ]);
+    expect(domainAuthorizationSurfaceContract.map((entry) => entry.surfaceId)).toEqual([
+      "provider-backed-session-context",
+      "custom-role-db-loading",
+      "dashboard-api-server-action-guards",
+      "role-matrix-custom-role-cross-tenant",
+      "field-redaction-audit-rows",
+      "signed-audit-log-rows",
+      "csrf-session-revocation",
+      "ci-secret-safe-artifacts",
     ]);
     expect(domainAuthorizationArtifactPaths).toContain("coverage/domain-authorization-runtime.json");
+    expect(domainAuthorizationArtifactPaths).toContain("coverage/domain-authorization-audit-signature-contract.json");
     expect(domainAuthorizationArtifactPaths).toContain("coverage/domain-authorization-secret-safe-artifacts.json");
+    expect(domainAuthorizationArtifactPaths).toContain("coverage/domain-authorization-redacted-evidence-bundle.json");
     expect(domainAuthorizationArtifactPaths).toContain("test-results/domain-authorization-runtime");
   });
 
@@ -80,7 +96,9 @@ describe("domain authorization route runtime contract", () => {
     });
 
     expect(decision.requiredControls).toBe(domainAuthorizationRuntimeControls);
+    expect(domainAuthorizationRuntimeControls).toContain("sign-redacted-audit-log-rows-before-persistence");
     expect(gapTracker).toContain("domainAuthorizationRuntimeControls");
+    expect(gapTracker).toContain("Domain authorization identity assertions pin exported commands, controls, artifacts, evidence flags, signed-audit contract, and required external evidence helpers");
   });
 
   it("keeps auth package scripts, route guard helpers, DB role models, and current middleware boundary visible", () => {
@@ -111,6 +129,9 @@ describe("domain authorization route runtime contract", () => {
     );
     expect(domainAuthorizationRuntimeReadiness.blockers).toContain(
       "Authorization route artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.",
+    );
+    expect(domainAuthorizationRuntimeReadiness.blockers).toContain(
+      "Authorization AuditLog allow/deny rows must include signed redacted audit payload evidence.",
     );
   });
 
@@ -194,8 +215,11 @@ describe("domain authorization route runtime contract", () => {
     expect(decision.status).toBe("blocked");
     expect(decision.missingCommands).toContain("session revocation route tests");
     expect(decision.missingArtifacts).toContain("coverage/domain-authorization-secret-safe-artifacts.json");
+    expect(decision.missingArtifacts).toContain("coverage/domain-authorization-audit-signature-contract.json");
     expect(decision.missingControls).toContain("apply-route-guards-before-dashboard-api-server-action-side-effects");
+    expect(decision.missingControls).toContain("sign-redacted-audit-log-rows-before-persistence");
     expect(decision.missingEvidence).toContain("customRolesLoadedFromDatabase");
+    expect(decision.missingEvidence).toContain("authorizationAuditRowsSigned");
     expect(decision.missingEvidence).toContain("crossTenantDenialTestsPassed");
     expect(decision.blockers).toContain(
       "CustomRole rows must be loaded from tenant-scoped database storage in guarded route tests.",
@@ -226,8 +250,36 @@ describe("domain authorization route runtime contract", () => {
     expect(executionPlan.externalCommands).toBe(domainAuthorizationExternalCommands);
     expect(executionPlan.localArtifacts).toBe(domainAuthorizationLocalArtifacts);
     expect(executionPlan.externalArtifacts).toBe(domainAuthorizationExternalArtifacts);
+    expect(executionPlan.surfaceContract).toBe(domainAuthorizationSurfaceContract);
+    expect(executionPlan.surfaceContract).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          surfaceId: "provider-backed-session-context",
+          artifact: "coverage/domain-authorization-provider-session-redacted.json",
+          proofBoundary: "provider-session",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "signed-audit-log-rows",
+          artifact: "coverage/domain-authorization-audit-signature-contract.json",
+          proofBoundary: "signed-audit",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "ci-secret-safe-artifacts",
+          artifact: "coverage/domain-authorization-secret-safe-artifacts.json",
+          proofBoundary: "ci-proof",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+      ]),
+    );
     expect(executionPlan.localArtifacts).toContain("coverage/domain-authorization-dashboard-middleware.json");
     expect(executionPlan.externalArtifacts).toContain("coverage/domain-authorization-provider-session-redacted.json");
+    expect(executionPlan.externalArtifacts).toContain("coverage/domain-authorization-audit-signature-contract.json");
+    expect(executionPlan.externalArtifacts).toContain("coverage/domain-authorization-redacted-evidence-bundle.json");
     expect(executionPlan.externalArtifacts).toContain("provider-backed DomainAuthorizationRun persistence proof");
     expect(executionPlan.commandExecutionAllowed).toBe(false);
     expect(executionPlan.providerSessionExecutionAllowed).toBe(false);
@@ -244,8 +296,25 @@ describe("domain authorization route runtime contract", () => {
     });
     expect(executionPlan.requiredExternalEvidence).toBe(domainAuthorizationRequiredExternalEvidence);
     expect(executionPlan.requiredExternalEvidence).toContain(
+      "Redacted domain authorization evidence bundle captured with signed-audit contract metadata and without raw provider tokens, tenant identifiers, role IDs, route payloads, URLs, or actor identifiers.",
+    );
+    expect(executionPlan.requiredExternalEvidence).toContain(
       "Provider-backed DomainAuthorizationRun persistence row captured through persistDomainAuthorizationRun.",
     );
+    expect(executionPlan.requiredExternalEvidence).toContain(
+      "Signed redacted authorization AuditLog payload evidence with signing-key readiness metadata.",
+    );
+    expect(executionPlan.auditSignatureContract).toBe(domainAuthorizationAuditSignatureContract);
+    expect(domainAuthorizationAuditSignatureContract.signatureInput).toEqual([
+      "tenantId",
+      "actorIdHash",
+      "routePath",
+      "permission",
+      "decision",
+      "requestId",
+      "createdAt",
+    ]);
+    expect(domainAuthorizationAuditSignatureContract.rawProviderTokenLoggingAllowed).toBe(false);
 
     const artifact = {
       sessionToken: "github_pat_abcdefghijklmnopqrstuvwxyz123456",
@@ -261,6 +330,7 @@ describe("domain authorization route runtime contract", () => {
     };
     const redactedOnly = buildRedactedDomainAuthorizationArtifact(artifact);
     const review = buildDomainAuthorizationArtifactReview(artifact);
+    const bundle = buildDomainAuthorizationRedactedEvidenceBundle(artifact);
     const serialized = JSON.stringify(review.artifact);
 
     expect(JSON.stringify(redactedOnly)).not.toContain("github_pat_abcdefghijklmnopqrstuvwxyz123456");
@@ -281,6 +351,14 @@ describe("domain authorization route runtime contract", () => {
     ]);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(domainAuthorizationRequiredExternalEvidence);
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.artifactPath).toBe("coverage/domain-authorization-redacted-evidence-bundle.json");
+    expect(bundle.review.safeForTracker).toBe(true);
+    expect(bundle.requiredArtifacts).toBe(domainAuthorizationArtifactPaths);
+    expect(bundle.requiredExternalEvidence).toBe(domainAuthorizationRequiredExternalEvidence);
+    expect(bundle.auditSignatureContract).toBe(domainAuthorizationAuditSignatureContract);
+    expect(bundle.providerExecutionAllowed).toBe(false);
+    expect(bundle.databaseExecutionAllowed).toBe(false);
   });
 
   it("wires CI, manifest, tracker, and artifacts without claiming route enforcement readiness", () => {
@@ -293,13 +371,18 @@ describe("domain authorization route runtime contract", () => {
     expect(gapTracker).toContain("apps/web/lib/domainAuthorizationRuntime.ts");
     expect(gapTracker).toContain("persistDomainAuthorizationRun upsert seam");
     expect(gapTracker).toContain("GAP-023 is domain-authorization-runtime-matrix wired with evidence classifier");
-    expect(gapTracker).toContain("live provider-backed sessions, DB-loaded CustomRole rows, provider-backed persistDomainAuthorizationRun execution, dashboard/API/server-action route-guard adoption, role-matrix route tests, custom-role route tests, cross-tenant denial tests, field-redaction serialization, AuditLog persistence, CSRF binding, session revocation, CI evidence, and secret-safe artifacts remain open");
+    expect(gapTracker).toContain(
+      "live provider-backed sessions, DB-loaded CustomRole rows, provider-backed persistDomainAuthorizationRun execution, dashboard/API/server-action route-guard adoption, role-matrix route tests, custom-role route tests, cross-tenant denial tests, field-redaction serialization, AuditLog persistence, CSRF binding, session revocation, CI evidence, secret-safe artifacts, and redacted evidence bundle capture remain gated",
+    );
     expect(gapTracker).toContain("proof inventory");
     expect(gapTracker).toContain("buildDomainAuthorizationExecutionPlan");
+    expect(gapTracker).toContain("domainAuthorizationSurfaceContract");
     expect(gapTracker).toContain("domainAuthorizationExecutionPolicy");
     expect(gapTracker).toContain("domainAuthorizationRequiredExternalEvidence");
+    expect(gapTracker).toContain("domainAuthorizationAuditSignatureContract");
     expect(gapTracker).toContain("buildRedactedDomainAuthorizationArtifact");
     expect(gapTracker).toContain("buildDomainAuthorizationArtifactReview");
+    expect(gapTracker).toContain("buildDomainAuthorizationRedactedEvidenceBundle");
   });
 
   it("pins current domain authorization proof files for GAP-023", () => {

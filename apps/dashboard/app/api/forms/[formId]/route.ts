@@ -2,6 +2,8 @@ import { prisma } from "@inkroute/db";
 import { NextRequest, NextResponse } from "next/server";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../../dashboardAuth";
 
+export const runtime = "nodejs";
+
 function redactQuestionOptions(value: unknown): Record<string, unknown> | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
   return Object.fromEntries(
@@ -16,6 +18,10 @@ function normalizeFormAction(value: unknown): "archive_form_version" | null {
   if (!value || typeof value !== "object") return null;
   const action = (value as { action?: unknown }).action;
   return action === "archive_form_version" ? action : null;
+}
+
+function toJsonValue(value: unknown) {
+  return JSON.parse(JSON.stringify(value));
 }
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
@@ -234,7 +240,7 @@ export async function PATCH(request: NextRequest, context: DashboardFormRouteCon
     );
   }
 
-  const idempotencyKey = request.headers.get("idempotency-key") ?? "missing-idempotency-key";
+  const idempotencyKey = request.headers.get("idempotency-key") ?? `form-archive:${tenantId}:${params.formId}:${action}`;
 
   if (actor.source === "local-fallback") {
     if (process.env.NODE_ENV === "production") {
@@ -286,6 +292,38 @@ export async function PATCH(request: NextRequest, context: DashboardFormRouteCon
 
       if (!intakeForm && !consentForm) return { status: "not_found" as const };
 
+      const idempotency = await tx.idempotencyKey.upsert({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-form-archive", key: idempotencyKey } },
+        create: {
+          tenantId,
+          scope: "dashboard-form-archive",
+          key: idempotencyKey,
+          status: "claimed",
+          metadata: toJsonValue({
+            route: "/api/forms/[formId]",
+            action,
+            formId: params.formId,
+            entityType: intakeForm ? "IntakeForm" : "ConsentForm",
+            rawAnswersTouched: false,
+            legalCopyChanged: false,
+            signatureRequestSent: false,
+          }),
+        },
+        update: {
+          metadata: toJsonValue({
+            route: "/api/forms/[formId]",
+            action,
+            formId: params.formId,
+            entityType: intakeForm ? "IntakeForm" : "ConsentForm",
+            replayObserved: true,
+            rawAnswersTouched: false,
+            legalCopyChanged: false,
+            signatureRequestSent: false,
+          }),
+        },
+        select: { id: true, key: true },
+      });
+
       if (intakeForm) {
         await tx.intakeForm.update({
           where: { id: intakeForm.id },
@@ -309,6 +347,7 @@ export async function PATCH(request: NextRequest, context: DashboardFormRouteCon
             source: "dashboard-api",
             dashboardMutationAction: "archive_form_version",
             idempotencyKey,
+            idempotencyKeyId: idempotency.id,
             fromStatus: intakeForm?.status ?? consentForm!.status,
             toStatus: "archived",
             legalCopyChanged: false,
@@ -319,7 +358,25 @@ export async function PATCH(request: NextRequest, context: DashboardFormRouteCon
         select: { id: true },
       });
 
-      return { status: "updated" as const, audit };
+      await tx.idempotencyKey.update({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-form-archive", key: idempotencyKey } },
+        data: {
+          status: "completed",
+          result: toJsonValue({
+            formId: params.formId,
+            action,
+            auditId: audit.id,
+            entityType: intakeForm ? "IntakeForm" : "ConsentForm",
+            toStatus: "archived",
+            rawAnswersTouched: false,
+            legalCopyChanged: false,
+            signatureRequestSent: false,
+          }),
+        },
+        select: { id: true },
+      });
+
+      return { status: "updated" as const, audit, idempotency };
     });
 
     if (result.status === "not_found") {
@@ -335,8 +392,9 @@ export async function PATCH(request: NextRequest, context: DashboardFormRouteCon
         action,
         persistence: "database",
         auditId: result.audit.id,
+        idempotencyKeyId: result.idempotency.id,
         gapIds: ["GAP-007", "GAP-013", "GAP-038", "GAP-040"],
-        boundary: "Form archive writes are tenant-scoped, RBAC-gated, audited, no-store, and do not modify legal copy, signatures, raw answers, or medical payloads.",
+        boundary: "Form archive writes are tenant-scoped, RBAC-gated, idempotency-backed, audited, no-store, and do not modify legal copy, signatures, raw answers, or medical payloads.",
       },
       { headers: noStoreHeaders },
     );

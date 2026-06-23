@@ -21,6 +21,8 @@ describe("dashboard client read route contract", () => {
       expect(source).toContain('"Cache-Control": "no-store"');
     }
 
+    expect(detailRouteSource).toContain("dashboardTenantQuerySchema.safeParse");
+    expect(detailRouteSource).toContain('code: "VALIDATION_FAILED"');
     expect(listRouteSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(listRouteSource).not.toContain('}, { status: 403 });');
     expect(listRouteSource).not.toContain('}, { status: 500 });');
@@ -73,17 +75,31 @@ describe("dashboard client read route contract", () => {
 
   it("wires a gated private-note client write seam without export/delete/provider side effects", () => {
     expect(detailRouteSource).toContain("export async function PATCH");
+    expect(detailRouteSource).toContain('export const runtime = "nodejs"');
     expect(detailRouteSource).toContain('assertPermission(actor, "client:write")');
-    expect(detailRouteSource).toContain("privateNoteFromBody");
+    expect(detailRouteSource).toContain("clientPrivateNoteInputSchema.safeParse");
+    expect(detailRouteSource).toContain("Client private-note payload failed validation.");
     expect(detailRouteSource).toContain("PROVIDER_CLIENT_WRITE_PERSISTENCE_NOT_CONFIGURED");
     expect(detailRouteSource).toContain("localClientWriteFallbackDisabled");
+    expect(detailRouteSource).toContain("dashboard-client-private-note");
+    expect(detailRouteSource).toContain("tx.idempotencyKey.upsert");
+    expect(detailRouteSource).toContain("requestHash: true");
+    expect(detailRouteSource).toContain('status: "idempotency_conflict"');
+    expect(detailRouteSource).toContain('code: "IDEMPOTENCY_CONFLICT"');
+    expect(detailRouteSource).toContain('idempotency.status === "completed"');
     expect(detailRouteSource).toContain("tx.clientProfile.upsert");
     expect(detailRouteSource).toContain("tx.auditLog.create");
+    expect(detailRouteSource).toContain("tx.idempotencyKey.update");
     expect(detailRouteSource).toContain('action: "client:write:private-note"');
     expect(detailRouteSource).toContain('dashboardMutationAction: "append_client_private_note"');
+    expect(detailRouteSource).toContain("noteHash");
     expect(detailRouteSource).toContain("rawNoteReturned: false");
+    expect(detailRouteSource).toContain("rawNoteStoredInResult: false");
+    expect(detailRouteSource).toContain("idempotencyKeyId");
+    expect(detailRouteSource).toContain("idempotencyReplay");
     expect(detailRouteSource).toContain('persistence: "local-contract"');
     expect(detailRouteSource).not.toContain('persistence: "local-plan-only"');
+    expect(detailRouteSource).not.toContain('"missing-idempotency-key"');
     expect(detailRouteSource).toContain("private-note write contract with raw-note redaction and audit metadata");
     expect(detailRouteSource).not.toContain("private-note write plan only");
     expect(detailPageSource).toContain("ClientDetailActionPanel");
@@ -91,5 +107,20 @@ describe("dashboard client read route contract", () => {
     expect(detailActionPanelSource).toContain('action: "append_private_note"');
     expect(detailActionPanelSource).toContain("Save private note");
     expect(detailActionPanelSource).toContain("consent resend, healed-photo requests, exports, deletes, and provider sends remain evidence-gated");
+  });
+
+  it("persists client creation idempotency before audited writes", () => {
+    expect(listRouteSource).toContain('export const runtime = "nodejs"');
+    expect(listRouteSource).toContain("dashboard-client-create");
+    expect(listRouteSource).toContain("tx.idempotencyKey.upsert");
+    expect(listRouteSource).toContain("idempotency.status === \"completed\"");
+    expect(listRouteSource).toContain("tx.client.findFirst");
+    expect(listRouteSource).toContain("tx.client.create");
+    expect(listRouteSource).toContain("tx.auditLog.create");
+    expect(listRouteSource).toContain("tx.idempotencyKey.update");
+    expect(listRouteSource).toContain("rawContactStoredInResult: false");
+    expect(listRouteSource).toContain("idempotencyKeyId");
+    expect(listRouteSource).toContain("idempotencyReplay");
+    expect(listRouteSource).toContain("idempotency-backed");
   });
 });

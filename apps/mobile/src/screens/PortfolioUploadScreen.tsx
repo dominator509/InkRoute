@@ -3,7 +3,40 @@ import { mobilePortfolioItems } from "../lib/mobileDemo";
 import { MobileCard } from "../components/MobileCard";
 import { MobilePill } from "../components/MobilePill";
 import { MobileScreen } from "../components/MobileScreen";
+import { mobileApiFetch, type MobileApiResponseEnvelope, type MobileApiSession } from "../lib/mobileApiClient";
 import { portfolioUploadDraft } from "../lib/mobileDemo";
+
+export interface MobilePortfolioSummary {
+  id: string;
+  title: string;
+  caption: string;
+}
+
+export function loadMobilePortfolio(
+  session: MobileApiSession,
+  requestId = `mobile-portfolio:${session.tenantId}`,
+): Promise<MobileApiResponseEnvelope<MobilePortfolioSummary[]>> {
+  return mobileApiFetch<MobilePortfolioSummary[]>(session, {
+    domain: "portfolio",
+    method: "GET",
+    path: "/api/mobile/portfolio",
+    requestId,
+  });
+}
+
+export function createMobilePortfolioUploadIntent(
+  session: MobileApiSession,
+  input: { filename: string; contentType: string; idempotencyKey: string; requestId?: string },
+): Promise<MobileApiResponseEnvelope<{ uploadIntentId: string }>> {
+  return mobileApiFetch<{ uploadIntentId: string }>(session, {
+    domain: "portfolio",
+    method: "POST",
+    path: "/api/mobile/portfolio/upload-intents",
+    requestId: input.requestId ?? `mobile-portfolio-upload:${input.filename}`,
+    idempotencyKey: input.idempotencyKey,
+    body: { filename: input.filename, contentType: input.contentType },
+  });
+}
 
 export function PortfolioUploadScreen() {
   return (

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const listRouteSource = readFileSync(join(process.cwd(), "apps/dashboard/app/api/portfolio/route.ts"), "utf8");
 const detailRouteSource = readFileSync(join(process.cwd(), "apps/dashboard/app/api/portfolio/[portfolioId]/route.ts"), "utf8");
+const imageAttachRouteSource = readFileSync(join(process.cwd(), "apps/dashboard/app/api/portfolio/[portfolioId]/images/route.ts"), "utf8");
 const portfolioPageSource = readFileSync(join(process.cwd(), "apps/dashboard/app/portfolio/page.tsx"), "utf8");
 const trustPageSource = readFileSync(join(process.cwd(), "apps/dashboard/app/trust/page.tsx"), "utf8");
 
@@ -64,5 +65,39 @@ describe("dashboard portfolio read route contract", () => {
     expect(portfolioPageSource).toContain("signed storage");
     expect(trustPageSource).toContain("provider storage proof gated");
     expect(trustPageSource).not.toContain("signed storage not wired");
+  });
+
+  it("persists portfolio creation idempotency before audited metadata writes", () => {
+    expect(listRouteSource).toContain('export const runtime = "nodejs"');
+    expect(listRouteSource).toContain("dashboard-portfolio-create");
+    expect(listRouteSource).toContain("tx.idempotencyKey.upsert");
+    expect(listRouteSource).toContain("idempotency.status === \"completed\"");
+    expect(listRouteSource).toContain("portfolioItemModel.findFirst");
+    expect(listRouteSource).toContain("portfolioItemModel.create");
+    expect(listRouteSource).toContain("tx.auditLog.create");
+    expect(listRouteSource).toContain("tx.idempotencyKey.update");
+    expect(listRouteSource).toContain("imageUrlStoredInResult: false");
+    expect(listRouteSource).toContain("providerUrlMinted: false");
+    expect(listRouteSource).toContain("idempotencyKeyId");
+    expect(listRouteSource).toContain("idempotencyReplay");
+    expect(listRouteSource).toContain("idempotency-backed");
+  });
+
+  it("persists portfolio image metadata idempotency before audited attachment writes", () => {
+    expect(imageAttachRouteSource).toContain('export const runtime = "nodejs"');
+    expect(imageAttachRouteSource).toContain("dashboard-portfolio-image-attach");
+    expect(imageAttachRouteSource).toContain("tx.idempotencyKey.upsert");
+    expect(imageAttachRouteSource).toContain("idempotency.status === \"completed\"");
+    expect(imageAttachRouteSource).toContain("tx.portfolioImage.findFirst");
+    expect(imageAttachRouteSource).toContain("tx.portfolioImage.create");
+    expect(imageAttachRouteSource).toContain("tx.auditLog.create");
+    expect(imageAttachRouteSource).toContain("tx.idempotencyKey.update");
+    expect(imageAttachRouteSource).toContain("rawImageUrlStoredInResult: false");
+    expect(imageAttachRouteSource).toContain("providerUrlMinted: false");
+    expect(imageAttachRouteSource).toContain("malwareScanExecuted: false");
+    expect(imageAttachRouteSource).toContain("derivativesGenerated: false");
+    expect(imageAttachRouteSource).toContain("idempotencyKeyId");
+    expect(imageAttachRouteSource).toContain("idempotencyReplay");
+    expect(imageAttachRouteSource).toContain("idempotency-backed");
   });
 });

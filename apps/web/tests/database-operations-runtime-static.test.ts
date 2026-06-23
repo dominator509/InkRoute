@@ -1,10 +1,11 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   buildDatabaseOperationsRuntimeArtifactReview,
   buildDatabaseOperationsRuntimeEvidenceDecision,
   buildDatabaseOperationsRuntimeExecutionPlan,
+  buildDatabaseOperationsRuntimeRedactedEvidenceBundle,
   buildRedactedDatabaseOperationsArtifact,
   databaseOperationsRuntimeArtifactPaths,
   databaseOperationsRuntimeCommands,
@@ -63,7 +64,8 @@ describe("GAP-117 database operations runtime wiring", () => {
       "tenant-isolation-smoke",
       "branch-promotion",
       "production-data-safety-review",
-      "ci-database-operations-artifacts"
+      "ci-database-operations-artifacts",
+      "redacted-evidence-bundle"
     ]);
     expect(databaseOperationsRuntimeMatrix).toEqual(
       expect.arrayContaining([
@@ -71,10 +73,12 @@ describe("GAP-117 database operations runtime wiring", () => {
         expect.objectContaining({ id: "generated-sql-review", artifact: "coverage/database-migration-dry-run-redacted.json" }),
         expect.objectContaining({ id: "backup-restore-drill", artifact: "coverage/database-backup-restore-drill-redacted.json" }),
         expect.objectContaining({ id: "production-data-safety-review", artifact: "coverage/database-production-data-safety-review.md" }),
-        expect.objectContaining({ id: "ci-database-operations-artifacts", command: "capture CI database-operations artifacts" })
+        expect.objectContaining({ id: "ci-database-operations-artifacts", command: "capture CI database-operations artifacts" }),
+        expect.objectContaining({ id: "redacted-evidence-bundle", artifact: "coverage/database-operations-redacted-evidence-bundle.json" })
       ])
     );
     expect(databaseOperationsRuntimeArtifactPaths).toContain("coverage/database-destructive-sql-scan.json");
+    expect(databaseOperationsRuntimeArtifactPaths).toContain("coverage/database-operations-redacted-evidence-bundle.json");
     expect(databaseOperationsRuntimeArtifactPaths).toContain("test-results/database-operations-runtime");
   });
 
@@ -153,6 +157,7 @@ describe("GAP-117 database operations runtime wiring", () => {
     expect(gapTracker).toContain("databaseOperationsRuntimeExecutionPolicy");
     expect(gapTracker).toContain("databaseOperationsRuntimeRequiredExternalEvidence");
     expect(gapTracker).toContain("buildDatabaseOperationsRuntimeArtifactReview");
+    expect(gapTracker).toContain("buildDatabaseOperationsRuntimeRedactedEvidenceBundle");
   });
 
   it("pins current database operations runtime proof files for GAP-117", () => {
@@ -278,6 +283,7 @@ describe("GAP-117 database operations runtime wiring", () => {
         "coverage/database-backup-restore-drill-redacted.json",
         "coverage/database-branch-promotion-approval-redacted.json",
         "coverage/database-operations-ci-run-redacted.json",
+        "coverage/database-operations-redacted-evidence-bundle.json",
       ]),
     );
     expect(blockedDecision.databaseOperationsPolicy).toEqual({
@@ -364,6 +370,9 @@ describe("GAP-117 database operations runtime wiring", () => {
       backupRestoreRequiresProviderDatabase: true,
     });
     expect(plan.externalEvidenceRequired).toBe(databaseOperationsRuntimeRequiredExternalEvidence);
+    expect(plan.externalEvidenceRequired).toContain(
+      "Redacted database operations evidence bundle captured without raw connection strings, provider IDs, branch labels, SQL literals, tenant identifiers, run URLs, or customer data.",
+    );
   });
 
   it("redacts database operations artifacts before review or retention", () => {
@@ -383,6 +392,7 @@ describe("GAP-117 database operations runtime wiring", () => {
     };
     const redacted = buildRedactedDatabaseOperationsArtifact(rawArtifact);
     const review = buildDatabaseOperationsRuntimeArtifactReview("coverage/database-migration-dry-run-redacted.json", rawArtifact);
+    const bundle = buildDatabaseOperationsRuntimeRedactedEvidenceBundle("coverage/database-migration-dry-run-redacted.json", rawArtifact);
     const serialized = JSON.stringify(review);
 
     expect(JSON.stringify(redacted)).not.toContain("postgres://");
@@ -409,6 +419,13 @@ describe("GAP-117 database operations runtime wiring", () => {
       ]),
     );
     expect(review.externalEvidenceRequired).toBe(databaseOperationsRuntimeRequiredExternalEvidence);
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.artifactPath).toBe("coverage/database-operations-redacted-evidence-bundle.json");
+    expect(bundle.review.containsUnredactedSensitiveValues).toBe(false);
+    expect(bundle.requiredArtifacts).toBe(databaseOperationsRuntimeArtifactPaths);
+    expect(bundle.externalEvidenceRequired).toBe(databaseOperationsRuntimeRequiredExternalEvidence);
+    expect(bundle.providerDatabaseExecutionAllowed).toBe(false);
+    expect(bundle.ciArtifactExecutionAllowed).toBe(false);
     expect(review.externalEvidenceRequired).toEqual(
       expect.arrayContaining([
         "Provider branch, migration dry-run, staging apply, backup/restore, and tenant-isolation artifacts must be captured outside Codex with connection strings redacted.",

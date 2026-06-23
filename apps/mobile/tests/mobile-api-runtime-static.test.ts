@@ -33,6 +33,12 @@ describe("mobile API sync runtime contract", () => {
   const apiClientStaticTest = readWorkspaceFile("apps/mobile/tests/mobile-api-client-static.test.ts");
   const homeScreen = readWorkspaceFile("apps/mobile/src/screens/HomeScreen.tsx");
   const bookingScreen = readWorkspaceFile("apps/mobile/src/screens/BookingRequestsScreen.tsx");
+  const travelScreen = readWorkspaceFile("apps/mobile/src/screens/TravelUpdateScreen.tsx");
+  const appointmentsScreen = readWorkspaceFile("apps/mobile/src/screens/AppointmentsScreen.tsx");
+  const clientsScreen = readWorkspaceFile("apps/mobile/src/screens/ClientsScreen.tsx");
+  const portfolioScreen = readWorkspaceFile("apps/mobile/src/screens/PortfolioUploadScreen.tsx");
+  const notificationsScreen = readWorkspaceFile("apps/mobile/src/screens/NotificationsScreen.tsx");
+  const systemStatusScreen = readWorkspaceFile("apps/mobile/src/screens/SystemStatusScreen.tsx");
   const ciWorkflow = readWorkspaceFile(".github/workflows/ci.yml");
   const unitManifest = readWorkspaceFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readWorkspaceFile("GAP_TRACKER.md");
@@ -87,6 +93,20 @@ describe("mobile API sync runtime contract", () => {
     expect(homeScreen).toContain("API sync contract");
     expect(bookingScreen).toContain("Typed client ready");
     expect(bookingScreen).toContain("lifecycle contract ready");
+    expect(bookingScreen).toContain("loadMobileBookingRequests");
+    expect(bookingScreen).toContain("submitMobileBookingLifecycleAction");
+    expect(travelScreen).toContain("loadMobileTravelStops");
+    expect(travelScreen).toContain("publishMobileTravelStop");
+    expect(travelScreen).toContain("mobileApiFetch");
+    expect(appointmentsScreen).toContain("loadMobileAppointments");
+    expect(appointmentsScreen).toContain("loadMobileAvailability");
+    expect(clientsScreen).toContain("loadMobileClients");
+    expect(clientsScreen).toContain("loadMobileClientTimeline");
+    expect(portfolioScreen).toContain("loadMobilePortfolio");
+    expect(portfolioScreen).toContain("createMobilePortfolioUploadIntent");
+    expect(notificationsScreen).toContain("loadMobileNotifications");
+    expect(notificationsScreen).toContain("loadMobileMessages");
+    expect(systemStatusScreen).toContain("loadMobileReleaseHealth");
   });
 
   it("keeps runtime blockers explicit until provider auth, seeded smoke, denial, offline replay, and device evidence exists", () => {
@@ -95,9 +115,11 @@ describe("mobile API sync runtime contract", () => {
     expect(mobileApiRuntimeReadiness.missingScreenDomains).toEqual([]);
     expect(mobileApiRuntimeReadiness.requiredCommands).toBe(mobileApiRuntimeCommands);
     expect(mobileApiRuntimeReadiness.requiredEvidence).toBe(mobileApiEvidenceFlags);
-    expect(mobileApiRuntimeReadiness.requiredEvidence).toEqual(mobileApiEvidenceFlags);
     expect(mobileApiRuntimeReadiness.blockers).toContain("@inkroute/mobile-support API/sync tests must pass.");
-    expect(mobileApiRuntimeReadiness.blockers).toContain("Offline-aware retry queue must handle mobile mutations.");
+    expect(mobileApiRuntimeReadiness.blockers).not.toContain("Offline-aware retry queue must handle mobile mutations.");
+    expect(mobileApiRuntimeReadiness.blockers).not.toContain(
+      "Mobile mutation idempotency keys must persist until replay succeeds or is abandoned.",
+    );
     expect(mobileApiRuntimeReadiness.blockers).toContain("Mobile API tests must reject cross-tenant reads and writes.");
   });
 
@@ -208,6 +230,13 @@ describe("mobile API sync runtime contract", () => {
       "packages/mobile/tests/mobile-support.test.ts",
       "apps/mobile/src/lib/mobileApiClient.ts",
       "apps/mobile/src/lib/mobileApiRuntime.ts",
+      "apps/mobile/src/screens/BookingRequestsScreen.tsx",
+      "apps/mobile/src/screens/AppointmentsScreen.tsx",
+      "apps/mobile/src/screens/ClientsScreen.tsx",
+      "apps/mobile/src/screens/PortfolioUploadScreen.tsx",
+      "apps/mobile/src/screens/NotificationsScreen.tsx",
+      "apps/mobile/src/screens/TravelUpdateScreen.tsx",
+      "apps/mobile/src/screens/SystemStatusScreen.tsx",
       "apps/mobile/tests/mobile-api-client-static.test.ts",
       "apps/mobile/tests/mobile-api-runtime-static.test.ts",
       "testing/manifests/unit-test-manifest.json",

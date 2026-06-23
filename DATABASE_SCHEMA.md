@@ -10,21 +10,21 @@ This is not production-ready because the schema has not been validated by Prisma
 
 | Domain | Models in Prisma schema | Status |
 | --- | --- | --- |
-| Tenancy | Tenant, TenantDomain, FeatureFlag | Scaffolded, migration unverified |
-| Users/RBAC | User, TenantMember, CustomRole | Scaffolded, auth/session integration pending |
-| Artist/studio | Artist, Studio | Scaffolded |
-| Client CRM | Client, ClientProfile | Scaffolded; encryption service pending |
-| Portfolio | TattooStyle, PortfolioItem, PortfolioImage, FileAsset | Scaffolded; storage integration pending |
-| Travel/Nomad Mode | TravelCity, TravelSchedule, AvailabilityWindow | Scaffolded; conflict/timezone tests pending |
+| Tenancy | Tenant, TenantDomain, FeatureFlag | Schema plus release/feature-flag local persistence contracts wired; provider-backed migration/runtime proof pending |
+| Users/RBAC | User, TenantMember, CustomRole | Schema plus dashboard auth/RBAC shim contracts wired; live auth/session integration pending |
+| Artist/studio | Artist, Studio | Schema present; provider/runtime proof pending |
+| Client CRM | Client, ClientProfile | Schema present; sensitive-write encryption policy contracts partially wired, full provider-backed lifecycle proof pending |
+| Portfolio | TattooStyle, PortfolioItem, PortfolioImage, FileAsset | Schema plus local FileAsset/SignedUrlGrant persistence contracts wired; storage provider integration pending |
+| Travel/Nomad Mode | TravelCity, TravelSchedule, AvailabilityWindow | Schema plus dashboard travel/availability local persistence contracts wired; conflict/timezone/provider proof pending |
 | Calendar | CalendarConnection, CalendarEvent | Scaffolded; provider OAuth/sync pending |
-| Booking | BookingRequest, BookingStateEvent, Appointment | Scaffolded; API/state machine tests pending |
-| Payments | Deposit, Payment, Refund, PaymentAuditLog | Scaffolded; Stripe/webhook integration pending |
-| Intake/consent/safety | IntakeForm, IntakeQuestion, IntakeResponse, ConsentForm, ConsentSignature, MedicalSafetyAcknowledgment | Scaffolded; legal review and encryption pending |
-| Files/uploads | FileAsset, ReferenceImage | Scaffolded; object storage/signed URL flow pending |
-| Messaging/notifications | MessageThread, Message, Notification, NotificationDelivery | Scaffolded; email/SMS/push providers pending |
+| Booking | BookingRequest, BookingStateEvent, Appointment | Schema plus booking request DB-first route/state/audit contracts wired; seeded integration/runtime proof pending |
+| Payments | Deposit, Payment, Refund, PaymentAuditLog | Schema plus deposit draft/webhook replay/audit local contracts wired; Stripe provider proof pending |
+| Intake/consent/safety | IntakeForm, IntakeQuestion, IntakeResponse, ConsentForm, ConsentSignature, MedicalSafetyAcknowledgment | Schema plus dashboard form metadata and privacy/legal review contracts wired; legal/provider proof pending |
+| Files/uploads | FileAsset, ReferenceImage | Schema plus local signed-upload/FileAsset/ReferenceImage contracts wired; object storage provider proof pending |
+| Messaging/notifications | MessageThread, Message, Notification, NotificationDelivery | Schema plus DB-first message/contact/preference/notification handoff contracts wired; email/SMS/push providers pending |
 | Reputation | Review | Scaffolded |
 | SEO | SeoCityPage, SeoStylePage, SeoRedirect | Scaffolded; dynamic page routes pending |
-| Audit/errors/releases | AuditLog, ErrorReport, ReleaseRecord | Scaffolded; observability wiring pending |
+| Audit/errors/releases | AuditLog, ErrorReport, ReleaseRecord | Schema plus error-report, provider-webhook, release, and audit local contracts wired; provider/CI proof pending |
 
 ## Enum/state machine inventory
 
@@ -50,7 +50,7 @@ Never trust a client-submitted `tenantId` without validating the authenticated u
 
 ## Sensitive data posture
 
-The schema intentionally stores sensitive fields as encrypted string placeholders, including client birthdate, emergency contact, medical notes, allergies, skin concerns, provider tokens, and consent metadata. The encryption service is not implemented yet and is tracked in `GAP_TRACKER.md` as a production blocker.
+The schema keeps sensitive columns as strings so application-level encryption can store ciphertext and key metadata without exposing plaintext. Local encryption/key-policy contracts are wired for booking medical notes and provider-token intake, including rotation/readiness metadata and fail-closed invalid-key behavior. Runtime KMS/key lifecycle proof, provider-token operational coverage, and broader sensitive-field integration remain tracked in `GAP_TRACKER.md` as production evidence gates.
 
 Sensitive objects:
 - Client PII and phone/email.
@@ -128,7 +128,7 @@ The scaffolded `.github/workflows/release-governance.yml` includes a `Prisma mig
 
 ## Phase 7 payment persistence note
 
-The Prisma schema already includes `Deposit`, `Payment`, `Refund`, and `PaymentAuditLog` models. Phase 7 added payment policy/session/webhook helper code, but it did not add migrations, repositories, or transactional persistence. Production payment work must store `policySnapshot`, provider session/payment/refund IDs, amount/currency/status, paid/failed timestamps, and tenant-scoped audit logs idempotently. Stripe metadata must reference internal IDs only and must not contain medical notes, consent text, private messages, or reference-image URLs.
+The Prisma schema already includes `Deposit`, `Payment`, `Refund`, and `PaymentAuditLog` models. Dashboard and public deposit-session routes now persist local DB draft records transactionally, including `policySnapshot`, pending `Payment`, idempotency metadata, and tenant-scoped `PaymentAuditLog` rows before any provider redirect. Production payment work still must add provider Checkout/PaymentIntent execution, provider session/payment/refund IDs, paid/failed timestamps, replay-safe webhook reconciliation, and sandbox/live evidence. Stripe metadata must reference internal IDs only and must not contain medical notes, consent text, private messages, or reference-image URLs.
 
 ## Phase 8 calendar persistence note
 

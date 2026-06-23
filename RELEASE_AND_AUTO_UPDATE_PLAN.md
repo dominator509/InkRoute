@@ -102,9 +102,9 @@ Implemented:
 - Dashboard `/releases` preview for release gates, health checks, preview/production feature flag decisions, EAS Update compatibility, rollback plans, CI/CD guardrails, release notes, and audit drafts.
 - Dashboard API boundaries:
   - `GET /api/releases`
-  - `POST /api/releases` returns `501 RELEASE_PERSISTENCE_NOT_IMPLEMENTED`
+  - `POST /api/releases` validates release creation and uses the auth/idempotency-backed persistence/audit contract where DB access is available
   - `GET /api/feature-flags`
-  - `POST /api/feature-flags` returns `501 FEATURE_FLAG_MUTATION_NOT_IMPLEMENTED`
+  - `POST /api/feature-flags` validates rollout updates and uses the auth/idempotency-backed persistence/audit contract where DB access is available
 - Public limited release health preview at `GET /api/public/[tenantSlug]/release-health`.
 - Mobile system status preview for release candidate, OTA update plan, health checks, and feature flag snapshot.
 - Manual dry-run GitHub Actions workflow at `.github/workflows/release-governance.yml`.

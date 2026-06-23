@@ -76,6 +76,7 @@ export const semanticDocumentationRuntimeArtifactPaths = [
   "coverage/semantic-documentation-runtime-proof-boundary.json",
   "coverage/semantic-documentation-provider-proof-boundary.json",
   "coverage/semantic-documentation-legal-review-boundary.json",
+  "coverage/semantic-documentation-redacted-evidence-bundle.json",
   "test-results/semantic-documentation-runtime",
 ] as const;
 
@@ -115,6 +116,7 @@ export const semanticDocumentationRuntimeLocalArtifacts = [
 
 export const semanticDocumentationRuntimeExternalArtifacts = [
   "coverage/semantic-documentation-ci-quality-docs.json",
+  "coverage/semantic-documentation-redacted-evidence-bundle.json",
   "test-results/semantic-documentation-runtime",
 ] as const satisfies readonly SemanticDocumentationRuntimeArtifact[];
 
@@ -133,6 +135,7 @@ export interface SemanticDocumentationEvidenceInput {
   readonly providerProofSeparated: boolean;
   readonly legalReviewSeparated: boolean;
   readonly semanticDocumentationRunPersisted: boolean;
+  readonly redactedEvidenceBundleCaptured: boolean;
   readonly capturedArtifacts: readonly SemanticDocumentationRuntimeArtifact[];
   readonly completedCommands: readonly SemanticDocumentationRuntimeCommand[];
 }
@@ -172,6 +175,15 @@ export interface SemanticDocumentationRuntimeArtifactReview {
   readonly safeForTracker: boolean;
 }
 
+export interface SemanticDocumentationRuntimeRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly artifactPath: "coverage/semantic-documentation-redacted-evidence-bundle.json";
+  readonly review: SemanticDocumentationRuntimeArtifactReview;
+  readonly requiredArtifacts: typeof semanticDocumentationRuntimeArtifactPaths;
+  readonly requiredExternalEvidence: typeof semanticDocumentationRuntimeRequiredExternalEvidence;
+  readonly providerExecutionAllowed: false;
+}
+
 export const semanticDocumentationRuntimeLocalCommands = [
   "pnpm quality:docs",
   "node scripts/quality/audit-doc-links.mjs",
@@ -192,6 +204,7 @@ export const semanticDocumentationRuntimeRequiredExternalEvidence = [
   "Runtime build and live route proof captured outside semantic documentation wording checks.",
   "Provider readiness proof captured outside semantic documentation wording checks.",
   "Legal review proof captured outside semantic documentation wording checks.",
+  "Redacted semantic documentation evidence bundle captured without raw provider, legal, runtime, or CI secrets.",
 ] as const;
 
 export type SemanticDocumentationRuntimeExecutionPolicy = {
@@ -260,6 +273,12 @@ export const semanticDocumentationRuntimeMatrix = [
     command: "document that legal review proof stays separate from wording checks",
     artifact: "coverage/semantic-documentation-legal-review-boundary.json",
     status: "legal-review-separated",
+  },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted semantic documentation evidence bundle",
+    artifact: "coverage/semantic-documentation-redacted-evidence-bundle.json",
+    status: "ci-gated",
   },
 ] as const satisfies readonly SemanticDocumentationRuntimeMatrixEntry[];
 
@@ -364,6 +383,9 @@ export function buildSemanticDocumentationEvidenceDecision(
   if (!input.semanticDocumentationRunPersisted) {
     blockers.push("SemanticDocumentationRun persistence row must be captured for durable auditability.");
   }
+  if (!input.redactedEvidenceBundleCaptured) {
+    blockers.push("Redacted semantic documentation evidence bundle must be captured.");
+  }
   if (missingArtifacts.length > 0) {
     blockers.push("Every required semantic documentation artifact must be captured.");
   }
@@ -457,6 +479,19 @@ export function buildSemanticDocumentationRuntimeArtifactReview(
     redactions,
     requiredExternalEvidence: semanticDocumentationRuntimeRequiredExternalEvidence,
     safeForTracker: true,
+  };
+}
+
+export function buildSemanticDocumentationRuntimeRedactedEvidenceBundle(
+  artifact: unknown,
+): SemanticDocumentationRuntimeRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    artifactPath: "coverage/semantic-documentation-redacted-evidence-bundle.json",
+    review: buildSemanticDocumentationRuntimeArtifactReview(artifact),
+    requiredArtifacts: semanticDocumentationRuntimeArtifactPaths,
+    requiredExternalEvidence: semanticDocumentationRuntimeRequiredExternalEvidence,
+    providerExecutionAllowed: false,
   };
 }
 

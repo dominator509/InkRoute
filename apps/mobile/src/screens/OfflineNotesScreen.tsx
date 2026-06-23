@@ -10,7 +10,7 @@ export function OfflineNotesScreen() {
     <MobileScreen
       eyebrow="Offline-first strategy"
       title="Weak-signal travel queue"
-      summary="Offline queue contract for notes, travel updates, and portfolio metadata created while traveling. The app-side adapter, sync worker, idempotent replay, retry state, and redacted audit events are wired; encrypted device storage and reconnect smoke evidence remain runtime-gated."
+      summary="Offline queue contract for notes, travel updates, and portfolio metadata created while traveling. The app-side adapter, offline-to-online reconnect scheduler, sync worker, idempotent replay, retry state, and redacted audit events are wired; encrypted device storage and reconnect smoke evidence remain runtime-gated."
     >
       <MobileCard title="Queue summary" detail={offlineQueueSummary.warning}>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -23,6 +23,7 @@ export function OfflineNotesScreen() {
       <MobileCard title="Sync worker contract" eyebrow="GAP-045" detail={offlineSyncPreview.boundary}>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           <MobilePill label={offlineSyncPreview.adapter} tone="warn" />
+          <MobilePill label={offlineSyncPreview.reconnectWorker} tone="good" />
           <MobilePill label="idempotent replay wired" tone="good" />
           <MobilePill label="encrypted device storage gated" tone="danger" />
           <MobilePill label="reconnect smoke pending" tone="warn" />

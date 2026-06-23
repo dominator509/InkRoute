@@ -29,6 +29,8 @@ describe("mobile push runtime contract", () => {
   const notificationsSource = readWorkspaceFile("packages/notifications/src/index.ts");
   const notificationsTests = readWorkspaceFile("packages/notifications/tests/delivery-plan.test.ts");
   const pushSource = readWorkspaceFile("apps/mobile/src/lib/mobilePush.ts");
+  const prismaSchema = readWorkspaceFile("packages/db/prisma/schema.prisma");
+  const prismaMigration = readWorkspaceFile("packages/db/prisma/migrations/20260622193000_add_mobile_push_tokens_interactions/migration.sql");
   const pushStaticTest = readWorkspaceFile("apps/mobile/tests/mobile-push-static.test.ts");
   const notificationScreen = readWorkspaceFile("apps/mobile/src/screens/NotificationsScreen.tsx");
   const ciWorkflow = readWorkspaceFile(".github/workflows/ci.yml");
@@ -83,7 +85,19 @@ describe("mobile push runtime contract", () => {
     expect(pushSource).toContain("buildExpoPushRegistrationPlan");
     expect(pushSource).toContain("buildMobilePushLocalContract");
     expect(pushSource).toContain("ExpoPushProviderRepository");
+    expect(pushSource).toContain("PrismaExpoPushProviderRepositoryClient");
+    expect(pushSource).toContain("createPrismaExpoPushProviderRepository");
     expect(pushSource).toContain("createInMemoryExpoPushProviderRepository");
+    expect(pushSource).toContain("pushToken.upsert");
+    expect(pushSource).toContain("notificationInteraction.create");
+    expect(pushSource).toContain("providerEvent.upsert");
+    expect(pushSource).toContain("notificationSuppression.upsert");
+    expect(prismaSchema).toContain("model PushToken");
+    expect(prismaSchema).toContain("model NotificationInteraction");
+    expect(prismaSchema).toContain("@@unique([tenantId, provider, deviceId])");
+    expect(prismaSchema).toContain("@@unique([tenantId, idempotencyKey])");
+    expect(prismaMigration).toContain('CREATE TABLE "PushToken"');
+    expect(prismaMigration).toContain('CREATE TABLE "NotificationInteraction"');
     expect(pushSource).toContain("buildRedactedExpoPushPayload");
     expect(pushSource).toContain("processExpoPushReceipt");
     expect(pushSource).toContain("suppressInvalidToken");
@@ -105,9 +119,12 @@ describe("mobile push runtime contract", () => {
     expect(mobilePushRuntimeReadiness.missingScripts).toEqual([]);
     expect(mobilePushRuntimeReadiness.requiredCommands).toBe(mobilePushRuntimeCommands);
     expect(mobilePushRuntimeReadiness.requiredEvidence).toBe(mobilePushDecisionRequiredEvidence);
-    expect(mobilePushRuntimeReadiness.requiredEvidence).toEqual(mobilePushDecisionRequiredEvidence);
     expect(mobilePushRuntimeReadiness.blockers).toContain("Expo project id must be configured before push delivery.");
-    expect(mobilePushRuntimeReadiness.blockers).toContain("Tenant/user/device-scoped push token persistence must be available.");
+    expect(mobilePushRuntimeReadiness.blockers).not.toContain("Tenant/user/device-scoped push token persistence must be available.");
+    expect(mobilePushRuntimeReadiness.blockers).not.toContain("Push opt-out persistence must be available before sending.");
+    expect(mobilePushRuntimeReadiness.blockers).not.toContain("NotificationDelivery persistence must be available for push sends.");
+    expect(mobilePushRuntimeReadiness.blockers).not.toContain("Audit-log persistence must be available for push registration, sends, receipts, and taps.");
+    expect(mobilePushRuntimeReadiness.blockers).not.toContain("Invalid-token suppression persistence must be available for Expo receipt failures.");
     expect(mobilePushRuntimeReadiness.blockers).toContain("Push tap navigation must pass iOS/Android device QA.");
   });
 
@@ -151,7 +168,6 @@ describe("mobile push runtime contract", () => {
     expect(blockedDecision.missingArtifacts).toContain("coverage/mobile-push-secret-safe-artifacts.json");
     expect(blockedDecision.requiredCommands).toBe(mobilePushRuntimeCommands);
     expect(blockedDecision.requiredEvidence).toBe(mobilePushDecisionRequiredEvidence);
-    expect(blockedDecision.requiredEvidence).toEqual(mobilePushDecisionRequiredEvidence);
     expect(blockedDecision.redactedSummary).toEqual({
       capturedArtifactCount: 5,
       requiredArtifactCount: mobilePushArtifactPaths.length,
@@ -267,6 +283,8 @@ describe("mobile push runtime contract", () => {
       "packages/mobile/package.json",
       "apps/mobile/src/lib/mobilePush.ts",
       "apps/mobile/src/lib/mobilePushRuntime.ts",
+      "packages/db/prisma/schema.prisma",
+      "packages/db/prisma/migrations/20260622193000_add_mobile_push_tokens_interactions/migration.sql",
       "apps/mobile/src/lib/mobileDemo.ts",
       "apps/mobile/src/screens/NotificationsScreen.tsx",
       "apps/mobile/tests/mobile-push-static.test.ts",
@@ -288,6 +306,8 @@ describe("mobile push runtime contract", () => {
     expect(gapTracker).toContain("apps/mobile/src/lib/mobilePushRuntime.ts");
     expect(gapTracker).toContain("mobile push evidence classifier");
     expect(gapTracker).toContain("local in-memory Expo push repository contract");
+    expect(gapTracker).toContain("Prisma-shaped Expo push repository adapter");
+    expect(gapTracker).toContain("PushToken and NotificationInteraction schema models");
     expect(gapTracker).toContain("Expo push payload sanitizer");
     expect(gapTracker).toContain("GAP-044 is mobile-push-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("buildMobilePushExecutionPlan");

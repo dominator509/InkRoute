@@ -57,6 +57,53 @@ export interface AbuseEventPersistenceContract {
   failClosedGate: "persist_before_reject_on_limiter_error";
 }
 
+export interface AbuseEventPersistenceClient {
+  readonly abuseEvent: {
+    create(input: {
+      data: {
+        tenantId: string;
+        actorUserId?: string;
+        routeFamily: string;
+        routePattern: string;
+        abuseKeyHash: string;
+        ipHash?: string;
+        userAgentHash?: string;
+        action: string;
+        reason: string;
+        limiterProvider?: string;
+        limiterDecision: string;
+        observedRequests?: number;
+        windowSeconds?: number;
+        botChallengeRequired: boolean;
+        providerSignatureValid?: boolean;
+        alertDispatchedAt?: Date;
+        failClosed: boolean;
+        redactedMetadata: Record<string, unknown>;
+      };
+    }): Promise<{ id?: string } | unknown>;
+  };
+  readonly auditLog: {
+    create(input: {
+      data: {
+        tenantId: string;
+        actorUserId?: string;
+        action: "abuse.event.persisted";
+        entityType: "AbuseEvent";
+        entityId: string;
+        metadata: Record<string, unknown>;
+      };
+    }): Promise<unknown>;
+  };
+}
+
+export interface AbuseEventPersistenceResult {
+  readonly persisted: true;
+  readonly auditAction: "abuse.event.persisted";
+  readonly abuseEventId: string;
+  readonly limiterDecision: AbuseEventPersistenceInput["limiterDecision"];
+  readonly failClosed: boolean;
+}
+
 export const abuseControlArtifactPaths = [
   "coverage/abuse-control-runtime.json",
   "coverage/abuse-rate-limit-distributed.json",
@@ -131,6 +178,7 @@ export type AbuseControlCommand = (typeof abuseControlCommands)[number];
 
 export type AbuseControlExecutionPolicy = {
   localRouteChecksOnly: true;
+  abuseEventPersistenceContractAvailable: true;
   distributedLimiterRequiresExternalEvidence: true;
   botChallengeRequiresExternalEvidence: true;
   webhookBypassRequiresExternalEvidence: true;
@@ -170,6 +218,7 @@ export type AbuseControlEvidenceDecision = {
 export type AbuseControlExecutionPlan = {
   status: "local-plan-ready";
   policy: AbuseControlExecutionPolicy;
+  abuseEventPersistenceContractAvailable: true;
   externalEvidenceRequired: typeof abuseControlRequiredExternalEvidence;
   distributedLimiterExecutionAllowed: false;
   botChallengeExecutionAllowed: false;
@@ -186,6 +235,7 @@ export type AbuseControlExecutionPlan = {
 
 export const abuseControlExecutionPolicy: AbuseControlExecutionPolicy = {
   localRouteChecksOnly: true,
+  abuseEventPersistenceContractAvailable: true,
   distributedLimiterRequiresExternalEvidence: true,
   botChallengeRequiresExternalEvidence: true,
   webhookBypassRequiresExternalEvidence: true,
@@ -245,6 +295,7 @@ export function buildAbuseControlExecutionPlan(): AbuseControlExecutionPlan {
   return {
     status: "local-plan-ready",
     policy: abuseControlExecutionPolicy,
+    abuseEventPersistenceContractAvailable: true,
     externalEvidenceRequired: abuseControlRequiredExternalEvidence,
     distributedLimiterExecutionAllowed: false,
     botChallengeExecutionAllowed: false,
@@ -329,6 +380,74 @@ export function buildAbuseEventPersistenceContract(input: AbuseEventPersistenceI
     redactedFields: ["rawIp", "userAgent", "payload", "providerSignature", "messageBody", "token"],
     tenantIsolationKey: "tenantId",
     failClosedGate: "persist_before_reject_on_limiter_error",
+  };
+}
+
+export async function persistAbuseEventOutcome(
+  client: AbuseEventPersistenceClient,
+  input: AbuseEventPersistenceInput,
+): Promise<AbuseEventPersistenceResult> {
+  const redactedMetadata = buildRedactedAbuseControlArtifact({
+    routeFamily: input.routeFamily,
+    routePattern: input.routePattern,
+    abuseKeyHash: input.abuseKeyHash,
+    ipHash: input.ipHash,
+    userAgentHash: input.userAgentHash,
+    action: input.action,
+    reason: input.reason,
+    limiterProvider: input.limiterProvider,
+    limiterDecision: input.limiterDecision,
+    observedRequests: input.observedRequests,
+    windowSeconds: input.windowSeconds,
+    botChallengeRequired: input.botChallengeRequired,
+    providerSignatureValid: input.providerSignatureValid,
+    failClosed: input.failClosed,
+  }) as Record<string, unknown>;
+
+  const event = await client.abuseEvent.create({
+    data: {
+      tenantId: input.tenantId,
+      ...(input.actorUserId ? { actorUserId: input.actorUserId } : {}),
+      routeFamily: input.routeFamily,
+      routePattern: input.routePattern,
+      abuseKeyHash: input.abuseKeyHash,
+      ...(input.ipHash ? { ipHash: input.ipHash } : {}),
+      ...(input.userAgentHash ? { userAgentHash: input.userAgentHash } : {}),
+      action: input.action,
+      reason: input.reason,
+      ...(input.limiterProvider ? { limiterProvider: input.limiterProvider } : {}),
+      limiterDecision: input.limiterDecision,
+      ...(typeof input.observedRequests === "number" ? { observedRequests: input.observedRequests } : {}),
+      ...(typeof input.windowSeconds === "number" ? { windowSeconds: input.windowSeconds } : {}),
+      botChallengeRequired: input.botChallengeRequired,
+      ...(typeof input.providerSignatureValid === "boolean" ? { providerSignatureValid: input.providerSignatureValid } : {}),
+      ...(input.alertDispatchedAt ? { alertDispatchedAt: new Date(input.alertDispatchedAt) } : {}),
+      failClosed: input.failClosed,
+      redactedMetadata,
+    },
+  });
+  const abuseEventId =
+    typeof event === "object" && event && "id" in event && typeof event.id === "string"
+      ? event.id
+      : `${input.tenantId}:${input.routeFamily}:${input.abuseKeyHash}`;
+
+  await client.auditLog.create({
+    data: {
+      tenantId: input.tenantId,
+      ...(input.actorUserId ? { actorUserId: input.actorUserId } : {}),
+      action: "abuse.event.persisted",
+      entityType: "AbuseEvent",
+      entityId: abuseEventId,
+      metadata: redactedMetadata,
+    },
+  });
+
+  return {
+    persisted: true,
+    auditAction: "abuse.event.persisted",
+    abuseEventId,
+    limiterDecision: input.limiterDecision,
+    failClosed: input.failClosed,
   };
 }
 

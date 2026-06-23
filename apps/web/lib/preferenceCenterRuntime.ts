@@ -216,6 +216,7 @@ export const preferenceCenterRuntimeProofFiles = [
   "apps/web/tests/preference-center-static.test.ts",
   "apps/web/tests/preference-center-runtime-static.test.ts",
   "apps/dashboard/app/settings/page.tsx",
+  "packages/db/prisma/schema.prisma",
   "testing/manifests/unit-test-manifest.json",
   "SECURITY.md",
   ".github/workflows/ci.yml",

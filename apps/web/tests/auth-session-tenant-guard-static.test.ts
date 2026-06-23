@@ -13,11 +13,16 @@ import {
   authSessionTenantGuardLocalCommands,
   authSessionTenantGuardProofFiles,
   authSessionTenantGuardRequiredExternalEvidence,
+  authSessionTenantGuardRunPersistenceContract,
+  authSessionTenantGuardSurfaceContract,
   authSessionTenantGuardSurfaceMatrix,
   buildAuthGuardAuditLogPlan,
   buildAuthSessionTenantGuardArtifactReview,
   buildAuthSessionTenantGuardEvidenceDecision,
   buildAuthSessionTenantGuardExecutionPlan,
+  buildAuthSessionTenantGuardExternalEvidencePacket,
+  buildAuthSessionTenantGuardRunData,
+  persistAuthSessionTenantGuardRun,
   buildRedactedAuthSessionTenantGuardArtifact,
 } from "../lib/authSessionTenantGuardRuntime";
 
@@ -49,11 +54,12 @@ describe("GAP-095 auth session tenant guard runtime contract", () => {
     expect(dashboardAuth).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(dashboardAuth).toContain("headers: noStoreHeaders");
     expect(dashboardAuth).not.toContain('headers: { "Cache-Control": "no-store" }');
-    expect(trustRoute).toContain("resolveDashboardReader");
+    expect(trustRoute).toContain("resolveDashboardActor(request)");
+    expect(trustRoute).toContain('assertPermission(actor, "tenant:read")');
     expect(trustRoute).toContain("TENANT_SCOPE_REQUIRED");
     expect(trustRoute).toContain("ROLE_NOT_AUTHORIZED");
     expect(trustRoute).toContain("DASHBOARD_TRUST_STATUS_PROVIDER_AUTH_NOT_CONFIGURED");
-    expect(trustRoute).toContain("scaffoldedTrustPreviewDisabled");
+    expect(trustRoute).toContain("headerOnlyTrustPreviewDisabled");
     expect(privacyRoute).toContain("resolveDashboardActor");
     expect(privacyRoute).toContain("checkDashboardMutationRateLimit");
     expect(privacyRoute).toContain('"Cache-Control": "no-store"');
@@ -93,7 +99,18 @@ describe("GAP-095 auth session tenant guard runtime contract", () => {
         "provider-backed-cross-tenant-proof",
       ]),
     );
+    expect(authSessionTenantGuardSurfaceContract.map((entry) => entry.surfaceId)).toEqual([
+      "dashboard-middleware-session-cookie-csrf",
+      "dashboard-api-tenant-reader-actor",
+      "mobile-session-tenant-guard",
+      "provider-login-logout-callbacks",
+      "persisted-session-revocation",
+      "csrf-bound-mutations",
+      "auth-audit-log-redaction",
+      "cross-tenant-route-denial",
+    ]);
     expect(authSessionTenantGuardArtifactPaths).toContain("coverage/auth-provider-session-redacted.json");
+    expect(authSessionTenantGuardArtifactPaths).toContain("coverage/auth-session-tenant-guard-external-evidence-packet.json");
     expect(auditPlan).toMatchObject({
       entityType: "AuthGuardDecision",
       action: "auth_guard:csrf_failed",
@@ -152,6 +169,7 @@ describe("GAP-095 auth session tenant guard runtime contract", () => {
       persistedSessionRevocationProofCaptured: false,
       auditLogRedactionProofCaptured: true,
       crossTenantDenialProofCaptured: false,
+      externalEvidencePacketCaptured: false,
       requiredCommandsRun: authSessionTenantGuardCommands.filter(
         (command) => command !== "provider-backed login/logout integration tests" && command !== "cross-tenant route integration tests",
       ),
@@ -174,11 +192,14 @@ describe("GAP-095 auth session tenant guard runtime contract", () => {
         "Capture provider-backed login/logout integration proof.",
         "Capture persisted TenantMember/session/revocation lookup proof.",
         "Capture cross-tenant dashboard/API/mobile denial proof.",
+        "Capture auth/session external evidence packet.",
         "Required command not recorded: provider-backed login/logout integration tests",
         "Required command not recorded: cross-tenant route integration tests",
       ]),
     );
     expect(blockedDecision.missingArtifacts).toContain("coverage/auth-provider-session-redacted.json");
+    expect(blockedDecision.requiredCommands).toBe(authSessionTenantGuardCommands);
+    expect(blockedDecision.requiredEvidence).toBe(authSessionTenantGuardArtifactPaths);
     expect(blockedDecision.redactedSummary).toEqual({
       storesRawSessionTokens: false,
       storesRawProviderPayloads: false,
@@ -194,6 +215,7 @@ describe("GAP-095 auth session tenant guard runtime contract", () => {
       persistedSessionRevocationProofCaptured: true,
       auditLogRedactionProofCaptured: true,
       crossTenantDenialProofCaptured: true,
+      externalEvidencePacketCaptured: true,
       requiredCommandsRun: authSessionTenantGuardCommands,
       capturedArtifacts: authSessionTenantGuardArtifactPaths,
     });
@@ -203,6 +225,56 @@ describe("GAP-095 auth session tenant guard runtime contract", () => {
     expect(completeDecision.missingArtifacts).toEqual([]);
     expect(completeDecision.requiredCommands).toBe(authSessionTenantGuardCommands);
     expect(completeDecision.requiredEvidence).toBe(authSessionTenantGuardArtifactPaths);
+  });
+
+  it("pins the GAP-095 auth-session tenant guard run persistence contract without claiming provider execution", () => {
+    const runData = buildAuthSessionTenantGuardRunData({
+      tenantId: "tenant_static",
+      runId: "auth_session_guard_static",
+      commitSha: "abc123",
+      status: "blocked",
+      providerLoginLogoutProofCaptured: false,
+      persistedSessionRevocationProofCaptured: false,
+      auditLogRedactionProofCaptured: true,
+      crossTenantDenialProofCaptured: false,
+      secretSafeReviewCaptured: true,
+      capturedArtifacts: [
+        "coverage/auth-session-tenant-guard-runtime.json",
+        "coverage/auth-dashboard-middleware-guard.json",
+      ],
+      requiredCommandsRun: authSessionTenantGuardLocalCommands,
+    });
+
+    expect(authSessionTenantGuardRunPersistenceContract).toEqual({
+      model: "AuthSessionTenantGuardRun",
+      tenantRelation: "authSessionTenantGuardRuns",
+      storesCommandMatrix: true,
+      storesArtifactManifest: true,
+      storesProviderSessionEvidence: true,
+      storesRevocationEvidence: true,
+      storesAuditEvidence: true,
+      storesCrossTenantEvidence: true,
+      storesSecretSafeReview: true,
+    });
+    expect(runData).toMatchObject({
+      tenantId: "tenant_static",
+      runId: "auth_session_guard_static",
+      commitSha: "abc123",
+      status: "blocked",
+      providerLoginLogoutProofCaptured: false,
+      persistedSessionRevocationProofCaptured: false,
+      auditLogRedactionProofCaptured: true,
+      crossTenantDenialProofCaptured: false,
+      secretSafeReviewCaptured: true,
+      redactedSummary: {
+        storesRawSessionTokens: false,
+        storesRawProviderPayloads: false,
+        providerSecretsRedacted: true,
+      },
+    });
+    expect(runData.commandMatrix).toBe(authSessionTenantGuardCommands);
+    expect(runData.completedCommands).toBe(authSessionTenantGuardLocalCommands);
+    expect(String(persistAuthSessionTenantGuardRun)).toContain("repository.authSessionTenantGuardRun.upsert");
   });
 
   it("pins CI, manifest, and tracker references for GAP-095", () => {
@@ -215,7 +287,10 @@ describe("GAP-095 auth session tenant guard runtime contract", () => {
     expect(ci).toContain("auth-session-tenant-guard-artifacts");
     expect(manifest).toContain("unit-web-auth-session-tenant-guard-static");
     expect(tracker).toContain("apps/web/lib/authSessionTenantGuardRuntime.ts");
+    expect(tracker).toContain("persistAuthSessionTenantGuardRun upsert seam");
     expect(tracker).toContain("Auth/session/tenant guard evidence classifier wired and provider-backed proof gated");
+    expect(tracker).toContain("authSessionTenantGuardSurfaceContract");
+    expect(tracker).toContain("buildAuthSessionTenantGuardExternalEvidencePacket");
   });
 
   it("keeps GAP-095 provider auth and cross-tenant execution disabled in the local plan", () => {
@@ -240,10 +315,37 @@ describe("GAP-095 auth session tenant guard runtime contract", () => {
     expect(plan.externalCommands).toBe(authSessionTenantGuardExternalCommands);
     expect(plan.localArtifacts).toBe(authSessionTenantGuardLocalArtifacts);
     expect(plan.externalArtifacts).toBe(authSessionTenantGuardExternalArtifacts);
+    expect(plan.surfaceContract).toBe(authSessionTenantGuardSurfaceContract);
+    expect(plan.surfaceContract).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        surfaceId: "dashboard-middleware-session-cookie-csrf",
+        requiredArtifact: "coverage/auth-dashboard-middleware-guard.json",
+        guardBoundary: "dashboard-middleware",
+        providerBackedEvidenceRequired: false,
+        redactedArtifactRequired: true,
+      }),
+      expect.objectContaining({
+        surfaceId: "persisted-session-revocation",
+        requiredCommand: "persist User, TenantMember, CustomRole, session, and revocation lookups",
+        requiredArtifact: "coverage/auth-csrf-revocation-redacted.json",
+        guardBoundary: "session-revocation",
+        providerBackedEvidenceRequired: true,
+        redactedArtifactRequired: true,
+      }),
+      expect.objectContaining({
+        surfaceId: "cross-tenant-route-denial",
+        requiredCommand: "cross-tenant route integration tests",
+        requiredArtifact: "coverage/auth-cross-tenant-denial-redacted.json",
+        guardBoundary: "cross-tenant",
+        providerBackedEvidenceRequired: true,
+        redactedArtifactRequired: true,
+      }),
+    ]));
     expect(plan.externalArtifacts).toEqual(expect.arrayContaining([
       "coverage/auth-csrf-revocation-redacted.json",
       "coverage/auth-provider-session-redacted.json",
       "coverage/auth-cross-tenant-denial-redacted.json",
+      "coverage/auth-session-tenant-guard-external-evidence-packet.json",
     ]));
     expect(plan.requiredExternalEvidence).toBe(authSessionTenantGuardRequiredExternalEvidence);
     expect(plan.requiredExternalEvidence).toEqual([
@@ -253,8 +355,26 @@ describe("GAP-095 auth session tenant guard runtime contract", () => {
       "provider-backed dashboard/mobile/API route guard proof",
       "CSRF-bound mutating route tests",
       "auth AuditLog persistence and cross-tenant route integration proof",
+      "auth/session external evidence packet with redacted provider, session, revocation, audit, and denial proof",
     ]);
     expect(plan.disabledReasons.join(" ")).toContain("Provider auth execution requires selected provider credentials");
+  });
+
+  it("keeps the GAP-095 auth/session external evidence packet non-executing and provider-gated", () => {
+    const packet = buildAuthSessionTenantGuardExternalEvidencePacket();
+
+    expect(packet.packetId).toBe("gap-095-auth-session-tenant-guard-external-evidence");
+    expect(packet.requiredArtifact).toBe("coverage/auth-session-tenant-guard-external-evidence-packet.json");
+    expect(packet.providerAuthExecutionAllowed).toBe(false);
+    expect(packet.persistedSessionExecutionAllowed).toBe(false);
+    expect(packet.routeIntegrationExecutionAllowed).toBe(false);
+    expect(packet.providerSessionEvidenceRequired).toBe(true);
+    expect(packet.sessionRevocationEvidenceRequired).toBe(true);
+    expect(packet.auditPersistenceEvidenceRequired).toBe(true);
+    expect(packet.crossTenantDenialEvidenceRequired).toBe(true);
+    expect(packet.redactionRequired).toBe(true);
+    expect(packet.requiredExternalEvidence).toBe(authSessionTenantGuardRequiredExternalEvidence);
+    expect(packet.surfaceContract).toBe(authSessionTenantGuardSurfaceContract);
   });
 
   it("redacts GAP-095 auth/session/provider artifacts before review", () => {

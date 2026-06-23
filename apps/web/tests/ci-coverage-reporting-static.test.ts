@@ -6,9 +6,11 @@ import {
   buildCiCoverageReportingArtifactReview,
   buildCiCoverageReportingEvidenceDecision,
   buildCiCoverageReportingExecutionPlan,
+  buildCiCoverageReportingRedactedArtifactPacket,
   buildCiCoverageRunData,
   buildCiCoverageRunPersistenceContract,
   ciCoverageRunPersistencePreview,
+  ciCoverageBranchRuleContract,
   ciCoverageReportingArtifactPaths,
   ciCoverageReportingCommands,
   ciCoverageReportingExecutionPolicy,
@@ -41,7 +43,8 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
       "pnpm test:e2e",
       "gh run view <ci-run-id> --json conclusion,status,url",
       "gh api repos/:owner/:repo/actions/runs/<ci-run-id>/artifacts",
-      "verify branch protection requires CI quality check"
+      "verify branch protection requires CI quality check",
+      "static branch-rule contract review"
     ]);
     expect(ciCoverageReportingMatrix.map((entry) => entry.id)).toEqual([
       "frozen-install-typecheck",
@@ -50,7 +53,9 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
       "machine-readable-reports",
       "failure-debug-media",
       "test-summary-retention-flaky-policy",
-      "ci-run-branch-protection"
+      "ci-run-branch-protection",
+      "branch-rule-contract",
+      "redacted-artifact-packet"
     ]);
     expect(ciCoverageReportingArtifactPaths).toEqual(
       expect.arrayContaining([
@@ -63,7 +68,9 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
         "coverage/playwright-junit.xml",
         "coverage/ci-test-summary.md",
         "coverage/ci-branch-protection-redacted.json",
+        "coverage/ci-branch-rule-contract.json",
         "coverage/ci-failed-test-debug-artifacts.json",
+        "coverage/ci-coverage-redacted-artifact-packet.json",
         "test-results/ci-coverage-reporting"
       ])
     );
@@ -144,6 +151,7 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
       flakyPolicyDocumented: false,
       ciRunPassed: false,
       branchProtectionRequiresCi: false,
+      branchRuleContractCaptured: false,
       branchProtectionArtifactPath: "coverage/ci-branch-protection-redacted.json",
       ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/redacted"
     });
@@ -154,6 +162,7 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
     expect(schema).toContain("@@unique([tenantId, runId])");
     expect(contract.transactionWrites).toEqual(["CiCoverageRun", "AuditLog"]);
     expect(contract.requiredCiFlags).toContain("failedDebugArtifactsVerified");
+    expect(contract.requiredCiFlags).toContain("branchRuleContractCaptured");
     expect(contract.artifactFields).toContain("branchProtectionArtifactPath");
     expect(contract.tenantIsolationKey).toBe("tenantId");
     expect(ciCoverageRunPersistencePreview.modelName).toBe("CiCoverageRun");
@@ -191,10 +200,12 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
     expect(unitManifest).toContain("unit-web-ci-coverage-reporting-static");
     expect(unitManifest).toContain("CiCoverageRun Prisma model and app row contract are wired");
     expect(gapTracker).toContain("apps/web/lib/ciCoverageReporting.ts");
+    expect(gapTracker).toContain("ciCoverageBranchRuleContract");
     expect(gapTracker).toContain("CI coverage evidence classifier wired and repository proof gated");
     expect(gapTracker).toContain("GAP-111 is ci-coverage-reporting-matrix wired with evidence classifier");
     expect(gapTracker).toContain("persistCiCoverageRun upsert seam");
     expect(gapTracker).toContain("ciCoverageReportingExternalArtifacts");
+    expect(gapTracker).toContain("buildCiCoverageReportingRedactedArtifactPacket");
   });
 
   it("classifies GAP-111 evidence as blocked until passing CI, artifacts, flaky policy, debug paths, and branch protection are proven", () => {
@@ -213,6 +224,8 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
       flakyPolicyDocumented: false,
       ciRunPassed: false,
       branchProtectionRequiresCi: false,
+      branchRuleContractCaptured: false,
+      redactedArtifactPacketCaptured: false,
       requiredCommandsRun: ciCoverageReportingCommands.filter(
         (command) =>
           command !== "pnpm test:e2e" &&
@@ -240,6 +253,8 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
         "Document flaky retry/quarantine policy.",
         "Capture passing CI quality run proof.",
         "Capture branch protection required-check proof.",
+        "Capture branch-rule contract proof for required checks, PR review, stale-review dismissal, up-to-date branch, conversations, and admin enforcement.",
+        "Capture retained redacted CI coverage artifact packet proof.",
         "Required command not recorded: pnpm test:e2e",
         "Required command not recorded: gh run view <ci-run-id> --json conclusion,status,url",
         "Required command not recorded: verify branch protection requires CI quality check",
@@ -253,10 +268,14 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
         "coverage/playwright-traces",
         "coverage/ci-branch-protection-redacted.json",
         "coverage/ci-failed-test-debug-artifacts.json",
+        "coverage/ci-coverage-redacted-artifact-packet.json",
       ]),
     );
+    expect(blockedDecision.requiredCommands).toBe(ciCoverageReportingCommands);
+    expect(blockedDecision.requiredEvidence).toBe(ciCoverageReportingArtifactPaths);
     expect(blockedDecision.ciPolicy).toEqual({
       branchProtectionRequired: true,
+      branchRuleContractRequired: true,
       failedDebugArtifactsRequired: true,
       flakyQuarantinePolicyRequired: true,
     });
@@ -276,6 +295,8 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
       flakyPolicyDocumented: true,
       ciRunPassed: true,
       branchProtectionRequiresCi: true,
+      branchRuleContractCaptured: true,
+      redactedArtifactPacketCaptured: true,
       requiredCommandsRun: ciCoverageReportingCommands,
       capturedArtifacts: ciCoverageReportingArtifactPaths,
     });
@@ -302,6 +323,16 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
     expect(plan.localCommands).toBe(ciCoverageReportingLocalCommands);
     expect(plan.localArtifacts).toBe(ciCoverageReportingLocalArtifacts);
     expect(plan.externalArtifacts).toBe(ciCoverageReportingExternalArtifacts);
+    expect(plan.branchRuleContract).toBe(ciCoverageBranchRuleContract);
+    expect(ciCoverageBranchRuleContract).toMatchObject({
+      branchPattern: "main",
+      requiredStatusChecks: ["CI quality"],
+      requiresPullRequestReview: true,
+      dismissesStaleReviews: true,
+      requiresUpToDateBranch: true,
+      requiresConversationResolution: true,
+      includesAdministrators: true,
+    });
     expect(ciCoverageReportingExecutionPolicy.externalEvidenceRequired).toBe(ciCoverageReportingRequiredExternalEvidence);
     expect(ciCoverageReportingRequiredExternalEvidence).toEqual(expect.arrayContaining([
       "Passing GitHub Actions CI quality run proof",
@@ -309,6 +340,7 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
       "Trace, screenshot, video, and failed-test debug artifact proof",
       "Branch protection required-check proof",
       "Provider-backed CiCoverageRun persistence proof",
+      "Retained redacted CI coverage artifact packet proof",
     ]));
     expect(plan.externalCommands).toBe(ciCoverageReportingCommands);
     expect(plan.externalArtifacts).toEqual(expect.arrayContaining([
@@ -316,7 +348,9 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
       "coverage/playwright-report",
       "coverage/playwright-traces",
       "coverage/ci-branch-protection-redacted.json",
+      "coverage/ci-branch-rule-contract.json",
       "coverage/ci-failed-test-debug-artifacts.json",
+      "coverage/ci-coverage-redacted-artifact-packet.json",
     ]));
     expect(plan.disabledReasons.join(" ")).toContain("Branch protection proof requires repository settings inspection.");
   });
@@ -336,7 +370,8 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
 
     const redacted = buildRedactedCiCoverageArtifact(rawArtifact);
     const review = buildCiCoverageReportingArtifactReview(rawArtifact);
-    const serialized = JSON.stringify({ redacted, review });
+    const packet = buildCiCoverageReportingRedactedArtifactPacket(rawArtifact);
+    const serialized = JSON.stringify({ redacted, review, packet });
 
     expect(serialized).not.toContain("ci-coverage-private");
     expect(serialized).not.toContain("privatecommitsha");
@@ -353,6 +388,12 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
       "Branch protection required-check proof",
       "Provider-backed CiCoverageRun persistence proof",
     ]));
+    expect(packet.status).toBe("redacted-artifact-packet-ready");
+    expect(packet.artifactPath).toBe("coverage/ci-coverage-redacted-artifact-packet.json");
+    expect(packet.review.requiredArtifacts).toBe(ciCoverageReportingArtifactPaths);
+    expect(packet.requiredArtifacts).toBe(ciCoverageReportingArtifactPaths);
+    expect(packet.retainedExternalGates).toBe(ciCoverageReportingRequiredExternalEvidence);
+    expect(packet.providerExecutionAllowed).toBe(false);
   });
 });
 

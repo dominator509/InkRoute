@@ -53,6 +53,7 @@ export interface Phase10SeoRuntimeExecutionPlan {
   readonly staticContractSurfaces: readonly Phase10SeoRuntimeSurfaceId[];
   readonly runtimeSurfaces: readonly Phase10SeoRuntimeSurfaceId[];
   readonly providerSurfaces: readonly Phase10SeoRuntimeSurfaceId[];
+  readonly surfaceContract: typeof phase10SeoRuntimeSurfaceContract;
   readonly secretSafeArtifactPath: Phase10SeoRuntimeEvidenceArtifact;
   readonly externalEvidenceRequired: typeof phase10SeoRuntimeRequiredExternalEvidence;
 }
@@ -73,6 +74,20 @@ export interface Phase10SeoRuntimeArtifactReview {
   readonly redactedArtifact: unknown;
   readonly unsafeFindings: readonly string[];
   readonly requiredArtifactPath: Phase10SeoRuntimeEvidenceArtifact;
+}
+
+export interface Phase10SeoRuntimeBuildEvidencePacket {
+  readonly packetId: "gap-076-phase10-seo-runtime-build-evidence";
+  readonly requiredArtifact: "coverage/phase10-seo-runtime-build-packet.json";
+  readonly providerExecutionAllowed: false;
+  readonly requiredCommands: typeof phase10SeoRuntimeBuildCommands;
+  readonly requiredArtifacts: typeof phase10SeoRuntimeArtifactPaths;
+  readonly requiredExternalEvidence: typeof phase10SeoRuntimeRequiredExternalEvidence;
+  readonly surfaceContract: typeof phase10SeoRuntimeSurfaceContract;
+  readonly searchConsoleProviderEvidenceRequired: true;
+  readonly renderedCrawlEvidenceRequired: true;
+  readonly ciEvidenceRequired: true;
+  readonly redactionRequired: true;
 }
 
 export const phase10SeoRuntimeSurfaces: Phase10SeoRuntimeSurface[] = [
@@ -207,6 +222,7 @@ export const phase10SeoRuntimeArtifactPaths = [
   "coverage/phase10-search-console-status.json",
   "coverage/phase10-search-console-provider-execution-redacted.json",
   "coverage/phase10-seo-runtime-ci-evidence.json",
+  "coverage/phase10-seo-runtime-build-packet.json",
   "coverage/phase10-seo-runtime-secret-safe-artifacts.json",
   "test-results/phase10-seo-web",
   "test-results/phase10-seo-dashboard",
@@ -241,6 +257,107 @@ export const phase10SeoRuntimeProofFiles = [
 ] as const;
 
 export type Phase10SeoRuntimeEvidenceArtifact = (typeof phase10SeoRuntimeArtifactPaths)[number];
+
+export interface Phase10SeoRuntimeSurfaceContractEntry {
+  readonly surfaceId: Phase10SeoRuntimeSurfaceId | "ci-phase10-seo-runtime-gate" | "secret-safe-artifacts";
+  readonly requiredCommand: string;
+  readonly requiredArtifact: Phase10SeoRuntimeEvidenceArtifact;
+  readonly runtimeBoundary:
+    | "build"
+    | "static-contract"
+    | "browser-runtime"
+    | "rendered-crawl"
+    | "database-runtime"
+    | "api-runtime"
+    | "search-console-provider"
+    | "ci-proof"
+    | "artifact-review";
+  readonly providerBackedEvidenceRequired: boolean;
+  readonly redactedArtifactRequired: true;
+}
+
+export const phase10SeoRuntimeSurfaceContract: readonly Phase10SeoRuntimeSurfaceContractEntry[] = [
+  {
+    surfaceId: "web-build",
+    requiredCommand: "pnpm --filter @inkroute/web build",
+    requiredArtifact: "coverage/phase10-seo-web-build.json",
+    runtimeBoundary: "build",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "dashboard-build",
+    requiredCommand: "pnpm --filter @inkroute/dashboard build",
+    requiredArtifact: "coverage/phase10-seo-dashboard-build.json",
+    runtimeBoundary: "build",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "dashboard-seo-browser-smoke",
+    requiredCommand: "pnpm playwright test apps/dashboard/tests/seo-browser-smoke.spec.ts",
+    requiredArtifact: "coverage/phase10-dashboard-seo-browser-smoke.json",
+    runtimeBoundary: "browser-runtime",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "rendered-public-seo-crawl",
+    requiredCommand: "pnpm playwright test apps/web/tests/e2e/structured-data-crawl.spec.ts",
+    requiredArtifact: "coverage/phase10-rendered-public-seo-crawl.json",
+    runtimeBoundary: "rendered-crawl",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "rendered-sitemap-canonical-crawl",
+    requiredCommand: "pnpm playwright test apps/web/tests/e2e/sitemap-canonical-crawl.spec.ts",
+    requiredArtifact: "coverage/phase10-rendered-sitemap-canonical-crawl.json",
+    runtimeBoundary: "rendered-crawl",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "database-backed-seo-routes",
+    requiredCommand: "pnpm vitest run apps/dashboard/tests/seo-read-route-static.test.ts apps/dashboard/tests/seo-publication-route-static.test.ts",
+    requiredArtifact: "coverage/phase10-database-backed-seo-routes.json",
+    runtimeBoundary: "database-runtime",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "api-preview-runtime-artifacts",
+    requiredCommand: "pnpm vitest run apps/web/tests/sitemap-route.test.ts",
+    requiredArtifact: "coverage/phase10-api-preview-runtime.json",
+    runtimeBoundary: "api-runtime",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "search-console-provider-status",
+    requiredCommand: "pnpm vitest run apps/dashboard/tests/search-console-route-static.test.ts",
+    requiredArtifact: "coverage/phase10-search-console-provider-execution-redacted.json",
+    runtimeBoundary: "search-console-provider",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "ci-phase10-seo-runtime-gate",
+    requiredCommand: "GitHub Actions Phase 10 SEO app runtime and build gate",
+    requiredArtifact: "coverage/phase10-seo-runtime-ci-evidence.json",
+    runtimeBoundary: "ci-proof",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "secret-safe-artifacts",
+    requiredCommand: "secret-safe Phase 10 SEO runtime/build artifact review",
+    requiredArtifact: "coverage/phase10-seo-runtime-secret-safe-artifacts.json",
+    runtimeBoundary: "artifact-review",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+] as const;
 
 const phase10SensitiveKeyPattern =
   /(?:authorization|bearer|clientsecret|credential|cookie|email|password|phone|private|rawhtml|refreshtoken|secret|token)/i;
@@ -309,6 +426,7 @@ export function buildPhase10SeoRuntimeExecutionPlan(): Phase10SeoRuntimeExecutio
       .filter((surface) => surface.evidenceType === "runtime-required")
       .map((surface) => surface.id),
     providerSurfaces: ["search-console-provider-status"],
+    surfaceContract: phase10SeoRuntimeSurfaceContract,
     secretSafeArtifactPath: "coverage/phase10-seo-runtime-secret-safe-artifacts.json",
     externalEvidenceRequired: phase10SeoRuntimeRequiredExternalEvidence,
   };
@@ -336,6 +454,22 @@ export function buildPhase10SeoRuntimeArtifactReview(
   };
 }
 
+export function buildPhase10SeoRuntimeBuildEvidencePacket(): Phase10SeoRuntimeBuildEvidencePacket {
+  return {
+    packetId: "gap-076-phase10-seo-runtime-build-evidence",
+    requiredArtifact: "coverage/phase10-seo-runtime-build-packet.json",
+    providerExecutionAllowed: false,
+    requiredCommands: phase10SeoRuntimeBuildCommands,
+    requiredArtifacts: phase10SeoRuntimeArtifactPaths,
+    requiredExternalEvidence: phase10SeoRuntimeRequiredExternalEvidence,
+    surfaceContract: phase10SeoRuntimeSurfaceContract,
+    searchConsoleProviderEvidenceRequired: true,
+    renderedCrawlEvidenceRequired: true,
+    ciEvidenceRequired: true,
+    redactionRequired: true,
+  };
+}
+
 export interface Phase10SeoRuntimeEvidenceInput {
   readonly testingPackageTestsPassed: boolean;
   readonly testingPackageTypecheckPassed: boolean;
@@ -353,6 +487,7 @@ export interface Phase10SeoRuntimeEvidenceInput {
   readonly searchConsoleStatusVerified: boolean;
   readonly searchConsoleProviderExecutionCaptured: boolean;
   readonly ciEvidenceCaptured: boolean;
+  readonly runtimeBuildEvidencePacketCaptured: boolean;
   readonly secretSafeArtifactReviewPassed: boolean;
   readonly capturedArtifacts: readonly Phase10SeoRuntimeEvidenceArtifact[];
 }
@@ -361,6 +496,7 @@ export const phase10SeoRuntimeDecisionRequiredEvidence = [
   "testing package, web build, dashboard build, and static contract artifacts",
   "dashboard browser/publish smokes and rendered public SEO/sitemap canonical crawl artifacts",
   "database-backed SEO route, sitemap runtime, API preview runtime, and canonical runtime artifacts",
+  "Phase 10 SEO runtime/build evidence packet with command, crawl, provider, CI, and redaction proof",
   "Search Console provider execution, CI gate, and redacted secret-safe artifact evidence",
 ] as const;
 
@@ -391,6 +527,7 @@ export function buildPhase10SeoRuntimeEvidenceDecision(input: Phase10SeoRuntimeE
     !input.searchConsoleStatusVerified ? "Search Console provider status evidence is required." : null,
     !input.searchConsoleProviderExecutionCaptured ? "Redacted Search Console provider execution evidence is required." : null,
     !input.ciEvidenceCaptured ? "CI Phase 10 SEO runtime/build gate evidence is required." : null,
+    !input.runtimeBuildEvidencePacketCaptured ? "Phase 10 SEO runtime/build evidence packet is required." : null,
     !input.secretSafeArtifactReviewPassed ? "Secret-safe artifact review evidence is required." : null,
   ].filter((blocker): blocker is string => blocker !== null);
   const capturedArtifacts = new Set(input.capturedArtifacts);
@@ -426,6 +563,7 @@ export const phase10SeoRuntimeBuildMatrix: readonly Phase10SeoRuntimeBuildMatrix
   { id: "search-console-status", command: "pnpm vitest run apps/dashboard/tests/search-console-route-static.test.ts", artifact: "coverage/phase10-search-console-status.json", status: "wired" },
   { id: "search-console-provider-execution", command: "redacted Search Console provider execution proof", artifact: "coverage/phase10-search-console-provider-execution-redacted.json", status: "provider-gated" },
   { id: "ci-phase10-seo-runtime-gate", command: "GitHub Actions Phase 10 SEO runtime/build gate", artifact: "coverage/phase10-seo-runtime-ci-evidence.json", status: "ci-gated" },
+  { id: "runtime-build-evidence-packet", command: "capture Phase 10 SEO runtime/build evidence packet", artifact: "coverage/phase10-seo-runtime-build-packet.json", status: "ci-gated" },
   { id: "secret-safe-artifacts", command: "redacted Phase 10 SEO runtime artifact audit", artifact: "coverage/phase10-seo-runtime-secret-safe-artifacts.json", status: "ci-gated" },
 ] as const;
 

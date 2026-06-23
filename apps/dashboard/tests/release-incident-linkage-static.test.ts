@@ -66,7 +66,11 @@ describe("release incident linkage runtime contract", () => {
     expect(route).toContain("sanitizedPayloadsVerified: true");
     expect(route).toContain("PROVIDER_RELEASE_INCIDENT_PERSISTENCE_NOT_CONFIGURED");
     expect(route).toContain("localReleaseIncidentFallbackDisabled");
-    expect(route).toContain('result.linkage.readiness.status !== "ready"');
+    expect(route).toContain('linkage.readiness.status !== "ready"');
+    expect(route).toContain("providerEvidenceBlocked: true");
+    expect(route).toContain("releaseIncidentLinkIds: []");
+    expect(route).toContain("noWritesCommitted: true");
+    expect(route.indexOf('linkage.readiness.status !== "ready"')).toBeLessThan(route.indexOf("tx.auditLog.create"));
     expect(route).toContain("RELEASE_INCIDENT_PROVIDER_EVIDENCE_NOT_CONFIGURED");
     expect(route).toContain("liveReleaseIncidentProviderEvidenceRequired");
     expect(route).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');

@@ -9,6 +9,7 @@
   type SmsProviderSendPlanInput,
   type SmsWebhookRuntimeReadinessPlan,
 } from "@inkroute/notifications";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 export type SmsProviderMutationInput = SmsProviderSendPlanInput & {
   providerRequestId: string;
@@ -91,6 +92,22 @@ export interface SmsProviderContract {
   requiredRepositoryMethods: readonly (keyof SmsProviderRepository)[];
 }
 
+export interface SmsWebhookSignatureVerificationInput {
+  readonly requestUrl: string;
+  readonly rawBody: string;
+  readonly signatureHeader: string | null;
+  readonly authToken?: string;
+  readonly contentType?: string;
+}
+
+export interface SmsWebhookSignatureVerification {
+  readonly verifierConfigured: boolean;
+  readonly twilioAuthTokenConfigured: boolean;
+  readonly requestUrlValidated: boolean;
+  readonly verified: boolean;
+  readonly reason: "verified" | "missing-auth-token" | "missing-signature" | "signature-mismatch";
+}
+
 export const sampleSmsContext: NotificationTemplateContext = {
   artistName: "Mara Vale",
   clientName: "Riley",
@@ -112,6 +129,56 @@ export const sampleSmsConsent: ClientConsentSnapshot = {
   marketingOptIn: false,
   transactionalAllowed: true,
 };
+
+function safeSignatureEquals(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function buildTwilioSignatureBaseString(input: Pick<SmsWebhookSignatureVerificationInput, "requestUrl" | "rawBody" | "contentType">): string {
+  if ((input.contentType ?? "").includes("application/x-www-form-urlencoded")) {
+    const params = new URLSearchParams(input.rawBody);
+    const sortedPairs = [...params.entries()].sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey));
+    return `${input.requestUrl}${sortedPairs.map(([key, value]) => `${key}${value}`).join("")}`;
+  }
+
+  return `${input.requestUrl}${input.rawBody}`;
+}
+
+export function verifySmsWebhookSignature(input: SmsWebhookSignatureVerificationInput): SmsWebhookSignatureVerification {
+  if (!input.authToken) {
+    return {
+      verifierConfigured: false,
+      twilioAuthTokenConfigured: false,
+      requestUrlValidated: false,
+      verified: false,
+      reason: "missing-auth-token",
+    };
+  }
+
+  if (!input.signatureHeader) {
+    return {
+      verifierConfigured: true,
+      twilioAuthTokenConfigured: true,
+      requestUrlValidated: false,
+      verified: false,
+      reason: "missing-signature",
+    };
+  }
+
+  const baseString = buildTwilioSignatureBaseString(input);
+  const expectedSignature = createHmac("sha1", input.authToken).update(baseString).digest("base64");
+  const verified = safeSignatureEquals(input.signatureHeader, expectedSignature);
+
+  return {
+    verifierConfigured: true,
+    twilioAuthTokenConfigured: true,
+    requestUrlValidated: true,
+    verified,
+    reason: verified ? "verified" : "signature-mismatch",
+  };
+}
 
 export function buildSmsProviderContract(): SmsProviderContract {
   return {
@@ -194,6 +261,7 @@ export function buildSmsWebhookReadinessFromPayload(input: {
   inboundBody?: string;
   rawBodyCaptured: boolean;
   signatureHeaderPresent: boolean;
+  signatureVerification?: SmsWebhookSignatureVerification;
   alreadyProcessedEventIds?: readonly string[];
 }): SmsWebhookRuntimeReadinessPlan {
   return buildSmsWebhookRuntimeReadinessPlan({
@@ -204,9 +272,9 @@ export function buildSmsWebhookReadinessFromPayload(input: {
     ...(input.inboundBody ? { inboundBody: input.inboundBody } : {}),
     rawBodyCaptured: input.rawBodyCaptured,
     signatureHeaderPresent: input.signatureHeaderPresent,
-    signatureVerifierConfigured: false,
-    twilioAuthTokenConfigured: false,
-    requestUrlValidated: false,
+    signatureVerifierConfigured: input.signatureVerification?.verifierConfigured ?? false,
+    twilioAuthTokenConfigured: input.signatureVerification?.twilioAuthTokenConfigured ?? false,
+    requestUrlValidated: input.signatureVerification?.requestUrlValidated ?? false,
     tenantResolved: Boolean(input.tenantId),
     consentProofAvailable: true,
     quietHoursPolicyConfigured: true,

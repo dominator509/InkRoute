@@ -21,6 +21,7 @@ import {
   privateStorageSignedUrlGrantPersistencePreview,
   privateStorageSignedUrlPreview,
   privateStorageSignedUrlRuntimeContract,
+  persistPrivateStorageSignedUrlGrant,
 } from "../lib/privateStorageSignedUrls";
 
 function readWorkspaceFile(path: string) {
@@ -38,6 +39,10 @@ describe("GAP-097 private storage signed URL contract", () => {
     expect(source).toContain("verify-tenant-subject-scope");
     expect(source).toContain("persist-signed-url-grant");
     expect(source).toContain("write-private-storage-audit-log");
+    expect(source).toContain("PrivateStorageSignedUrlPersistenceClient");
+    expect(source).toContain("persistPrivateStorageSignedUrlGrant");
+    expect(source).toContain("rawSignedUrlStored: false");
+    expect(source).toContain("where: {");
     expect(privateStorageSignedUrlPreview.plan.status).toBe("provider_gated");
     expect(privateStorageSignedUrlPreview.requiredWrites).toEqual(["FileAsset", "AuditLog", "SignedUrlGrant"]);
   });
@@ -271,12 +276,14 @@ describe("GAP-097 private storage signed URL contract", () => {
     const plan = buildPrivateStorageSignedUrlExecutionPlan();
 
     expect(plan.bucketAclExecutionAllowed).toBe(false);
+    expect(plan.transactionalPersistenceContractAvailable).toBe(true);
     expect(plan.signedUploadExecutionAllowed).toBe(false);
     expect(plan.signedDownloadExecutionAllowed).toBe(false);
     expect(plan.transactionalPersistenceExecutionAllowed).toBe(false);
     expect(plan.publicDerivativeExecutionAllowed).toBe(false);
     expect(plan.policy).toBe(privateStorageSignedUrlExecutionPolicy);
     expect(plan.policy).toEqual({
+      transactionalPersistenceContractAvailable: true,
       bucketAclExecutionAllowed: false,
       signedUploadExecutionAllowed: false,
       signedDownloadExecutionAllowed: false,
@@ -303,6 +310,61 @@ describe("GAP-097 private storage signed URL contract", () => {
       "approved derivative public-read integration proof",
     ]);
     expect(plan.disabledReasons.join(" ")).toContain("Private bucket ACL denial proof requires live S3/Supabase bucket access.");
+    expect(plan.disabledReasons.join(" ")).toContain("SignedUrlGrant transactional persistence contract is wired");
+  });
+
+  it("persists signed URL grant metadata without storing raw signed URLs", async () => {
+    const writes: unknown[] = [];
+    const result = await persistPrivateStorageSignedUrlGrant(
+      {
+        fileAsset: {
+          async updateMany(input) {
+            writes.push(input);
+            return { count: 1 };
+          },
+        },
+        signedUrlGrant: {
+          async create(input) {
+            writes.push(input);
+            return {};
+          },
+        },
+        auditLog: {
+          async create(input) {
+            writes.push(input);
+            return {};
+          },
+        },
+      },
+      {
+        grant: {
+          tenantId: "tenant_demo",
+          fileAssetId: "fileasset_demo",
+          issuedByUserId: "user_demo",
+          recipientUserId: "client_demo",
+          operation: "download",
+          scope: "download",
+          bucket: "inkroute-private",
+          objectKey: "private/tenant_demo/reference/fileasset_demo.jpg",
+          signedUrlHash: "sha256:redacted",
+          expiresAt: "2026-06-09T00:15:00.000Z",
+        },
+      },
+    );
+
+    const serialized = JSON.stringify(writes);
+    expect(result).toMatchObject({
+      persisted: true,
+      fileAssetUpdated: true,
+      grantPersisted: true,
+      auditAction: "private_storage.signed_url.created",
+      rawSignedUrlStored: false,
+    });
+    expect(serialized).toContain('"tenantId":"tenant_demo"');
+    expect(serialized).toContain('"entityType":"SignedUrlGrant"');
+    expect(serialized).toContain('"action":"private_storage.signed_url.created"');
+    expect(serialized).not.toContain("private/tenant_demo/reference/fileasset_demo.jpg");
+    expect(serialized).not.toContain("https://");
   });
 
   it("redacts GAP-097 signed URL and provider artifacts before review", () => {

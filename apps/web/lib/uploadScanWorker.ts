@@ -48,6 +48,47 @@ export interface UploadScanWorkerPlan {
   plan: UploadScanPipelinePlan;
 }
 
+export interface UploadScanWorkerPersistenceClient {
+  readonly fileAsset: {
+    updateMany(input: {
+      where: { id: string; tenantId: string };
+      data: {
+        scanStatus: string;
+        detectedMimeType: string | null;
+        malwareVerdict: string;
+        scanProvider?: string;
+        scanCheckedAt: Date;
+        quarantineReason?: string | null;
+        derivativeObjectKey?: string | null;
+        derivativeMimeType?: string | null;
+        metadataStripped: boolean;
+        storageVisibility: string;
+        metadata: Record<string, unknown>;
+      };
+    }): Promise<{ count: number }>;
+  };
+  readonly auditLog: {
+    create(input: {
+      data: {
+        tenantId: string;
+        action: "upload.scan_verdict";
+        entityType: "FileAsset";
+        entityId: string;
+        metadata: Record<string, unknown>;
+      };
+    }): Promise<unknown>;
+  };
+}
+
+export interface UploadScanWorkerPersistenceResult {
+  readonly persisted: boolean;
+  readonly scanStatus: string;
+  readonly auditAction: "upload.scan_verdict";
+  readonly fileAssetUpdated: boolean;
+  readonly quarantineRequired: boolean;
+  readonly publicDerivativeAllowed: boolean;
+}
+
 export function buildUploadDerivativeMetadataPlan(input: {
   tenantId: string;
   fileAssetId: string;
@@ -118,7 +159,7 @@ export const uploadScanWorkerExternalCommands = uploadScanWorkerCommands.slice(2
 export const uploadScanWorkerRequiredExternalEvidence = [
   "object-storage byte inspection integration proof",
   "malware scanner provider verdict proof",
-  "FileAsset scan-status and derivative persistence proof",
+  "provider-backed FileAsset scan-status and derivative persistence proof",
   "storage quarantine/rejection proof",
   "private-original/public-derivative access proof",
 ] as const;
@@ -169,6 +210,7 @@ export type UploadScanWorkerEvidenceDecision = {
 
 export type UploadScanWorkerExecutionPlan = {
   status: "local-plan-ready";
+  fileAssetPersistenceContractAvailable: true;
   objectStorageExecutionAllowed: false;
   malwareScannerExecutionAllowed: false;
   fileAssetPersistenceExecutionAllowed: false;
@@ -184,6 +226,7 @@ export type UploadScanWorkerExecutionPlan = {
 };
 
 export type UploadScanWorkerExecutionPolicy = {
+  fileAssetPersistenceContractAvailable: true;
   objectStorageExecutionAllowed: false;
   malwareScannerExecutionAllowed: false;
   fileAssetPersistenceExecutionAllowed: false;
@@ -236,6 +279,7 @@ export function buildRedactedUploadScanWorkerArtifact(value: unknown): unknown {
 }
 
 export const uploadScanWorkerExecutionPolicy: UploadScanWorkerExecutionPolicy = {
+  fileAssetPersistenceContractAvailable: true,
   objectStorageExecutionAllowed: false,
   malwareScannerExecutionAllowed: false,
   fileAssetPersistenceExecutionAllowed: false,
@@ -247,6 +291,7 @@ export const uploadScanWorkerExecutionPolicy: UploadScanWorkerExecutionPolicy = 
 export function buildUploadScanWorkerExecutionPlan(): UploadScanWorkerExecutionPlan {
   return {
     status: "local-plan-ready",
+    fileAssetPersistenceContractAvailable: true,
     objectStorageExecutionAllowed: false,
     malwareScannerExecutionAllowed: false,
     fileAssetPersistenceExecutionAllowed: false,
@@ -261,7 +306,7 @@ export function buildUploadScanWorkerExecutionPlan(): UploadScanWorkerExecutionP
     disabledReasons: [
       "Object-storage byte inspection requires live storage object reads.",
       "Malware scanner verdict proof requires a configured scanner provider.",
-      "FileAsset scan-status persistence proof requires migrated database execution.",
+      "FileAsset scan-status persistence contract is wired, but proof still requires migrated database execution.",
       "Storage quarantine/rejection proof requires live private object mutation.",
       "Private-original/public-derivative proof requires integration storage access checks.",
     ],
@@ -283,6 +328,65 @@ export function buildUploadScanWorkerArtifactReview(rawArtifact: unknown): Uploa
   };
 }
 
+export async function persistUploadScanWorkerOutcome(
+  client: UploadScanWorkerPersistenceClient,
+  input: { plan: UploadScanWorkerPlan; scanProvider?: string; now?: Date },
+): Promise<UploadScanWorkerPersistenceResult> {
+  const checkedAt = input.now ?? new Date();
+  const scanStatus = input.plan.status;
+  const quarantineReason = input.plan.plan.reasons.length > 0 ? input.plan.plan.reasons.join("; ") : null;
+  const derivativeMimeType = input.plan.derivativeMetadata.derivativeObjectKey.endsWith(".png") ? "image/png" : "image/webp";
+  const metadataStripped =
+    input.plan.derivativeMetadata.strippedMetadata.exifRemoved ||
+    input.plan.derivativeMetadata.strippedMetadata.gpsRemoved ||
+    input.plan.derivativeMetadata.normalizedDerivativeGenerated;
+  const metadata = buildRedactedUploadScanWorkerArtifact({
+    gapIds: input.plan.gapIds,
+    objectKey: input.plan.objectKey,
+    detectedMimeType: input.plan.detectedMimeType,
+    quarantineRequired: input.plan.quarantineRequired,
+    publicDerivativeAllowed: input.plan.publicDerivativeAllowed,
+    derivativeObjectKey: input.plan.derivativeMetadata.derivativeObjectKey,
+    reasons: input.plan.plan.reasons,
+  }) as Record<string, unknown>;
+
+  const updated = await client.fileAsset.updateMany({
+    where: { id: input.plan.fileAssetId, tenantId: input.plan.tenantId },
+    data: {
+      scanStatus,
+      detectedMimeType: input.plan.detectedMimeType,
+      malwareVerdict: input.plan.plan.malwareVerdict,
+      ...(input.scanProvider ? { scanProvider: input.scanProvider } : {}),
+      scanCheckedAt: checkedAt,
+      quarantineReason,
+      derivativeObjectKey: input.plan.publicDerivativeAllowed ? input.plan.derivativeMetadata.derivativeObjectKey : null,
+      derivativeMimeType: input.plan.publicDerivativeAllowed ? derivativeMimeType : null,
+      metadataStripped,
+      storageVisibility: input.plan.derivativeMetadata.storageVisibility,
+      metadata,
+    },
+  });
+
+  await client.auditLog.create({
+    data: {
+      tenantId: input.plan.tenantId,
+      action: "upload.scan_verdict",
+      entityType: "FileAsset",
+      entityId: input.plan.fileAssetId,
+      metadata,
+    },
+  });
+
+  return {
+    persisted: updated.count === 1,
+    scanStatus,
+    auditAction: "upload.scan_verdict",
+    fileAssetUpdated: updated.count === 1,
+    quarantineRequired: input.plan.quarantineRequired,
+    publicDerivativeAllowed: input.plan.publicDerivativeAllowed,
+  };
+}
+
 export function buildUploadScanWorkerEvidenceDecision(
   input: UploadScanWorkerEvidenceInput,
 ): UploadScanWorkerEvidenceDecision {
@@ -292,7 +396,7 @@ export function buildUploadScanWorkerEvidenceDecision(
     !input.objectStorageByteInspectionCaptured && "Capture object-storage byte inspection proof.",
     !input.malwareScannerVerdictCaptured && "Capture malware scanner provider verdict proof.",
     !input.metadataStrippingCaptured && "Capture EXIF/GPS stripping and derivative metadata proof.",
-    !input.fileAssetPersistenceCaptured && "Capture FileAsset scan-status and derivative persistence proof.",
+    !input.fileAssetPersistenceCaptured && "Capture provider-backed FileAsset scan-status and derivative persistence proof.",
     !input.quarantineRejectionCaptured && "Capture spoofed MIME, malware, and unscanned quarantine/rejection proof.",
     !input.privateOriginalPublicDerivativeCaptured && "Capture private-original and public-derivative access proof.",
   ].filter(Boolean) as string[];
@@ -390,3 +494,4 @@ export const uploadScanWorkerPreview = buildUploadScanWorkerPlan({
   scanProviderConfigured: false,
   declaredByAuthenticatedUser: true,
 });
+

@@ -18,6 +18,7 @@ import {
   securityMiddlewareRequiredExternalEvidence,
   securityMiddlewareRuntimeProofFiles,
   securityMiddlewareRuntimeContract,
+  persistSecurityMiddlewareEvidence,
 } from "../lib/securityMiddlewareRuntime";
 
 function readWorkspaceFile(path: string) {
@@ -99,6 +100,9 @@ describe("GAP-102 security middleware runtime contract", () => {
     expect(contract.redactedFields).toContain("csrfToken");
     expect(contract.tenantIsolationKey).toBe("tenantId");
     expect(securityMiddlewareEvidencePersistencePreview.modelName).toBe("SecurityMiddlewareEvidence");
+    expect(readWorkspaceFile("apps/web/lib/securityMiddlewareRuntime.ts")).toContain("SecurityMiddlewareEvidencePersistenceClient");
+    expect(readWorkspaceFile("apps/web/lib/securityMiddlewareRuntime.ts")).toContain("persistSecurityMiddlewareEvidence");
+    expect(readWorkspaceFile("apps/web/lib/securityMiddlewareRuntime.ts")).toContain('action: "security.middleware.evidence.persisted"');
   });
 
   it("keeps existing middleware runtime, static, and E2E security tests in the evidence set", () => {
@@ -233,12 +237,14 @@ describe("GAP-102 security middleware runtime contract", () => {
     const plan = buildSecurityMiddlewareExecutionPlan();
 
     expect(plan.browserSmokeExecutionAllowed).toBe(false);
+    expect(plan.persistenceContractAvailable).toBe(true);
     expect(plan.deploymentHstsExecutionAllowed).toBe(false);
     expect(plan.providerCspExecutionAllowed).toBe(false);
     expect(plan.signedWebhookReviewExecutionAllowed).toBe(false);
     expect(plan.persistenceExecutionAllowed).toBe(false);
     expect(plan.routeIntegrationExecutionAllowed).toBe(false);
     expect(plan.policy).toBe(securityMiddlewareExecutionPolicy);
+    expect(plan.policy.persistenceContractAvailable).toBe(true);
     expect(plan.externalEvidenceRequired).toBe(securityMiddlewareRequiredExternalEvidence);
     expect(securityMiddlewareExecutionPolicy.externalEvidenceRequired).toBe(securityMiddlewareRequiredExternalEvidence);
     expect(securityMiddlewareRequiredExternalEvidence).toEqual(expect.arrayContaining([
@@ -268,6 +274,56 @@ describe("GAP-102 security middleware runtime contract", () => {
       "coverage/security-webhook-csrf-bypass-review.json",
     ]));
     expect(plan.disabledReasons.join(" ")).toContain("Production HTTPS HSTS proof requires deployment-platform evidence.");
+    expect(plan.disabledReasons.join(" ")).toContain("SecurityMiddlewareEvidence persistence contract is wired");
+  });
+
+  it("persists security middleware evidence with redacted AuditLog metadata", async () => {
+    const writes: unknown[] = [];
+    const result = await persistSecurityMiddlewareEvidence(
+      {
+        securityMiddlewareEvidence: {
+          async create(input) {
+            writes.push(input);
+            return { id: "security_middleware_evidence_demo" };
+          },
+        },
+        auditLog: {
+          async create(input) {
+            writes.push(input);
+            return {};
+          },
+        },
+      },
+      {
+        tenantId: "tenant_demo",
+        surface: "dashboard",
+        environment: "production",
+        routePattern: "/api/security/privacy-requests",
+        headerSmokePassed: true,
+        productionHstsVerified: true,
+        previewLocalHstsSuppressed: true,
+        cspProviderConnectSrcVerified: true,
+        cspFrameBaseFormInvariantPassed: true,
+        csrfAttackRejected: true,
+        csrfValidSessionAllowed: true,
+        sameSiteSessionBoundVerified: true,
+        signedWebhookBypassReviewed: true,
+        artifactObjectKey: "security/tenant_demo/middleware/redacted-dashboard-smoke.json",
+      },
+    );
+
+    const serialized = JSON.stringify(writes);
+    expect(result).toMatchObject({
+      persisted: true,
+      evidenceId: "security_middleware_evidence_demo",
+      auditAction: "security.middleware.evidence.persisted",
+      tenantId: "tenant_demo",
+      surface: "dashboard",
+    });
+    expect(serialized).toContain('"tenantId":"tenant_demo"');
+    expect(serialized).toContain('"entityType":"SecurityMiddlewareEvidence"');
+    expect(serialized).toContain('"action":"security.middleware.evidence.persisted"');
+    expect(serialized).not.toContain("redacted-dashboard-smoke.json");
   });
 
   it("redacts GAP-102 CSRF, cookie, session, webhook, and artifact evidence before review", () => {

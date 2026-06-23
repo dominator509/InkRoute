@@ -20,6 +20,11 @@ const normalizeReleaseChannel = (value: string) => {
   return value;
 };
 
+const optionalReleaseChannelInput = (value: unknown) => {
+  if (value === undefined || value === null || value === "") return undefined;
+  return normalizeReleaseChannel(String(value));
+};
+
 export const releaseCreateInputSchema = z.object({
   tenantId: cuidLikeSchema.optional(),
   version: z.string().min(1).max(120).trim(),
@@ -34,10 +39,27 @@ export const releaseCreateInputSchema = z.object({
 
 export type ReleaseCreateInput = z.infer<typeof releaseCreateInputSchema>;
 
+export const releaseRollbackInputSchema = z.object({
+  tenantId: cuidLikeSchema.optional(),
+  fromVersion: z.string().min(1).max(120).trim(),
+  targetVersion: z.string().min(1).max(120).trim(),
+  channel: z.preprocess((value) => normalizeReleaseChannel(String(value)), releaseChannelSchema),
+  reason: z.string().min(3).max(2_000).trim().default("Dashboard rollback intent."),
+  idempotencyKey: z.string().min(8).max(200).trim().optional(),
+});
+
+export type ReleaseRollbackInput = z.infer<typeof releaseRollbackInputSchema>;
+
 export const releaseTenantQuerySchema = z.object({
   tenantId: cuidLikeSchema.optional(),
   tenantSlug: z.string().min(2).max(120).trim().optional(),
-});
+}).strict();
+
+export const featureFlagReadQuerySchema = z.object({
+  tenantId: cuidLikeSchema.optional(),
+  environment: z.preprocess(optionalReleaseChannelInput, releaseChannelSchema.optional().default("preview")),
+  role: z.string().min(1).max(80).trim().optional(),
+}).strict();
 
 export const featureFlagPatchInputSchema = z.object({
   tenantId: cuidLikeSchema.optional(),
@@ -50,6 +72,7 @@ export const featureFlagPatchInputSchema = z.object({
 });
 
 export type FeatureFlagPatchInput = z.infer<typeof featureFlagPatchInputSchema>;
+export type FeatureFlagReadQuery = z.infer<typeof featureFlagReadQuerySchema>;
 
 export const deploymentReadinessMutationSchema = z.object({
   operation: deploymentOperationSchema.default("readiness-review"),

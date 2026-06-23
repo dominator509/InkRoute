@@ -1,5 +1,6 @@
 ﻿import {
   buildStructuredDataCrawlQaReadinessPlan,
+  extractRenderedJsonLdScriptsFromHtml,
   type StructuredDataCrawlQaReadinessPlan,
 } from "@inkroute/seo";
 import { allPublicSeoRoutes } from "./seoEngine";
@@ -394,16 +395,11 @@ export const supportedRichResultSchemaTypes = ["FAQPage", "ImageObject", "Event"
 export const unsupportedSchemaReviewRequiredTypes = ["Person"] as const;
 
 export function extractJsonLdScriptsFromHtml(html: string): Array<Record<string, unknown>> {
-  const scripts = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi) ?? [];
-  return scripts.flatMap((script) => {
-    const json = script.replace(/^<script[^>]*>/i, "").replace(/<\/script>$/i, "").trim();
-    try {
-      const parsed = JSON.parse(json) as Record<string, unknown> | Array<Record<string, unknown>>;
-      return Array.isArray(parsed) ? parsed : [parsed];
-    } catch {
-      return [{ "@type": "INVALID_JSON_LD", rawLength: json.length }];
-    }
-  });
+  const extraction = extractRenderedJsonLdScriptsFromHtml(html);
+  if (extraction.graphs.length > 0) return [...extraction.graphs];
+  return extraction.scripts
+    .filter((script) => script.parseError)
+    .map((script) => ({ "@type": "INVALID_JSON_LD", rawLength: script.rawLength, parseError: script.parseError }));
 }
 
 export function buildStructuredDataCrawlQaContract(): StructuredDataCrawlQaReadinessPlan {

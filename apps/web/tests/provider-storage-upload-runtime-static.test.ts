@@ -33,6 +33,7 @@ describe("provider storage upload runtime contract", () => {
   const securityTests = readRepoFile("packages/security/tests/upload-policy.test.ts");
   const uploadRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/secure-upload-intents/route.ts");
   const uploadPolicyRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/upload-policy/route.ts");
+  const dashboardSignedUploadRoute = readRepoFile("apps/dashboard/app/api/files/signed-upload/route.ts");
   const uploadRouteTest = readRepoFile("apps/web/tests/secure-upload-intents-route.test.ts");
   const portfolioReadTest = readRepoFile("apps/dashboard/tests/portfolio-read-route-static.test.ts");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
@@ -186,6 +187,20 @@ describe("provider storage upload runtime contract", () => {
     expect(uploadRoute).toContain("fileAssetPersistencePlan");
     expect(uploadRoute).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(uploadRoute).toContain('{ ...noStoreHeaders, "Retry-After": String(rateLimit.retryAfterSeconds) }');
+    expect(dashboardSignedUploadRoute).toContain('export const runtime = "nodejs"');
+    expect(dashboardSignedUploadRoute).toContain("dashboard-signed-upload-intent");
+    expect(dashboardSignedUploadRoute).toContain("tx.idempotencyKey.upsert");
+    expect(dashboardSignedUploadRoute).toContain("idempotency.status === \"completed\"");
+    expect(dashboardSignedUploadRoute).toContain("tx.fileAsset.findFirst");
+    expect(dashboardSignedUploadRoute).toContain("tx.fileAsset.create");
+    expect(dashboardSignedUploadRoute).toContain("tx.signedUrlGrant.create");
+    expect(dashboardSignedUploadRoute).toContain("tx.auditLog.create");
+    expect(dashboardSignedUploadRoute).toContain("tx.idempotencyKey.update");
+    expect(dashboardSignedUploadRoute).toContain("providerUrlMinted: false");
+    expect(dashboardSignedUploadRoute).toContain("malwareScanExecuted: false");
+    expect(dashboardSignedUploadRoute).toContain("bucketAclVerified: false");
+    expect(dashboardSignedUploadRoute).toContain("idempotencyKeyId");
+    expect(dashboardSignedUploadRoute).toContain("idempotencyReplay");
     expect(uploadPolicyRoute).toContain("PROVIDER_STORAGE_POLICY_NOT_CONFIGURED");
     expect(uploadPolicyRoute).toContain("local policy preview is disabled until provider proof is captured");
     expect(uploadPolicyRoute).toContain('status: "local-preview"');
@@ -193,7 +208,7 @@ describe("provider storage upload runtime contract", () => {
     expect(uploadPolicyRoute).not.toContain("Upload policy preview only");
     expect(uploadPolicyRoute).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(uploadPolicyRoute).toContain("{ headers: noStoreHeaders }");
-    expect(uploadPolicyRoute).toContain("scaffoldedUploadPolicyDisabled");
+    expect(uploadPolicyRoute).toContain("localUploadPolicyPreviewDisabled");
     expect(uploadRoute).toContain("local signed-upload validation rules");
     expect(uploadRouteTest).toContain("secure-upload-intents");
     expect(uploadRouteTest).toContain('response.headers.get("Cache-Control")).toBe("no-store")');
@@ -379,6 +394,7 @@ describe("provider storage upload runtime contract", () => {
     expect(providerStorageUploadRuntimeProofFiles).toContain("packages/security/package.json");
     expect(providerStorageUploadRuntimeProofFiles).toContain("apps/web/package.json");
     expect(providerStorageUploadRuntimeProofFiles).toContain("apps/web/lib/providerStorageUploadRuntime.ts");
+    expect(dashboardSignedUploadRoute.length).toBeGreaterThan(0);
     expect(providerStorageUploadRuntimeProofFiles).toContain("apps/web/tests/provider-storage-upload-runtime-static.test.ts");
     for (const proofFile of providerStorageUploadRuntimeProofFiles) {
       expect(readRepoFile(proofFile).length).toBeGreaterThan(0);

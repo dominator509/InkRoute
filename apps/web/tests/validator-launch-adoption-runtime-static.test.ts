@@ -7,6 +7,7 @@ import {
   buildValidatorLaunchAdoptionArtifactReview,
   buildValidatorLaunchAdoptionExecutionPlan,
   buildValidatorLaunchAdoptionRunData,
+  buildValidatorRouteAdoptionScan,
   persistValidatorLaunchAdoptionRun,
   validatorLaunchAdoptionExternalArtifacts,
   validatorLaunchAdoptionExternalCommands,
@@ -95,6 +96,40 @@ describe("validator launch adoption runtime contract", () => {
     expect(bookingRoute).toContain("bookingRequestInputSchema");
     expect(stripeWebhookRoute).toContain("webhook");
     expect(dashboardReleaseRoute).toContain("releaseCreateInputSchema");
+  });
+
+  it("scans representative route sources for shared schemas before side effects", () => {
+    const scan = buildValidatorRouteAdoptionScan([
+      {
+        route: "apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts",
+        family: "public",
+        source: bookingRoute,
+        requiredSchemaSymbols: ["bookingRequestInputSchema", "safeParse"],
+        sideEffectSymbols: ["prisma.bookingRequest.create", "localRuntimeState.recordBookingRequest"],
+      },
+      {
+        route: "apps/web/app/api/webhooks/stripe/route.ts",
+        family: "webhook",
+        source: stripeWebhookRoute,
+        requiredSchemaSymbols: ["JSON.parse", "verifyStripeWebhookSignature"],
+        sideEffectSymbols: ["paymentAuditLog", "providerWebhookDelivery"],
+      },
+      {
+        route: "apps/dashboard/app/api/releases/route.ts",
+        family: "dashboard",
+        source: dashboardReleaseRoute,
+        requiredSchemaSymbols: ["releaseCreateInputSchema", "safeParse"],
+        sideEffectSymbols: ["releaseRecord", "auditLog"],
+      },
+    ]);
+
+    expect(scan).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ family: "public", usesSharedSchemas: true, validatesBeforeSideEffects: true }),
+        expect.objectContaining({ family: "webhook", usesSharedSchemas: true, validatesBeforeSideEffects: true }),
+        expect.objectContaining({ family: "dashboard", usesSharedSchemas: true, validatesBeforeSideEffects: true }),
+      ]),
+    );
   });
 
   it("keeps validator launch adoption blocked until schema, route, security, CI, and safe artifact evidence exists", () => {
@@ -287,6 +322,7 @@ describe("validator launch adoption runtime contract", () => {
     expect(unitManifest).toContain("unit-web-validator-launch-adoption-runtime-static");
     expect(unitManifest).toContain("ValidatorLaunchAdoptionRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/validatorLaunchAdoptionRuntime.ts");
+    expect(gapTracker).toContain("buildValidatorRouteAdoptionScan");
     expect(gapTracker).toContain("persistValidatorLaunchAdoptionRun upsert seam");
     expect(gapTracker).toContain("live installed-workspace validator typecheck/tests, provider-backed persistValidatorLaunchAdoptionRun execution, route-wide shared-schema adoption proof, malformed-payload tests, tenant/auth scope tests, sensitive-field redaction/encryption tests, CI evidence, and secret-safe artifacts remain open");
     expect(gapTracker).toContain("GAP-020 is validator-launch-adoption-runtime-matrix wired with evidence classifier");

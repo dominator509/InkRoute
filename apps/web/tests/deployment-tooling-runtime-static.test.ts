@@ -5,9 +5,11 @@ import {
   buildDeploymentToolingRuntimeArtifactReview,
   buildDeploymentToolingRuntimeEvidenceDecision,
   buildDeploymentToolingRuntimeExecutionPlan,
+  buildDeploymentToolingRuntimeRedactedBlockerOwnerPacket,
   buildRedactedDeploymentToolingArtifact,
   buildDeploymentToolingRunData,
   buildDeploymentToolingRunPersistenceContract,
+  deploymentToolingBlockerOwnerContract,
   deploymentToolingRunPersistencePreview,
   deploymentToolingRuntimeArtifactPaths,
   deploymentToolingRuntimeCommands,
@@ -64,7 +66,16 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
       "rollback-preflight",
       "production-approval-boundary",
       "ci-deployment-reports",
-      "blocker-owner-artifact"
+      "blocker-owner-artifact",
+      "redacted-blocker-owner-packet"
+    ]);
+    expect(deploymentToolingBlockerOwnerContract.map((entry) => entry.blockerId)).toEqual([
+      "dependency-install",
+      "deployment-package-quality",
+      "dashboard-runtime-smoke",
+      "rollback-approval-boundary",
+      "ci-deployment-reports",
+      "owner-retention"
     ]);
     expect(deploymentToolingRuntimeArtifactPaths).toEqual(
       expect.arrayContaining([
@@ -82,6 +93,7 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
         "coverage/deployment-production-approval-boundary.json",
         "coverage/deployment-ci-reports-redacted.json",
         "coverage/deployment-blocker-owner-list.json",
+        "coverage/deployment-blocker-owner-redacted-packet.json",
         "test-results/deployment-tooling-runtime"
       ])
     );
@@ -116,7 +128,7 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     expect(deploymentToolingRuntimeReadiness.status).toBe("blocked");
     expect(deploymentToolingRuntimeReadiness.missingPackageScripts).toEqual([]);
     expect(deploymentToolingRuntimeReadiness.missingRootScripts).toEqual([]);
-    expect(deploymentToolingRuntimeReadiness.requiredCommands).toStrictEqual(deploymentToolingRuntimeCommands);
+    expect(deploymentToolingRuntimeReadiness.requiredCommands).toBe(deploymentToolingRuntimeCommands);
     expect(deploymentToolingRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "Dependency install output plus @inkroute/deployment typecheck and test output.",
@@ -220,6 +232,8 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     expect(gapTracker).toContain("Deployment tooling evidence classifier wired and execution proof gated");
     expect(gapTracker).toContain("GAP-113 is deployment-tooling-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("persistDeploymentToolingRun upsert seam");
+    expect(gapTracker).toContain("deploymentToolingBlockerOwnerContract");
+    expect(gapTracker).toContain("buildDeploymentToolingRuntimeRedactedBlockerOwnerPacket");
   });
 
   it("classifies GAP-113 evidence as blocked until deployment tooling execution proof is captured", () => {
@@ -238,6 +252,7 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
       productionApprovalBoundaryVerified: true,
       ciDeploymentReportsCaptured: false,
       blockerOwnersDocumented: true,
+      redactedBlockerOwnerPacketCaptured: false,
       requiredCommandsRun: deploymentToolingRuntimeCommands.filter(
         (command) =>
           command !== "pnpm --filter @inkroute/deployment test" &&
@@ -270,6 +285,7 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
         "Capture dashboard deployment page smoke proof.",
         "Capture rollback preflight proof.",
         "Capture CI deployment report artifacts.",
+        "Capture retained redacted deployment blocker-owner packet proof.",
         "Required command not recorded: pnpm --filter @inkroute/deployment test",
         "Required command not recorded: pnpm deploy:checklist",
         "Required command not recorded: pnpm --filter @inkroute/dashboard build",
@@ -287,8 +303,11 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
         "coverage/deploy-checklist.json",
         "coverage/deployment-dashboard-build.log",
         "coverage/deployment-ci-reports-redacted.json",
+        "coverage/deployment-blocker-owner-redacted-packet.json",
       ]),
     );
+    expect(blockedDecision.requiredCommands).toBe(deploymentToolingRuntimeCommands);
+    expect(blockedDecision.requiredEvidence).toBe(deploymentToolingRuntimeArtifactPaths);
     expect(blockedDecision.deploymentPolicy).toEqual({
       productionActionsRemainApprovalGated: true,
       rollbackPreflightRequired: true,
@@ -310,6 +329,7 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
       productionApprovalBoundaryVerified: true,
       ciDeploymentReportsCaptured: true,
       blockerOwnersDocumented: true,
+      redactedBlockerOwnerPacketCaptured: true,
       requiredCommandsRun: deploymentToolingRuntimeCommands,
       capturedArtifacts: deploymentToolingRuntimeArtifactPaths,
     });
@@ -328,6 +348,35 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     expect(plan.externalCommands).toBe(deploymentToolingRuntimeExternalCommands);
     expect(plan.localArtifacts).toBe(deploymentToolingRuntimeLocalArtifacts);
     expect(plan.externalArtifacts).toBe(deploymentToolingRuntimeExternalArtifacts);
+    expect(plan.blockerOwnerContract).toBe(deploymentToolingBlockerOwnerContract);
+    expect(plan.blockerOwnerContract).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          blockerId: "dependency-install",
+          ownerRole: "platform",
+          requiredEvidenceArtifact: "coverage/deployment-install.log",
+          executionBoundary: "provider-proof",
+          redactedOwnerEvidenceRequired: true,
+          secretsForbidden: true,
+        }),
+        expect.objectContaining({
+          blockerId: "ci-deployment-reports",
+          ownerRole: "ci",
+          requiredEvidenceArtifact: "coverage/deployment-ci-reports-redacted.json",
+          executionBoundary: "ci-proof",
+          redactedOwnerEvidenceRequired: true,
+          secretsForbidden: true,
+        }),
+        expect.objectContaining({
+          blockerId: "owner-retention",
+          ownerRole: "release-manager",
+          requiredEvidenceArtifact: "coverage/deployment-blocker-owner-list.json",
+          executionBoundary: "human-approval-proof",
+          redactedOwnerEvidenceRequired: true,
+          secretsForbidden: true,
+        }),
+      ]),
+    );
     expect(plan.localArtifacts).toEqual(
       expect.arrayContaining([
         "coverage/deployment-tooling-runtime.json",
@@ -350,6 +399,7 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
         "coverage/deployment-production-approval-boundary.json",
         "coverage/deployment-ci-reports-redacted.json",
         "coverage/deployment-blocker-owner-list.json",
+        "coverage/deployment-blocker-owner-redacted-packet.json",
       ]),
     );
     expect(plan.frozenInstallExecutionAllowed).toBe(false);
@@ -362,6 +412,7 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     expect(plan.ciReportExecutionAllowed).toBe(false);
     expect(plan.persistenceExecutionAllowed).toBe(false);
     expect(plan.executionPolicy).toBe(deploymentToolingRuntimeExecutionPolicy);
+    expect(plan.executionPolicy.externalEvidenceRequired).toBe(deploymentToolingRuntimeRequiredExternalEvidence);
     expect(plan.executionPolicy).toEqual({
       codexMayClassifyLocalCommands: true,
       dependencyInstallRequiresUserApproval: true,
@@ -387,7 +438,8 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     };
     const redacted = buildRedactedDeploymentToolingArtifact(rawArtifact);
     const review = buildDeploymentToolingRuntimeArtifactReview("coverage/deployment-ci-reports-redacted.json", rawArtifact);
-    const serialized = JSON.stringify(review);
+    const packet = buildDeploymentToolingRuntimeRedactedBlockerOwnerPacket(rawArtifact);
+    const serialized = JSON.stringify({ review, packet });
 
     expect(JSON.stringify(redacted)).not.toContain("postgres://");
     expect(serialized).not.toContain("github.com/dominator509");
@@ -416,8 +468,16 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
         "Deployment approval and rollback-preflight artifacts must prove production actions stayed human-gated and non-mutating.",
         "CI deployment reports must be retained with run URLs, provider identifiers, tokens, and environment details redacted.",
         "Provider-backed DeploymentToolingRun persistence must execute only in approved provider environments.",
+        "Retained redacted blocker-owner packet must be captured for deploymentToolingBlockerOwnerContract before closure.",
       ]),
     );
+    expect(packet.status).toBe("redacted-blocker-owner-packet-ready");
+    expect(packet.artifactPath).toBe("coverage/deployment-blocker-owner-redacted-packet.json");
+    expect(packet.blockerOwnerContract).toBe(deploymentToolingBlockerOwnerContract);
+    expect(packet.review.containsUnredactedSensitiveValues).toBe(false);
+    expect(packet.requiredArtifacts).toBe(deploymentToolingRuntimeArtifactPaths);
+    expect(packet.externalEvidenceRequired).toBe(deploymentToolingRuntimeRequiredExternalEvidence);
+    expect(packet.providerExecutionAllowed).toBe(false);
   });
 });
 

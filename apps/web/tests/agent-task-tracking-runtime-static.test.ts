@@ -23,6 +23,7 @@ import {
   buildAgentTaskTrackingEvidenceDecision,
   buildAgentTaskTrackingRuntimeArtifactReview,
   buildAgentTaskTrackingRuntimeExecutionPlan,
+  buildAgentTaskTrackingRuntimeRedactedEvidenceBundle,
   buildRedactedAgentTaskTrackingArtifact,
 } from "../lib/agentTaskTrackingRuntime";
 
@@ -80,9 +81,11 @@ describe("agent task tracking runtime contract", () => {
       "gap-tracker-links",
       "status-traceability",
       "ci-task-tracking-artifacts",
+      "redacted-evidence-bundle",
     ]);
     expect(agentTaskTrackingRuntimeArtifactPaths).toContain("coverage/agent-task-tracking-issue-create-redacted.json");
     expect(agentTaskTrackingRuntimeArtifactPaths).toContain("coverage/agent-task-tracking-ci-run-redacted.json");
+    expect(agentTaskTrackingRuntimeArtifactPaths).toContain("coverage/agent-task-tracking-redacted-evidence-bundle.json");
     expect(agentTaskTrackingRuntimeArtifactPaths).toContain("test-results/agent-task-tracking-runtime");
   });
 
@@ -150,6 +153,7 @@ describe("agent task tracking runtime contract", () => {
       "coverage/agent-task-tracking-gap-links.json",
       "coverage/agent-task-tracking-status-traceability.json",
       "coverage/agent-task-tracking-ci-run-redacted.json",
+      "coverage/agent-task-tracking-redacted-evidence-bundle.json",
       "test-results/agent-task-tracking-runtime",
     ]);
     expect(decision.missingCommands).toEqual([
@@ -214,6 +218,7 @@ describe("agent task tracking runtime contract", () => {
     expect(gapTracker).toContain("agentTaskTrackingRequiredEvidence");
     expect(gapTracker).toContain("agentTaskTrackingRuntimeRequiredExternalEvidence");
     expect(gapTracker).toContain("buildAgentTaskTrackingRuntimeArtifactReview");
+    expect(gapTracker).toContain("buildAgentTaskTrackingRuntimeRedactedEvidenceBundle");
   });
 
   it("pins current agent task tracking runtime proof files for GAP-123", () => {
@@ -290,6 +295,7 @@ describe("agent task tracking runtime contract", () => {
         "coverage/agent-task-tracking-gap-links.json",
         "coverage/agent-task-tracking-status-traceability.json",
         "coverage/agent-task-tracking-ci-run-redacted.json",
+        "coverage/agent-task-tracking-redacted-evidence-bundle.json",
       ]),
     );
     expect(plan.taskSyncVerifierExecutionAllowed).toBe(false);
@@ -312,6 +318,9 @@ describe("agent task tracking runtime contract", () => {
       providerDatabaseRequiredForPersistence: true,
     });
     expect(plan.externalEvidenceRequired).toBe(agentTaskTrackingRuntimeRequiredExternalEvidence);
+    expect(plan.externalEvidenceRequired).toContain(
+      "Redacted agent task tracking evidence bundle must omit raw issue URLs, project item URLs, tracking URLs, actors, provider labels, run URLs, and private metadata.",
+    );
   });
 
   it("redacts agent task tracking artifacts before review or persistence", () => {
@@ -329,7 +338,8 @@ describe("agent task tracking runtime contract", () => {
     };
     const redacted = buildRedactedAgentTaskTrackingArtifact(rawArtifact);
     const review = buildAgentTaskTrackingRuntimeArtifactReview("coverage/agent-task-tracking-issue-create-redacted.json", rawArtifact);
-    const serialized = JSON.stringify(review);
+    const bundle = buildAgentTaskTrackingRuntimeRedactedEvidenceBundle("coverage/agent-task-tracking-issue-create-redacted.json", rawArtifact);
+    const serialized = JSON.stringify(bundle);
 
     expect(JSON.stringify(redacted)).not.toContain("github.com/dominator509");
     expect(serialized).not.toContain("owner@example.com");
@@ -357,8 +367,20 @@ describe("agent task tracking runtime contract", () => {
         "Handoff doc links, GAP_TRACKER links, and status traceability artifacts must redact issue URLs, project item URLs, actors, and private metadata.",
         "CI agent task tracking artifacts must redact run URLs, tokens, provider labels, and raw logs before retention.",
         "AgentTaskTrackingRun persistence must execute only against an approved provider-backed database.",
+        "Redacted agent task tracking evidence bundle must omit raw issue URLs, project item URLs, tracking URLs, actors, provider labels, run URLs, and private metadata.",
       ]),
     );
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.sourceArtifactPath).toBe("coverage/agent-task-tracking-issue-create-redacted.json");
+    expect(bundle.artifactPath).toBe("coverage/agent-task-tracking-redacted-evidence-bundle.json");
+    expect(bundle.review.containsUnredactedSensitiveValues).toBe(false);
+    expect(bundle.requiredArtifacts).toBe(agentTaskTrackingRuntimeArtifactPaths);
+    expect(bundle.externalEvidenceRequired).toBe(agentTaskTrackingRuntimeRequiredExternalEvidence);
+    expect(bundle.githubIssueCreationAllowed).toBe(false);
+    expect(bundle.githubProjectSyncAllowed).toBe(false);
+    expect(bundle.statusTraceabilityExecutionAllowed).toBe(false);
+    expect(bundle.ciArtifactExecutionAllowed).toBe(false);
+    expect(bundle.persistenceExecutionAllowed).toBe(false);
   });
 });
 

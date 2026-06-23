@@ -2,7 +2,40 @@ import { Text, View } from "react-native";
 import { MobileCard } from "../components/MobileCard";
 import { MobilePill } from "../components/MobilePill";
 import { MobileScreen } from "../components/MobileScreen";
+import { mobileApiFetch, type MobileApiResponseEnvelope, type MobileApiSession } from "../lib/mobileApiClient";
 import { mobileAppointments, mobileIcsPreview } from "../lib/mobileDemo";
+
+export interface MobileAppointmentSummary {
+  id: string;
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  status: string;
+}
+
+export function loadMobileAppointments(
+  session: MobileApiSession,
+  requestId = `mobile-appointments:${session.tenantId}`,
+): Promise<MobileApiResponseEnvelope<MobileAppointmentSummary[]>> {
+  return mobileApiFetch<MobileAppointmentSummary[]>(session, {
+    domain: "appointments",
+    method: "GET",
+    path: "/api/mobile/appointments",
+    requestId,
+  });
+}
+
+export function loadMobileAvailability(
+  session: MobileApiSession,
+  requestId = `mobile-availability:${session.tenantId}`,
+): Promise<MobileApiResponseEnvelope<unknown[]>> {
+  return mobileApiFetch<unknown[]>(session, {
+    domain: "appointments",
+    method: "GET",
+    path: "/api/mobile/availability",
+    requestId,
+  });
+}
 
 export function AppointmentsScreen() {
   return (

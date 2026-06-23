@@ -32,6 +32,46 @@ export interface MessagingPrivacyRepository {
   persistAuditLog(input: { tenantId: string; plan: MessagingPrivacyPlan; redactedMetadata: Record<string, unknown> }): Promise<void>;
 }
 
+export interface MessagingPrivacyPrismaRepositoryClient {
+  readonly idempotencyKey: {
+    findUnique(input: { where: { tenantId_scope_key: { tenantId: string; scope: string; key: string } } }): Promise<unknown | null>;
+    create(input: { data: { tenantId: string; scope: string; key: string; status: string; metadata: Record<string, unknown> } }): Promise<unknown>;
+  };
+  readonly messagePrivacyEvent: {
+    create(input: {
+      data: {
+        tenantId: string;
+        action: string;
+        threadId?: string;
+        messageId?: string;
+        actorUserId?: string;
+        role?: string;
+        status?: string;
+        workflowStatus?: string;
+        retentionDays?: number;
+        redactionFindings?: readonly string[];
+        metadata?: Record<string, unknown>;
+      };
+    }): Promise<unknown>;
+  };
+  readonly messageAuditLog: {
+    create(input: {
+      data: {
+        tenantId: string;
+        action: string;
+        threadId?: string;
+        messageId?: string;
+        actorUserId?: string;
+        role?: string;
+        metadata?: Record<string, unknown>;
+      };
+    }): Promise<unknown>;
+  };
+  readonly message: {
+    updateMany(input: { where: { tenantId: string; id: string }; data: { body: string; status?: string } }): Promise<unknown>;
+  };
+}
+
 export interface MessagingPrivacyContract {
   runtimeReadiness: MessagingPrivacyRuntimeReadinessPlan;
   redactPlan: MessagingPrivacyPlan;
@@ -80,6 +120,49 @@ export function buildRedactedMessagingPrivacyPayload(input: unknown): unknown {
   );
 }
 
+export const messagingPrivacyActionRolePolicy: Record<MessagingPrivacyAction, readonly MessagingRole[]> = {
+  authorize_message_view: ["client", "artist", "assistant", "studio_manager", "admin"],
+  redact_message: ["artist", "studio_manager", "admin"],
+  export_thread: ["studio_manager", "admin"],
+  delete_thread: ["admin"],
+  apply_retention: ["admin"],
+  moderate_message: ["studio_manager", "admin"],
+};
+
+export const messagingPrivacyRoleMismatchBlocker =
+  "Messaging privacy route must use the authenticated dashboard actor role, not a caller supplied role.";
+
+export const messagingPrivacySecureAttachmentBlocker =
+  "Secure attachment policy denies this role access to private or signed message attachments.";
+
+export function mapDashboardRoleToMessagingPrivacyRole(role: string): MessagingRole {
+  const normalized = role.trim().toLowerCase();
+  if (normalized === "owner") return "admin";
+  if (normalized === "admin" || normalized === "studio_manager" || normalized === "artist" || normalized === "assistant" || normalized === "client") {
+    return normalized;
+  }
+  return "assistant";
+}
+
+export function isMessagingPrivacyActionAllowedForRole(action: MessagingPrivacyAction, role: MessagingRole): boolean {
+  return messagingPrivacyActionRolePolicy[action].includes(role);
+}
+
+export function isMessagingPrivacyAttachmentAllowedForRole(role: MessagingRole, attachmentUrl?: string): boolean {
+  if (!attachmentUrl) return true;
+  const normalizedUrl = attachmentUrl.toLowerCase();
+  const privateOrSignedUrl = normalizedUrl.includes("/private/") || normalizedUrl.includes("token=") || normalizedUrl.includes("signature=");
+  return !(privateOrSignedUrl && role === "assistant");
+}
+
+function withMessagingPrivacyBlocker(plan: MessagingPrivacyPlan, blocker: string): MessagingPrivacyPlan {
+  return {
+    ...plan,
+    status: "blocked",
+    blockers: plan.blockers.includes(blocker) ? plan.blockers : [...plan.blockers, blocker],
+  };
+}
+
 export function buildMessagingPrivacyContract(): MessagingPrivacyContract {
   return {
     runtimeReadiness: buildMessagingPrivacyRuntimeReadinessPlan({
@@ -97,16 +180,16 @@ export function buildMessagingPrivacyContract(): MessagingPrivacyContract {
       unauthorizedRoleDenialTestsPassed: false,
       secureAttachmentAuthorizationImplemented: true,
       attachmentPolicyTestsPassed: false,
-      exportWorkflowPersistenceAvailable: false,
-      deleteWorkflowPersistenceAvailable: false,
-      retentionWorkflowPersistenceAvailable: false,
+      exportWorkflowPersistenceAvailable: true,
+      deleteWorkflowPersistenceAvailable: true,
+      retentionWorkflowPersistenceAvailable: true,
       retentionJobConfigured: false,
       providerPayloadExportOmissionEnforced: false,
       privateUrlExportOmissionEnforced: false,
       moderationRateLimitIntegrationConfigured: true,
       spamModerationTestsPassed: false,
-      auditLogPersistenceAvailable: false,
-      idempotencyStoreAvailable: false,
+      auditLogPersistenceAvailable: true,
+      idempotencyStoreAvailable: true,
       secretSafeArtifactsReviewed: false,
       postgresRetentionIntegrationTestsPassed: false,
     }),
@@ -212,7 +295,11 @@ export function buildMessagingPrivacyPlanFromRequest(input: {
   rateLimitAllowed?: boolean;
   idempotencyKey?: string;
 }): MessagingPrivacyPlan {
-  return buildMessagingPrivacyPlan(input);
+  const plan = buildMessagingPrivacyPlan(input);
+  if (!isMessagingPrivacyAttachmentAllowedForRole(input.role, input.attachmentUrl)) {
+    return withMessagingPrivacyBlocker(plan, messagingPrivacySecureAttachmentBlocker);
+  }
+  return plan;
 }
 
 export async function executeMessagingPrivacyPlan(
@@ -232,6 +319,25 @@ export async function executeMessagingPrivacyPlan(
   });
   if (claim === "duplicate") return { status: "duplicate", plan };
 
+  const effectiveAttachmentUrl = input.attachmentUrl ?? plan.attachmentUrl;
+  if (effectiveAttachmentUrl && effectiveThreadId) {
+    const attachmentStatus = await repository.authorizeAttachment({
+      tenantId: input.tenantId,
+      threadId: effectiveThreadId,
+      role: plan.role,
+      attachmentUrl: effectiveAttachmentUrl,
+    });
+    if (attachmentStatus === "denied") {
+      const blockedPlan = withMessagingPrivacyBlocker(plan, messagingPrivacySecureAttachmentBlocker);
+      await repository.persistAuditLog({
+        tenantId: input.tenantId,
+        plan: blockedPlan,
+        redactedMetadata: { attachmentAuthorizationStatus: attachmentStatus, blocker: messagingPrivacySecureAttachmentBlocker },
+      });
+      return { status: "blocked", plan: blockedPlan };
+    }
+  }
+
   await repository.persistPrivacyEvent({ tenantId: input.tenantId, plan, redactedMetadata: { action: plan.action, findings: plan.redactionFindings } });
   if (plan.action === "redact_message" && input.messageId) await repository.persistRedactedMessage({ tenantId: input.tenantId, messageId: input.messageId, bodyPreview: "[redacted-message-body]", findings: plan.redactionFindings });
   if (plan.action === "export_thread") {
@@ -248,17 +354,156 @@ export async function executeMessagingPrivacyPlan(
       retentionDays: effectiveRetentionDays,
     });
   }
-  if (input.attachmentUrl && effectiveThreadId) {
-    await repository.authorizeAttachment({
-      tenantId: input.tenantId,
-      threadId: effectiveThreadId,
-      role: plan.role,
-      attachmentUrl: input.attachmentUrl,
-    });
-  }
   if (plan.action === "moderate_message") await repository.persistModerationDecision({ tenantId: input.tenantId, plan, spamScore: input.spamScore ?? 0 });
   await repository.persistAuditLog({ tenantId: input.tenantId, plan, redactedMetadata: { visibleFields: plan.visibleFields, requiredWrites: plan.requiredWrites } });
   return { status: "processed", plan };
+}
+
+const messagingPrivacyIdempotencyScope = "messaging_privacy";
+
+const planMetadata = (plan: MessagingPrivacyPlan, extra: Record<string, unknown> = {}): Record<string, unknown> =>
+  buildRedactedMessagingPrivacyPayload({
+    action: plan.action,
+    status: plan.status,
+    visibleFields: plan.visibleFields,
+    requiredWrites: plan.requiredWrites,
+    redactionFindings: plan.redactionFindings,
+    exportIncludesProviderPayloads: plan.exportIncludesProviderPayloads,
+    exportIncludesPrivateUrls: plan.exportIncludesPrivateUrls,
+    attachmentPolicyApproved: plan.attachmentPolicyApproved,
+    rateLimitAllowed: plan.rateLimitAllowed,
+    ...extra,
+  }) as Record<string, unknown>;
+
+export function createPrismaMessagingPrivacyRepository(
+  client: MessagingPrivacyPrismaRepositoryClient,
+): MessagingPrivacyRepository {
+  const persistWorkflowEvent = async (input: {
+    tenantId: string;
+    plan: MessagingPrivacyPlan;
+    workflowStatus: string;
+    threadId?: string;
+    retentionDays?: number;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> => {
+    await client.messagePrivacyEvent.create({
+      data: {
+        tenantId: input.tenantId,
+        action: input.plan.action,
+        ...(input.threadId ?? input.plan.threadId ? { threadId: input.threadId ?? input.plan.threadId } : {}),
+        ...(input.plan.messageId ? { messageId: input.plan.messageId } : {}),
+        ...(input.plan.actorId ? { actorUserId: input.plan.actorId } : {}),
+        role: input.plan.role,
+        status: input.plan.status,
+        workflowStatus: input.workflowStatus,
+        ...(input.retentionDays ?? input.plan.retentionDays ? { retentionDays: input.retentionDays ?? input.plan.retentionDays } : {}),
+        redactionFindings: input.plan.redactionFindings,
+        metadata: planMetadata(input.plan, input.metadata),
+      },
+    });
+  };
+
+  return {
+    async claimIdempotencyKey(input) {
+      const existing = await client.idempotencyKey.findUnique({
+        where: {
+          tenantId_scope_key: {
+            tenantId: input.tenantId,
+            scope: messagingPrivacyIdempotencyScope,
+            key: `${input.action}:${input.key}`,
+          },
+        },
+      });
+      if (existing) return "duplicate";
+
+      await client.idempotencyKey.create({
+        data: {
+          tenantId: input.tenantId,
+          scope: messagingPrivacyIdempotencyScope,
+          key: `${input.action}:${input.key}`,
+          status: "claimed",
+          metadata: planMetadata({ action: input.action, status: "ready", visibleFields: [], requiredWrites: [], redactionFindings: [] } as MessagingPrivacyPlan),
+        },
+      });
+      return "claimed";
+    },
+    async persistPrivacyEvent(input) {
+      await persistWorkflowEvent({
+        tenantId: input.tenantId,
+        plan: input.plan,
+        workflowStatus: "privacy_event_recorded",
+        metadata: input.redactedMetadata,
+      });
+    },
+    async persistRedactedMessage(input) {
+      await client.message.updateMany({
+        where: { tenantId: input.tenantId, id: input.messageId },
+        data: { body: "[redacted-message-body]", status: "read" },
+      });
+      await client.messagePrivacyEvent.create({
+        data: {
+          tenantId: input.tenantId,
+          action: "redact_message",
+          messageId: input.messageId,
+          status: "ready",
+          workflowStatus: "message_redacted",
+          redactionFindings: input.findings,
+          metadata: planMetadata({ action: "redact_message", status: "ready", visibleFields: [], requiredWrites: [], redactionFindings: input.findings } as MessagingPrivacyPlan, {
+            bodyPreview: input.bodyPreview,
+          }),
+        },
+      });
+    },
+    async persistExportWorkflow(input) {
+      await persistWorkflowEvent({ tenantId: input.tenantId, plan: input.plan, workflowStatus: "export_queued", threadId: input.threadId });
+    },
+    async persistDeleteWorkflow(input) {
+      await persistWorkflowEvent({ tenantId: input.tenantId, plan: input.plan, workflowStatus: "delete_queued", threadId: input.threadId });
+    },
+    async persistRetentionWorkflow(input) {
+      await persistWorkflowEvent({
+        tenantId: input.tenantId,
+        plan: input.plan,
+        workflowStatus: "retention_queued",
+        threadId: input.threadId,
+        retentionDays: input.retentionDays,
+      });
+    },
+    async authorizeAttachment(input) {
+      const status = input.attachmentUrl.includes("/private/") && input.role === "assistant" ? "denied" : "allowed";
+      await client.messageAuditLog.create({
+        data: {
+          tenantId: input.tenantId,
+          action: "authorize_attachment",
+          threadId: input.threadId,
+          role: input.role,
+          metadata: buildRedactedMessagingPrivacyPayload({ attachmentUrl: input.attachmentUrl, status }) as Record<string, unknown>,
+        },
+      });
+      return status;
+    },
+    async persistModerationDecision(input) {
+      await persistWorkflowEvent({
+        tenantId: input.tenantId,
+        plan: input.plan,
+        workflowStatus: "moderation_recorded",
+        metadata: { spamScore: input.spamScore, rateLimitAllowed: input.plan.rateLimitAllowed },
+      });
+    },
+    async persistAuditLog(input) {
+      await client.messageAuditLog.create({
+        data: {
+          tenantId: input.tenantId,
+          action: input.plan.action,
+          ...(input.plan.threadId ? { threadId: input.plan.threadId } : {}),
+          ...(input.plan.messageId ? { messageId: input.plan.messageId } : {}),
+          ...(input.plan.actorId ? { actorUserId: input.plan.actorId } : {}),
+          role: input.plan.role,
+          metadata: planMetadata(input.plan, input.redactedMetadata),
+        },
+      });
+    },
+  };
 }
 
 export function createInMemoryMessagingPrivacyRepository(): MessagingPrivacyRepository & {

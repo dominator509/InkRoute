@@ -118,7 +118,10 @@ describe("SMS provider runtime contract", () => {
     expect(providerSource).toContain("buildRedactedSmsWebhookPayload");
     expect(providerSource).toContain("persistInboundThread");
     expect(providerSource).toContain("buildSmsProviderReconciliation");
+    expect(providerSource).toContain("verifySmsWebhookSignature");
     expect(routeSource).toContain("buildSmsWebhookReadinessFromPayload");
+    expect(routeSource).toContain("verifySmsWebhookSignature");
+    expect(routeSource).toContain("INVALID_SMS_PROVIDER_SIGNATURE");
     expect(routeSource).toContain("x-twilio-signature");
     expect(routeSource).toContain("PROVIDER_SMS_WEBHOOK_RECONCILIATION_NOT_CONFIGURED");
     expect(routeSource).toContain("localSmsWebhookPersistenceDisabled");
@@ -134,7 +137,7 @@ describe("SMS provider runtime contract", () => {
     expect(smsProviderRuntimeReadiness.requiredEvidence).toBe(smsProviderRuntimeReadinessRequiredEvidence);
     expect(smsProviderRuntimeReadiness.requiredControls).toBe(smsProviderRuntimeReadinessRequiredControls);
     expect(smsProviderRuntimeReadiness.blockers).toContain("Real Twilio SDK credentials and messaging service must be configured in a secret store.");
-    expect(smsProviderRuntimeReadiness.blockers).toContain("SMS webhook route must verify Twilio signatures cryptographically against raw bodies and request URLs.");
+    expect(smsProviderRuntimeReadiness.blockers).toContain("SMS webhook route signature verification, request URL validation, and invalid-signature rejection evidence must be captured.");
     expect(smsProviderRuntimeReadiness.blockers).toContain("Sent, delivered, failed, STOP, and HELP provider flows must be tested against the sandbox.");
   });
 
@@ -333,6 +336,7 @@ describe("SMS provider runtime contract", () => {
     expect(gapTracker).toContain("buildSmsProviderArtifactReview");
     expect(gapTracker).toContain("non-executing SMS provider execution policy");
     expect(gapTracker).toContain("local in-memory SMS provider repository contract");
+    expect(gapTracker).toContain("verifySmsWebhookSignature");
     expect(gapTracker).toContain("SMS provider payload sanitizer");
     expect(gapTracker).toContain("GAP-062 is sms-provider-runtime-matrix wired with SMS provider evidence classifier");
     expect(smsProviderArtifactPaths).toContain("coverage/sms-provider-secret-safe-artifacts.json");

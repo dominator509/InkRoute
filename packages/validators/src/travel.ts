@@ -48,7 +48,22 @@ export const availabilityWindowInputSchema = z.intersection(
 
 export const travelStopInputSchema = travelScheduleInputSchema;
 
+export const waitlistSignupInputSchema = z.object({
+  citySlug: slugSchema,
+  clientName: z.string().min(2).max(120),
+  clientEmail: z.string().email().max(240),
+  phone: z.string().min(7).max(32).optional(),
+  preferredStyle: z.string().min(2).max(80).optional(),
+  placement: z.string().min(2).max(80).optional(),
+  sizeEstimate: z.string().min(2).max(80).optional(),
+  notes: z.string().max(1200).optional(),
+  marketingOptIn: z.boolean().default(false),
+  smsOptIn: z.boolean().default(false),
+  policyAccepted: z.literal(true),
+});
+
 export type TravelCityInput = z.infer<typeof travelCityInputSchema>;
 export type TravelScheduleInput = z.infer<typeof travelScheduleInputSchema>;
 export type AvailabilityWindowInput = z.infer<typeof availabilityWindowInputSchema>;
 export type TravelStopInput = z.infer<typeof travelStopInputSchema>;
+export type WaitlistSignupInput = z.infer<typeof waitlistSignupInputSchema>;

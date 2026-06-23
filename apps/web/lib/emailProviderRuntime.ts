@@ -366,7 +366,7 @@ export const emailProviderRuntimeReadiness: EmailProviderRuntimeReadiness = {
   blockers: [
     "Real Resend SDK/API key must be configured in a secret store before provider-backed sends.",
     "Verified sender/domain evidence must be captured before production email delivery.",
-    "Email webhook route must verify Resend/Svix signatures cryptographically against raw bodies.",
+    "Email webhook route signature verification and invalid-signature rejection evidence must be captured.",
     "NotificationDelivery, ProviderEvent, and suppression persistence must be durable and transactional.",
     "Delivered, bounced, complained, and unsubscribe provider events must be tested against the sandbox.",
     "Email provider CI evidence and secret-safe artifact review must be captured.",

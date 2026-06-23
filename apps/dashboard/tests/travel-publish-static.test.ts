@@ -13,6 +13,8 @@ import { demoTravelStops } from "@inkroute/config";
 const repoRoot = resolve(__dirname, "../../..");
 const pageSource = readFileSync(resolve(repoRoot, "apps/dashboard/app/travel/page.tsx"), "utf8");
 const actionPanelSource = readFileSync(resolve(repoRoot, "apps/dashboard/components/TravelPublishActionPanel.tsx"), "utf8");
+const travelCityRouteSource = readFileSync(resolve(repoRoot, "apps/dashboard/app/api/travel/cities/route.ts"), "utf8");
+const travelScheduleRouteSource = readFileSync(resolve(repoRoot, "apps/dashboard/app/api/travel/schedules/route.ts"), "utf8");
 
 describe("dashboard travel publish contract", () => {
   it("covers publish, update, unpublish, and rollback actions", () => {
@@ -130,8 +132,19 @@ describe("dashboard travel publish contract", () => {
     const routeSource = readFileSync(resolve(repoRoot, "apps/dashboard/app/api/travel/publish/route.ts"), "utf8");
 
     expect(routeSource).toContain("buildTravelPublishMutationPlan");
+    expect(routeSource).toContain('export const runtime = "nodejs"');
     expect(routeSource).toContain("travel:write");
     expect(routeSource).toContain("TRAVEL_PUBLISH_BLOCKED");
+    expect(routeSource).toContain("database-persisted");
+    expect(routeSource).toContain("TravelSchedule");
+    expect(routeSource).toContain("auditLog.create");
+    expect(routeSource).toContain("idempotencyKey.upsert");
+    expect(routeSource).toContain('idempotency.status === "completed"');
+    expect(routeSource).toContain('status: "idempotency_conflict"');
+    expect(routeSource).toContain('code: "IDEMPOTENCY_CONFLICT"');
+    expect(routeSource).toContain("requestHash");
+    expect(routeSource).toContain("idempotencyKeyId");
+    expect(routeSource).toContain("idempotencyReplay");
     expect(routeSource).toContain("repository-required");
     expect(routeSource).toContain("{ status: 202, headers: noStoreHeaders }");
     expect(routeSource).not.toContain("{ status: 501, headers: noStoreHeaders }");
@@ -145,5 +158,38 @@ describe("dashboard travel publish contract", () => {
     expect(actionPanelSource).toContain('fetch("/api/travel/publish"');
     expect(actionPanelSource).toContain("Submit publish draft");
     expect(actionPanelSource).toContain("Durable travel repositories, public cache revalidation, provider rollback handling, waitlist notifications, and dashboard-to-public E2E proof remain evidence-gated.");
+  });
+
+  it("persists travel city creation idempotency before audited writes", () => {
+    expect(travelCityRouteSource).toContain('export const runtime = "nodejs"');
+    expect(travelCityRouteSource).toContain("dashboard-travel-city-create");
+    expect(travelCityRouteSource).toContain("tx.idempotencyKey.upsert");
+    expect(travelCityRouteSource).toContain("idempotency.status === \"completed\"");
+    expect(travelCityRouteSource).toContain("tx.travelCity.findFirst");
+    expect(travelCityRouteSource).toContain("tx.travelCity.create");
+    expect(travelCityRouteSource).toContain("tx.auditLog.create");
+    expect(travelCityRouteSource).toContain("tx.idempotencyKey.update");
+    expect(travelCityRouteSource).toContain("rawLocationStoredInResult: false");
+    expect(travelCityRouteSource).toContain("publicCacheRevalidated: false");
+    expect(travelCityRouteSource).toContain("idempotencyKeyId");
+    expect(travelCityRouteSource).toContain("idempotencyReplay");
+    expect(travelCityRouteSource).toContain("idempotency-backed");
+  });
+
+  it("persists travel schedule creation idempotency before audited writes", () => {
+    expect(travelScheduleRouteSource).toContain('export const runtime = "nodejs"');
+    expect(travelScheduleRouteSource).toContain("dashboard-travel-schedule-create");
+    expect(travelScheduleRouteSource).toContain("tx.idempotencyKey.upsert");
+    expect(travelScheduleRouteSource).toContain("idempotency.status === \"completed\"");
+    expect(travelScheduleRouteSource).toContain("tx.travelSchedule.findFirst");
+    expect(travelScheduleRouteSource).toContain("tx.travelSchedule.create");
+    expect(travelScheduleRouteSource).toContain("tx.auditLog.create");
+    expect(travelScheduleRouteSource).toContain("tx.idempotencyKey.update");
+    expect(travelScheduleRouteSource).toContain("rawNotesStoredInResult: false");
+    expect(travelScheduleRouteSource).toContain("publicCacheRevalidated: false");
+    expect(travelScheduleRouteSource).toContain("notificationFanoutQueued: false");
+    expect(travelScheduleRouteSource).toContain("idempotencyKeyId");
+    expect(travelScheduleRouteSource).toContain("idempotencyReplay");
+    expect(travelScheduleRouteSource).toContain("idempotency-backed");
   });
 });

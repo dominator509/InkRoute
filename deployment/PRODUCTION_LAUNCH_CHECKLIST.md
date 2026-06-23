@@ -2,7 +2,7 @@
 
 ## Status
 
-Scaffolded only. The current repo is not production-ready.
+Local source, schema, route, runtime-evidence, and launch checklist contracts are wired, but the current repo is not production-ready because live provider credentials, CI runs, deployment approvals, legal review, database/storage proofs, browser/device evidence, and redacted launch artifacts are still missing.
 
 ## Blocking launch items
 
@@ -11,7 +11,7 @@ Scaffolded only. The current repo is not production-ready.
 - Database provisioned, migrations generated, seed/dev data verified, backups configured.
 - Auth/session/RBAC/tenant isolation implemented and tested.
 - Private storage, signed uploads, malware scanning, EXIF/GPS stripping, and ACLs verified.
-- Booking persistence, reference uploads, Stripe deposits, notifications, calendar holds, and confirmation flows implemented.
+- Booking/contact persistence and local handoff contracts wired; reference upload provider URLs, Stripe deposits, notification delivery, calendar holds, confirmation runtime proof, and provider-backed workflows verified.
 - Web/dashboard/mobile provider sandboxes verified.
 - Legal review complete for privacy, terms, consent, medical, SMS, aftercare, deposit, no-show, refund, and tax language.
 - Sentry/OpenTelemetry/error redaction/alerting wired.

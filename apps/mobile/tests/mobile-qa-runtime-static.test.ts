@@ -94,7 +94,6 @@ describe("mobile QA runtime contract", () => {
     expect(mobileQaRuntimeReadiness.missingScripts).toEqual([]);
     expect(mobileQaRuntimeReadiness.requiredCommands).toBe(mobileQaRuntimeCommands);
     expect(mobileQaRuntimeReadiness.requiredEvidence).toBe(mobileQaEvidenceFlags);
-    expect(mobileQaRuntimeReadiness.requiredEvidence).toEqual(mobileQaEvidenceFlags);
     expect(mobileQaRuntimeReadiness.blockers).toContain("Expo app component/render tests must cover registered screens.");
     expect(mobileQaRuntimeReadiness.blockers).toContain("Physical device smoke must cover auth, API sync, offline, push, crash, and OTA flows.");
     expect(mobileQaRuntimeReadiness.blockers).toContain("Mobile QA artifacts must include simulator screenshots/logs, accessibility notes, provider/device transcripts, and release evidence.");

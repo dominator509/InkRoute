@@ -12,6 +12,28 @@ export interface CiCoverageReportingMatrixEntry {
   readonly status: CiCoverageReportingStatus;
 }
 
+export interface CiCoverageBranchRuleContract {
+  readonly branchPattern: "main";
+  readonly requiredStatusChecks: readonly ["CI quality"];
+  readonly requiresPullRequestReview: true;
+  readonly dismissesStaleReviews: true;
+  readonly requiresUpToDateBranch: true;
+  readonly requiresConversationResolution: true;
+  readonly includesAdministrators: true;
+  readonly proofArtifact: "coverage/ci-branch-rule-contract.json";
+}
+
+export const ciCoverageBranchRuleContract = {
+  branchPattern: "main",
+  requiredStatusChecks: ["CI quality"],
+  requiresPullRequestReview: true,
+  dismissesStaleReviews: true,
+  requiresUpToDateBranch: true,
+  requiresConversationResolution: true,
+  includesAdministrators: true,
+  proofArtifact: "coverage/ci-branch-rule-contract.json",
+} as const satisfies CiCoverageBranchRuleContract;
+
 export interface CiCoverageRunPersistenceInput {
   tenantId: string;
   runId: string;
@@ -33,6 +55,7 @@ export interface CiCoverageRunPersistenceInput {
   flakyPolicyDocumented: boolean;
   ciRunPassed: boolean;
   branchProtectionRequiresCi: boolean;
+  branchRuleContractCaptured: boolean;
   branchProtectionArtifactPath?: string | null;
   ciRunUrl?: string | null;
 }
@@ -56,6 +79,7 @@ export interface CiCoverageRunPersistenceContract {
     "flakyPolicyDocumented",
     "ciRunPassed",
     "branchProtectionRequiresCi",
+    "branchRuleContractCaptured",
   ];
   artifactFields: readonly ["reportingMatrix", "artifactManifest", "branchProtectionArtifactPath"];
   tenantIsolationKey: "tenantId";
@@ -91,8 +115,10 @@ export const ciCoverageReportingArtifactPaths = [
   "coverage/ci-test-summary.md",
   "coverage/ci-artifact-retention.json",
   "coverage/ci-branch-protection-redacted.json",
+  "coverage/ci-branch-rule-contract.json",
   "coverage/ci-flaky-policy.md",
   "coverage/ci-failed-test-debug-artifacts.json",
+  "coverage/ci-coverage-redacted-artifact-packet.json",
   "test-results/ci-coverage-reporting"
 ] as const;
 
@@ -118,7 +144,8 @@ export const ciCoverageReportingCommands = [
   "pnpm test:e2e",
   "gh run view <ci-run-id> --json conclusion,status,url",
   "gh api repos/:owner/:repo/actions/runs/<ci-run-id>/artifacts",
-  "verify branch protection requires CI quality check"
+  "verify branch protection requires CI quality check",
+  "static branch-rule contract review"
 ] as const;
 
 export const ciCoverageReportingRequiredExternalEvidence = [
@@ -126,8 +153,10 @@ export const ciCoverageReportingRequiredExternalEvidence = [
   "Uploaded Vitest coverage and Playwright report proof",
   "Trace, screenshot, video, and failed-test debug artifact proof",
   "Branch protection required-check proof",
+  "Branch-rule contract proof for required CI checks, PR review, stale-review dismissal, up-to-date branch, conversations, and administrator enforcement",
   "Flaky quarantine/escalation policy proof",
   "Provider-backed CiCoverageRun persistence proof",
+  "Retained redacted CI coverage artifact packet proof",
 ] as const;
 
 export type CiCoverageReportingArtifact = (typeof ciCoverageReportingArtifactPaths)[number];
@@ -161,6 +190,8 @@ export type CiCoverageReportingEvidenceInput = {
   flakyPolicyDocumented: boolean;
   ciRunPassed: boolean;
   branchProtectionRequiresCi: boolean;
+  branchRuleContractCaptured: boolean;
+  redactedArtifactPacketCaptured: boolean;
   requiredCommandsRun: readonly CiCoverageReportingCommand[];
   capturedArtifacts: readonly CiCoverageReportingArtifact[];
 };
@@ -173,6 +204,7 @@ export type CiCoverageReportingEvidenceDecision = {
   requiredEvidence: typeof ciCoverageReportingArtifactPaths;
   ciPolicy: {
     branchProtectionRequired: true;
+    branchRuleContractRequired: true;
     failedDebugArtifactsRequired: true;
     flakyQuarantinePolicyRequired: true;
   };
@@ -193,6 +225,7 @@ export type CiCoverageReportingExecutionPlan = {
   externalCommands: typeof ciCoverageReportingCommands;
   localArtifacts: typeof ciCoverageReportingLocalArtifacts;
   externalArtifacts: typeof ciCoverageReportingExternalArtifacts;
+  branchRuleContract: typeof ciCoverageBranchRuleContract;
   disabledReasons: readonly string[];
 };
 
@@ -213,6 +246,16 @@ export type CiCoverageReportingArtifactReview = {
   redactedArtifact: unknown;
   requiredArtifacts: typeof ciCoverageReportingArtifactPaths;
   retainedExternalGates: readonly string[];
+};
+
+export type CiCoverageReportingRedactedArtifactPacket = {
+  status: "redacted-artifact-packet-ready";
+  artifactPath: "coverage/ci-coverage-redacted-artifact-packet.json";
+  redactedArtifact: unknown;
+  review: CiCoverageReportingArtifactReview;
+  requiredArtifacts: typeof ciCoverageReportingArtifactPaths;
+  retainedExternalGates: typeof ciCoverageReportingRequiredExternalEvidence;
+  providerExecutionAllowed: false;
 };
 
 const ciCoverageSensitivePatterns = [
@@ -278,11 +321,13 @@ export function buildCiCoverageReportingExecutionPlan(): CiCoverageReportingExec
     externalCommands: ciCoverageReportingCommands,
     localArtifacts: ciCoverageReportingLocalArtifacts,
     externalArtifacts: ciCoverageReportingExternalArtifacts,
+    branchRuleContract: ciCoverageBranchRuleContract,
     disabledReasons: [
       "Frozen install, typecheck, and unit coverage proof require CI or local runner execution.",
       "Playwright E2E proof requires browser runtime execution.",
       "GitHub run and artifact proof requires GitHub Actions access.",
       "Branch protection proof requires repository settings inspection.",
+      "Branch-rule contract proof requires repository settings inspection.",
       "Failed-test debug media proof requires a real failed or retained CI artifact.",
       "CiCoverageRun persistence proof requires provider-backed database execution.",
     ],
@@ -305,6 +350,22 @@ export function buildCiCoverageReportingArtifactReview(rawArtifact: unknown): Ci
   };
 }
 
+export function buildCiCoverageReportingRedactedArtifactPacket(
+  rawArtifact: unknown,
+): CiCoverageReportingRedactedArtifactPacket {
+  const review = buildCiCoverageReportingArtifactReview(rawArtifact);
+
+  return {
+    status: "redacted-artifact-packet-ready",
+    artifactPath: "coverage/ci-coverage-redacted-artifact-packet.json",
+    redactedArtifact: review.redactedArtifact,
+    review,
+    requiredArtifacts: ciCoverageReportingArtifactPaths,
+    retainedExternalGates: ciCoverageReportingRequiredExternalEvidence,
+    providerExecutionAllowed: false,
+  };
+}
+
 export function buildCiCoverageReportingEvidenceDecision(
   input: CiCoverageReportingEvidenceInput,
 ): CiCoverageReportingEvidenceDecision {
@@ -323,6 +384,8 @@ export function buildCiCoverageReportingEvidenceDecision(
     !input.flakyPolicyDocumented && "Document flaky retry/quarantine policy.",
     !input.ciRunPassed && "Capture passing CI quality run proof.",
     !input.branchProtectionRequiresCi && "Capture branch protection required-check proof.",
+    !input.branchRuleContractCaptured && "Capture branch-rule contract proof for required checks, PR review, stale-review dismissal, up-to-date branch, conversations, and admin enforcement.",
+    !input.redactedArtifactPacketCaptured && "Capture retained redacted CI coverage artifact packet proof.",
   ].filter(Boolean) as string[];
 
   const missingArtifacts = ciCoverageReportingArtifactPaths.filter(
@@ -343,6 +406,7 @@ export function buildCiCoverageReportingEvidenceDecision(
     requiredEvidence: ciCoverageReportingArtifactPaths,
     ciPolicy: {
       branchProtectionRequired: true,
+      branchRuleContractRequired: true,
       failedDebugArtifactsRequired: true,
       flakyQuarantinePolicyRequired: true,
     },
@@ -391,6 +455,18 @@ export const ciCoverageReportingMatrix: readonly CiCoverageReportingMatrixEntry[
     command: "gh run view <ci-run-id> and verify branch protection requires CI quality check",
     artifact: "coverage/ci-branch-protection-redacted.json",
     status: "repository-gated"
+  },
+  {
+    id: "branch-rule-contract",
+    command: "static branch-rule contract review",
+    artifact: "coverage/ci-branch-rule-contract.json",
+    status: "repository-gated"
+  },
+  {
+    id: "redacted-artifact-packet",
+    command: "retain redacted CI coverage artifact packet",
+    artifact: "coverage/ci-coverage-redacted-artifact-packet.json",
+    status: "repository-gated"
   }
 ];
 
@@ -416,6 +492,7 @@ export function buildCiCoverageRunPersistenceContract(
       "flakyPolicyDocumented",
       "ciRunPassed",
       "branchProtectionRequiresCi",
+      "branchRuleContractCaptured",
     ],
     artifactFields: ["reportingMatrix", "artifactManifest", "branchProtectionArtifactPath"],
     tenantIsolationKey: "tenantId",
@@ -493,6 +570,7 @@ export const ciCoverageRunPersistencePreview = buildCiCoverageRunPersistenceCont
   flakyPolicyDocumented: false,
   ciRunPassed: false,
   branchProtectionRequiresCi: false,
+  branchRuleContractCaptured: false,
   branchProtectionArtifactPath: "coverage/ci-branch-protection-redacted.json",
 });
 

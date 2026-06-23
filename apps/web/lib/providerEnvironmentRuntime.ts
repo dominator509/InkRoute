@@ -60,6 +60,7 @@ export const providerEnvironmentRuntimeArtifactPaths = [
   "coverage/provider-github-environment-protection-redacted.json",
   "coverage/provider-secret-store-destinations-redacted.json",
   "coverage/provider-redacted-handoff-labels.json",
+  "coverage/provider-redacted-handoff-packet.json",
   "coverage/provider-environment-ci-run-redacted.json",
   "test-results/provider-environment-runtime"
 ] as const;
@@ -104,6 +105,7 @@ export const providerEnvironmentRuntimeRequiredExternalEvidence = [
   "Secret-store destination evidence must include labels only and never committed secret values or provider resource IDs.",
   "Database, storage, EAS, Sentry, and GitHub protection artifacts must redact URLs, tokens, bucket names, project IDs, and user data.",
   "ProviderEnvironmentRun persistence must execute only against an approved provider-backed database.",
+  "Retained redacted provider-environment handoff packet must be captured before closure.",
 ] as const;
 
 export type ProviderEnvironmentRuntimeExecutionPolicy = {
@@ -178,6 +180,7 @@ export type ProviderEnvironmentRuntimeEvidenceInput = {
   githubEnvironmentProtectionsConfigured: boolean;
   secretStoreDestinationsConfigured: boolean;
   redactedEvidenceLabelsRecorded: boolean;
+  redactedHandoffPacketCaptured: boolean;
   ciProviderEnvironmentArtifactsCaptured: boolean;
   requiredCommandsRun: readonly ProviderEnvironmentRuntimeCommand[];
   capturedArtifacts: readonly ProviderEnvironmentRuntimeArtifact[];
@@ -222,6 +225,16 @@ export interface ProviderEnvironmentRuntimeArtifactReview {
   readonly redactions: readonly string[];
   readonly containsUnredactedSensitiveValues: false;
   readonly externalEvidenceRequired: typeof providerEnvironmentRuntimeRequiredExternalEvidence;
+}
+
+export interface ProviderEnvironmentRuntimeRedactedHandoffPacket {
+  readonly status: "redacted-handoff-packet-ready";
+  readonly artifactPath: "coverage/provider-redacted-handoff-packet.json";
+  readonly surfaces: typeof providerEnvironmentRuntimeSurfaces;
+  readonly review: ProviderEnvironmentRuntimeArtifactReview;
+  readonly requiredArtifacts: typeof providerEnvironmentRuntimeArtifactPaths;
+  readonly externalEvidenceRequired: typeof providerEnvironmentRuntimeRequiredExternalEvidence;
+  readonly providerExecutionAllowed: false;
 }
 
 const sensitiveProviderEnvironmentKeyPattern =
@@ -318,6 +331,7 @@ export function buildProviderEnvironmentRuntimeEvidenceDecision(
     !input.githubEnvironmentProtectionsConfigured && "Capture GitHub environment protection audit proof.",
     !input.secretStoreDestinationsConfigured && "Capture secret-store destination proof.",
     !input.redactedEvidenceLabelsRecorded && "Record only redacted provider evidence labels.",
+    !input.redactedHandoffPacketCaptured && "Capture retained redacted provider-environment handoff packet proof.",
     !input.ciProviderEnvironmentArtifactsCaptured && "Capture CI provider-environment artifacts.",
   ].filter(Boolean) as string[];
 
@@ -424,6 +438,20 @@ export function buildProviderEnvironmentRuntimeArtifactReview(
   };
 }
 
+export function buildProviderEnvironmentRuntimeRedactedHandoffPacket(
+  artifact: unknown,
+): ProviderEnvironmentRuntimeRedactedHandoffPacket {
+  return {
+    status: "redacted-handoff-packet-ready",
+    artifactPath: "coverage/provider-redacted-handoff-packet.json",
+    surfaces: providerEnvironmentRuntimeSurfaces,
+    review: buildProviderEnvironmentRuntimeArtifactReview("coverage/provider-redacted-handoff-packet.json", artifact),
+    requiredArtifacts: providerEnvironmentRuntimeArtifactPaths,
+    externalEvidenceRequired: providerEnvironmentRuntimeRequiredExternalEvidence,
+    providerExecutionAllowed: false,
+  };
+}
+
 export const providerEnvironmentRuntimeMatrix: readonly ProviderEnvironmentRuntimeMatrixEntry[] = [
   {
     id: "manifest-verifier",
@@ -483,6 +511,12 @@ export const providerEnvironmentRuntimeMatrix: readonly ProviderEnvironmentRunti
     id: "redacted-evidence-labels",
     command: "record redacted provider evidence labels",
     artifact: "coverage/provider-redacted-handoff-labels.json",
+    status: "ci-gated"
+  },
+  {
+    id: "redacted-handoff-packet",
+    command: "retain redacted provider-environment handoff packet",
+    artifact: "coverage/provider-redacted-handoff-packet.json",
     status: "ci-gated"
   },
   {

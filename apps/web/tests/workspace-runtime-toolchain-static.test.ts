@@ -22,6 +22,7 @@ import {
   buildRedactedWorkspaceRuntimeToolchainArtifact,
   buildWorkspaceRuntimeToolchainArtifactReview,
   buildWorkspaceRuntimeToolchainExecutionPlan,
+  buildWorkspaceRuntimeToolchainRedactedEvidenceBundle,
 } from "../lib/workspaceRuntimeToolchain";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -63,8 +64,10 @@ describe("workspace runtime toolchain contract", () => {
       "dashboard-build",
       "ci-workspace-job",
       "production-blocker-visibility",
+      "redacted-evidence-bundle",
     ]);
     expect(workspaceRuntimeToolchainArtifactPaths).toContain("coverage/workspace-runtime-toolchain.json");
+    expect(workspaceRuntimeToolchainArtifactPaths).toContain("coverage/workspace-runtime-redacted-evidence-bundle.json");
     expect(workspaceRuntimeToolchainArtifactPaths).toContain("test-results/workspace-runtime-toolchain");
   });
 
@@ -140,6 +143,7 @@ describe("workspace runtime toolchain contract", () => {
       ciEvidenceCaptured: false,
       productionBlockersVisible: true,
       workspaceRuntimeToolchainRunPersisted: false,
+      redactedEvidenceBundleCaptured: false,
       capturedReports: [
         "docs/workspace/manifests/workspace-import-audit.json",
         "docs/workspace/manifests/package-script-audit.json",
@@ -167,6 +171,7 @@ describe("workspace runtime toolchain contract", () => {
       "coverage/workspace-web-build-output.txt",
       "coverage/workspace-dashboard-build-output.txt",
       "coverage/workspace-ci-job.json",
+      "coverage/workspace-runtime-redacted-evidence-bundle.json",
       "test-results/workspace-runtime-toolchain",
     ]);
     expect(decision.missingCommands).toEqual([
@@ -188,6 +193,7 @@ describe("workspace runtime toolchain contract", () => {
     expect(decision.requiredEvidence).toBe(workspaceRuntimeToolchainRequiredEvidence);
     expect(decision.blockers).toContain("@inkroute/workspace typecheck must pass.");
     expect(decision.blockers).toContain("WorkspaceRuntimeToolchainRun persistence row must be captured for durable auditability.");
+    expect(decision.blockers).toContain("Redacted workspace runtime evidence bundle must be captured.");
     expect(decision.blockers).toContain("Every required workspace runtime report must be captured.");
   });
 
@@ -205,6 +211,7 @@ describe("workspace runtime toolchain contract", () => {
       ciEvidenceCaptured: true,
       productionBlockersVisible: true,
       workspaceRuntimeToolchainRunPersisted: true,
+      redactedEvidenceBundleCaptured: true,
       capturedReports: workspaceRuntimeToolchainGeneratedReports,
       capturedArtifacts: workspaceRuntimeToolchainArtifactPaths,
       completedCommands: workspaceRuntimeToolchainCommands,
@@ -233,6 +240,7 @@ describe("workspace runtime toolchain contract", () => {
     expect(gapTracker).toContain("workspaceRuntimeToolchainRequiredEvidence");
     expect(gapTracker).toContain("workspaceRuntimeToolchainRequiredExternalEvidence");
     expect(gapTracker).toContain("buildWorkspaceRuntimeToolchainArtifactReview");
+    expect(gapTracker).toContain("buildWorkspaceRuntimeToolchainRedactedEvidenceBundle");
   });
 
   it("pins current workspace runtime toolchain proof files for GAP-130", () => {
@@ -276,6 +284,7 @@ describe("workspace runtime toolchain contract", () => {
       "coverage/workspace-web-build-output.txt",
       "coverage/workspace-dashboard-build-output.txt",
       "coverage/workspace-ci-job.json",
+      "coverage/workspace-runtime-redacted-evidence-bundle.json",
       "test-results/workspace-runtime-toolchain",
     ]);
     expect(plan).toMatchObject({
@@ -302,6 +311,7 @@ describe("workspace runtime toolchain contract", () => {
     expect(plan.requiredExternalEvidence).toBe(workspaceRuntimeToolchainRequiredExternalEvidence);
     expect(plan.requiredExternalEvidence).toContain("pnpm install evidence captured after dependency resolution.");
     expect(plan.requiredExternalEvidence).toContain("Durable WorkspaceRuntimeToolchainRun persistence row captured from the target database.");
+    expect(plan.requiredExternalEvidence).toContain("Redacted workspace runtime evidence bundle captured without raw install logs, CI URLs, database URLs, tokens, or operator identifiers.");
   });
 
   it("redacts workspace runtime toolchain artifacts before tracker or handoff use", () => {
@@ -328,6 +338,7 @@ describe("workspace runtime toolchain contract", () => {
     });
 
     const review = buildWorkspaceRuntimeToolchainArtifactReview(artifact);
+    const bundle = buildWorkspaceRuntimeToolchainRedactedEvidenceBundle(artifact);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(workspaceRuntimeToolchainRequiredExternalEvidence);
     expect(review.redactions).toEqual(
@@ -343,6 +354,12 @@ describe("workspace runtime toolchain contract", () => {
     expect(review.requiredExternalEvidence).toContain(
       "Runtime readiness report keeps production blockers visible in redacted evidence.",
     );
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.artifactPath).toBe("coverage/workspace-runtime-redacted-evidence-bundle.json");
+    expect(bundle.review.safeForTracker).toBe(true);
+    expect(bundle.requiredArtifacts).toBe(workspaceRuntimeToolchainArtifactPaths);
+    expect(bundle.requiredExternalEvidence).toBe(workspaceRuntimeToolchainRequiredExternalEvidence);
+    expect(bundle.providerExecutionAllowed).toBe(false);
   });
 });
 

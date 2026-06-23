@@ -27,6 +27,7 @@ describe("timezone recurrence QA runtime contract", () => {
   const calendarPackageJson = readWorkspaceFile("packages/calendar/package.json");
   const calendarSource = readWorkspaceFile("packages/calendar/src/index.ts");
   const calendarTests = readWorkspaceFile("packages/calendar/tests/availability-conflicts.test.ts");
+  const runtimeSource = readWorkspaceFile("apps/dashboard/lib/timezoneRecurrenceQaRuntime.ts");
   const qaSource = readWorkspaceFile("apps/dashboard/lib/timezoneRecurrenceQa.ts");
   const qaStaticTest = readWorkspaceFile("apps/dashboard/tests/timezone-recurrence-qa-static.test.ts");
   const routeSource = readWorkspaceFile("apps/dashboard/app/api/calendar/timezone-qa/route.ts");
@@ -115,7 +116,11 @@ describe("timezone recurrence QA runtime contract", () => {
     expect(timezoneRecurrenceRuntimeReadiness.missingScripts).toEqual([]);
     expect(timezoneRecurrenceRuntimeReadiness.requiredCommands).toBe(timezoneRecurrenceRuntimeCommands);
     expect(timezoneRecurrenceRuntimeReadiness.requiredEvidence).toBe(timezoneRecurrenceDecisionRequiredEvidence);
-    expect(timezoneRecurrenceRuntimeReadiness.blockers).toContain("Temporal or an explicit timezone/date library must be implemented at route, persistence, and provider boundaries.");
+    expect(timezoneRecurrenceRuntimeReadiness.blockers).not.toContain("Temporal or an explicit timezone/date library must be implemented at route, persistence, and provider boundaries.");
+    expect(calendarSource).toContain("explicitTimezoneDateBoundaryStrategy");
+    expect(calendarSource).toContain("buildExplicitTimezoneDateBoundaryEvidence");
+    expect(runtimeSource).toContain("buildExplicitTimezoneDateBoundaryEvidence().status");
+    expect(runtimeSource).toContain("document explicit Intl.DateTimeFormat timezone/date boundary");
     expect(timezoneRecurrenceRuntimeReadiness.blockers).toContain("DST spring-forward behavior must be tested.");
     expect(timezoneRecurrenceRuntimeReadiness.blockers).toContain("ICS timezone rendering/import smoke test must pass.");
   });

@@ -261,7 +261,7 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
             gapIds: ["GAP-015", "GAP-087", "GAP-090", "GAP-094"],
           },
           productionBoundary: {
-            scaffoldedReleaseHealthDisabled: true,
+            localReleaseHealthFallbackDisabled: true,
             requiredBeforeEnablement: [
               "ReleaseRecord and FeatureFlag database reads",
               "tenant-safe public feature snapshots",

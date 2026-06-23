@@ -26,6 +26,25 @@ export interface MobileCrashReporterAdapter {
   bufferOfflineReport(report: ObservabilityReportDraft): Promise<void>;
 }
 
+export interface MobileCrashErrorReportIngestOptions {
+  tenantSlug: string;
+  baseUrl?: string;
+  botProtectionToken?: string;
+  fetcher?: typeof fetch;
+}
+
+export interface MobileCrashErrorReportPayload {
+  source: ObservabilityReportDraft["source"];
+  runtime: ObservabilityReportDraft["runtime"];
+  environment: ObservabilityReportDraft["environment"];
+  message: string;
+  route?: string;
+  release?: string;
+  handled: boolean;
+  metadata: Record<string, unknown>;
+  tags: Record<string, string>;
+}
+
 export interface MobileCrashCaptureResult {
   report: ObservabilityReportDraft;
   sentryPlan: SentrySdkConfigurationPlan;
@@ -113,6 +132,72 @@ export function buildMobileCrashReadinessPreview(): MobileCrashRuntimeReadinessP
     offlineCrashBufferingVerified: false,
     noPiiProviderPayloadVerified: false,
   });
+}
+
+export function buildMobileCrashErrorReportPayload(report: ObservabilityReportDraft): MobileCrashErrorReportPayload {
+  return {
+    source: report.source,
+    runtime: report.runtime,
+    environment: report.environment,
+    message: report.redactedMessage,
+    ...(report.route ? { route: report.route } : {}),
+    ...(report.release ? { release: report.release } : {}),
+    handled: report.handled,
+    metadata: {
+      ...report.redactedMetadata,
+      mobileCrashFallback: true,
+      reportId: report.id,
+      stackHash: report.stackHash,
+      fingerprint: report.fingerprint,
+      redactionLevel: report.redactionLevel,
+      alertRecommended: report.alertRecommended,
+      rawStackOmitted: true,
+      gapIds: ["GAP-046", "GAP-081"],
+    },
+    tags: {
+      ...report.tags,
+      surface: "mobile",
+      fallbackIngest: "error-report",
+    },
+  };
+}
+
+export function buildMobileCrashErrorReportIngestPath(tenantSlug: string): string {
+  return `/api/public/${encodeURIComponent(tenantSlug)}/error-reports`;
+}
+
+export function createMobileCrashErrorReportIngestAdapter(
+  options: MobileCrashErrorReportIngestOptions,
+): MobileCrashReporterAdapter {
+  const fetcher = options.fetcher ?? fetch;
+  const baseUrl = options.baseUrl?.replace(/\/$/, "") ?? "";
+  const ingestPath = buildMobileCrashErrorReportIngestPath(options.tenantSlug);
+
+  return {
+    async captureSanitizedReport() {
+      throw new Error("Provider mobile crash capture is not configured; use persisted sanitized fallback ingest.");
+    },
+    async persistFallbackReport(report) {
+      const response = await fetcher(`${baseUrl}${ingestPath}`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-request-id": report.id,
+          "x-inkroute-error-honeypot": "",
+          ...(options.botProtectionToken ? { "x-inkroute-bot-token": options.botProtectionToken } : {}),
+        },
+        body: JSON.stringify(buildMobileCrashErrorReportPayload(report)),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Persisted mobile crash fallback ingest failed with HTTP ${response.status}; response body redacted.`);
+      }
+    },
+    async bufferOfflineReport(report) {
+      const payload = buildMobileCrashErrorReportPayload(report);
+      void payload;
+    },
+  };
 }
 
 export async function captureMobileCrash(input: {
@@ -204,7 +289,28 @@ export const mobileCrashCapturePreview = {
     easChannel: "preview",
     runtimeVersion: "0.1.0",
   }),
+  fallbackIngestPath: buildMobileCrashErrorReportIngestPath(inkrouteDemoTenant.slug),
+  fallbackIngestPayload: buildMobileCrashErrorReportPayload(
+    buildMobileCrashReportDraft(
+      new Error("Expo crash from artist@example.test with auth token demo-token and payment card 4242 4242 4242 4242"),
+      {
+        tenantId: inkrouteDemoTenant.id,
+        release: "mobile-preview-0.1.0",
+        environment: "preview",
+        route: "SystemStatusScreen",
+        requestId: "mobile_crash_preview",
+        easChannel: "preview",
+        runtimeVersion: "0.1.0",
+      },
+      {
+        clientEmail: "artist@example.test",
+        medicalNote: "sensitive medical context",
+        pushToken: "ExponentPushToken[demo-token]",
+        privateFileUrl: "signed-upload-url-redacted",
+      },
+    ),
+  ),
   readiness: buildMobileCrashReadinessPreview(),
   boundary:
-    "Mobile crash capture now has a package-backed sanitized fallback/offline-buffer contract; live Sentry SDK credentials, source maps, debug symbols, no-PII provider payload proof, and forced simulator/device crash proof remain gated.",
+    "Mobile crash capture now has a package-backed sanitized fallback/offline-buffer contract and ErrorReport ingest handoff; live Sentry SDK credentials, source maps, debug symbols, no-PII provider payload proof, forced simulator/device crash proof, and persistence execution proof remain gated.",
 };

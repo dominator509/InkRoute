@@ -43,6 +43,54 @@ export interface SignedIcsFeedRepository {
   persistAccessLog(input: SignedIcsFeedAccessLogInput): Promise<void>;
 }
 
+export interface PersistedSignedIcsFeedTokenRow {
+  readonly tenantSlug: string;
+  readonly artistSlug: string;
+  readonly tokenHash: string;
+  readonly expiresAt: Date | string;
+  readonly revokedAt: Date | string | null;
+}
+
+export interface SignedIcsFeedPrismaClient {
+  readonly signedIcsFeedToken: {
+    create(input: {
+      readonly data: {
+        readonly tenantSlug: string;
+        readonly artistSlug: string;
+        readonly tokenHash: string;
+        readonly expiresAt: Date;
+        readonly createdBy: string;
+        readonly rotatedFromTokenHash?: string;
+      };
+    }): Promise<PersistedSignedIcsFeedTokenRow>;
+    findFirst(input: {
+      readonly where: { readonly tenantSlug: string; readonly artistSlug: string; readonly tokenHash: string };
+    }): Promise<PersistedSignedIcsFeedTokenRow | null>;
+    update(input: {
+      readonly where: { readonly tenantSlug_artistSlug_tokenHash: { readonly tenantSlug: string; readonly artistSlug: string; readonly tokenHash: string } };
+      readonly data: { readonly revokedAt: Date; readonly revokedBy: string };
+    }): Promise<PersistedSignedIcsFeedTokenRow>;
+    updateMany(input: {
+      readonly where: { readonly tenantSlug: string; readonly artistSlug: string; readonly tokenHash: string; readonly revokedAt: null };
+      readonly data: { readonly revokedAt: Date; readonly revokedBy: string };
+    }): Promise<unknown>;
+  };
+  readonly signedIcsFeedAccessLog: {
+    create(input: {
+      readonly data: {
+        readonly tenantSlug: string;
+        readonly artistSlug: string;
+        readonly tokenHash: string | null;
+        readonly status: SignedIcsFeedAccessDecision["status"];
+        readonly allowed: boolean;
+        readonly userAgent: string | null;
+        readonly ipHash: string | null;
+        readonly occurredAt: Date;
+      };
+    }): Promise<unknown>;
+  };
+}
+
 export interface SignedIcsFeedAccessEvaluation {
   decision: SignedIcsFeedAccessDecision;
   tokenHash: string | null;
@@ -145,6 +193,92 @@ function buildSignedIcsFeedRepositoryKey(input: {
   readonly tokenHash: string;
 }): string {
   return `${input.tenantSlug}:${input.artistSlug}:${input.tokenHash}`;
+}
+
+function signedIcsFeedTokenRecordFromRow(row: PersistedSignedIcsFeedTokenRow): SignedIcsFeedTokenRecord {
+  return {
+    tenantSlug: row.tenantSlug,
+    artistSlug: row.artistSlug,
+    tokenHash: row.tokenHash,
+    expiresAt: new Date(row.expiresAt).toISOString(),
+    ...(row.revokedAt ? { revokedAt: new Date(row.revokedAt).toISOString() } : {}),
+  };
+}
+
+export function createPrismaSignedIcsFeedRepository(client: SignedIcsFeedPrismaClient): SignedIcsFeedRepository {
+  return {
+    async createToken(input) {
+      const row = await client.signedIcsFeedToken.create({
+        data: {
+          tenantSlug: input.tenantSlug,
+          artistSlug: input.artistSlug,
+          tokenHash: input.tokenHash,
+          expiresAt: new Date(input.expiresAt),
+          createdBy: input.createdBy,
+        },
+      });
+      return signedIcsFeedTokenRecordFromRow(row);
+    },
+    async rotateToken(input) {
+      await client.signedIcsFeedToken.updateMany({
+        where: {
+          tenantSlug: input.tenantSlug,
+          artistSlug: input.artistSlug,
+          tokenHash: input.previousTokenHash,
+          revokedAt: null,
+        },
+        data: { revokedAt: new Date(), revokedBy: input.createdBy },
+      });
+      const row = await client.signedIcsFeedToken.create({
+        data: {
+          tenantSlug: input.tenantSlug,
+          artistSlug: input.artistSlug,
+          tokenHash: input.tokenHash,
+          expiresAt: new Date(input.expiresAt),
+          createdBy: input.createdBy,
+          rotatedFromTokenHash: input.previousTokenHash,
+        },
+      });
+      return signedIcsFeedTokenRecordFromRow(row);
+    },
+    async revokeToken(input) {
+      const row = await client.signedIcsFeedToken.update({
+        where: {
+          tenantSlug_artistSlug_tokenHash: {
+            tenantSlug: input.tenantSlug,
+            artistSlug: input.artistSlug,
+            tokenHash: input.tokenHash,
+          },
+        },
+        data: { revokedAt: new Date(input.revokedAt), revokedBy: input.actorId },
+      });
+      return signedIcsFeedTokenRecordFromRow(row);
+    },
+    async findTokenRecord(input) {
+      const row = await client.signedIcsFeedToken.findFirst({
+        where: {
+          tenantSlug: input.tenantSlug,
+          artistSlug: input.artistSlug,
+          tokenHash: input.tokenHash,
+        },
+      });
+      return row ? signedIcsFeedTokenRecordFromRow(row) : null;
+    },
+    async persistAccessLog(input) {
+      await client.signedIcsFeedAccessLog.create({
+        data: {
+          tenantSlug: input.tenantSlug,
+          artistSlug: input.artistSlug,
+          tokenHash: input.tokenHash,
+          status: input.status,
+          allowed: input.allowed,
+          userAgent: input.userAgent,
+          ipHash: input.ipHash,
+          occurredAt: new Date(input.occurredAt),
+        },
+      });
+    },
+  };
 }
 
 export function createInMemorySignedIcsFeedRepository(

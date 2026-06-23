@@ -1,10 +1,11 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   buildLaunchOperationsRuntimeArtifactReview,
   buildLaunchOperationsRuntimeEvidenceDecision,
   buildLaunchOperationsRuntimeExecutionPlan,
+  buildLaunchOperationsRuntimeRedactedEvidenceBundle,
   buildRedactedLaunchOperationsArtifact,
   launchOperationsRuntimeArtifactPaths,
   launchOperationsRuntimeCheckIds,
@@ -70,17 +71,20 @@ describe("GAP-120 launch operations runtime wiring", () => {
       "monitoring-dashboard",
       "communications-templates-approval",
       "operations-approval",
-      "ci-operations-artifacts"
+      "ci-operations-artifacts",
+      "redacted-evidence-bundle"
     ]);
     expect(launchOperationsRuntimeMatrix).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: "incident-drill", artifact: "coverage/launch-operations-incident-drill-redacted.json" }),
         expect.objectContaining({ id: "privacy-request-drill", artifact: "coverage/launch-operations-privacy-request-drill-redacted.json" }),
         expect.objectContaining({ id: "operations-approval", artifact: "coverage/launch-operations-approval-redacted.json" }),
-        expect.objectContaining({ id: "ci-operations-artifacts", command: "capture CI launch-operations artifacts" })
+        expect.objectContaining({ id: "ci-operations-artifacts", command: "capture CI launch-operations artifacts" }),
+        expect.objectContaining({ id: "redacted-evidence-bundle", artifact: "coverage/launch-operations-redacted-evidence-bundle.json" })
       ])
     );
     expect(launchOperationsRuntimeArtifactPaths).toContain("coverage/launch-operations-ci-run-redacted.json");
+    expect(launchOperationsRuntimeArtifactPaths).toContain("coverage/launch-operations-redacted-evidence-bundle.json");
     expect(launchOperationsRuntimeArtifactPaths).toContain("test-results/launch-operations-runtime");
   });
 
@@ -147,6 +151,7 @@ describe("GAP-120 launch operations runtime wiring", () => {
     expect(gapTracker).toContain("launchOperationsRuntimeExecutionPolicy");
     expect(gapTracker).toContain("launchOperationsRuntimeRequiredExternalEvidence");
     expect(gapTracker).toContain("buildLaunchOperationsRuntimeArtifactReview");
+    expect(gapTracker).toContain("buildLaunchOperationsRuntimeRedactedEvidenceBundle");
   });
 
   it("pins current launch operations runtime proof files for GAP-120", () => {
@@ -272,6 +277,7 @@ describe("GAP-120 launch operations runtime wiring", () => {
         "coverage/launch-operations-monitoring-dashboard-redacted.json",
         "coverage/launch-operations-approval-redacted.json",
         "coverage/launch-operations-ci-run-redacted.json",
+        "coverage/launch-operations-redacted-evidence-bundle.json",
       ]),
     );
     expect(blockedDecision.operationsPolicy).toEqual({
@@ -353,6 +359,9 @@ describe("GAP-120 launch operations runtime wiring", () => {
       ciProviderRequiredForOperationsArtifacts: true,
     });
     expect(plan.externalEvidenceRequired).toBe(launchOperationsRuntimeRequiredExternalEvidence);
+    expect(plan.externalEvidenceRequired).toContain(
+      "Redacted launch operations evidence bundle captured without private contact details, provider alert webhooks, raw support transcripts, customer data, monitoring URLs, approval payloads, or CI run URLs.",
+    );
   });
 
   it("redacts launch operations artifacts before review or retention", () => {
@@ -371,6 +380,7 @@ describe("GAP-120 launch operations runtime wiring", () => {
     };
     const redacted = buildRedactedLaunchOperationsArtifact(rawArtifact);
     const review = buildLaunchOperationsRuntimeArtifactReview("coverage/launch-operations-owner-coverage-redacted.json", rawArtifact);
+    const bundle = buildLaunchOperationsRuntimeRedactedEvidenceBundle("coverage/launch-operations-owner-coverage-redacted.json", rawArtifact);
     const serialized = JSON.stringify(review);
 
     expect(JSON.stringify(redacted)).not.toContain("incident@example.com");
@@ -398,6 +408,13 @@ describe("GAP-120 launch operations runtime wiring", () => {
       ]),
     );
     expect(review.externalEvidenceRequired).toBe(launchOperationsRuntimeRequiredExternalEvidence);
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.artifactPath).toBe("coverage/launch-operations-redacted-evidence-bundle.json");
+    expect(bundle.review.containsUnredactedSensitiveValues).toBe(false);
+    expect(bundle.requiredArtifacts).toBe(launchOperationsRuntimeArtifactPaths);
+    expect(bundle.externalEvidenceRequired).toBe(launchOperationsRuntimeRequiredExternalEvidence);
+    expect(bundle.operationsApprovalExecutionAllowed).toBe(false);
+    expect(bundle.ciArtifactExecutionAllowed).toBe(false);
     expect(review.externalEvidenceRequired).toEqual(
       expect.arrayContaining([
         "Named owner, on-call, alert routing, and support escalation proof must be captured outside Codex with private contact details redacted.",

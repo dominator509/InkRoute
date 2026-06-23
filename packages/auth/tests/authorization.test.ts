@@ -34,6 +34,7 @@ import {
   hasPermission,
   mobileAuthRuntimeReadinessRequiredCommands,
   mobileAuthRuntimeReadinessRequiredEvidence,
+  providerSessionCallbackContract,
   providerSessionStoreRequiredCommands,
   providerSessionStoreRequiredControls,
   providerSessionStoreRequiredEvidence,
@@ -755,12 +756,14 @@ describe("auth authorization helpers", () => {
       dashboardBuildPassed: false,
       authProviderSessionsConfigured: false,
       dashboardMiddlewareEnforcesGuard: false,
+      routeMethodPermissionMappingCaptured: false,
       protectedLayoutEnforcesGuard: false,
       dashboardApiHelpersEnforceGuard: false,
       tenantMembershipDbLookupConfigured: false,
       customRoleDbLookupConfigured: false,
       unauthorizedStatesImplemented: false,
       authAuditLogsPersisted: false,
+      authRunPersistenceContractCaptured: false,
       browserLoginLogoutPassed: false,
       browserTenantSwitchPassed: false,
       browserCrossTenantDenialPassed: false,
@@ -775,7 +778,9 @@ describe("auth authorization helpers", () => {
     expect(plan.requiredControls).toBe(dashboardAuthGuardRequiredControls);
     expect(plan.requiredEvidence).toBe(dashboardAuthGuardRequiredEvidence);
     expect(plan.blockers).toContain("Dashboard middleware must enforce auth and tenant guard decisions before route rendering.");
+    expect(plan.blockers).toContain("Dashboard route-method permission inference must prove safe/read, mutating/write, and unknown-method deny behavior.");
     expect(plan.blockers).toContain("Dashboard unauthorized, login redirect, tenant-switch, expired-session, and denied-permission state evidence must be captured before auth guard readiness.");
+    expect(plan.blockers).toContain("Dashboard auth guard run records must expose a redacted AuditLog persistence contract.");
     expect(plan.blockers).not.toContain("Dashboard unauthorized, login redirect, tenant-switch, expired-session, and denied-permission states must be implemented.");
     expect(plan.blockers).toContain("Browser cross-tenant denial evidence must prove private tenant data is not exposed.");
     expect(plan.blockers).toContain("Dashboard auth guard artifacts must be redacted and free of secrets, session tokens, raw PII, medical, and payment data.");
@@ -790,12 +795,14 @@ describe("auth authorization helpers", () => {
       dashboardBuildPassed: true,
       authProviderSessionsConfigured: true,
       dashboardMiddlewareEnforcesGuard: true,
+      routeMethodPermissionMappingCaptured: true,
       protectedLayoutEnforcesGuard: true,
       dashboardApiHelpersEnforceGuard: true,
       tenantMembershipDbLookupConfigured: true,
       customRoleDbLookupConfigured: true,
       unauthorizedStatesImplemented: true,
       authAuditLogsPersisted: true,
+      authRunPersistenceContractCaptured: true,
       browserLoginLogoutPassed: true,
       browserTenantSwitchPassed: true,
       browserCrossTenantDenialPassed: true,
@@ -914,6 +921,14 @@ describe("auth authorization helpers", () => {
   });
 
   it("blocks provider session-store readiness until callbacks, persisted membership, revocation, secure storage, audits, and smoke evidence exist", () => {
+    expect(providerSessionCallbackContract.map((entry) => entry.kind)).toEqual(["login", "logout", "session"]);
+    expect(providerSessionCallbackContract.map((entry) => entry.auditAction)).toEqual([
+      "auth.provider.login",
+      "auth.provider.logout",
+      "auth.provider.session",
+    ]);
+    expect(providerSessionCallbackContract.every((entry) => entry.rawProviderTokenLoggingAllowed === false)).toBe(true);
+
     const plan = buildProviderSessionStoreReadinessPlan({
       packageScripts: { test: "vitest run" },
       providerSelected: false,

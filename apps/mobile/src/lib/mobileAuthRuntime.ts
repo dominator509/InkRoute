@@ -16,6 +16,24 @@ export interface MobileAuthRuntimeMatrixEntry {
   readonly status: MobileAuthRuntimeStatus;
 }
 
+export interface MobileAuthSecureSessionLifecycleContract {
+  readonly localStates: readonly ["signed_out", "provider_pending", "secure_store_active", "biometric_locked", "refresh_required", "revoked"];
+  readonly clearingTransitions: readonly ["logout", "revoked_session", "tenant_mismatch", "secure_store_unavailable"];
+  readonly plaintextTokenStorageAllowed: false;
+  readonly refreshRequiresSecureStore: true;
+  readonly revokedSessionClearsTenantContext: true;
+  readonly auditDecisionRequiredForEveryTransition: true;
+}
+
+export const mobileAuthSecureSessionLifecycleContract = {
+  localStates: ["signed_out", "provider_pending", "secure_store_active", "biometric_locked", "refresh_required", "revoked"],
+  clearingTransitions: ["logout", "revoked_session", "tenant_mismatch", "secure_store_unavailable"],
+  plaintextTokenStorageAllowed: false,
+  refreshRequiresSecureStore: true,
+  revokedSessionClearsTenantContext: true,
+  auditDecisionRequiredForEveryTransition: true,
+} as const satisfies MobileAuthSecureSessionLifecycleContract;
+
 export const mobileAuthRuntimeCommands = [
   "pnpm --filter @inkroute/auth typecheck",
   "pnpm --filter @inkroute/auth test",
@@ -33,11 +51,13 @@ export const mobileAuthArtifactPaths = [
   "coverage/mobile-auth-app-test.txt",
   "coverage/mobile-auth-provider-login-logout-redacted.json",
   "coverage/mobile-auth-securestore-redacted.json",
+  "coverage/mobile-auth-secure-session-lifecycle.json",
   "coverage/mobile-auth-biometric-device-redacted.json",
   "coverage/mobile-auth-refresh-logout-revocation.json",
   "coverage/mobile-auth-tenant-role-denial.json",
   "coverage/mobile-auth-auditlog-redacted.json",
   "coverage/mobile-auth-ios-android-smoke-redacted.json",
+  "coverage/mobile-auth-persisted-run-payload.json",
   "coverage/mobile-auth-secret-safe-artifacts.json",
   "test-results/mobile-auth-runtime",
 ] as const;
@@ -63,12 +83,14 @@ export const mobileAuthEvidenceFlags = [
   "mobileTestsPassed",
   "providerLoginLogoutTested",
   "secureStorePlaintextDenied",
+  "secureSessionLifecycleCaptured",
   "biometricDeviceTested",
   "refreshLogoutRevocationClearingTested",
   "tenantMembershipRoleResolutionTested",
   "crossTenantDenialTested",
   "auditPersistenceVerified",
   "iosAndroidSmokeTested",
+  "persistedRunPayloadCaptured",
   "ciEvidenceCaptured",
   "secretSafeArtifactsCaptured",
 ] as const;
@@ -87,11 +109,13 @@ export const mobileAuthRequiredExternalEvidence = [
   "provider-backed login/logout/session callback transcript",
   "real Expo SecureStore persistence evidence",
   "plaintext-denial SecureStore evidence",
+  "secure-session lifecycle clearing evidence",
   "biometric device unlock smoke",
   "refresh/logout/revocation clearing proof",
   "server-backed tenant membership and role resolution proof",
   "cross-tenant runtime denial proof",
   "mobile auth audit persistence evidence",
+  "persisted MobileAuthRuntime run payload",
   "mobile typecheck/test output",
   "CI mobile auth evidence",
   "secret-safe mobile auth artifact review",
@@ -120,7 +144,9 @@ export interface MobileAuthExecutionPlan {
   readonly ciExecutionAllowed: false;
   readonly localCommands: typeof mobileAuthLocalCommands;
   readonly externalCommands: typeof mobileAuthExternalCommands;
+  readonly surfaceContract: typeof mobileAuthSurfaceContract;
   readonly requiredExternalEvidence: typeof mobileAuthRequiredExternalEvidence;
+  readonly secureSessionLifecycleContract: typeof mobileAuthSecureSessionLifecycleContract;
 }
 
 export interface MobileAuthArtifactReview {
@@ -128,6 +154,18 @@ export interface MobileAuthArtifactReview {
   readonly redactedArtifact: unknown;
   readonly redactedPaths: readonly string[];
   readonly secretSafe: boolean;
+  readonly requiredExternalEvidence: typeof mobileAuthRequiredExternalEvidence;
+}
+
+export interface MobileAuthPersistedRunPayload {
+  readonly payloadId: "gap-042-mobile-auth-persisted-run";
+  readonly requiredArtifact: "coverage/mobile-auth-persisted-run-payload.json";
+  readonly providerBackedPersistenceRequired: true;
+  readonly localPersistenceExecutionAllowed: false;
+  readonly secureStoreDeviceEvidenceRequired: true;
+  readonly tenantDenialEvidenceRequired: true;
+  readonly auditPersistenceEvidenceRequired: true;
+  readonly redactionRequired: true;
   readonly requiredExternalEvidence: typeof mobileAuthRequiredExternalEvidence;
 }
 
@@ -180,6 +218,12 @@ export const mobileAuthRuntimeMatrix = [
     status: "secure-store-gated",
   },
   {
+    id: "secure-session-lifecycle",
+    command: "local secure-session lifecycle clearing contract tests",
+    artifact: "coverage/mobile-auth-secure-session-lifecycle.json",
+    status: "secure-store-gated",
+  },
+  {
     id: "biometric-unlock",
     command: "Expo device biometric unlock test",
     artifact: "coverage/mobile-auth-biometric-device-redacted.json",
@@ -209,7 +253,116 @@ export const mobileAuthRuntimeMatrix = [
     artifact: "coverage/mobile-auth-ios-android-smoke-redacted.json",
     status: "device-gated",
   },
+  {
+    id: "persisted-run-payload",
+    command: "capture persisted MobileAuthRuntime run payload",
+    artifact: "coverage/mobile-auth-persisted-run-payload.json",
+    status: "audit-gated",
+  },
 ] as const satisfies readonly MobileAuthRuntimeMatrixEntry[];
+
+export interface MobileAuthSurfaceContractEntry {
+  readonly surfaceId: string;
+  readonly command: string;
+  readonly artifact: string;
+  readonly proofBoundary:
+    | "provider-session"
+    | "secure-store"
+    | "secure-session-lifecycle"
+    | "biometric-device"
+    | "refresh-revocation"
+    | "tenant-role-denial"
+    | "audit-persistence"
+    | "device-smoke"
+    | "ci-secret-safe";
+  readonly providerBackedEvidenceRequired: boolean;
+  readonly deviceEvidenceRequired: boolean;
+  readonly redactedArtifactRequired: boolean;
+}
+
+export const mobileAuthSurfaceContract = [
+  {
+    surfaceId: "provider-login-logout",
+    command: "provider-backed mobile login/logout/refresh tests",
+    artifact: "coverage/mobile-auth-provider-login-logout-redacted.json",
+    proofBoundary: "provider-session",
+    providerBackedEvidenceRequired: true,
+    deviceEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "securestore-token-storage",
+    command: "Expo SecureStore plaintext-denial and clearing evidence",
+    artifact: "coverage/mobile-auth-securestore-redacted.json",
+    proofBoundary: "secure-store",
+    providerBackedEvidenceRequired: false,
+    deviceEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "secure-session-lifecycle",
+    command: "local secure-session lifecycle clearing contract tests",
+    artifact: "coverage/mobile-auth-secure-session-lifecycle.json",
+    proofBoundary: "secure-session-lifecycle",
+    providerBackedEvidenceRequired: false,
+    deviceEvidenceRequired: false,
+    redactedArtifactRequired: false,
+  },
+  {
+    surfaceId: "biometric-unlock",
+    command: "Expo device biometric unlock test",
+    artifact: "coverage/mobile-auth-biometric-device-redacted.json",
+    proofBoundary: "biometric-device",
+    providerBackedEvidenceRequired: false,
+    deviceEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "refresh-logout-revocation-clearing",
+    command: "refresh token recovery plus logout/revoked-session local clearing tests",
+    artifact: "coverage/mobile-auth-refresh-logout-revocation.json",
+    proofBoundary: "refresh-revocation",
+    providerBackedEvidenceRequired: true,
+    deviceEvidenceRequired: true,
+    redactedArtifactRequired: false,
+  },
+  {
+    surfaceId: "tenant-role-cross-tenant-denial",
+    command: "server-backed tenant membership, role resolution, and cross-tenant denial tests",
+    artifact: "coverage/mobile-auth-tenant-role-denial.json",
+    proofBoundary: "tenant-role-denial",
+    providerBackedEvidenceRequired: true,
+    deviceEvidenceRequired: false,
+    redactedArtifactRequired: false,
+  },
+  {
+    surfaceId: "audit-persistence",
+    command: "mobile auth AuditLog persistence tests",
+    artifact: "coverage/mobile-auth-auditlog-redacted.json",
+    proofBoundary: "audit-persistence",
+    providerBackedEvidenceRequired: true,
+    deviceEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "ios-android-device-smoke",
+    command: "Expo iOS/Android auth smoke tests",
+    artifact: "coverage/mobile-auth-ios-android-smoke-redacted.json",
+    proofBoundary: "device-smoke",
+    providerBackedEvidenceRequired: true,
+    deviceEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "ci-secret-safe-artifacts",
+    command: "GitHub Actions mobile auth runtime evidence job",
+    artifact: "coverage/mobile-auth-secret-safe-artifacts.json",
+    proofBoundary: "ci-secret-safe",
+    providerBackedEvidenceRequired: true,
+    deviceEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+] as const satisfies readonly MobileAuthSurfaceContractEntry[];
 
 export const mobileAuthRuntimeReadiness = buildMobileAuthRuntimeReadinessPlan({
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
@@ -268,6 +421,7 @@ export const mobileAuthLocalCommands = [
   "pnpm --filter @inkroute/auth typecheck",
   "pnpm --filter @inkroute/auth test",
   "static mobile secure-session adapter review",
+  "static secure-session lifecycle clearing review",
   "static AuthScreen auth contract surfacing review",
 ] as const;
 
@@ -276,6 +430,7 @@ export const mobileAuthExternalCommands = [
   "pnpm --filter @inkroute/mobile test",
   "provider-backed mobile login/logout/session callback tests",
   "Expo SecureStore plaintext-denial evidence",
+  "local secure-session lifecycle clearing contract tests",
   "biometric device unlock smoke",
   "mobile refresh/logout/revocation clearing tests",
   "server-backed tenant membership and cross-tenant denial tests",
@@ -294,7 +449,9 @@ export const buildMobileAuthExecutionPlan = (): MobileAuthExecutionPlan => ({
   ciExecutionAllowed: false,
   localCommands: mobileAuthLocalCommands,
   externalCommands: mobileAuthExternalCommands,
+  surfaceContract: mobileAuthSurfaceContract,
   requiredExternalEvidence: mobileAuthRequiredExternalEvidence,
+  secureSessionLifecycleContract: mobileAuthSecureSessionLifecycleContract,
 });
 
 export const buildRedactedMobileAuthArtifact = (artifact: unknown): Pick<MobileAuthArtifactReview, "redactedArtifact" | "redactedPaths"> => {
@@ -315,6 +472,18 @@ export const buildMobileAuthArtifactReview = (artifact: unknown): MobileAuthArti
     requiredExternalEvidence: mobileAuthRequiredExternalEvidence,
   };
 };
+
+export const buildMobileAuthPersistedRunPayload = (): MobileAuthPersistedRunPayload => ({
+  payloadId: "gap-042-mobile-auth-persisted-run",
+  requiredArtifact: "coverage/mobile-auth-persisted-run-payload.json",
+  providerBackedPersistenceRequired: true,
+  localPersistenceExecutionAllowed: false,
+  secureStoreDeviceEvidenceRequired: true,
+  tenantDenialEvidenceRequired: true,
+  auditPersistenceEvidenceRequired: true,
+  redactionRequired: true,
+  requiredExternalEvidence: mobileAuthRequiredExternalEvidence,
+});
 
 export const buildMobileAuthEvidenceDecision = (
   input: MobileAuthEvidenceInput = {},

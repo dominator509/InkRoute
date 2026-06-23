@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   buildHandoffToolingRuntimeArtifactReview,
+  buildHandoffToolingRuntimeRedactedEvidenceBundle,
   buildHandoffToolingRuntimeEvidenceDecision,
   buildHandoffToolingRuntimeExecutionPlan,
   buildRedactedHandoffToolingArtifact,
@@ -57,6 +58,7 @@ describe("handoff tooling runtime contract", () => {
     expect(handoffToolingRequiredDocs).toContain("docs/handoff/AGENT_EXECUTION_QUEUE.md");
     expect(handoffToolingRequiredCiEvidence).toContain("handoff-tooling-runtime-artifacts");
     expect(handoffToolingRuntimeArtifactPaths).toContain("coverage/handoff-tooling-runtime.json");
+    expect(handoffToolingRuntimeArtifactPaths).toContain("coverage/handoff-tooling-redacted-evidence-bundle.json");
     expect(handoffToolingRuntimeArtifactPaths).toContain("test-results/handoff-tooling-runtime");
   });
 
@@ -106,6 +108,7 @@ describe("handoff tooling runtime contract", () => {
       "handoff-verify-task-sync",
       "handoff-all",
       "ci-evidence",
+      "redacted-evidence-bundle",
       "report-artifacts",
     ]);
     expect(handoffToolingRuntimeMatrix).toEqual(
@@ -113,7 +116,8 @@ describe("handoff tooling runtime contract", () => {
         expect.objectContaining({ id: "handoff-verify-docs", artifact: "coverage/handoff-verify-docs.json" }),
         expect.objectContaining({ id: "handoff-audit", artifact: "coverage/handoff-audit.json" }),
         expect.objectContaining({ id: "handoff-verify-task-sync", artifact: "coverage/handoff-task-sync.json" }),
-        expect.objectContaining({ id: "handoff-all", artifact: "coverage/handoff-all-output.txt" })
+        expect.objectContaining({ id: "handoff-all", artifact: "coverage/handoff-all-output.txt" }),
+        expect.objectContaining({ id: "redacted-evidence-bundle", artifact: "coverage/handoff-tooling-redacted-evidence-bundle.json" })
       ])
     );
     expect(ciWorkflow).toContain("Run Phase 16 handoff tooling runtime contracts");
@@ -129,6 +133,7 @@ describe("handoff tooling runtime contract", () => {
     expect(gapTracker).toContain("handoffToolingRuntimeLocalArtifacts");
     expect(gapTracker).toContain("handoffToolingRuntimeExternalArtifacts");
     expect(gapTracker).toContain("buildHandoffToolingRuntimeArtifactReview");
+    expect(gapTracker).toContain("buildHandoffToolingRuntimeRedactedEvidenceBundle");
   });
 
   it("pins current handoff tooling runtime proof files for GAP-121", () => {
@@ -309,6 +314,7 @@ describe("handoff tooling runtime contract", () => {
         "coverage/handoff-tooling-package-test.txt",
         "coverage/handoff-all-output.txt",
         "coverage/handoff-tooling-ci-run.json",
+        "coverage/handoff-tooling-redacted-evidence-bundle.json",
       ]),
     );
     expect(plan.dependencyInstallExecutionAllowed).toBe(false);
@@ -333,6 +339,9 @@ describe("handoff tooling runtime contract", () => {
       providerDatabaseRequiredForPersistence: true,
     });
     expect(plan.externalEvidenceRequired).toBe(handoffToolingRuntimeRequiredExternalEvidence);
+    expect(plan.externalEvidenceRequired).toContain(
+      "Redacted handoff tooling evidence bundle captured without raw command output, environment values, provider URLs, run URLs, raw logs, report IDs, or actor identifiers.",
+    );
   });
 
   it("redacts handoff tooling artifacts before report retention", () => {
@@ -349,7 +358,8 @@ describe("handoff tooling runtime contract", () => {
     };
     const redacted = buildRedactedHandoffToolingArtifact(rawArtifact);
     const review = buildHandoffToolingRuntimeArtifactReview("coverage/handoff-tooling-ci-run.json", rawArtifact);
-    const serialized = JSON.stringify(review);
+    const bundle = buildHandoffToolingRuntimeRedactedEvidenceBundle("coverage/handoff-tooling-ci-run.json", rawArtifact);
+    const serialized = JSON.stringify(bundle);
 
     expect(JSON.stringify(redacted)).not.toContain("ghp_secret");
     expect(serialized).not.toContain("registry.example.com");
@@ -378,8 +388,18 @@ describe("handoff tooling runtime contract", () => {
         "Handoff report artifacts must redact command output, environment values, provider URLs, run URLs, and raw logs.",
         "Report artifacts must either be captured or explicitly documented as unavailable before runtime closure.",
         "HandoffToolingRun persistence must execute only against an approved provider-backed database.",
+        "Redacted handoff tooling evidence bundle captured without raw command output, environment values, provider URLs, run URLs, raw logs, report IDs, or actor identifiers.",
       ]),
     );
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.sourceArtifactPath).toBe("coverage/handoff-tooling-ci-run.json");
+    expect(bundle.artifactPath).toBe("coverage/handoff-tooling-redacted-evidence-bundle.json");
+    expect(bundle.review.containsUnredactedSensitiveValues).toBe(false);
+    expect(bundle.requiredArtifacts).toBe(handoffToolingRuntimeArtifactPaths);
+    expect(bundle.externalEvidenceRequired).toBe(handoffToolingRuntimeRequiredExternalEvidence);
+    expect(bundle.handoffAllExecutionAllowed).toBe(false);
+    expect(bundle.persistenceExecutionAllowed).toBe(false);
+    expect(bundle.ciArtifactExecutionAllowed).toBe(false);
   });
 });
 

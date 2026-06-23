@@ -1,5 +1,6 @@
 import { buildAvailabilitySlots, detectCalendarConflicts, type CalendarTimeBlock } from "@inkroute/calendar";
 import { inkrouteDemoArtist, inkrouteDemoTenant } from "@inkroute/config";
+import { prisma } from "@inkroute/db";
 import type { AvailabilityWindow } from "@inkroute/types";
 
 const noStoreHeaders = { "Cache-Control": "private, no-store" } as const;
@@ -32,10 +33,158 @@ const demoBusyBlocks: CalendarTimeBlock[] = [
   },
 ];
 
+function isDatabaseUnavailable(error: unknown): boolean {
+  if (!process.env.DATABASE_URL) return true;
+
+  if (!(error instanceof Error)) return false;
+  const code = (error as { code?: string }).code;
+  if (typeof code === "string" && ["P1000", "P1001", "P1002", "P1003", "P1008"].includes(code)) return true;
+
+  const message = error.message.toLowerCase();
+  return message.includes("connect") && message.includes("database");
+}
+
+function toPublicWindow(row: {
+  id: string;
+  tenantId: string;
+  artistId: string;
+  kind: string;
+  status: string;
+  startsAt: Date;
+  endsAt: Date;
+  timezone: string;
+  maxBookings: number | null;
+  bufferBeforeMinutes: number;
+  bufferAfterMinutes: number;
+}): AvailabilityWindow {
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    artistId: row.artistId,
+    kind: row.kind,
+    status: row.status,
+    startsAt: row.startsAt.toISOString(),
+    endsAt: row.endsAt.toISOString(),
+    timezone: row.timezone,
+    ...(row.maxBookings !== null ? { maxBookings: row.maxBookings } : {}),
+    bufferBeforeMinutes: row.bufferBeforeMinutes,
+    bufferAfterMinutes: row.bufferAfterMinutes,
+  };
+}
+
 export async function GET(_request: Request, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;
+  const normalizedTenantSlug = decodeURIComponent(tenantSlug).toLowerCase().trim();
 
-  if (tenantSlug !== inkrouteDemoTenant.slug) {
+  try {
+    const prismaRuntime = prisma as unknown as {
+      tenant: {
+        findUnique: (options: {
+          where: { slug: string };
+          select: {
+            id: true;
+            slug: true;
+            availabilityWindows: {
+              where: { status: { in: string[] }; endsAt: { gte: Date } };
+              orderBy: { startsAt: "asc" };
+              take: number;
+              select: {
+                id: true;
+                tenantId: true;
+                artistId: true;
+                kind: true;
+                status: true;
+                startsAt: true;
+                endsAt: true;
+                timezone: true;
+                maxBookings: true;
+                bufferBeforeMinutes: true;
+                bufferAfterMinutes: true;
+              };
+            };
+          };
+        }) => Promise<{ id: string; slug: string; availabilityWindows: Array<Parameters<typeof toPublicWindow>[0]> } | null>;
+      };
+    };
+    const tenant = await prismaRuntime.tenant.findUnique({
+      where: { slug: normalizedTenantSlug },
+      select: {
+        id: true,
+        slug: true,
+        availabilityWindows: {
+          where: {
+            status: { in: ["open", "waitlist"] },
+            endsAt: { gte: new Date() },
+          },
+          orderBy: { startsAt: "asc" },
+          take: 6,
+          select: {
+            id: true,
+            tenantId: true,
+            artistId: true,
+            kind: true,
+            status: true,
+            startsAt: true,
+            endsAt: true,
+            timezone: true,
+            maxBookings: true,
+            bufferBeforeMinutes: true,
+            bufferAfterMinutes: true,
+          },
+        },
+      },
+    });
+
+    if (tenant) {
+      const windows = tenant.availabilityWindows.map(toPublicWindow);
+      return Response.json(
+        {
+          ok: true,
+          status: "database_preview_read_only",
+          gapIds: ["GAP-009", "GAP-056", "GAP-057"],
+          data: {
+            tenantSlug: tenant.slug,
+            source: "database",
+            windows,
+            slotsByWindow: windows.map((window) => ({
+              windowId: window.id,
+              slots: buildAvailabilitySlots({ window, durationMinutes: 120, stepMinutes: 120, existingBlocks: [] }),
+            })),
+            boundary: {
+              readOnly: true,
+              holdsPersisted: false,
+              conflictWritesPersisted: false,
+              providerSyncExecuted: false,
+              requiredNextWork: [
+                "Persist slot holds transactionally before accepting bookings against these windows.",
+                "Prove concurrent hold race rejection with seeded Postgres tests.",
+                "Attach Google provider sync evidence only after OAuth credentials and encrypted tokens are configured.",
+              ],
+            },
+          },
+        },
+        { headers: noStoreHeaders },
+      );
+    }
+  } catch (error) {
+    if (process.env.NODE_ENV === "production" || !isDatabaseUnavailable(error)) {
+      return Response.json(
+        {
+          ok: false,
+          error: { code: "PROVIDER_AVAILABILITY_NOT_CONFIGURED" },
+          tenantSlug,
+          productionBoundary: {
+            staticPreviewDisabled: true,
+            databaseAvailabilityReadFailed: true,
+            gapIds: ["GAP-009", "GAP-056", "GAP-057"],
+          },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+  }
+
+  if (normalizedTenantSlug !== inkrouteDemoTenant.slug) {
     return Response.json({ ok: false, error: { code: "NOT_FOUND", message: "No demo availability exists for this tenant." } }, { status: 404, headers: noStoreHeaders });
   }
 

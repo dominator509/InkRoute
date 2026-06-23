@@ -24,6 +24,7 @@ import {
   buildRequiredChecksEvidenceDecision,
   buildRequiredChecksRuntimeArtifactReview,
   buildRequiredChecksRuntimeExecutionPlan,
+  buildRequiredChecksRuntimeRedactedEvidenceBundle,
   buildRedactedRequiredChecksArtifact,
 } from "../lib/requiredChecksRuntime";
 
@@ -71,8 +72,10 @@ describe("required checks runtime contract", () => {
       "repository-settings-audit",
       "failing-quality-pr-block",
       "codeowners-review-active",
+      "redacted-evidence-bundle",
     ]);
     expect(requiredChecksRuntimeArtifactPaths).toContain("coverage/required-checks-runtime.json");
+    expect(requiredChecksRuntimeArtifactPaths).toContain("coverage/required-checks-redacted-evidence-bundle.json");
     expect(requiredChecksRuntimeArtifactPaths).toContain("test-results/required-checks-runtime");
   });
 
@@ -137,6 +140,7 @@ describe("required checks runtime contract", () => {
       ciQualityJobPassed: false,
       redactedSettingsEvidenceCaptured: false,
       requiredChecksRunPersisted: false,
+      redactedEvidenceBundleCaptured: false,
       configuredBranchProtectionChecks: ["CI / quality"],
       configuredRepositorySettings: ["branch-protection"],
       capturedArtifacts: [
@@ -171,6 +175,7 @@ describe("required checks runtime contract", () => {
       "coverage/required-checks-repository-settings-redacted.json",
       "coverage/required-checks-failing-pr-redacted.json",
       "coverage/required-checks-codeowners-review-redacted.json",
+      "coverage/required-checks-redacted-evidence-bundle.json",
       "test-results/required-checks-runtime",
     ]);
     expect(decision.missingCommands).toEqual([
@@ -187,6 +192,7 @@ describe("required checks runtime contract", () => {
     expect(decision.requiredEvidence).toBe(requiredChecksRuntimeRequiredEvidence);
     expect(decision.blockers).toContain("GitHub branch protection must require every documented quality status check.");
     expect(decision.blockers).toContain("RequiredChecksRun persistence row must be captured for durable auditability.");
+    expect(decision.blockers).toContain("Redacted required-checks evidence bundle must be captured.");
     expect(decision.blockers).toContain("Every required checks artifact must be captured.");
   });
 
@@ -200,6 +206,7 @@ describe("required checks runtime contract", () => {
       ciQualityJobPassed: true,
       redactedSettingsEvidenceCaptured: true,
       requiredChecksRunPersisted: true,
+      redactedEvidenceBundleCaptured: true,
       configuredBranchProtectionChecks: requiredChecksBranchProtectionChecks,
       configuredRepositorySettings: requiredChecksRepositorySettings,
       capturedArtifacts: requiredChecksRuntimeArtifactPaths,
@@ -230,6 +237,7 @@ describe("required checks runtime contract", () => {
     expect(gapTracker).toContain("requiredChecksRuntimeRequiredEvidence");
     expect(gapTracker).toContain("requiredChecksRuntimeRequiredExternalEvidence");
     expect(gapTracker).toContain("buildRequiredChecksRuntimeArtifactReview");
+    expect(gapTracker).toContain("buildRequiredChecksRuntimeRedactedEvidenceBundle");
   });
 
   it("pins current required checks runtime proof files for GAP-129", () => {
@@ -272,6 +280,7 @@ describe("required checks runtime contract", () => {
       "coverage/required-checks-repository-settings-redacted.json",
       "coverage/required-checks-failing-pr-redacted.json",
       "coverage/required-checks-codeowners-review-redacted.json",
+      "coverage/required-checks-redacted-evidence-bundle.json",
       "test-results/required-checks-runtime",
     ]);
     expect(plan).toMatchObject({
@@ -298,6 +307,7 @@ describe("required checks runtime contract", () => {
       "Redacted GitHub branch-protection settings showing every required check is enforced.",
     );
     expect(plan.requiredExternalEvidence).toContain("Durable RequiredChecksRun persistence row captured from the target database.");
+    expect(plan.requiredExternalEvidence).toContain("Redacted required-checks evidence bundle captured without raw GitHub settings, tokens, URLs, or actor identifiers.");
   });
 
   it("redacts required-checks runtime artifacts before tracker or handoff use", () => {
@@ -321,6 +331,7 @@ describe("required checks runtime contract", () => {
     });
 
     const review = buildRequiredChecksRuntimeArtifactReview(artifact);
+    const bundle = buildRequiredChecksRuntimeRedactedEvidenceBundle(artifact);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(requiredChecksRuntimeRequiredExternalEvidence);
     expect(review.redactions).toEqual(
@@ -333,6 +344,12 @@ describe("required checks runtime contract", () => {
       ]),
     );
     expect(review.requiredExternalEvidence).toContain("Failing quality-gate PR merge-block evidence captured from GitHub.");
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.artifactPath).toBe("coverage/required-checks-redacted-evidence-bundle.json");
+    expect(bundle.review.safeForTracker).toBe(true);
+    expect(bundle.requiredArtifacts).toBe(requiredChecksRuntimeArtifactPaths);
+    expect(bundle.requiredExternalEvidence).toBe(requiredChecksRuntimeRequiredExternalEvidence);
+    expect(bundle.providerExecutionAllowed).toBe(false);
   });
 });
 

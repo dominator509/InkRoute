@@ -75,6 +75,13 @@ describe("mobile crash runtime contract", () => {
     expect(crashSource).toContain("buildMobileCrashReportDraft");
     expect(crashSource).toContain("buildMobileCrashCaptureContract");
     expect(crashSource).toContain("MobileCrashReporterAdapter");
+    expect(crashSource).toContain("createMobileCrashErrorReportIngestAdapter");
+    expect(crashSource).toContain("buildMobileCrashErrorReportPayload");
+    expect(crashSource).toContain("buildMobileCrashErrorReportIngestPath");
+    expect(crashSource).toContain("/api/public/${encodeURIComponent(tenantSlug)}/error-reports");
+    expect(crashSource).toContain('fallbackIngest: "error-report"');
+    expect(crashSource).toContain('rawStackOmitted: true');
+    expect(crashSource).toContain('gapIds: ["GAP-046", "GAP-081"]');
     expect(crashSource).toContain("bufferOfflineReport(report)");
     expect(crashSource).toContain("persistFallbackReport(report)");
     expect(crashSource).toContain("externalCaptureSucceeded");
@@ -92,7 +99,6 @@ describe("mobile crash runtime contract", () => {
     expect(mobileCrashRuntimeReadiness.missingScripts).toEqual([]);
     expect(mobileCrashRuntimeReadiness.requiredCommands).toBe(mobileCrashRuntimeCommands);
     expect(mobileCrashRuntimeReadiness.requiredEvidence).toBe(mobileCrashEvidenceFlags);
-    expect(mobileCrashRuntimeReadiness.requiredEvidence).toEqual(mobileCrashEvidenceFlags);
     expect(mobileCrashRuntimeReadiness.blockers).toContain("Mobile Sentry DSN must be configured in environment/secret settings.");
     expect(mobileCrashRuntimeReadiness.blockers).toContain("Expo JavaScript source maps must upload for mobile releases.");
     expect(mobileCrashRuntimeReadiness.blockers).toContain("Provider payloads and dashboard summaries must be proven free of raw PII, medical, payment, token, and private URL values.");
@@ -221,6 +227,8 @@ describe("mobile crash runtime contract", () => {
     expect(gapTracker).toContain("apps/mobile/src/lib/mobileCrashRuntime.ts");
     expect(gapTracker).toContain("GAP-046 is mobile-crash-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("buildMobileCrashExecutionPlan");
+    expect(gapTracker).toContain("ErrorReport ingest handoff contract");
+    expect(gapTracker).toContain("keep the fallback adapter pointed at persisted ErrorReport ingest");
     expect(gapTracker).toContain("mobileCrashExecutionPolicy");
     expect(gapTracker).toContain("mobileCrashLocalCommands/mobileCrashExternalCommands");
     expect(gapTracker).toContain("mobileCrashRequiredExternalEvidence");

@@ -9,6 +9,11 @@ import {
 } from "../lib/notificationScheduler";
 
 const schedulerSource = readFileSync(join(process.cwd(), "apps/dashboard/lib/notificationScheduler.ts"), "utf8");
+const prismaSchema = readFileSync(join(process.cwd(), "packages/db/prisma/schema.prisma"), "utf8");
+const notificationWorkerMigration = readFileSync(
+  join(process.cwd(), "packages/db/prisma/migrations/20260623093000_add_notification_worker_jobs/migration.sql"),
+  "utf8",
+);
 const routeSource = readFileSync(join(process.cwd(), "apps/dashboard/app/api/notifications/scheduler/route.ts"), "utf8");
 const pageSource = readFileSync(join(process.cwd(), "apps/dashboard/app/templates/page.tsx"), "utf8");
 const actionPanelSource = readFileSync(
@@ -36,13 +41,39 @@ describe("dashboard notification scheduler contract", () => {
 
   it("defines repository seams for durable queue worker execution", () => {
     expect(schedulerSource).toContain("DashboardNotificationSchedulerRepository");
+    expect(schedulerSource).toContain("PrismaNotificationSchedulerWorkerRepositoryClient");
+    expect(schedulerSource).toContain("createPrismaNotificationSchedulerWorkerRepository");
+    expect(schedulerSource).toContain('notificationSchedulerWorkerIdempotencyScope = "notification.scheduler.worker"');
     expect(schedulerSource).toContain("claimIdempotencyKey");
     expect(schedulerSource).toContain("persistNotificationJobs");
     expect(schedulerSource).toContain("claimDueNotificationJob");
     expect(schedulerSource).toContain("persistNotificationDelivery");
     expect(schedulerSource).toContain("cancelScheduledJobs");
+    expect(schedulerSource).toContain("persistRetry");
     expect(schedulerSource).toContain("persistDeadLetter");
     expect(schedulerSource).toContain("persistWorkerAuditLog");
+    expect(schedulerSource).toContain("client.notificationJob.createMany");
+    expect(schedulerSource).toContain("client.deadLetterJob.create");
+    expect(schedulerSource).toContain("client.notificationWorkerAuditLog.create");
+    expect(schedulerSource).toContain("client.notificationProviderHandoff.updateMany");
+    expect(schedulerSource).toContain("client.notificationDeliveryStatusTransition.create");
+    expect(schedulerSource).toContain("buildRedactedNotificationSchedulerMetadata");
+  });
+
+  it("pins durable notification worker Prisma schema and migration seams", () => {
+    expect(prismaSchema).toContain("model NotificationJob");
+    expect(prismaSchema).toContain("model DeadLetterJob");
+    expect(prismaSchema).toContain("model NotificationWorkerAuditLog");
+    expect(prismaSchema).toContain("@@unique([tenantId, idempotencyKey, sourceAction])");
+    expect(prismaSchema).toContain("@@index([tenantId, state, availableAt])");
+    expect(prismaSchema).toContain("notificationJobs NotificationJob[]");
+    expect(prismaSchema).toContain("deadLetterJobs   DeadLetterJob[]");
+    expect(prismaSchema).toContain("notificationWorkerAuditLogs NotificationWorkerAuditLog[]");
+    expect(notificationWorkerMigration).toContain('CREATE TABLE "NotificationJob"');
+    expect(notificationWorkerMigration).toContain('CREATE TABLE "DeadLetterJob"');
+    expect(notificationWorkerMigration).toContain('CREATE TABLE "NotificationWorkerAuditLog"');
+    expect(notificationWorkerMigration).toContain('"NotificationJob_tenantId_state_availableAt_idx"');
+    expect(notificationWorkerMigration).toContain('"NotificationWorkerAuditLog_tenantId_action_createdAt_idx"');
   });
 
   it("redacts nested notification scheduler worker metadata", () => {
@@ -101,14 +132,33 @@ describe("dashboard notification scheduler contract", () => {
   it("wires a scheduler API boundary with RBAC, tenant guard, no-store, and action parsing", () => {
     expect(routeSource).toContain("export async function GET");
     expect(routeSource).toContain("export async function POST");
+    expect(routeSource).toContain('export const runtime = "nodejs"');
     expect(routeSource).toContain('assertPermission(actor, "message:read")');
     expect(routeSource).toContain('assertPermission(actor, "message:write")');
     expect(routeSource).toContain('code: "TENANT_MISMATCH"');
     expect(routeSource).toContain("buildDashboardSchedulerPlanFromAction");
+    expect(routeSource).toContain("idempotencyStoreAvailable: dbBackedActor");
+    expect(routeSource).toContain("auditLogPersistenceAvailable: dbBackedActor");
     expect(routeSource).toContain("local queue/worker contract");
     expect(routeSource).not.toContain("Scheduler API exposes queue/worker plans only");
     expect(routeSource).toContain("NOTIFICATION_SCHEDULER_PERSISTENCE_NOT_CONFIGURED");
     expect(routeSource).toContain("schedulerLocalContractFallbackDisabled");
+    expect(routeSource).toContain('action === "schedule_sequence"');
+    expect(routeSource).toContain("tx.appointment.findFirst");
+    expect(routeSource).toContain("tx.bookingRequest.findFirst");
+    expect(routeSource).toContain('status: "related_not_found"');
+    expect(routeSource).toContain("tx.idempotencyKey.upsert");
+    expect(routeSource).toContain('idempotency.status === "completed"');
+    expect(routeSource).toContain('code: "IDEMPOTENCY_CONFLICT"');
+    expect(routeSource).toContain("tx.notification.create");
+    expect(routeSource).toContain("tx.notificationDelivery.create");
+    expect(routeSource).toContain("tx.notificationProviderHandoff.create");
+    expect(routeSource).toContain("tx.auditLog.create");
+    expect(routeSource).toContain("tx.idempotencyKey.update");
+    expect(routeSource).toContain("idempotencyKeyId");
+    expect(routeSource).toContain("idempotencyReplay");
+    expect(routeSource).toContain('persistence: "database"');
+    expect(routeSource).toContain("worker execution remains evidence-gated");
     expect(routeSource).toContain("Scheduler POST returns the local transaction/write contract");
     expect(routeSource).not.toContain("schedulerPlanOnlyWritesDisabled");
     expect(routeSource).not.toContain("plan-only responses are disabled");

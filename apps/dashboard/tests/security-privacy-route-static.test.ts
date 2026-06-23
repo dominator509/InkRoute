@@ -9,14 +9,12 @@ const actionPanelSource = readFileSync(join(process.cwd(), "apps/dashboard/compo
 describe("dashboard privacy request route static contract", () => {
   it("keeps privacy mutations tenant- and role-scoped with no-store responses", () => {
     expect(routeSource).toContain("resolveDashboardActor");
-    expect(routeSource).toContain('request.headers.get("x-tenant-id")');
-    expect(routeSource).toContain("allowedDashboardRoles");
+    expect(routeSource).toContain("assertPermission(actor, \"tenant:write\")");
+    expect(routeSource).toContain("actor.source !== \"local-fallback\"");
+    expect(routeSource).toContain("CLIENT_NOT_FOUND");
     expect(routeSource).toContain("function normalizeHeaderValue(value: string | null): string | null");
-    expect(routeSource).toContain("const fallbackRole = \"viewer\";");
-    expect(routeSource).toContain("const defaultDemoActorId = \"demo-dashboard-user\";");
-    expect(routeSource).toContain("const normalizedRole = role.toLowerCase()");
-    expect(routeSource).toContain("TENANT_SCOPE_REQUIRED");
-    expect(routeSource).toContain("ROLE_NOT_AUTHORIZED");
+    expect(routeSource).toContain("UNAUTHENTICATED");
+    expect(routeSource).toContain("FORBIDDEN");
     expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(routeSource).toContain("headers: noStoreHeaders");
     expect(routeSource).not.toContain('headers: { "Cache-Control": "no-store" }');
@@ -37,9 +35,14 @@ describe("dashboard privacy request route static contract", () => {
   });
 
   it("keeps production workflow and audit-persistence gaps explicit", () => {
-    expect(routeSource).toContain("Persist PrivacyRequest row + case notes");
+    expect(routeSource).toContain("tx.privacyRequest.create");
+    expect(routeSource).toContain("tx.auditLog.create");
+    expect(routeSource).toContain("privacy.request.create");
+    expect(routeSource).toContain("persistedPrivacyRequestStoreConfigured: true");
+    expect(routeSource).toContain("auditLogPersistencePassed: true");
+    expect(routeSource).toContain("DATABASE_UNAVAILABLE");
     expect(routeSource).toContain("Implement verified export/delete/rectification workers");
-    expect(routeSource).toContain("Review workflow, consent text, and customer-facing language with counsel");
+    expect(routeSource).toContain("Capture sanitized log/error evidence, attorney approval, dashboard build/typecheck, route tests, and CI evidence.");
     expect(pageSource).toContain("POST /api/security/privacy-requests");
     expect(pageSource).toContain("PrivacyRequestActionPanel");
     expect(actionPanelSource).toContain('fetch("/api/security/privacy-requests"');

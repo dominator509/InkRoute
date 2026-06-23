@@ -1,8 +1,12 @@
+import { createHash } from "node:crypto";
 import { buildTenantDashboardView } from "@inkroute/config";
 import { prisma } from "@inkroute/db";
+import { clientPrivateNoteInputSchema, dashboardTenantQuerySchema } from "@inkroute/validators";
 import { NextRequest, NextResponse } from "next/server";
 import { dashboardProjectedClients } from "../../../../lib/demo";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../../dashboardAuth";
+
+export const runtime = "nodejs";
 
 interface ClientDetailRouteContext {
   params: Promise<{ clientId: string }>;
@@ -12,16 +16,17 @@ function formatLocation(city?: string | null, region?: string | null, country?: 
   return [city, region, country].filter(Boolean).join(", ") || "Unknown";
 }
 
-function privateNoteFromBody(value: unknown): string | null {
-  if (!value || typeof value !== "object") return null;
-  const body = value as { privateNote?: unknown };
-  if (typeof body.privateNote !== "string") return null;
-  const note = body.privateNote.trim();
-  if (note.length === 0 || note.length > 500) return null;
-  return note;
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+function hashIdempotencySubject(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
 }
 
-const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+function resultAuditId(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+  const result = value as { auditId?: unknown };
+  return typeof result.auditId === "string" ? result.auditId : null;
+}
 
 export async function GET(request: NextRequest, context: ClientDetailRouteContext) {
   const actor = resolveDashboardActor(request);
@@ -32,8 +37,15 @@ export async function GET(request: NextRequest, context: ClientDetailRouteContex
   }
 
   const { clientId } = await context.params;
-  const params = new URL(request.url).searchParams;
-  const tenantId = params.get("tenantId") ?? actor.tenantId;
+  const query = dashboardTenantQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
+  if (!query.success) {
+    return NextResponse.json(
+      { ok: false, error: { code: "VALIDATION_FAILED", message: "Dashboard client detail query failed validation.", issues: query.error.flatten() } },
+      { status: 400, headers: noStoreHeaders },
+    );
+  }
+
+  const tenantId = query.data.tenantId ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
     return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a client for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
@@ -224,25 +236,34 @@ export async function PATCH(request: NextRequest, context: ClientDetailRouteCont
   }
 
   const { clientId } = await context.params;
-  const params = new URL(request.url).searchParams;
-  const tenantId = params.get("tenantId") ?? actor.tenantId;
+  const query = dashboardTenantQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
+  if (!query.success) {
+    return NextResponse.json(
+      { ok: false, error: { code: "VALIDATION_FAILED", message: "Dashboard client write query failed validation.", issues: query.error.flatten() } },
+      { status: 400, headers: noStoreHeaders },
+    );
+  }
+
+  const tenantId = query.data.tenantId ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
     return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot update a client for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const parsed = (await request.json().catch(() => null)) as unknown;
-  const note = privateNoteFromBody(parsed);
-  if (!note) {
+  const noteInput = clientPrivateNoteInputSchema.safeParse(parsed);
+  if (!noteInput.success) {
     return NextResponse.json(
       {
         ok: false,
-        error: { code: "VALIDATION_FAILED", message: "Provide a privateNote string between 1 and 500 characters." },
+        error: { code: "VALIDATION_FAILED", message: "Client private-note payload failed validation.", issues: noteInput.error.flatten() },
       },
       { status: 400, headers: noStoreHeaders },
     );
   }
 
-  const idempotencyKey = request.headers.get("idempotency-key") ?? "missing-idempotency-key";
+  const note = noteInput.data.privateNote;
+  const noteHash = hashIdempotencySubject(note);
+  const idempotencyKey = request.headers.get("idempotency-key") ?? `client-private-note:${tenantId}:${clientId}:${noteHash}`;
 
   if (actor.source === "local-fallback") {
     if (process.env.NODE_ENV === "production") {
@@ -285,6 +306,39 @@ export async function PATCH(request: NextRequest, context: ClientDetailRouteCont
       });
       if (!client) return { status: "not_found" as const };
 
+      const idempotency = await tx.idempotencyKey.upsert({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-client-private-note", key: idempotencyKey } },
+        create: {
+          tenantId,
+          scope: "dashboard-client-private-note",
+          key: idempotencyKey,
+          status: "pending",
+          requestHash: noteHash,
+          metadata: {
+            source: "dashboard-api",
+            dashboardMutationAction: "append_client_private_note",
+            clientId,
+            noteLength: note.length,
+            noteHash,
+            rawNoteStoredInResult: false,
+          },
+        },
+        update: {},
+        select: { id: true, status: true, requestHash: true, result: true },
+      });
+
+      if (idempotency.requestHash !== noteHash) {
+        return { status: "idempotency_conflict" as const, idempotency };
+      }
+
+      if (idempotency.status === "completed") {
+        return {
+          status: "replayed" as const,
+          idempotency,
+          auditId: resultAuditId(idempotency.result),
+        };
+      }
+
       await tx.clientProfile.upsert({
         where: { clientId },
         create: {
@@ -308,6 +362,9 @@ export async function PATCH(request: NextRequest, context: ClientDetailRouteCont
             source: "dashboard-api",
             dashboardMutationAction: "append_client_private_note",
             idempotencyKey,
+            idempotencyKeyId: idempotency.id,
+            noteHash,
+            noteLength: note.length,
             privateNoteStored: true,
             rawNoteReturned: false,
           },
@@ -315,11 +372,45 @@ export async function PATCH(request: NextRequest, context: ClientDetailRouteCont
         select: { id: true },
       });
 
-      return { status: "updated" as const, audit };
+      await tx.idempotencyKey.update({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-client-private-note", key: idempotencyKey } },
+        data: {
+          status: "completed",
+          result: {
+            clientId,
+            auditId: audit.id,
+            noteHash,
+            noteLength: note.length,
+            privateNoteStored: true,
+            rawNoteReturned: false,
+          },
+        },
+      });
+
+      return { status: "updated" as const, idempotency, auditId: audit.id };
     });
 
     if (result.status === "not_found") {
       return NextResponse.json({ ok: false, error: { code: "CLIENT_NOT_FOUND", message: "Client was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
+    }
+
+    if (result.status === "idempotency_conflict") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          clientId,
+          error: {
+            code: "IDEMPOTENCY_CONFLICT",
+            message: "Idempotency key was already used for a different private-note payload.",
+          },
+          idempotencyKeyId: result.idempotency.id,
+          gapIds: ["GAP-007", "GAP-038", "GAP-040"],
+          boundary: "Private client note idempotency is request-hash guarded and defaults to denial on mismatched replay payloads.",
+        },
+        { status: 409, headers: noStoreHeaders },
+      );
     }
 
     return NextResponse.json(
@@ -329,9 +420,11 @@ export async function PATCH(request: NextRequest, context: ClientDetailRouteCont
         tenantId,
         clientId,
         persistence: "database",
-        auditId: result.audit.id,
+        auditId: result.auditId,
+        idempotencyKeyId: result.idempotency.id,
+        idempotencyReplay: result.status === "replayed",
         gapIds: ["GAP-007", "GAP-038", "GAP-040"],
-        boundary: "Private client note writes are tenant-scoped, RBAC-gated, audited, and never echo the raw note.",
+        boundary: "Private client note writes are tenant-scoped, RBAC-gated, idempotency-backed, audited, and never echo the raw note.",
       },
       { headers: noStoreHeaders },
     );

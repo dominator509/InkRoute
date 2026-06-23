@@ -4,6 +4,7 @@ import { MobileCard } from "../components/MobileCard";
 import { MobilePill } from "../components/MobilePill";
 import { MobileScreen } from "../components/MobileScreen";
 import { mobileCrashCapturePreview } from "../lib/mobileCrash";
+import { mobileApiFetch, type MobileApiResponseEnvelope, type MobileApiSession } from "../lib/mobileApiClient";
 import { mobileUpdateRuntimePreview } from "../lib/mobileUpdates";
 import {
   mobileBoundaries,
@@ -22,6 +23,24 @@ import {
   mobilePrivacyDraft,
   mobileUploadValidationPreview,
 } from "../lib/mobileDemo";
+
+export interface MobileReleaseHealthSummary {
+  version: string;
+  status: string;
+  productionBlocked: boolean;
+}
+
+export function loadMobileReleaseHealth(
+  session: MobileApiSession,
+  requestId = `mobile-release-health:${session.tenantId}`,
+): Promise<MobileApiResponseEnvelope<MobileReleaseHealthSummary>> {
+  return mobileApiFetch<MobileReleaseHealthSummary>(session, {
+    domain: "releases",
+    method: "GET",
+    path: "/api/mobile/release-health",
+    requestId,
+  });
+}
 
 export function SystemStatusScreen() {
   return (

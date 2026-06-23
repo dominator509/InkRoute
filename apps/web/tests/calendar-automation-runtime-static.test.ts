@@ -6,6 +6,7 @@ import {
   buildCalendarAutomationDecisionRequiredEvidence,
   buildCalendarAutomationEvidenceDecision,
   buildCalendarAutomationExecutionPlan,
+  buildCalendarAutomationPersistedRunPayload,
   buildRedactedCalendarAutomationArtifact,
   calendarAutomationDecisionRequiredEvidence,
   calendarAutomationExternalCommands,
@@ -14,10 +15,10 @@ import {
   calendarAutomationLocalCommands,
   calendarAutomationRequiredExternalEvidence,
   calendarAutomationRuntimeCommands,
+  calendarAutomationSurfaceContract,
   calendarAutomationRuntimeMatrix,
   calendarAutomationRuntimeProofFiles,
   calendarAutomationRuntimeReadiness,
-  calendarAutomationRuntimeCommands,
 } from "../lib/calendarAutomatedTestsRuntime";
 
 const root = resolve(__dirname, "../../..");
@@ -60,10 +61,24 @@ describe("calendar automated test runtime contract", () => {
       "signed-ics-revocation-db",
       "ci-calendar-job",
       "artifact-retention",
+      "persisted-run-payload",
       "secret-safe-artifacts",
     ]);
     expect(calendarAutomationArtifactPaths).toContain("coverage/calendar-automation-runtime.json");
+    expect(calendarAutomationArtifactPaths).toContain("coverage/calendar-automation-persisted-run-payload.json");
     expect(calendarAutomationArtifactPaths).toContain("test-results/calendar-automation-runtime");
+    expect(calendarAutomationSurfaceContract.map((entry) => entry.surfaceId)).toEqual([
+      "signed-ics-route",
+      "availability-preview-route",
+      "postgres-integration",
+      "google-provider",
+      "timezone-provider-matrix",
+      "dashboard-public-playwright",
+      "concurrent-hold-race",
+      "signed-feed-revocation",
+      "ci-calendar-job",
+      "artifact-retention",
+    ]);
   });
 
   it("pins current calendar automation proof files for GAP-059", () => {
@@ -110,8 +125,10 @@ describe("calendar automated test runtime contract", () => {
   it("keeps DB, Google, timezone, Playwright, race, revocation, CI, and artifact blockers explicit", () => {
     expect(calendarAutomationRuntimeReadiness.status).toBe("blocked");
     expect(calendarAutomationRuntimeReadiness.missingScripts).toEqual([]);
-    expect(calendarAutomationRuntimeReadiness.requiredCommands).toEqual(calendarAutomationRuntimeCommands);
-    expect(calendarAutomationRuntimeReadiness.requiredEvidence).toEqual(calendarAutomationRuntimeReadiness.requiredEvidence);
+    expect(calendarAutomationRuntimeReadiness.requiredCommands).toBe(calendarAutomationRuntimeCommands);
+    expect(calendarAutomationDecisionRequiredEvidence).toEqual(
+      buildCalendarAutomationDecisionRequiredEvidence(calendarAutomationRuntimeReadiness.requiredEvidence),
+    );
     expect(calendarAutomationRuntimeReadiness.blockers).toContain("Postgres calendar integration tests must pass for availability, holds, appointments, audit logs, and feed tokens.");
     expect(calendarAutomationRuntimeReadiness.blockers).toContain("Google provider integration tests must pass against a test calendar.");
     expect(calendarAutomationRuntimeReadiness.blockers).toContain("Calendar test artifacts must capture DB logs, Google provider transcripts, Playwright traces, and ICS import output.");
@@ -131,7 +148,36 @@ describe("calendar automated test runtime contract", () => {
       signedFeedRevocationRequiredForClosure: true,
       secretSafeArtifactsRequiredForClosure: true,
     });
-    expect(plan.policy).toEqual(calendarAutomationExecutionPolicy);
+    expect(plan.policy).toBe(calendarAutomationExecutionPolicy);
+    expect(plan.surfaceContract).toBe(calendarAutomationSurfaceContract);
+    expect(plan.surfaceContract).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          surfaceId: "signed-ics-route",
+          requiredCommand: "pnpm vitest run apps/web/tests/ics-feed-route.test.ts",
+          requiredArtifact: "coverage/calendar-automation-signed-ics-route.json",
+          automationBoundary: "local-route",
+          providerBackedEvidenceRequired: false,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "google-provider",
+          requiredCommand: "Google test-calendar provider tests",
+          requiredArtifact: "coverage/calendar-automation-google-provider-redacted.json",
+          automationBoundary: "google-provider",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "signed-feed-revocation",
+          requiredCommand: "signed-feed revocation DB tests",
+          requiredArtifact: "coverage/calendar-automation-signed-ics-revocation-db.json",
+          automationBoundary: "signed-feed-db",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+      ]),
+    );
     expect(plan.commandExecutionAllowed).toBe(false);
     expect(plan.seededPostgresExecutionAllowed).toBe(false);
     expect(plan.googleProviderExecutionAllowed).toBe(false);
@@ -140,9 +186,9 @@ describe("calendar automated test runtime contract", () => {
     expect(plan.signedFeedRevocationExecutionAllowed).toBe(false);
     expect(plan.ciExecutionAllowed).toBe(false);
     expect(plan.artifactReviewExecutionAllowed).toBe(false);
-    expect(plan.localCommands).toEqual(calendarAutomationLocalCommands);
-    expect(plan.externalCommands).toEqual(calendarAutomationExternalCommands);
-    expect(plan.requiredExternalEvidence).toEqual(calendarAutomationRequiredExternalEvidence);
+    expect(plan.localCommands).toBe(calendarAutomationLocalCommands);
+    expect(plan.externalCommands).toBe(calendarAutomationExternalCommands);
+    expect(plan.requiredExternalEvidence).toBe(calendarAutomationRequiredExternalEvidence);
     expect(calendarAutomationRequiredExternalEvidence).toEqual([
       "actual helper/route command output",
       "calendar Postgres integration tests",
@@ -153,8 +199,24 @@ describe("calendar automated test runtime contract", () => {
       "signed-feed revocation DB tests",
       "CI calendar automation artifacts",
       "artifact retention proof",
+      "tenant-isolated persisted calendar automation run payload",
       "secret-safe calendar automation artifact review",
     ]);
+  });
+
+  it("keeps the GAP-059 persisted automation payload provider-backed and non-executing", () => {
+    const payload = buildCalendarAutomationPersistedRunPayload();
+
+    expect(payload.payloadId).toBe("gap-059-calendar-automation-persisted-run");
+    expect(payload.requiredArtifact).toBe("coverage/calendar-automation-persisted-run-payload.json");
+    expect(payload.providerBackedPersistenceRequired).toBe(true);
+    expect(payload.localPersistenceExecutionAllowed).toBe(false);
+    expect(payload.tenantIsolationEvidenceRequired).toBe(true);
+    expect(payload.postgresIntegrationEvidenceRequired).toBe(true);
+    expect(payload.googleProviderEvidenceRequired).toBe(true);
+    expect(payload.playwrightEvidenceRequired).toBe(true);
+    expect(payload.redactionRequired).toBe(true);
+    expect(payload.requiredExternalEvidence).toBe(calendarAutomationRequiredExternalEvidence);
   });
 
   it("pins calendar automation artifact redaction and review through the runtime contract", () => {
@@ -217,6 +279,7 @@ describe("calendar automated test runtime contract", () => {
       signedIcsRevocationDbTestsPassed: false,
       ciCalendarJobEvidenceCaptured: false,
       artifactRetentionVerified: false,
+      persistedAutomationRunPayloadCaptured: false,
       secretSafeArtifactReviewPassed: false,
       capturedArtifacts: [
         "coverage/calendar-automation-runtime.json",
@@ -232,6 +295,7 @@ describe("calendar automated test runtime contract", () => {
     expect(blockedDecision.blockers).toContain("Google test-calendar provider evidence is missing.");
     expect(blockedDecision.blockers).toContain("Dashboard calendar Playwright evidence is missing.");
     expect(blockedDecision.blockers).toContain("Signed ICS revocation DB evidence is missing.");
+    expect(blockedDecision.blockers).toContain("Tenant-isolated persisted calendar automation run payload is missing.");
     expect(blockedDecision.blockers).toContain(
       "Secret-safe calendar automation artifact review evidence is missing.",
     );
@@ -261,6 +325,7 @@ describe("calendar automated test runtime contract", () => {
       signedIcsRevocationDbTestsPassed: true,
       ciCalendarJobEvidenceCaptured: true,
       artifactRetentionVerified: true,
+      persistedAutomationRunPayloadCaptured: true,
       secretSafeArtifactReviewPassed: true,
       capturedArtifacts: calendarAutomationArtifactPaths,
     });
@@ -283,6 +348,8 @@ describe("calendar automated test runtime contract", () => {
     expect(gapTracker).toContain("calendarAutomationDecisionRequiredEvidence");
     expect(gapTracker).toContain("calendarAutomationExecutionPolicy");
     expect(gapTracker).toContain("calendarAutomationRequiredExternalEvidence");
+    expect(gapTracker).toContain("calendarAutomationSurfaceContract");
+    expect(gapTracker).toContain("buildCalendarAutomationPersistedRunPayload");
     expect(gapTracker).toContain("buildRedactedCalendarAutomationArtifact");
     expect(gapTracker).toContain("buildCalendarAutomationArtifactReview");
     expect(gapTracker).toContain("non-executing calendar automation execution policy");

@@ -13,6 +13,15 @@ export interface DeploymentToolingRuntimeMatrixEntry {
   readonly status: DeploymentToolingRuntimeStatus;
 }
 
+export interface DeploymentToolingBlockerOwnerContractEntry {
+  readonly blockerId: string;
+  readonly ownerRole: "platform" | "dashboard" | "ci" | "release-manager";
+  readonly requiredEvidenceArtifact: DeploymentToolingRuntimeArtifact | "coverage/deployment-blocker-owner-list.json";
+  readonly executionBoundary: "local-proof" | "provider-proof" | "ci-proof" | "human-approval-proof";
+  readonly redactedOwnerEvidenceRequired: true;
+  readonly secretsForbidden: true;
+}
+
 export interface DeploymentToolingRunPersistenceInput {
   tenantId: string;
   runId: string;
@@ -94,6 +103,7 @@ export const deploymentToolingRuntimeArtifactPaths = [
   "coverage/deployment-production-approval-boundary.json",
   "coverage/deployment-ci-reports-redacted.json",
   "coverage/deployment-blocker-owner-list.json",
+  "coverage/deployment-blocker-owner-redacted-packet.json",
   "test-results/deployment-tooling-runtime"
 ] as const;
 
@@ -156,6 +166,7 @@ export const deploymentToolingRuntimeRequiredExternalEvidence = [
   "Deployment approval and rollback-preflight artifacts must prove production actions stayed human-gated and non-mutating.",
   "CI deployment reports must be retained with run URLs, provider identifiers, tokens, and environment details redacted.",
   "Provider-backed DeploymentToolingRun persistence must execute only in approved provider environments.",
+  "Retained redacted blocker-owner packet must be captured for deploymentToolingBlockerOwnerContract before closure.",
 ] as const;
 
 export type DeploymentToolingRuntimeExecutionPolicy = {
@@ -213,6 +224,7 @@ export type DeploymentToolingRuntimeEvidenceInput = {
   productionApprovalBoundaryVerified: boolean;
   ciDeploymentReportsCaptured: boolean;
   blockerOwnersDocumented: boolean;
+  redactedBlockerOwnerPacketCaptured: boolean;
   requiredCommandsRun: readonly DeploymentToolingRuntimeCommand[];
   capturedArtifacts: readonly DeploymentToolingRuntimeArtifact[];
 };
@@ -235,6 +247,7 @@ export interface DeploymentToolingRuntimeExecutionPlan {
   readonly externalCommands: typeof deploymentToolingRuntimeExternalCommands;
   readonly localArtifacts: typeof deploymentToolingRuntimeLocalArtifacts;
   readonly externalArtifacts: typeof deploymentToolingRuntimeExternalArtifacts;
+  readonly blockerOwnerContract: typeof deploymentToolingBlockerOwnerContract;
   readonly frozenInstallExecutionAllowed: false;
   readonly packageQualityExecutionAllowed: false;
   readonly deploymentScriptExecutionAllowed: false;
@@ -254,6 +267,67 @@ export interface DeploymentToolingRuntimeArtifactReview {
   readonly containsUnredactedSensitiveValues: false;
   readonly externalEvidenceRequired: typeof deploymentToolingRuntimeRequiredExternalEvidence;
 }
+
+export interface DeploymentToolingRuntimeRedactedBlockerOwnerPacket {
+  readonly status: "redacted-blocker-owner-packet-ready";
+  readonly artifactPath: "coverage/deployment-blocker-owner-redacted-packet.json";
+  readonly blockerOwnerContract: typeof deploymentToolingBlockerOwnerContract;
+  readonly review: DeploymentToolingRuntimeArtifactReview;
+  readonly requiredArtifacts: typeof deploymentToolingRuntimeArtifactPaths;
+  readonly externalEvidenceRequired: typeof deploymentToolingRuntimeRequiredExternalEvidence;
+  readonly providerExecutionAllowed: false;
+}
+
+export const deploymentToolingBlockerOwnerContract: readonly DeploymentToolingBlockerOwnerContractEntry[] = [
+  {
+    blockerId: "dependency-install",
+    ownerRole: "platform",
+    requiredEvidenceArtifact: "coverage/deployment-install.log",
+    executionBoundary: "provider-proof",
+    redactedOwnerEvidenceRequired: true,
+    secretsForbidden: true,
+  },
+  {
+    blockerId: "deployment-package-quality",
+    ownerRole: "platform",
+    requiredEvidenceArtifact: "coverage/deployment-package-tests.json",
+    executionBoundary: "local-proof",
+    redactedOwnerEvidenceRequired: true,
+    secretsForbidden: true,
+  },
+  {
+    blockerId: "dashboard-runtime-smoke",
+    ownerRole: "dashboard",
+    requiredEvidenceArtifact: "coverage/deployment-readiness-api-smoke.json",
+    executionBoundary: "provider-proof",
+    redactedOwnerEvidenceRequired: true,
+    secretsForbidden: true,
+  },
+  {
+    blockerId: "rollback-approval-boundary",
+    ownerRole: "release-manager",
+    requiredEvidenceArtifact: "coverage/deployment-production-approval-boundary.json",
+    executionBoundary: "human-approval-proof",
+    redactedOwnerEvidenceRequired: true,
+    secretsForbidden: true,
+  },
+  {
+    blockerId: "ci-deployment-reports",
+    ownerRole: "ci",
+    requiredEvidenceArtifact: "coverage/deployment-ci-reports-redacted.json",
+    executionBoundary: "ci-proof",
+    redactedOwnerEvidenceRequired: true,
+    secretsForbidden: true,
+  },
+  {
+    blockerId: "owner-retention",
+    ownerRole: "release-manager",
+    requiredEvidenceArtifact: "coverage/deployment-blocker-owner-list.json",
+    executionBoundary: "human-approval-proof",
+    redactedOwnerEvidenceRequired: true,
+    secretsForbidden: true,
+  },
+] as const;
 
 const sensitiveDeploymentToolingKeyPattern =
   /(token|secret|password|authorization|cookie|env|databaseUrl|dbUrl|provider|ciRunUrl|deployUrl|previewUrl|approval|payload|tenantId|userId|runId|email|phone|blockerOwner)/i;
@@ -285,6 +359,7 @@ export function buildDeploymentToolingRuntimeEvidenceDecision(
     !input.productionApprovalBoundaryVerified && "Capture production approval boundary proof.",
     !input.ciDeploymentReportsCaptured && "Capture CI deployment report artifacts.",
     !input.blockerOwnersDocumented && "Capture blocker-owner artifact.",
+    !input.redactedBlockerOwnerPacketCaptured && "Capture retained redacted deployment blocker-owner packet proof.",
   ].filter(Boolean) as string[];
 
   const missingArtifacts = deploymentToolingRuntimeArtifactPaths.filter(
@@ -317,6 +392,7 @@ export function buildDeploymentToolingRuntimeExecutionPlan(): DeploymentToolingR
     externalCommands: deploymentToolingRuntimeExternalCommands,
     localArtifacts: deploymentToolingRuntimeLocalArtifacts,
     externalArtifacts: deploymentToolingRuntimeExternalArtifacts,
+    blockerOwnerContract: deploymentToolingBlockerOwnerContract,
     frozenInstallExecutionAllowed: false,
     packageQualityExecutionAllowed: false,
     deploymentScriptExecutionAllowed: false,
@@ -387,6 +463,20 @@ export function buildDeploymentToolingRuntimeArtifactReview(
   };
 }
 
+export function buildDeploymentToolingRuntimeRedactedBlockerOwnerPacket(
+  artifact: unknown,
+): DeploymentToolingRuntimeRedactedBlockerOwnerPacket {
+  return {
+    status: "redacted-blocker-owner-packet-ready",
+    artifactPath: "coverage/deployment-blocker-owner-redacted-packet.json",
+    blockerOwnerContract: deploymentToolingBlockerOwnerContract,
+    review: buildDeploymentToolingRuntimeArtifactReview("coverage/deployment-blocker-owner-redacted-packet.json", artifact),
+    requiredArtifacts: deploymentToolingRuntimeArtifactPaths,
+    externalEvidenceRequired: deploymentToolingRuntimeRequiredExternalEvidence,
+    providerExecutionAllowed: false,
+  };
+}
+
 export const deploymentToolingRuntimeMatrix: readonly DeploymentToolingRuntimeMatrixEntry[] = [
   {
     id: "install-package-quality",
@@ -446,6 +536,12 @@ export const deploymentToolingRuntimeMatrix: readonly DeploymentToolingRuntimeMa
     id: "blocker-owner-artifact",
     command: "capture deployment blocker-owner artifact",
     artifact: "coverage/deployment-blocker-owner-list.json",
+    status: "ci-gated"
+  },
+  {
+    id: "redacted-blocker-owner-packet",
+    command: "retain redacted deployment blocker-owner packet",
+    artifact: "coverage/deployment-blocker-owner-redacted-packet.json",
     status: "ci-gated"
   }
 ];

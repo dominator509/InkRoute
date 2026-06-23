@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-21T23:30:26.049Z",
+  "generatedAt": "2026-06-22T00:13:10.015Z",
   "source": "GAP-124 documentation audit quality",
   "status": "fail",
   "markdownFilesChecked": 161,
@@ -11,27 +11,6 @@
       "sourcePath": "AGENTS.md",
       "line": 164,
       "message": "Legal readiness claim lacks pending/gated/evidence qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "API_CONTRACTS.md",
-      "line": 114,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "API_CONTRACTS.md",
-      "line": 166,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "API_CONTRACTS.md",
-      "line": 178,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
     },
     {
       "status": "fail",

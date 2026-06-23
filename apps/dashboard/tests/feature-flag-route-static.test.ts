@@ -9,6 +9,8 @@ describe("dashboard feature-flag route contract", () => {
   it("guards feature-flag reads with RBAC, tenant scope, and no-store cache policy", () => {
     expect(routeSource).toContain('assertPermission(actor, "release:read")');
     expect(routeSource).toContain('code: "FORBIDDEN"');
+    expect(routeSource).toContain("featureFlagReadQuerySchema.safeParse");
+    expect(routeSource).toContain("Feature flag query failed validation.");
     expect(routeSource).toContain("tenantId !== actor.tenantId");
     expect(routeSource).toContain('code: "TENANT_MISMATCH"');
     expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
@@ -24,12 +26,20 @@ describe("dashboard feature-flag route contract", () => {
     expect(routeSource).toContain('entityType: "FeatureFlag"');
     expect(routeSource).toContain("auditId: result.audit.id");
     expect(routeSource).toContain("evaluateFeatureFlags(definitions, context)");
+    expect(routeSource).toContain("const environment = query.data.environment");
   });
 
   it("keeps feature-flag writes gated by settings permission, validation, provider credentials, and audit rows", () => {
     expect(routeSource).toContain('assertPermission(actor, "settings:write")');
     expect(routeSource).toContain("featureFlagPatchInputSchema.safeParse");
     expect(routeSource).toContain("PROVIDER_CREDENTIALS_REQUIRED");
+    expect(routeSource).toContain("tx.idempotencyKey.upsert");
+    expect(routeSource).toContain("requestHash");
+    expect(routeSource).toContain('idempotency.status === "completed"');
+    expect(routeSource).toContain('code: "IDEMPOTENCY_CONFLICT"');
+    expect(routeSource).toContain("tx.idempotencyKey.update");
+    expect(routeSource).toContain("idempotencyKeyId");
+    expect(routeSource).toContain("idempotencyReplay");
     expect(routeSource).toContain("tx.featureFlag.upsert");
     expect(routeSource).toContain('action: "feature_flag:update"');
     expect(routeSource).toContain("previousEnabled");

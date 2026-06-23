@@ -52,6 +52,49 @@ export interface SecurityMiddlewareEvidencePersistenceContract {
   tenantIsolationKey: "tenantId";
 }
 
+export interface SecurityMiddlewareEvidencePersistenceClient {
+  readonly securityMiddlewareEvidence: {
+    create(input: {
+      data: {
+        tenantId: string;
+        surface: string;
+        environment: string;
+        routePattern: string;
+        headerSmokePassed: boolean;
+        productionHstsVerified: boolean;
+        previewLocalHstsSuppressed: boolean;
+        cspProviderConnectSrcVerified: boolean;
+        cspFrameBaseFormInvariantPassed: boolean;
+        csrfAttackRejected: boolean;
+        csrfValidSessionAllowed: boolean;
+        sameSiteSessionBoundVerified: boolean;
+        signedWebhookBypassReviewed: boolean;
+        artifactObjectKey?: string;
+        redactedMetadata: Record<string, unknown>;
+      };
+    }): Promise<{ id?: string } | unknown>;
+  };
+  readonly auditLog: {
+    create(input: {
+      data: {
+        tenantId: string;
+        action: "security.middleware.evidence.persisted";
+        entityType: "SecurityMiddlewareEvidence";
+        entityId: string;
+        metadata: Record<string, unknown>;
+      };
+    }): Promise<unknown>;
+  };
+}
+
+export interface SecurityMiddlewareEvidencePersistenceResult {
+  readonly persisted: true;
+  readonly evidenceId: string;
+  readonly auditAction: "security.middleware.evidence.persisted";
+  readonly tenantId: string;
+  readonly surface: SecurityMiddlewareEvidencePersistenceInput["surface"];
+}
+
 export const securityMiddlewareArtifactPaths = [
   "coverage/security-middleware-runtime.json",
   "coverage/security-web-header-browser-smoke.json",
@@ -130,6 +173,7 @@ export type SecurityMiddlewareCommand = (typeof securityMiddlewareCommands)[numb
 
 export type SecurityMiddlewareExecutionPolicy = {
   localMiddlewareContractOnly: true;
+  persistenceContractAvailable: true;
   browserSmokeRequiresExternalEvidence: true;
   deploymentHstsRequiresExternalEvidence: true;
   providerCspRequiresExternalEvidence: true;
@@ -170,6 +214,7 @@ export type SecurityMiddlewareEvidenceDecision = {
 export type SecurityMiddlewareExecutionPlan = {
   status: "local-plan-ready";
   policy: SecurityMiddlewareExecutionPolicy;
+  persistenceContractAvailable: true;
   externalEvidenceRequired: typeof securityMiddlewareRequiredExternalEvidence;
   browserSmokeExecutionAllowed: false;
   deploymentHstsExecutionAllowed: false;
@@ -186,6 +231,7 @@ export type SecurityMiddlewareExecutionPlan = {
 
 export const securityMiddlewareExecutionPolicy: SecurityMiddlewareExecutionPolicy = {
   localMiddlewareContractOnly: true,
+  persistenceContractAvailable: true,
   browserSmokeRequiresExternalEvidence: true,
   deploymentHstsRequiresExternalEvidence: true,
   providerCspRequiresExternalEvidence: true,
@@ -244,6 +290,7 @@ export function buildSecurityMiddlewareExecutionPlan(): SecurityMiddlewareExecut
   return {
     status: "local-plan-ready",
     policy: securityMiddlewareExecutionPolicy,
+    persistenceContractAvailable: true,
     externalEvidenceRequired: securityMiddlewareRequiredExternalEvidence,
     browserSmokeExecutionAllowed: false,
     deploymentHstsExecutionAllowed: false,
@@ -260,7 +307,7 @@ export function buildSecurityMiddlewareExecutionPlan(): SecurityMiddlewareExecut
       "Production HTTPS HSTS proof requires deployment-platform evidence.",
       "Provider CSP connect-src proof requires provider-specific runtime smoke evidence.",
       "Signed webhook CSRF bypass review requires signed callback integration evidence.",
-      "SecurityMiddlewareEvidence persistence proof requires provider-backed database execution.",
+      "SecurityMiddlewareEvidence persistence contract is wired, but proof requires provider-backed database execution.",
       "Runtime route integration proof requires deployed or browser-backed route execution.",
     ],
   };
@@ -341,6 +388,69 @@ export function buildSecurityMiddlewareEvidencePersistenceContract(
     ],
     redactedFields: ["artifactObjectKey", "redactedMetadata", "cookie", "csrfToken", "sessionId"],
     tenantIsolationKey: "tenantId",
+  };
+}
+
+export async function persistSecurityMiddlewareEvidence(
+  client: SecurityMiddlewareEvidencePersistenceClient,
+  input: SecurityMiddlewareEvidencePersistenceInput,
+): Promise<SecurityMiddlewareEvidencePersistenceResult> {
+  const redactedMetadata = buildRedactedSecurityMiddlewareArtifact({
+    surface: input.surface,
+    environment: input.environment,
+    routePattern: input.routePattern,
+    headerSmokePassed: input.headerSmokePassed,
+    productionHstsVerified: input.productionHstsVerified,
+    previewLocalHstsSuppressed: input.previewLocalHstsSuppressed,
+    cspProviderConnectSrcVerified: input.cspProviderConnectSrcVerified,
+    cspFrameBaseFormInvariantPassed: input.cspFrameBaseFormInvariantPassed,
+    csrfAttackRejected: input.csrfAttackRejected,
+    csrfValidSessionAllowed: input.csrfValidSessionAllowed,
+    sameSiteSessionBoundVerified: input.sameSiteSessionBoundVerified,
+    signedWebhookBypassReviewed: input.signedWebhookBypassReviewed,
+    artifactObjectKey: input.artifactObjectKey,
+  }) as Record<string, unknown>;
+
+  const evidence = await client.securityMiddlewareEvidence.create({
+    data: {
+      tenantId: input.tenantId,
+      surface: input.surface,
+      environment: input.environment,
+      routePattern: input.routePattern,
+      headerSmokePassed: input.headerSmokePassed,
+      productionHstsVerified: input.productionHstsVerified,
+      previewLocalHstsSuppressed: input.previewLocalHstsSuppressed,
+      cspProviderConnectSrcVerified: input.cspProviderConnectSrcVerified,
+      cspFrameBaseFormInvariantPassed: input.cspFrameBaseFormInvariantPassed,
+      csrfAttackRejected: input.csrfAttackRejected,
+      csrfValidSessionAllowed: input.csrfValidSessionAllowed,
+      sameSiteSessionBoundVerified: input.sameSiteSessionBoundVerified,
+      signedWebhookBypassReviewed: input.signedWebhookBypassReviewed,
+      ...(input.artifactObjectKey ? { artifactObjectKey: input.artifactObjectKey } : {}),
+      redactedMetadata,
+    },
+  });
+  const evidenceId =
+    typeof evidence === "object" && evidence && "id" in evidence && typeof evidence.id === "string"
+      ? evidence.id
+      : `${input.tenantId}:${input.surface}:${input.environment}:${input.routePattern}`;
+
+  await client.auditLog.create({
+    data: {
+      tenantId: input.tenantId,
+      action: "security.middleware.evidence.persisted",
+      entityType: "SecurityMiddlewareEvidence",
+      entityId: evidenceId,
+      metadata: redactedMetadata,
+    },
+  });
+
+  return {
+    persisted: true,
+    evidenceId,
+    auditAction: "security.middleware.evidence.persisted",
+    tenantId: input.tenantId,
+    surface: input.surface,
   };
 }
 

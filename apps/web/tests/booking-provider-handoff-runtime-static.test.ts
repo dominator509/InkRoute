@@ -90,6 +90,9 @@ describe("booking provider handoff runtime contract", () => {
     expect(bookingProviderHandoffRuntimeReadiness.blockers).toContain(
       "Provider handoffs must enforce idempotency across retries, worker restarts, and webhook replays.",
     );
+    expect(bookingProviderHandoffRuntimeReadiness.blockers).not.toContain("Retry policy must be verified for retryable provider failures.");
+    expect(bookingProviderHandoffRuntimeReadiness.blockers).not.toContain("Provider rollback paths must be verified.");
+    expect(bookingProviderHandoffRuntimeReadiness.blockers).not.toContain("Operator review queue must be configured for provider failures.");
   });
 
   it("blocks provider handoff completion when sandbox, worker, rollback, idempotency, CI, or safe evidence is missing", () => {

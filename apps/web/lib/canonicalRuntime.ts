@@ -54,6 +54,106 @@ export interface CanonicalDomainRepository {
   snapshot(): CanonicalDomainRepositorySnapshot;
 }
 
+export interface PersistedTenantDomainRow {
+  readonly tenantId: string;
+  readonly hostname: string;
+  readonly status: "pending" | "verified" | "failed" | "disabled" | string;
+  readonly isPrimary: boolean;
+}
+
+export interface PersistedSeoRedirectRow {
+  readonly tenantId: string;
+  readonly fromPath: string;
+  readonly toPath: string;
+  readonly statusCode: number;
+  readonly isActive: boolean;
+}
+
+export interface CanonicalDomainPrismaClient {
+  readonly tenantDomain: {
+    findMany(input: {
+      readonly where: { readonly tenantId: string; readonly status: "verified" };
+      readonly select: { readonly tenantId: true; readonly hostname: true; readonly status: true; readonly isPrimary: true };
+      readonly orderBy: readonly [{ readonly isPrimary: "desc" }, { readonly hostname: "asc" }];
+    }): Promise<readonly PersistedTenantDomainRow[]>;
+  };
+  readonly seoRedirect: {
+    findMany(input: {
+      readonly where: { readonly tenantId: string; readonly isActive: true };
+      readonly select: { readonly tenantId: true; readonly fromPath: true; readonly toPath: true; readonly statusCode: true; readonly isActive: true };
+      readonly orderBy: readonly [{ readonly fromPath: "asc" }];
+    }): Promise<readonly PersistedSeoRedirectRow[]>;
+  };
+}
+
+export interface PersistedCanonicalDomainRepository {
+  listTenantDomains(tenantId: string): Promise<readonly TenantCanonicalDomain[]>;
+  listSeoRedirectRules(tenantId: string): Promise<readonly SeoRedirectRule[]>;
+  snapshot(tenantId: string): Promise<CanonicalDomainRepositorySnapshot>;
+}
+
+function tenantSlugForCanonicalDomain(tenantId: string): string {
+  return tenantId === inkrouteDemoTenant.id ? inkrouteDemoTenant.slug : tenantId;
+}
+
+export function buildTenantCanonicalDomainsFromRows(rows: readonly PersistedTenantDomainRow[]): readonly TenantCanonicalDomain[] {
+  const verifiedRows = rows.filter((row) => row.status === "verified");
+  const rowsByTenant = new Map<string, PersistedTenantDomainRow[]>();
+
+  for (const row of verifiedRows) {
+    rowsByTenant.set(row.tenantId, [...(rowsByTenant.get(row.tenantId) ?? []), row]);
+  }
+
+  return [...rowsByTenant.entries()].map(([tenantId, tenantRows]) => {
+    const sortedTenantRows = [...tenantRows].sort((left, right) => Number(right.isPrimary) - Number(left.isPrimary) || left.hostname.localeCompare(right.hostname));
+    const primaryRow = sortedTenantRows[0]!;
+    return {
+      tenantId,
+      tenantSlug: tenantSlugForCanonicalDomain(tenantId),
+      primaryHost: primaryRow.hostname,
+      allowedHosts: sortedTenantRows.map((row) => row.hostname),
+      forceHttps: true,
+    };
+  });
+}
+
+export function buildSeoRedirectRulesFromRows(rows: readonly PersistedSeoRedirectRow[]): readonly SeoRedirectRule[] {
+  return rows
+    .filter((row) => row.isActive)
+    .map((row) => ({
+      tenantId: row.tenantId,
+      fromPath: row.fromPath,
+      toPath: row.toPath,
+      statusCode: row.statusCode,
+      isActive: row.isActive,
+    }));
+}
+
+export function createPrismaCanonicalDomainRepository(client: CanonicalDomainPrismaClient): PersistedCanonicalDomainRepository {
+  return {
+    async listTenantDomains(tenantId) {
+      const rows = await client.tenantDomain.findMany({
+        where: { tenantId, status: "verified" },
+        select: { tenantId: true, hostname: true, status: true, isPrimary: true },
+        orderBy: [{ isPrimary: "desc" }, { hostname: "asc" }],
+      });
+      return buildTenantCanonicalDomainsFromRows(rows);
+    },
+    async listSeoRedirectRules(tenantId) {
+      const rows = await client.seoRedirect.findMany({
+        where: { tenantId, isActive: true },
+        select: { tenantId: true, fromPath: true, toPath: true, statusCode: true, isActive: true },
+        orderBy: [{ fromPath: "asc" }],
+      });
+      return buildSeoRedirectRulesFromRows(rows);
+    },
+    async snapshot(tenantId) {
+      const [domains, redirects] = await Promise.all([this.listTenantDomains(tenantId), this.listSeoRedirectRules(tenantId)]);
+      return { domains, redirects, evaluations: [] };
+    },
+  };
+}
+
 export function createInMemoryCanonicalDomainRepository(input: {
   domains?: readonly TenantCanonicalDomain[];
   redirects?: readonly SeoRedirectRule[];
@@ -161,4 +261,14 @@ export function evaluateCanonicalRequestWithRepository(
     destinationPath: result.destinationPath,
   });
   return result;
+}
+
+export async function evaluateCanonicalRequestWithPersistedRepository(
+  repository: PersistedCanonicalDomainRepository,
+  input: { tenantId?: string; tenantSlug?: string; host: string; path: string; protocol: "http" | "https"; method?: string },
+) {
+  const tenantId = input.tenantId ?? inkrouteDemoTenant.id;
+  const [domains, redirects] = await Promise.all([repository.listTenantDomains(tenantId), repository.listSeoRedirectRules(tenantId)]);
+  const inMemoryRepository = createInMemoryCanonicalDomainRepository({ domains, redirects });
+  return evaluateCanonicalRequestWithRepository(inMemoryRepository, input);
 }

@@ -72,6 +72,7 @@ describe("preference center runtime contract", () => {
     expect(notificationsSource).toContain("buildPreferenceMutationPlan");
     expect(preferenceSource).toContain("executePreferenceMutation");
     expect(preferenceSource).toContain("createInMemoryPreferenceRepository");
+    expect(preferenceSource).toContain("createPrismaPreferenceRepository");
     expect(preferenceSource).toContain("buildRedactedPreferenceMetadata");
     expect(preferenceSource).toContain("buildPreferenceTokenHash");
     expect(preferenceSource).toContain("List-Unsubscribe");
@@ -79,6 +80,10 @@ describe("preference center runtime contract", () => {
     expect(preferencePage).toContain("Notification preferences");
     expect(settingsPage).toContain("Tenant notification settings");
     expect(staticTest).toContain("raw-token avoidance");
+    expect(staticTest).toContain("PREFERENCE_TOKEN_INVALID");
+    expect(staticTest).toContain("PREFERENCE_TOKEN_FORGED");
+    expect(staticTest).toContain("PREFERENCE_TOKEN_EXPIRED");
+    expect(staticTest).toContain("PREFERENCE_TOKEN_REUSED");
     expect(staticTest).toContain("redacts nested preference metadata");
     expect(staticTest).toContain("executes a local preference repository contract");
   });
@@ -87,9 +92,11 @@ describe("preference center runtime contract", () => {
     expect(preferenceCenterRuntimeReadiness.status).toBe("blocked");
     expect(preferenceCenterRuntimeReadiness.missingScripts).toEqual([]);
     expect(preferenceCenterRuntimeReadiness.requiredEvidence).toBe(preferenceCenterDecisionRequiredEvidence);
-    expect(preferenceCenterRuntimeReadiness.blockers).toContain("Preference token hashes must be persisted instead of raw tokens.");
     expect(preferenceCenterRuntimeReadiness.blockers).toContain("Forged, expired, tenant-mismatched, and reused preference tokens must be rejected by tests.");
     expect(preferenceCenterRuntimeReadiness.blockers).toContain("Preference, unsubscribe, SMS STOP/START, and tenant settings copy must be legal-approved.");
+    expect(preferenceCenterRuntimeReadiness.blockers).not.toContain("Preference token hashes must be persisted instead of raw tokens.");
+    expect(preferenceCenterRuntimeReadiness.blockers).not.toContain("Email unsubscribe persistence must be available before preference readiness.");
+    expect(preferenceCenterRuntimeReadiness.blockers).not.toContain("Tenant channel settings persistence must be available before preference readiness.");
   });
 
   it("pins the non-executing GAP-067 preference center execution policy", () => {
@@ -268,6 +275,9 @@ describe("preference center runtime contract", () => {
     expect(gapTracker).toContain("buildPreferenceCenterArtifactReview");
     expect(gapTracker).toContain("non-executing preference center execution policy");
     expect(gapTracker).toContain("local in-memory preference repository contract");
+    expect(gapTracker).toContain("createPrismaPreferenceRepository");
+    expect(gapTracker).toContain("DB-first signed-token validation before preference/unsubscribe side effects");
+    expect(gapTracker).toContain("missing, forged, expired, reused, or revoked preference tokens");
     expect(gapTracker).toContain("preference metadata sanitizer");
     expect(gapTracker).toContain("GAP-067 is preference-center-runtime-matrix wired with preference center evidence classifier");
     expect(notificationsSource).toContain("Client preference center page evidence must be captured before preference readiness.");
@@ -294,6 +304,7 @@ describe("preference center runtime contract", () => {
       "apps/web/tests/preference-center-static.test.ts",
       "apps/web/tests/preference-center-runtime-static.test.ts",
       "apps/dashboard/app/settings/page.tsx",
+      "packages/db/prisma/schema.prisma",
       "testing/manifests/unit-test-manifest.json",
       "SECURITY.md",
       ".github/workflows/ci.yml",

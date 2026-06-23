@@ -33,6 +33,8 @@ describe("payment persistence runtime contract", () => {
   const paymentActionPanel = readWorkspaceFile("apps/dashboard/components/PaymentActionPanel.tsx");
   const paymentsRoute = readWorkspaceFile("apps/dashboard/app/api/payments/route.ts");
   const paymentDetailRoute = readWorkspaceFile("apps/dashboard/app/api/payments/[paymentId]/route.ts");
+  const refundRoute = readWorkspaceFile("apps/dashboard/app/api/refunds/route.ts");
+  const depositDraftRoute = readWorkspaceFile("apps/dashboard/app/api/payments/deposit-session/route.ts");
   const prismaSchema = readWorkspaceFile("packages/db/prisma/schema.prisma");
   const ciWorkflow = readWorkspaceFile(".github/workflows/ci.yml");
   const unitManifest = readWorkspaceFile("testing/manifests/unit-test-manifest.json");
@@ -78,6 +80,9 @@ describe("payment persistence runtime contract", () => {
     expect(paymentsTests).toContain("buildPaymentPersistenceRuntimeReadinessPlan");
     expect(persistenceSource).toContain("TenantPaymentRepository");
     expect(persistenceSource).toContain("createInMemoryTenantPaymentRepository");
+    expect(persistenceSource).toContain("createPrismaTenantPaymentRepository");
+    expect(persistenceSource).toContain("applyPrismaPaymentLifecycleWrite");
+    expect(persistenceSource).toContain("prisma.$transaction");
     expect(persistenceSource).toContain("executePaymentLifecycleMutation");
     expect(persistenceSource).toContain("claimIdempotencyKey");
     expect(persistenceSource).toContain("Idempotency key replay crossed tenant or action scope.");
@@ -96,6 +101,31 @@ describe("payment persistence runtime contract", () => {
     expect(paymentActionPanel).toContain('action: "request_deposit"');
     expect(paymentsRoute).toContain("PaymentAuditLog");
     expect(paymentDetailRoute).toContain("PaymentAuditLog");
+    expect(refundRoute).toContain('export const runtime = "nodejs"');
+    expect(refundRoute).toContain("dashboard-refund-create");
+    expect(refundRoute).toContain("tx.idempotencyKey.upsert");
+    expect(refundRoute).toContain("idempotency.status === \"completed\"");
+    expect(refundRoute).toContain("tx.refund.findFirst");
+    expect(refundRoute).toContain("tx.refund.create");
+    expect(refundRoute).toContain("tx.paymentAuditLog.create");
+    expect(refundRoute).toContain("tx.idempotencyKey.update");
+    expect(refundRoute).toContain("rawReasonStoredInResult: false");
+    expect(refundRoute).toContain("stripeRefundCreated: false");
+    expect(refundRoute).toContain("webhookReconciled: false");
+    expect(refundRoute).toContain("idempotencyKeyId");
+    expect(refundRoute).toContain("idempotencyReplay");
+    expect(depositDraftRoute).toContain('export const runtime = "nodejs"');
+    expect(depositDraftRoute).toContain("dashboard-deposit-draft");
+    expect(depositDraftRoute).toContain("tx.idempotencyKey.upsert");
+    expect(depositDraftRoute).toContain("idempotency.status === \"completed\"");
+    expect(depositDraftRoute).toContain("tx.deposit.findFirst");
+    expect(depositDraftRoute).toContain("tx.deposit.create");
+    expect(depositDraftRoute).toContain("tx.paymentAuditLog.create");
+    expect(depositDraftRoute).toContain("tx.idempotencyKey.update");
+    expect(depositDraftRoute).toContain("stripeCheckoutCreated: false");
+    expect(depositDraftRoute).toContain("webhookReconciled: false");
+    expect(depositDraftRoute).toContain("idempotencyKeyId");
+    expect(depositDraftRoute).toContain("idempotencyReplay");
     expect(prismaSchema).toContain("model PaymentAuditLog");
   });
 
@@ -104,7 +134,15 @@ describe("payment persistence runtime contract", () => {
     expect(paymentPersistenceRuntimeReadiness.missingScripts).toEqual([]);
     expect(paymentPersistenceRuntimeReadiness.requiredCommands).toBe(paymentPersistenceRuntimeCommands);
     expect(paymentPersistenceRuntimeReadiness.requiredEvidence).toBe(paymentPersistenceEvidenceFlags);
-    expect(paymentPersistenceRuntimeReadiness.blockers).toContain("Payment lifecycle mutations must run in database transactions.");
+    expect(paymentPersistenceRuntimeReadiness.blockers).not.toContain("Payment lifecycle mutations must run in database transactions.");
+    expect(paymentPersistenceRuntimeReadiness.blockers).not.toContain("Deposit creation must persist Deposit and initial PaymentAuditLog records.");
+    expect(paymentPersistenceRuntimeReadiness.blockers).not.toContain("Provider Checkout session ids and redirect URLs must persist after Stripe creation.");
+    expect(paymentPersistenceRuntimeReadiness.blockers).not.toContain("Paid transition must persist Payment, Deposit, BookingStateEvent, PaymentAuditLog, and IdempotencyKey writes.");
+    expect(paymentPersistenceRuntimeReadiness.blockers).not.toContain("Failed payment transition must persist PaymentAuditLog and safe retry state.");
+    expect(paymentPersistenceRuntimeReadiness.blockers).not.toContain("Refund transition must persist Refund, Payment, PaymentAuditLog, and IdempotencyKey writes.");
+    expect(paymentPersistenceRuntimeReadiness.blockers).not.toContain("Dispute transition must persist disputed Payment state and PaymentAuditLog evidence.");
+    expect(paymentPersistenceRuntimeReadiness.blockers).not.toContain("Every payment lifecycle mutation must persist a PaymentAuditLog row.");
+    expect(paymentPersistenceRuntimeReadiness.blockers).not.toContain("BookingStateEvent rows must be persisted for payment lifecycle changes that affect booking state.");
     expect(paymentPersistenceRuntimeReadiness.blockers).not.toContain(
       "Idempotency store must be implemented for provider sessions, webhooks, refunds, and retries.",
     );

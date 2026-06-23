@@ -45,6 +45,19 @@ export const messageInputSchema = z.object({
   providerMessageId: z.string().max(240).optional(),
 });
 
+export const publicMessageInputSchema = z.object({
+  subject: z.string().min(2).max(180),
+  body: z.string().min(1).max(10_000),
+  bookingRequestId: cuidLikeSchema.optional(),
+});
+
+export const publicContactInputSchema = z.object({
+  name: z.string().min(2).max(120),
+  email: z.string().email().max(240),
+  subject: z.string().max(180).optional(),
+  message: z.string().min(10).max(4000),
+});
+
 export const notificationInputSchema = z.object({
   userId: cuidLikeSchema.optional(),
   clientId: cuidLikeSchema.optional(),
@@ -105,6 +118,8 @@ export const providerWebhookPreviewInputSchema = z.object({
 
 export type MessageThreadInput = z.infer<typeof messageThreadInputSchema>;
 export type MessageInput = z.infer<typeof messageInputSchema>;
+export type PublicMessageInput = z.infer<typeof publicMessageInputSchema>;
+export type PublicContactInput = z.infer<typeof publicContactInputSchema>;
 export type NotificationInput = z.infer<typeof notificationInputSchema>;
 export type NotificationDeliveryInput = z.infer<typeof notificationDeliveryInputSchema>;
 export type NotificationConsentInput = z.infer<typeof notificationConsentInputSchema>;

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildPhase10SeoRuntimeArtifactReview,
   buildPhase10SeoRuntimeEvidenceDecision,
+  buildPhase10SeoRuntimeBuildEvidencePacket,
   buildPhase10SeoRuntimeExecutionPlan,
   buildRedactedPhase10SeoRuntimeArtifact,
   phase10SeoRuntimeArtifactPaths,
@@ -14,6 +15,7 @@ import {
   phase10SeoRuntimeExecutionPolicy,
   phase10SeoRuntimeProofFiles,
   phase10SeoRuntimeRequiredExternalEvidence,
+  phase10SeoRuntimeSurfaceContract,
   phase10SeoRuntimeSurfaces,
 } from "../lib/phase10SeoRuntimeBuild";
 
@@ -42,6 +44,18 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
       "canonical-runtime-artifacts",
       "search-console-provider-status",
     ]);
+    expect(phase10SeoRuntimeSurfaceContract.map((entry) => entry.surfaceId)).toEqual([
+      "web-build",
+      "dashboard-build",
+      "dashboard-seo-browser-smoke",
+      "rendered-public-seo-crawl",
+      "rendered-sitemap-canonical-crawl",
+      "database-backed-seo-routes",
+      "api-preview-runtime-artifacts",
+      "search-console-provider-status",
+      "ci-phase10-seo-runtime-gate",
+      "secret-safe-artifacts",
+    ]);
   });
 
   it("distinguishes static contract evidence from runtime/build evidence still required", () => {
@@ -66,6 +80,7 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
     expect(phase10SeoRuntimeArtifactPaths).toContain("coverage/phase10-api-preview-runtime.json");
     expect(phase10SeoRuntimeArtifactPaths).toContain("coverage/phase10-canonical-runtime.json");
     expect(phase10SeoRuntimeArtifactPaths).toContain("coverage/phase10-search-console-provider-execution-redacted.json");
+    expect(phase10SeoRuntimeArtifactPaths).toContain("coverage/phase10-seo-runtime-build-packet.json");
     expect(phase10SeoRuntimeArtifactPaths).toContain("coverage/phase10-seo-runtime-secret-safe-artifacts.json");
     expect(phase10SeoRuntimeArtifactPaths).toContain("test-results/phase10-seo-dashboard");
     expect(phase10SeoRuntimeBuildContract.status).toBe("blocked");
@@ -108,6 +123,7 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
       "search-console-status",
       "search-console-provider-execution",
       "ci-phase10-seo-runtime-gate",
+      "runtime-build-evidence-packet",
       "secret-safe-artifacts",
     ]);
   });
@@ -118,6 +134,35 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
     expect(plan.id).toBe("gap-076-phase10-seo-runtime-build");
     expect(plan.providerExecutionAllowed).toBe(false);
     expect(plan.policy).toBe(phase10SeoRuntimeExecutionPolicy);
+    expect(plan.surfaceContract).toBe(phase10SeoRuntimeSurfaceContract);
+    expect(plan.surfaceContract).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          surfaceId: "web-build",
+          requiredCommand: "pnpm --filter @inkroute/web build",
+          requiredArtifact: "coverage/phase10-seo-web-build.json",
+          runtimeBoundary: "build",
+          providerBackedEvidenceRequired: false,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "search-console-provider-status",
+          requiredCommand: "pnpm vitest run apps/dashboard/tests/search-console-route-static.test.ts",
+          requiredArtifact: "coverage/phase10-search-console-provider-execution-redacted.json",
+          runtimeBoundary: "search-console-provider",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "ci-phase10-seo-runtime-gate",
+          requiredCommand: "GitHub Actions Phase 10 SEO app runtime and build gate",
+          requiredArtifact: "coverage/phase10-seo-runtime-ci-evidence.json",
+          runtimeBoundary: "ci-proof",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+      ]),
+    );
     expect(plan.policy).toEqual({
       executeTestingPackageChecks: false,
       executeWebBuild: false,
@@ -192,6 +237,7 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
       searchConsoleStatusVerified: true,
       searchConsoleProviderExecutionCaptured: false,
       ciEvidenceCaptured: false,
+      runtimeBuildEvidencePacketCaptured: false,
       secretSafeArtifactReviewPassed: false,
       capturedArtifacts: ["coverage/phase10-seo-testing-package.json"],
     });
@@ -204,6 +250,7 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
         "Dashboard SEO browser smoke evidence is required.",
         "Rendered sitemap/canonical crawl evidence is required.",
         "Redacted Search Console provider execution evidence is required.",
+        "Phase 10 SEO runtime/build evidence packet is required.",
       ]),
     );
     expect(blocked.missingArtifacts).toContain("coverage/phase10-seo-web-build.json");
@@ -227,6 +274,7 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
       searchConsoleStatusVerified: true,
       searchConsoleProviderExecutionCaptured: true,
       ciEvidenceCaptured: true,
+      runtimeBuildEvidencePacketCaptured: true,
       secretSafeArtifactReviewPassed: true,
       capturedArtifacts: phase10SeoRuntimeArtifactPaths,
     });
@@ -235,6 +283,22 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
     expect(complete.blockers).toEqual([]);
     expect(complete.missingArtifacts).toEqual([]);
     expect(complete.redactedSummary).toContain("CI-safe artifacts captured");
+  });
+
+  it("keeps the Phase 10 SEO runtime/build evidence packet non-executing and provider-proof gated", () => {
+    const packet = buildPhase10SeoRuntimeBuildEvidencePacket();
+
+    expect(packet.packetId).toBe("gap-076-phase10-seo-runtime-build-evidence");
+    expect(packet.requiredArtifact).toBe("coverage/phase10-seo-runtime-build-packet.json");
+    expect(packet.providerExecutionAllowed).toBe(false);
+    expect(packet.requiredCommands).toBe(phase10SeoRuntimeBuildCommands);
+    expect(packet.requiredArtifacts).toBe(phase10SeoRuntimeArtifactPaths);
+    expect(packet.requiredExternalEvidence).toBe(phase10SeoRuntimeRequiredExternalEvidence);
+    expect(packet.surfaceContract).toBe(phase10SeoRuntimeSurfaceContract);
+    expect(packet.searchConsoleProviderEvidenceRequired).toBe(true);
+    expect(packet.renderedCrawlEvidenceRequired).toBe(true);
+    expect(packet.ciEvidenceRequired).toBe(true);
+    expect(packet.redactionRequired).toBe(true);
   });
 
   it("requires the Phase 10 SEO app runtime/build gate in CI", () => {
@@ -250,6 +314,8 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
     expect(ciWorkflow).toContain("coverage/phase10-seo-runtime-secret-safe-artifacts.json");
     expect(gapTracker).toContain("Phase 10 SEO runtime/build evidence classifier wired and runtime-matrix gated");
     expect(gapTracker).toContain("phase10SeoRuntimeDecisionRequiredEvidence");
+    expect(gapTracker).toContain("phase10SeoRuntimeSurfaceContract");
+    expect(gapTracker).toContain("buildPhase10SeoRuntimeBuildEvidencePacket");
   });
 
   it("pins current Phase 10 SEO runtime/build proof files for GAP-076", () => {

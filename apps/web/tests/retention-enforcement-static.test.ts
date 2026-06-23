@@ -19,7 +19,9 @@ import {
   retentionEnforcementPreview,
   retentionEnforcementRequiredExternalEvidence,
   retentionEnforcementRuntimeContract,
+  retentionScheduledWorkerPlanPreview,
   retentionTombstonePersistencePreview,
+  persistRetentionTombstoneOutcome,
 } from "../lib/retentionEnforcement";
 
 function readWorkspaceFile(path: string) {
@@ -41,7 +43,15 @@ describe("GAP-099 retention enforcement contract", () => {
     expect(source).toContain("skip-legal-hold-record");
     expect(source).toContain("replay-tombstones-after-restore");
     expect(source).toContain("attach-destructive-action-rollback-note");
+    expect(source).toContain("RetentionTombstonePersistenceClient");
+    expect(source).toContain("persistRetentionTombstoneOutcome");
+    expect(source).toContain("RetentionScheduledWorkerPlan");
+    expect(source).toContain("buildRetentionScheduledWorkerPlan");
+    expect(source).toContain("destructiveExecutionAllowed: false");
+    expect(source).toContain('action: "retention.tombstone.persisted"');
     expect(retentionEnforcementPreview.dryRun.status).toBe("blocked");
+    expect(retentionScheduledWorkerPlanPreview.destructiveExecutionAllowed).toBe(false);
+    expect(retentionScheduledWorkerPlanPreview.requiredExternalEvidence).toBe(retentionEnforcementRequiredExternalEvidence);
     expect(retentionEnforcementPreview.requiredWorkers).toEqual(
       expect.arrayContaining(["database-retention", "storage-retention", "privacy-export", "audit-log", "backup-restore-reconciliation"]),
     );
@@ -277,12 +287,14 @@ describe("GAP-099 retention enforcement contract", () => {
     const plan = buildRetentionEnforcementExecutionPlan();
 
     expect(plan.scheduledWorkerExecutionAllowed).toBe(false);
+    expect(plan.tombstonePersistenceContractAvailable).toBe(true);
     expect(plan.postgresExecutionAllowed).toBe(false);
     expect(plan.objectStorageExecutionAllowed).toBe(false);
     expect(plan.backupRestoreReplayExecutionAllowed).toBe(false);
     expect(plan.destructiveRollbackExecutionAllowed).toBe(false);
     expect(plan.tenantIsolationExecutionAllowed).toBe(false);
     expect(plan.policy).toBe(retentionEnforcementExecutionPolicy);
+    expect(plan.policy.tombstonePersistenceContractAvailable).toBe(true);
     expect(plan.externalEvidenceRequired).toBe(retentionEnforcementRequiredExternalEvidence);
     expect(retentionEnforcementExecutionPolicy.externalEvidenceRequired).toBe(retentionEnforcementRequiredExternalEvidence);
     expect(retentionEnforcementRequiredExternalEvidence).toEqual(expect.arrayContaining([
@@ -311,6 +323,57 @@ describe("GAP-099 retention enforcement contract", () => {
       "coverage/retention-destructive-rollback.md",
     ]));
     expect(plan.disabledReasons.join(" ")).toContain("Scheduled worker execution requires production-like scheduler");
+    expect(plan.disabledReasons.join(" ")).toContain("RetentionTombstone persistence contract is wired");
+  });
+
+  it("persists retention tombstones with redacted audit metadata through a tenant-scoped local contract", async () => {
+    const writes: unknown[] = [];
+    const result = await persistRetentionTombstoneOutcome(
+      {
+        retentionTombstone: {
+          async create(input) {
+            writes.push(input);
+            return { id: "tombstone_demo" };
+          },
+        },
+        auditLog: {
+          async create(input) {
+            writes.push(input);
+            return { id: "audit_demo" };
+          },
+        },
+      },
+      {
+        tenantId: "tenant_demo",
+        privacyRequestId: "privacy_request_demo",
+        workerRunId: "retention_run_demo",
+        sourceRecordId: "reference_due",
+        sourceRecordType: "FileAsset",
+        category: "reference_file",
+        action: "delete",
+        reason: "Past retention window.",
+        dryRunFingerprint: "sha256:redacted-dry-run",
+        executedAt: "2026-06-09T00:20:00.000Z",
+        restoreReplayAfter: "2026-06-09T00:20:00.000Z",
+        storageObjectKey: "private/tenant_demo/reference/reference_due.jpg",
+        legalHoldSkipped: false,
+        rollbackNote: "Restore only after tombstone replay keeps deleted record inaccessible.",
+      },
+    );
+
+    const serialized = JSON.stringify(writes);
+    expect(result).toMatchObject({
+      persisted: true,
+      auditAction: "retention.tombstone.persisted",
+      tombstoneId: "tombstone_demo",
+      tenantId: "tenant_demo",
+      legalHoldSkipped: false,
+      restoreReplayRequired: true,
+    });
+    expect(serialized).toContain('"tenantId":"tenant_demo"');
+    expect(serialized).toContain('"entityType":"RetentionTombstone"');
+    expect(serialized).toContain('"action":"retention.tombstone.persisted"');
+    expect(serialized).not.toContain("private/tenant_demo/reference/reference_due.jpg");
   });
 
   it("redacts GAP-099 retention dry-run, tombstone, storage, and rollback artifacts before review", () => {

@@ -88,6 +88,7 @@ export const repositoryGovernanceRuntimeArtifactPaths = [
   "coverage/repository-security-settings-redacted.json",
   "coverage/repository-merge-rules-redacted.json",
   "coverage/repository-enforcement-test-pr-redacted.json",
+  "coverage/repository-governance-redacted-evidence-bundle.json",
   "test-results/repository-governance-runtime",
 ] as const;
 
@@ -172,6 +173,22 @@ export interface RepositoryGovernanceRuntimeArtifactReview {
   readonly externalEvidenceRequired: typeof repositoryGovernanceRuntimeRequiredExternalEvidence;
 }
 
+export interface RepositoryGovernanceRuntimeRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly sourceArtifactPath: RepositoryGovernanceRuntimeArtifact | string;
+  readonly artifactPath: "coverage/repository-governance-redacted-evidence-bundle.json";
+  readonly review: RepositoryGovernanceRuntimeArtifactReview;
+  readonly requiredArtifacts: typeof repositoryGovernanceRuntimeArtifactPaths;
+  readonly externalEvidenceRequired: typeof repositoryGovernanceRuntimeRequiredExternalEvidence;
+  readonly branchProtectionAuditExecutionAllowed: false;
+  readonly requiredChecksReviewExecutionAllowed: false;
+  readonly codeownersReviewTestExecutionAllowed: false;
+  readonly secretScanningReviewExecutionAllowed: false;
+  readonly securityAlertsReviewExecutionAllowed: false;
+  readonly mergeRulesReviewExecutionAllowed: false;
+  readonly persistenceExecutionAllowed: false;
+}
+
 export const repositoryGovernanceRuntimeLocalCommands = [
   "pnpm quality:governance",
   "pnpm quality:all",
@@ -191,6 +208,7 @@ export const repositoryGovernanceRuntimeRequiredExternalEvidence = [
   "Enforcement-test PR evidence must prove settings block unsafe merges without exposing PR URLs, check-run URLs, or private reviewer details.",
   "Secret scanning and security alert proof must redact provider identifiers and repository settings payloads.",
   "RepositoryGovernanceRun persistence must execute only against an approved provider-backed database.",
+  "Redacted repository governance evidence bundle must omit raw repository settings payloads, PR URLs, check-run URLs, tokens, actors, reviewer details, and provider identifiers.",
 ] as const;
 
 export const repositoryGovernanceRuntimeLocalArtifacts = [
@@ -315,6 +333,27 @@ export function buildRepositoryGovernanceRuntimeArtifactReview(
   };
 }
 
+export function buildRepositoryGovernanceRuntimeRedactedEvidenceBundle(
+  artifactPath: RepositoryGovernanceRuntimeArtifact | string,
+  artifact: unknown,
+): RepositoryGovernanceRuntimeRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    sourceArtifactPath: artifactPath,
+    artifactPath: "coverage/repository-governance-redacted-evidence-bundle.json",
+    review: buildRepositoryGovernanceRuntimeArtifactReview(artifactPath, artifact),
+    requiredArtifacts: repositoryGovernanceRuntimeArtifactPaths,
+    externalEvidenceRequired: repositoryGovernanceRuntimeRequiredExternalEvidence,
+    branchProtectionAuditExecutionAllowed: false,
+    requiredChecksReviewExecutionAllowed: false,
+    codeownersReviewTestExecutionAllowed: false,
+    secretScanningReviewExecutionAllowed: false,
+    securityAlertsReviewExecutionAllowed: false,
+    mergeRulesReviewExecutionAllowed: false,
+    persistenceExecutionAllowed: false,
+  };
+}
+
 export const repositoryGovernanceRuntimeMatrix = [
   {
     id: "source-governance-audit",
@@ -369,6 +408,12 @@ export const repositoryGovernanceRuntimeMatrix = [
     command: "test PR proves branch protection, required checks, and CODEOWNERS review enforcement",
     artifact: "coverage/repository-enforcement-test-pr-redacted.json",
     status: "enforcement-gated",
+  },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted repository governance evidence bundle",
+    artifact: "coverage/repository-governance-redacted-evidence-bundle.json",
+    status: "github-settings-gated",
   },
 ] as const satisfies readonly RepositoryGovernanceRuntimeMatrixEntry[];
 

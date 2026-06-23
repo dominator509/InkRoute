@@ -5,12 +5,14 @@ import {
   buildDashboardTestArtifactReview,
   buildDashboardTestEvidenceDecision,
   buildDashboardTestExecutionPlan,
+  buildDashboardTestRunPayload,
   buildRedactedDashboardTestArtifact,
   dashboardTestArtifactPaths,
   dashboardTestEvidenceFlags,
   dashboardTestExternalCommands,
   dashboardTestLocalCommands,
   dashboardRunnableTestCoverageFiles,
+  dashboardTestSurfaceCoverageContract,
   dashboardTestRuntimeCommands,
   dashboardTestRuntimeExecutionPolicy,
   dashboardTestRuntimeMatrix,
@@ -63,10 +65,20 @@ describe("dashboard test execution runtime contract", () => {
       "axe-keyboard-accessibility",
       "playwright-critical-flow",
       "ci-branch-flaky-secret-safe",
+      "run-payload",
     ]);
     expect(dashboardTestArtifactPaths).toContain("coverage/dashboard-test-runtime.json");
     expect(dashboardTestArtifactPaths).toContain("coverage/dashboard-test-playwright-critical-flow.json");
+    expect(dashboardTestArtifactPaths).toContain("coverage/dashboard-test-run-payload.json");
     expect(dashboardTestArtifactPaths).toContain("test-results/dashboard-test-runtime");
+    expect(dashboardTestSurfaceCoverageContract.map((entry) => entry.surfaceId)).toEqual([
+      "route-read-contracts",
+      "auth-rbac-tenant-denial",
+      "booking-mutation-lifecycle",
+      "provider-safe-state-smoke",
+      "accessibility-keyboard",
+      "ci-artifact-retention",
+    ]);
   });
 
   it("keeps package dashboard matrix helpers and current dashboard runtime tests wired", () => {
@@ -113,7 +125,7 @@ describe("dashboard test execution runtime contract", () => {
   it("keeps execution blockers explicit until real app tests, axe, Playwright, CI, branch protection, and safe artifacts exist", () => {
     expect(dashboardTestRuntimeReadiness.status).toBe("blocked");
     expect(dashboardTestRuntimeReadiness.missingScripts).toEqual([]);
-    expect(dashboardTestRuntimeReadiness.requiredCommands).toEqual(dashboardTestRuntimeCommands);
+    expect(dashboardTestRuntimeReadiness.requiredCommands).toBe(dashboardTestRuntimeCommands);
     expect(dashboardTestRuntimeReadiness.requiredEvidence).toContain("dashboard typecheck and build command evidence");
     expect(dashboardTestRuntimeReadiness.requiredEvidence).toContain("dashboard unit/component, route rendering, and auth guard test output");
     expect(dashboardTestRuntimeReadiness.requiredEvidence).toContain(
@@ -140,6 +152,7 @@ describe("dashboard test execution runtime contract", () => {
     expect(decision.status).toBe("blocked");
     expect(decision.missingCommands).toContain("Playwright dashboard critical-flow suite");
     expect(decision.missingArtifacts).toContain("coverage/dashboard-test-secret-safe-artifacts.json");
+    expect(decision.missingEvidence).toContain("dashboardTestRunPayloadCaptured");
     expect(decision.missingEvidence).toContain("secretSafeArtifactsCaptured");
     expect(decision.blockers).toContain("Pinned dashboard test commands must be run and captured.");
   });
@@ -183,6 +196,35 @@ describe("dashboard test execution runtime contract", () => {
       "static dashboard test manifest review",
     ]);
     expect(executionPlan.externalCommands).toBe(dashboardTestExternalCommands);
+    expect(executionPlan.surfaceCoverageContract).toBe(dashboardTestSurfaceCoverageContract);
+    expect(executionPlan.surfaceCoverageContract).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          surfaceId: "route-read-contracts",
+          requiredCommand: "dashboard route rendering tests",
+          requiredArtifact: "coverage/dashboard-test-route-rendering.json",
+          evidenceFlag: "dashboardRouteRenderingTestsPassed",
+          runBoundary: "dashboard-runtime",
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "booking-mutation-lifecycle",
+          requiredCommand: "dashboard booking mutation lifecycle tests",
+          requiredArtifact: "coverage/dashboard-test-booking-mutation-lifecycle.json",
+          evidenceFlag: "dashboardMutationLifecycleTestsPassed",
+          runBoundary: "dashboard-runtime",
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "ci-artifact-retention",
+          requiredCommand: "GitHub Actions dashboard test artifact upload",
+          requiredArtifact: "coverage/dashboard-test-ci-artifacts.json",
+          evidenceFlag: "ciArtifactsUploaded",
+          runBoundary: "ci-provider",
+          redactedArtifactRequired: true,
+        }),
+      ]),
+    );
     expect(executionPlan.externalCommands).toEqual([
       "pnpm --filter @inkroute/dashboard typecheck",
       "pnpm --filter @inkroute/dashboard build",
@@ -216,6 +258,7 @@ describe("dashboard test execution runtime contract", () => {
     expect(executionPlan.requiredExternalEvidence).toBe(dashboardTestRuntimeRequiredExternalEvidence);
     expect(executionPlan.requiredExternalEvidence).toContain("Playwright dashboard critical-flow suite evidence");
     expect(executionPlan.requiredExternalEvidence).toContain("branch protection dashboard required-check proof");
+    expect(executionPlan.requiredExternalEvidence).toContain("persisted dashboard test run payload");
     expect(executionPlan.requiredExternalEvidence).toContain("secret-safe dashboard test artifact review");
     expect(artifactReview.requiredExternalEvidence).toBe(dashboardTestRuntimeRequiredExternalEvidence);
     expect(artifactReview.redactions).toEqual([
@@ -235,6 +278,21 @@ describe("dashboard test execution runtime contract", () => {
     expect(JSON.stringify(directRedaction.artifact)).toContain("safe dashboard test evidence");
   });
 
+  it("keeps the GAP-041 dashboard test run payload non-executing and evidence-gated", () => {
+    const payload = buildDashboardTestRunPayload();
+
+    expect(payload.payloadId).toBe("gap-041-dashboard-test-run-payload");
+    expect(payload.requiredArtifact).toBe("coverage/dashboard-test-run-payload.json");
+    expect(payload.dashboardRuntimeEvidenceRequired).toBe(true);
+    expect(payload.browserEvidenceRequired).toBe(true);
+    expect(payload.ciEvidenceRequired).toBe(true);
+    expect(payload.branchProtectionEvidenceRequired).toBe(true);
+    expect(payload.localPersistenceExecutionAllowed).toBe(false);
+    expect(payload.redactionRequired).toBe(true);
+    expect(payload.requiredExternalEvidence).toBe(dashboardTestRuntimeRequiredExternalEvidence);
+    expect(payload.surfaceCoverageContract).toBe(dashboardTestSurfaceCoverageContract);
+  });
+
   it("wires CI, manifest, tracker, and artifacts without claiming runnable dashboard test completion", () => {
     expect(ciWorkflow).toContain("Run Phase 5 dashboard test execution runtime contracts");
     expect(ciWorkflow).toContain("dashboard-test-runtime-static.test.ts");
@@ -247,6 +305,8 @@ describe("dashboard test execution runtime contract", () => {
     expect(gapTracker).toContain("buildDashboardTestArtifactReview");
     expect(gapTracker).toContain("dashboardTestRuntimeExecutionPolicy");
     expect(gapTracker).toContain("dashboardTestRuntimeRequiredExternalEvidence");
+    expect(gapTracker).toContain("dashboardTestSurfaceCoverageContract");
+    expect(gapTracker).toContain("buildDashboardTestRunPayload");
     expect(gapTracker).toContain("GAP-041 is dashboard-test-matrix wired with evidence classifier");
     expect(dashboardTestArtifactPaths).toContain("coverage/dashboard-test-secret-safe-artifacts.json");
   });

@@ -1,9 +1,10 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   buildPrismaLifecycleDecisionRequiredEvidence,
   buildPrismaLifecycleExecutionPlan,
+  buildPrismaLifecycleRedactedEvidenceBundle,
   buildPrismaLifecycleRunData,
   prismaLifecycleArtifactPaths,
   prismaLifecycleCommands,
@@ -64,8 +65,10 @@ describe("Prisma lifecycle runtime contract", () => {
       "migration-drift-check",
       "production-url-guard",
       "ci-db-lifecycle",
+      "redacted-evidence-bundle",
     ]);
     expect(prismaLifecycleArtifactPaths).toContain("coverage/prisma-lifecycle-runtime.json");
+    expect(prismaLifecycleArtifactPaths).toContain("coverage/prisma-lifecycle-redacted-evidence-bundle.json");
     expect(prismaLifecycleArtifactPaths).toContain("test-results/prisma-lifecycle-runtime");
   });
 
@@ -180,6 +183,9 @@ describe("Prisma lifecycle runtime contract", () => {
     });
     expect(executionPlan.requiredExternalEvidence).toBe(prismaLifecycleRequiredExternalEvidence);
     expect(executionPlan.requiredExternalEvidence).toContain(
+      "Redacted Prisma lifecycle evidence bundle captured without raw database URLs, SQL containing secrets, command logs, tokens, URLs, or actor identifiers.",
+    );
+    expect(executionPlan.requiredExternalEvidence).toContain(
       "Provider-backed persistPrismaLifecycleRun execution evidence.",
     );
 
@@ -218,6 +224,7 @@ describe("Prisma lifecycle runtime contract", () => {
       "coverage/prisma-migration-sql-review.json",
       "coverage/prisma-drift-check-output.txt",
       "coverage/prisma-db-lifecycle-ci-job.json",
+      "coverage/prisma-lifecycle-redacted-evidence-bundle.json",
       "test-results/prisma-lifecycle-runtime",
     ]);
     expect(decision.missingCommands).toEqual([
@@ -285,7 +292,10 @@ describe("Prisma lifecycle runtime contract", () => {
     expect(gapTracker).toContain("prismaLifecycleRequiredEvidence");
     expect(gapTracker).toContain("prismaLifecycleExecutionPolicy");
     expect(gapTracker).toContain("prismaLifecycleRequiredExternalEvidence");
-    expect(gapTracker).toContain("live non-production Postgres provisioning, Prisma validate/generate/migrate, SQL review, seed, drift, command evidence, CI evidence, provider-backed persistPrismaLifecycleRun execution, and artifact proof remain open");
+    expect(gapTracker).toContain("buildPrismaLifecycleRedactedEvidenceBundle");
+    expect(gapTracker).toContain(
+      "live non-production Postgres provisioning, Prisma validate/generate/migrate, SQL review, seed, drift, production URL guard proof, command evidence, CI evidence, provider-backed persistPrismaLifecycleRun execution, and artifact proof remain gated",
+    );
     expect(gapTracker).toContain("GAP-002 is prisma-lifecycle-runtime-matrix wired with evidence classifier");
   });
 
@@ -303,6 +313,37 @@ describe("Prisma lifecycle runtime contract", () => {
     for (const file of prismaLifecycleProofFiles) {
       expect(readRepoFile(file).length).toBeGreaterThan(0);
     }
+  });
+
+  it("builds a redacted Prisma lifecycle evidence bundle for handoff use", () => {
+    const artifact = {
+      databaseUrl: "postgres://user:pass@example.invalid/db",
+      directUrl: "postgres://direct:pass@example.invalid/db",
+      migrationSql: "-- token github_pat_1234567890ABCDEFGHIJKLMNOP",
+      commandOutput: "migrated by owner@example.com",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/27171288295",
+      safeSummary: "Prisma lifecycle proof captured",
+    };
+
+    const bundle = buildPrismaLifecycleRedactedEvidenceBundle(artifact);
+
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.artifactPath).toBe("coverage/prisma-lifecycle-redacted-evidence-bundle.json");
+    expect(bundle.requiredArtifacts).toBe(prismaLifecycleArtifactPaths);
+    expect(bundle.requiredExternalEvidence).toBe(prismaLifecycleRequiredExternalEvidence);
+    expect(bundle.databaseExecutionAllowed).toBe(false);
+    expect(bundle.providerExecutionAllowed).toBe(false);
+    expect(bundle.redactions).toEqual(
+      expect.arrayContaining(["database", "direct", "url", "sql", "token", "email", "output", "environment"]),
+    );
+    expect(bundle.redactedArtifact).toMatchObject({
+      databaseUrl: "[REDACTED]",
+      directUrl: "[REDACTED]",
+      migrationSql: "[REDACTED]",
+      commandOutput: "[REDACTED]",
+      ciRunUrl: "[REDACTED]",
+      safeSummary: "Prisma lifecycle proof captured",
+    });
   });
 });
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Scaffolded only. `apps/mobile/eas.json` exists, but no EAS project, credentials, preview build, device test, push token, or OTA update has been verified.
+Mobile source/config contracts are present, including `apps/mobile/eas.json`, runtime-version/channel policy, local mobile QA matrices, and offline/reconnect support contracts. No EAS project, credentials, preview build, physical-device run, push token, or OTA update has been verified.
 
 ## Preview build sequence
 

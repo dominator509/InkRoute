@@ -718,6 +718,21 @@ export interface JsonLdValidationResult {
   findings: SeoIssue[];
 }
 
+export interface RenderedJsonLdScriptExtraction {
+  readonly index: number;
+  readonly rawLength: number;
+  readonly graphs: readonly JsonLd[];
+  readonly parseError?: string;
+}
+
+export interface RenderedJsonLdExtractionResult {
+  readonly status: "ready" | "blocked";
+  readonly scriptCount: number;
+  readonly graphs: readonly JsonLd[];
+  readonly scripts: readonly RenderedJsonLdScriptExtraction[];
+  readonly blockers: readonly string[];
+}
+
 export type PublicWebSurfaceKind = "page" | "api" | "webhook" | "metadata";
 export type PublicWebBackingMode = "static_demo" | "local_runtime" | "database" | "provider";
 export type PublicWebReadinessStatus = "ready" | "blocked";
@@ -1407,6 +1422,64 @@ function findDuplicateValues(values: readonly string[]): string[] {
 
 function isJsonLdGraph(value: JsonLd): value is { "@graph": unknown[] } {
   return Array.isArray(value["@graph"]);
+}
+
+function decodeJsonLdScriptText(value: string): string {
+  return value
+    .replace(/&quot;/g, "\"")
+    .replace(/&#34;/g, "\"")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .trim();
+}
+
+function asRenderedJsonLdGraphs(value: unknown): JsonLd[] {
+  if (Array.isArray(value)) return value.filter((item): item is JsonLd => Boolean(item) && typeof item === "object" && !Array.isArray(item));
+  if (value && typeof value === "object") return [value as JsonLd];
+  return [];
+}
+
+export function extractRenderedJsonLdScriptsFromHtml(html: string): RenderedJsonLdExtractionResult {
+  const scriptPattern = /<script\b[^>]*\btype=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  const scripts: RenderedJsonLdScriptExtraction[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = scriptPattern.exec(html)) !== null) {
+    const raw = decodeJsonLdScriptText(match[1] ?? "");
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      const graphs = asRenderedJsonLdGraphs(parsed);
+      scripts.push({
+        index: scripts.length,
+        rawLength: raw.length,
+        graphs,
+        ...(graphs.length === 0 ? { parseError: "JSON-LD script parsed but did not contain object graph entries." } : {}),
+      });
+    } catch (error) {
+      scripts.push({
+        index: scripts.length,
+        rawLength: raw.length,
+        graphs: [],
+        parseError: error instanceof Error ? error.message : "JSON-LD parse failed.",
+      });
+    }
+  }
+
+  const graphs = scripts.flatMap((script) => script.graphs);
+  const blockers = [
+    scripts.length === 0 ? "Rendered HTML did not contain application/ld+json scripts." : null,
+    scripts.some((script) => script.parseError) ? "One or more rendered JSON-LD scripts could not be parsed into object graph entries." : null,
+    scripts.length > 0 && graphs.length === 0 ? "Rendered JSON-LD extraction produced no structured-data graph objects." : null,
+  ].filter((blocker): blocker is string => blocker !== null);
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    scriptCount: scripts.length,
+    graphs,
+    scripts,
+    blockers,
+  };
 }
 
 function asJsonLdItems(graph: JsonLd | JsonLd[]): unknown[] {

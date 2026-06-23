@@ -156,6 +156,99 @@ export const appE2eRuntimeExternalArtifacts = appE2eRuntimeArtifactPaths.filter(
 
 export type AppE2eRuntimeCommand = (typeof appE2eRuntimeCommands)[number];
 
+export interface AppE2eRuntimeSurfaceContractEntry {
+  readonly surfaceId: string;
+  readonly requiredCommand: AppE2eRuntimeCommand;
+  readonly requiredArtifact: AppE2eRuntimeArtifact;
+  readonly runtimeBoundary:
+    | "web-build"
+    | "dashboard-build"
+    | "browser-install"
+    | "web-e2e"
+    | "dashboard-e2e"
+    | "manifest"
+    | "trace-media"
+    | "ci-proof"
+    | "failure-hardening";
+  readonly browserRuntimeRequired: boolean;
+  readonly redactedArtifactRequired: true;
+}
+
+export const appE2eRuntimeSurfaceContract: readonly AppE2eRuntimeSurfaceContractEntry[] = [
+  {
+    surfaceId: "web-build-runtime",
+    requiredCommand: "pnpm --filter @inkroute/web build",
+    requiredArtifact: "coverage/app-e2e-web-runtime.log",
+    runtimeBoundary: "web-build",
+    browserRuntimeRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "dashboard-build-runtime",
+    requiredCommand: "pnpm --filter @inkroute/dashboard build",
+    requiredArtifact: "coverage/app-e2e-dashboard-runtime.log",
+    runtimeBoundary: "dashboard-build",
+    browserRuntimeRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "playwright-chromium-install",
+    requiredCommand: "pnpm exec playwright install --with-deps chromium",
+    requiredArtifact: "coverage/app-e2e-playwright-install.log",
+    runtimeBoundary: "browser-install",
+    browserRuntimeRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "public-booking-security-seo",
+    requiredCommand: "pnpm test:e2e --project=web-chromium",
+    requiredArtifact: "coverage/app-e2e-public-booking-results.json",
+    runtimeBoundary: "web-e2e",
+    browserRuntimeRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "dashboard-smoke-security-operator",
+    requiredCommand: "pnpm test:e2e --project=dashboard-chromium",
+    requiredArtifact: "coverage/app-e2e-dashboard-smoke-results.json",
+    runtimeBoundary: "dashboard-e2e",
+    browserRuntimeRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "e2e-manifest-verification",
+    requiredCommand: "pnpm test:manifest",
+    requiredArtifact: "coverage/app-e2e-manifest-check.json",
+    runtimeBoundary: "manifest",
+    browserRuntimeRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "trace-media-retention",
+    requiredCommand: "pnpm test:e2e --project=dashboard-chromium",
+    requiredArtifact: "coverage/playwright-report",
+    runtimeBoundary: "trace-media",
+    browserRuntimeRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "ci-e2e-artifacts",
+    requiredCommand: "GitHub Actions CI E2E job",
+    requiredArtifact: "coverage/playwright-results.json",
+    runtimeBoundary: "ci-proof",
+    browserRuntimeRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "failure-hardening",
+    requiredCommand: "GitHub Actions CI E2E job",
+    requiredArtifact: "test-results/app-e2e-runtime",
+    runtimeBoundary: "failure-hardening",
+    browserRuntimeRequired: true,
+    redactedArtifactRequired: true,
+  },
+] as const;
+
 export type AppE2eRuntimeExecutionPolicy = {
   localManifestOnly: true;
   webDashboardBuildRequiresExternalEvidence: true;
@@ -214,6 +307,7 @@ export type AppE2eRuntimeExecutionPlan = {
   externalCommands: typeof appE2eRuntimeExternalCommands;
   localArtifacts: typeof appE2eRuntimeLocalArtifacts;
   externalArtifacts: typeof appE2eRuntimeExternalArtifacts;
+  surfaceContract: typeof appE2eRuntimeSurfaceContract;
   disabledReasons: readonly string[];
 };
 
@@ -292,6 +386,7 @@ export function buildAppE2eRuntimeExecutionPlan(): AppE2eRuntimeExecutionPlan {
     externalCommands: appE2eRuntimeExternalCommands,
     localArtifacts: appE2eRuntimeLocalArtifacts,
     externalArtifacts: appE2eRuntimeExternalArtifacts,
+    surfaceContract: appE2eRuntimeSurfaceContract,
     disabledReasons: [
       "Web build and runtime proof requires Next.js build/start execution.",
       "Dashboard build and runtime proof requires Next.js build/start execution.",

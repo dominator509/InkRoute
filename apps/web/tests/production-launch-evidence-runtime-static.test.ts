@@ -1,10 +1,11 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   buildProductionLaunchEvidenceRuntimeArtifactReview,
   buildProductionLaunchEvidenceRuntimeEvidenceDecision,
   buildProductionLaunchEvidenceRuntimeExecutionPlan,
+  buildProductionLaunchEvidenceRuntimeRedactedEvidenceBundle,
   buildRedactedProductionLaunchEvidenceArtifact,
   productionLaunchEvidenceBundleRequiredEvidence,
   productionLaunchEvidenceBundleIds,
@@ -73,7 +74,8 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
       "mobile-release-bundle",
       "legal-approval-bundle",
       "rollback-operations-bundle",
-      "final-approval-record"
+      "final-approval-record",
+      "redacted-evidence-bundle"
     ]);
     expect(productionLaunchEvidenceRuntimeMatrix).toEqual(
       expect.arrayContaining([
@@ -81,10 +83,12 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
         expect.objectContaining({ id: "security-privacy-trust-bundle", artifact: "coverage/production-launch-security-privacy-redacted.json" }),
         expect.objectContaining({ id: "accessibility-seo-performance-bundle", artifact: "coverage/production-launch-a11y-seo-performance-redacted.json" }),
         expect.objectContaining({ id: "mobile-release-bundle", artifact: "coverage/production-launch-mobile-release-redacted.json" }),
-        expect.objectContaining({ id: "legal-approval-bundle", command: "verify production launch legal approval bundle" })
+        expect.objectContaining({ id: "legal-approval-bundle", command: "verify production launch legal approval bundle" }),
+        expect.objectContaining({ id: "redacted-evidence-bundle", artifact: "coverage/production-launch-redacted-evidence-bundle.json" })
       ])
     );
     expect(productionLaunchEvidenceRuntimeArtifactPaths).toContain("coverage/production-launch-approval-redacted.json");
+    expect(productionLaunchEvidenceRuntimeArtifactPaths).toContain("coverage/production-launch-redacted-evidence-bundle.json");
     expect(productionLaunchEvidenceRuntimeArtifactPaths).toContain("test-results/production-launch-evidence-runtime");
   });
 
@@ -149,6 +153,7 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
     expect(gapTracker).toContain("productionLaunchEvidenceRuntimeLocalArtifacts");
     expect(gapTracker).toContain("productionLaunchEvidenceRuntimeExternalArtifacts");
     expect(gapTracker).toContain("buildProductionLaunchEvidenceRuntimeArtifactReview");
+    expect(gapTracker).toContain("buildProductionLaunchEvidenceRuntimeRedactedEvidenceBundle");
   });
 
   it("pins current production launch evidence runtime proof files for GAP-118", () => {
@@ -269,6 +274,7 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
         "coverage/production-launch-legal-approval-redacted.json",
         "coverage/production-launch-approval-redacted.json",
         "coverage/production-launch-ci-run-redacted.json",
+        "coverage/production-launch-redacted-evidence-bundle.json",
       ]),
     );
     expect(blockedDecision.launchPolicy).toEqual({
@@ -353,6 +359,9 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
       unsafeEvidenceForbidden: true,
     });
     expect(plan.externalEvidenceRequired).toBe(productionLaunchEvidenceRuntimeRequiredExternalEvidence);
+    expect(plan.externalEvidenceRequired).toContain(
+      "Redacted production launch evidence bundle captured without raw provider IDs, database URLs, run URLs, reviewer contacts, customer data, approval payloads, rollback owner contacts, or production URLs.",
+    );
   });
 
   it("redacts production launch artifacts before approval review or retention", () => {
@@ -370,6 +379,7 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
     };
     const redacted = buildRedactedProductionLaunchEvidenceArtifact(rawArtifact);
     const review = buildProductionLaunchEvidenceRuntimeArtifactReview("coverage/production-launch-approval-redacted.json", rawArtifact);
+    const bundle = buildProductionLaunchEvidenceRuntimeRedactedEvidenceBundle("coverage/production-launch-approval-redacted.json", rawArtifact);
     const serialized = JSON.stringify(review);
 
     expect(JSON.stringify(redacted)).not.toContain("legal@example.com");
@@ -394,6 +404,13 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
       ]),
     );
     expect(review.externalEvidenceRequired).toBe(productionLaunchEvidenceRuntimeRequiredExternalEvidence);
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.artifactPath).toBe("coverage/production-launch-redacted-evidence-bundle.json");
+    expect(bundle.review.containsUnredactedSensitiveValues).toBe(false);
+    expect(bundle.requiredArtifacts).toBe(productionLaunchEvidenceRuntimeArtifactPaths);
+    expect(bundle.externalEvidenceRequired).toBe(productionLaunchEvidenceRuntimeRequiredExternalEvidence);
+    expect(bundle.approvalExecutionAllowed).toBe(false);
+    expect(bundle.ciArtifactExecutionAllowed).toBe(false);
     expect(review.externalEvidenceRequired).toEqual(
       expect.arrayContaining([
         "CI/build/test, database, provider, secret, security, accessibility, SEO, performance, and mobile bundles must be captured outside Codex when execution is approved.",

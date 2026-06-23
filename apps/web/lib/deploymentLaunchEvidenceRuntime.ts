@@ -296,6 +296,7 @@ export interface DeploymentLaunchEvidenceExecutionPlan {
   readonly externalCommands: typeof deploymentLaunchEvidenceExternalCommands;
   readonly localArtifacts: typeof deploymentLaunchEvidenceLocalArtifacts;
   readonly externalArtifacts: typeof deploymentLaunchEvidenceExternalArtifacts;
+  readonly surfaceContract: typeof deploymentLaunchEvidenceSurfaceContract;
   readonly commandExecutionAllowed: false;
   readonly providerExecutionAllowed: false;
   readonly databaseExecutionAllowed: false;
@@ -312,6 +313,107 @@ export interface DeploymentLaunchEvidenceArtifactReview {
   readonly requiredExternalEvidence: typeof deploymentLaunchEvidenceRequiredExternalEvidence;
   readonly safeForTracker: boolean;
 }
+
+export interface DeploymentLaunchEvidenceSurfaceContractEntry {
+  readonly surfaceId: string;
+  readonly requiredCommand: (typeof deploymentLaunchEvidenceRuntimeCommands)[number];
+  readonly requiredArtifact: (typeof deploymentLaunchEvidenceArtifactPaths)[number];
+  readonly launchBoundary:
+    | "local-package"
+    | "provider-env"
+    | "secret-destination"
+    | "database-storage"
+    | "mobile-eas"
+    | "production-approval"
+    | "ci-release"
+    | "rollback"
+    | "artifact-safety";
+  readonly providerBackedEvidenceRequired: boolean;
+  readonly redactedArtifactRequired: true;
+}
+
+export const deploymentLaunchEvidenceSurfaceContract: readonly DeploymentLaunchEvidenceSurfaceContractEntry[] = [
+  {
+    surfaceId: "deployment-package-gates",
+    requiredCommand: "pnpm --filter @inkroute/deployment typecheck",
+    requiredArtifact: "coverage/deployment-launch-package-typecheck.txt",
+    launchBoundary: "local-package",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "provider-projects-and-preview",
+    requiredCommand: "pnpm deploy:verify-provider-envs",
+    requiredArtifact: "coverage/deployment-provider-envs-redacted.json",
+    launchBoundary: "provider-env",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "protected-environments-secrets-approval",
+    requiredCommand: "pnpm deploy:verify-secrets",
+    requiredArtifact: "coverage/deployment-secrets-redacted.json",
+    launchBoundary: "secret-destination",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "production-dry-run-strict-env",
+    requiredCommand: "production deployment dry run",
+    requiredArtifact: "coverage/deployment-production-dry-run-redacted.json",
+    launchBoundary: "production-approval",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "database-storage-operations",
+    requiredCommand: "pnpm deploy:verify-database-ops",
+    requiredArtifact: "coverage/deployment-database-migration-dry-run-redacted.json",
+    launchBoundary: "database-storage",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "mobile-eas-preview-native-ota",
+    requiredCommand: "pnpm deploy:verify-mobile",
+    requiredArtifact: "coverage/deployment-eas-preview-build-redacted.json",
+    launchBoundary: "mobile-eas",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "ci-sentry-release-upload",
+    requiredCommand: "Sentry release/source-map upload proof",
+    requiredArtifact: "coverage/deployment-sentry-release-upload-redacted.json",
+    launchBoundary: "ci-release",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "rollback-launch-packet",
+    requiredCommand: "deployment rollback drill",
+    requiredArtifact: "coverage/deployment-rollback-drill-redacted.json",
+    launchBoundary: "rollback",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "protected-approval-proof",
+    requiredCommand: "GitHub protected environment approval proof",
+    requiredArtifact: "coverage/deployment-github-environment-approval-redacted.json",
+    launchBoundary: "production-approval",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "provider-artifact-safety",
+    requiredCommand: "pnpm deploy:verify-launch-evidence",
+    requiredArtifact: "coverage/deployment-provider-artifact-safety.json",
+    launchBoundary: "artifact-safety",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+] as const;
 
 const sensitiveDeploymentLaunchEvidenceKeyPattern =
   /(token|secret|password|authorization|cookie|email|phone|name|address|vercel|github|eas|expo|sentry|supabase|neon|postgres|database|storage|provider|tenant|user|client|project|team|org|environment|deployment|url|uri|dsn|key|id|payload|artifact)/iu;
@@ -422,6 +524,7 @@ export function buildDeploymentLaunchEvidenceExecutionPlan(): DeploymentLaunchEv
     externalCommands: deploymentLaunchEvidenceExternalCommands,
     localArtifacts: deploymentLaunchEvidenceLocalArtifacts,
     externalArtifacts: deploymentLaunchEvidenceExternalArtifacts,
+    surfaceContract: deploymentLaunchEvidenceSurfaceContract,
     commandExecutionAllowed: false,
     providerExecutionAllowed: false,
     databaseExecutionAllowed: false,

@@ -20,6 +20,7 @@ import {
   buildSemanticDocumentationEvidenceDecision,
   buildSemanticDocumentationRuntimeArtifactReview,
   buildSemanticDocumentationRuntimeExecutionPlan,
+  buildSemanticDocumentationRuntimeRedactedEvidenceBundle,
   buildRedactedSemanticDocumentationArtifact,
 } from "../lib/semanticDocumentationRuntime";
 
@@ -65,8 +66,10 @@ describe("semantic documentation runtime contract", () => {
       "runtime-proof-boundary",
       "provider-proof-boundary",
       "legal-review-boundary",
+      "redacted-evidence-bundle",
     ]);
     expect(semanticDocumentationRuntimeArtifactPaths).toContain("coverage/semantic-documentation-runtime.json");
+    expect(semanticDocumentationRuntimeArtifactPaths).toContain("coverage/semantic-documentation-redacted-evidence-bundle.json");
     expect(semanticDocumentationRuntimeArtifactPaths).toContain("test-results/semantic-documentation-runtime");
   });
 
@@ -107,6 +110,7 @@ describe("semantic documentation runtime contract", () => {
       providerProofSeparated: false,
       legalReviewSeparated: false,
       semanticDocumentationRunPersisted: false,
+      redactedEvidenceBundleCaptured: false,
       capturedArtifacts: [
         "coverage/semantic-documentation-runtime.json",
         "coverage/semantic-documentation-link-path-output.txt",
@@ -127,6 +131,7 @@ describe("semantic documentation runtime contract", () => {
       "coverage/semantic-documentation-runtime-proof-boundary.json",
       "coverage/semantic-documentation-provider-proof-boundary.json",
       "coverage/semantic-documentation-legal-review-boundary.json",
+      "coverage/semantic-documentation-redacted-evidence-bundle.json",
       "test-results/semantic-documentation-runtime",
     ]);
     expect(decision.missingCommands).toEqual([
@@ -144,6 +149,7 @@ describe("semantic documentation runtime contract", () => {
     expect(decision.blockers).toContain("CI evidence for semantic documentation audits must be captured.");
     expect(decision.blockers).toContain("Semantic documentation audit must keep provider readiness proof separate from static wording checks.");
     expect(decision.blockers).toContain("SemanticDocumentationRun persistence row must be captured for durable auditability.");
+    expect(decision.blockers).toContain("Redacted semantic documentation evidence bundle must be captured.");
     expect(decision.blockers).toContain("Every required semantic documentation artifact must be captured.");
   });
 
@@ -163,6 +169,7 @@ describe("semantic documentation runtime contract", () => {
       providerProofSeparated: true,
       legalReviewSeparated: true,
       semanticDocumentationRunPersisted: true,
+      redactedEvidenceBundleCaptured: true,
       capturedArtifacts: semanticDocumentationRuntimeArtifactPaths,
       completedCommands: semanticDocumentationRuntimeCommands,
     });
@@ -189,6 +196,7 @@ describe("semantic documentation runtime contract", () => {
     expect(gapTracker).toContain("semanticDocumentationRuntimeLocalArtifacts");
     expect(gapTracker).toContain("semanticDocumentationRuntimeExternalArtifacts");
     expect(gapTracker).toContain("buildSemanticDocumentationRuntimeArtifactReview");
+    expect(gapTracker).toContain("buildSemanticDocumentationRuntimeRedactedEvidenceBundle");
   });
 
   it("pins current semantic documentation runtime proof files for GAP-128", () => {
@@ -267,6 +275,7 @@ describe("semantic documentation runtime contract", () => {
     ]);
     expect(plan.externalArtifacts).toEqual([
       "coverage/semantic-documentation-ci-quality-docs.json",
+      "coverage/semantic-documentation-redacted-evidence-bundle.json",
       "test-results/semantic-documentation-runtime",
     ]);
     expect(plan).toMatchObject({
@@ -292,6 +301,7 @@ describe("semantic documentation runtime contract", () => {
     expect(plan.requiredExternalEvidence).toBe(semanticDocumentationRuntimeRequiredExternalEvidence);
     expect(plan.requiredExternalEvidence).toContain("Runtime build and live route proof captured outside semantic documentation wording checks.");
     expect(plan.requiredExternalEvidence).toContain("Legal review proof captured outside semantic documentation wording checks.");
+    expect(plan.requiredExternalEvidence).toContain("Redacted semantic documentation evidence bundle captured without raw provider, legal, runtime, or CI secrets.");
   });
 
   it("redacts semantic documentation runtime artifacts before tracker or handoff use", () => {
@@ -316,12 +326,19 @@ describe("semantic documentation runtime contract", () => {
     });
 
     const review = buildSemanticDocumentationRuntimeArtifactReview(artifact);
+    const bundle = buildSemanticDocumentationRuntimeRedactedEvidenceBundle(artifact);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(semanticDocumentationRuntimeRequiredExternalEvidence);
     expect(review.redactions).toEqual(
       expect.arrayContaining(["runId", "ciUrl", "claimLog", "providerEvidence", "legalReview"]),
     );
     expect(review.requiredExternalEvidence).toContain("Provider readiness proof captured outside semantic documentation wording checks.");
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.artifactPath).toBe("coverage/semantic-documentation-redacted-evidence-bundle.json");
+    expect(bundle.review.safeForTracker).toBe(true);
+    expect(bundle.requiredArtifacts).toBe(semanticDocumentationRuntimeArtifactPaths);
+    expect(bundle.requiredExternalEvidence).toBe(semanticDocumentationRuntimeRequiredExternalEvidence);
+    expect(bundle.providerExecutionAllowed).toBe(false);
   });
 });
 

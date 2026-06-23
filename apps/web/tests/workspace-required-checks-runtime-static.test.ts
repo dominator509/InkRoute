@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -22,6 +22,7 @@ import {
   buildWorkspaceRequiredChecksDecisionRequiredEvidence,
   buildWorkspaceRequiredChecksEvidenceDecision,
   buildWorkspaceRequiredChecksExecutionPlan,
+  buildWorkspaceRequiredChecksRedactedEvidenceBundle,
 } from "../lib/workspaceRequiredChecksRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -62,8 +63,12 @@ describe("workspace required checks runtime contract", () => {
       "failing-workspace-audit-pr",
       "failing-pr-gap-diff-pr",
       "redacted-evidence-logs",
+      "redacted-evidence-bundle",
     ]);
     expect(workspaceRequiredChecksArtifactPaths).toContain("coverage/workspace-required-checks-runtime.json");
+    expect(workspaceRequiredChecksArtifactPaths).toContain(
+      "coverage/workspace-required-checks-redacted-evidence-bundle.json",
+    );
     expect(workspaceRequiredChecksArtifactPaths).toContain("test-results/workspace-required-checks-runtime");
   });
 
@@ -131,6 +136,7 @@ describe("workspace required checks runtime contract", () => {
       evidenceCaptured: false,
       logsRedacted: false,
       workspaceRequiredChecksRunPersisted: false,
+      redactedEvidenceBundleCaptured: false,
       protectedBranchRequiredChecks: ["CI / quality"],
       capturedArtifacts: [
         "coverage/workspace-required-checks-runtime.json",
@@ -154,6 +160,7 @@ describe("workspace required checks runtime contract", () => {
       "coverage/workspace-required-checks-failing-workspace-pr-redacted.json",
       "coverage/workspace-required-checks-failing-gap-diff-pr-redacted.json",
       "coverage/workspace-required-checks-redacted-logs.json",
+      "coverage/workspace-required-checks-redacted-evidence-bundle.json",
       "test-results/workspace-required-checks-runtime",
     ]);
     expect(decision.missingCommands).toEqual([
@@ -174,6 +181,7 @@ describe("workspace required checks runtime contract", () => {
     expect(decision.requiredEvidence).toBe(workspaceRequiredChecksRequiredEvidence);
     expect(decision.blockers).toContain("pnpm workspace:all must include and pass workspace required checks.");
     expect(decision.blockers).toContain("WorkspaceRequiredChecksRun persistence row must be captured for durable auditability.");
+    expect(decision.blockers).toContain("Redacted workspace required-checks evidence bundle must be captured.");
     expect(decision.blockers).toContain("Every required workspace checks artifact must be captured.");
   });
 
@@ -190,6 +198,7 @@ describe("workspace required checks runtime contract", () => {
       evidenceCaptured: true,
       logsRedacted: true,
       workspaceRequiredChecksRunPersisted: true,
+      redactedEvidenceBundleCaptured: true,
       protectedBranchRequiredChecks: workspaceRequiredBranchProtectionChecks,
       capturedArtifacts: workspaceRequiredChecksArtifactPaths,
       completedCommands: workspaceRequiredChecksCommands,
@@ -210,7 +219,9 @@ describe("workspace required checks runtime contract", () => {
     expect(unitManifest).toContain("WorkspaceRequiredChecksRun Prisma model and app row contract");
     expect(gapTracker).toContain("WorkspaceRequiredChecksRun");
     expect(gapTracker).toContain("apps/web/lib/workspaceRequiredChecksRuntime.ts");
-    expect(gapTracker).toContain("live command, CI, branch-protection, failing-PR merge-block, PR gap-diff merge-block, and redacted-log evidence remain open");
+    expect(gapTracker).toContain(
+      "live command, CI, branch-protection, failing-PR merge-block, PR gap-diff merge-block, redacted-log, persisted run, and artifact evidence remain gated",
+    );
     expect(gapTracker).toContain("GAP-133 is workspace-required-checks-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("buildWorkspaceRequiredChecksExecutionPlan");
     expect(gapTracker).toContain("workspaceRequiredChecksExecutionPolicy");
@@ -218,6 +229,7 @@ describe("workspace required checks runtime contract", () => {
     expect(gapTracker).toContain("workspaceRequiredChecksRequiredEvidence");
     expect(gapTracker).toContain("workspaceRequiredChecksRequiredExternalEvidence");
     expect(gapTracker).toContain("buildWorkspaceRequiredChecksArtifactReview");
+    expect(gapTracker).toContain("buildWorkspaceRequiredChecksRedactedEvidenceBundle");
   });
 
   it("pins current workspace required checks runtime proof files for GAP-133", () => {
@@ -257,6 +269,7 @@ describe("workspace required checks runtime contract", () => {
       "coverage/workspace-required-checks-failing-workspace-pr-redacted.json",
       "coverage/workspace-required-checks-failing-gap-diff-pr-redacted.json",
       "coverage/workspace-required-checks-redacted-logs.json",
+      "coverage/workspace-required-checks-redacted-evidence-bundle.json",
       "test-results/workspace-required-checks-runtime",
     ]);
     expect(plan).toMatchObject({
@@ -285,6 +298,9 @@ describe("workspace required checks runtime contract", () => {
       "Redacted GitHub branch-protection settings proving every workspace and PR gap-diff check is required before merge.",
     );
     expect(plan.requiredExternalEvidence).toContain("Durable WorkspaceRequiredChecksRun persistence row captured from the target database.");
+    expect(plan.requiredExternalEvidence).toContain(
+      "Redacted workspace required-checks evidence bundle captured without raw GitHub settings, merge-block logs, tokens, URLs, or actor identifiers.",
+    );
   });
 
   it("redacts workspace required-check artifacts before tracker or handoff use", () => {
@@ -307,6 +323,7 @@ describe("workspace required checks runtime contract", () => {
     });
 
     const review = buildWorkspaceRequiredChecksArtifactReview(artifact);
+    const bundle = buildWorkspaceRequiredChecksRedactedEvidenceBundle(artifact);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(workspaceRequiredChecksRequiredExternalEvidence);
     expect(review.redactions).toEqual(
@@ -319,6 +336,12 @@ describe("workspace required checks runtime contract", () => {
       ]),
     );
     expect(review.requiredExternalEvidence).toContain("Required-check evidence logs reviewed as redacted and secret-free.");
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.artifactPath).toBe("coverage/workspace-required-checks-redacted-evidence-bundle.json");
+    expect(bundle.review.safeForTracker).toBe(true);
+    expect(bundle.requiredArtifacts).toBe(workspaceRequiredChecksArtifactPaths);
+    expect(bundle.requiredExternalEvidence).toBe(workspaceRequiredChecksRequiredExternalEvidence);
+    expect(bundle.providerExecutionAllowed).toBe(false);
   });
 });
 

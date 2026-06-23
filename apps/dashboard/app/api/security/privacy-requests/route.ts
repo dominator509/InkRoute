@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { prisma } from "@inkroute/db";
 import {
   buildDashboardPrivacyWorkflowEvidencePlan,
   buildPrivacyRequestDraft,
@@ -6,10 +7,15 @@ import {
   redactRecord,
   type PrivacyRequestType,
 } from "@inkroute/security";
+import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../../dashboardAuth";
 
 type PrivacyRequestInput = {
   type: PrivacyRequestType;
   email: string;
+  requesterName?: string;
+  clientId?: string;
+  legalHold?: boolean;
+  legalHoldReason?: string;
   details?: Record<string, unknown>;
 };
 
@@ -23,20 +29,12 @@ type DemoPrivacyRequest = {
   receivedAt: string;
 };
 
-type DashboardActor = {
-  tenantId: string;
-  userId: string;
-  role: string;
-};
-
 const requestTypes: PrivacyRequestType[] = ["access", "export", "rectification", "deletion", "restriction"];
 const demoTenantId = "demo-studio-alpha";
-const allowedDashboardRoles = new Set(["owner", "studio_manager", "admin"]);
-const fallbackRole = "viewer";
 const inMemoryPrivacyRequests: DemoPrivacyRequest[] = [];
 const rateLimitBuckets = new Map<string, { windowStart: number; count: number }>();
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
-const defaultDemoActorId = "demo-dashboard-user";
+const privacyRequestGapIds = ["GAP-040", "GAP-098", "GAP-099", "GAP-100", "GAP-101"] as const;
 
 function normalizeHeaderValue(value: string | null): string | null {
   const normalized = value?.trim();
@@ -60,42 +58,13 @@ function getClientIp(request: NextRequest): string {
   return request.headers.get("x-client-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown-ip";
 }
 
-function resolveDashboardActor(request: NextRequest): { actor?: DashboardActor; error?: { status: number; code: string; message: string } } {
-  const tenantId = normalizeHeaderValue(request.headers.get("x-tenant-id"));
-  const role = normalizeHeaderValue(request.headers.get("x-user-role")) ?? fallbackRole;
-  const userId = normalizeHeaderValue(request.headers.get("x-user-id")) ?? defaultDemoActorId;
-  const normalizedRole = role.toLowerCase();
-
-  if (tenantId !== demoTenantId) {
-    return {
-      error: {
-        status: 403,
-        code: "TENANT_SCOPE_REQUIRED",
-        message: "Dashboard privacy mutations require an authenticated tenant scope.",
-      },
-    };
-  }
-
-  if (!allowedDashboardRoles.has(normalizedRole)) {
-    return {
-      error: {
-        status: 403,
-        code: "ROLE_NOT_AUTHORIZED",
-        message: "Dashboard privacy mutations require owner, studio_manager, or admin role.",
-      },
-    };
-  }
-
-  return { actor: { tenantId, userId, role: normalizedRole } };
-}
-
-function checkDashboardMutationRateLimit(request: NextRequest, actor: DashboardActor) {
+function checkDashboardMutationRateLimit(request: NextRequest, actor: { tenantId: string; actorUserId: string }) {
   const rule = rateLimitRules.find((candidate) => candidate.id === "dashboard-mutation");
   if (!rule) {
     return { allowed: true, remaining: 0, retryAfterSeconds: 0, maxRequests: 0 };
   }
 
-  const key = `${rule.id}:${actor.tenantId}:${actor.userId}:${getClientIp(request)}`;
+  const key = `${rule.id}:${actor.tenantId}:${actor.actorUserId}:${getClientIp(request)}`;
   const now = Date.now();
   const windowMs = rule.windowSeconds * 1000;
   const bucket = rateLimitBuckets.get(key);
@@ -115,6 +84,33 @@ function rateLimitHeaders(retryAfterSeconds: number) {
   return { ...noStoreHeaders, "Retry-After": String(retryAfterSeconds) };
 }
 
+function buildPrivacyWorkflowEvidencePlan(options: { persistedPrivacyRequestStoreConfigured: boolean; auditLogPersistencePassed: boolean }) {
+  return buildDashboardPrivacyWorkflowEvidencePlan({
+    packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+    securityTestsPassed: false,
+    securityTypecheckPassed: false,
+    dashboardTypecheckPassed: false,
+    dashboardBuildPassed: false,
+    routeProjectionSurfaces: ["client_profile", "booking_request", "consent_form", "payment", "message", "file_asset"],
+    routeTestSurfaces: ["client_profile", "booking_request", "consent_form", "payment", "message", "file_asset"],
+    persistedPrivacyRequestStoreConfigured: options.persistedPrivacyRequestStoreConfigured,
+    exportWorkflowIntegrationPassed: false,
+    deleteAnonymizeWorkflowIntegrationPassed: false,
+    privateStorageDeletionIntegrationPassed: false,
+    auditLogPersistencePassed: options.auditLogPersistencePassed,
+    legalApprovalCaptured: false,
+    consentMedicalDepositSmsCopyApproved: false,
+    sanitizedLogEvidenceCaptured: false,
+    sanitizedErrorEvidenceCaptured: false,
+    ciEvidenceCaptured: false,
+    secretSafeArtifactsCaptured: false,
+  });
+}
+
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
 export async function POST(request: NextRequest) {
   let body: unknown;
   try {
@@ -131,22 +127,33 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const requesterName = typeof input.requesterName === "string" ? normalizeHeaderValue(input.requesterName) : null;
+  const clientId = typeof input.clientId === "string" ? normalizeHeaderValue(input.clientId) : null;
+  const legalHoldReason = typeof input.legalHoldReason === "string" ? normalizeHeaderValue(input.legalHoldReason) : null;
   const details = typeof input.details === "object" && input.details !== null ? (input.details as Record<string, unknown>) : undefined;
   const requestInput: PrivacyRequestInput = {
     type: input.type,
-    email: input.email,
+    email: input.email.trim().toLowerCase(),
+    ...(requesterName ? { requesterName } : {}),
+    ...(clientId ? { clientId } : {}),
+    ...(input.legalHold === true ? { legalHold: true } : {}),
+    ...(legalHoldReason ? { legalHoldReason } : {}),
     ...(details !== undefined ? { details } : {}),
   };
 
-  const actorResolution = resolveDashboardActor(request);
-  if (actorResolution.error) {
+  let actor;
+  try {
+    actor = resolveDashboardActor(request);
+    assertPermission(actor, "tenant:write");
+  } catch (error) {
+    const status = error instanceof Error && error.message === "AUTH_REQUIRED" ? 401 : 403;
+    const code = status === 401 ? "UNAUTHENTICATED" : "FORBIDDEN";
     return NextResponse.json(
-      { ok: false, error: { code: actorResolution.error.code, message: actorResolution.error.message, gapIds: ["GAP-095", "GAP-098"] } },
-      { status: actorResolution.error.status, headers: noStoreHeaders },
+      { ok: false, error: { code, message: "Dashboard privacy mutations require authenticated owner or studio manager access.", gapIds: ["GAP-040", "GAP-095", "GAP-098"] } },
+      { status, headers: noStoreHeaders },
     );
   }
 
-  const actor = actorResolution.actor!;
   const rateLimit = checkDashboardMutationRateLimit(request, actor);
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -163,25 +170,174 @@ export async function POST(request: NextRequest) {
   }
 
   const redactedSubmission = redactRecord({ email: requestInput.email, details: requestInput.details ?? {} });
-  const dashboardPrivacyWorkflowEvidencePlan = buildDashboardPrivacyWorkflowEvidencePlan({
-    packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
-    securityTestsPassed: false,
-    securityTypecheckPassed: false,
-    dashboardTypecheckPassed: false,
-    dashboardBuildPassed: false,
-    routeProjectionSurfaces: ["client_profile", "booking_request", "consent_form", "payment", "message", "file_asset"],
-    routeTestSurfaces: ["client_profile", "booking_request", "consent_form", "payment", "message", "file_asset"],
+
+  if (actor.source !== "local-fallback") {
+    try {
+      const now = new Date();
+      const result = await prisma.$transaction(async (tx) => {
+        if (requestInput.clientId) {
+          const client = await tx.client.findFirst({
+            where: { id: requestInput.clientId, tenantId: actor.tenantId },
+            select: { id: true },
+          });
+
+          if (!client) {
+            throw new Error("CLIENT_NOT_FOUND");
+          }
+        }
+
+        const privacyRequest = await tx.privacyRequest.create({
+          data: {
+            tenantId: actor.tenantId,
+            requesterUserId: actor.actorUserId,
+            ...(requestInput.clientId ? { clientId: requestInput.clientId } : {}),
+            requestType: requestInput.type,
+            status: "intake_received",
+            requesterEmail: requestInput.email,
+            ...(requestInput.requesterName ? { requesterName: requestInput.requesterName } : {}),
+            dueAt: addDays(now, 30),
+            legalHold: requestInput.legalHold === true,
+            ...(requestInput.legalHoldReason ? { legalHoldReason: requestInput.legalHoldReason } : {}),
+            redactedSubmission,
+            statusHistory: [
+              {
+                status: "intake_received",
+                at: now.toISOString(),
+                actorUserId: actor.actorUserId,
+                source: "dashboard-api",
+                note: "Dashboard privacy intake persisted; fulfillment workers remain gated by GAP-040.",
+              },
+            ],
+            fulfillmentMetadata: {
+              source: "dashboard-api",
+              workerDispatchQueued: false,
+              exportWorkflowIntegrationPassed: false,
+              deleteAnonymizeWorkflowIntegrationPassed: false,
+              privateStorageDeletionIntegrationPassed: false,
+              legalApprovalCaptured: false,
+              gapIds: [...privacyRequestGapIds],
+            },
+          },
+          select: {
+            id: true,
+            requestType: true,
+            status: true,
+            requesterEmail: true,
+            dueAt: true,
+            legalHold: true,
+            createdAt: true,
+          },
+        });
+
+        const audit = await tx.auditLog.create({
+          data: {
+            tenantId: actor.tenantId,
+            actorUserId: actor.actorUserId,
+            action: "privacy.request.create",
+            entityType: "PrivacyRequest",
+            entityId: privacyRequest.id,
+            metadata: {
+              source: "dashboard-api",
+              requestType: privacyRequest.requestType,
+              status: privacyRequest.status,
+              clientLinked: Boolean(requestInput.clientId),
+              legalHold: privacyRequest.legalHold,
+              redaction: "redactRecord",
+              workerDispatchQueued: false,
+              externalEvidenceGates: [
+                "exportWorkflowIntegrationPassed",
+                "deleteAnonymizeWorkflowIntegrationPassed",
+                "privateStorageDeletionIntegrationPassed",
+                "legalApprovalCaptured",
+                "sanitizedLogEvidenceCaptured",
+                "sanitizedErrorEvidenceCaptured",
+                "ciEvidenceCaptured",
+              ],
+              gapIds: [...privacyRequestGapIds],
+            },
+          },
+          select: { id: true },
+        });
+
+        return { privacyRequest, audit };
+      });
+
+      const dashboardPrivacyWorkflowEvidencePlan = buildPrivacyWorkflowEvidencePlan({
+        persistedPrivacyRequestStoreConfigured: true,
+        auditLogPersistencePassed: true,
+      });
+
+      return NextResponse.json(
+        {
+          ok: true,
+          data: {
+            tenantId: actor.tenantId,
+            actor: {
+              userId: actor.actorUserId,
+              role: actor.role,
+            },
+            persistence: "database",
+            draft: buildPrivacyRequestDraft(requestInput.type),
+            dashboardPrivacyWorkflowEvidencePlan,
+            persisted: {
+              id: result.privacyRequest.id,
+              requestType: result.privacyRequest.requestType,
+              status: result.privacyRequest.status,
+              email: redactRecord({ email: result.privacyRequest.requesterEmail }).email,
+              dueAt: result.privacyRequest.dueAt.toISOString(),
+              legalHold: result.privacyRequest.legalHold,
+              receivedAt: result.privacyRequest.createdAt.toISOString(),
+            },
+            auditId: result.audit.id,
+            nextStep: "Privacy request intake is persisted and audited; export/delete/anonymize workers remain deferred until provider/legal evidence is captured.",
+            requiredNextWork: [
+              "Implement verified export/delete/rectification workers with legal retention holds.",
+              "Wire private file deletion and retention tombstone execution to the privacy request lifecycle.",
+              "Capture sanitized log/error evidence, attorney approval, dashboard build/typecheck, route tests, and CI evidence.",
+            ],
+            gapIds: privacyRequestGapIds,
+          },
+        },
+        { status: 201, headers: noStoreHeaders },
+      );
+    } catch (error) {
+      if (error instanceof Error && error.message === "CLIENT_NOT_FOUND") {
+        return NextResponse.json(
+          { ok: false, error: { code: "CLIENT_NOT_FOUND", message: "Privacy request clientId must belong to the actor tenant.", gapIds: ["GAP-040", "GAP-098"] } },
+          { status: 404, headers: noStoreHeaders },
+        );
+      }
+
+      if (isDatabaseUnavailable(error)) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: {
+              code: "DATABASE_UNAVAILABLE",
+              message: "Dashboard privacy request intake requires DB-backed PrivacyRequest and AuditLog persistence for authenticated tenants.",
+              gapIds: privacyRequestGapIds,
+            },
+            productionBoundary: {
+              inMemoryPrivacyRequestPersistenceDisabled: true,
+              requiresDurablePrivacyRequestStore: true,
+              requiresAuditLogPersistence: true,
+              requiresExportDeleteWorkers: true,
+            },
+          },
+          { status: 503, headers: noStoreHeaders },
+        );
+      }
+
+      return NextResponse.json(
+        { ok: false, error: { code: "PRIVACY_REQUEST_CREATE_FAILED", message: "Privacy request intake could not be persisted.", gapIds: privacyRequestGapIds } },
+        { status: 500, headers: noStoreHeaders },
+      );
+    }
+  }
+
+  const dashboardPrivacyWorkflowEvidencePlan = buildPrivacyWorkflowEvidencePlan({
     persistedPrivacyRequestStoreConfigured: false,
-    exportWorkflowIntegrationPassed: false,
-    deleteAnonymizeWorkflowIntegrationPassed: false,
-    privateStorageDeletionIntegrationPassed: false,
     auditLogPersistencePassed: false,
-    legalApprovalCaptured: false,
-    consentMedicalDepositSmsCopyApproved: false,
-    sanitizedLogEvidenceCaptured: false,
-    sanitizedErrorEvidenceCaptured: false,
-    ciEvidenceCaptured: false,
-    secretSafeArtifactsCaptured: false,
   });
 
   if (process.env.NODE_ENV === "production") {
@@ -197,7 +353,7 @@ export async function POST(request: NextRequest) {
         data: {
           tenantId: actor.tenantId,
           actor: {
-            userId: actor.userId,
+            userId: actor.actorUserId,
             role: actor.role,
           },
           draft: buildPrivacyRequestDraft(requestInput.type),
@@ -234,7 +390,7 @@ export async function POST(request: NextRequest) {
       data: {
         tenantId: demoTenantId,
         actor: {
-          userId: actor.userId,
+          userId: actor.actorUserId,
           role: actor.role,
         },
         draft: buildPrivacyRequestDraft(requestInput.type),
@@ -249,7 +405,7 @@ export async function POST(request: NextRequest) {
         nextStep: "Dashboard persistence and worker dispatch are demo-scoped and do not yet execute export/deletion/notification workflows.",
         requiredNextWork: [
           "Require owner/studio manager role and tenant membership before dashboard privacy operations.",
-          "Persist PrivacyRequest row + case notes in tenant-scoped store and audit log.",
+          "Use DB-backed PrivacyRequest + AuditLog persistence for authenticated tenant actors; local fallback remains demo-only.",
           "Implement verified export/delete/rectification workers with legal retention holds.",
           "Review workflow, consent text, and customer-facing language with counsel.",
         ],

@@ -972,6 +972,52 @@ export interface ProviderSessionStoreReadinessPlan {
   blockers: readonly string[];
 }
 
+export type ProviderSessionCallbackKind = "login" | "logout" | "session";
+export type ProviderSessionCallbackFailClosedStatus =
+  | "provider_identity_missing"
+  | "session_revocation_required"
+  | "tenant_membership_missing";
+
+export interface ProviderSessionCallbackContractEntry {
+  readonly kind: ProviderSessionCallbackKind;
+  readonly providerEvent: string;
+  readonly serverAction: string;
+  readonly requiredLookup: string;
+  readonly auditAction: string;
+  readonly failClosedStatus: ProviderSessionCallbackFailClosedStatus;
+  readonly rawProviderTokenLoggingAllowed: false;
+}
+
+export const providerSessionCallbackContract = [
+  {
+    kind: "login",
+    providerEvent: "provider.signIn",
+    serverAction: "resolve-or-create-application-user",
+    requiredLookup: "provider identity -> User",
+    auditAction: "auth.provider.login",
+    failClosedStatus: "provider_identity_missing",
+    rawProviderTokenLoggingAllowed: false,
+  },
+  {
+    kind: "logout",
+    providerEvent: "provider.signOut",
+    serverAction: "revoke-session-and-clear-client-state",
+    requiredLookup: "active session -> revocation row",
+    auditAction: "auth.provider.logout",
+    failClosedStatus: "session_revocation_required",
+    rawProviderTokenLoggingAllowed: false,
+  },
+  {
+    kind: "session",
+    providerEvent: "provider.session",
+    serverAction: "attach-tenant-membership-and-role-context",
+    requiredLookup: "User -> TenantMember -> CustomRole",
+    auditAction: "auth.provider.session",
+    failClosedStatus: "tenant_membership_missing",
+    rawProviderTokenLoggingAllowed: false,
+  },
+] as const satisfies readonly ProviderSessionCallbackContractEntry[];
+
 export type DashboardSurfaceKind = "page" | "api" | "server_action";
 export type DashboardSurfaceMode = "static_demo" | "read_only_api" | "mutation_api" | "provider_action";
 
@@ -1323,12 +1369,14 @@ export interface DashboardAuthGuardEvidenceInput {
   dashboardBuildPassed: boolean;
   authProviderSessionsConfigured: boolean;
   dashboardMiddlewareEnforcesGuard: boolean;
+  routeMethodPermissionMappingCaptured: boolean;
   protectedLayoutEnforcesGuard: boolean;
   dashboardApiHelpersEnforceGuard: boolean;
   tenantMembershipDbLookupConfigured: boolean;
   customRoleDbLookupConfigured: boolean;
   unauthorizedStatesImplemented: boolean;
   authAuditLogsPersisted: boolean;
+  authRunPersistenceContractCaptured: boolean;
   browserLoginLogoutPassed: boolean;
   browserTenantSwitchPassed: boolean;
   browserCrossTenantDenialPassed: boolean;
@@ -1352,6 +1400,7 @@ export const dashboardAuthGuardRequiredCommands = [
   "pnpm --filter @inkroute/dashboard typecheck",
   "pnpm --filter @inkroute/dashboard build",
   "dashboard middleware auth guard tests",
+  "dashboard route-method permission mapping contract tests",
   "dashboard protected layout auth guard tests",
   "dashboard API auth guard tests",
   "browser dashboard login/logout smoke",
@@ -1363,6 +1412,7 @@ export const dashboardAuthGuardRequiredCommands = [
 
 export const dashboardAuthGuardRequiredControls = [
   "Resolve provider-backed session, TenantMember, and CustomRole rows server-side before rendering protected dashboard data.",
+  "Infer dashboard route permissions from HTTP method with safe/read, mutating/write, and unknown-method deny behavior.",
   "Apply middleware, protected layout, and API helper guards before private reads or mutations.",
   "Redirect unauthenticated users to login and tenant mismatches to tenant switch without leaking private data.",
   "Deny expired, revoked, cross-tenant, and insufficient-permission sessions with redacted audit rows.",
@@ -1372,8 +1422,10 @@ export const dashboardAuthGuardRequiredControls = [
 
 export const dashboardAuthGuardRequiredEvidence = [
   "provider-backed session plus TenantMember/CustomRole database lookup evidence",
+  "dashboard route-method permission mapping evidence",
   "dashboard middleware, protected layout, and API helper guard adoption evidence",
   "unauthorized state, redacted AuditLog, and no-store cache evidence",
+  "dashboard auth guard run persistence contract evidence",
   "browser login/logout, tenant-switch, and cross-tenant denial evidence",
   "dashboard typecheck/build, CI, and secret-safe artifact evidence",
 ] as const;
@@ -1395,12 +1447,14 @@ export function buildDashboardAuthGuardEvidencePlan(
   if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with protected layout and middleware wiring.");
   if (!input.authProviderSessionsConfigured) blockers.push("Real auth provider sessions must be configured for dashboard guard tests.");
   if (!input.dashboardMiddlewareEnforcesGuard) blockers.push("Dashboard middleware must enforce auth and tenant guard decisions before route rendering.");
+  if (!input.routeMethodPermissionMappingCaptured) blockers.push("Dashboard route-method permission inference must prove safe/read, mutating/write, and unknown-method deny behavior.");
   if (!input.protectedLayoutEnforcesGuard) blockers.push("Protected dashboard layout must enforce guard decisions before private data loading.");
   if (!input.dashboardApiHelpersEnforceGuard) blockers.push("Dashboard API helpers must enforce guard decisions before private data reads or mutations.");
   if (!input.tenantMembershipDbLookupConfigured) blockers.push("Tenant membership lookup must come from persisted database/provider-backed server state.");
   if (!input.customRoleDbLookupConfigured) blockers.push("Custom role lookup must come from tenant-scoped database state.");
   if (!input.unauthorizedStatesImplemented) blockers.push("Dashboard unauthorized, login redirect, tenant-switch, expired-session, and denied-permission state evidence must be captured before auth guard readiness.");
   if (!input.authAuditLogsPersisted) blockers.push("Dashboard auth allow/deny/login/logout/tenant-switch decisions must persist redacted AuditLog rows.");
+  if (!input.authRunPersistenceContractCaptured) blockers.push("Dashboard auth guard run records must expose a redacted AuditLog persistence contract.");
   if (!input.browserLoginLogoutPassed) blockers.push("Browser login/logout evidence must pass for protected dashboard routes.");
   if (!input.browserTenantSwitchPassed) blockers.push("Browser tenant-switch evidence must pass for authorized tenant changes.");
   if (!input.browserCrossTenantDenialPassed) blockers.push("Browser cross-tenant denial evidence must prove private tenant data is not exposed.");
@@ -1411,17 +1465,23 @@ export function buildDashboardAuthGuardEvidencePlan(
   if (!input.authProviderSessionsConfigured || !input.tenantMembershipDbLookupConfigured || !input.customRoleDbLookupConfigured) {
     requiredEvidence.push(dashboardAuthGuardRequiredEvidence[0]);
   }
-  if (!input.dashboardMiddlewareEnforcesGuard || !input.protectedLayoutEnforcesGuard || !input.dashboardApiHelpersEnforceGuard) {
+  if (!input.routeMethodPermissionMappingCaptured) {
     requiredEvidence.push(dashboardAuthGuardRequiredEvidence[1]);
   }
-  if (!input.unauthorizedStatesImplemented || !input.authAuditLogsPersisted || !input.noStoreCacheVerified) {
+  if (!input.dashboardMiddlewareEnforcesGuard || !input.protectedLayoutEnforcesGuard || !input.dashboardApiHelpersEnforceGuard) {
     requiredEvidence.push(dashboardAuthGuardRequiredEvidence[2]);
   }
-  if (!input.browserLoginLogoutPassed || !input.browserTenantSwitchPassed || !input.browserCrossTenantDenialPassed) {
+  if (!input.unauthorizedStatesImplemented || !input.authAuditLogsPersisted || !input.noStoreCacheVerified) {
     requiredEvidence.push(dashboardAuthGuardRequiredEvidence[3]);
   }
-  if (!input.dashboardTypecheckPassed || !input.dashboardBuildPassed || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
+  if (!input.authRunPersistenceContractCaptured) {
     requiredEvidence.push(dashboardAuthGuardRequiredEvidence[4]);
+  }
+  if (!input.browserLoginLogoutPassed || !input.browserTenantSwitchPassed || !input.browserCrossTenantDenialPassed) {
+    requiredEvidence.push(dashboardAuthGuardRequiredEvidence[5]);
+  }
+  if (!input.dashboardTypecheckPassed || !input.dashboardBuildPassed || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
+    requiredEvidence.push(dashboardAuthGuardRequiredEvidence[6]);
   }
 
   return {
@@ -1452,6 +1512,7 @@ export const providerSessionStoreRequiredCommands = [
 ] as const;
 
 export const providerSessionStoreRequiredControls = [
+  "Map provider login, logout, and session callbacks through the providerSessionCallbackContract before route authorization.",
   "Map provider identity to application User records without trusting client headers.",
   "Resolve TenantMember and CustomRole rows server-side for every guarded request.",
   "Persist active sessions and revocations before route authorization.",

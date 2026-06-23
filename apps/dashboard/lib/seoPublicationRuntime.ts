@@ -50,6 +50,133 @@ export interface SeoPublicationLocalRepository {
   snapshot(): SeoPublicationLocalRepositorySnapshot;
 }
 
+export interface SeoPublicationPrismaClient {
+  readonly idempotencyKey: {
+    findUnique(args: { where: { tenantId_scope_key: { tenantId: string; scope: string; key: string } } }): Promise<unknown | null>;
+    create(args: { data: { tenantId: string; scope: string; key: string; status: string; metadata: Record<string, unknown> } }): Promise<unknown>;
+  };
+  readonly seoPublicationRevalidationJob: {
+    create(args: {
+      data: {
+        tenantId: string;
+        entityType: SeoPublicationLocalModel;
+        entityId: string;
+        action: SeoPublicationLocalAction;
+        tags: readonly string[];
+        status: string;
+        metadata: Record<string, unknown>;
+      };
+    }): Promise<unknown>;
+  };
+  readonly seoPublicationAssociation: {
+    createMany(args: {
+      data: readonly {
+        tenantId: string;
+        entityType: SeoPublicationLocalModel;
+        entityId: string;
+        relatedKind: "faq" | "review" | "image";
+        relatedId: string;
+      }[];
+      skipDuplicates: boolean;
+    }): Promise<unknown>;
+  };
+  readonly auditLog: {
+    create(args: {
+      data: {
+        tenantId: string;
+        actorUserId: string;
+        action: string;
+        entityType: SeoPublicationLocalModel;
+        entityId: string;
+        metadata: Record<string, unknown>;
+      };
+    }): Promise<unknown>;
+  };
+}
+
+export interface SeoPublicationPrismaRepository {
+  claimIdempotencyKey(input: SeoPublicationLocalMutation): Promise<"claimed" | "duplicate">;
+  persistRevalidationJob(input: SeoPublicationLocalMutation): Promise<void>;
+  persistAssociations(input: SeoPublicationLocalMutation): Promise<void>;
+  persistAuditLog(input: SeoPublicationLocalMutation): Promise<void>;
+}
+
+function seoPublicationAssociations(input: SeoPublicationLocalMutation) {
+  return [
+    ...(input.relatedFaqIds ?? []).map((relatedId) => ({ tenantId: input.tenantId, entityType: input.model, entityId: input.entityId, relatedKind: "faq" as const, relatedId })),
+    ...(input.relatedReviewIds ?? []).map((relatedId) => ({ tenantId: input.tenantId, entityType: input.model, entityId: input.entityId, relatedKind: "review" as const, relatedId })),
+    ...(input.relatedImageIds ?? []).map((relatedId) => ({ tenantId: input.tenantId, entityType: input.model, entityId: input.entityId, relatedKind: "image" as const, relatedId })),
+  ] as const;
+}
+
+export function createPrismaSeoPublicationRepository(client: SeoPublicationPrismaClient): SeoPublicationPrismaRepository {
+  const scope = "seo-publication";
+
+  return {
+    async claimIdempotencyKey(input) {
+      const existing = await client.idempotencyKey.findUnique({
+        where: { tenantId_scope_key: { tenantId: input.tenantId, scope, key: input.idempotencyKey } },
+      });
+      if (existing) return "duplicate";
+
+      await client.idempotencyKey.create({
+        data: {
+          tenantId: input.tenantId,
+          scope,
+          key: input.idempotencyKey,
+          status: "claimed",
+          metadata: buildRedactedSeoPublicationArtifact({
+            model: input.model,
+            action: input.action,
+            entityId: input.entityId,
+            revalidationTags: input.revalidationTags,
+          }) as Record<string, unknown>,
+        },
+      });
+      return "claimed";
+    },
+    async persistRevalidationJob(input) {
+      await client.seoPublicationRevalidationJob.create({
+        data: {
+          tenantId: input.tenantId,
+          entityType: input.model,
+          entityId: input.entityId,
+          action: input.action,
+          tags: input.revalidationTags,
+          status: "queued",
+          metadata: buildRedactedSeoPublicationArtifact({
+            idempotencyKey: input.idempotencyKey,
+            revalidationTags: input.revalidationTags,
+          }) as Record<string, unknown>,
+        },
+      });
+    },
+    async persistAssociations(input) {
+      const data = seoPublicationAssociations(input);
+      if (data.length === 0) return;
+      await client.seoPublicationAssociation.createMany({ data, skipDuplicates: true });
+    },
+    async persistAuditLog(input) {
+      await client.auditLog.create({
+        data: {
+          tenantId: input.tenantId,
+          actorUserId: input.actorId,
+          action: `seo:${input.model}:${input.action}`,
+          entityType: input.model,
+          entityId: input.entityId,
+          metadata: buildRedactedSeoPublicationArtifact({
+            idempotencyKey: input.idempotencyKey,
+            revalidationTags: input.revalidationTags,
+            relatedFaqIds: input.relatedFaqIds ?? [],
+            relatedReviewIds: input.relatedReviewIds ?? [],
+            relatedImageIds: input.relatedImageIds ?? [],
+          }) as Record<string, unknown>,
+        },
+      });
+    },
+  };
+}
+
 export interface SeoPublicationArtifactReview {
   readonly status: "passed" | "blocked";
   readonly redactedArtifacts: readonly unknown[];
@@ -436,11 +563,11 @@ export const seoPublicationRuntimeReadiness = buildSeoPublicationRuntimeReadines
   seoCityPageRepositoryImplemented: true,
   seoStylePageRepositoryImplemented: true,
   seoRedirectRepositoryImplemented: true,
-  faqReviewImageAssociationPersistenceAvailable: false,
+  faqReviewImageAssociationPersistenceAvailable: true,
   publishStatePersistenceAvailable: true,
   auditLogPersistenceAvailable: true,
-  revalidationJobPersistenceAvailable: false,
-  idempotencyStoreAvailable: false,
+  revalidationJobPersistenceAvailable: true,
+  idempotencyStoreAvailable: true,
   previewToPublishFlowImplemented: true,
   archiveRedirectFlowImplemented: true,
   prismaIntegrationTestsPassed: false,

@@ -101,7 +101,7 @@ describe("release health route", () => {
       const payload = (await response.json()) as {
         ok: boolean;
         error: { code: string; gapIds: string[] };
-        productionBoundary: { scaffoldedReleaseHealthDisabled: boolean };
+        productionBoundary: { localReleaseHealthFallbackDisabled: boolean };
       };
 
       expect(response.status).toBe(503);
@@ -109,7 +109,7 @@ describe("release health route", () => {
       expect(payload.error.code).toBe("PROVIDER_RELEASE_HEALTH_NOT_CONFIGURED");
       expect(JSON.stringify(payload)).toContain("local release-health fallback is disabled");
       expect(payload.error.gapIds).toContain("GAP-087");
-      expect(payload.productionBoundary.scaffoldedReleaseHealthDisabled).toBe(true);
+      expect(payload.productionBoundary.localReleaseHealthFallbackDisabled).toBe(true);
     } finally {
       process.env.NODE_ENV = originalNodeEnv;
     }

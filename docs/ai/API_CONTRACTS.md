@@ -47,6 +47,7 @@ Dashboard APIs currently use `apps/dashboard/app/api/dashboardAuth.ts` for a hea
 | --- | --- | --- |
 | `GET` | `/api/releases` | Auth-shim guarded, tenant-scoped DB reads with fallback |
 | `POST` | `/api/releases` | Validated persistence with audit metadata where DB is available |
+| `PATCH` | `/api/releases` | Validated rollback intent with idempotency/audit metadata; provider rollback execution remains gated |
 | `GET` | `/api/feature-flags` | Auth-shim guarded, persisted global/tenant flag reads with fallback |
 | `POST` | `/api/feature-flags` | Validated persistence and credential-gate checks |
 | `GET` | `/api/deployment/readiness` | Auth-shim guarded readiness preview |
@@ -54,7 +55,7 @@ Dashboard APIs currently use `apps/dashboard/app/api/dashboardAuth.ts` for a hea
 | `GET` | `/api/error-reports` | Auth-shim guarded DB/local read path for redacted error reports |
 | `POST` | `/api/error-reports` | Auth-shim guarded DB/local ingest path for sanitized error reports |
 | `GET` | `/api/security/trust-status` | Static trust/security posture preview; production auth/RBAC still required |
-| `POST` | `/api/security/privacy-requests` | Scaffolded internal privacy draft boundary; returns `501` until production workflow exists |
+| `POST` | `/api/security/privacy-requests` | Dashboard auth/RBAC guarded privacy intake; DB-backed `PrivacyRequest` + redacted `AuditLog` write when available, rate-limited by tenant/actor/IP, production local fallback fail-closed; export/delete workers and legal/provider proof remain gated |
 
 ## Webhook Routes
 
@@ -63,7 +64,7 @@ Dashboard APIs currently use `apps/dashboard/app/api/dashboardAuth.ts` for a hea
 | `POST` | `/api/webhooks/stripe` | Local raw-body parse/interpreter; Stripe signature verification and reconciliation not live |
 | `POST` | `/api/webhooks/email` | Local parse/persist of interpreted events; provider signature verification not live |
 | `POST` | `/api/webhooks/sms` | Local parse/persist and STOP boundary; provider signature verification not live |
-| `POST` | `/api/webhooks/sentry` | Scaffolded boundary; returns `501` until provider verification/persistence exists |
+| `POST` | `/api/webhooks/sentry` | Sentry signature-required webhook boundary; verifies `SENTRY_WEBHOOK_SECRET`, persists provider delivery/idempotency + audit reconciliation when tenant ownership is available, and fails closed in production without durable persistence/provider proof |
 
 ## Booking State Rules
 

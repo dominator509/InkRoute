@@ -17,6 +17,7 @@ import {
   dashboardLaunchRuntimeLocalArtifacts,
   dashboardLaunchRuntimeLocalCommands,
   dashboardLaunchRunPersistenceContract,
+  dashboardLaunchSurfaceContract,
   dashboardLaunchRuntimeCommands,
   dashboardLaunchRuntimeControls,
   dashboardLaunchRuntimeMatrix,
@@ -71,6 +72,15 @@ describe("dashboard launch runtime contract", () => {
     ]);
     expect(dashboardLaunchArtifactPaths).toContain("coverage/dashboard-launch-runtime.json");
     expect(dashboardLaunchArtifactPaths).toContain("test-results/dashboard-launch-runtime");
+    expect(dashboardLaunchSurfaceContract.map((entry) => entry.surfaceId)).toEqual([
+      "seeded-tenant-launch-data",
+      "provider-auth-session",
+      "tenant-read-route-contracts",
+      "mutation-auditlog-persistence",
+      "rbac-cross-tenant-denial",
+      "loading-empty-error-states",
+      "ci-launch-artifact-retention",
+    ]);
   });
 
   it("pins the DashboardLaunchRun persistence model and migration", () => {
@@ -161,7 +171,7 @@ describe("dashboard launch runtime contract", () => {
   it("keeps dashboard launch blockers explicit until provider-backed runtime evidence exists", () => {
     expect(dashboardLaunchRuntimeReadiness.status).toBe("blocked");
     expect(dashboardLaunchRuntimeReadiness.missingScripts).toEqual([]);
-    expect(dashboardLaunchRuntimeReadiness.requiredCommands).toEqual(dashboardLaunchRuntimeCommands);
+    expect(dashboardLaunchRuntimeReadiness.requiredCommands).toBe(dashboardLaunchRuntimeCommands);
     expect(dashboardLaunchRuntimeReadiness.requiredControls).toEqual([
       "Resolve provider-backed session and tenant membership before every dashboard data load.",
       "Load dashboard data through tenant-scoped repositories or authenticated APIs.",
@@ -170,7 +180,9 @@ describe("dashboard launch runtime contract", () => {
       "Redact private client, medical, payment, consent, and system fields before serialization.",
       "Capture secret-safe build, smoke, and CI artifacts for launch closeout.",
     ]);
-    expect(dashboardLaunchRuntimeReadiness.requiredEvidence).toEqual(dashboardLaunchRuntimeReadiness.requiredEvidence);
+    expect(buildDashboardLaunchDecisionRequiredEvidence(dashboardLaunchRuntimeReadiness.requiredEvidence)).toBe(
+      dashboardLaunchRequiredEvidence,
+    );
     expect(dashboardLaunchRuntimeReadiness.blockers).toContain("@inkroute/dashboard build must pass.");
     expect(dashboardLaunchRuntimeReadiness.blockers).toContain(
       "Dashboard must use provider-backed auth/session state.",
@@ -238,13 +250,13 @@ describe("dashboard launch runtime contract", () => {
       "dashboard mutation AuditLog persistence tests",
       "GitHub Actions dashboard launch evidence job",
     ]);
-    expect(decision.requiredControls).toEqual(dashboardLaunchRuntimeControls);
-    expect(decision.requiredArtifacts).toEqual(dashboardLaunchArtifactPaths);
-    expect(decision.requiredCommands).toEqual(dashboardLaunchRuntimeCommands);
+    expect(decision.requiredControls).toBe(dashboardLaunchRuntimeControls);
+    expect(decision.requiredArtifacts).toBe(dashboardLaunchArtifactPaths);
+    expect(decision.requiredCommands).toBe(dashboardLaunchRuntimeCommands);
     expect(decision.requiredEvidence).toEqual(
       buildDashboardLaunchDecisionRequiredEvidence(dashboardLaunchRuntimeReadiness.requiredEvidence),
     );
-    expect(decision.requiredEvidence).toEqual(dashboardLaunchRequiredEvidence);
+    expect(decision.requiredEvidence).toBe(dashboardLaunchRequiredEvidence);
     expect(decision.blockers).toContain("@inkroute/dashboard build must pass.");
     expect(decision.blockers).toContain("DashboardLaunchRun persistence row must be captured for durable auditability.");
     expect(decision.blockers).toContain("Every required dashboard launch control must be covered.");
@@ -296,6 +308,7 @@ describe("dashboard launch runtime contract", () => {
     expect(gapTracker).toContain("live dashboard typecheck/build/test, Playwright, seeded tenant data, provider auth, Prisma repositories, real mutations, provider actions, RBAC/cross-tenant denial, field redaction, launch states, CI evidence, provider-backed persistDashboardLaunchRun execution, and secret-safe artifacts remain open");
     expect(gapTracker).toContain("GAP-007 is dashboard-launch-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("proof inventory");
+    expect(gapTracker).toContain("Dashboard launch runtime identity assertions pin exported commands, controls, artifacts, required evidence, and decision evidence helpers");
   });
 
   it("pins current dashboard launch proof files for GAP-007", () => {
@@ -314,6 +327,38 @@ describe("dashboard launch runtime contract", () => {
     expect(plan.externalCommands).toBe(dashboardLaunchRuntimeExternalCommands);
     expect(plan.localArtifacts).toBe(dashboardLaunchRuntimeLocalArtifacts);
     expect(plan.externalArtifacts).toBe(dashboardLaunchRuntimeExternalArtifacts);
+    expect(plan.surfaceContract).toBe(dashboardLaunchSurfaceContract);
+    expect(plan.surfaceContract).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          surfaceId: "provider-auth-session",
+          requiredControl: "provider-backed-session-and-tenant-membership",
+          requiredCommand: "dashboard provider-backed auth smoke tests",
+          requiredArtifact: "coverage/dashboard-provider-auth-smoke.json",
+          launchBoundary: "provider-auth",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "mutation-auditlog-persistence",
+          requiredControl: "tenant-scoped-mutation-transactions-with-auditlog",
+          requiredCommand: "dashboard mutation AuditLog persistence tests",
+          requiredArtifact: "coverage/dashboard-mutation-auditlog.json",
+          launchBoundary: "mutation-audit",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "tenant-read-route-contracts",
+          requiredControl: "tenant-scoped-repositories-or-authenticated-apis",
+          requiredCommand: "pnpm --filter @inkroute/dashboard test",
+          requiredArtifact: "coverage/dashboard-tenant-scoped-apis.json",
+          launchBoundary: "tenant-api",
+          providerBackedEvidenceRequired: false,
+          redactedArtifactRequired: true,
+        }),
+      ]),
+    );
     expect(plan.localArtifacts).toEqual(["coverage/dashboard-launch-runtime.json", "coverage/dashboard-typecheck.txt"]);
     expect(plan.externalArtifacts).toContain("coverage/dashboard-secret-safe-artifacts.json");
     expect(plan.externalArtifacts).toContain("test-results/dashboard-launch-runtime");

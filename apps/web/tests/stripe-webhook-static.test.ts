@@ -93,4 +93,16 @@ describe("Stripe webhook route static contract", () => {
     expect(routeSource).toContain("reconciliation");
     expect(routeSource).toContain("runtimeReadiness");
   });
+
+  it("pins durable Stripe webhook replay and payment audit persistence seams", () => {
+    expect(routeSource).toContain("resolveStripeTenant");
+    expect(routeSource).toContain("persistStripeWebhookEvent");
+    expect(routeSource).toContain("txRuntime.providerWebhookDelivery.findFirst");
+    expect(routeSource).toContain("txRuntime.providerWebhookDelivery.create");
+    expect(routeSource).toContain("txRuntime.providerWebhookDelivery.update");
+    expect(routeSource).toContain("txRuntime.paymentAuditLog.create");
+    expect(routeSource).toContain("stripe.webhook.received");
+    expect(routeSource).toContain("rawPayloadStored: false");
+    expect(routeSource).toContain("Production Stripe webhooks require STRIPE_WEBHOOK_SECRET");
+  });
 });

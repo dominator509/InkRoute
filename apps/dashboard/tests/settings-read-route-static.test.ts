@@ -11,6 +11,8 @@ describe("dashboard settings read route contract", () => {
     expect(routeSource).toContain('evaluateDashboardApiGuard(request, "tenant:read"');
     expect(routeSource).toContain("settingsGuardFailureResponse(guard)");
     expect(routeSource).toContain('code: "FORBIDDEN"');
+    expect(routeSource).toContain("dashboardTenantQuerySchema.safeParse");
+    expect(routeSource).toContain("Settings query failed validation.");
     expect(routeSource).toContain("tenantId !== actor.tenantId");
     expect(routeSource).toContain('code: "TENANT_MISMATCH"');
     expect(routeSource).toContain('"Cache-Control": "no-store"');
@@ -67,11 +69,16 @@ describe("dashboard settings read route contract", () => {
     expect(routeSource).toContain("export async function PATCH");
     expect(routeSource).toContain('evaluateDashboardApiGuard(request, "settings:write"');
     expect(routeSource).toContain("settingsGuardFailureResponse(guard)");
+    expect(routeSource).toContain("tenantSettingsMutationSchema.safeParse");
+    expect(routeSource).toContain("Settings payload failed validation.");
     expect(routeSource).toContain("tenantId !== actor.tenantId");
     expect(routeSource).toContain("prisma.$transaction");
+    expect(routeSource).toContain("tx.idempotencyKey.upsert");
+    expect(routeSource).toContain("tx.idempotencyKey.update");
     expect(routeSource).toContain("tx.tenant.update");
     expect(routeSource).toContain('action: "settings:update"');
     expect(routeSource).toContain('dashboardMutationAction: "update_settings"');
+    expect(routeSource).toContain("idempotencyKeyId");
     expect(routeSource).toContain("PROVIDER_SETTINGS_PERSISTENCE_NOT_CONFIGURED");
     expect(routeSource).toContain("localSettingsWriteFallbackDisabled");
     expect(routeSource).toContain("rawSecretsStored: false");

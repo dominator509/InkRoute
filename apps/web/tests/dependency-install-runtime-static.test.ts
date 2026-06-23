@@ -1,10 +1,11 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   buildDependencyInstallDecisionRequiredEvidence,
   buildDependencyInstallEvidenceDecision,
   buildDependencyInstallExecutionPlan,
+  buildDependencyInstallRedactedEvidenceBundle,
   buildDependencyInstallRunData,
   dependencyInstallArtifactPaths,
   dependencyInstallExecutionPolicy,
@@ -63,8 +64,10 @@ describe("dependency install runtime contract", () => {
       "unit-tests-after-install",
       "ci-quality-job",
       "production-blocker-visibility",
+      "redacted-evidence-bundle",
     ]);
     expect(dependencyInstallArtifactPaths).toContain("coverage/dependency-install-runtime.json");
+    expect(dependencyInstallArtifactPaths).toContain("coverage/dependency-install-redacted-evidence-bundle.json");
     expect(dependencyInstallArtifactPaths).toContain("test-results/dependency-install-runtime");
   });
 
@@ -170,6 +173,9 @@ describe("dependency install runtime contract", () => {
     });
     expect(executionPlan.requiredExternalEvidence).toBe(dependencyInstallRequiredExternalEvidence);
     expect(executionPlan.requiredExternalEvidence).toContain(
+      "Redacted dependency install evidence bundle captured without raw install logs, tokens, URLs, environment values, or actor identifiers.",
+    );
+    expect(executionPlan.requiredExternalEvidence).toContain(
       "Provider-backed persistDependencyInstallRun execution evidence.",
     );
     expect(dependencyInstallReadiness.status).toBe("blocked");
@@ -224,6 +230,7 @@ describe("dependency install runtime contract", () => {
       "coverage/dependency-lint-output.txt",
       "coverage/dependency-unit-output.txt",
       "coverage/dependency-ci-quality-job.json",
+      "coverage/dependency-install-redacted-evidence-bundle.json",
       "test-results/dependency-install-runtime",
     ]);
     expect(decision.missingCommands).toEqual([
@@ -292,7 +299,10 @@ describe("dependency install runtime contract", () => {
     expect(gapTracker).toContain("dependencyInstallReadinessRequiredEvidence");
     expect(gapTracker).toContain("dependencyInstallRequiredEvidence");
     expect(gapTracker).toContain("dependencyInstallRequiredExternalEvidence");
-    expect(gapTracker).toContain("live install, frozen-lockfile install, typecheck, lint, unit-test, workspace audit, CI, provider-backed persistDependencyInstallRun execution, production-blocker visibility, and artifact evidence remain open");
+    expect(gapTracker).toContain("buildDependencyInstallRedactedEvidenceBundle");
+    expect(gapTracker).toContain(
+      "live install, frozen-lockfile install, typecheck, lint, unit-test, workspace audit, CI, provider-backed persistDependencyInstallRun execution, production-blocker visibility, and artifact evidence remain gated",
+    );
     expect(gapTracker).toContain("GAP-001 is dependency-install-runtime-matrix wired with evidence classifier");
   });
 
@@ -312,6 +322,34 @@ describe("dependency install runtime contract", () => {
     for (const file of dependencyInstallProofFiles) {
       expect(readRepoFile(file).length).toBeGreaterThan(0);
     }
+  });
+
+  it("builds a redacted dependency install evidence bundle for handoff use", () => {
+    const artifact = {
+      installOutput: "installed with token github_pat_1234567890ABCDEFGHIJKLMNOP",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/27171288295",
+      actorEmail: "owner@example.com",
+      environment: { DATABASE_URL: "postgres://user:pass@example.invalid/db" },
+      safeSummary: "dependency install proof captured",
+    };
+
+    const bundle = buildDependencyInstallRedactedEvidenceBundle(artifact);
+
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.artifactPath).toBe("coverage/dependency-install-redacted-evidence-bundle.json");
+    expect(bundle.requiredArtifacts).toBe(dependencyInstallArtifactPaths);
+    expect(bundle.requiredExternalEvidence).toBe(dependencyInstallRequiredExternalEvidence);
+    expect(bundle.providerExecutionAllowed).toBe(false);
+    expect(bundle.redactions).toEqual(
+      expect.arrayContaining(["token", "url", "email", "actor", "log", "output", "environment"]),
+    );
+    expect(bundle.redactedArtifact).toMatchObject({
+      installOutput: "[REDACTED]",
+      ciRunUrl: "[REDACTED]",
+      actorEmail: "[REDACTED]",
+      environment: "[REDACTED]",
+      safeSummary: "dependency install proof captured",
+    });
   });
 });
 

@@ -26,6 +26,7 @@ import {
 const ciWorkflow = readFileSync(join(process.cwd(), ".github/workflows/ci.yml"), "utf8");
 const unitManifest = readFileSync(join(process.cwd(), "testing/manifests/unit-test-manifest.json"), "utf8");
 const gapTracker = readFileSync(join(process.cwd(), "GAP_TRACKER.md"), "utf8");
+const structuredDataCrawlQaSource = readFileSync(join(process.cwd(), "apps/web/lib/structuredDataCrawlQa.ts"), "utf8");
 
 describe("GAP-073 structured-data crawl QA contract", () => {
   it("defines rendered public route inventory across JSON-LD, canonical, sitemap, robots, and noindex surfaces", () => {
@@ -41,6 +42,7 @@ describe("GAP-073 structured-data crawl QA contract", () => {
       '<html><head><script type="application/ld+json">[{"@type":"FAQPage"},{"@type":"ImageObject"}]</script></head></html>',
     );
     expect(scripts.map((script) => script["@type"])).toEqual(["FAQPage", "ImageObject"]);
+    expect(structuredDataCrawlQaSource).toContain("extractRenderedJsonLdScriptsFromHtml");
   });
 
   it("builds local crawl artifacts for rendered JSON-LD, canonical, sitemap, and noindex checks", () => {

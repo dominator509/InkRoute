@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   buildPhase9AppRuntimeBuildExecutionPlan,
   buildPhase9AppRuntimeBuildEvidenceDecision,
+  buildPhase9AppRuntimeBuildRunEvidencePacket,
   buildPhase9RuntimeArtifactReview,
   buildRedactedPhase9RuntimeArtifact,
   phase9AppRuntimeBuildDecisionRequiredEvidence,
@@ -16,6 +17,7 @@ import {
   phase9AppRuntimeBuildRuntimeMatrix,
   phase9AppRuntimeBuildRuntimeProofFiles,
   phase9AppRuntimeBuildRuntimeReadiness,
+  phase9AppRuntimeBuildSurfaceContract,
   phase9AppRuntimeBuildSurfaceIds,
   phase9RuntimeRequiredArtifacts,
 } from "../lib/phase9AppRuntimeBuildRuntime";
@@ -44,8 +46,22 @@ describe("Phase 9 app runtime/build runtime contract", () => {
       "booking-to-notification runtime smoke with provider sends disabled",
     ]);
     expect(phase9AppRuntimeBuildSurfaceIds).toContain("booking-to-notification-runtime-smoke");
+    expect(phase9AppRuntimeBuildSurfaceContract.map((entry) => entry.surfaceId)).toEqual([
+      "web-build",
+      "dashboard-build",
+      "mobile-typecheck",
+      "notification-routes",
+      "dashboard-playwright-smoke",
+      "expo-device-notification",
+      "booking-to-notification-runtime",
+      "provider-disabled-proof",
+      "ci-phase9-gate",
+      "secret-safe-artifacts",
+    ]);
     expect(phase9AppRuntimeBuildRuntimeMatrix.map((entry) => entry.id)).toContain("provider-disabled-proof");
+    expect(phase9AppRuntimeBuildRuntimeMatrix.map((entry) => entry.id)).toContain("run-evidence-packet");
     expect(phase9AppRuntimeBuildRuntimeArtifactPaths).toContain("coverage/phase9-app-runtime-build-runtime.json");
+    expect(phase9AppRuntimeBuildRuntimeArtifactPaths).toContain("coverage/phase9-app-runtime-build-run-evidence-packet.json");
     expect(phase9AppRuntimeBuildRuntimeArtifactPaths).toContain("test-results/phase9-app-runtime-build");
   });
 
@@ -83,6 +99,35 @@ describe("Phase 9 app runtime/build runtime contract", () => {
       secretSafeArtifactsRequiredForClosure: true,
     });
     expect(plan.policy).toBe(phase9AppRuntimeBuildExecutionPolicy);
+    expect(plan.surfaceContract).toBe(phase9AppRuntimeBuildSurfaceContract);
+    expect(plan.surfaceContract).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          surfaceId: "web-build",
+          requiredCommand: "pnpm --filter @inkroute/web build",
+          requiredArtifact: "coverage/phase9-web-build.log",
+          runtimeBoundary: "web-build",
+          providerSendsDisabledRequired: false,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "booking-to-notification-runtime",
+          requiredCommand: "booking-to-notification runtime smoke with provider sends disabled",
+          requiredArtifact: "coverage/phase9-booking-to-notification-runtime-redacted.json",
+          runtimeBoundary: "booking-notification",
+          providerSendsDisabledRequired: true,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "provider-disabled-proof",
+          requiredCommand: "prove provider sends disabled or sandboxed during runtime smoke",
+          requiredArtifact: "coverage/phase9-provider-disabled-runtime-proof.json",
+          runtimeBoundary: "provider-disabled",
+          providerSendsDisabledRequired: true,
+          redactedArtifactRequired: true,
+        }),
+      ]),
+    );
     expect(plan.commandExecutionAllowed).toBe(false);
     expect(plan.buildExecutionAllowed).toBe(false);
     expect(plan.routeExecutionAllowed).toBe(false);
@@ -111,8 +156,24 @@ describe("Phase 9 app runtime/build runtime contract", () => {
       "Expo simulator/device notification smoke artifacts",
       "booking-to-notification runtime smoke output",
       "CI Phase 9 app runtime/build artifacts",
+      "Phase 9 app runtime/build run evidence packet",
       "secret-safe Phase 9 runtime/build artifact review",
     ]);
+  });
+
+  it("keeps the GAP-070 run evidence packet non-executing and provider-disabled proof gated", () => {
+    const packet = buildPhase9AppRuntimeBuildRunEvidencePacket();
+
+    expect(packet.packetId).toBe("gap-070-phase9-app-runtime-build-run-evidence");
+    expect(packet.requiredArtifact).toBe("coverage/phase9-app-runtime-build-run-evidence-packet.json");
+    expect(packet.localRunPersistenceExecutionAllowed).toBe(false);
+    expect(packet.providerDisabledEvidenceRequired).toBe(true);
+    expect(packet.browserOrDeviceEvidenceRequired).toBe(true);
+    expect(packet.bookingToNotificationRuntimeEvidenceRequired).toBe(true);
+    expect(packet.ciEvidenceRequired).toBe(true);
+    expect(packet.redactionRequired).toBe(true);
+    expect(packet.requiredExternalEvidence).toBe(phase9AppRuntimeBuildRequiredExternalEvidence);
+    expect(packet.surfaceContract).toBe(phase9AppRuntimeBuildSurfaceContract);
   });
 
   it("pins Phase 9 runtime/build artifact redaction and review through the runtime", () => {
@@ -177,6 +238,7 @@ describe("Phase 9 app runtime/build runtime contract", () => {
       bookingToNotificationRuntimePassed: false,
       providerDisabledRuntimeProofCaptured: false,
       ciEvidenceCaptured: false,
+      runEvidencePacketCaptured: false,
       secretSafeArtifactReviewPassed: false,
       capturedArtifacts: [
         "coverage/phase9-app-runtime-build-runtime.json",
@@ -192,6 +254,7 @@ describe("Phase 9 app runtime/build runtime contract", () => {
     expect(blockedDecision.blockers).toContain("Dashboard provider-disabled runtime evidence is missing.");
     expect(blockedDecision.blockers).toContain("Expo device notification smoke evidence is missing.");
     expect(blockedDecision.blockers).toContain("Provider-disabled runtime proof is missing.");
+    expect(blockedDecision.blockers).toContain("Phase 9 app runtime/build run evidence packet is missing.");
     expect(blockedDecision.blockers).toContain(
       "Secret-safe Phase 9 runtime/build artifact review evidence is missing.",
     );
@@ -224,6 +287,7 @@ describe("Phase 9 app runtime/build runtime contract", () => {
       bookingToNotificationRuntimePassed: true,
       providerDisabledRuntimeProofCaptured: true,
       ciEvidenceCaptured: true,
+      runEvidencePacketCaptured: true,
       secretSafeArtifactReviewPassed: true,
       capturedArtifacts: phase9AppRuntimeBuildRuntimeArtifactPaths,
     });
@@ -244,6 +308,8 @@ describe("Phase 9 app runtime/build runtime contract", () => {
     expect(gapTracker).toContain("buildPhase9AppRuntimeBuildExecutionPlan");
     expect(gapTracker).toContain("phase9AppRuntimeBuildExecutionPolicy");
     expect(gapTracker).toContain("phase9AppRuntimeBuildRequiredExternalEvidence");
+    expect(gapTracker).toContain("phase9AppRuntimeBuildSurfaceContract");
+    expect(gapTracker).toContain("buildPhase9AppRuntimeBuildRunEvidencePacket");
     expect(gapTracker).toContain("buildRedactedPhase9RuntimeArtifact");
     expect(gapTracker).toContain("buildPhase9RuntimeArtifactReview");
     expect(gapTracker).toContain("non-executing Phase 9 runtime/build execution policy");

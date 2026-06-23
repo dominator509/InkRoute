@@ -137,6 +137,99 @@ export type AccessibilityVisualRuntimeArtifact = (typeof accessibilityVisualRunt
 
 export type AccessibilityVisualRuntimeCommand = (typeof accessibilityVisualRuntimeCommands)[number];
 
+export interface AccessibilityVisualSurfaceContractEntry {
+  readonly surfaceId: string;
+  readonly requiredCommand: AccessibilityVisualRuntimeCommand;
+  readonly requiredArtifact: AccessibilityVisualRuntimeArtifact;
+  readonly proofBoundary:
+    | "web-a11y"
+    | "dashboard-a11y"
+    | "axe"
+    | "lighthouse"
+    | "contrast"
+    | "responsive"
+    | "manual-qa"
+    | "visual-regression"
+    | "ci-proof";
+  readonly browserOrDeviceEvidenceRequired: boolean;
+  readonly redactedArtifactRequired: true;
+}
+
+export const accessibilityVisualSurfaceContract: readonly AccessibilityVisualSurfaceContractEntry[] = [
+  {
+    surfaceId: "web-playwright-a11y",
+    requiredCommand: "pnpm test:e2e --project=web-chromium --grep @a11y",
+    requiredArtifact: "coverage/accessibility-web-a11y-results.json",
+    proofBoundary: "web-a11y",
+    browserOrDeviceEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "dashboard-playwright-a11y",
+    requiredCommand: "pnpm test:e2e --project=dashboard-chromium --grep @a11y",
+    requiredArtifact: "coverage/accessibility-dashboard-a11y-results.json",
+    proofBoundary: "dashboard-a11y",
+    browserOrDeviceEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "axe-reports",
+    requiredCommand: "collect axe reports for public web and dashboard accessibility runs",
+    requiredArtifact: "coverage/accessibility-web-axe-report.json",
+    proofBoundary: "axe",
+    browserOrDeviceEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "lighthouse-budgets",
+    requiredCommand: "Lighthouse accessibility budget run for public and dashboard routes",
+    requiredArtifact: "coverage/accessibility-lighthouse-budgets.json",
+    proofBoundary: "lighthouse",
+    browserOrDeviceEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "contrast-audit",
+    requiredCommand: "contrast audit for public web, dashboard, and mobile high-risk surfaces",
+    requiredArtifact: "coverage/accessibility-contrast-audit.json",
+    proofBoundary: "contrast",
+    browserOrDeviceEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "responsive-layout",
+    requiredCommand: "responsive layout audit for mobile, tablet, and desktop breakpoints",
+    requiredArtifact: "coverage/accessibility-responsive-layout.json",
+    proofBoundary: "responsive",
+    browserOrDeviceEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "screen-reader-mobile-qa",
+    requiredCommand: "manual screen-reader and mobile accessibility QA pass",
+    requiredArtifact: "coverage/accessibility-screen-reader-notes.md",
+    proofBoundary: "manual-qa",
+    browserOrDeviceEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "visual-baselines-diffs",
+    requiredCommand: "visual regression baseline and diff review",
+    requiredArtifact: "coverage/visual-diffs",
+    proofBoundary: "visual-regression",
+    browserOrDeviceEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "ci-regression-triage",
+    requiredCommand: "GitHub Actions accessibility/visual job",
+    requiredArtifact: "coverage/accessibility-visual-ci-run-redacted.json",
+    proofBoundary: "ci-proof",
+    browserOrDeviceEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+] as const;
+
 export type AccessibilityVisualRuntimeExecutionPolicy = {
   localMatrixOnly: true;
   webDashboardA11yRequiresExternalEvidence: true;
@@ -194,6 +287,7 @@ export type AccessibilityVisualRuntimeExecutionPlan = {
   externalCommands: typeof accessibilityVisualRuntimeCommands;
   localArtifacts: typeof accessibilityVisualRuntimeLocalArtifacts;
   externalArtifacts: typeof accessibilityVisualRuntimeExternalArtifacts;
+  surfaceContract: typeof accessibilityVisualSurfaceContract;
   disabledReasons: readonly string[];
 };
 
@@ -279,6 +373,7 @@ export function buildAccessibilityVisualRuntimeExecutionPlan(): AccessibilityVis
     externalCommands: accessibilityVisualRuntimeCommands,
     localArtifacts: accessibilityVisualRuntimeLocalArtifacts,
     externalArtifacts: accessibilityVisualRuntimeExternalArtifacts,
+    surfaceContract: accessibilityVisualSurfaceContract,
     disabledReasons: [
       "Web and dashboard @a11y proof requires Playwright/browser execution.",
       "Axe, Lighthouse, contrast, and responsive audit proof requires runtime audit execution.",

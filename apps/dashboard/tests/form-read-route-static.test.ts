@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 
 const listRouteSource = readFileSync(join(process.cwd(), "apps/dashboard/app/api/forms/route.ts"), "utf8");
 const detailRouteSource = readFileSync(join(process.cwd(), "apps/dashboard/app/api/forms/[formId]/route.ts"), "utf8");
+const intakeCreateRouteSource = readFileSync(join(process.cwd(), "apps/dashboard/app/api/intake/forms/route.ts"), "utf8");
+const consentCreateRouteSource = readFileSync(join(process.cwd(), "apps/dashboard/app/api/consent/forms/route.ts"), "utf8");
 const formsPageSource = readFileSync(join(process.cwd(), "apps/dashboard/app/forms/page.tsx"), "utf8");
 const formActionPanelSource = readFileSync(join(process.cwd(), "apps/dashboard/components/FormActionPanel.tsx"), "utf8");
 const authSource = readFileSync(join(process.cwd(), "packages/auth/src/index.ts"), "utf8");
@@ -80,8 +82,11 @@ describe("dashboard form read route contract", () => {
     expect(detailRouteSource).toContain("localFormWriteFallbackDisabled");
     expect(detailRouteSource).toContain("tx.intakeForm.update");
     expect(detailRouteSource).toContain("tx.consentForm.update");
+    expect(detailRouteSource).toContain("tx.idempotencyKey.upsert");
+    expect(detailRouteSource).toContain("tx.idempotencyKey.update");
     expect(detailRouteSource).toContain("tx.auditLog.create");
     expect(detailRouteSource).toContain('action: "form:write:archive"');
+    expect(detailRouteSource).toContain("idempotencyKeyId");
     expect(detailRouteSource).toContain("legalCopyChanged: false");
     expect(detailRouteSource).toContain("signatureRequestSent: false");
     expect(detailRouteSource).toContain("rawAnswersTouched: false");
@@ -93,5 +98,40 @@ describe("dashboard form read route contract", () => {
     expect(formActionPanelSource).toContain("form publishing, signature requests, private upload retention, and attorney-reviewed copy remain evidence-gated");
     expect(formActionPanelSource).toContain("Consent publishing, signature requests, private upload retention, and raw medical payload handling stay evidence-gated");
     expect(formActionPanelSource).not.toContain("This action only archives form metadata");
+  });
+
+  it("persists intake form creation idempotency before audited metadata writes", () => {
+    expect(intakeCreateRouteSource).toContain('export const runtime = "nodejs"');
+    expect(intakeCreateRouteSource).toContain("dashboard-intake-form-create");
+    expect(intakeCreateRouteSource).toContain("tx.idempotencyKey.upsert");
+    expect(intakeCreateRouteSource).toContain("idempotency.status === \"completed\"");
+    expect(intakeCreateRouteSource).toContain("tx.intakeForm.findFirst");
+    expect(intakeCreateRouteSource).toContain("tx.intakeForm.create");
+    expect(intakeCreateRouteSource).toContain("tx.auditLog.create");
+    expect(intakeCreateRouteSource).toContain("tx.idempotencyKey.update");
+    expect(intakeCreateRouteSource).toContain("rawQuestionsStoredInResult: false");
+    expect(intakeCreateRouteSource).toContain("rawResponsesStoredInResult: false");
+    expect(intakeCreateRouteSource).toContain("privacyReviewCompleted: false");
+    expect(intakeCreateRouteSource).toContain("idempotencyKeyId");
+    expect(intakeCreateRouteSource).toContain("idempotencyReplay");
+    expect(intakeCreateRouteSource).toContain("idempotency-backed");
+  });
+
+  it("persists consent form creation idempotency before audited metadata writes", () => {
+    expect(consentCreateRouteSource).toContain('export const runtime = "nodejs"');
+    expect(consentCreateRouteSource).toContain("dashboard-consent-form-create");
+    expect(consentCreateRouteSource).toContain("tx.idempotencyKey.upsert");
+    expect(consentCreateRouteSource).toContain("idempotency.status === \"completed\"");
+    expect(consentCreateRouteSource).toContain("tx.consentForm.findFirst");
+    expect(consentCreateRouteSource).toContain("tx.consentForm.create");
+    expect(consentCreateRouteSource).toContain("tx.auditLog.create");
+    expect(consentCreateRouteSource).toContain("tx.idempotencyKey.update");
+    expect(consentCreateRouteSource).toContain("rawBodyStoredInResult: false");
+    expect(consentCreateRouteSource).toContain("legalApprovalCompleted: false");
+    expect(consentCreateRouteSource).toContain("signatureRequestSent: false");
+    expect(consentCreateRouteSource).toContain("medicalAcknowledgmentExecuted: false");
+    expect(consentCreateRouteSource).toContain("idempotencyKeyId");
+    expect(consentCreateRouteSource).toContain("idempotencyReplay");
+    expect(consentCreateRouteSource).toContain("idempotency-backed");
   });
 });

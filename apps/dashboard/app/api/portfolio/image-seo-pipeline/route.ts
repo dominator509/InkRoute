@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { demoPortfolioItems, inkrouteDemoTenant } from "@inkroute/config";
 import { prisma } from "@inkroute/db";
 import { NextRequest, NextResponse } from "next/server";
@@ -9,6 +10,8 @@ import {
 } from "../../../../lib/imageSeoPipeline";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../../dashboardAuth";
 
+export const runtime = "nodejs";
+
 function stringValue(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
@@ -19,6 +22,16 @@ function numberValue(value: unknown): number | undefined {
 }
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+function hashImageSeoSubject(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function resultString(value: unknown, key: string): string | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const result = value as Record<string, unknown>;
+  return typeof result[key] === "string" ? result[key] : null;
+}
 
 function json(payload: Record<string, unknown>, status = 200) {
   return NextResponse.json(payload, { status, headers: noStoreHeaders });
@@ -95,19 +108,84 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let persisted: { fileAssetId: string; portfolioImageId: string; auditId: string } | null = null;
+  let persisted: { fileAssetId: string | null; portfolioImageId: string | null; auditId: string | null; idempotencyKeyId: string; idempotencyReplay: boolean } | null = null;
   if (actor.source !== "local-fallback") {
+    const objectKey = primaryDerivative?.objectKey ?? plan.derivatives[0]!.objectKey;
+    const idempotencyKey = stringValue(body.idempotencyKey) ?? `image-seo:${tenantId}:${plan.portfolioItemId}:${objectKey}:${requestedWidth}x${requestedHeight}`;
+    const requestHash = hashImageSeoSubject(
+      JSON.stringify({
+        tenantId,
+        portfolioItemId: plan.portfolioItemId,
+        objectKey,
+        publicUrl: primaryDerivative?.publicUrl ?? null,
+        width: requestedWidth,
+        height: requestedHeight,
+        derivativeCount: derivativeMetadata.length,
+      }),
+    );
+
     try {
-      persisted = await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
+        const portfolioItem = await tx.portfolioItem.findFirst({
+          where: { id: plan.portfolioItemId, tenantId },
+          select: { id: true },
+        });
+        if (!portfolioItem) return { status: "portfolio_item_not_found" as const };
+
+        const idempotency = await tx.idempotencyKey.upsert({
+          where: { tenantId_scope_key: { tenantId, scope: "portfolio.image_seo_pipeline", key: idempotencyKey } },
+          create: {
+            tenantId,
+            scope: "portfolio.image_seo_pipeline",
+            key: idempotencyKey,
+            status: "pending",
+            requestHash,
+            metadata: {
+              source: "dashboard-image-seo-pipeline-route",
+              portfolioItemId: plan.portfolioItemId,
+              objectKey,
+              requestedWidth,
+              requestedHeight,
+              storageTransformExecuted: false,
+              cdnLoadVerified: false,
+              lighthouseAuditExecuted: false,
+            },
+          },
+          update: {},
+          select: { id: true, status: true, requestHash: true, result: true },
+        });
+
+        if (idempotency.requestHash !== requestHash) {
+          return { status: "idempotency_conflict" as const, idempotency };
+        }
+
+        if (idempotency.status === "completed") {
+          return {
+            status: "replayed" as const,
+            idempotency,
+            fileAssetId: resultString(idempotency.result, "fileAssetId"),
+            portfolioImageId: resultString(idempotency.result, "portfolioImageId"),
+            auditId: resultString(idempotency.result, "auditId"),
+          };
+        }
+
+        const existingFileAsset = await tx.fileAsset.findUnique({
+          where: { bucket_objectKey: { bucket: "portfolio-public-derivatives", objectKey } },
+          select: { tenantId: true },
+        });
+        if (existingFileAsset && existingFileAsset.tenantId !== tenantId) {
+          return { status: "file_asset_tenant_conflict" as const, idempotency };
+        }
+
         const fileAsset = await tx.fileAsset.upsert({
-          where: { bucket_objectKey: { bucket: "portfolio-public-derivatives", objectKey: primaryDerivative?.objectKey ?? plan.derivatives[0]!.objectKey } },
+          where: { bucket_objectKey: { bucket: "portfolio-public-derivatives", objectKey } },
           create: {
             tenantId,
             uploadedByUserId: actor.actorUserId,
             kind: "portfolio_image",
             visibility: "public",
             bucket: "portfolio-public-derivatives",
-            objectKey: primaryDerivative?.objectKey ?? plan.derivatives[0]!.objectKey,
+            objectKey,
             originalFilename: plan.filenameHint,
             mimeType: `image/${primaryDerivative?.format ?? "webp"}`,
             sizeBytes: numberValue(body.sizeBytes) ?? 1,
@@ -165,7 +243,9 @@ export async function POST(request: NextRequest) {
               fileAssetId: fileAsset.id,
               portfolioItemId: plan.portfolioItemId,
               derivativeCount: plan.derivatives.length,
-              sourceObjectKey: "[redacted-dashboard-field]",
+            sourceObjectKey: "[redacted-dashboard-field]",
+              idempotencyKeyId: idempotency.id,
+              requestHash,
               sourceRemainsPrivate: plan.sourceRemainsPrivate,
               cacheControl: plan.cacheControl,
               requiredEvidence: imageSeoPipelineRuntimeContract.requiredEvidence,
@@ -174,8 +254,75 @@ export async function POST(request: NextRequest) {
           select: { id: true },
         });
 
-        return { fileAssetId: fileAsset.id, portfolioImageId: portfolioImage.id, auditId: audit.id };
+        await tx.idempotencyKey.update({
+          where: { tenantId_scope_key: { tenantId, scope: "portfolio.image_seo_pipeline", key: idempotencyKey } },
+          data: {
+            status: "completed",
+            result: {
+              fileAssetId: fileAsset.id,
+              portfolioImageId: portfolioImage.id,
+              auditId: audit.id,
+              requestHash,
+              storageTransformExecuted: false,
+              cdnLoadVerified: false,
+              lighthouseAuditExecuted: false,
+            },
+          },
+        });
+
+        return { status: "persisted" as const, idempotency, fileAssetId: fileAsset.id, portfolioImageId: portfolioImage.id, auditId: audit.id };
       });
+
+      if (result.status === "portfolio_item_not_found") {
+        return json(
+          {
+            ok: false,
+            source: actor.source,
+            tenantId,
+            error: { code: "RELATED_RECORD_NOT_FOUND", message: "Image SEO portfolio item must exist for this tenant." },
+            gapIds: ["GAP-005", "GAP-077"],
+          },
+          404,
+        );
+      }
+
+      if (result.status === "idempotency_conflict") {
+        return json(
+          {
+            ok: false,
+            source: actor.source,
+            tenantId,
+            error: { code: "IDEMPOTENCY_CONFLICT", message: "Idempotency key was already used for a different image SEO payload." },
+            idempotencyKeyId: result.idempotency.id,
+            gapIds: ["GAP-005", "GAP-077"],
+            boundary: "Image SEO idempotency is request-hash guarded and defaults to denial on mismatched replay payloads.",
+          },
+          409,
+        );
+      }
+
+      if (result.status === "file_asset_tenant_conflict") {
+        return json(
+          {
+            ok: false,
+            source: actor.source,
+            tenantId,
+            error: { code: "TENANT_ASSET_CONFLICT", message: "Image SEO derivative object key is already owned by another tenant." },
+            idempotencyKeyId: result.idempotency.id,
+            gapIds: ["GAP-005", "GAP-077"],
+            boundary: "Image SEO derivative metadata denies cross-tenant FileAsset object-key collisions before writes.",
+          },
+          409,
+        );
+      }
+
+      persisted = {
+        fileAssetId: result.fileAssetId,
+        portfolioImageId: result.portfolioImageId,
+        auditId: result.auditId,
+        idempotencyKeyId: result.idempotency.id,
+        idempotencyReplay: result.status === "replayed",
+      };
     } catch (error) {
       if (process.env.NODE_ENV === "production" && isDatabaseUnavailable(error)) {
         return json(
@@ -201,6 +348,8 @@ export async function POST(request: NextRequest) {
     {
       ok: true,
       persistence: persisted ? "database" : "dry-run",
+      idempotencyKeyId: persisted?.idempotencyKeyId ?? null,
+      idempotencyReplay: persisted?.idempotencyReplay ?? false,
       plan,
       derivativeMetadata,
       persisted,

@@ -142,6 +142,160 @@ export async function persistDomainEventAuditRun(
   });
 }
 
+export type DomainEventAuditLifecycleKind = "booking" | "payment";
+
+export interface DomainEventAuditLifecycleTransactionInput {
+  readonly kind: DomainEventAuditLifecycleKind;
+  readonly tenantId: string;
+  readonly actorUserId: string;
+  readonly subjectId: string;
+  readonly previousStatus: string | null;
+  readonly nextStatus: string;
+  readonly idempotencyKey: string;
+  readonly rollbackReason?: string | null;
+}
+
+export interface DomainEventAuditLifecycleTransactionResult {
+  readonly status: "committed" | "replayed";
+  readonly kind: DomainEventAuditLifecycleKind;
+  readonly tenantId: string;
+  readonly subjectId: string;
+  readonly idempotencyKey: string;
+  readonly nextStatus: string;
+}
+
+export interface DomainEventAuditTransactionClient {
+  readonly idempotencyKey: {
+    findUnique(args: { where: { tenantId_scope_key: { tenantId: string; scope: string; key: string } }; select: { result: true } }): Promise<{ result: unknown } | null>;
+    create(args: { data: { tenantId: string; scope: string; key: string; status: string; metadata: Record<string, unknown> } }): Promise<unknown>;
+    update(args: { where: { tenantId_scope_key: { tenantId: string; scope: string; key: string } }; data: { status: string; result: DomainEventAuditLifecycleTransactionResult } }): Promise<unknown>;
+  };
+  readonly bookingRequest: {
+    update(args: { where: { id: string; tenantId: string }; data: { status: string } }): Promise<unknown>;
+  };
+  readonly bookingStateEvent: {
+    create(args: { data: { tenantId: string; bookingRequestId: string; actorUserId: string; type: string; fromStatus: string | null; toStatus: string; metadata: Record<string, unknown> } }): Promise<unknown>;
+  };
+  readonly payment: {
+    update(args: { where: { id: string; tenantId: string }; data: { status: string } }): Promise<unknown>;
+  };
+  readonly paymentAuditLog: {
+    create(args: { data: { tenantId: string; paymentId: string; actorUserId: string; action: string; metadata: Record<string, unknown> } }): Promise<unknown>;
+  };
+  readonly auditLog: {
+    create(args: { data: { tenantId: string; actorUserId: string; action: string; entityType: string; entityId: string; metadata: Record<string, unknown> } }): Promise<unknown>;
+  };
+}
+
+export interface DomainEventAuditTransactionRepository {
+  readonly $transaction: <T>(callback: (tx: DomainEventAuditTransactionClient) => Promise<T>) => Promise<T>;
+}
+
+function isDomainEventAuditLifecycleTransactionResult(value: unknown): value is DomainEventAuditLifecycleTransactionResult {
+  return Boolean(value && typeof value === "object" && "status" in value && "kind" in value && "subjectId" in value);
+}
+
+export async function executeDomainEventAuditLifecycleTransaction(
+  repository: DomainEventAuditTransactionRepository,
+  input: DomainEventAuditLifecycleTransactionInput,
+): Promise<DomainEventAuditLifecycleTransactionResult> {
+  const scope = `domain-event-audit:${input.kind}`;
+
+  return repository.$transaction(async (tx) => {
+    const existing = await tx.idempotencyKey.findUnique({
+      where: { tenantId_scope_key: { tenantId: input.tenantId, scope, key: input.idempotencyKey } },
+      select: { result: true },
+    });
+    if (existing && isDomainEventAuditLifecycleTransactionResult(existing.result)) {
+      return { ...existing.result, status: "replayed" };
+    }
+
+    await tx.idempotencyKey.create({
+      data: {
+        tenantId: input.tenantId,
+        scope,
+        key: input.idempotencyKey,
+        status: "claimed",
+        metadata: {
+          kind: input.kind,
+          subjectId: input.subjectId,
+          previousStatus: input.previousStatus,
+          nextStatus: input.nextStatus,
+        },
+      },
+    });
+
+    if (input.kind === "booking") {
+      await tx.bookingRequest.update({
+        where: { id: input.subjectId, tenantId: input.tenantId },
+        data: { status: input.nextStatus },
+      });
+      await tx.bookingStateEvent.create({
+        data: {
+          tenantId: input.tenantId,
+          bookingRequestId: input.subjectId,
+          actorUserId: input.actorUserId,
+          type: "status_changed",
+          fromStatus: input.previousStatus,
+          toStatus: input.nextStatus,
+          metadata: { idempotencyKey: input.idempotencyKey, rollbackReason: input.rollbackReason ?? null },
+        },
+      });
+    } else {
+      await tx.payment.update({
+        where: { id: input.subjectId, tenantId: input.tenantId },
+        data: { status: input.nextStatus },
+      });
+      await tx.paymentAuditLog.create({
+        data: {
+          tenantId: input.tenantId,
+          paymentId: input.subjectId,
+          actorUserId: input.actorUserId,
+          action: "payment_status_changed",
+          metadata: {
+            idempotencyKey: input.idempotencyKey,
+            previousStatus: input.previousStatus,
+            nextStatus: input.nextStatus,
+            rollbackReason: input.rollbackReason ?? null,
+          },
+        },
+      });
+    }
+
+    await tx.auditLog.create({
+      data: {
+        tenantId: input.tenantId,
+        actorUserId: input.actorUserId,
+        action: `${input.kind}:status_changed`,
+        entityType: input.kind === "booking" ? "BookingRequest" : "Payment",
+        entityId: input.subjectId,
+        metadata: {
+          idempotencyKey: input.idempotencyKey,
+          previousStatus: input.previousStatus,
+          nextStatus: input.nextStatus,
+          rollbackReason: input.rollbackReason ?? null,
+        },
+      },
+    });
+
+    const result: DomainEventAuditLifecycleTransactionResult = {
+      status: "committed",
+      kind: input.kind,
+      tenantId: input.tenantId,
+      subjectId: input.subjectId,
+      idempotencyKey: input.idempotencyKey,
+      nextStatus: input.nextStatus,
+    };
+
+    await tx.idempotencyKey.update({
+      where: { tenantId_scope_key: { tenantId: input.tenantId, scope, key: input.idempotencyKey } },
+      data: { status: "completed", result },
+    });
+
+    return result;
+  });
+}
+
 export const domainEventAuditRuntimeCommands = [
   "pnpm --filter @inkroute/booking typecheck",
   "pnpm --filter @inkroute/booking test",
@@ -497,8 +651,8 @@ export const domainEventAuditRuntimeReadiness = buildDomainEventAuditTransaction
   bookingTypecheckPassed: false,
   paymentTestsPassed: false,
   paymentTypecheckPassed: false,
-  prismaTransactionServicesImplemented: false,
-  tenantScopedRepositoriesImplemented: false,
+  prismaTransactionServicesImplemented: true,
+  tenantScopedRepositoriesImplemented: true,
   bookingStateMutationAtomicityPassed: false,
   paymentStateMutationAtomicityPassed: false,
   bookingStateEventRowsPersisted: false,

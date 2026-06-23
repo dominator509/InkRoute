@@ -73,6 +73,7 @@ export const signedIcsFeedRuntimeProofFiles = [
   "apps/web/tests/signed-ics-feed-runtime-static.test.ts",
   "apps/web/tests/ics-feed-route.test.ts",
   "apps/web/app/api/public/[tenantSlug]/calendar/[artistSlug]/travel.ics/route.ts",
+  "packages/db/prisma/schema.prisma",
   "testing/manifests/unit-test-manifest.json",
   ".github/workflows/ci.yml",
 ] as const;

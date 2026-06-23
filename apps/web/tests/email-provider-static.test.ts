@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import { createHmac } from "node:crypto";
 import { resolve } from "node:path";
 
 import {
@@ -12,6 +13,7 @@ import {
   sampleEmailConsent,
   sampleEmailContext,
   sanitizeEmailProviderSendResult,
+  verifyEmailWebhookSignature,
 } from "../lib/emailProvider";
 
 const repoRoot = resolve(__dirname, "../../..");
@@ -155,6 +157,45 @@ describe("email provider contract", () => {
     expect(readiness.blockers).toContain("NotificationDelivery persistence must be available before webhook reconciliation.");
   });
 
+  it("verifies Resend/Svix webhook signatures from raw bodies without trusting header presence alone", () => {
+    const rawBody = "{\"type\":\"email.delivered\"}";
+    const svixId = "msg_demo";
+    const svixTimestamp = "1780000000";
+    const secret = Buffer.from("email-webhook-secret").toString("base64");
+    const signature = createHmac("sha256", Buffer.from(secret, "base64"))
+      .update(`${svixId}.${svixTimestamp}.${rawBody}`)
+      .digest("base64");
+
+    const verified = verifyEmailWebhookSignature({
+      rawBody,
+      signatureHeader: `v1,${signature}`,
+      svixId,
+      svixTimestamp,
+      secret: `whsec_${secret}`,
+      nowMs: 1780000000 * 1000,
+    });
+    const mismatched = verifyEmailWebhookSignature({
+      rawBody,
+      signatureHeader: "v1,invalid",
+      svixId,
+      svixTimestamp,
+      secret: `whsec_${secret}`,
+      nowMs: 1780000000 * 1000,
+    });
+
+    expect(verified).toMatchObject({
+      verifierConfigured: true,
+      webhookSecretConfigured: true,
+      timestampWithinTolerance: true,
+      verified: true,
+      reason: "verified",
+    });
+    expect(mismatched).toMatchObject({
+      verified: false,
+      reason: "signature-mismatch",
+    });
+  });
+
   it("normalizes bounce/complaint/unsubscribe events into suppression reconciliation", () => {
     const reconciliation = buildEmailProviderReconciliation({
       eventId: "evt_demo",
@@ -171,6 +212,8 @@ describe("email provider contract", () => {
     const routeSource = readFileSync(resolve(repoRoot, "apps/web/app/api/webhooks/email/route.ts"), "utf8");
 
     expect(routeSource).toContain("buildEmailWebhookReadinessFromPayload");
+    expect(routeSource).toContain("verifyEmailWebhookSignature");
+    expect(routeSource).toContain("INVALID_EMAIL_PROVIDER_SIGNATURE");
     expect(routeSource).toContain("emailProviderContract");
     expect(routeSource).toContain("productionBoundary");
     expect(routeSource).toContain("PROVIDER_EMAIL_WEBHOOK_RECONCILIATION_NOT_CONFIGURED");

@@ -20,6 +20,7 @@ import {
   testingLaunchExecutionRuntimeMatrix,
   testingLaunchExecutionRuntimeProofFiles,
   testingLaunchExecutionRuntimeReadiness,
+  testingLaunchExecutionSurfaceContract,
   persistTestingLaunchExecutionRun,
 } from "../lib/testingLaunchExecutionRuntime";
 
@@ -68,6 +69,19 @@ describe("testing launch execution runtime contract", () => {
       "reports-artifact-retention",
       "ci-quality-run",
       "branch-protection-flaky-policy-secret-safety",
+    ]);
+    expect(testingLaunchExecutionSurfaceContract.map((entry) => entry.surfaceId)).toEqual([
+      "frozen-install",
+      "static-manifest-typecheck",
+      "unit-coverage",
+      "playwright-e2e",
+      "web-dashboard-builds",
+      "database-integration",
+      "provider-sandbox",
+      "mobile-simulator-device",
+      "ci-quality-run",
+      "branch-protection",
+      "secret-safe-artifacts",
     ]);
     expect(testingLaunchExecutionArtifactPaths).toContain("coverage/testing-launch-execution-runtime.json");
     expect(testingLaunchExecutionArtifactPaths).toContain("coverage/playwright-report");
@@ -168,8 +182,8 @@ describe("testing launch execution runtime contract", () => {
   it("keeps launch execution blocked until real command, provider, mobile, CI, and artifact evidence exists", () => {
     expect(testingLaunchExecutionRuntimeReadiness.status).toBe("blocked");
     expect(testingLaunchExecutionRuntimeReadiness.missingScripts).toEqual([]);
-    expect(testingLaunchExecutionRuntimeReadiness.requiredCommands).toEqual(testingLaunchExecutionRuntimeCommands);
-    expect(testingLaunchExecutionRuntimeReadiness.requiredEvidence).toEqual(testingLaunchExecutionEvidenceRequiredEvidence);
+    expect(testingLaunchExecutionRuntimeReadiness.requiredCommands).toBe(testingLaunchExecutionRuntimeCommands);
+    expect(testingLaunchExecutionRuntimeReadiness.requiredEvidence).toBe(testingLaunchExecutionEvidenceRequiredEvidence);
     expect(testingLaunchExecutionRuntimeReadiness.blockers).toContain(
       "pnpm install --frozen-lockfile must pass before testing launch execution is ready.",
     );
@@ -214,7 +228,7 @@ describe("testing launch execution runtime contract", () => {
     expect(decision.missingCommands).toEqual([]);
     expect(decision.missingArtifacts).toEqual([]);
     expect(decision.missingEvidence).toEqual([]);
-    expect(decision.requiredEvidence).toEqual(testingLaunchExecutionRunPersistenceContract.evidenceBooleans);
+    expect(decision.requiredEvidence).toBe(testingLaunchExecutionRunPersistenceContract.evidenceBooleans);
   });
 
   it("keeps testing launch execution classified, redacted, and externally gated", () => {
@@ -223,6 +237,35 @@ describe("testing launch execution runtime contract", () => {
     expect(executionPlan.externalCommands).toBe(testingLaunchExecutionExternalCommands);
     expect(executionPlan.localArtifacts).toBe(testingLaunchExecutionLocalArtifacts);
     expect(executionPlan.externalArtifacts).toBe(testingLaunchExecutionExternalArtifacts);
+    expect(executionPlan.surfaceContract).toBe(testingLaunchExecutionSurfaceContract);
+    expect(executionPlan.surfaceContract).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          surfaceId: "provider-sandbox",
+          requiredCommand: "provider sandbox test suite",
+          requiredArtifact: "coverage/testing-provider-sandbox-output-redacted.json",
+          executionBoundary: "provider-sandbox",
+          externalEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "ci-quality-run",
+          requiredCommand: "GitHub Actions CI quality run with retained artifacts",
+          requiredArtifact: "coverage/testing-ci-quality-run-redacted.json",
+          executionBoundary: "ci-proof",
+          externalEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "unit-coverage",
+          requiredCommand: "pnpm test:unit:coverage",
+          requiredArtifact: "coverage/testing-unit-coverage-summary.json",
+          executionBoundary: "local-command",
+          externalEvidenceRequired: false,
+          redactedArtifactRequired: true,
+        }),
+      ]),
+    );
     expect(executionPlan.localCommands).toContain("pnpm install --frozen-lockfile");
     expect(executionPlan.localCommands).toContain("pnpm test:e2e");
     expect(executionPlan.localCommands).toContain("security test suite");
@@ -306,8 +349,10 @@ describe("testing launch execution runtime contract", () => {
     expect(gapTracker).toContain("testingLaunchExecutionLocalCommands/testingLaunchExecutionExternalCommands");
     expect(gapTracker).toContain("testingLaunchExecutionPolicy");
     expect(gapTracker).toContain("testingLaunchExecutionRequiredExternalEvidence");
+    expect(gapTracker).toContain("testingLaunchExecutionSurfaceContract");
     expect(gapTracker).toContain("buildRedactedTestingLaunchExecutionArtifact");
     expect(gapTracker).toContain("buildTestingLaunchExecutionArtifactReview");
+    expect(gapTracker).toContain("Testing launch execution identity assertions pin exported local/external commands, artifacts, required external evidence, policy, surface contract, and persistence evidence helpers");
   });
 
   it("pins current testing launch execution proof files for GAP-012", () => {

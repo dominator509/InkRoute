@@ -37,11 +37,17 @@ describe("mobile push static contract", () => {
 
   it("requires provider repository hooks for receipts, invalid-token suppression, opt-outs, and audit logs", () => {
     expect(pushSource).toContain("ExpoPushProviderRepository");
+    expect(pushSource).toContain("PrismaExpoPushProviderRepositoryClient");
+    expect(pushSource).toContain("createPrismaExpoPushProviderRepository");
     expect(pushSource).toContain("persistPushToken");
     expect(pushSource).toContain("persistPushOptOut");
     expect(pushSource).toContain("claimReceiptIdempotency");
     expect(pushSource).toContain("suppressInvalidToken");
     expect(pushSource).toContain("persistAuditLog");
+    expect(pushSource).toContain("pushToken.upsert");
+    expect(pushSource).toContain("notificationInteraction.create");
+    expect(pushSource).toContain("notificationSuppression.upsert");
+    expect(pushSource).toContain("providerEvent.upsert");
   });
 
   it("persists only ready delivery, receipt, and tap plans through an adapter", () => {

@@ -21,6 +21,7 @@ import {
   buildAbuseEventPersistenceContract,
   buildAbuseControlRuntimeContract,
   buildRedactedAbuseControlArtifact,
+  persistAbuseEventOutcome,
 } from "../lib/abuseControlRuntime";
 
 function readWorkspaceFile(path: string) {
@@ -42,6 +43,9 @@ describe("GAP-101 abuse control runtime contract", () => {
     expect(source).toContain("reject-invalid-provider-webhook");
     expect(source).toContain("persist-redacted-abuse-event");
     expect(source).toContain("fail-closed-on-limiter-error");
+    expect(source).toContain("AbuseEventPersistenceClient");
+    expect(source).toContain("persistAbuseEventOutcome");
+    expect(source).toContain('action: "abuse.event.persisted"');
     expect(abuseControlRuntimePreview.plan.status).toBe("blocked");
     expect(abuseControlRuntimePreview.actions).toContain("apply-bot-challenge");
     expect(abuseControlRuntimePreview.plan.blockers).toContain("Distributed Redis/edge rate limiter must be configured before production abuse controls are ready.");
@@ -292,12 +296,14 @@ describe("GAP-101 abuse control runtime contract", () => {
     const plan = buildAbuseControlExecutionPlan();
 
     expect(plan.distributedLimiterExecutionAllowed).toBe(false);
+    expect(plan.abuseEventPersistenceContractAvailable).toBe(true);
     expect(plan.botChallengeExecutionAllowed).toBe(false);
     expect(plan.webhookBypassExecutionAllowed).toBe(false);
     expect(plan.alertDeliveryExecutionAllowed).toBe(false);
     expect(plan.failClosedExecutionAllowed).toBe(false);
     expect(plan.publicRouteIntegrationExecutionAllowed).toBe(false);
     expect(plan.policy).toBe(abuseControlExecutionPolicy);
+    expect(plan.policy.abuseEventPersistenceContractAvailable).toBe(true);
     expect(plan.externalEvidenceRequired).toBe(abuseControlRequiredExternalEvidence);
     expect(abuseControlExecutionPolicy.externalEvidenceRequired).toBe(abuseControlRequiredExternalEvidence);
     expect(abuseControlRequiredExternalEvidence).toEqual(expect.arrayContaining([
@@ -319,6 +325,59 @@ describe("GAP-101 abuse control runtime contract", () => {
       "coverage/abuse-fail-closed.json",
     ]));
     expect(plan.disabledReasons.join(" ")).toContain("Distributed limiter proof requires Redis/Upstash or edge provider execution.");
+  });
+
+  it("persists privacy-safe AbuseEvent rows and redacted AuditLog metadata", async () => {
+    const writes: unknown[] = [];
+    const result = await persistAbuseEventOutcome(
+      {
+        abuseEvent: {
+          async create(input) {
+            writes.push(input);
+            return { id: "abuse_event_demo" };
+          },
+        },
+        auditLog: {
+          async create(input) {
+            writes.push(input);
+            return {};
+          },
+        },
+      },
+      {
+        tenantId: "tenant_demo",
+        actorUserId: "user_demo",
+        routeFamily: "dashboard-mutation",
+        routePattern: "/api/security/privacy-requests",
+        abuseKeyHash: "sha256:tenant-route-user-redacted",
+        ipHash: "sha256:redacted",
+        userAgentHash: "sha256:redacted",
+        action: "fail_closed",
+        reason: "Limiter provider failed closed before handler execution.",
+        limiterProvider: "upstash",
+        limiterDecision: "failed_closed",
+        observedRequests: 1,
+        windowSeconds: 60,
+        botChallengeRequired: false,
+        alertDispatchedAt: "2026-06-09T00:40:00.000Z",
+        failClosed: true,
+      },
+    );
+
+    const serialized = JSON.stringify(writes);
+    expect(result).toMatchObject({
+      persisted: true,
+      auditAction: "abuse.event.persisted",
+      abuseEventId: "abuse_event_demo",
+      limiterDecision: "failed_closed",
+      failClosed: true,
+    });
+    expect(serialized).toContain('"tenantId":"tenant_demo"');
+    expect(serialized).toContain('"entityType":"AbuseEvent"');
+    expect(serialized).toContain('"action":"abuse.event.persisted"');
+    expect(serialized).not.toContain("Authorization");
+    expect(serialized).not.toContain("providerSignature");
+    expect(serialized).not.toContain("messageBody");
   });
 
   it("redacts GAP-101 abuse-control artifacts before review", () => {

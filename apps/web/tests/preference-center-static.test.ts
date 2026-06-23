@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   buildRedactedPreferenceMetadata,
   createInMemoryPreferenceRepository,
+  createPrismaPreferenceRepository,
   executePreferenceMutation,
   preferenceCenterContract,
 } from "../lib/preferenceCenter";
@@ -93,22 +94,123 @@ describe("preference center and unsubscribe contract", () => {
     expect(repository.state.preferenceAudits.length).toBeGreaterThanOrEqual(4);
   });
 
+  it("maps the Prisma preference repository to hash-only token, preference, suppression, tenant setting, idempotency, and audit writes", async () => {
+    const writes: string[] = [];
+    const idempotencyRows = new Map<string, { metadata: { action: string } }>();
+    const repository = createPrismaPreferenceRepository({
+      preferenceToken: {
+        create: async ({ data }) => {
+          writes.push(`token:${data.tokenHash}`);
+          return data;
+        },
+      },
+      idempotencyKey: {
+        findUnique: async ({ where }) => idempotencyRows.get(where.tenantId_scope_key.key) ?? null,
+        create: async ({ data }) => {
+          idempotencyRows.set(data.key, { metadata: { action: String(data.metadata.action) } });
+          writes.push(`idempotency:${data.key}`);
+          return data;
+        },
+      },
+      notificationChannelPreference: {
+        upsert: async ({ where }) => {
+          writes.push(`preference:${where.tenantId_subjectType_subjectId_channel.channel}`);
+          return where;
+        },
+      },
+      notificationSuppression: {
+        upsert: async ({ where }) => {
+          writes.push(`suppression:${where.tenantId_channel_destinationHash_reason.reason}`);
+          return where;
+        },
+      },
+      tenantNotificationSetting: {
+        upsert: async ({ where }) => {
+          writes.push(`tenant-setting:${where.tenantId_channel.channel}`);
+          return where;
+        },
+      },
+      auditLog: {
+        create: async ({ data }) => {
+          writes.push(`audit:${data.action}`);
+          return data;
+        },
+      },
+    });
+
+    const issued = await executePreferenceMutation(repository, preferenceCenterContract.issueTokenPlan);
+    const unsubscribed = await executePreferenceMutation(repository, preferenceCenterContract.unsubscribeEmailPlan);
+    const tenantSettings = await executePreferenceMutation(repository, preferenceCenterContract.tenantSettingsPlan);
+
+    expect(issued.status).toBe("processed");
+    expect(unsubscribed.status).toBe("processed");
+    expect(tenantSettings.status).toBe("processed");
+    expect(writes.join(" ")).not.toContain("pref_demo_token");
+    expect(writes).toEqual(expect.arrayContaining([
+      expect.stringMatching(/^token:pref_hash_/),
+      "preference:email",
+      "suppression:unsubscribe_email",
+      "tenant-setting:email",
+      "audit:preference.issue_preference_token",
+    ]));
+  });
+
   it("wires preference and unsubscribe APIs with no-store responses and raw-token avoidance", () => {
     expect(preferenceRouteSource).toContain("export async function GET");
     expect(preferenceRouteSource).toContain("export async function POST");
     expect(preferenceRouteSource).toContain("buildPreferencePlanFromRequest");
+    expect(preferenceRouteSource).toContain("buildPreferenceTokenHash");
+    expect(preferenceRouteSource).toContain("tokenValidationResponse");
+    expect(preferenceRouteSource).toContain("PREFERENCE_TOKEN_INVALID");
+    expect(preferenceRouteSource).toContain("PREFERENCE_TOKEN_MISSING");
+    expect(preferenceRouteSource).toContain("PREFERENCE_TOKEN_FORGED");
+    expect(preferenceRouteSource).toContain("PREFERENCE_TOKEN_EXPIRED");
+    expect(preferenceRouteSource).toContain("PREFERENCE_TOKEN_REUSED");
+    expect(preferenceRouteSource).toContain("PREFERENCE_TOKEN_REVOKED");
+    expect(preferenceRouteSource).toContain("preferenceToken.findFirst");
+    expect(preferenceRouteSource).toContain("preferenceToken.create");
+    expect(preferenceRouteSource).toContain("preferenceToken.expiresAt.getTime() <= Date.now()");
+    expect(preferenceRouteSource).toContain("resolvePreferenceTenant");
+    expect(preferenceRouteSource).toContain("persistPreferenceMutation");
+    expect(preferenceRouteSource).toContain("notificationChannelPreference.upsert");
+    expect(preferenceRouteSource).toContain("notificationSuppression.upsert");
+    expect(preferenceRouteSource).toContain("idempotencyKey.upsert");
+    expect(preferenceRouteSource).toContain("auditLog.create");
+    expect(preferenceRouteSource).toContain("preference.public_mutation");
     expect(preferenceRouteSource).toContain('"Cache-Control": "no-store"');
     expect(preferenceRouteSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(preferenceRouteSource).not.toContain('}, { status: 400 });');
     expect(preferenceRouteSource).toContain("PROVIDER_PREFERENCE_PERSISTENCE_NOT_CONFIGURED");
     expect(preferenceRouteSource).toContain("localContractMutationFallbackDisabled");
     expect(unsubscribeRouteSource).toContain('action: "unsubscribe_email"');
+    expect(unsubscribeRouteSource).toContain("buildPreferenceTokenHash");
+    expect(unsubscribeRouteSource).toContain("x-preference-token");
     expect(unsubscribeRouteSource).toContain("x-preference-token-hash");
+    expect(unsubscribeRouteSource).toContain("tokenValidationResponse");
+    expect(unsubscribeRouteSource).toContain("PREFERENCE_TOKEN_INVALID");
+    expect(unsubscribeRouteSource).toContain("PREFERENCE_TOKEN_MISSING");
+    expect(unsubscribeRouteSource).toContain("PREFERENCE_TOKEN_FORGED");
+    expect(unsubscribeRouteSource).toContain("PREFERENCE_TOKEN_EXPIRED");
+    expect(unsubscribeRouteSource).toContain("PREFERENCE_TOKEN_REUSED");
+    expect(unsubscribeRouteSource).toContain("PREFERENCE_TOKEN_REVOKED");
+    expect(unsubscribeRouteSource).toContain("preferenceToken.findFirst");
+    expect(unsubscribeRouteSource).toContain("preferenceToken.update");
+    expect(unsubscribeRouteSource).toContain("preferenceToken.expiresAt.getTime() <= Date.now()");
+    expect(unsubscribeRouteSource).toContain("usedAt: new Date()");
+    expect(unsubscribeRouteSource).toContain("resolveUnsubscribeTenant");
+    expect(unsubscribeRouteSource).toContain("persistUnsubscribe");
+    expect(unsubscribeRouteSource).toContain("notificationChannelPreference.upsert");
+    expect(unsubscribeRouteSource).toContain("notificationSuppression.upsert");
+    expect(unsubscribeRouteSource).toContain("idempotencyKey.upsert");
+    expect(unsubscribeRouteSource).toContain("auditLog.create");
+    expect(unsubscribeRouteSource).toContain("preference.one_click_unsubscribe");
     expect(unsubscribeRouteSource).toContain("listUnsubscribeHeaders");
     expect(unsubscribeRouteSource).toContain("PROVIDER_UNSUBSCRIBE_PERSISTENCE_NOT_CONFIGURED");
     expect(unsubscribeRouteSource).toContain("localContractUnsubscribeFallbackDisabled");
     expect(unsubscribeRouteSource).not.toContain("writePlanOnlyUnsubscribeDisabled");
     expect(unsubscribeRouteSource).toContain("never stores raw preference tokens");
+    expect(unsubscribeRouteSource).toContain("rejects missing, forged, expired, reused, or revoked preference tokens");
+    expect(preferenceRouteSource).toContain("reject missing, forged, expired, reused, or revoked preference tokens");
     expect(preferenceRouteSource).toContain("localContractMutationFallbackDisabled");
     expect(preferenceRouteSource).toContain("Preference POST returns the local mutation contract");
     expect(preferenceRouteSource).not.toContain("writePlanOnlyMutationDisabled");

@@ -11,13 +11,12 @@ describe("dashboard auth middleware contract", () => {
     expect(middlewareSource).toContain("resolveDashboardActor(request)");
     expect(middlewareSource).toContain("evaluateDashboardRouteGuard");
     expect(middlewareSource).toContain("toTenantAccessContext(actor)");
-    expect(middlewareSource).toContain('permission: "booking:read"');
+    expect(middlewareSource).toContain("resolveDashboardPermissionForRoute(path, request.method)");
   });
 
   it("preserves login and tenant-switch redirects with no-store auth guard headers", () => {
     expect(middlewareSource).toContain('guard.action === "redirect_login" || guard.action === "redirect_tenant_switch"');
-    expect(middlewareSource).toContain('guard.redirectTo ?? "/login"');
-    expect(middlewareSource).toContain('new URL(`/login?next=${encodeURIComponent(path)}`, request.url)');
+    expect(middlewareSource).toContain('new URL(`/login?next=${encodeURIComponent(request.nextUrl.pathname)}`, request.url)');
     expect(middlewareSource).toContain('response.headers.set("Cache-Control", "no-store")');
     expect(middlewareSource).toContain('response.headers.set("x-inkroute-dashboard-auth-guard"');
   });

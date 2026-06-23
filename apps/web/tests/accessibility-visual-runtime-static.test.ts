@@ -13,6 +13,7 @@ import {
   accessibilityVisualRuntimeProofFiles,
   accessibilityVisualRuntimeReadiness,
   accessibilityVisualRuntimeRequiredExternalEvidence,
+  accessibilityVisualSurfaceContract,
   accessibilityVisualRuntimeSpecFiles,
   buildRedactedAccessibilityVisualArtifact,
   buildAccessibilityVisualRuntimeArtifactReview,
@@ -66,6 +67,17 @@ describe("GAP-109 accessibility and visual runtime wiring", () => {
       ])
     );
     expect(accessibilityVisualRuntimeMatrix.map((entry) => entry.id)).toEqual([
+      "web-playwright-a11y",
+      "dashboard-playwright-a11y",
+      "axe-reports",
+      "lighthouse-budgets",
+      "contrast-audit",
+      "responsive-layout",
+      "screen-reader-mobile-qa",
+      "visual-baselines-diffs",
+      "ci-regression-triage"
+    ]);
+    expect(accessibilityVisualSurfaceContract.map((entry) => entry.surfaceId)).toEqual([
       "web-playwright-a11y",
       "dashboard-playwright-a11y",
       "axe-reports",
@@ -194,6 +206,7 @@ describe("GAP-109 accessibility and visual runtime wiring", () => {
     expect(gapTracker).toContain("GAP-109 is accessibility-visual-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("persistAccessibilityVisualRun upsert seam");
     expect(gapTracker).toContain("accessibilityVisualRuntimeExternalArtifacts");
+    expect(gapTracker).toContain("accessibilityVisualSurfaceContract");
   });
 
   it("classifies GAP-109 evidence as blocked until automated, manual, visual, and CI proof is captured", () => {
@@ -255,6 +268,8 @@ describe("GAP-109 accessibility and visual runtime wiring", () => {
         "coverage/accessibility-visual-ci-run-redacted.json",
       ]),
     );
+    expect(blockedDecision.requiredCommands).toBe(accessibilityVisualRuntimeCommands);
+    expect(blockedDecision.requiredEvidence).toBe(accessibilityVisualRuntimeArtifactPaths);
     expect(blockedDecision.qaPolicy).toEqual({
       automatedAndManualProofRequired: true,
       visualDiffsMustBeReviewed: true,
@@ -301,6 +316,33 @@ describe("GAP-109 accessibility and visual runtime wiring", () => {
     expect(plan.localCommands).toBe(accessibilityVisualRuntimeLocalCommands);
     expect(plan.localArtifacts).toBe(accessibilityVisualRuntimeLocalArtifacts);
     expect(plan.externalArtifacts).toBe(accessibilityVisualRuntimeExternalArtifacts);
+    expect(plan.surfaceContract).toBe(accessibilityVisualSurfaceContract);
+    expect(plan.surfaceContract).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        surfaceId: "dashboard-playwright-a11y",
+        requiredCommand: "pnpm test:e2e --project=dashboard-chromium --grep @a11y",
+        requiredArtifact: "coverage/accessibility-dashboard-a11y-results.json",
+        proofBoundary: "dashboard-a11y",
+        browserOrDeviceEvidenceRequired: true,
+        redactedArtifactRequired: true,
+      }),
+      expect.objectContaining({
+        surfaceId: "screen-reader-mobile-qa",
+        requiredCommand: "manual screen-reader and mobile accessibility QA pass",
+        requiredArtifact: "coverage/accessibility-screen-reader-notes.md",
+        proofBoundary: "manual-qa",
+        browserOrDeviceEvidenceRequired: true,
+        redactedArtifactRequired: true,
+      }),
+      expect.objectContaining({
+        surfaceId: "ci-regression-triage",
+        requiredCommand: "GitHub Actions accessibility/visual job",
+        requiredArtifact: "coverage/accessibility-visual-ci-run-redacted.json",
+        proofBoundary: "ci-proof",
+        browserOrDeviceEvidenceRequired: true,
+        redactedArtifactRequired: true,
+      }),
+    ]));
     expect(accessibilityVisualRuntimeExecutionPolicy.externalEvidenceRequired).toBe(accessibilityVisualRuntimeRequiredExternalEvidence);
     expect(accessibilityVisualRuntimeRequiredExternalEvidence).toEqual(expect.arrayContaining([
       "Web and dashboard Playwright @a11y proof",

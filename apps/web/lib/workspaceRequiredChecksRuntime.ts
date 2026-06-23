@@ -120,6 +120,7 @@ export const workspaceRequiredChecksArtifactPaths = [
   "coverage/workspace-required-checks-failing-workspace-pr-redacted.json",
   "coverage/workspace-required-checks-failing-gap-diff-pr-redacted.json",
   "coverage/workspace-required-checks-redacted-logs.json",
+  "coverage/workspace-required-checks-redacted-evidence-bundle.json",
   "test-results/workspace-required-checks-runtime",
 ] as const;
 
@@ -158,6 +159,7 @@ export interface WorkspaceRequiredChecksEvidenceInput {
   readonly evidenceCaptured: boolean;
   readonly logsRedacted: boolean;
   readonly workspaceRequiredChecksRunPersisted: boolean;
+  readonly redactedEvidenceBundleCaptured: boolean;
   readonly protectedBranchRequiredChecks: readonly string[];
   readonly capturedArtifacts: readonly WorkspaceRequiredChecksArtifact[];
   readonly completedCommands: readonly WorkspaceRequiredChecksCommand[];
@@ -200,6 +202,15 @@ export interface WorkspaceRequiredChecksArtifactReview {
   readonly safeForTracker: boolean;
 }
 
+export interface WorkspaceRequiredChecksRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly artifactPath: "coverage/workspace-required-checks-redacted-evidence-bundle.json";
+  readonly review: WorkspaceRequiredChecksArtifactReview;
+  readonly requiredArtifacts: typeof workspaceRequiredChecksArtifactPaths;
+  readonly requiredExternalEvidence: typeof workspaceRequiredChecksRequiredExternalEvidence;
+  readonly providerExecutionAllowed: false;
+}
+
 export const workspaceRequiredChecksLocalCommands = [
   "pnpm workspace:required-checks",
   "pnpm workspace:all",
@@ -221,6 +232,7 @@ export const workspaceRequiredChecksRequiredExternalEvidence = [
   "Failing workspace-audit PR and PR GAP tracker diff evidence merge-block proof captured from GitHub.",
   "Required-check evidence logs reviewed as redacted and secret-free.",
   "Durable WorkspaceRequiredChecksRun persistence row captured from the target database.",
+  "Redacted workspace required-checks evidence bundle captured without raw GitHub settings, merge-block logs, tokens, URLs, or actor identifiers.",
 ] as const;
 
 export const workspaceRequiredChecksLocalArtifacts = [
@@ -236,6 +248,7 @@ export const workspaceRequiredChecksExternalArtifacts = [
   "coverage/workspace-required-checks-failing-workspace-pr-redacted.json",
   "coverage/workspace-required-checks-failing-gap-diff-pr-redacted.json",
   "coverage/workspace-required-checks-redacted-logs.json",
+  "coverage/workspace-required-checks-redacted-evidence-bundle.json",
   "test-results/workspace-required-checks-runtime",
 ] as const satisfies readonly WorkspaceRequiredChecksArtifact[];
 
@@ -330,6 +343,12 @@ export const workspaceRequiredChecksRuntimeMatrix = [
     artifact: "coverage/workspace-required-checks-redacted-logs.json",
     status: "redaction-gated",
   },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted workspace required-checks evidence bundle",
+    artifact: "coverage/workspace-required-checks-redacted-evidence-bundle.json",
+    status: "redaction-gated",
+  },
 ] as const satisfies readonly WorkspaceRequiredChecksRuntimeMatrixEntry[];
 
 export const workspaceRequiredChecksReadiness = buildWorkspaceRequiredChecksReadinessPlan({
@@ -373,6 +392,9 @@ export function buildWorkspaceRequiredChecksEvidenceDecision(
   }
   if (!input.workspaceRequiredChecksRunPersisted) {
     blockers.push("WorkspaceRequiredChecksRun persistence row must be captured for durable auditability.");
+  }
+  if (!input.redactedEvidenceBundleCaptured) {
+    blockers.push("Redacted workspace required-checks evidence bundle must be captured.");
   }
   if (missingArtifacts.length > 0) {
     blockers.push("Every required workspace checks artifact must be captured.");
@@ -469,6 +491,19 @@ export function buildWorkspaceRequiredChecksArtifactReview(
     redactions,
     requiredExternalEvidence: workspaceRequiredChecksRequiredExternalEvidence,
     safeForTracker: true,
+  };
+}
+
+export function buildWorkspaceRequiredChecksRedactedEvidenceBundle(
+  artifact: unknown,
+): WorkspaceRequiredChecksRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    artifactPath: "coverage/workspace-required-checks-redacted-evidence-bundle.json",
+    review: buildWorkspaceRequiredChecksArtifactReview(artifact),
+    requiredArtifacts: workspaceRequiredChecksArtifactPaths,
+    requiredExternalEvidence: workspaceRequiredChecksRequiredExternalEvidence,
+    providerExecutionAllowed: false,
   };
 }
 

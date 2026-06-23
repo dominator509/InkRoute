@@ -2,8 +2,42 @@ import { Text, View } from "react-native";
 import { MobileCard } from "../components/MobileCard";
 import { MobilePill } from "../components/MobilePill";
 import { MobileScreen } from "../components/MobileScreen";
-import { mobileApiSyncPreview } from "../lib/mobileApiClient";
+import { mobileApiFetch, mobileApiSyncPreview, type MobileApiResponseEnvelope, type MobileApiSession } from "../lib/mobileApiClient";
 import { mobileBookingLifecycleActionContract, mobileBookingQueue } from "../lib/mobileDemo";
+
+export interface MobileBookingRequestSummary {
+  id: string;
+  client: string;
+  city: string;
+  status: string;
+  score: number;
+}
+
+export function loadMobileBookingRequests(
+  session: MobileApiSession,
+  requestId = `mobile-bookings:${session.tenantId}`,
+): Promise<MobileApiResponseEnvelope<MobileBookingRequestSummary[]>> {
+  return mobileApiFetch<MobileBookingRequestSummary[]>(session, {
+    domain: "bookings",
+    method: "GET",
+    path: "/api/mobile/bookings",
+    requestId,
+  });
+}
+
+export function submitMobileBookingLifecycleAction(
+  session: MobileApiSession,
+  input: { bookingId: string; action: "accept" | "decline" | "request_changes"; idempotencyKey: string; requestId?: string },
+): Promise<MobileApiResponseEnvelope<{ bookingId: string; status: string }>> {
+  return mobileApiFetch<{ bookingId: string; status: string }>(session, {
+    domain: "bookings",
+    method: "PATCH",
+    path: `/api/mobile/bookings/${encodeURIComponent(input.bookingId)}/actions`,
+    requestId: input.requestId ?? `mobile-booking-action:${input.bookingId}`,
+    idempotencyKey: input.idempotencyKey,
+    body: { action: input.action },
+  });
+}
 
 export function BookingRequestsScreen() {
   return (

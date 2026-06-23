@@ -1,4 +1,4 @@
-﻿import { buildProductionLaunchEvidenceRuntimeReadinessPlan } from "@inkroute/deployment";
+import { buildProductionLaunchEvidenceRuntimeReadinessPlan } from "@inkroute/deployment";
 import type { ProductionLaunchEvidenceBundleId } from "@inkroute/deployment";
 
 export type ProductionLaunchEvidenceRuntimeStatus =
@@ -75,6 +75,7 @@ export const productionLaunchEvidenceRuntimeArtifactPaths = [
   "coverage/production-launch-checklist-blockers.json",
   "coverage/production-launch-approval-redacted.json",
   "coverage/production-launch-ci-run-redacted.json",
+  "coverage/production-launch-redacted-evidence-bundle.json",
   "test-results/production-launch-evidence-runtime"
 ] as const;
 
@@ -125,6 +126,7 @@ export const productionLaunchEvidenceRuntimeRequiredExternalEvidence = [
   "Legal approval and explicit production approval must be human-reviewed, redacted, and captured only after every bundle is verified.",
   "Rollback and operations artifacts must prove approved runtime execution and redact incident owner contact details.",
   "Launch evidence artifacts must redact provider IDs, database URLs, run URLs, reviewer contacts, customer data, and approval payloads.",
+  "Redacted production launch evidence bundle captured without raw provider IDs, database URLs, run URLs, reviewer contacts, customer data, approval payloads, rollback owner contacts, or production URLs.",
 ] as const;
 
 export type ProductionLaunchEvidenceRuntimeExecutionPolicy = {
@@ -167,6 +169,7 @@ export const productionLaunchEvidenceRuntimeExternalArtifacts = [
   "coverage/production-launch-rollback-operations-redacted.json",
   "coverage/production-launch-approval-redacted.json",
   "coverage/production-launch-ci-run-redacted.json",
+  "coverage/production-launch-redacted-evidence-bundle.json",
 ] as const satisfies readonly ProductionLaunchEvidenceRuntimeArtifact[];
 
 export type ProductionLaunchEvidenceRuntimeEvidenceInput = {
@@ -219,6 +222,16 @@ export interface ProductionLaunchEvidenceRuntimeExecutionPlan {
   readonly ciArtifactExecutionAllowed: false;
   readonly executionPolicy: typeof productionLaunchEvidenceRuntimeExecutionPolicy;
   readonly externalEvidenceRequired: typeof productionLaunchEvidenceRuntimeRequiredExternalEvidence;
+}
+
+export interface ProductionLaunchEvidenceRuntimeRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly artifactPath: "coverage/production-launch-redacted-evidence-bundle.json";
+  readonly review: ProductionLaunchEvidenceRuntimeArtifactReview;
+  readonly requiredArtifacts: typeof productionLaunchEvidenceRuntimeArtifactPaths;
+  readonly externalEvidenceRequired: typeof productionLaunchEvidenceRuntimeRequiredExternalEvidence;
+  readonly approvalExecutionAllowed: false;
+  readonly ciArtifactExecutionAllowed: false;
 }
 
 export interface ProductionLaunchEvidenceRuntimeArtifactReview {
@@ -364,6 +377,21 @@ export function buildProductionLaunchEvidenceRuntimeArtifactReview(
   };
 }
 
+export function buildProductionLaunchEvidenceRuntimeRedactedEvidenceBundle(
+  artifactPath: ProductionLaunchEvidenceRuntimeArtifact | string,
+  artifact: unknown,
+): ProductionLaunchEvidenceRuntimeRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    artifactPath: "coverage/production-launch-redacted-evidence-bundle.json",
+    review: buildProductionLaunchEvidenceRuntimeArtifactReview(artifactPath, artifact),
+    requiredArtifacts: productionLaunchEvidenceRuntimeArtifactPaths,
+    externalEvidenceRequired: productionLaunchEvidenceRuntimeRequiredExternalEvidence,
+    approvalExecutionAllowed: false,
+    ciArtifactExecutionAllowed: false,
+  };
+}
+
 export const productionLaunchEvidenceRuntimeMatrix: readonly ProductionLaunchEvidenceRuntimeMatrixEntry[] = [
   {
     id: "launch-evidence-verifier",
@@ -423,6 +451,12 @@ export const productionLaunchEvidenceRuntimeMatrix: readonly ProductionLaunchEvi
     id: "final-approval-record",
     command: "capture explicit redacted production approval after every bundle is verified",
     artifact: "coverage/production-launch-approval-redacted.json",
+    status: "approval-gated"
+  },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted production launch evidence bundle",
+    artifact: "coverage/production-launch-redacted-evidence-bundle.json",
     status: "approval-gated"
   }
 ];

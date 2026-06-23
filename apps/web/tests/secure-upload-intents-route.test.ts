@@ -40,6 +40,13 @@ describe("public secure upload intent route", () => {
     expect(routeSource).toContain("buildSignedUploadIntentPlan");
     expect(routeSource).toContain("validateUploadDraft");
     expect(routeSource).toContain("persistUploadIntent");
+    expect(routeSource).toContain("resolveUploadTenant");
+    expect(routeSource).toContain("tx.fileAsset.create");
+    expect(routeSource).toContain("tx.signedUrlGrant.create");
+    expect(routeSource).toContain("tx.referenceImage.create");
+    expect(routeSource).toContain("tx.auditLog.create");
+    expect(routeSource).toContain("PUBLIC_UPLOAD_BOOKING_CONTEXT_REQUIRED");
+    expect(routeSource).toContain("file.public_signed_upload.intent");
     expect(routeSource).toContain("declaredByAuthenticatedUser");
     expect(routeSource).toContain("localUploadIntentDisabled");
     expect(routeSource).toContain("providerSignedUploadUrlIssued");

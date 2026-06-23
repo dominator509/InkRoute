@@ -23,8 +23,13 @@ const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "
 describe("dashboard notification scheduler runtime contract", () => {
   const notificationsPackageJson = readRepoFile("packages/notifications/package.json");
   const notificationsSource = readRepoFile("packages/notifications/src/index.ts");
+  const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
+  const notificationWorkerMigration = readRepoFile(
+    "packages/db/prisma/migrations/20260623093000_add_notification_worker_jobs/migration.sql",
+  );
   const schedulerSource = readRepoFile("apps/dashboard/lib/notificationScheduler.ts");
   const routeSource = readRepoFile("apps/dashboard/app/api/notifications/scheduler/route.ts");
+  const queueRouteSource = readRepoFile("apps/dashboard/app/api/notifications/queue/route.ts");
   const pageSource = readRepoFile("apps/dashboard/app/templates/page.tsx");
   const actionPanelSource = readRepoFile("apps/dashboard/components/NotificationSchedulerActionPanel.tsx");
   const staticTest = readRepoFile("apps/dashboard/tests/notification-scheduler-static.test.ts");
@@ -76,12 +81,43 @@ describe("dashboard notification scheduler runtime contract", () => {
     expect(notificationsSource).toContain("buildNotificationSchedulerPlan");
     expect(schedulerSource).toContain("executeNotificationSchedulerPlan");
     expect(schedulerSource).toContain("createInMemoryNotificationSchedulerRepository");
+    expect(schedulerSource).toContain("PrismaNotificationSchedulerWorkerRepositoryClient");
+    expect(schedulerSource).toContain("createPrismaNotificationSchedulerWorkerRepository");
+    expect(schedulerSource).toContain('notificationSchedulerWorkerIdempotencyScope = "notification.scheduler.worker"');
     expect(schedulerSource).toContain("buildRedactedNotificationSchedulerMetadata");
     expect(schedulerSource).toContain("persistNotificationJobs");
     expect(schedulerSource).toContain("persistDeadLetter");
     expect(schedulerSource).toContain("persistWorkerAuditLog");
+    expect(schedulerSource).toContain("client.notificationJob.createMany");
+    expect(schedulerSource).toContain("client.deadLetterJob.create");
+    expect(schedulerSource).toContain("client.notificationWorkerAuditLog.create");
+    expect(prismaSchema).toContain("model NotificationJob");
+    expect(prismaSchema).toContain("model DeadLetterJob");
+    expect(prismaSchema).toContain("model NotificationWorkerAuditLog");
+    expect(prismaSchema).toContain("@@index([tenantId, state, availableAt])");
+    expect(notificationWorkerMigration).toContain('CREATE TABLE "NotificationJob"');
+    expect(notificationWorkerMigration).toContain('CREATE TABLE "DeadLetterJob"');
+    expect(notificationWorkerMigration).toContain('CREATE TABLE "NotificationWorkerAuditLog"');
     expect(routeSource).toContain('assertPermission(actor, "message:write")');
     expect(routeSource).toContain("buildDashboardSchedulerPlanFromAction");
+    expect(routeSource).toContain('export const runtime = "nodejs"');
+    expect(routeSource).toContain("tx.appointment.findFirst");
+    expect(routeSource).toContain("tx.bookingRequest.findFirst");
+    expect(routeSource).toContain("tx.idempotencyKey.upsert");
+    expect(routeSource).toContain("tx.notification.create");
+    expect(routeSource).toContain("tx.notificationDelivery.create");
+    expect(routeSource).toContain("tx.notificationProviderHandoff.create");
+    expect(routeSource).toContain("tx.auditLog.create");
+    expect(routeSource).toContain("idempotencyKeyId");
+    expect(routeSource).toContain("idempotencyReplay");
+    expect(queueRouteSource).toContain('export const runtime = "nodejs"');
+    expect(queueRouteSource).toContain("tx.idempotencyKey.upsert");
+    expect(queueRouteSource).toContain("requestHash");
+    expect(queueRouteSource).toContain('status: "idempotency_conflict"');
+    expect(queueRouteSource).toContain('code: "IDEMPOTENCY_CONFLICT"');
+    expect(queueRouteSource).toContain("tx.idempotencyKey.update");
+    expect(queueRouteSource).toContain("idempotencyKeyId");
+    expect(queueRouteSource).toContain("idempotencyReplay");
     expect(routeSource).toContain("NOTIFICATION_SCHEDULER_PERSISTENCE_NOT_CONFIGURED");
     expect(routeSource).toContain("schedulerLocalContractFallbackDisabled");
     expect(routeSource).not.toContain("schedulerPlanOnlyWritesDisabled");
@@ -100,12 +136,13 @@ describe("dashboard notification scheduler runtime contract", () => {
   it("keeps backend, persistence, worker, provider, concurrency, integration, CI, and artifact blockers explicit", () => {
     expect(notificationSchedulerRuntimeReadiness.status).toBe("blocked");
     expect(notificationSchedulerRuntimeReadiness.missingScripts).toEqual([]);
-    expect(notificationSchedulerRuntimeReadiness.requiredCommands).toEqual(notificationSchedulerRuntimeCommands);
-    expect(notificationSchedulerRuntimeReadiness.requiredEvidence).toEqual(notificationSchedulerDecisionRequiredEvidence);
-    expect(notificationSchedulerRuntimeReadiness.blockers).toContain("Notification queue backend must be configured before scheduler promotion.");
-    expect(notificationSchedulerRuntimeReadiness.blockers).toContain("NotificationJob persistence must be available.");
-    expect(notificationSchedulerRuntimeReadiness.blockers).toContain("Due-job claiming must be transactional to prevent duplicate sends.");
-    expect(notificationSchedulerRuntimeReadiness.blockers).toContain("DeadLetterJob persistence must be available.");
+    expect(notificationSchedulerRuntimeReadiness.requiredCommands).toBe(notificationSchedulerRuntimeCommands);
+    expect(notificationSchedulerRuntimeReadiness.requiredEvidence).toBe(notificationSchedulerDecisionRequiredEvidence);
+    expect(notificationSchedulerRuntimeReadiness.blockers).not.toContain("Notification queue backend must be configured before scheduler promotion.");
+    expect(notificationSchedulerRuntimeReadiness.blockers).not.toContain("NotificationJob persistence must be available.");
+    expect(notificationSchedulerRuntimeReadiness.blockers).not.toContain("Due-job claiming must be transactional to prevent duplicate sends.");
+    expect(notificationSchedulerRuntimeReadiness.blockers).not.toContain("DeadLetterJob persistence must be available.");
+    expect(notificationSchedulerRuntimeReadiness.blockers).not.toContain("Worker audit log persistence must be available.");
   });
 
   it("pins the non-executing GAP-065 notification scheduler execution policy", () => {
@@ -124,20 +161,20 @@ describe("dashboard notification scheduler runtime contract", () => {
       ciEvidenceRequiredForClosure: true,
       secretSafeArtifactsRequiredForClosure: true,
     });
-    expect(plan.policy).toEqual(notificationSchedulerExecutionPolicy);
-    expect(plan.commandExecutionAllowed).toEqual(false);
-    expect(plan.queueBackendExecutionAllowed).toEqual(false);
-    expect(plan.durableRepositoryExecutionAllowed).toEqual(false);
-    expect(plan.schedulerProcessExecutionAllowed).toEqual(false);
-    expect(plan.workerProcessExecutionAllowed).toEqual(false);
-    expect(plan.providerDispatchExecutionAllowed).toEqual(false);
-    expect(plan.concurrencyExecutionAllowed).toEqual(false);
-    expect(plan.integrationExecutionAllowed).toEqual(false);
-    expect(plan.ciExecutionAllowed).toEqual(false);
-    expect(plan.artifactReviewExecutionAllowed).toEqual(false);
-    expect(plan.localCommands).toEqual(notificationSchedulerLocalCommands);
-    expect(plan.externalCommands).toEqual(notificationSchedulerExternalCommands);
-    expect(plan.requiredExternalEvidence).toEqual(notificationSchedulerRequiredExternalEvidence);
+    expect(plan.policy).toBe(notificationSchedulerExecutionPolicy);
+    expect(plan.commandExecutionAllowed).toBe(false);
+    expect(plan.queueBackendExecutionAllowed).toBe(false);
+    expect(plan.durableRepositoryExecutionAllowed).toBe(false);
+    expect(plan.schedulerProcessExecutionAllowed).toBe(false);
+    expect(plan.workerProcessExecutionAllowed).toBe(false);
+    expect(plan.providerDispatchExecutionAllowed).toBe(false);
+    expect(plan.concurrencyExecutionAllowed).toBe(false);
+    expect(plan.integrationExecutionAllowed).toBe(false);
+    expect(plan.ciExecutionAllowed).toBe(false);
+    expect(plan.artifactReviewExecutionAllowed).toBe(false);
+    expect(plan.localCommands).toBe(notificationSchedulerLocalCommands);
+    expect(plan.externalCommands).toBe(notificationSchedulerExternalCommands);
+    expect(plan.requiredExternalEvidence).toBe(notificationSchedulerRequiredExternalEvidence);
     expect(notificationSchedulerRequiredExternalEvidence).toEqual([
       "actual notification scheduler command output",
       "queue backend configuration evidence",
@@ -168,7 +205,7 @@ describe("dashboard notification scheduler runtime contract", () => {
       },
     });
 
-    expect(redacted.secretSafe).toEqual(true);
+    expect(redacted.secretSafe).toBe(true);
     expect(redacted.redactedPaths).toEqual([
       "tenantId",
       "notificationJobPayload",
@@ -193,11 +230,11 @@ describe("dashboard notification scheduler runtime contract", () => {
       queueBackendUrl: "https://private/queue",
     });
 
-    expect(review.passed).toEqual(true);
+    expect(review.passed).toBe(true);
     expect(review.blockers).toEqual([]);
-    expect(review.artifact.secretSafe).toEqual(true);
+    expect(review.artifact.secretSafe).toBe(true);
     expect(review.artifact.redactedPaths).toEqual(["queueBackendUrl"]);
-    expect(review.requiredExternalEvidence).toEqual(notificationSchedulerRequiredExternalEvidence);
+    expect(review.requiredExternalEvidence).toBe(notificationSchedulerRequiredExternalEvidence);
   });
 
   it("classifies notification scheduler evidence before GAP-065 can close", () => {
@@ -240,8 +277,8 @@ describe("dashboard notification scheduler runtime contract", () => {
     );
     expect(blockedDecision.missingArtifacts).toContain("coverage/notification-scheduler-queue-backend.json");
     expect(blockedDecision.missingArtifacts).toContain("coverage/notification-scheduler-secret-safe-artifacts.json");
-    expect(blockedDecision.requiredCommands).toEqual(notificationSchedulerRuntimeCommands);
-    expect(blockedDecision.requiredEvidence).toEqual(notificationSchedulerDecisionRequiredEvidence);
+    expect(blockedDecision.requiredCommands).toBe(notificationSchedulerRuntimeCommands);
+    expect(blockedDecision.requiredEvidence).toBe(notificationSchedulerDecisionRequiredEvidence);
     expect(blockedDecision.redactedSummary).toEqual({
       capturedArtifactCount: 5,
       requiredArtifactCount: notificationSchedulerArtifactPaths.length,
@@ -272,7 +309,7 @@ describe("dashboard notification scheduler runtime contract", () => {
     expect(completeDecision.status).toBe("complete");
     expect(completeDecision.blockers).toEqual([]);
     expect(completeDecision.missingArtifacts).toEqual([]);
-    expect(completeDecision.requiredEvidence).toEqual(notificationSchedulerDecisionRequiredEvidence);
+    expect(completeDecision.requiredEvidence).toBe(notificationSchedulerDecisionRequiredEvidence);
   });
 
   it("wires CI, manifest, tracker, and artifacts without claiming live queue execution", () => {
@@ -301,6 +338,8 @@ describe("dashboard notification scheduler runtime contract", () => {
       "packages/notifications/package.json",
       "packages/notifications/src/index.ts",
       "packages/notifications/tests/delivery-plan.test.ts",
+      "packages/db/prisma/schema.prisma",
+      "packages/db/prisma/migrations/20260623093000_add_notification_worker_jobs/migration.sql",
       "apps/dashboard/lib/notificationScheduler.ts",
       "apps/dashboard/lib/notificationSchedulerRuntime.ts",
       "apps/dashboard/app/api/notifications/scheduler/route.ts",

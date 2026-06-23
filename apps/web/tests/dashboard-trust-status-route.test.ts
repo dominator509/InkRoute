@@ -40,7 +40,7 @@ describe("dashboard trust status route", () => {
       expect(body.ok).toBe(false);
       expect(body.error.code).toBe("DASHBOARD_TRUST_STATUS_PROVIDER_AUTH_NOT_CONFIGURED");
       expect(body.error.message).toContain("header-only trust previews are disabled until provider-backed session evidence is captured");
-      expect(body.productionBoundary.scaffoldedTrustPreviewDisabled).toBe(true);
+      expect(body.productionBoundary.headerOnlyTrustPreviewDisabled).toBe(true);
       expect(body.productionBoundary.requiresProviderBackedSession).toBe(true);
       expect(body.productionBoundary.requiresSecurityRuntimeEvidence).toBe(true);
     } finally {

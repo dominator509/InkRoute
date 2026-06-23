@@ -2,8 +2,40 @@
 import { MobileCard } from "../components/MobileCard";
 import { MobilePill } from "../components/MobilePill";
 import { MobileScreen } from "../components/MobileScreen";
+import { mobileApiFetch, type MobileApiResponseEnvelope, type MobileApiSession } from "../lib/mobileApiClient";
 import { mobilePushContractPreview } from "../lib/mobilePush";
 import { mobileAutomationSequence, mobileNotificationPlans, notificationPreviews } from "../lib/mobileDemo";
+
+export interface MobileNotificationSummary {
+  id: string;
+  title: string;
+  body: string;
+  readAt?: string | null;
+}
+
+export function loadMobileNotifications(
+  session: MobileApiSession,
+  requestId = `mobile-notifications:${session.tenantId}`,
+): Promise<MobileApiResponseEnvelope<MobileNotificationSummary[]>> {
+  return mobileApiFetch<MobileNotificationSummary[]>(session, {
+    domain: "notifications",
+    method: "GET",
+    path: "/api/mobile/notifications",
+    requestId,
+  });
+}
+
+export function loadMobileMessages(
+  session: MobileApiSession,
+  requestId = `mobile-messages:${session.tenantId}`,
+): Promise<MobileApiResponseEnvelope<unknown[]>> {
+  return mobileApiFetch<unknown[]>(session, {
+    domain: "notifications",
+    method: "GET",
+    path: "/api/mobile/messages",
+    requestId,
+  });
+}
 
 function planTone(status: string) {
   if (status === "allowed") return "good" as const;

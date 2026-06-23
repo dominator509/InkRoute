@@ -5,6 +5,7 @@ import {
   buildPerformanceLoadRuntimeArtifactReview,
   buildPerformanceLoadRuntimeEvidenceDecision,
   buildPerformanceLoadRuntimeExecutionPlan,
+  buildPerformanceLoadRuntimeRedactedArtifactPacket,
   buildRedactedPerformanceLoadArtifact,
   buildPerformanceLoadRunData,
   buildPerformanceLoadRunPersistenceContract,
@@ -18,6 +19,7 @@ import {
   performanceLoadRuntimeLocalCommands,
   performanceLoadRuntimeMatrix,
   performanceLoadRuntimeProofFiles,
+  performanceLoadRouteBudgetTargets,
   performanceLoadRuntimeReadiness,
   performanceLoadRuntimeRequiredExternalEvidence,
   persistPerformanceLoadRun
@@ -39,6 +41,7 @@ describe("GAP-112 performance and load runtime wiring", () => {
       "pnpm test:performance:budgets",
       "Lighthouse CI for public and dashboard route budgets",
       "capture Core Web Vitals for public and dashboard critical routes",
+      "verify performance route budget target contract",
       "measure public home/booking/city SEO route budgets",
       "measure dashboard overview and booking detail route budgets",
       "load test public booking endpoint",
@@ -53,6 +56,7 @@ describe("GAP-112 performance and load runtime wiring", () => {
       "budget-verifier",
       "lighthouse-core-web-vitals",
       "core-web-vitals",
+      "route-budget-target-contract",
       "public-route-budgets",
       "dashboard-route-budgets",
       "booking-load",
@@ -62,7 +66,8 @@ describe("GAP-112 performance and load runtime wiring", () => {
       "image-optimization-benchmarks",
       "regression-thresholds",
       "ci-performance-job",
-      "regression-triage"
+      "regression-triage",
+      "redacted-artifact-packet"
     ]);
     expect(performanceLoadRuntimeArtifactPaths).toEqual(
       expect.arrayContaining([
@@ -72,6 +77,7 @@ describe("GAP-112 performance and load runtime wiring", () => {
         "coverage/performance-core-web-vitals.json",
         "coverage/performance-public-route-budgets.json",
         "coverage/performance-dashboard-route-budgets.json",
+        "coverage/performance-route-budget-targets.json",
         "coverage/performance-booking-load.json",
         "coverage/performance-webhook-burst.json",
         "coverage/performance-upload-intent-load.json",
@@ -80,6 +86,7 @@ describe("GAP-112 performance and load runtime wiring", () => {
         "coverage/performance-regression-thresholds.json",
         "coverage/performance-ci-run-redacted.json",
         "coverage/performance-regression-triage.md",
+        "coverage/performance-load-redacted-artifact-packet.json",
         "test-results/performance-load-runtime"
       ])
     );
@@ -109,7 +116,7 @@ describe("GAP-112 performance and load runtime wiring", () => {
   it("keeps readiness blocked until real Lighthouse, load, EXPLAIN, image, CI, and triage proof exists", () => {
     expect(performanceLoadRuntimeReadiness.status).toBe("blocked");
     expect(performanceLoadRuntimeReadiness.missingScripts).toEqual([]);
-    expect(performanceLoadRuntimeReadiness.requiredCommands).toStrictEqual(performanceLoadRuntimeCommands);
+    expect(performanceLoadRuntimeReadiness.requiredCommands).toBe(performanceLoadRuntimeCommands);
     expect(performanceLoadRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "performance budget verifier, Lighthouse CI, Core Web Vitals, and route budget reports",
@@ -142,6 +149,7 @@ describe("GAP-112 performance and load runtime wiring", () => {
       coreWebVitalsWithinBudget: false,
       publicRouteBudgetsPassed: false,
       dashboardRouteBudgetsPassed: false,
+      routeBudgetTargetsVerified: false,
       bookingLoadTestPassed: false,
       webhookBurstTestPassed: false,
       uploadIntentLoadTestPassed: false,
@@ -204,11 +212,13 @@ describe("GAP-112 performance and load runtime wiring", () => {
     expect(unitManifest).toContain("unit-web-performance-load-runtime-static");
     expect(unitManifest).toContain("PerformanceLoadRun Prisma model and app row contract are wired");
     expect(gapTracker).toContain("apps/web/lib/performanceLoadRuntime.ts");
+    expect(gapTracker).toContain("performanceLoadRouteBudgetTargets");
     expect(gapTracker).toContain("Performance load evidence classifier wired and benchmark proof gated");
     expect(gapTracker).toContain("GAP-112 is performance-load-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("performanceLoadRuntimeLocalArtifacts");
     expect(gapTracker).toContain("performanceLoadRuntimeExternalArtifacts");
     expect(gapTracker).toContain("persistPerformanceLoadRun upsert seam");
+    expect(gapTracker).toContain("buildPerformanceLoadRuntimeRedactedArtifactPacket");
   });
 
   it("classifies GAP-112 evidence as blocked until Lighthouse, load, DB, image, CI, and triage proof is captured", () => {
@@ -218,6 +228,7 @@ describe("GAP-112 performance and load runtime wiring", () => {
       coreWebVitalsWithinBudget: false,
       publicRouteBudgetsPassed: false,
       dashboardRouteBudgetsPassed: false,
+      routeBudgetTargetsVerified: false,
       bookingLoadTestPassed: false,
       webhookBurstTestPassed: false,
       uploadIntentLoadTestPassed: false,
@@ -227,6 +238,7 @@ describe("GAP-112 performance and load runtime wiring", () => {
       performanceArtifactsRetained: true,
       ciPerformanceJobPassed: false,
       regressionsTriagedAndFixed: false,
+      redactedArtifactPacketCaptured: false,
       requiredCommandsRun: performanceLoadRuntimeCommands.filter(
         (command) =>
           command !== "Lighthouse CI for public and dashboard route budgets" &&
@@ -253,12 +265,14 @@ describe("GAP-112 performance and load runtime wiring", () => {
       expect.arrayContaining([
         "Run Lighthouse CI for public and dashboard routes.",
         "Capture Core Web Vitals within budget.",
+        "Verify route budget targets for public, dashboard, and runtime endpoints.",
         "Run public booking load test.",
         "Run Stripe webhook burst load test.",
         "Run DB EXPLAIN/ANALYZE query-plan checks.",
         "Run image optimization benchmarks.",
         "Capture CI performance/load job proof.",
         "Triage and fix or document performance regressions.",
+        "Capture retained redacted performance/load artifact packet proof.",
         "Required command not recorded: Lighthouse CI for public and dashboard route budgets",
         "Required command not recorded: capture Core Web Vitals for public and dashboard critical routes",
         "Required command not recorded: load test public booking endpoint",
@@ -278,9 +292,12 @@ describe("GAP-112 performance and load runtime wiring", () => {
         "coverage/performance-ci-run-redacted.json",
       ]),
     );
+    expect(blockedDecision.requiredCommands).toBe(performanceLoadRuntimeCommands);
+    expect(blockedDecision.requiredEvidence).toBe(performanceLoadRuntimeArtifactPaths);
     expect(blockedDecision.performancePolicy).toEqual({
       lighthouseAndCwvRequired: true,
       loadAndDatabaseBenchmarksRequired: true,
+      routeBudgetTargetsRequired: true,
       regressionsMustBeTriaged: true,
     });
 
@@ -290,6 +307,7 @@ describe("GAP-112 performance and load runtime wiring", () => {
       coreWebVitalsWithinBudget: true,
       publicRouteBudgetsPassed: true,
       dashboardRouteBudgetsPassed: true,
+      routeBudgetTargetsVerified: true,
       bookingLoadTestPassed: true,
       webhookBurstTestPassed: true,
       uploadIntentLoadTestPassed: true,
@@ -299,6 +317,7 @@ describe("GAP-112 performance and load runtime wiring", () => {
       performanceArtifactsRetained: true,
       ciPerformanceJobPassed: true,
       regressionsTriagedAndFixed: true,
+      redactedArtifactPacketCaptured: true,
       requiredCommandsRun: performanceLoadRuntimeCommands,
       capturedArtifacts: performanceLoadRuntimeArtifactPaths,
     });
@@ -317,6 +336,18 @@ describe("GAP-112 performance and load runtime wiring", () => {
     expect(plan.externalCommands).toBe(performanceLoadRuntimeExternalCommands);
     expect(plan.localArtifacts).toBe(performanceLoadRuntimeLocalArtifacts);
     expect(plan.externalArtifacts).toBe(performanceLoadRuntimeExternalArtifacts);
+    expect(plan.routeBudgetTargets).toBe(performanceLoadRouteBudgetTargets);
+    expect(performanceLoadRouteBudgetTargets.map((target) => target.id)).toEqual([
+      "public-home",
+      "public-booking",
+      "dashboard-overview",
+      "dashboard-booking-detail",
+      "runtime-booking-api",
+      "runtime-upload-intent-api",
+    ]);
+    expect(performanceLoadRouteBudgetTargets.every((target) => target.p95MsBudget > 0)).toBe(true);
+    expect(performanceLoadRouteBudgetTargets.every((target) => target.maxErrorRate <= 0.01)).toBe(true);
+    expect(performanceLoadRouteBudgetTargets.every((target) => target.minConcurrentUsers > 0)).toBe(true);
     expect(plan.localArtifacts).toEqual(
       expect.arrayContaining([
         "coverage/performance-load-runtime.json",
@@ -335,6 +366,7 @@ describe("GAP-112 performance and load runtime wiring", () => {
         "coverage/performance-db-explain-analyze.json",
         "coverage/performance-image-optimization.json",
         "coverage/performance-ci-run-redacted.json",
+        "coverage/performance-load-redacted-artifact-packet.json",
       ]),
     );
     expect(plan.lighthouseExecutionAllowed).toBe(false);
@@ -346,6 +378,7 @@ describe("GAP-112 performance and load runtime wiring", () => {
     expect(plan.ciPerformanceExecutionAllowed).toBe(false);
     expect(plan.persistenceExecutionAllowed).toBe(false);
     expect(plan.executionPolicy).toBe(performanceLoadRuntimeExecutionPolicy);
+    expect(plan.executionPolicy.externalEvidenceRequired).toBe(performanceLoadRuntimeRequiredExternalEvidence);
     expect(plan.executionPolicy).toEqual({
       codexMayRunDependencyFreeVerifier: true,
       liveBrowserRequiredForLighthouseAndCwv: true,
@@ -370,7 +403,8 @@ describe("GAP-112 performance and load runtime wiring", () => {
     };
     const redacted = buildRedactedPerformanceLoadArtifact(rawArtifact);
     const review = buildPerformanceLoadRuntimeArtifactReview("coverage/performance-load-runtime.json", rawArtifact);
-    const serialized = JSON.stringify(review);
+    const packet = buildPerformanceLoadRuntimeRedactedArtifactPacket(rawArtifact);
+    const serialized = JSON.stringify({ review, packet });
 
     expect(JSON.stringify(redacted)).not.toContain("postgres://");
     expect(serialized).not.toContain("postgres://");
@@ -399,8 +433,15 @@ describe("GAP-112 performance and load runtime wiring", () => {
         "Load-test and Stripe webhook artifacts must redact provider payloads, tenant IDs, user IDs, emails, and phone numbers.",
         "DB EXPLAIN/ANALYZE artifacts must redact database URLs, query literals, and customer identifiers.",
         "CI performance artifacts must redact run URLs and provider identifiers before retention.",
+        "Retained redacted performance/load artifact packet must be captured before closure.",
       ]),
     );
+    expect(packet.status).toBe("redacted-artifact-packet-ready");
+    expect(packet.artifactPath).toBe("coverage/performance-load-redacted-artifact-packet.json");
+    expect(packet.review.containsUnredactedSensitiveValues).toBe(false);
+    expect(packet.requiredArtifacts).toBe(performanceLoadRuntimeArtifactPaths);
+    expect(packet.externalEvidenceRequired).toBe(performanceLoadRuntimeRequiredExternalEvidence);
+    expect(packet.providerExecutionAllowed).toBe(false);
   });
 });
 

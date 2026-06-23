@@ -1,4 +1,4 @@
-﻿import { buildDomainAuthorizationRouteEvidencePlan } from "@inkroute/auth";
+import { buildDomainAuthorizationRouteEvidencePlan } from "@inkroute/auth";
 
 export type DomainAuthorizationRuntimeStatus =
   | "wired"
@@ -36,6 +36,32 @@ export interface DomainAuthorizationRunPersistenceContract {
   readonly storesCiEvidence: true;
   readonly storesSecretSafeArtifacts: true;
 }
+
+export interface DomainAuthorizationAuditSignatureContract {
+  readonly algorithm: "HMAC-SHA256-or-provider-KMS-signature";
+  readonly signatureInput: readonly [
+    "tenantId",
+    "actorIdHash",
+    "routePath",
+    "permission",
+    "decision",
+    "requestId",
+    "createdAt",
+  ];
+  readonly signatureOutput: "auditSignature";
+  readonly keyPolicy: "SIGNING_KEY_ID required; missing or invalid signing keys fail closed before closure.";
+  readonly redactionPolicy: "Hash actor/client identifiers, omit raw provider tokens, and redact PII before signing artifacts.";
+  readonly rawProviderTokenLoggingAllowed: false;
+}
+
+export const domainAuthorizationAuditSignatureContract = {
+  algorithm: "HMAC-SHA256-or-provider-KMS-signature",
+  signatureInput: ["tenantId", "actorIdHash", "routePath", "permission", "decision", "requestId", "createdAt"],
+  signatureOutput: "auditSignature",
+  keyPolicy: "SIGNING_KEY_ID required; missing or invalid signing keys fail closed before closure.",
+  redactionPolicy: "Hash actor/client identifiers, omit raw provider tokens, and redact PII before signing artifacts.",
+  rawProviderTokenLoggingAllowed: false,
+} as const satisfies DomainAuthorizationAuditSignatureContract;
 
 export const domainAuthorizationRunPersistenceContract = {
   prismaModel: "DomainAuthorizationRun",
@@ -173,10 +199,12 @@ export const domainAuthorizationArtifactPaths = [
   "coverage/domain-authorization-cross-tenant-denial.json",
   "coverage/domain-authorization-field-redaction.json",
   "coverage/domain-authorization-audit-rows-redacted.json",
+  "coverage/domain-authorization-audit-signature-contract.json",
   "coverage/domain-authorization-csrf-session-binding.json",
   "coverage/domain-authorization-session-revocation.json",
   "coverage/domain-authorization-ci-evidence.json",
   "coverage/domain-authorization-secret-safe-artifacts.json",
+  "coverage/domain-authorization-redacted-evidence-bundle.json",
   "test-results/domain-authorization-runtime",
 ] as const;
 
@@ -197,10 +225,12 @@ export const domainAuthorizationExternalArtifacts = [
   "coverage/domain-authorization-cross-tenant-denial.json",
   "coverage/domain-authorization-field-redaction.json",
   "coverage/domain-authorization-audit-rows-redacted.json",
+  "coverage/domain-authorization-audit-signature-contract.json",
   "coverage/domain-authorization-csrf-session-binding.json",
   "coverage/domain-authorization-session-revocation.json",
   "coverage/domain-authorization-ci-evidence.json",
   "coverage/domain-authorization-secret-safe-artifacts.json",
+  "coverage/domain-authorization-redacted-evidence-bundle.json",
   "test-results/domain-authorization-runtime",
   "provider-backed DomainAuthorizationRun persistence proof",
 ] as const;
@@ -269,13 +299,104 @@ export const domainAuthorizationRuntimeMatrix = [
     artifact: "coverage/domain-authorization-ci-evidence.json",
     status: "ci-gated",
   },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted domain authorization evidence bundle",
+    artifact: "coverage/domain-authorization-redacted-evidence-bundle.json",
+    status: "ci-gated",
+  },
 ] as const satisfies readonly DomainAuthorizationRuntimeMatrixEntry[];
+
+export interface DomainAuthorizationSurfaceContractEntry {
+  readonly surfaceId: string;
+  readonly command: string;
+  readonly artifact: string;
+  readonly proofBoundary:
+    | "provider-session"
+    | "database-role"
+    | "route-guard"
+    | "role-matrix"
+    | "field-redaction"
+    | "signed-audit"
+    | "csrf-revocation"
+    | "ci-proof";
+  readonly providerBackedEvidenceRequired: boolean;
+  readonly redactedArtifactRequired: boolean;
+}
+
+export const domainAuthorizationSurfaceContract = [
+  {
+    surfaceId: "provider-backed-session-context",
+    command: "provider-backed session tests for guarded route context",
+    artifact: "coverage/domain-authorization-provider-session-redacted.json",
+    proofBoundary: "provider-session",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "custom-role-db-loading",
+    command: "CustomRole database loading route tests",
+    artifact: "coverage/domain-authorization-custom-role-db-redacted.json",
+    proofBoundary: "database-role",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "dashboard-api-server-action-guards",
+    command: "dashboard middleware route-guard contract tests && dashboard/API/server-action role matrix tests",
+    artifact: "coverage/domain-authorization-api-route-guards.json",
+    proofBoundary: "route-guard",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: false,
+  },
+  {
+    surfaceId: "role-matrix-custom-role-cross-tenant",
+    command: "built-in role matrix, custom-role, and cross-tenant route denial tests",
+    artifact: "coverage/domain-authorization-cross-tenant-denial.json",
+    proofBoundary: "role-matrix",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: false,
+  },
+  {
+    surfaceId: "field-redaction-audit-rows",
+    command: "field redaction route serialization tests && authorization AuditLog persistence tests",
+    artifact: "coverage/domain-authorization-audit-rows-redacted.json",
+    proofBoundary: "field-redaction",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "signed-audit-log-rows",
+    command: "authorization AuditLog persistence tests",
+    artifact: "coverage/domain-authorization-audit-signature-contract.json",
+    proofBoundary: "signed-audit",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "csrf-session-revocation",
+    command: "CSRF-bound mutating route tests && session revocation route tests",
+    artifact: "coverage/domain-authorization-csrf-session-binding.json",
+    proofBoundary: "csrf-revocation",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: false,
+  },
+  {
+    surfaceId: "ci-secret-safe-artifacts",
+    command: "GitHub Actions domain authorization evidence job",
+    artifact: "coverage/domain-authorization-secret-safe-artifacts.json",
+    proofBoundary: "ci-proof",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+] as const satisfies readonly DomainAuthorizationSurfaceContractEntry[];
 
 export const domainAuthorizationRuntimeControls = [
   "resolve-provider-session-tenant-member-custom-role-server-side-before-authorization",
   "apply-route-guards-before-dashboard-api-server-action-side-effects",
   "reject-invalid-permissions-inactive-roles-cross-tenant-roles-revoked-sessions-csrf-mismatches",
   "persist-redacted-audit-log-rows-for-allow-deny-decisions",
+  "sign-redacted-audit-log-rows-before-persistence",
   "apply-field-authorization-before-private-data-serialization",
 ] as const;
 
@@ -291,6 +412,7 @@ export const domainAuthorizationEvidenceFlags = [
   "crossTenantDenialTestsPassed",
   "fieldRedactionRouteTestsPassed",
   "authorizationAuditRowsPersisted",
+  "authorizationAuditRowsSigned",
   "csrfSessionBindingTestsPassed",
   "sessionRevocationTestsPassed",
   "providerBackedSessionTestsPassed",
@@ -325,6 +447,7 @@ export interface DomainAuthorizationExecutionPlan {
   readonly externalCommands: typeof domainAuthorizationExternalCommands;
   readonly localArtifacts: typeof domainAuthorizationLocalArtifacts;
   readonly externalArtifacts: typeof domainAuthorizationExternalArtifacts;
+  readonly surfaceContract: typeof domainAuthorizationSurfaceContract;
   readonly commandExecutionAllowed: false;
   readonly providerSessionExecutionAllowed: false;
   readonly databaseExecutionAllowed: false;
@@ -332,6 +455,7 @@ export interface DomainAuthorizationExecutionPlan {
   readonly ciExecutionAllowed: false;
   readonly executionPolicy: typeof domainAuthorizationExecutionPolicy;
   readonly requiredExternalEvidence: typeof domainAuthorizationRequiredExternalEvidence;
+  readonly auditSignatureContract: typeof domainAuthorizationAuditSignatureContract;
 }
 
 export interface DomainAuthorizationArtifactReview {
@@ -339,6 +463,17 @@ export interface DomainAuthorizationArtifactReview {
   readonly redactions: readonly string[];
   readonly requiredExternalEvidence: typeof domainAuthorizationRequiredExternalEvidence;
   readonly safeForTracker: boolean;
+}
+
+export interface DomainAuthorizationRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly artifactPath: "coverage/domain-authorization-redacted-evidence-bundle.json";
+  readonly review: DomainAuthorizationArtifactReview;
+  readonly requiredArtifacts: typeof domainAuthorizationArtifactPaths;
+  readonly requiredExternalEvidence: typeof domainAuthorizationRequiredExternalEvidence;
+  readonly auditSignatureContract: typeof domainAuthorizationAuditSignatureContract;
+  readonly providerExecutionAllowed: false;
+  readonly databaseExecutionAllowed: false;
 }
 
 export const domainAuthorizationLocalCommands = [
@@ -371,6 +506,7 @@ const domainAuthorizationEvidenceBlockers: Record<DomainAuthorizationEvidenceFla
   crossTenantDenialTestsPassed: "Cross-tenant dashboard/API/server-action denial tests must pass.",
   fieldRedactionRouteTestsPassed: "Field-redaction serialization tests must pass.",
   authorizationAuditRowsPersisted: "Authorization AuditLog allow/deny rows must be persisted with redaction.",
+  authorizationAuditRowsSigned: "Authorization AuditLog allow/deny rows must include signed redacted audit payload evidence.",
   csrfSessionBindingTestsPassed: "CSRF-bound mutating route tests must pass.",
   sessionRevocationTestsPassed: "Session revocation route tests must pass.",
   providerBackedSessionTestsPassed: "Provider-backed session route-context tests must pass.",
@@ -392,8 +528,10 @@ export const domainAuthorizationRequiredExternalEvidence = [
   "Dashboard, API, and server-action route-guard adoption evidence before side effects.",
   "Built-in role, custom-role, cross-tenant denial, CSRF binding, and session revocation route tests.",
   "Field-redaction serialization and redacted authorization AuditLog persistence evidence.",
+  "Signed redacted authorization AuditLog payload evidence with signing-key readiness metadata.",
   "Provider-backed DomainAuthorizationRun persistence row captured through persistDomainAuthorizationRun.",
   "CI evidence and secret-safe authorization route artifacts.",
+  "Redacted domain authorization evidence bundle captured with signed-audit contract metadata and without raw provider tokens, tenant identifiers, role IDs, route payloads, URLs, or actor identifiers.",
 ] as const;
 
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) =>
@@ -439,6 +577,7 @@ export function buildDomainAuthorizationExecutionPlan(): DomainAuthorizationExec
     externalCommands: domainAuthorizationExternalCommands,
     localArtifacts: domainAuthorizationLocalArtifacts,
     externalArtifacts: domainAuthorizationExternalArtifacts,
+    surfaceContract: domainAuthorizationSurfaceContract,
     commandExecutionAllowed: false,
     providerSessionExecutionAllowed: false,
     databaseExecutionAllowed: false,
@@ -446,6 +585,7 @@ export function buildDomainAuthorizationExecutionPlan(): DomainAuthorizationExec
     ciExecutionAllowed: false,
     executionPolicy: domainAuthorizationExecutionPolicy,
     requiredExternalEvidence: domainAuthorizationRequiredExternalEvidence,
+    auditSignatureContract: domainAuthorizationAuditSignatureContract,
   };
 }
 
@@ -460,6 +600,21 @@ export function buildDomainAuthorizationArtifactReview(artifact: unknown): Domai
     redactions,
     requiredExternalEvidence: domainAuthorizationRequiredExternalEvidence,
     safeForTracker: true,
+  };
+}
+
+export function buildDomainAuthorizationRedactedEvidenceBundle(
+  artifact: unknown,
+): DomainAuthorizationRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    artifactPath: "coverage/domain-authorization-redacted-evidence-bundle.json",
+    review: buildDomainAuthorizationArtifactReview(artifact),
+    requiredArtifacts: domainAuthorizationArtifactPaths,
+    requiredExternalEvidence: domainAuthorizationRequiredExternalEvidence,
+    auditSignatureContract: domainAuthorizationAuditSignatureContract,
+    providerExecutionAllowed: false,
+    databaseExecutionAllowed: false,
   };
 }
 
@@ -505,6 +660,7 @@ const routeReadiness = buildDomainAuthorizationRouteEvidencePlan({
   crossTenantDenialTestsPassed: false,
   fieldRedactionRouteTestsPassed: false,
   authorizationAuditRowsPersisted: false,
+  authorizationAuditRowsSigned: false,
   csrfSessionBindingTestsPassed: false,
   sessionRevocationTestsPassed: false,
   providerBackedSessionTestsPassed: false,

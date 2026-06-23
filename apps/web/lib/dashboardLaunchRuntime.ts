@@ -183,6 +183,82 @@ export type DashboardLaunchRuntimeCommand = (typeof dashboardLaunchRuntimeComman
 export type DashboardLaunchRuntimeControl = (typeof dashboardLaunchRuntimeControls)[number];
 export type DashboardLaunchArtifact = (typeof dashboardLaunchArtifactPaths)[number];
 
+export interface DashboardLaunchSurfaceContractEntry {
+  readonly surfaceId: string;
+  readonly requiredControl: DashboardLaunchRuntimeControl;
+  readonly requiredCommand: DashboardLaunchRuntimeCommand;
+  readonly requiredArtifact: DashboardLaunchArtifact;
+  readonly launchBoundary: "seeded-data" | "provider-auth" | "tenant-api" | "mutation-audit" | "rbac-denial" | "ui-state" | "ci-proof";
+  readonly providerBackedEvidenceRequired: boolean;
+  readonly redactedArtifactRequired: true;
+}
+
+export const dashboardLaunchSurfaceContract: readonly DashboardLaunchSurfaceContractEntry[] = [
+  {
+    surfaceId: "seeded-tenant-launch-data",
+    requiredControl: "tenant-scoped-repositories-or-authenticated-apis",
+    requiredCommand: "pnpm test:e2e --project=dashboard-chromium",
+    requiredArtifact: "coverage/dashboard-seeded-tenant-data.json",
+    launchBoundary: "seeded-data",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "provider-auth-session",
+    requiredControl: "provider-backed-session-and-tenant-membership",
+    requiredCommand: "dashboard provider-backed auth smoke tests",
+    requiredArtifact: "coverage/dashboard-provider-auth-smoke.json",
+    launchBoundary: "provider-auth",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "tenant-read-route-contracts",
+    requiredControl: "tenant-scoped-repositories-or-authenticated-apis",
+    requiredCommand: "pnpm --filter @inkroute/dashboard test",
+    requiredArtifact: "coverage/dashboard-tenant-scoped-apis.json",
+    launchBoundary: "tenant-api",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "mutation-auditlog-persistence",
+    requiredControl: "tenant-scoped-mutation-transactions-with-auditlog",
+    requiredCommand: "dashboard mutation AuditLog persistence tests",
+    requiredArtifact: "coverage/dashboard-mutation-auditlog.json",
+    launchBoundary: "mutation-audit",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "rbac-cross-tenant-denial",
+    requiredControl: "rbac-and-cross-tenant-denial",
+    requiredCommand: "dashboard RBAC and cross-tenant denial tests",
+    requiredArtifact: "coverage/dashboard-rbac-cross-tenant-denial.json",
+    launchBoundary: "rbac-denial",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "loading-empty-error-states",
+    requiredControl: "private-field-redaction-before-serialization",
+    requiredCommand: "pnpm --filter @inkroute/dashboard test",
+    requiredArtifact: "coverage/dashboard-loading-empty-error-states.json",
+    launchBoundary: "ui-state",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "ci-launch-artifact-retention",
+    requiredControl: "secret-safe-build-smoke-ci-artifacts",
+    requiredCommand: "GitHub Actions dashboard launch evidence job",
+    requiredArtifact: "coverage/dashboard-ci-evidence.json",
+    launchBoundary: "ci-proof",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+] as const;
+
 export interface DashboardLaunchEvidenceInput {
   readonly dashboardTypecheckPassed: boolean;
   readonly dashboardBuildPassed: boolean;
@@ -278,6 +354,7 @@ export interface DashboardLaunchExecutionPlan {
   readonly externalCommands: typeof dashboardLaunchRuntimeExternalCommands;
   readonly localArtifacts: typeof dashboardLaunchRuntimeLocalArtifacts;
   readonly externalArtifacts: typeof dashboardLaunchRuntimeExternalArtifacts;
+  readonly surfaceContract: typeof dashboardLaunchSurfaceContract;
   readonly dashboardTypecheckExecutionAllowed: false;
   readonly dashboardBuildExecutionAllowed: false;
   readonly dashboardTestExecutionAllowed: false;
@@ -638,6 +715,7 @@ export function buildDashboardLaunchExecutionPlan(): DashboardLaunchExecutionPla
     externalCommands: dashboardLaunchRuntimeExternalCommands,
     localArtifacts: dashboardLaunchRuntimeLocalArtifacts,
     externalArtifacts: dashboardLaunchRuntimeExternalArtifacts,
+    surfaceContract: dashboardLaunchSurfaceContract,
     dashboardTypecheckExecutionAllowed: false,
     dashboardBuildExecutionAllowed: false,
     dashboardTestExecutionAllowed: false,

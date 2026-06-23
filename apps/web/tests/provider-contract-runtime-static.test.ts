@@ -9,6 +9,7 @@ import {
   buildProviderContractRunData,
   buildProviderContractRunPersistenceContract,
   persistProviderContractRun,
+  providerContractDisableEnablePolicy,
   providerContractRuntimeArtifactPaths,
   providerContractRuntimeCommands,
   providerContractRuntimeExternalArtifacts,
@@ -37,6 +38,7 @@ describe("GAP-110 provider contract runtime wiring", () => {
     expect(providerContractRuntimeCommands).toEqual([
       "pnpm vitest run apps/web/tests/provider-webhook-contracts.test.ts",
       "pnpm test:manifest",
+      "static provider disable/enable policy gate review",
       "commit signed raw-body and replay/idempotency fixtures for Stripe, email, SMS, and Sentry",
       "stripe listen --forward-to localhost:3000/api/webhooks/stripe && stripe trigger checkout.session.completed",
       "run Google Calendar OAuth, freebusy, sync-token, conflict, and disconnect sandbox flows",
@@ -48,6 +50,7 @@ describe("GAP-110 provider contract runtime wiring", () => {
     expect(providerContractRuntimeMatrix.map((entry) => entry.id)).toEqual([
       "static-webhook-contracts",
       "provider-manifest-verification",
+      "provider-disable-enable-policy",
       "raw-body-replay-fixtures",
       "stripe-cli-idempotency",
       "google-calendar-oauth-sync",
@@ -59,6 +62,7 @@ describe("GAP-110 provider contract runtime wiring", () => {
     expect(providerContractRuntimeArtifactPaths).toEqual(
       expect.arrayContaining([
         "coverage/provider-contract-runtime.json",
+        "coverage/provider-disable-enable-policy.json",
         "coverage/provider-raw-body-fixtures.json",
         "coverage/provider-replay-idempotency-fixtures.json",
         "coverage/provider-stripe-cli-redacted.log",
@@ -94,6 +98,7 @@ describe("GAP-110 provider contract runtime wiring", () => {
     expect(providerContractRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "static provider contract suite, manifest verification, signed raw-body fixtures, and replay/idempotency fixtures",
+        "provider disable/enable policy map with fail-closed missing-evidence gates",
         "Stripe CLI webhook/idempotency and Google Calendar OAuth/sync sandbox transcripts",
         "storage signed URL/upload/download, rate-limit store, and auth session fixture contract output",
         "email, SMS, push, and Sentry sandbox send/capture artifacts",
@@ -192,6 +197,7 @@ describe("GAP-110 provider contract runtime wiring", () => {
     expect(gapTracker).toContain("GAP-110 is provider-contract-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("providerContractRuntimeLocalArtifacts");
     expect(gapTracker).toContain("providerContractRuntimeExternalArtifacts");
+    expect(gapTracker).toContain("providerContractDisableEnablePolicy");
     expect(gapTracker).toContain("persistProviderContractRun upsert seam");
   });
 
@@ -256,6 +262,8 @@ describe("GAP-110 provider contract runtime wiring", () => {
         "coverage/provider-contract-ci-run-redacted.json",
       ]),
     );
+    expect(blockedDecision.requiredCommands).toBe(providerContractRuntimeCommands);
+    expect(blockedDecision.requiredEvidence).toBe(providerContractRuntimeArtifactPaths);
     expect(blockedDecision.providerPolicy).toEqual({
       rawSecretsForbidden: true,
       signedRawBodyFixturesRequired: true,
@@ -317,6 +325,18 @@ describe("GAP-110 provider contract runtime wiring", () => {
     expect(plan.externalCommands).toBe(providerContractRuntimeExternalCommands);
     expect(plan.localArtifacts).toBe(providerContractRuntimeLocalArtifacts);
     expect(plan.externalArtifacts).toBe(providerContractRuntimeExternalArtifacts);
+    expect(plan.disableEnablePolicy).toBe(providerContractDisableEnablePolicy);
+    expect(providerContractDisableEnablePolicy.map((entry) => entry.provider)).toEqual([
+      "stripe",
+      "google_calendar",
+      "storage",
+      "email_sms_push",
+      "sentry",
+      "auth_rate_limit",
+    ]);
+    expect(providerContractDisableEnablePolicy.every((entry) => entry.defaultState === "disabled")).toBe(true);
+    expect(providerContractDisableEnablePolicy.every((entry) => entry.disableOnMissingEvidence === true)).toBe(true);
+    expect(providerContractDisableEnablePolicy.every((entry) => entry.rawSecretArtifactsAllowed === false)).toBe(true);
     expect(plan.externalArtifacts).toEqual(expect.arrayContaining([
       "coverage/provider-raw-body-fixtures.json",
       "coverage/provider-stripe-cli-redacted.log",

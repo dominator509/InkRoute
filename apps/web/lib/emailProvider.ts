@@ -9,6 +9,7 @@ import {
   type ProviderEventReconciliationPlan,
   buildProviderEventReconciliationPlan,
 } from "@inkroute/notifications";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 export type EmailProviderMutationInput = EmailProviderSendPlanInput & {
   providerRequestId: string;
@@ -75,6 +76,24 @@ export interface EmailProviderContract {
   requiredRepositoryMethods: readonly (keyof EmailProviderRepository)[];
 }
 
+export interface EmailWebhookSignatureVerificationInput {
+  readonly rawBody: string;
+  readonly signatureHeader: string | null;
+  readonly svixId: string | null;
+  readonly svixTimestamp: string | null;
+  readonly secret?: string;
+  readonly nowMs?: number;
+  readonly toleranceSeconds?: number;
+}
+
+export interface EmailWebhookSignatureVerification {
+  readonly verifierConfigured: boolean;
+  readonly webhookSecretConfigured: boolean;
+  readonly timestampWithinTolerance: boolean;
+  readonly verified: boolean;
+  readonly reason: "verified" | "missing-secret" | "missing-signature" | "missing-svix-metadata" | "timestamp-out-of-tolerance" | "signature-mismatch";
+}
+
 export const sampleEmailContext: NotificationTemplateContext = {
   artistName: "Mara Vale",
   clientName: "Riley",
@@ -94,6 +113,90 @@ export const sampleEmailConsent: ClientConsentSnapshot = {
   marketingOptIn: false,
   transactionalAllowed: true,
 };
+
+function normalizeSvixSecret(secret: string): Buffer {
+  const trimmed = secret.trim();
+  const withoutPrefix = trimmed.startsWith("whsec_") ? trimmed.slice("whsec_".length) : trimmed;
+
+  try {
+    return Buffer.from(withoutPrefix, "base64");
+  } catch {
+    return Buffer.from(trimmed, "utf8");
+  }
+}
+
+function safeSignatureEquals(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+export function verifyEmailWebhookSignature(input: EmailWebhookSignatureVerificationInput): EmailWebhookSignatureVerification {
+  const toleranceSeconds = input.toleranceSeconds ?? 300;
+  const nowMs = input.nowMs ?? Date.now();
+
+  if (!input.secret) {
+    return {
+      verifierConfigured: false,
+      webhookSecretConfigured: false,
+      timestampWithinTolerance: false,
+      verified: false,
+      reason: "missing-secret",
+    };
+  }
+
+  if (!input.signatureHeader) {
+    return {
+      verifierConfigured: true,
+      webhookSecretConfigured: true,
+      timestampWithinTolerance: false,
+      verified: false,
+      reason: "missing-signature",
+    };
+  }
+
+  if (!input.svixId || !input.svixTimestamp) {
+    return {
+      verifierConfigured: true,
+      webhookSecretConfigured: true,
+      timestampWithinTolerance: false,
+      verified: false,
+      reason: "missing-svix-metadata",
+    };
+  }
+
+  const timestampSeconds = Number(input.svixTimestamp);
+  const timestampWithinTolerance =
+    Number.isFinite(timestampSeconds) && Math.abs(Math.floor(nowMs / 1000) - timestampSeconds) <= toleranceSeconds;
+
+  if (!timestampWithinTolerance) {
+    return {
+      verifierConfigured: true,
+      webhookSecretConfigured: true,
+      timestampWithinTolerance: false,
+      verified: false,
+      reason: "timestamp-out-of-tolerance",
+    };
+  }
+
+  const signedPayload = `${input.svixId}.${input.svixTimestamp}.${input.rawBody}`;
+  const expectedSignature = createHmac("sha256", normalizeSvixSecret(input.secret)).update(signedPayload).digest("base64");
+  const signatures = input.signatureHeader
+    .split(" ")
+    .flatMap((part) => part.split(","))
+    .map((part) => part.trim())
+    .map((part) => part.replace(/^v\d+,/, "").replace(/^v\d+=/, ""))
+    .filter(Boolean);
+  const verified = signatures.some((signature) => safeSignatureEquals(signature, expectedSignature));
+
+  return {
+    verifierConfigured: true,
+    webhookSecretConfigured: true,
+    timestampWithinTolerance,
+    verified,
+    reason: verified ? "verified" : "signature-mismatch",
+  };
+}
 
 export function buildEmailProviderContract(): EmailProviderContract {
   return {
@@ -146,6 +249,7 @@ export function buildEmailWebhookReadinessFromPayload(input: {
   providerMessageId?: string;
   rawBodyCaptured: boolean;
   signatureHeaderPresent: boolean;
+  signatureVerification?: EmailWebhookSignatureVerification;
   alreadyProcessedEventIds?: readonly string[];
 }): EmailWebhookRuntimeReadinessPlan {
   return buildEmailWebhookRuntimeReadinessPlan({
@@ -156,9 +260,9 @@ export function buildEmailWebhookReadinessFromPayload(input: {
     ...(input.alreadyProcessedEventIds ? { alreadyProcessedEventIds: input.alreadyProcessedEventIds } : {}),
     rawBodyCaptured: input.rawBodyCaptured,
     signatureHeaderPresent: input.signatureHeaderPresent,
-    signatureVerifierConfigured: false,
-    webhookSecretConfigured: false,
-    signatureTimestampWithinTolerance: false,
+    signatureVerifierConfigured: input.signatureVerification?.verifierConfigured ?? false,
+    webhookSecretConfigured: input.signatureVerification?.webhookSecretConfigured ?? false,
+    signatureTimestampWithinTolerance: input.signatureVerification?.timestampWithinTolerance ?? false,
     tenantResolved: Boolean(input.tenantId),
     deliveryLogPersistenceAvailable: false,
     providerEventPersistenceAvailable: false,

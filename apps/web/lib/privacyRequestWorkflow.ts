@@ -345,7 +345,7 @@ export function buildPrivacyRequestPersistenceContract(input: PrivacyRequestPers
   return {
     modelName: "PrivacyRequest",
     row: input,
-    transactionWrites: ["PrivacyRequest", "AuditLog"],
+    transactionWrites: ["IdempotencyKey", "PrivacyRequest", "AuditLog"],
     statusTransitions: ["intake_received", "identity_pending", "processing", "legal_hold", "completed", "denied"],
     auditActions: [
       "privacy.request.created",

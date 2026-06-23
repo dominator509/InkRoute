@@ -11,6 +11,67 @@ export interface ProviderContractRuntimeMatrixEntry {
   readonly status: ProviderContractRuntimeStatus;
 }
 
+export type ProviderContractProviderId =
+  | "stripe"
+  | "google_calendar"
+  | "storage"
+  | "email_sms_push"
+  | "sentry"
+  | "auth_rate_limit";
+
+export interface ProviderContractDisableEnablePolicyEntry {
+  readonly provider: ProviderContractProviderId;
+  readonly defaultState: "disabled";
+  readonly enableRequiresEvidence: readonly string[];
+  readonly disableOnMissingEvidence: true;
+  readonly rawSecretArtifactsAllowed: false;
+}
+
+export const providerContractDisableEnablePolicy = [
+  {
+    provider: "stripe",
+    defaultState: "disabled",
+    enableRequiresEvidence: ["stripeCliWebhookPassed", "stripeIdempotencyVerified", "redactedArtifactsRetained"],
+    disableOnMissingEvidence: true,
+    rawSecretArtifactsAllowed: false,
+  },
+  {
+    provider: "google_calendar",
+    defaultState: "disabled",
+    enableRequiresEvidence: ["googleCalendarOauthPassed", "googleCalendarSyncVerified", "redactedArtifactsRetained"],
+    disableOnMissingEvidence: true,
+    rawSecretArtifactsAllowed: false,
+  },
+  {
+    provider: "storage",
+    defaultState: "disabled",
+    enableRequiresEvidence: ["storageSignedUrlPassed", "storageUploadDownloadPassed", "redactedArtifactsRetained"],
+    disableOnMissingEvidence: true,
+    rawSecretArtifactsAllowed: false,
+  },
+  {
+    provider: "email_sms_push",
+    defaultState: "disabled",
+    enableRequiresEvidence: ["resendSandboxPassed", "twilioSandboxPassed", "expoPushSandboxPassed", "redactedArtifactsRetained"],
+    disableOnMissingEvidence: true,
+    rawSecretArtifactsAllowed: false,
+  },
+  {
+    provider: "sentry",
+    defaultState: "disabled",
+    enableRequiresEvidence: ["sentryCaptureVerified", "redactedArtifactsRetained"],
+    disableOnMissingEvidence: true,
+    rawSecretArtifactsAllowed: false,
+  },
+  {
+    provider: "auth_rate_limit",
+    defaultState: "disabled",
+    enableRequiresEvidence: ["authSessionFixturesPassed", "rateLimitStorePassed", "redactedArtifactsRetained"],
+    disableOnMissingEvidence: true,
+    rawSecretArtifactsAllowed: false,
+  },
+] as const satisfies readonly ProviderContractDisableEnablePolicyEntry[];
+
 export interface ProviderContractRunPersistenceInput {
   tenantId: string;
   runId: string;
@@ -86,6 +147,7 @@ export const providerContractRuntimeArtifactPaths = [
   "coverage/provider-contract-runtime.json",
   "coverage/provider-contract-static-suite.json",
   "coverage/provider-contract-manifest-check.json",
+  "coverage/provider-disable-enable-policy.json",
   "coverage/provider-raw-body-fixtures.json",
   "coverage/provider-replay-idempotency-fixtures.json",
   "coverage/provider-stripe-cli-redacted.log",
@@ -121,6 +183,7 @@ export const providerContractRuntimeProofFiles = [
 export const providerContractRuntimeCommands = [
   "pnpm vitest run apps/web/tests/provider-webhook-contracts.test.ts",
   "pnpm test:manifest",
+  "static provider disable/enable policy gate review",
   "commit signed raw-body and replay/idempotency fixtures for Stripe, email, SMS, and Sentry",
   "stripe listen --forward-to localhost:3000/api/webhooks/stripe && stripe trigger checkout.session.completed",
   "run Google Calendar OAuth, freebusy, sync-token, conflict, and disconnect sandbox flows",
@@ -130,8 +193,8 @@ export const providerContractRuntimeCommands = [
   "GitHub Actions provider-contract job"
 ] as const;
 
-export const providerContractRuntimeLocalCommands = providerContractRuntimeCommands.slice(0, 2);
-export const providerContractRuntimeExternalCommands = providerContractRuntimeCommands.slice(2);
+export const providerContractRuntimeLocalCommands = providerContractRuntimeCommands.slice(0, 3);
+export const providerContractRuntimeExternalCommands = providerContractRuntimeCommands.slice(3);
 
 export const providerContractRuntimeRequiredExternalEvidence = [
   "Signed raw-body and replay/idempotency fixture proof",
@@ -152,6 +215,7 @@ export const providerContractRuntimeLocalArtifacts = [
   "coverage/provider-contract-runtime.json",
   "coverage/provider-contract-static-suite.json",
   "coverage/provider-contract-manifest-check.json",
+  "coverage/provider-disable-enable-policy.json",
   "test-results/provider-contract-runtime",
 ] as const satisfies readonly ProviderContractRuntimeArtifact[];
 
@@ -238,6 +302,7 @@ export type ProviderContractRuntimeExecutionPlan = {
   externalCommands: typeof providerContractRuntimeExternalCommands;
   localArtifacts: typeof providerContractRuntimeLocalArtifacts;
   externalArtifacts: typeof providerContractRuntimeExternalArtifacts;
+  disableEnablePolicy: typeof providerContractDisableEnablePolicy;
   disabledReasons: readonly string[];
 };
 
@@ -320,6 +385,7 @@ export function buildProviderContractRuntimeExecutionPlan(): ProviderContractRun
     externalCommands: providerContractRuntimeExternalCommands,
     localArtifacts: providerContractRuntimeLocalArtifacts,
     externalArtifacts: providerContractRuntimeExternalArtifacts,
+    disableEnablePolicy: providerContractDisableEnablePolicy,
     disabledReasons: [
       "Signed raw-body and replay/idempotency fixture proof requires committed sanitized fixtures.",
       "Stripe CLI webhook/idempotency proof requires Stripe sandbox execution.",
@@ -422,6 +488,12 @@ export const providerContractRuntimeMatrix: readonly ProviderContractRuntimeMatr
     id: "provider-manifest-verification",
     command: "pnpm test:manifest",
     artifact: "coverage/provider-contract-manifest-check.json",
+    status: "wired"
+  },
+  {
+    id: "provider-disable-enable-policy",
+    command: "static provider disable/enable policy gate review",
+    artifact: "coverage/provider-disable-enable-policy.json",
     status: "wired"
   },
   {
@@ -536,8 +608,9 @@ export const providerContractRuntimeReadiness = {
   missingScripts: [],
   requiredCommands: providerContractRuntimeCommands,
   requiredEvidence: [
-    "static provider contract suite, manifest verification, signed raw-body fixtures, and replay/idempotency fixtures",
-    "Stripe CLI webhook/idempotency and Google Calendar OAuth/sync sandbox transcripts",
+  "static provider contract suite, manifest verification, signed raw-body fixtures, and replay/idempotency fixtures",
+  "provider disable/enable policy map with fail-closed missing-evidence gates",
+  "Stripe CLI webhook/idempotency and Google Calendar OAuth/sync sandbox transcripts",
     "storage signed URL/upload/download, rate-limit store, and auth session fixture contract output",
     "email, SMS, push, and Sentry sandbox send/capture artifacts",
     "redacted provider artifact bundle and CI provider-contract job evidence",

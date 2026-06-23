@@ -39,7 +39,7 @@ describe("provider webhook route boundaries", () => {
         body: JSON.stringify({
           type: "email.bounced",
           tenantSlug: "inkroute-demo",
-          data: { email_id: "email_msg_001" },
+          data: { email_id: "email_msg_001", email: "client@example.test" },
         }),
       }),
     );
@@ -47,6 +47,7 @@ describe("provider webhook route boundaries", () => {
       ok: boolean;
       data: {
         interpretation: { provider: string; eventType: string; normalizedStatus: string; requiresSignatureVerification: boolean };
+        durablePersistence: string;
         productionBoundary: { gapIds: string[]; requiredBeforeEnablement: string[] };
       };
     };
@@ -59,11 +60,12 @@ describe("provider webhook route boundaries", () => {
       normalizedStatus: "failed",
       requiresSignatureVerification: true,
     });
+    expect(payload.data.durablePersistence).toMatch(/database-|duplicate-provider-event/);
     expect(payload.data.productionBoundary.gapIds).toEqual(["GAP-061", "GAP-064", "GAP-066"]);
     expect(payload.data.productionBoundary.requiredBeforeEnablement.join(" ")).toContain("suppression");
   });
 
-  it("fail-closes production email webhooks before local runtime persistence", async () => {
+  it("fail-closes production email webhooks before parsing or local runtime persistence when the webhook secret is missing", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = "production";
 
@@ -82,14 +84,19 @@ describe("provider webhook route boundaries", () => {
       const payload = (await response.json()) as {
         ok: boolean;
         error: { code: string };
-        data: { productionBoundary: { localEmailWebhookPersistenceDisabled: boolean; requiresDurableProviderEventPersistence: boolean } };
+        productionBoundary: {
+          localEmailWebhookPersistenceDisabled: boolean;
+          requiresCryptographicSignatureSecret: boolean;
+          durablePersistence: string;
+        };
       };
 
       expect(response.status).toBe(503);
       expect(payload.ok).toBe(false);
-      expect(payload.error.code).toBe("PROVIDER_EMAIL_WEBHOOK_RECONCILIATION_NOT_CONFIGURED");
-      expect(payload.data.productionBoundary.localEmailWebhookPersistenceDisabled).toBe(true);
-      expect(payload.data.productionBoundary.requiresDurableProviderEventPersistence).toBe(true);
+      expect(payload.error.code).toBe("EMAIL_PROVIDER_WEBHOOK_SECRET_NOT_CONFIGURED");
+      expect(payload.productionBoundary.localEmailWebhookPersistenceDisabled).toBe(true);
+      expect(payload.productionBoundary.requiresCryptographicSignatureSecret).toBe(true);
+      expect(payload.productionBoundary.durablePersistence).toBe("not-attempted-production-secret-gated");
     } finally {
       process.env.NODE_ENV = originalNodeEnv;
     }
@@ -131,6 +138,7 @@ describe("provider webhook route boundaries", () => {
         body: JSON.stringify({
           MessageStatus: "message.received",
           Body: "STOP",
+          From: "+15555550199",
           tenantSlug: "inkroute-demo",
         }),
       }),
@@ -147,13 +155,14 @@ describe("provider webhook route boundaries", () => {
       }),
     );
     const stopPayload = (await stop.json()) as {
-      data: { interpretation: { requiresInboundMessageHandling: boolean; shouldUpdateDeliveryLog: boolean; notes: string[] }; inboundBodyProvided: boolean };
+      data: { durablePersistence: string; interpretation: { requiresInboundMessageHandling: boolean; shouldUpdateDeliveryLog: boolean; notes: string[] }; inboundBodyProvided: boolean };
     };
     const helpPayload = (await help.json()) as {
       data: { interpretation: { requiresInboundMessageHandling: boolean; shouldUpdateDeliveryLog: boolean; notes: string[] }; inboundBodyProvided: boolean };
     };
 
     expect(stop.status).toBe(200);
+    expect(stopPayload.data.durablePersistence).toMatch(/database-|duplicate-provider-event/);
     expect(stopPayload.data.inboundBodyProvided).toBe(true);
     expect(stopPayload.data.interpretation).toMatchObject({
       requiresInboundMessageHandling: true,
@@ -170,7 +179,7 @@ describe("provider webhook route boundaries", () => {
     expect(helpPayload.data.interpretation.notes.join(" ")).toContain("Inbound SMS should create");
   });
 
-  it("fail-closes production SMS webhooks before local runtime persistence", async () => {
+  it("fail-closes production SMS webhooks before parsing or local runtime persistence when the auth token is missing", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = "production";
 
@@ -189,14 +198,19 @@ describe("provider webhook route boundaries", () => {
       const payload = (await response.json()) as {
         ok: boolean;
         error: { code: string };
-        data: { productionBoundary: { localSmsWebhookPersistenceDisabled: boolean; requiresDurableProviderEventPersistence: boolean } };
+        productionBoundary: {
+          localSmsWebhookPersistenceDisabled: boolean;
+          requiresCryptographicSignatureSecret: boolean;
+          durablePersistence: string;
+        };
       };
 
       expect(response.status).toBe(503);
       expect(payload.ok).toBe(false);
-      expect(payload.error.code).toBe("PROVIDER_SMS_WEBHOOK_RECONCILIATION_NOT_CONFIGURED");
-      expect(payload.data.productionBoundary.localSmsWebhookPersistenceDisabled).toBe(true);
-      expect(payload.data.productionBoundary.requiresDurableProviderEventPersistence).toBe(true);
+      expect(payload.error.code).toBe("SMS_PROVIDER_WEBHOOK_AUTH_TOKEN_NOT_CONFIGURED");
+      expect(payload.productionBoundary.localSmsWebhookPersistenceDisabled).toBe(true);
+      expect(payload.productionBoundary.requiresCryptographicSignatureSecret).toBe(true);
+      expect(payload.productionBoundary.durablePersistence).toBe("not-attempted-production-secret-gated");
     } finally {
       process.env.NODE_ENV = originalNodeEnv;
     }

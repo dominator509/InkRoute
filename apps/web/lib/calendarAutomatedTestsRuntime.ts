@@ -38,6 +38,7 @@ export interface CalendarAutomationExecutionPolicy {
 
 export interface CalendarAutomationExecutionPlan {
   readonly policy: typeof calendarAutomationExecutionPolicy;
+  readonly surfaceContract: typeof calendarAutomationSurfaceContract;
   readonly commandExecutionAllowed: false;
   readonly seededPostgresExecutionAllowed: false;
   readonly googleProviderExecutionAllowed: false;
@@ -54,6 +55,19 @@ export interface CalendarAutomationExecutionPlan {
 export type CalendarAutomationArtifactReview = ReturnType<
   typeof buildCalendarAutomationSecretSafeArtifactReview
 >;
+
+export interface CalendarAutomationPersistedRunPayload {
+  readonly payloadId: "gap-059-calendar-automation-persisted-run";
+  readonly requiredArtifact: "coverage/calendar-automation-persisted-run-payload.json";
+  readonly providerBackedPersistenceRequired: true;
+  readonly localPersistenceExecutionAllowed: false;
+  readonly tenantIsolationEvidenceRequired: true;
+  readonly postgresIntegrationEvidenceRequired: true;
+  readonly googleProviderEvidenceRequired: true;
+  readonly playwrightEvidenceRequired: true;
+  readonly redactionRequired: true;
+  readonly requiredExternalEvidence: typeof calendarAutomationRequiredExternalEvidence;
+}
 
 export const calendarAutomationExecutionPolicy = {
   codexMayClassifyStaticCalendarAutomationReadiness: true,
@@ -106,11 +120,13 @@ export const calendarAutomationRequiredExternalEvidence = [
   "signed-feed revocation DB tests",
   "CI calendar automation artifacts",
   "artifact retention proof",
+  "tenant-isolated persisted calendar automation run payload",
   "secret-safe calendar automation artifact review",
 ] as const;
 
 export const buildCalendarAutomationExecutionPlan = (): CalendarAutomationExecutionPlan => ({
   policy: calendarAutomationExecutionPolicy,
+  surfaceContract: calendarAutomationSurfaceContract,
   commandExecutionAllowed: false,
   seededPostgresExecutionAllowed: false,
   googleProviderExecutionAllowed: false,
@@ -128,6 +144,19 @@ export const buildCalendarAutomationArtifactReview = (
   input: Parameters<typeof buildCalendarAutomationSecretSafeArtifactReview>[0],
 ): CalendarAutomationArtifactReview => buildCalendarAutomationSecretSafeArtifactReview(input);
 
+export const buildCalendarAutomationPersistedRunPayload = (): CalendarAutomationPersistedRunPayload => ({
+  payloadId: "gap-059-calendar-automation-persisted-run",
+  requiredArtifact: "coverage/calendar-automation-persisted-run-payload.json",
+  providerBackedPersistenceRequired: true,
+  localPersistenceExecutionAllowed: false,
+  tenantIsolationEvidenceRequired: true,
+  postgresIntegrationEvidenceRequired: true,
+  googleProviderEvidenceRequired: true,
+  playwrightEvidenceRequired: true,
+  redactionRequired: true,
+  requiredExternalEvidence: calendarAutomationRequiredExternalEvidence,
+});
+
 export const calendarAutomationArtifactPaths = [
   "coverage/calendar-automation-runtime.json",
   "coverage/calendar-automation-calendar-typecheck.txt",
@@ -143,6 +172,7 @@ export const calendarAutomationArtifactPaths = [
   "coverage/calendar-automation-signed-ics-revocation-db.json",
   "coverage/calendar-automation-ci-job.json",
   "coverage/calendar-automation-artifact-retention.json",
+  "coverage/calendar-automation-persisted-run-payload.json",
   "coverage/calendar-automation-secret-safe-artifacts.json",
   "test-results/calendar-automation-runtime",
 ] as const;
@@ -166,6 +196,113 @@ export const calendarAutomationRuntimeProofFiles = [
 
 export type CalendarAutomationEvidenceArtifact = (typeof calendarAutomationArtifactPaths)[number];
 
+export interface CalendarAutomationSurfaceContractEntry {
+  readonly surfaceId: string;
+  readonly requiredCommand:
+    | (typeof calendarAutomationRuntimeCommands)[number]
+    | (typeof calendarAutomationExternalCommands)[number]
+    | "Playwright dashboard calendar smoke"
+    | "Playwright public travel calendar smoke"
+    | "retain DB logs, Google transcripts, Playwright traces, and ICS import output"
+    | "review calendar/travel artifacts for provider tokens, PII, and private booking data";
+  readonly requiredArtifact: CalendarAutomationEvidenceArtifact;
+  readonly automationBoundary:
+    | "local-route"
+    | "postgres"
+    | "google-provider"
+    | "timezone"
+    | "playwright"
+    | "race-condition"
+    | "signed-feed-db"
+    | "ci-proof"
+    | "artifact-retention";
+  readonly providerBackedEvidenceRequired: boolean;
+  readonly redactedArtifactRequired: true;
+}
+
+export const calendarAutomationSurfaceContract: readonly CalendarAutomationSurfaceContractEntry[] = [
+  {
+    surfaceId: "signed-ics-route",
+    requiredCommand: "pnpm vitest run apps/web/tests/ics-feed-route.test.ts",
+    requiredArtifact: "coverage/calendar-automation-signed-ics-route.json",
+    automationBoundary: "local-route",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "availability-preview-route",
+    requiredCommand: "pnpm vitest run apps/web/tests/availability-preview-route.test.ts",
+    requiredArtifact: "coverage/calendar-automation-availability-preview-route.json",
+    automationBoundary: "local-route",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "postgres-integration",
+    requiredCommand: "calendar Postgres integration tests",
+    requiredArtifact: "coverage/calendar-automation-postgres-integration.json",
+    automationBoundary: "postgres",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "google-provider",
+    requiredCommand: "Google test-calendar provider tests",
+    requiredArtifact: "coverage/calendar-automation-google-provider-redacted.json",
+    automationBoundary: "google-provider",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "timezone-provider-matrix",
+    requiredCommand: "DST/recurrence provider matrix tests",
+    requiredArtifact: "coverage/calendar-automation-timezone-provider-matrix.json",
+    automationBoundary: "timezone",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "dashboard-public-playwright",
+    requiredCommand: "Playwright dashboard/public travel calendar smoke",
+    requiredArtifact: "coverage/calendar-automation-dashboard-playwright-redacted.json",
+    automationBoundary: "playwright",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "concurrent-hold-race",
+    requiredCommand: "concurrent hold race-condition tests",
+    requiredArtifact: "coverage/calendar-automation-concurrent-hold-race.json",
+    automationBoundary: "race-condition",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "signed-feed-revocation",
+    requiredCommand: "signed-feed revocation DB tests",
+    requiredArtifact: "coverage/calendar-automation-signed-ics-revocation-db.json",
+    automationBoundary: "signed-feed-db",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "ci-calendar-job",
+    requiredCommand: "GitHub Actions calendar lifecycle test job",
+    requiredArtifact: "coverage/calendar-automation-ci-job.json",
+    automationBoundary: "ci-proof",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "artifact-retention",
+    requiredCommand: "calendar automation artifact retention review",
+    requiredArtifact: "coverage/calendar-automation-artifact-retention.json",
+    automationBoundary: "artifact-retention",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+] as const;
+
 export interface CalendarAutomationEvidenceInput {
   readonly calendarTypecheckPassed: boolean;
   readonly calendarTestsPassed: boolean;
@@ -180,6 +317,7 @@ export interface CalendarAutomationEvidenceInput {
   readonly signedIcsRevocationDbTestsPassed: boolean;
   readonly ciCalendarJobEvidenceCaptured: boolean;
   readonly artifactRetentionVerified: boolean;
+  readonly persistedAutomationRunPayloadCaptured: boolean;
   readonly secretSafeArtifactReviewPassed: boolean;
   readonly capturedArtifacts: readonly CalendarAutomationEvidenceArtifact[];
 }
@@ -198,6 +336,7 @@ export interface CalendarAutomationEvidenceDecision {
 
 export type CalendarAutomationDecisionRequiredEvidence = readonly [
   ...typeof calendarAutomationRuntimeReadiness.requiredEvidence,
+  "tenant-isolated persisted calendar automation run payload",
   "secret-safe review of retained calendar/travel artifacts",
 ];
 
@@ -206,6 +345,7 @@ export function buildCalendarAutomationDecisionRequiredEvidence(
 ): CalendarAutomationDecisionRequiredEvidence {
   return [
     ...readinessEvidence,
+    "tenant-isolated persisted calendar automation run payload",
     "secret-safe review of retained calendar/travel artifacts",
   ];
 }
@@ -247,6 +387,9 @@ export const buildCalendarAutomationEvidenceDecision = (
     ...(!input.artifactRetentionVerified
       ? ["Calendar automation artifact retention evidence is missing."]
       : []),
+    ...(!input.persistedAutomationRunPayloadCaptured
+      ? ["Tenant-isolated persisted calendar automation run payload is missing."]
+      : []),
     ...(!input.secretSafeArtifactReviewPassed
       ? ["Secret-safe calendar automation artifact review evidence is missing."]
       : []),
@@ -280,6 +423,7 @@ export const calendarAutomationRuntimeMatrix = [
   { id: "signed-ics-revocation-db", command: "signed-feed revocation DB tests", artifact: "coverage/calendar-automation-signed-ics-revocation-db.json", status: "db-gated" },
   { id: "ci-calendar-job", command: "GitHub Actions calendar lifecycle test job", artifact: "coverage/calendar-automation-ci-job.json", status: "ci-gated" },
   { id: "artifact-retention", command: "retain DB logs, Google transcripts, Playwright traces, and ICS import output", artifact: "coverage/calendar-automation-artifact-retention.json", status: "artifact-gated" },
+  { id: "persisted-run-payload", command: "capture tenant-isolated persisted calendar automation run payload", artifact: "coverage/calendar-automation-persisted-run-payload.json", status: "db-gated" },
   { id: "secret-safe-artifacts", command: "review calendar/travel artifacts for provider tokens, PII, and private booking data", artifact: "coverage/calendar-automation-secret-safe-artifacts.json", status: "artifact-gated" },
 ] as const satisfies readonly CalendarAutomationRuntimeMatrixEntry[];
 

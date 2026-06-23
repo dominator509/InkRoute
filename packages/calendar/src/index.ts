@@ -120,6 +120,18 @@ export interface CalendarTimezoneAuditSummary {
   findings: CalendarTimezoneFinding[];
 }
 
+export interface ExplicitTimezoneDateBoundaryEvidence {
+  status: "ready" | "blocked";
+  strategy: "intl-datetimeformat";
+  sampleInstant: ISODateString;
+  sampleTimezone: string;
+  renderedLabel: string | null;
+  boundarySources: readonly ["route", "persistence", "provider", "render"];
+  storesUtcInstants: true;
+  requiresIanaTimezoneAtBoundaries: true;
+  blockers: readonly string[];
+}
+
 export type AvailabilityPersistenceAction =
   | "create_availability_window"
   | "create_slot_hold"
@@ -586,6 +598,55 @@ export function isValidIanaTimezone(timezone: string): boolean {
   } catch {
     return false;
   }
+}
+
+export const explicitTimezoneDateBoundaryStrategy = {
+  strategy: "intl-datetimeformat",
+  boundarySources: ["route", "persistence", "provider", "render"],
+  storesUtcInstants: true,
+  requiresIanaTimezoneAtBoundaries: true,
+  proofArtifact: "coverage/timezone-recurrence-temporal-library.json",
+} as const;
+
+export function buildExplicitTimezoneDateBoundaryEvidence(input: {
+  sampleInstant?: ISODateString;
+  sampleTimezone?: string;
+} = {}): ExplicitTimezoneDateBoundaryEvidence {
+  const sampleInstant = input.sampleInstant ?? "2026-06-08T16:00:00.000Z";
+  const sampleTimezone = input.sampleTimezone ?? "America/Los_Angeles";
+  const blockers: string[] = [];
+  let renderedLabel: string | null = null;
+
+  if (!sampleInstant.endsWith("Z") || Number.isNaN(Date.parse(sampleInstant))) {
+    blockers.push("Timezone/date boundary samples must use canonical UTC instants.");
+  }
+  if (!isValidIanaTimezone(sampleTimezone)) {
+    blockers.push("Timezone/date boundary samples must use trimmed region-style IANA identifiers.");
+  }
+
+  if (blockers.length === 0) {
+    renderedLabel = new Intl.DateTimeFormat("en-US", {
+      timeZone: sampleTimezone,
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+    }).format(new Date(sampleInstant));
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    strategy: explicitTimezoneDateBoundaryStrategy.strategy,
+    sampleInstant,
+    sampleTimezone,
+    renderedLabel,
+    boundarySources: explicitTimezoneDateBoundaryStrategy.boundarySources,
+    storesUtcInstants: true,
+    requiresIanaTimezoneAtBoundaries: true,
+    blockers,
+  };
 }
 
 export function auditCalendarTimezones(input: {

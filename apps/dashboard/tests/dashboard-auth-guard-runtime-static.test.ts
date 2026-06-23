@@ -13,11 +13,13 @@ import {
   dashboardAuthGuardLocalCommands,
   dashboardAuthGuardReadinessAreas,
   dashboardAuthGuardRequiredExternalEvidence,
+  dashboardAuthGuardRouteMethodPermissionContract,
   dashboardAuthGuardRuntimeCommands,
   dashboardAuthGuardRuntimeMatrix,
   dashboardAuthGuardRuntimeProofFiles,
   dashboardAuthGuardRuntimeReadiness,
   dashboardAuthGuardRuntimeRequiredControls,
+  dashboardAuthGuardSurfaceContract,
 } from "../lib/dashboardAuthGuardRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -49,6 +51,7 @@ describe("dashboard auth guard runtime contract", () => {
       "GitHub Actions dashboard auth guard evidence job",
     ]);
     expect(dashboardAuthGuardReadinessAreas).toContain("dashboard-middleware-guard");
+    expect(dashboardAuthGuardReadinessAreas).toContain("route-method-permission-inference");
     expect(dashboardAuthGuardReadinessAreas).toContain("dashboard-api-helper-guard");
     expect(dashboardAuthGuardReadinessAreas).toContain("browser-cross-tenant-denial");
     expect(dashboardAuthGuardRuntimeMatrix.map((entry) => entry.id)).toEqual([
@@ -56,6 +59,7 @@ describe("dashboard auth guard runtime contract", () => {
       "auth-tests",
       "dashboard-typecheck-build",
       "middleware-guard",
+      "route-method-permission-map",
       "protected-layout-guard",
       "api-helper-guard",
       "provider-session",
@@ -64,7 +68,21 @@ describe("dashboard auth guard runtime contract", () => {
       "browser-denial-smokes",
       "ci-secret-safe-evidence",
     ]);
+    expect(dashboardAuthGuardSurfaceContract.map((entry) => entry.surfaceId)).toEqual([
+      "provider-backed-dashboard-session",
+      "route-method-permission-inference",
+      "middleware-layout-api-guards",
+      "tenant-member-custom-role-database",
+      "unauthorized-forbidden-denial-states",
+      "auth-audit-log-persistence",
+      "auth-run-persistence-contract",
+      "browser-login-tenant-denial",
+      "no-store-cache-policy",
+      "ci-secret-safe-artifacts",
+    ]);
     expect(dashboardAuthGuardArtifactPaths).toContain("coverage/dashboard-auth-guard-runtime.json");
+    expect(dashboardAuthGuardArtifactPaths).toContain("coverage/dashboard-auth-route-method-permission-map.json");
+    expect(dashboardAuthGuardArtifactPaths).toContain("coverage/dashboard-auth-guard-run-persistence-contract.json");
     expect(dashboardAuthGuardArtifactPaths).toContain("test-results/dashboard-auth-guard-runtime");
   });
 
@@ -88,6 +106,13 @@ describe("dashboard auth guard runtime contract", () => {
     expect(dashboardMiddleware).toContain("evaluateDashboardRouteGuard");
     expect(dashboardMiddleware).toContain("Cache-Control");
     expect(dashboardMiddleware).toContain("x-inkroute-dashboard-auth-guard");
+    expect(dashboardAuthApi).toContain("export function buildDashboardAuthGuardRunRecord");
+    expect(dashboardAuthApi).toContain("export async function persistDashboardAuthGuardRun");
+    expect(dashboardAuthApi).toContain("entityType: \"DashboardAuthGuardRun\"");
+    expect(dashboardAuthApi).toContain("persistedTenantMemberRequired: true");
+    expect(dashboardAuthApi).toContain("persistedCustomRoleRequired: true");
+    expect(dashboardAuthApi).toContain("providerBackedSessionRequired: true");
+    expect(dashboardAuthApi).toContain("authRunRecord: buildDashboardAuthGuardRunRecord");
     expect(dashboardAuthApi).toContain("evaluateDashboardApiGuard");
     expect(dashboardAuthApi).toContain("dashboardApiGuardFailureResponse");
     expect(dashboardAuthApi).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
@@ -103,8 +128,8 @@ describe("dashboard auth guard runtime contract", () => {
   it("keeps evidence blockers explicit until provider sessions, DB roles, browser denial, CI, and safe artifacts exist", () => {
     expect(dashboardAuthGuardRuntimeReadiness.status).toBe("blocked");
     expect(dashboardAuthGuardRuntimeReadiness.missingScripts).toEqual([]);
-    expect(dashboardAuthGuardRuntimeReadiness.requiredCommands).toEqual(dashboardAuthGuardRuntimeCommands);
-    expect(dashboardAuthGuardRuntimeReadiness.requiredControls).toEqual(dashboardAuthGuardRuntimeRequiredControls);
+    expect(dashboardAuthGuardRuntimeReadiness.requiredCommands).toBe(dashboardAuthGuardRuntimeCommands);
+    expect(dashboardAuthGuardRuntimeReadiness.requiredControls).toBe(dashboardAuthGuardRuntimeRequiredControls);
     expect(dashboardAuthGuardRuntimeReadiness.requiredEvidence).toContain(
       "provider-backed session plus TenantMember/CustomRole database lookup evidence",
     );
@@ -140,7 +165,9 @@ describe("dashboard auth guard runtime contract", () => {
     expect(decision.missingCommands).toContain("browser dashboard cross-tenant denial smoke");
     expect(decision.missingArtifacts).toContain("coverage/dashboard-auth-secret-safe-artifacts.json");
     expect(decision.missingReadinessAreas).toContain("provider-backed-dashboard-session");
+    expect(decision.missingReadinessAreas).toContain("route-method-permission-inference");
     expect(decision.missingEvidence).toContain("authProviderSessionsConfigured");
+    expect(decision.missingEvidence).toContain("routeMethodPermissionMappingCaptured");
     expect(decision.missingEvidence).toContain("browserCrossTenantDenialPassed");
     expect(decision.blockers).toContain("Real auth provider sessions must be configured for dashboard guard tests.");
     expect(decision.blockers).toContain(
@@ -187,14 +214,45 @@ describe("dashboard auth guard runtime contract", () => {
       "pnpm --filter @inkroute/auth typecheck",
       "pnpm --filter @inkroute/auth test",
       "static dashboard middleware guard review",
+      "static dashboard route-method permission review",
       "static protected layout guard review",
       "static dashboard API helper no-store review",
     ]);
     expect(executionPlan.externalCommands).toBe(dashboardAuthGuardExternalCommands);
+    expect(executionPlan.surfaceContract).toBe(dashboardAuthGuardSurfaceContract);
+    expect(executionPlan.surfaceContract).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          surfaceId: "provider-backed-dashboard-session",
+          proofBoundary: "provider-session",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "route-method-permission-inference",
+          proofBoundary: "route-method-permission",
+          providerBackedEvidenceRequired: false,
+          redactedArtifactRequired: false,
+        }),
+        expect.objectContaining({
+          surfaceId: "auth-run-persistence-contract",
+          proofBoundary: "run-persistence-contract",
+          providerBackedEvidenceRequired: false,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "ci-secret-safe-artifacts",
+          proofBoundary: "ci-proof",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+      ]),
+    );
     expect(executionPlan.externalCommands).toEqual([
       "pnpm --filter @inkroute/dashboard typecheck",
       "pnpm --filter @inkroute/dashboard build",
       "dashboard middleware auth guard tests",
+      "dashboard route-method permission mapping contract tests",
       "dashboard protected layout auth guard tests",
       "dashboard API auth guard tests",
       "browser dashboard login/logout smoke",
@@ -221,8 +279,13 @@ describe("dashboard auth guard runtime contract", () => {
     });
     expect(executionPlan.requiredExternalEvidence).toBe(dashboardAuthGuardRequiredExternalEvidence);
     expect(executionPlan.requiredExternalEvidence).toContain("provider-backed dashboard session evidence");
+    expect(executionPlan.requiredExternalEvidence).toContain("dashboard route-method permission mapping evidence");
     expect(executionPlan.requiredExternalEvidence).toContain("browser dashboard cross-tenant denial smoke");
     expect(executionPlan.requiredExternalEvidence).toContain("secret-safe dashboard auth artifact review");
+    expect(executionPlan.routeMethodPermissionContract).toBe(dashboardAuthGuardRouteMethodPermissionContract);
+    expect(dashboardAuthGuardRouteMethodPermissionContract.safeMethods).toEqual(["GET", "HEAD", "OPTIONS"]);
+    expect(dashboardAuthGuardRouteMethodPermissionContract.mutatingMethods).toEqual(["POST", "PUT", "PATCH", "DELETE"]);
+    expect(dashboardAuthGuardRouteMethodPermissionContract.unknownMethodPolicy).toBe("deny");
     expect(
       buildDashboardAuthGuardEvidenceDecision({
         commands: dashboardAuthGuardRuntimeCommands,
@@ -235,11 +298,13 @@ describe("dashboard auth guard runtime contract", () => {
           dashboardBuildPassed: true,
           authProviderSessionsConfigured: true,
           dashboardMiddlewareEnforcesGuard: true,
+          routeMethodPermissionMappingCaptured: true,
           protectedLayoutEnforcesGuard: true,
           dashboardApiHelpersEnforceGuard: true,
           tenantMembershipDbLookupConfigured: true,
           customRoleDbLookupConfigured: true,
           authAuditLogsPersisted: true,
+          authRunPersistenceContractCaptured: true,
           browserLoginLogoutPassed: true,
           browserTenantSwitchPassed: true,
           browserCrossTenantDenialPassed: true,
@@ -273,12 +338,17 @@ describe("dashboard auth guard runtime contract", () => {
     expect(ciWorkflow).toContain("dashboard-auth-guard-runtime-artifacts");
     expect(unitManifest).toContain("unit-dashboard-auth-guard-runtime-static");
     expect(gapTracker).toContain("apps/dashboard/lib/dashboardAuthGuardRuntime.ts");
+    expect(gapTracker).toContain("dashboardAuthGuardRouteMethodPermissionContract");
     expect(gapTracker).toContain("buildDashboardAuthGuardExecutionPlan");
+    expect(gapTracker).toContain("dashboardAuthGuardSurfaceContract");
     expect(gapTracker).toContain("dashboardAuthGuardLocalCommands/dashboardAuthGuardExternalCommands");
     expect(gapTracker).toContain("buildRedactedDashboardAuthGuardArtifact");
     expect(gapTracker).toContain("buildDashboardAuthGuardArtifactReview");
     expect(gapTracker).toContain("dashboardAuthGuardExecutionPolicy");
     expect(gapTracker).toContain("dashboardAuthGuardRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildDashboardAuthGuardRunRecord");
+    expect(gapTracker).toContain("persistDashboardAuthGuardRun");
+    expect(gapTracker).toContain("Dashboard auth guard identity assertions pin exported commands, controls, surface contract, route-method permission contract, policy, and required external evidence helpers");
     expect(gapTracker).toContain("GAP-036 is dashboard-auth-guard-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("GAP-036 is dashboard-auth-guard-runtime-matrix");
     expect(dashboardAuthGuardArtifactPaths).toContain("coverage/dashboard-auth-secret-safe-artifacts.json");

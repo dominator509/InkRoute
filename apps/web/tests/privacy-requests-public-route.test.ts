@@ -58,6 +58,7 @@ describe("public privacy request route", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body.ok).toBe(true);
     expect(body.data.tenantSlug).toBe("inkroute-demo");
+    expect(body.data.persistence).toBe("local-fallback");
     expect(body.data.persisted.requestType).toBe("export");
     expect(body.data.persisted).toMatchObject({ tenantId: "tenant_inkroute_demo", requestType: "export" });
     expect(body.data.redactedSubmission.email).not.toBe("client@example.test");

@@ -134,6 +134,7 @@ describe("dashboard availability persistence contract", () => {
     expect(routeSource).toContain("buildAvailabilityPersistencePlan");
     expect(routeSource).toContain("calendar:write");
     expect(routeSource).toContain("AVAILABILITY_HOLD_BLOCKED");
+    expect(routeSource).toContain("tx.availabilityWindow.findFirst");
     expect(routeSource).toContain("repository-required");
     expect(routeSource).toContain("{ status: 202, headers: noStoreHeaders }");
     expect(routeSource).not.toContain("{ status: 501, headers: noStoreHeaders }");

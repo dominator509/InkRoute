@@ -26,17 +26,24 @@ describe("dashboard booking state mutation route contract", () => {
     expect(routeSource).toContain('code: "INVALID_TRANSITION"');
   });
 
-  it("persists booking status, state event, and audit log in one tenant-scoped transaction", () => {
+  it("persists booking status, idempotency, state event, and audit log in one tenant-scoped transaction", () => {
     const transactionIndex = routeSource.indexOf("prisma.$transaction");
+    const idempotencyClaimIndex = routeSource.indexOf("tx.idempotencyKey.upsert");
     const bookingUpdateIndex = routeSource.indexOf("tx.bookingRequest.update");
     const eventCreateIndex = routeSource.indexOf("tx.bookingStateEvent.create");
     const auditCreateIndex = routeSource.indexOf("tx.auditLog.create");
+    const idempotencyResultIndex = routeSource.indexOf("tx.idempotencyKey.update");
 
     expect(transactionIndex).toBeGreaterThan(-1);
-    expect(bookingUpdateIndex).toBeGreaterThan(transactionIndex);
+    expect(idempotencyClaimIndex).toBeGreaterThan(transactionIndex);
+    expect(bookingUpdateIndex).toBeGreaterThan(idempotencyClaimIndex);
     expect(eventCreateIndex).toBeGreaterThan(bookingUpdateIndex);
     expect(auditCreateIndex).toBeGreaterThan(eventCreateIndex);
+    expect(idempotencyResultIndex).toBeGreaterThan(auditCreateIndex);
     expect(routeSource).toContain("where: { id: bookingId, tenantId }");
+    expect(routeSource).toContain("existingIdempotency?.status === \"completed\"");
+    expect(routeSource).toContain("Booking lifecycle mutation replay returned the previously persisted idempotency result");
+    expect(routeSource).toContain("idempotencyKeyId");
     expect(routeSource).toContain('action: `booking.${action}`');
   });
 
@@ -66,11 +73,16 @@ describe("dashboard booking read route contract", () => {
     for (const source of [listRouteSource, detailRouteSource]) {
       expect(source).toContain('assertPermission(actor, "booking:read")');
       expect(source).toContain('code: "FORBIDDEN"');
+      expect(source).toContain(".safeParse(Object.fromEntries(new URL(request.url).searchParams))");
+      expect(source).toContain('code: "VALIDATION_FAILED"');
       expect(source).toContain("tenantId !== actor.tenantId");
       expect(source).toContain('code: "TENANT_MISMATCH"');
       expect(source).toContain('"Cache-Control": "no-store"');
     }
 
+    expect(listRouteSource).toContain("dashboardListQuerySchema");
+    expect(listRouteSource).toContain("query.data.limit");
+    expect(detailRouteSource).toContain("dashboardTenantQuerySchema");
     expect(listRouteSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(listRouteSource).not.toContain('}, { status: 403 });');
     expect(listRouteSource).not.toContain('}, { status: 500 });');

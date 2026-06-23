@@ -6,6 +6,7 @@ import {
   buildSeoPublicationEvidenceDecision,
   buildSeoPublicationExecutionPlan,
   createInMemorySeoPublicationRepository,
+  createPrismaSeoPublicationRepository,
   executeLocalSeoPublicationMutation,
   seoPublicationArtifactPaths,
   seoPublicationDecisionRequiredEvidence,
@@ -118,6 +119,66 @@ describe("SEO publication runtime contract", () => {
     expect(snapshot.auditLogs).toHaveLength(1);
   });
 
+  it("exposes a Prisma-backed publication repository contract for durable idempotency, revalidation, associations, and audit rows", async () => {
+    const calls: string[] = [];
+    const repository = createPrismaSeoPublicationRepository({
+      idempotencyKey: {
+        async findUnique() {
+          calls.push("idempotencyKey.findUnique");
+          return null;
+        },
+        async create() {
+          calls.push("idempotencyKey.create");
+          return {};
+        },
+      },
+      seoPublicationRevalidationJob: {
+        async create() {
+          calls.push("seoPublicationRevalidationJob.create");
+          return {};
+        },
+      },
+      seoPublicationAssociation: {
+        async createMany() {
+          calls.push("seoPublicationAssociation.createMany");
+          return {};
+        },
+      },
+      auditLog: {
+        async create() {
+          calls.push("auditLog.create");
+          return {};
+        },
+      },
+    });
+
+    const mutation = {
+      tenantId: "tenant_demo",
+      actorId: "user_seo_demo",
+      model: "SeoCityPage" as const,
+      action: "publish" as const,
+      entityId: "seo_city_seattle",
+      idempotencyKey: "seo:publish:city:seattle",
+      revalidationTags: ["seo:city:seattle"],
+      relatedFaqIds: ["faq_1"],
+      relatedReviewIds: ["review_1"],
+      relatedImageIds: ["image_1"],
+    };
+
+    await expect(repository.claimIdempotencyKey(mutation)).resolves.toBe("claimed");
+    await repository.persistRevalidationJob(mutation);
+    await repository.persistAssociations(mutation);
+    await repository.persistAuditLog(mutation);
+
+    expect(calls).toEqual([
+      "idempotencyKey.findUnique",
+      "idempotencyKey.create",
+      "seoPublicationRevalidationJob.create",
+      "seoPublicationAssociation.createMany",
+      "auditLog.create",
+    ]);
+  });
+
   it("reviews retained SEO publication artifacts with recursive secret, provider payload, and PII redaction", () => {
     const review = buildSeoPublicationArtifactReview({
       expectedArtifactPaths: ["coverage/seo-publication-dashboard-publish-flow-redacted.json"],
@@ -139,13 +200,13 @@ describe("SEO publication runtime contract", () => {
     expect(review.blockers).toEqual([]);
   });
 
-  it("keeps association, idempotency, revalidation, integration, tenant, dashboard, CI, and artifact blockers explicit", () => {
+  it("keeps integration, tenant, dashboard, CI, and artifact blockers explicit after local persistence is wired", () => {
     expect(seoPublicationRuntimeReadiness.status).toBe("blocked");
     expect(seoPublicationRuntimeReadiness.missingScripts).toEqual([]);
-    expect(seoPublicationRuntimeReadiness.requiredEvidence).toEqual(seoPublicationDecisionRequiredEvidence);
-    expect(seoPublicationRuntimeReadiness.blockers).toContain("FAQ, review, and image SEO associations must persist tenant-safely.");
-    expect(seoPublicationRuntimeReadiness.blockers).toContain("SEO revalidation jobs must persist after publication commits.");
-    expect(seoPublicationRuntimeReadiness.blockers).toContain("SEO publication idempotency store must be available.");
+    expect(seoPublicationRuntimeReadiness.requiredEvidence).toBe(seoPublicationDecisionRequiredEvidence);
+    expect(seoPublicationRuntimeReadiness.blockers).not.toContain("FAQ, review, and image SEO associations must persist tenant-safely.");
+    expect(seoPublicationRuntimeReadiness.blockers).not.toContain("SEO revalidation jobs must persist after publication commits.");
+    expect(seoPublicationRuntimeReadiness.blockers).not.toContain("SEO publication idempotency store must be available.");
     expect(seoPublicationRuntimeReadiness.blockers).toContain("Dashboard SEO publish/edit/archive flow tests must pass.");
   });
 
@@ -164,19 +225,19 @@ describe("SEO publication runtime contract", () => {
       ciEvidenceRequiredForClosure: true,
       secretSafeArtifactsRequiredForClosure: true,
     });
-    expect(plan.policy).toEqual(seoPublicationExecutionPolicy);
-    expect(plan.commandExecutionAllowed).toEqual(false);
-    expect(plan.seededPrismaExecutionAllowed).toEqual(false);
-    expect(plan.tenantIsolationExecutionAllowed).toEqual(false);
-    expect(plan.idempotencyExecutionAllowed).toEqual(false);
-    expect(plan.revalidationExecutionAllowed).toEqual(false);
-    expect(plan.associationExecutionAllowed).toEqual(false);
-    expect(plan.browserExecutionAllowed).toEqual(false);
-    expect(plan.ciExecutionAllowed).toEqual(false);
-    expect(plan.artifactReviewExecutionAllowed).toEqual(false);
-    expect(plan.localCommands).toEqual(seoPublicationLocalCommands);
-    expect(plan.externalCommands).toEqual(seoPublicationExternalCommands);
-    expect(plan.requiredExternalEvidence).toEqual(seoPublicationRequiredExternalEvidence);
+    expect(plan.policy).toBe(seoPublicationExecutionPolicy);
+    expect(plan.commandExecutionAllowed).toBe(false);
+    expect(plan.seededPrismaExecutionAllowed).toBe(false);
+    expect(plan.tenantIsolationExecutionAllowed).toBe(false);
+    expect(plan.idempotencyExecutionAllowed).toBe(false);
+    expect(plan.revalidationExecutionAllowed).toBe(false);
+    expect(plan.associationExecutionAllowed).toBe(false);
+    expect(plan.browserExecutionAllowed).toBe(false);
+    expect(plan.ciExecutionAllowed).toBe(false);
+    expect(plan.artifactReviewExecutionAllowed).toBe(false);
+    expect(plan.localCommands).toBe(seoPublicationLocalCommands);
+    expect(plan.externalCommands).toBe(seoPublicationExternalCommands);
+    expect(plan.requiredExternalEvidence).toBe(seoPublicationRequiredExternalEvidence);
     expect(seoPublicationRequiredExternalEvidence).toEqual([
       "actual SEO publication command output",
       "seeded SeoCityPage mutation integration tests",
@@ -231,8 +292,8 @@ describe("SEO publication runtime contract", () => {
     expect(blockedDecision.blockers).toContain("Secret-safe SEO publication artifact review evidence is missing.");
     expect(blockedDecision.missingArtifacts).toContain("coverage/seo-publication-city-prisma.json");
     expect(blockedDecision.missingArtifacts).toContain("coverage/seo-publication-secret-safe-artifacts.json");
-    expect(blockedDecision.requiredCommands).toEqual(seoPublicationRuntimeCommands);
-    expect(blockedDecision.requiredEvidence).toEqual(seoPublicationDecisionRequiredEvidence);
+    expect(blockedDecision.requiredCommands).toBe(seoPublicationRuntimeCommands);
+    expect(blockedDecision.requiredEvidence).toBe(seoPublicationDecisionRequiredEvidence);
     expect(blockedDecision.redactedSummary).toEqual({
       capturedArtifactCount: 5,
       requiredArtifactCount: seoPublicationArtifactPaths.length,
@@ -263,7 +324,7 @@ describe("SEO publication runtime contract", () => {
     expect(completeDecision.status).toBe("complete");
     expect(completeDecision.blockers).toEqual([]);
     expect(completeDecision.missingArtifacts).toEqual([]);
-    expect(completeDecision.requiredEvidence).toEqual(seoPublicationDecisionRequiredEvidence);
+    expect(completeDecision.requiredEvidence).toBe(seoPublicationDecisionRequiredEvidence);
   });
 
   it("wires CI, manifest, tracker, and artifacts without claiming seeded DB/browser proof", () => {
@@ -281,6 +342,7 @@ describe("SEO publication runtime contract", () => {
     expect(gapTracker).toContain("buildSeoPublicationArtifactReview");
     expect(gapTracker).toContain("non-executing SEO publication execution policy");
     expect(gapTracker).toContain("local in-memory SEO publication repository contract");
+    expect(gapTracker).toContain("createPrismaSeoPublicationRepository");
     expect(gapTracker).toContain("GAP-071 is seo-publication-runtime-matrix wired");
     expect(seoPublicationArtifactPaths).toContain("coverage/seo-publication-secret-safe-artifacts.json");
   });

@@ -1,5 +1,6 @@
 import { buildTenantDashboardView } from "@inkroute/config";
 import { prisma } from "@inkroute/db";
+import { dashboardTenantQuerySchema } from "@inkroute/validators";
 import { NextRequest, NextResponse } from "next/server";
 import { dashboardProjectedBookingRows } from "../../../../lib/demo";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../../dashboardAuth";
@@ -27,8 +28,15 @@ export async function GET(request: NextRequest, context: BookingDetailRouteConte
   }
 
   const { bookingId } = await context.params;
-  const params = new URL(request.url).searchParams;
-  const tenantId = params.get("tenantId") ?? actor.tenantId;
+  const query = dashboardTenantQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
+  if (!query.success) {
+    return NextResponse.json(
+      { ok: false, error: { code: "VALIDATION_FAILED", message: "Dashboard booking detail query failed validation.", issues: query.error.flatten() } },
+      { status: 400, headers: noStoreHeaders },
+    );
+  }
+
+  const tenantId = query.data.tenantId ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
     return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a booking for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }

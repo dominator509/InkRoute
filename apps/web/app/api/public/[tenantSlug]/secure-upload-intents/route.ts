@@ -1,3 +1,5 @@
+import { createHash } from "crypto";
+import { prisma } from "@inkroute/db";
 import { NextResponse, type NextRequest } from "next/server";
 import {
   buildFileAssetPersistencePlan,
@@ -11,9 +13,58 @@ import { checkRateLimit, getClientIp, persistUploadIntent, resolveTenant } from 
 
 const uploadKinds: UploadAssetKind[] = ["portfolio_public", "reference_private", "consent_signature", "healed_follow_up", "document_private"];
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+type TenantResolution = { tenantId: string; source: "database" | "local-fallback" };
 
 function isUploadKind(value: unknown): value is UploadAssetKind {
   return typeof value === "string" && uploadKinds.includes(value as UploadAssetKind);
+}
+
+function toJsonValue(value: unknown) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function isDatabaseUnavailable(error: unknown): boolean {
+  if (!process.env.DATABASE_URL) return true;
+
+  if (!(error instanceof Error)) return false;
+  const code = (error as { code?: string }).code;
+  if (typeof code === "string" && ["P1000", "P1001", "P1002", "P1003", "P1008"].includes(code)) return true;
+
+  const message = error.message.toLowerCase();
+  return message.includes("connect") && message.includes("database");
+}
+
+async function resolveUploadTenant(tenantSlug: string): Promise<TenantResolution | null> {
+  const normalizedSlug = decodeURIComponent(tenantSlug).toLowerCase().trim();
+  try {
+    const prismaRuntime = prisma as unknown as {
+      tenant: {
+        findUnique: (options: { where: { slug: string }; select: { id: true } }) => Promise<{ id: string } | null>;
+      };
+    };
+    const tenant = await prismaRuntime.tenant.findUnique({
+      where: { slug: normalizedSlug },
+      select: { id: true },
+    });
+    if (tenant?.id) return { tenantId: tenant.id, source: "database" };
+  } catch (error) {
+    if (!isDatabaseUnavailable(error)) throw error;
+  }
+
+  const local = resolveTenant(normalizedSlug);
+  if (!local) return null;
+  return { tenantId: local.tenantId, source: "local-fallback" };
+}
+
+function fileAssetKindForUpload(kind: UploadAssetKind) {
+  if (kind === "portfolio_public") return "portfolio_original";
+  if (kind === "reference_private") return "reference_image";
+  if (kind === "document_private") return "document";
+  return kind;
+}
+
+function hashGrant(input: { tenantId: string; bucket: string; objectKey: string; operation: string; expiresAt: Date }) {
+  return createHash("sha256").update(`${input.tenantId}:${input.bucket}:${input.objectKey}:${input.operation}:${input.expiresAt.toISOString()}`).digest("hex");
 }
 
 export async function POST(request: NextRequest, context: { params: Promise<{ tenantSlug: string }> }) {
@@ -38,7 +89,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     sizeBytes: input.sizeBytes,
     declaredByAuthenticatedUser: Boolean(input.declaredByAuthenticatedUser),
   });
-  const resolvedTenant = resolveTenant(tenantSlug);
+  const resolvedTenant = await resolveUploadTenant(tenantSlug);
   if (!resolvedTenant) {
     return NextResponse.json(
       { ok: false, error: { code: "TENANT_NOT_FOUND", message: "Upload intents are available for local demo tenant slug only." } },
@@ -60,13 +111,214 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     );
   }
 
+  const rateLimit = checkRateLimit("public-upload-intent", tenantSlug, `${getClientIp(Object.fromEntries(request.headers.entries()))}:${resolvedTenant.tenantId}`);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "RATE_LIMIT_EXCEEDED",
+          details: { gapIds: ["GAP-005", "GAP-096", "GAP-097"], remaining: rateLimit.remaining, retryAfterSeconds: rateLimit.retryAfterSeconds },
+        },
+      },
+      { status: 429, headers: { ...noStoreHeaders, "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
+  const bookingRequestId = typeof input.bookingRequestId === "string" && input.bookingRequestId.trim().length > 0 ? input.bookingRequestId.trim() : null;
+  if (resolvedTenant.source === "database") {
+    if (!bookingRequestId) {
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: {
+              code: "PUBLIC_UPLOAD_BOOKING_CONTEXT_REQUIRED",
+              message: "Production public upload intents require an existing booking request or short-lived authenticated upload token before persistence.",
+            },
+            data: {
+              productionBoundary: {
+                gapIds: ["GAP-005", "GAP-033", "GAP-096", "GAP-097"],
+                anonymousUploadIntentDisabled: true,
+                requiredBeforeEnablement: ["booking-scoped upload token", "authenticated client identity", "provider-backed signed URL minting"],
+              },
+            },
+          },
+          { status: 422, headers: noStoreHeaders },
+        );
+      }
+    } else {
+      try {
+        const now = new Date();
+        const subjectId = `${bookingRequestId}-${now.getTime()}`;
+        const signedIntentPlan = buildSignedUploadIntentPlan({
+          kind: input.kind,
+          filename: input.filename,
+          mimeType: input.mimeType,
+          sizeBytes: input.sizeBytes,
+          declaredByAuthenticatedUser: Boolean(input.declaredByAuthenticatedUser),
+          tenantId: resolvedTenant.tenantId,
+          subjectId,
+          expiresInSeconds: 20 * 60,
+        });
+        const objectKey = signedIntentPlan.objectKey ?? `private/${resolvedTenant.tenantId}/${input.kind}/${subjectId}`;
+        const bucket = validation.storageVisibility === "public" ? "inkroute-public-uploads" : "inkroute-private-uploads";
+        const expiresAt = new Date(now.getTime() + signedIntentPlan.expiresInSeconds * 1000);
+
+        const result = await prisma.$transaction(async (tx) => {
+          const booking = await tx.bookingRequest.findFirst({
+            where: { id: bookingRequestId, tenantId: resolvedTenant.tenantId },
+            select: { id: true, clientId: true, assignedToUserId: true },
+          });
+          if (!booking?.clientId) return { status: "booking_context_missing" as const };
+
+          const issuer = booking.assignedToUserId
+            ? { userId: booking.assignedToUserId }
+            : await tx.tenantMember.findFirst({ where: { tenantId: resolvedTenant.tenantId }, select: { userId: true } });
+          if (!issuer?.userId) return { status: "issuer_missing" as const };
+
+          const fileAsset = await tx.fileAsset.create({
+            data: {
+              tenantId: resolvedTenant.tenantId,
+              uploadedByUserId: issuer.userId,
+              clientId: booking.clientId,
+              kind: fileAssetKindForUpload(input.kind),
+              visibility: validation.storageVisibility,
+              bucket,
+              objectKey,
+              originalFilename: input.filename,
+              mimeType: input.mimeType,
+              sizeBytes: input.sizeBytes,
+              signedUrlExpiresAt: expiresAt,
+              storageVisibility: validation.storageVisibility,
+              metadata: toJsonValue({
+                source: "public-secure-upload-intent",
+                bookingRequestId: booking.id,
+                providerUrlMinted: false,
+                scanStatus: "pending",
+                rawPayloadStored: false,
+              }),
+            },
+            select: { id: true, bucket: true, objectKey: true, kind: true, visibility: true, scanStatus: true, createdAt: true },
+          });
+
+          const grant = await tx.signedUrlGrant.create({
+            data: {
+              tenantId: resolvedTenant.tenantId,
+              fileAssetId: fileAsset.id,
+              issuedByUserId: issuer.userId,
+              operation: "upload",
+              scope: input.kind,
+              bucket,
+              objectKey,
+              signedUrlHash: hashGrant({ tenantId: resolvedTenant.tenantId, bucket, objectKey, operation: "upload", expiresAt }),
+              expiresAt,
+              metadata: toJsonValue({
+                providerUrlMinted: false,
+                publicRoute: true,
+                requiredNextStep: "provider-backed signed upload URL minting",
+              }),
+            },
+            select: { id: true, operation: true, scope: true, expiresAt: true, createdAt: true },
+          });
+
+          const referenceImage = input.kind === "reference_private"
+            ? await tx.referenceImage.create({
+              data: {
+                tenantId: resolvedTenant.tenantId,
+                bookingRequestId: booking.id,
+                clientId: booking.clientId,
+                fileAssetId: fileAsset.id,
+                label: "Public booking reference",
+                notes: "Created from public secure-upload intent; provider upload and scan pending.",
+              },
+              select: { id: true },
+            })
+            : null;
+
+          const audit = await tx.auditLog.create({
+            data: {
+              tenantId: resolvedTenant.tenantId,
+              actorUserId: issuer.userId,
+              action: "file.public_signed_upload.intent",
+              entityType: "FileAsset",
+              entityId: fileAsset.id,
+              metadata: toJsonValue({
+                route: "/api/public/[tenantSlug]/secure-upload-intents",
+                bookingRequestId: booking.id,
+                clientId: booking.clientId,
+                grantId: grant.id,
+                referenceImageId: referenceImage?.id ?? null,
+                providerUrlMinted: false,
+                scanApproved: false,
+                redactedFields: ["filename", "objectKey"],
+                gapIds: ["GAP-005", "GAP-033", "GAP-096", "GAP-097"],
+              }),
+            },
+            select: { id: true },
+          });
+
+          return { status: "created" as const, fileAsset, grant, referenceImage, audit };
+        });
+
+        if (result.status === "created") {
+          return NextResponse.json(
+            {
+              ok: true,
+              data: {
+                tenantSlug,
+                tenantId: resolvedTenant.tenantId,
+                persistence: "database",
+                validation,
+                fileAsset: { ...result.fileAsset, createdAt: result.fileAsset.createdAt.toISOString() },
+                signedUrlGrant: { ...result.grant, expiresAt: result.grant.expiresAt.toISOString(), createdAt: result.grant.createdAt.toISOString() },
+                referenceImageId: result.referenceImage?.id ?? null,
+                upload: { providerUrlMinted: false, uploadUrl: null, requiredNextStep: "provider-backed signed upload URL minting" },
+                auditId: result.audit.id,
+                signedIntentPlan,
+                localRuntime: { status: "not-used", gapIds: ["GAP-005", "GAP-033", "GAP-096", "GAP-097"] },
+                nextWork: [
+                  "Mint provider signed upload URLs after storage credentials are configured.",
+                  "Verify uploaded bytes, magic bytes, malware scan, and metadata stripping before exposing derivatives.",
+                  "Add tenant-isolated DB/provider tests for public reference uploads.",
+                ],
+              },
+            },
+            { status: 201, headers: noStoreHeaders },
+          );
+        }
+
+        if (process.env.NODE_ENV === "production") {
+          return NextResponse.json(
+            {
+              ok: false,
+              error: {
+                code: result.status === "issuer_missing" ? "PUBLIC_UPLOAD_ISSUER_NOT_CONFIGURED" : "PUBLIC_UPLOAD_BOOKING_CONTEXT_NOT_FOUND",
+                message: "Production public upload intents require tenant-scoped booking, client, and issuer context before persistence.",
+              },
+              data: { productionBoundary: { localUploadIntentDisabled: true, gapIds: ["GAP-005", "GAP-033", "GAP-096", "GAP-097"] } },
+            },
+            { status: result.status === "issuer_missing" ? 503 : 404, headers: noStoreHeaders },
+          );
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV === "production" || !isDatabaseUnavailable(error)) {
+          return NextResponse.json(
+            { ok: false, error: { code: "PUBLIC_UPLOAD_INTENT_PERSISTENCE_FAILED", message: "Public upload intent could not be persisted after validation." } },
+            { status: isDatabaseUnavailable(error) ? 503 : 500, headers: noStoreHeaders },
+          );
+        }
+      }
+    }
+  }
+
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json(
       {
         ok: false,
         error: {
           code: "PROVIDER_STORAGE_NOT_CONFIGURED",
-          message: "Production upload intents require provider-backed signed URLs; local upload intent previews are disabled.",
+          message: "Production upload intents require provider-backed signed URLs and database-backed booking/upload-token persistence; local upload intent previews are disabled.",
         },
         data: {
           productionBoundary: {
@@ -83,20 +335,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
         },
       },
       { status: 503, headers: noStoreHeaders },
-    );
-  }
-
-  const rateLimit = checkRateLimit("public-upload-intent", tenantSlug, `${getClientIp(Object.fromEntries(request.headers.entries()))}:${resolvedTenant.tenantId}`);
-  if (!rateLimit.allowed) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: {
-          code: "RATE_LIMIT_EXCEEDED",
-          details: { gapIds: ["GAP-005", "GAP-096", "GAP-097"], remaining: rateLimit.remaining, retryAfterSeconds: rateLimit.retryAfterSeconds },
-        },
-      },
-      { status: 429, headers: { ...noStoreHeaders, "Retry-After": String(rateLimit.retryAfterSeconds) } },
     );
   }
 

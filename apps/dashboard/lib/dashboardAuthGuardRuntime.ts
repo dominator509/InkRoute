@@ -11,6 +11,7 @@ export type DashboardAuthGuardRuntimeStatus =
   | "database-gated"
   | "browser-gated"
   | "audit-gated"
+  | "persistence-gated"
   | "ci-gated";
 
 export interface DashboardAuthGuardRuntimeMatrixEntry {
@@ -19,6 +20,24 @@ export interface DashboardAuthGuardRuntimeMatrixEntry {
   readonly artifact: string;
   readonly status: DashboardAuthGuardRuntimeStatus;
 }
+
+export interface DashboardAuthGuardRouteMethodPermissionContract {
+  readonly safeMethods: readonly ["GET", "HEAD", "OPTIONS"];
+  readonly mutatingMethods: readonly ["POST", "PUT", "PATCH", "DELETE"];
+  readonly safePermissionMode: "read";
+  readonly mutatingPermissionMode: "write";
+  readonly unknownMethodPolicy: "deny";
+  readonly routeOverrideRequiredForMixedPermissionRoutes: true;
+}
+
+export const dashboardAuthGuardRouteMethodPermissionContract = {
+  safeMethods: ["GET", "HEAD", "OPTIONS"],
+  mutatingMethods: ["POST", "PUT", "PATCH", "DELETE"],
+  safePermissionMode: "read",
+  mutatingPermissionMode: "write",
+  unknownMethodPolicy: "deny",
+  routeOverrideRequiredForMixedPermissionRoutes: true,
+} as const satisfies DashboardAuthGuardRouteMethodPermissionContract;
 
 export const dashboardAuthGuardRuntimeCommands = [
   "pnpm --filter @inkroute/auth typecheck",
@@ -38,12 +57,14 @@ export const dashboardAuthGuardRuntimeCommands = [
 export const dashboardAuthGuardReadinessAreas = [
   "provider-backed-dashboard-session",
   "dashboard-middleware-guard",
+  "route-method-permission-inference",
   "protected-layout-guard",
   "dashboard-api-helper-guard",
   "tenantmember-database-lookup",
   "customrole-database-lookup",
   "unauthorized-login-tenant-switch-denial-states",
   "auth-auditlog-persistence",
+  "auth-run-persistence-contract",
   "browser-login-logout",
   "browser-tenant-switch",
   "browser-cross-tenant-denial",
@@ -59,12 +80,14 @@ export const dashboardAuthGuardArtifactPaths = [
   "coverage/dashboard-auth-dashboard-typecheck.txt",
   "coverage/dashboard-auth-dashboard-build.txt",
   "coverage/dashboard-auth-middleware-guard.json",
+  "coverage/dashboard-auth-route-method-permission-map.json",
   "coverage/dashboard-auth-layout-guard.json",
   "coverage/dashboard-auth-api-helper-guard.json",
   "coverage/dashboard-auth-provider-session-redacted.json",
   "coverage/dashboard-auth-tenantmember-customrole-redacted.json",
   "coverage/dashboard-auth-unauthorized-states.json",
   "coverage/dashboard-auth-auditlog-redacted.json",
+  "coverage/dashboard-auth-guard-run-persistence-contract.json",
   "coverage/dashboard-auth-browser-login-logout.json",
   "coverage/dashboard-auth-browser-tenant-switch.json",
   "coverage/dashboard-auth-browser-cross-tenant-denial.json",
@@ -115,6 +138,12 @@ export const dashboardAuthGuardRuntimeMatrix = [
     status: "wired",
   },
   {
+    id: "route-method-permission-map",
+    command: "dashboard route-method permission mapping contract tests",
+    artifact: "coverage/dashboard-auth-route-method-permission-map.json",
+    status: "wired",
+  },
+  {
     id: "protected-layout-guard",
     command: "dashboard protected layout auth guard tests",
     artifact: "coverage/dashboard-auth-layout-guard.json",
@@ -158,6 +187,108 @@ export const dashboardAuthGuardRuntimeMatrix = [
   },
 ] as const satisfies readonly DashboardAuthGuardRuntimeMatrixEntry[];
 
+export interface DashboardAuthGuardSurfaceContractEntry {
+  readonly surfaceId: string;
+  readonly command: string;
+  readonly artifact: string;
+  readonly proofBoundary:
+    | "provider-session"
+    | "route-method-permission"
+    | "middleware-layout-api"
+    | "tenant-role-database"
+    | "denial-states"
+    | "audit-persistence"
+    | "run-persistence-contract"
+    | "browser-proof"
+    | "cache-policy"
+    | "ci-proof";
+  readonly providerBackedEvidenceRequired: boolean;
+  readonly redactedArtifactRequired: boolean;
+}
+
+export const dashboardAuthGuardSurfaceContract = [
+  {
+    surfaceId: "provider-backed-dashboard-session",
+    command: "dashboard middleware auth guard tests",
+    artifact: "coverage/dashboard-auth-provider-session-redacted.json",
+    proofBoundary: "provider-session",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "route-method-permission-inference",
+    command: "dashboard route-method permission mapping contract tests",
+    artifact: "coverage/dashboard-auth-route-method-permission-map.json",
+    proofBoundary: "route-method-permission",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: false,
+  },
+  {
+    surfaceId: "middleware-layout-api-guards",
+    command: "dashboard middleware auth guard tests && dashboard protected layout auth guard tests && dashboard API auth guard tests",
+    artifact: "coverage/dashboard-auth-api-helper-guard.json",
+    proofBoundary: "middleware-layout-api",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: false,
+  },
+  {
+    surfaceId: "tenant-member-custom-role-database",
+    command: "dashboard tenant-scoped TenantMember/CustomRole database guard tests",
+    artifact: "coverage/dashboard-auth-db-role-lookup-redacted.json",
+    proofBoundary: "tenant-role-database",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "unauthorized-forbidden-denial-states",
+    command: "dashboard unauthorized, forbidden, tenant switch, and cross-tenant denial tests",
+    artifact: "coverage/dashboard-auth-denial-states-redacted.json",
+    proofBoundary: "denial-states",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "auth-audit-log-persistence",
+    command: "dashboard auth AuditLog persistence tests",
+    artifact: "coverage/dashboard-auth-audit-logs-redacted.json",
+    proofBoundary: "audit-persistence",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "auth-run-persistence-contract",
+    command: "dashboard auth guard run persistence contract tests",
+    artifact: "coverage/dashboard-auth-guard-run-persistence-contract.json",
+    proofBoundary: "run-persistence-contract",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "browser-login-tenant-denial",
+    command: "browser dashboard login/logout smoke && browser dashboard tenant-switch smoke && browser dashboard cross-tenant denial smoke",
+    artifact: "coverage/dashboard-auth-browser-cross-tenant-denial-redacted.json",
+    proofBoundary: "browser-proof",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "no-store-cache-policy",
+    command: "dashboard no-store cache policy tests",
+    artifact: "coverage/dashboard-auth-no-store-cache.json",
+    proofBoundary: "cache-policy",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: false,
+  },
+  {
+    surfaceId: "ci-secret-safe-artifacts",
+    command: "GitHub Actions dashboard auth guard evidence job",
+    artifact: "coverage/dashboard-auth-secret-safe-artifacts.json",
+    proofBoundary: "ci-proof",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+] as const satisfies readonly DashboardAuthGuardSurfaceContractEntry[];
+
 export const dashboardAuthGuardRuntimeReadiness = buildDashboardAuthGuardEvidencePlan({
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
   authTestsPassed: false,
@@ -166,12 +297,14 @@ export const dashboardAuthGuardRuntimeReadiness = buildDashboardAuthGuardEvidenc
   dashboardBuildPassed: false,
   authProviderSessionsConfigured: false,
   dashboardMiddlewareEnforcesGuard: true,
+  routeMethodPermissionMappingCaptured: true,
   protectedLayoutEnforcesGuard: true,
   dashboardApiHelpersEnforceGuard: true,
   tenantMembershipDbLookupConfigured: false,
   customRoleDbLookupConfigured: false,
   unauthorizedStatesImplemented: true,
   authAuditLogsPersisted: false,
+  authRunPersistenceContractCaptured: true,
   browserLoginLogoutPassed: false,
   browserTenantSwitchPassed: false,
   browserCrossTenantDenialPassed: false,
@@ -187,12 +320,14 @@ export const dashboardAuthGuardEvidenceFlags = [
   "dashboardBuildPassed",
   "authProviderSessionsConfigured",
   "dashboardMiddlewareEnforcesGuard",
+  "routeMethodPermissionMappingCaptured",
   "protectedLayoutEnforcesGuard",
   "dashboardApiHelpersEnforceGuard",
   "tenantMembershipDbLookupConfigured",
   "customRoleDbLookupConfigured",
   "unauthorizedStatesImplemented",
   "authAuditLogsPersisted",
+  "authRunPersistenceContractCaptured",
   "browserLoginLogoutPassed",
   "browserTenantSwitchPassed",
   "browserCrossTenantDenialPassed",
@@ -230,12 +365,15 @@ const dashboardAuthGuardEvidenceBlockers: Record<DashboardAuthGuardEvidenceFlag,
   dashboardBuildPassed: "Dashboard build must pass.",
   authProviderSessionsConfigured: "Real auth provider sessions must be configured for dashboard guard tests.",
   dashboardMiddlewareEnforcesGuard: "Dashboard middleware must enforce the shared route guard.",
+  routeMethodPermissionMappingCaptured: "Dashboard route-method permission inference must be captured with safe/read, mutating/write, and unknown-method deny evidence.",
   protectedLayoutEnforcesGuard: "Protected dashboard layout must enforce the shared route guard.",
   dashboardApiHelpersEnforceGuard: "Dashboard API helpers must enforce the shared route guard.",
   tenantMembershipDbLookupConfigured: "TenantMember lookup must resolve from persisted server state.",
   customRoleDbLookupConfigured: "CustomRole lookup must resolve from persisted server state.",
   unauthorizedStatesImplemented: "Unauthorized, login, tenant-switch, and forbidden denial state evidence must be captured before auth guard readiness.",
   authAuditLogsPersisted: "Auth AuditLog persistence tests must pass.",
+  authRunPersistenceContractCaptured:
+    "Dashboard auth guard run records must expose a redacted AuditLog persistence contract before provider-backed execution.",
   browserLoginLogoutPassed: "Browser login/logout smoke must pass.",
   browserTenantSwitchPassed: "Browser tenant-switch smoke must pass.",
   browserCrossTenantDenialPassed: "Browser cross-tenant denial evidence must prove private tenant data is not exposed.",
@@ -290,6 +428,7 @@ export interface DashboardAuthGuardExecutionPolicy {
 export interface DashboardAuthGuardExecutionPlan {
   readonly localCommands: typeof dashboardAuthGuardLocalCommands;
   readonly externalCommands: typeof dashboardAuthGuardExternalCommands;
+  readonly surfaceContract: typeof dashboardAuthGuardSurfaceContract;
   readonly requiredExternalEvidence: typeof dashboardAuthGuardRequiredExternalEvidence;
   readonly commandExecutionAllowed: false;
   readonly authProviderExecutionAllowed: false;
@@ -298,6 +437,7 @@ export interface DashboardAuthGuardExecutionPlan {
   readonly auditPersistenceExecutionAllowed: false;
   readonly ciExecutionAllowed: false;
   readonly executionPolicy: typeof dashboardAuthGuardExecutionPolicy;
+  readonly routeMethodPermissionContract: typeof dashboardAuthGuardRouteMethodPermissionContract;
 }
 
 export interface DashboardAuthGuardArtifactReview {
@@ -309,6 +449,7 @@ export interface DashboardAuthGuardArtifactReview {
 
 export const dashboardAuthGuardRequiredExternalEvidence = [
   "provider-backed dashboard session evidence",
+  "dashboard route-method permission mapping evidence",
   "persisted TenantMember lookup evidence",
   "persisted CustomRole lookup evidence",
   "browser dashboard login/logout smoke",
@@ -334,6 +475,7 @@ export const dashboardAuthGuardLocalCommands = [
   "pnpm --filter @inkroute/auth typecheck",
   "pnpm --filter @inkroute/auth test",
   "static dashboard middleware guard review",
+  "static dashboard route-method permission review",
   "static protected layout guard review",
   "static dashboard API helper no-store review",
 ] as const;
@@ -342,6 +484,7 @@ export const dashboardAuthGuardExternalCommands = [
   "pnpm --filter @inkroute/dashboard typecheck",
   "pnpm --filter @inkroute/dashboard build",
   "dashboard middleware auth guard tests",
+  "dashboard route-method permission mapping contract tests",
   "dashboard protected layout auth guard tests",
   "dashboard API auth guard tests",
   "browser dashboard login/logout smoke",
@@ -354,6 +497,7 @@ export const dashboardAuthGuardExternalCommands = [
 export const buildDashboardAuthGuardExecutionPlan = (): DashboardAuthGuardExecutionPlan => ({
   localCommands: dashboardAuthGuardLocalCommands,
   externalCommands: dashboardAuthGuardExternalCommands,
+  surfaceContract: dashboardAuthGuardSurfaceContract,
   requiredExternalEvidence: dashboardAuthGuardRequiredExternalEvidence,
   commandExecutionAllowed: false,
   authProviderExecutionAllowed: false,
@@ -362,6 +506,7 @@ export const buildDashboardAuthGuardExecutionPlan = (): DashboardAuthGuardExecut
   auditPersistenceExecutionAllowed: false,
   ciExecutionAllowed: false,
   executionPolicy: dashboardAuthGuardExecutionPolicy,
+  routeMethodPermissionContract: dashboardAuthGuardRouteMethodPermissionContract,
 });
 
 const dashboardAuthGuardSensitiveArtifactKeyPattern =

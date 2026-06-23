@@ -140,6 +140,21 @@ function mutationResponse(plan: ReturnType<typeof buildSeoPublicationMutationPla
   );
 }
 
+function seoPublicationAssociationRows(input: {
+  tenantId: string;
+  entityType: SeoPublishableModel;
+  entityId: string;
+  relatedFaqIds: readonly string[];
+  relatedReviewIds: readonly string[];
+  relatedImageIds: readonly string[];
+}) {
+  return [
+    ...input.relatedFaqIds.map((relatedId) => ({ tenantId: input.tenantId, entityType: input.entityType, entityId: input.entityId, relatedKind: "faq", relatedId })),
+    ...input.relatedReviewIds.map((relatedId) => ({ tenantId: input.tenantId, entityType: input.entityType, entityId: input.entityId, relatedKind: "review", relatedId })),
+    ...input.relatedImageIds.map((relatedId) => ({ tenantId: input.tenantId, entityType: input.entityType, entityId: input.entityId, relatedKind: "image", relatedId })),
+  ];
+}
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
@@ -420,6 +435,36 @@ async function mutateSeoPublication(request: NextRequest) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
+      const publicationTx = tx as typeof tx & {
+        seoPublicationRevalidationJob: { create(args: unknown): Promise<unknown> };
+        seoPublicationAssociation: { createMany(args: unknown): Promise<unknown> };
+      };
+      const idempotencyScope = "seo-publication";
+      const existingIdempotency = await tx.idempotencyKey.findUnique({
+        where: { tenantId_scope_key: { tenantId, scope: idempotencyScope, key: plan.idempotencyKey } },
+        select: { id: true, result: true },
+      });
+      if (existingIdempotency) {
+        return { duplicate: true as const, entityId: stringValue(body.id), auditId: null, idempotencyId: existingIdempotency.id };
+      }
+
+      const idempotency = await tx.idempotencyKey.create({
+        data: {
+          tenantId,
+          scope: idempotencyScope,
+          key: plan.idempotencyKey,
+          status: "claimed",
+          metadata: {
+            model,
+            action,
+            revalidation: plan.revalidation,
+            relatedFaqIds: stringArray(body.relatedFaqIds),
+            relatedReviewIds: stringArray(body.relatedReviewIds),
+            relatedImageIds: stringArray(body.relatedImageIds),
+          },
+        },
+        select: { id: true },
+      });
       let entityId = stringValue(body.id);
 
       if (model === "SeoRedirect") {
@@ -527,14 +572,59 @@ async function mutateSeoPublication(request: NextRequest) {
         select: { id: true },
       });
 
-      return { entityId, auditId: audit.id };
+      await publicationTx.seoPublicationRevalidationJob.create({
+        data: {
+          tenantId,
+          entityType: model,
+          entityId,
+          action,
+          tags: plan.revalidation,
+          status: "queued",
+          auditLogId: audit.id,
+          metadata: {
+            idempotencyKey: plan.idempotencyKey,
+            idempotencyId: idempotency.id,
+            writes: plan.writes,
+          },
+        },
+      });
+
+      const associationRows = seoPublicationAssociationRows({
+        tenantId,
+        entityType: model,
+        entityId,
+        relatedFaqIds: stringArray(body.relatedFaqIds),
+        relatedReviewIds: stringArray(body.relatedReviewIds),
+        relatedImageIds: stringArray(body.relatedImageIds),
+      });
+      if (associationRows.length > 0) {
+        await publicationTx.seoPublicationAssociation.createMany({ data: associationRows, skipDuplicates: true });
+      }
+
+      await tx.idempotencyKey.update({
+        where: { id: idempotency.id },
+        data: { status: "completed", result: { entityId, auditId: audit.id } },
+      });
+
+      return { duplicate: false as const, entityId, auditId: audit.id, idempotencyId: idempotency.id };
     });
+
+    if (result.duplicate) {
+      return mutationResponse(plan, 200, {
+        persistence: "database",
+        duplicate: true,
+        entityId: result.entityId,
+        idempotencyId: result.idempotencyId,
+      });
+    }
 
     return mutationResponse(plan, action === "create" ? 201 : 200, {
       persistence: "database",
       entityId: result.entityId,
       auditId: result.auditId,
+      idempotencyId: result.idempotencyId,
       revalidation: plan.revalidation,
+      associationPersistence: "database",
     });
   } catch (error) {
     if (isDatabaseUnavailable(error)) {

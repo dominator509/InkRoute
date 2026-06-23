@@ -49,6 +49,7 @@ export const googleCalendarSyncArtifactPaths = [
   "coverage/google-calendar-sync-audit-log.json",
   "coverage/google-calendar-sync-tenant-isolation.json",
   "coverage/google-calendar-sync-test-calendar-artifacts-redacted.json",
+  "coverage/google-calendar-sync-run-persistence.json",
   "coverage/google-calendar-sync-secret-safe-artifacts.json",
   "test-results/google-calendar-sync-runtime",
 ] as const;
@@ -70,6 +71,113 @@ export const googleCalendarSyncRuntimeProofFiles = [
 
 export type GoogleCalendarSyncEvidenceArtifact = (typeof googleCalendarSyncArtifactPaths)[number];
 
+export interface GoogleCalendarSyncSurfaceContractEntry {
+  readonly surfaceId: string;
+  readonly requiredCommand:
+    | (typeof googleCalendarSyncRuntimeCommands)[number]
+    | (typeof googleCalendarSyncExternalCommands)[number]
+    | "execute encrypted Google provider-token repository writes"
+    | "execute real Google Calendar provider worker operations"
+    | "GitHub Actions Google Calendar sync evidence job";
+  readonly requiredArtifact: GoogleCalendarSyncEvidenceArtifact;
+  readonly providerBoundary:
+    | "sdk"
+    | "oauth"
+    | "encrypted-token"
+    | "provider-worker"
+    | "freebusy"
+    | "event-crud"
+    | "sync-recovery"
+    | "push-webhook"
+    | "tenant-isolation"
+    | "ci-proof";
+  readonly googleProviderEvidenceRequired: boolean;
+  readonly redactedArtifactRequired: true;
+}
+
+export const googleCalendarSyncSurfaceContract: readonly GoogleCalendarSyncSurfaceContractEntry[] = [
+  {
+    surfaceId: "google-sdk-client",
+    requiredCommand: "pnpm --filter @inkroute/calendar typecheck",
+    requiredArtifact: "coverage/google-calendar-sync-sdk-client-redacted.json",
+    providerBoundary: "sdk",
+    googleProviderEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "oauth-callback",
+    requiredCommand: "Google OAuth callback smoke test",
+    requiredArtifact: "coverage/google-calendar-sync-oauth-callback-redacted.json",
+    providerBoundary: "oauth",
+    googleProviderEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "encrypted-token-repository",
+    requiredCommand: "execute encrypted Google provider-token repository writes",
+    requiredArtifact: "coverage/google-calendar-sync-encrypted-token-repository.json",
+    providerBoundary: "encrypted-token",
+    googleProviderEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "provider-worker",
+    requiredCommand: "execute real Google Calendar provider worker operations",
+    requiredArtifact: "coverage/google-calendar-sync-provider-worker.json",
+    providerBoundary: "provider-worker",
+    googleProviderEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "freebusy-smoke",
+    requiredCommand: "Google FreeBusy test-calendar smoke",
+    requiredArtifact: "coverage/google-calendar-sync-freebusy-smoke-redacted.json",
+    providerBoundary: "freebusy",
+    googleProviderEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "event-crud-smoke",
+    requiredCommand: "Google event insert/update/delete smoke",
+    requiredArtifact: "coverage/google-calendar-sync-event-crud-smoke-redacted.json",
+    providerBoundary: "event-crud",
+    googleProviderEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "invalid-sync-token-recovery",
+    requiredCommand: "Google invalid sync-token full-resync smoke",
+    requiredArtifact: "coverage/google-calendar-sync-invalid-token-recovery.json",
+    providerBoundary: "sync-recovery",
+    googleProviderEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "push-renewal-webhook",
+    requiredCommand: "Google push channel renewal/webhook smoke",
+    requiredArtifact: "coverage/google-calendar-sync-push-webhook.json",
+    providerBoundary: "push-webhook",
+    googleProviderEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "tenant-isolation",
+    requiredCommand: "tenant-isolation evidence",
+    requiredArtifact: "coverage/google-calendar-sync-tenant-isolation.json",
+    providerBoundary: "tenant-isolation",
+    googleProviderEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "ci-secret-safe-artifacts",
+    requiredCommand: "GitHub Actions Google Calendar sync evidence job",
+    requiredArtifact: "coverage/google-calendar-sync-secret-safe-artifacts.json",
+    providerBoundary: "ci-proof",
+    googleProviderEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+] as const;
+
 export interface GoogleCalendarSyncExecutionPolicy {
   readonly codexMayClassifyStaticGoogleCalendarSyncReadiness: true;
   readonly googleSdkClientRequiredForClosure: true;
@@ -83,6 +191,7 @@ export interface GoogleCalendarSyncExecutionPolicy {
 
 export interface GoogleCalendarSyncExecutionPlan {
   readonly policy: typeof googleCalendarSyncExecutionPolicy;
+  readonly surfaceContract: typeof googleCalendarSyncSurfaceContract;
   readonly commandExecutionAllowed: false;
   readonly googleProviderExecutionAllowed: false;
   readonly oauthExecutionAllowed: false;
@@ -100,6 +209,19 @@ export interface GoogleCalendarSyncArtifactReview {
   readonly redactedArtifact: unknown;
   readonly redactedPaths: readonly string[];
   readonly secretSafe: boolean;
+  readonly requiredExternalEvidence: typeof googleCalendarSyncRequiredExternalEvidence;
+}
+
+export interface GoogleCalendarSyncRunPersistencePacket {
+  readonly runModel: "GoogleCalendarSyncRun";
+  readonly requiredArtifact: "coverage/google-calendar-sync-run-persistence.json";
+  readonly providerBackedPersistenceRequired: true;
+  readonly localPersistenceExecutionAllowed: false;
+  readonly encryptedTokenEvidenceRequired: true;
+  readonly tenantIsolationEvidenceRequired: true;
+  readonly calendarAuditLogEvidenceRequired: true;
+  readonly redactionRequired: true;
+  readonly requiredCommands: typeof googleCalendarSyncRuntimeCommands;
   readonly requiredExternalEvidence: typeof googleCalendarSyncRequiredExternalEvidence;
 }
 
@@ -123,6 +245,7 @@ export interface GoogleCalendarSyncEvidenceInput {
   readonly calendarAuditLogVerified: boolean;
   readonly tenantIsolationVerified: boolean;
   readonly googleTestCalendarArtifactsCaptured: boolean;
+  readonly googleCalendarSyncRunPersistenceVerified: boolean;
   readonly secretSafeArtifactReviewPassed: boolean;
   readonly capturedArtifacts: readonly GoogleCalendarSyncEvidenceArtifact[];
 }
@@ -160,6 +283,7 @@ export const googleCalendarSyncRequiredExternalEvidence = [
   "Google invalid sync-token full-resync smoke",
   "Google push channel renewal/webhook smoke",
   "tenant-isolation evidence",
+  "provider-backed GoogleCalendarSyncRun persistence packet",
   "CI Google Calendar sync evidence",
   "secret-safe Google Calendar sync artifact review",
 ] as const;
@@ -170,6 +294,7 @@ export const googleCalendarSyncDecisionRequiredEvidence = [
   "Google test calendar FreeBusy and event insert/update/delete smoke-test output",
   "full/incremental sync, invalid-token recovery, push renewal, and webhook evidence",
   "retry/idempotency, tenant-isolation, and Google test-calendar artifact evidence",
+  "provider-backed GoogleCalendarSyncRun persistence packet with encrypted-token, audit-log, and tenant-isolation proof",
   "secret-safe review of retained Google Calendar sync artifacts",
 ] as const;
 
@@ -219,6 +344,7 @@ const redactGoogleCalendarSyncArtifactValue = (
 
 export const buildGoogleCalendarSyncExecutionPlan = (): GoogleCalendarSyncExecutionPlan => ({
   policy: googleCalendarSyncExecutionPolicy,
+  surfaceContract: googleCalendarSyncSurfaceContract,
   commandExecutionAllowed: false,
   googleProviderExecutionAllowed: false,
   oauthExecutionAllowed: false,
@@ -250,6 +376,19 @@ export const buildGoogleCalendarSyncArtifactReview = (artifact: unknown): Google
   };
 };
 
+export const buildGoogleCalendarSyncRunPersistencePacket = (): GoogleCalendarSyncRunPersistencePacket => ({
+  runModel: "GoogleCalendarSyncRun",
+  requiredArtifact: "coverage/google-calendar-sync-run-persistence.json",
+  providerBackedPersistenceRequired: true,
+  localPersistenceExecutionAllowed: false,
+  encryptedTokenEvidenceRequired: true,
+  tenantIsolationEvidenceRequired: true,
+  calendarAuditLogEvidenceRequired: true,
+  redactionRequired: true,
+  requiredCommands: googleCalendarSyncRuntimeCommands,
+  requiredExternalEvidence: googleCalendarSyncRequiredExternalEvidence,
+});
+
 export const buildGoogleCalendarSyncEvidenceDecision = (
   input: GoogleCalendarSyncEvidenceInput,
 ): GoogleCalendarSyncEvidenceDecision => {
@@ -278,6 +417,9 @@ export const buildGoogleCalendarSyncEvidenceDecision = (
     ...(!input.tenantIsolationVerified ? ["Google provider tenant-isolation evidence is missing."] : []),
     ...(!input.googleTestCalendarArtifactsCaptured
       ? ["Redacted Google test-calendar artifact bundle is missing."]
+      : []),
+    ...(!input.googleCalendarSyncRunPersistenceVerified
+      ? ["Provider-backed GoogleCalendarSyncRun persistence packet is missing."]
       : []),
     ...(!input.secretSafeArtifactReviewPassed
       ? ["Secret-safe Google Calendar sync artifact review evidence is missing."]
@@ -411,6 +553,12 @@ export const googleCalendarSyncRuntimeMatrix = [
     id: "test-calendar-artifacts",
     command: "attach redacted Google test-calendar artifacts for OAuth, freebusy, event sync, push, and recovery",
     artifact: "coverage/google-calendar-sync-test-calendar-artifacts-redacted.json",
+    status: "ci-gated",
+  },
+  {
+    id: "run-persistence-packet",
+    command: "persist provider-backed GoogleCalendarSyncRun evidence packet",
+    artifact: "coverage/google-calendar-sync-run-persistence.json",
     status: "ci-gated",
   },
   {

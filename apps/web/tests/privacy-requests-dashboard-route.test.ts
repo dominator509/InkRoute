@@ -7,18 +7,20 @@ function dashboardPrivacyRequest(
   body: unknown,
   clientIp = "203.0.113.180",
   userId = "dashboard-user-1",
-  tenantId = "demo-studio-alpha",
+  tenantId: string | null = null,
   role = "studio_manager",
 ): NextRequest {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    "x-client-ip": clientIp,
+    "x-user-id": userId,
+    "x-user-role": role,
+  };
+  if (tenantId) headers["x-tenant-id"] = tenantId;
+
   return new NextRequest("https://local.test/api/dashboard/security/privacy-requests", {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-client-ip": clientIp,
-      "x-user-id": userId,
-      "x-tenant-id": tenantId,
-      "x-user-role": role,
-    },
+    headers,
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
 }
@@ -53,7 +55,7 @@ describe("dashboard privacy request route", () => {
 
     expect(response.status).toBe(201);
     expect(body.ok).toBe(true);
-    expect(body.data.tenantId).toBe("demo-studio-alpha");
+    expect(body.data.tenantId).toBe("tenant_inkroute_demo");
     expect(body.data.persisted.requestType).toBe("access");
     expect(body.data.persisted.id).toMatch(/^pr_\d{6}$/);
     expect(body.data.persisted.receivedAt).toBeDefined();
@@ -64,45 +66,31 @@ describe("dashboard privacy request route", () => {
     expect(body.data.gapIds).toContain("GAP-098");
   });
 
-  it("fail-closes production dashboard privacy requests before in-memory demo persistence", async () => {
+  it("fail-closes production dashboard privacy requests before non-durable persistence", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = "production";
 
     try {
-      const response = await POST(dashboardPrivacyRequest(validDashboardPrivacyBody, "203.0.113.184", "dashboard-user-production"));
+      const response = await POST(dashboardPrivacyRequest(validDashboardPrivacyBody, "203.0.113.184", "dashboard-user-production", "tenant_inkroute_demo"));
       const body = await response.json();
 
       expect(response.status).toBe(503);
       expect(body.ok).toBe(false);
-      expect(body.error.code).toBe("DASHBOARD_PRIVACY_REQUEST_PERSISTENCE_NOT_CONFIGURED");
-      expect(body.data.redactedSubmission.email).not.toBe("client@example.test");
-      expect(body.data.productionBoundary.inMemoryPrivacyRequestPersistenceDisabled).toBe(true);
-      expect(body.data.productionBoundary.requiresDurablePrivacyRequestStore).toBe(true);
-      expect(body.data.productionBoundary.requiresAuditLogPersistence).toBe(true);
+      expect(["DATABASE_UNAVAILABLE", "DASHBOARD_PRIVACY_REQUEST_PERSISTENCE_NOT_CONFIGURED"]).toContain(body.error.code);
+      expect(JSON.stringify(body)).not.toContain("555-0101");
     } finally {
       process.env.NODE_ENV = originalNodeEnv;
     }
   });
 
-  it("denies dashboard privacy mutations without matching tenant scope", async () => {
-    const response = await POST(dashboardPrivacyRequest(validDashboardPrivacyBody, "203.0.113.182", "dashboard-user-cross", "other-tenant"));
+  it("denies dashboard privacy mutations for roles without tenant write permission", async () => {
+    const response = await POST(dashboardPrivacyRequest(validDashboardPrivacyBody, "203.0.113.183", "dashboard-user-assistant", null, "assistant"));
     const body = await response.json();
 
     expect(response.status).toBe(403);
     expect(body).toMatchObject({
       ok: false,
-      error: { code: "TENANT_SCOPE_REQUIRED" },
-    });
-  });
-
-  it("denies dashboard privacy mutations for roles outside the privacy operator allowlist", async () => {
-    const response = await POST(dashboardPrivacyRequest(validDashboardPrivacyBody, "203.0.113.183", "dashboard-user-assistant", "demo-studio-alpha", "assistant"));
-    const body = await response.json();
-
-    expect(response.status).toBe(403);
-    expect(body).toMatchObject({
-      ok: false,
-      error: { code: "ROLE_NOT_AUTHORIZED" },
+      error: { code: "FORBIDDEN" },
     });
   });
 

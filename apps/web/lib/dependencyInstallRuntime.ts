@@ -1,4 +1,4 @@
-﻿import {
+import {
   buildDependencyInstallReadinessPlan,
   dependencyInstallRequiredEvidence as dependencyInstallPackageRequiredEvidence,
 } from "@inkroute/workspace";
@@ -127,6 +127,7 @@ export const dependencyInstallArtifactPaths = [
   "coverage/dependency-unit-output.txt",
   "coverage/dependency-ci-quality-job.json",
   "coverage/dependency-production-blockers.json",
+  "coverage/dependency-install-redacted-evidence-bundle.json",
   "test-results/dependency-install-runtime",
 ] as const;
 
@@ -148,6 +149,16 @@ export const dependencyInstallProofFiles = [
 export type DependencyInstallRuntimeCommand = (typeof dependencyInstallRuntimeCommands)[number];
 export type DependencyInstallSourceFile = (typeof dependencyInstallSourceFiles)[number];
 export type DependencyInstallArtifact = (typeof dependencyInstallArtifactPaths)[number];
+
+export interface DependencyInstallRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly artifactPath: "coverage/dependency-install-redacted-evidence-bundle.json";
+  readonly redactedArtifact: unknown;
+  readonly redactions: readonly string[];
+  readonly requiredArtifacts: typeof dependencyInstallArtifactPaths;
+  readonly requiredExternalEvidence: typeof dependencyInstallRequiredExternalEvidence;
+  readonly providerExecutionAllowed: false;
+}
 
 export interface DependencyInstallEvidenceInput {
   readonly packageJsonPresent: boolean;
@@ -285,6 +296,7 @@ export const dependencyInstallRequiredExternalEvidence = [
   "GitHub Actions CI quality job evidence.",
   "Provider-backed persistDependencyInstallRun execution evidence.",
   "Production-blocker visibility artifact evidence.",
+  "Redacted dependency install evidence bundle captured without raw install logs, tokens, URLs, environment values, or actor identifiers.",
 ] as const;
 
 export const dependencyInstallReadinessRequiredEvidence = dependencyInstallPackageRequiredEvidence;
@@ -376,6 +388,12 @@ export const dependencyInstallRuntimeMatrix = [
     command: "dependency readiness report keeps provider/runtime/legal blockers visible",
     artifact: "coverage/dependency-production-blockers.json",
     status: "wired",
+  },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted dependency install evidence bundle",
+    artifact: "coverage/dependency-install-redacted-evidence-bundle.json",
+    status: "ci-gated",
   },
 ] as const satisfies readonly DependencyInstallRuntimeMatrixEntry[];
 
@@ -542,3 +560,40 @@ export async function persistDependencyInstallRun(
   });
 }
 
+
+function redactDependencyInstallEvidenceArtifact(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactDependencyInstallEvidenceArtifact(entry));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => {
+        if (/(token|secret|password|url|email|actor|log|output|environment|env)/i.test(key)) {
+          return [key, "[REDACTED]"];
+        }
+        return [key, redactDependencyInstallEvidenceArtifact(entry)];
+      }),
+    );
+  }
+  if (typeof value === "string") {
+    return value
+      .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED]")
+      .replace(/https?:\/\/\S+/gi, "[REDACTED]")
+      .replace(/\b(?:github_pat|ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]+\b/g, "[REDACTED]");
+  }
+  return value;
+}
+
+export function buildDependencyInstallRedactedEvidenceBundle(
+  artifact: unknown,
+): DependencyInstallRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    artifactPath: "coverage/dependency-install-redacted-evidence-bundle.json",
+    redactedArtifact: redactDependencyInstallEvidenceArtifact(artifact),
+    redactions: ["token", "secret", "password", "url", "email", "actor", "log", "output", "environment"],
+    requiredArtifacts: dependencyInstallArtifactPaths,
+    requiredExternalEvidence: dependencyInstallRequiredExternalEvidence,
+    providerExecutionAllowed: false,
+  };
+}

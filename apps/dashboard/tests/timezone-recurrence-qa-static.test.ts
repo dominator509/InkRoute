@@ -68,6 +68,12 @@ describe("dashboard timezone recurrence QA contract", () => {
       "Europe/London",
       "Asia/Tokyo",
     ]);
+    expect(dashboardTimezoneRecurrenceQaContract.timezoneDateBoundary.strategy).toBe("intl-datetimeformat");
+    expect(dashboardTimezoneRecurrenceQaContract.timezoneDateBoundaryEvidence).toMatchObject({
+      status: "ready",
+      storesUtcInstants: true,
+      requiresIanaTimezoneAtBoundaries: true,
+    });
   });
 
   it("blocks local timezone recurrence evidence when boundaries or UTC instants are malformed", () => {
@@ -97,7 +103,7 @@ describe("dashboard timezone recurrence QA contract", () => {
 
     expect(readiness.status).toBe("blocked");
     expect(readiness.blockers).toContain("@inkroute/calendar timezone tests must pass.");
-    expect(readiness.blockers).toContain("Temporal or an explicit timezone/date library must be implemented at route, persistence, and provider boundaries.");
+    expect(readiness.blockers).not.toContain("Temporal or an explicit timezone/date library must be implemented at route, persistence, and provider boundaries.");
     expect(readiness.blockers).toContain("DST spring-forward behavior must be tested.");
     expect(readiness.blockers).toContain("Google Calendar timezone rendering smoke test must pass.");
     expect(readiness.blockers).toContain("ICS timezone rendering/import smoke test must pass.");

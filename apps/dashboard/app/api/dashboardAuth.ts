@@ -9,10 +9,12 @@ const allowedRoles: ReadonlyArray<Role> = ["owner", "artist", "assistant", "stud
 const fallbackRole = "assistant";
 const dashboardRouteMethodPermissionWrite: Record<string, Permission> = {
   bookings: "booking:write",
+  appointments: "booking:write",
   clients: "client:write",
   payments: "payment:write",
   portfolio: "portfolio:write",
   travel: "travel:write",
+  availability: "travel:write",
   messages: "message:write",
   templates: "form:write",
   calendar: "calendar:write",
@@ -26,10 +28,12 @@ const dashboardRouteMethodPermissionWrite: Record<string, Permission> = {
 
 const dashboardRouteMethodPermissionRead: Record<string, Permission> = {
   bookings: "booking:read",
+  appointments: "booking:read",
   clients: "client:read",
   payments: "payment:read",
   portfolio: "portfolio:read",
   travel: "travel:read",
+  availability: "travel:read",
   messages: "message:read",
   templates: "form:read",
   calendar: "calendar:read",
@@ -91,6 +95,50 @@ export interface DashboardMembershipLookupMetadata {
   membershipId: string | null;
   customRoleId: string | null;
   requiredNextStep: string | null;
+}
+
+export type DashboardAuthGuardDecisionStatus =
+  | "allowed"
+  | "unauthenticated"
+  | "session_expired"
+  | "session_revoked"
+  | "tenant_mismatch"
+  | "permission_denied";
+
+export interface DashboardAuthGuardAuditLogWrite {
+  tenantId: string;
+  actorUserId: string | null;
+  action: string;
+  entityType: "DashboardAuthGuardRun";
+  entityId: string;
+  metadata: {
+    routePath: string;
+    method: string;
+    permission: Permission;
+    guardAction: string;
+    decisionStatus: DashboardAuthGuardDecisionStatus;
+    actorSource: DashboardActorContext["source"];
+    actorRole: Role;
+    persistedTenantMemberRequired: true;
+    persistedCustomRoleRequired: true;
+    providerBackedSessionRequired: true;
+    redacted: true;
+  };
+}
+
+export interface DashboardAuthGuardRunRecord {
+  tenantId: string;
+  actorUserId: string;
+  routePath: string;
+  method: string;
+  permission: Permission;
+  guardAction: string;
+  decisionStatus: DashboardAuthGuardDecisionStatus;
+  auditLog: DashboardAuthGuardAuditLogWrite;
+}
+
+export interface DashboardAuthGuardAuditSink {
+  create(data: DashboardAuthGuardAuditLogWrite): Promise<unknown>;
 }
 
 function normalizeRole(value: string | null): Role {
@@ -188,7 +236,56 @@ export function evaluateDashboardApiGuard(request: NextRequest, permission: Perm
     now: new Date().toISOString(),
   });
 
-  return { actor, guard };
+  return { actor, guard, authRunRecord: buildDashboardAuthGuardRunRecord({ actor, guard, permission, routePath, method }) };
+}
+
+export function buildDashboardAuthGuardRunRecord(input: {
+  actor: DashboardActorContext;
+  guard: ReturnType<typeof evaluateApiRouteGuard>;
+  permission: Permission;
+  routePath: string;
+  method: string;
+}): DashboardAuthGuardRunRecord {
+  const method = input.method.toUpperCase();
+  const decisionStatus = input.guard.decision.status;
+
+  return {
+    tenantId: input.actor.tenantId,
+    actorUserId: input.actor.actorUserId,
+    routePath: input.routePath,
+    method,
+    permission: input.permission,
+    guardAction: input.guard.auditAction,
+    decisionStatus,
+    auditLog: {
+      tenantId: input.actor.tenantId,
+      actorUserId: input.actor.actorUserId,
+      action: input.guard.auditAction,
+      entityType: "DashboardAuthGuardRun",
+      entityId: `${method}:${input.routePath}`,
+      metadata: {
+        routePath: input.routePath,
+        method,
+        permission: input.permission,
+        guardAction: input.guard.auditAction,
+        decisionStatus,
+        actorSource: input.actor.source,
+        actorRole: input.actor.role,
+        persistedTenantMemberRequired: true,
+        persistedCustomRoleRequired: true,
+        providerBackedSessionRequired: true,
+        redacted: true,
+      },
+    },
+  };
+}
+
+export async function persistDashboardAuthGuardRun(
+  sink: DashboardAuthGuardAuditSink,
+  record: DashboardAuthGuardRunRecord,
+): Promise<DashboardAuthGuardRunRecord> {
+  await sink.create(record.auditLog);
+  return record;
 }
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;

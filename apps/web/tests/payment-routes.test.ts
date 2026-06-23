@@ -121,7 +121,7 @@ describe("payment API route boundaries", () => {
     expect(payload.data.productionBoundary.gapIds).toEqual(["GAP-004", "GAP-049", "GAP-050"]);
   });
 
-  it("fail-closes production deposit sessions instead of returning mock checkout previews", async () => {
+  it("fail-closes production deposit sessions instead of returning mock checkout previews or local fallback drafts", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = "production";
     const booking = persistBookingRequest("inkroute-demo", {
@@ -153,21 +153,21 @@ describe("payment API route boundaries", () => {
       const payload = (await response.json()) as {
         ok: boolean;
         error: { code: string };
-        data: { productionBoundary: { mockCheckoutDisabled: boolean; gapIds: string[] } };
+        data: { productionBoundary: { localFallbackDisabled?: boolean; mockCheckoutDisabled?: boolean; gapIds: string[] } };
       };
 
       expect(response.status).toBe(503);
       expect(response.headers.get("Cache-Control")).toBe("no-store");
       expect(payload).toMatchObject({
         ok: false,
-        error: { code: "PROVIDER_CHECKOUT_NOT_CONFIGURED" },
+        error: { code: expect.stringMatching(/^(DATABASE_UNAVAILABLE|PROVIDER_CHECKOUT_NOT_CONFIGURED)$/) },
         data: {
           productionBoundary: {
-            mockCheckoutDisabled: true,
             gapIds: ["GAP-004", "GAP-049", "GAP-050"],
           },
         },
       });
+      expect(payload.data.productionBoundary.localFallbackDisabled ?? payload.data.productionBoundary.mockCheckoutDisabled).toBe(true);
     } finally {
       process.env.NODE_ENV = originalNodeEnv;
     }

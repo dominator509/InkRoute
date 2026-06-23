@@ -48,6 +48,33 @@ export interface ExpoPushProviderRepository {
   persistAuditLog(input: { tenantId: string; action: string; redactedMetadata: Record<string, unknown> }): Promise<void>;
 }
 
+export interface PrismaExpoPushProviderRepositoryClient {
+  pushToken: {
+    upsert(args: unknown): Promise<unknown>;
+    updateMany(args: unknown): Promise<unknown>;
+  };
+  notificationSuppression: {
+    upsert(args: unknown): Promise<unknown>;
+  };
+  idempotencyKey: {
+    findUnique(args: unknown): Promise<{ metadata?: unknown } | null>;
+    create(args: unknown): Promise<unknown>;
+  };
+  notificationDelivery: {
+    create(args: unknown): Promise<unknown>;
+    updateMany(args: unknown): Promise<unknown>;
+  };
+  providerEvent: {
+    upsert(args: unknown): Promise<unknown>;
+  };
+  notificationInteraction: {
+    create(args: unknown): Promise<unknown>;
+  };
+  auditLog: {
+    create(args: unknown): Promise<unknown>;
+  };
+}
+
 export interface InMemoryExpoPushProviderRepositoryState {
   readonly pushTokens: ExpoPushRegistrationPlan[];
   readonly optOuts: { readonly tenantId: string; readonly userId: string; readonly deviceId: string; readonly optedOut: boolean }[];
@@ -110,6 +137,222 @@ export function buildRedactedExpoPushPayload(payload: Record<string, unknown>): 
 
 function buildReceiptIdempotencyKey(input: { readonly tenantId: string; readonly receiptId: string }): string {
   return `${input.tenantId}:${input.receiptId}`;
+}
+
+function toJsonValue(value: unknown): unknown {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function idempotencyMetadataRequestId(metadata: unknown): string | null {
+  return metadata && typeof metadata === "object" && "requestId" in metadata && typeof metadata.requestId === "string"
+    ? metadata.requestId
+    : null;
+}
+
+export function createPrismaExpoPushProviderRepository(
+  client: PrismaExpoPushProviderRepositoryClient,
+): ExpoPushProviderRepository {
+  return {
+    async persistPushToken(plan) {
+      if (!plan.shouldPersistToken) return;
+      const now = new Date();
+      await client.pushToken.upsert({
+        where: { tenantId_provider_deviceId: { tenantId: plan.tenantId, provider: plan.provider, deviceId: plan.deviceId } },
+        create: {
+          tenantId: plan.tenantId,
+          userId: plan.userId,
+          deviceId: plan.deviceId,
+          provider: plan.provider,
+          tokenHash: plan.tokenMasked ?? `masked-token:${plan.tenantId}:${plan.deviceId}`,
+          tokenMasked: plan.tokenMasked,
+          active: true,
+          permissionStatus: "granted",
+          optIn: true,
+          registeredAt: now,
+          lastSeenAt: now,
+          metadata: toJsonValue({
+            source: "mobile_push_registration",
+            requiredWrites: plan.requiredWrites,
+            gapIds: ["GAP-063"],
+          }),
+        },
+        update: {
+          userId: plan.userId,
+          tokenHash: plan.tokenMasked ?? `masked-token:${plan.tenantId}:${plan.deviceId}`,
+          tokenMasked: plan.tokenMasked,
+          active: true,
+          permissionStatus: "granted",
+          optIn: true,
+          disabledAt: null,
+          lastSeenAt: now,
+          metadata: toJsonValue({
+            source: "mobile_push_registration",
+            requiredWrites: plan.requiredWrites,
+            gapIds: ["GAP-063"],
+          }),
+        },
+      });
+    },
+    async persistPushOptOut(input) {
+      await client.pushToken.updateMany({
+        where: { tenantId: input.tenantId, userId: input.userId, deviceId: input.deviceId, provider: "expo" },
+        data: {
+          active: !input.optedOut,
+          optIn: !input.optedOut,
+          disabledAt: input.optedOut ? new Date() : null,
+        },
+      });
+      await client.notificationSuppression.upsert({
+        where: {
+          tenantId_channel_destinationHash_reason: {
+            tenantId: input.tenantId,
+            channel: "push",
+            destinationHash: input.deviceId,
+            reason: "mobile_push_opt_out",
+          },
+        },
+        create: {
+          tenantId: input.tenantId,
+          channel: "push",
+          provider: "expo",
+          destinationHash: input.deviceId,
+          reason: "mobile_push_opt_out",
+          source: "mobile",
+          active: input.optedOut,
+          rawPayloadStored: false,
+          metadata: toJsonValue({ userId: input.userId, deviceId: input.deviceId, gapIds: ["GAP-063"] }),
+        },
+        update: {
+          active: input.optedOut,
+          metadata: toJsonValue({ userId: input.userId, deviceId: input.deviceId, gapIds: ["GAP-063"] }),
+        },
+      });
+    },
+    async claimReceiptIdempotency(input) {
+      const existing = await client.idempotencyKey.findUnique({
+        where: { tenantId_scope_key: { tenantId: input.tenantId, scope: "expo_push_receipt", key: input.receiptId } },
+        select: { metadata: true },
+      });
+
+      if (existing) {
+        if (idempotencyMetadataRequestId(existing.metadata) === input.requestId) return "duplicate";
+        throw new Error("EXPO_PUSH_RECEIPT_IDEMPOTENCY_KEY_CONFLICT");
+      }
+
+      await client.idempotencyKey.create({
+        data: {
+          tenantId: input.tenantId,
+          scope: "expo_push_receipt",
+          key: input.receiptId,
+          status: "claimed",
+          metadata: toJsonValue({ requestId: input.requestId, gapIds: ["GAP-063"] }),
+        },
+      });
+      return "claimed";
+    },
+    async persistDelivery(plan) {
+      if (plan.status !== "ready") return;
+      await client.notificationDelivery.create({
+        data: {
+          tenantId: plan.tenantId,
+          notificationId: plan.notificationId,
+          channel: "push",
+          status: "queued",
+          destinationHash: plan.toMasked,
+          provider: plan.provider,
+        },
+      });
+    },
+    async persistProviderEvent(input) {
+      const payload = buildRedactedExpoPushPayload(input.redactedPayload);
+      const processedAt = new Date();
+      await client.providerEvent.upsert({
+        where: { tenantId_provider_eventId: { tenantId: input.tenantId, provider: input.reconciliation.provider, eventId: input.reconciliation.eventId } },
+        create: {
+          tenantId: input.tenantId,
+          provider: input.reconciliation.provider,
+          eventId: input.reconciliation.eventId,
+          eventType: input.reconciliation.interpretation.eventType,
+          normalizedStatus: input.reconciliation.interpretation.normalizedStatus,
+          idempotencyKey: input.reconciliation.idempotencyKey,
+          payloadSummary: toJsonValue(payload),
+          replayDetected: false,
+          rawPayloadStored: false,
+          processedAt,
+        },
+        update: {
+          replayDetected: true,
+          payloadSummary: toJsonValue(payload),
+          rawPayloadStored: false,
+          processedAt,
+        },
+      });
+      if (input.reconciliation.shouldUpdateDeliveryLog) {
+        await client.notificationDelivery.updateMany({
+          where: { tenantId: input.tenantId, provider: input.reconciliation.provider, providerMessageId: input.reconciliation.eventId },
+          data: { status: input.reconciliation.interpretation.normalizedStatus, attemptedAt: processedAt },
+        });
+      }
+    },
+    async suppressInvalidToken(input) {
+      await client.pushToken.updateMany({
+        where: { tenantId: input.tenantId, provider: "expo", tokenHash: input.tokenHash },
+        data: { active: false, optIn: false, disabledAt: new Date() },
+      });
+      await client.notificationSuppression.upsert({
+        where: {
+          tenantId_channel_destinationHash_reason: {
+            tenantId: input.tenantId,
+            channel: "push",
+            destinationHash: input.tokenHash,
+            reason: "expo_invalid_token",
+          },
+        },
+        create: {
+          tenantId: input.tenantId,
+          channel: "push",
+          provider: "expo",
+          destinationHash: input.tokenHash,
+          reason: "expo_invalid_token",
+          source: "expo_receipt",
+          active: true,
+          providerEventId: input.receiptId,
+          rawPayloadStored: false,
+          metadata: toJsonValue({ receiptId: input.receiptId, gapIds: ["GAP-063"] }),
+        },
+        update: {
+          active: true,
+          providerEventId: input.receiptId,
+          metadata: toJsonValue({ receiptId: input.receiptId, gapIds: ["GAP-063"] }),
+        },
+      });
+    },
+    async persistTapInteraction(plan) {
+      if (plan.status !== "ready") return;
+      await client.notificationInteraction.create({
+        data: {
+          tenantId: plan.tenantId,
+          notificationId: plan.notificationId,
+          userId: plan.userId,
+          channel: "push",
+          interactionType: "tap",
+          routePath: plan.routePath,
+          idempotencyKey: plan.idempotencyKey,
+          metadata: toJsonValue({ requiredWrites: plan.requiredWrites, gapIds: ["GAP-063"] }),
+        },
+      });
+    },
+    async persistAuditLog(input) {
+      await client.auditLog.create({
+        data: {
+          tenantId: input.tenantId,
+          action: input.action,
+          entityType: "MobilePush",
+          metadata: toJsonValue(buildRedactedExpoPushPayload(input.redactedMetadata)),
+        },
+      });
+    },
+  };
 }
 
 export function createInMemoryExpoPushProviderRepository(
@@ -241,15 +484,15 @@ export function buildExpoPushProviderContract(): ExpoPushProviderContract {
       nativePushCredentialsConfigured: false,
       permissionRuntimeImplemented: true,
       tokenRegistrationRuntimeImplemented: true,
-      pushTokenPersistenceAvailable: false,
-      optOutPersistenceAvailable: false,
+      pushTokenPersistenceAvailable: true,
+      optOutPersistenceAvailable: true,
       deliveryWorkerConfigured: false,
-      deliveryLogPersistenceAvailable: false,
-      auditLogPersistenceAvailable: false,
+      deliveryLogPersistenceAvailable: true,
+      auditLogPersistenceAvailable: true,
       expoSendSmokePassed: false,
       receiptWorkerConfigured: false,
       receiptReplayProtectionAvailable: true,
-      invalidTokenSuppressionPersistenceAvailable: false,
+      invalidTokenSuppressionPersistenceAvailable: true,
       deepLinkHandlerImplemented: true,
       foregroundDeviceQaPassed: false,
       backgroundDeviceQaPassed: false,

@@ -1,4 +1,4 @@
-﻿import { buildDatabaseOperationsRuntimeReadinessPlan } from "@inkroute/deployment";
+import { buildDatabaseOperationsRuntimeReadinessPlan } from "@inkroute/deployment";
 
 export type DatabaseOperationsRuntimeStatus =
   | "wired"
@@ -61,6 +61,7 @@ export const databaseOperationsRuntimeArtifactPaths = [
   "coverage/database-branch-promotion-approval-redacted.json",
   "coverage/database-production-data-safety-review.md",
   "coverage/database-operations-ci-run-redacted.json",
+  "coverage/database-operations-redacted-evidence-bundle.json",
   "test-results/database-operations-runtime"
 ] as const;
 
@@ -119,6 +120,7 @@ export const databaseOperationsRuntimeRequiredExternalEvidence = [
   "Generated SQL and destructive SQL review artifacts must redact literals, tenant identifiers, and provider branch labels.",
   "Branch promotion and production data-safety proof must remain approval-gated and must not include production connection strings.",
   "CI database-operations artifacts must redact run URLs, provider IDs, database URLs, and customer data before retention.",
+  "Redacted database operations evidence bundle captured without raw connection strings, provider IDs, branch labels, SQL literals, tenant identifiers, run URLs, or customer data.",
 ] as const;
 
 export type DatabaseOperationsRuntimeExecutionPolicy = {
@@ -215,6 +217,16 @@ export interface DatabaseOperationsRuntimeExecutionPlan {
   readonly ciArtifactExecutionAllowed: false;
   readonly executionPolicy: typeof databaseOperationsRuntimeExecutionPolicy;
   readonly externalEvidenceRequired: typeof databaseOperationsRuntimeRequiredExternalEvidence;
+}
+
+export interface DatabaseOperationsRuntimeRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly artifactPath: "coverage/database-operations-redacted-evidence-bundle.json";
+  readonly review: DatabaseOperationsRuntimeArtifactReview;
+  readonly requiredArtifacts: typeof databaseOperationsRuntimeArtifactPaths;
+  readonly externalEvidenceRequired: typeof databaseOperationsRuntimeRequiredExternalEvidence;
+  readonly providerDatabaseExecutionAllowed: false;
+  readonly ciArtifactExecutionAllowed: false;
 }
 
 export interface DatabaseOperationsRuntimeArtifactReview {
@@ -361,6 +373,21 @@ export function buildDatabaseOperationsRuntimeArtifactReview(
   };
 }
 
+export function buildDatabaseOperationsRuntimeRedactedEvidenceBundle(
+  artifactPath: DatabaseOperationsRuntimeArtifact | string,
+  artifact: unknown,
+): DatabaseOperationsRuntimeRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    artifactPath: "coverage/database-operations-redacted-evidence-bundle.json",
+    review: buildDatabaseOperationsRuntimeArtifactReview(artifactPath, artifact),
+    requiredArtifacts: databaseOperationsRuntimeArtifactPaths,
+    externalEvidenceRequired: databaseOperationsRuntimeRequiredExternalEvidence,
+    providerDatabaseExecutionAllowed: false,
+    ciArtifactExecutionAllowed: false,
+  };
+}
+
 export const databaseOperationsRuntimeMatrix: readonly DatabaseOperationsRuntimeMatrixEntry[] = [
   {
     id: "operations-verifier",
@@ -438,6 +465,12 @@ export const databaseOperationsRuntimeMatrix: readonly DatabaseOperationsRuntime
     id: "ci-database-operations-artifacts",
     command: "capture CI database-operations artifacts",
     artifact: "coverage/database-operations-ci-run-redacted.json",
+    status: "ci-gated"
+  },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted database operations evidence bundle",
+    artifact: "coverage/database-operations-redacted-evidence-bundle.json",
     status: "ci-gated"
   }
 ];

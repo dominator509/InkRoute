@@ -13,6 +13,16 @@ export interface PerformanceLoadRuntimeMatrixEntry {
   readonly status: PerformanceLoadRuntimeStatus;
 }
 
+export interface PerformanceLoadRouteBudgetTarget {
+  readonly id: string;
+  readonly surface: "public" | "dashboard" | "runtime";
+  readonly routePattern: string;
+  readonly p95MsBudget: number;
+  readonly maxErrorRate: number;
+  readonly minConcurrentUsers: number;
+  readonly evidenceArtifact: string;
+}
+
 export interface PerformanceLoadRunPersistenceInput {
   tenantId: string;
   runId: string;
@@ -25,6 +35,7 @@ export interface PerformanceLoadRunPersistenceInput {
   coreWebVitalsWithinBudget: boolean;
   publicRouteBudgetsPassed: boolean;
   dashboardRouteBudgetsPassed: boolean;
+  routeBudgetTargetsVerified: boolean;
   bookingLoadTestPassed: boolean;
   webhookBurstTestPassed: boolean;
   uploadIntentLoadTestPassed: boolean;
@@ -48,6 +59,7 @@ export interface PerformanceLoadRunPersistenceContract {
     "coreWebVitalsWithinBudget",
     "publicRouteBudgetsPassed",
     "dashboardRouteBudgetsPassed",
+    "routeBudgetTargetsVerified",
     "bookingLoadTestPassed",
     "webhookBurstTestPassed",
     "uploadIntentLoadTestPassed",
@@ -85,6 +97,7 @@ export const performanceLoadRuntimeArtifactPaths = [
   "coverage/performance-core-web-vitals.json",
   "coverage/performance-public-route-budgets.json",
   "coverage/performance-dashboard-route-budgets.json",
+  "coverage/performance-route-budget-targets.json",
   "coverage/performance-booking-load.json",
   "coverage/performance-webhook-burst.json",
   "coverage/performance-upload-intent-load.json",
@@ -93,6 +106,7 @@ export const performanceLoadRuntimeArtifactPaths = [
   "coverage/performance-regression-thresholds.json",
   "coverage/performance-ci-run-redacted.json",
   "coverage/performance-regression-triage.md",
+  "coverage/performance-load-redacted-artifact-packet.json",
   "test-results/performance-load-runtime"
 ] as const;
 
@@ -118,6 +132,7 @@ export const performanceLoadRuntimeCommands = [
   "pnpm test:performance:budgets",
   "Lighthouse CI for public and dashboard route budgets",
   "capture Core Web Vitals for public and dashboard critical routes",
+  "verify performance route budget target contract",
   "measure public home/booking/city SEO route budgets",
   "measure dashboard overview and booking detail route budgets",
   "load test public booking endpoint",
@@ -139,7 +154,65 @@ export const performanceLoadRuntimeRequiredExternalEvidence = [
   "Load-test and Stripe webhook artifacts must redact provider payloads, tenant IDs, user IDs, emails, and phone numbers.",
   "DB EXPLAIN/ANALYZE artifacts must redact database URLs, query literals, and customer identifiers.",
   "CI performance artifacts must redact run URLs and provider identifiers before retention.",
+  "Retained redacted performance/load artifact packet must be captured before closure.",
 ] as const;
+
+export const performanceLoadRouteBudgetTargets = [
+  {
+    id: "public-home",
+    surface: "public",
+    routePattern: "/",
+    p95MsBudget: 800,
+    maxErrorRate: 0.01,
+    minConcurrentUsers: 25,
+    evidenceArtifact: "coverage/performance-public-route-budgets.json",
+  },
+  {
+    id: "public-booking",
+    surface: "public",
+    routePattern: "/booking",
+    p95MsBudget: 900,
+    maxErrorRate: 0.01,
+    minConcurrentUsers: 25,
+    evidenceArtifact: "coverage/performance-booking-load.json",
+  },
+  {
+    id: "dashboard-overview",
+    surface: "dashboard",
+    routePattern: "/dashboard",
+    p95MsBudget: 1000,
+    maxErrorRate: 0.01,
+    minConcurrentUsers: 15,
+    evidenceArtifact: "coverage/performance-dashboard-route-budgets.json",
+  },
+  {
+    id: "dashboard-booking-detail",
+    surface: "dashboard",
+    routePattern: "/dashboard/bookings/:bookingId",
+    p95MsBudget: 1100,
+    maxErrorRate: 0.01,
+    minConcurrentUsers: 15,
+    evidenceArtifact: "coverage/performance-dashboard-route-budgets.json",
+  },
+  {
+    id: "runtime-booking-api",
+    surface: "runtime",
+    routePattern: "/api/public/:tenantSlug/booking-requests",
+    p95MsBudget: 750,
+    maxErrorRate: 0.005,
+    minConcurrentUsers: 30,
+    evidenceArtifact: "coverage/performance-booking-load.json",
+  },
+  {
+    id: "runtime-upload-intent-api",
+    surface: "runtime",
+    routePattern: "/api/files/signed-upload",
+    p95MsBudget: 650,
+    maxErrorRate: 0.005,
+    minConcurrentUsers: 30,
+    evidenceArtifact: "coverage/performance-upload-intent-load.json",
+  },
+] as const satisfies readonly PerformanceLoadRouteBudgetTarget[];
 
 export type PerformanceLoadRuntimeExecutionPolicy = {
   readonly codexMayRunDependencyFreeVerifier: true;
@@ -180,6 +253,7 @@ export const performanceLoadRuntimeExternalArtifacts = [
   "coverage/performance-image-optimization.json",
   "coverage/performance-ci-run-redacted.json",
   "coverage/performance-regression-triage.md",
+  "coverage/performance-load-redacted-artifact-packet.json",
 ] as const satisfies readonly PerformanceLoadRuntimeArtifact[];
 
 export type PerformanceLoadRuntimeEvidenceInput = {
@@ -188,6 +262,7 @@ export type PerformanceLoadRuntimeEvidenceInput = {
   coreWebVitalsWithinBudget: boolean;
   publicRouteBudgetsPassed: boolean;
   dashboardRouteBudgetsPassed: boolean;
+  routeBudgetTargetsVerified: boolean;
   bookingLoadTestPassed: boolean;
   webhookBurstTestPassed: boolean;
   uploadIntentLoadTestPassed: boolean;
@@ -197,6 +272,7 @@ export type PerformanceLoadRuntimeEvidenceInput = {
   performanceArtifactsRetained: boolean;
   ciPerformanceJobPassed: boolean;
   regressionsTriagedAndFixed: boolean;
+  redactedArtifactPacketCaptured: boolean;
   requiredCommandsRun: readonly PerformanceLoadRuntimeCommand[];
   capturedArtifacts: readonly PerformanceLoadRuntimeArtifact[];
 };
@@ -210,6 +286,7 @@ export type PerformanceLoadRuntimeEvidenceDecision = {
   performancePolicy: {
     lighthouseAndCwvRequired: true;
     loadAndDatabaseBenchmarksRequired: true;
+    routeBudgetTargetsRequired: true;
     regressionsMustBeTriaged: true;
   };
 };
@@ -219,6 +296,7 @@ export interface PerformanceLoadRuntimeExecutionPlan {
   readonly externalCommands: typeof performanceLoadRuntimeExternalCommands;
   readonly localArtifacts: typeof performanceLoadRuntimeLocalArtifacts;
   readonly externalArtifacts: typeof performanceLoadRuntimeExternalArtifacts;
+  readonly routeBudgetTargets: typeof performanceLoadRouteBudgetTargets;
   readonly lighthouseExecutionAllowed: false;
   readonly coreWebVitalsExecutionAllowed: false;
   readonly routeBudgetExecutionAllowed: false;
@@ -236,6 +314,15 @@ export interface PerformanceLoadRuntimeArtifactReview {
   readonly redactions: readonly string[];
   readonly containsUnredactedSensitiveValues: false;
   readonly externalEvidenceRequired: typeof performanceLoadRuntimeRequiredExternalEvidence;
+}
+
+export interface PerformanceLoadRuntimeRedactedArtifactPacket {
+  readonly status: "redacted-artifact-packet-ready";
+  readonly artifactPath: "coverage/performance-load-redacted-artifact-packet.json";
+  readonly review: PerformanceLoadRuntimeArtifactReview;
+  readonly requiredArtifacts: typeof performanceLoadRuntimeArtifactPaths;
+  readonly externalEvidenceRequired: typeof performanceLoadRuntimeRequiredExternalEvidence;
+  readonly providerExecutionAllowed: false;
 }
 
 const sensitivePerformanceLoadKeyPattern =
@@ -259,6 +346,7 @@ export function buildPerformanceLoadRuntimeEvidenceDecision(
     !input.coreWebVitalsWithinBudget && "Capture Core Web Vitals within budget.",
     !input.publicRouteBudgetsPassed && "Capture public route budget proof.",
     !input.dashboardRouteBudgetsPassed && "Capture dashboard route budget proof.",
+    !input.routeBudgetTargetsVerified && "Verify route budget targets for public, dashboard, and runtime endpoints.",
     !input.bookingLoadTestPassed && "Run public booking load test.",
     !input.webhookBurstTestPassed && "Run Stripe webhook burst load test.",
     !input.uploadIntentLoadTestPassed && "Run secure upload-intent load test.",
@@ -268,6 +356,7 @@ export function buildPerformanceLoadRuntimeEvidenceDecision(
     !input.performanceArtifactsRetained && "Retain performance/load artifacts.",
     !input.ciPerformanceJobPassed && "Capture CI performance/load job proof.",
     !input.regressionsTriagedAndFixed && "Triage and fix or document performance regressions.",
+    !input.redactedArtifactPacketCaptured && "Capture retained redacted performance/load artifact packet proof.",
   ].filter(Boolean) as string[];
 
   const missingArtifacts = performanceLoadRuntimeArtifactPaths.filter(
@@ -289,6 +378,7 @@ export function buildPerformanceLoadRuntimeEvidenceDecision(
     performancePolicy: {
       lighthouseAndCwvRequired: true,
       loadAndDatabaseBenchmarksRequired: true,
+      routeBudgetTargetsRequired: true,
       regressionsMustBeTriaged: true,
     },
   };
@@ -300,6 +390,7 @@ export function buildPerformanceLoadRuntimeExecutionPlan(): PerformanceLoadRunti
     externalCommands: performanceLoadRuntimeExternalCommands,
     localArtifacts: performanceLoadRuntimeLocalArtifacts,
     externalArtifacts: performanceLoadRuntimeExternalArtifacts,
+    routeBudgetTargets: performanceLoadRouteBudgetTargets,
     lighthouseExecutionAllowed: false,
     coreWebVitalsExecutionAllowed: false,
     routeBudgetExecutionAllowed: false,
@@ -368,6 +459,19 @@ export function buildPerformanceLoadRuntimeArtifactReview(
   };
 }
 
+export function buildPerformanceLoadRuntimeRedactedArtifactPacket(
+  artifact: unknown,
+): PerformanceLoadRuntimeRedactedArtifactPacket {
+  return {
+    status: "redacted-artifact-packet-ready",
+    artifactPath: "coverage/performance-load-redacted-artifact-packet.json",
+    review: buildPerformanceLoadRuntimeArtifactReview("coverage/performance-load-redacted-artifact-packet.json", artifact),
+    requiredArtifacts: performanceLoadRuntimeArtifactPaths,
+    externalEvidenceRequired: performanceLoadRuntimeRequiredExternalEvidence,
+    providerExecutionAllowed: false,
+  };
+}
+
 export const performanceLoadRuntimeMatrix: readonly PerformanceLoadRuntimeMatrixEntry[] = [
   {
     id: "budget-verifier",
@@ -386,6 +490,12 @@ export const performanceLoadRuntimeMatrix: readonly PerformanceLoadRuntimeMatrix
     command: "capture Core Web Vitals for public and dashboard critical routes",
     artifact: "coverage/performance-core-web-vitals.json",
     status: "runtime-gated"
+  },
+  {
+    id: "route-budget-target-contract",
+    command: "verify performance route budget target contract",
+    artifact: "coverage/performance-route-budget-targets.json",
+    status: "wired"
   },
   {
     id: "public-route-budgets",
@@ -446,6 +556,12 @@ export const performanceLoadRuntimeMatrix: readonly PerformanceLoadRuntimeMatrix
     command: "triage and fix or document performance regressions",
     artifact: "coverage/performance-regression-triage.md",
     status: "ci-gated"
+  },
+  {
+    id: "redacted-artifact-packet",
+    command: "retain redacted performance/load artifact packet",
+    artifact: "coverage/performance-load-redacted-artifact-packet.json",
+    status: "ci-gated"
   }
 ];
 
@@ -462,6 +578,7 @@ export function buildPerformanceLoadRunPersistenceContract(
       "coreWebVitalsWithinBudget",
       "publicRouteBudgetsPassed",
       "dashboardRouteBudgetsPassed",
+      "routeBudgetTargetsVerified",
       "bookingLoadTestPassed",
       "webhookBurstTestPassed",
       "uploadIntentLoadTestPassed",
@@ -506,6 +623,7 @@ export const performanceLoadRuntimeReadiness = buildPerformanceLoadRuntimeReadin
   coreWebVitalsWithinBudget: false,
   publicRouteBudgetsPassed: false,
   dashboardRouteBudgetsPassed: false,
+  routeBudgetTargetsVerified: false,
   bookingLoadTestPassed: false,
   webhookBurstTestPassed: false,
   uploadIntentLoadTestPassed: false,
@@ -528,6 +646,7 @@ export const performanceLoadRunPersistencePreview = buildPerformanceLoadRunPersi
   coreWebVitalsWithinBudget: false,
   publicRouteBudgetsPassed: false,
   dashboardRouteBudgetsPassed: false,
+  routeBudgetTargetsVerified: false,
   bookingLoadTestPassed: false,
   webhookBurstTestPassed: false,
   uploadIntentLoadTestPassed: false,

@@ -35,6 +35,12 @@ describe("mobile crash static contract", () => {
     expect(crashSource).toContain("bufferOfflineReport(report)");
     expect(crashSource).toContain('report.redactionLevel !== "blocked_high_risk_payload"');
     expect(crashSource).toContain("persistFallbackReport(report)");
+    expect(crashSource).toContain("createMobileCrashErrorReportIngestAdapter");
+    expect(crashSource).toContain("buildMobileCrashErrorReportPayload");
+    expect(crashSource).toContain("buildMobileCrashErrorReportIngestPath");
+    expect(crashSource).toContain('fallbackIngest: "error-report"');
+    expect(crashSource).toContain('rawStackOmitted: true');
+    expect(crashSource).toContain('gapIds: ["GAP-046", "GAP-081"]');
   });
 
   it("persists fallback crash reports even when external provider capture fails", () => {
@@ -43,12 +49,17 @@ describe("mobile crash static contract", () => {
     expect(crashSource).toContain("redactMobileCrashCaptureError");
     expect(crashSource).toContain("provider response, payload, and credentials redacted");
     expect(crashSource).toContain("await input.adapter.persistFallbackReport(report)");
+    expect(crashSource).toContain("/api/public/${encodeURIComponent(tenantSlug)}/error-reports");
+    expect(crashSource).toContain('"x-inkroute-error-honeypot": ""');
+    expect(crashSource).toContain('"x-inkroute-bot-token": options.botProtectionToken');
+    expect(crashSource).toContain("HTTP ${response.status}; response body redacted");
   });
 
   it("uses synthetic sensitive data only as a redaction preview", () => {
     expect(crashSource).toContain("artist@example.test");
     expect(crashSource).toContain("demo-token");
     expect(crashSource).toContain("signed-upload-url-redacted");
+    expect(crashSource).toContain("fallbackIngestPayload");
     expect(crashSource).not.toContain("SENTRY_AUTH_TOKEN=");
   });
 

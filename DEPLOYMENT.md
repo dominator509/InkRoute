@@ -142,7 +142,7 @@ Current state:
 - The workflow checks that release scaffold files exist.
 - Preview and production deployment jobs are intentionally disabled.
 - No Vercel, EAS, Sentry, Search Console, or database deployment secret is configured.
-- Dashboard release controls are non-mutating previews or `501` boundaries.
+- Dashboard release controls expose guarded local persistence contracts, but deployment jobs, protected approvals, provider-backed route evidence, and production mutations remain disabled until configured.
 
 Before enabling deployment jobs:
 

@@ -130,7 +130,7 @@ describe("notification and messaging route boundaries", () => {
         draft: { subject: string; relatedBookingRequestId?: string; channel: string };
         requiredNextWork: string[];
       };
-      runtimeBoundary: { tenantId: string; messageCount: number; savedInLocalRuntime: boolean; gapIds: string[] };
+      runtimeBoundary: { tenantId: string; messageCount: number; savedInLocalRuntime: boolean; savedInDatabase: boolean; gapIds: string[] };
     };
 
     expect(response.status).toBe(201);
@@ -149,8 +149,28 @@ describe("notification and messaging route boundaries", () => {
       tenantId: "tenant_demo_nomad",
       messageCount: 1,
       savedInLocalRuntime: true,
+      savedInDatabase: false,
       gapIds: ["GAP-009", "GAP-061", "GAP-064", "GAP-066"],
     });
+  });
+
+  it("pins public message database persistence and provider handoff seams", async () => {
+    const routeSource = await import("node:fs").then((fs) =>
+      fs.readFileSync("apps/web/app/api/public/[tenantSlug]/messages/route.ts", "utf8"),
+    );
+
+    expect(routeSource).toContain("resolveMessageTenant");
+    expect(routeSource).toContain("publicMessageInputSchema.safeParse");
+    expect(routeSource).toContain("tx.messageThread.create");
+    expect(routeSource).toContain("tx.message.create");
+    expect(routeSource).toContain("tx.notification.create");
+    expect(routeSource).toContain("tx.notificationDelivery.create");
+    expect(routeSource).toContain("tx.notificationProviderHandoff.create");
+    expect(routeSource).toContain("tx.idempotencyKey.upsert");
+    expect(routeSource).toContain("tx.auditLog.create");
+    expect(routeSource).toContain("message.public_intake");
+    expect(routeSource).toContain("PUBLIC_MESSAGE_BOOKING_CONTEXT_REQUIRED");
+    expect(routeSource).toContain("externalSendDeferred");
   });
 
   it("fail-closes production public messages instead of saving local runtime messages", async () => {

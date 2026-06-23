@@ -72,7 +72,7 @@ describe("GAP-098 privacy request workflow contract", () => {
     expect(schema).toContain("tenantRelationshipStatus");
     expect(schema).toContain("exportArtifactObjectKey");
     expect(schema).toContain("@@index([tenantId, dueAt])");
-    expect(contract.transactionWrites).toEqual(["PrivacyRequest", "AuditLog"]);
+    expect(contract.transactionWrites).toEqual(["IdempotencyKey", "PrivacyRequest", "AuditLog"]);
     expect(contract.statusTransitions).toContain("legal_hold");
     expect(contract.auditActions).toContain("privacy.worker.executed");
     expect(contract.redactedFields).toContain("requesterEmail");
@@ -87,6 +87,10 @@ describe("GAP-098 privacy request workflow contract", () => {
     const dashboardTest = readWorkspaceFile("apps/web/tests/privacy-requests-dashboard-route.test.ts");
     const dashboardStatic = readWorkspaceFile("apps/dashboard/tests/security-privacy-route-static.test.ts");
 
+    expect(publicRoute).toContain("tx.privacyRequest.create");
+    expect(publicRoute).toContain("tx.idempotencyKey.upsert");
+    expect(publicRoute).toContain("tx.idempotencyKey.update");
+    expect(publicRoute).toContain("privacy.request.public_intake");
     expect(publicRoute).toContain("persistPrivacyRequest");
     expect(publicRoute).toContain("buildPrivacyRequestDraft");
     expect(publicRoute).toContain("redactRecord");
@@ -94,10 +98,11 @@ describe("GAP-098 privacy request workflow contract", () => {
     expect(dashboardRoute).toContain("checkDashboardMutationRateLimit");
     expect(dashboardRoute).toContain("DASHBOARD_PRIVACY_REQUEST_PERSISTENCE_NOT_CONFIGURED");
     expect(dashboardRoute).toContain("inMemoryPrivacyRequestPersistenceDisabled");
-    expect(dashboardRoute).toContain("Persist PrivacyRequest row + case notes");
+    expect(dashboardRoute).toContain("tx.privacyRequest.create");
+    expect(dashboardRoute).toContain("privacy.request.create");
     expect(publicTest).toContain("persists demo-scope privacy requests");
-    expect(dashboardTest).toContain("fail-closes production dashboard privacy requests before in-memory demo persistence");
-    expect(dashboardTest).toContain("ROLE_NOT_AUTHORIZED");
+    expect(dashboardTest).toContain("fail-closes production dashboard privacy requests before non-durable persistence");
+    expect(dashboardTest).toContain("FORBIDDEN");
     expect(dashboardStatic).toContain("audit persistence");
   });
 

@@ -18,6 +18,8 @@ export type RetentionWorkerAction =
   | "replay-tombstones-after-restore"
   | "attach-destructive-action-rollback-note";
 
+export type RetentionWorkerExecutionMode = "dry-run-only" | "external-evidence-required";
+
 export interface RetentionEnforcementContractInput {
   records: readonly RetentionCandidateRecord[];
   legalReviewApproved: boolean;
@@ -26,6 +28,22 @@ export interface RetentionEnforcementContractInput {
   auditLogConfigured: boolean;
   backupPolicyDocumented: boolean;
   restorePolicyDocumented: boolean;
+}
+
+export interface RetentionScheduledWorkerPlan {
+  readonly mode: RetentionWorkerExecutionMode;
+  readonly destructiveExecutionAllowed: false;
+  readonly workerRunId: string;
+  readonly dryRunStatus: "ready" | "blocked";
+  readonly dueRecordCount: number;
+  readonly databaseActions: readonly RetentionWorkerAction[];
+  readonly storageActions: readonly RetentionWorkerAction[];
+  readonly exportActions: readonly RetentionWorkerAction[];
+  readonly tombstoneActions: readonly RetentionWorkerAction[];
+  readonly auditActions: readonly RetentionWorkerAction[];
+  readonly legalHoldSkippedRecordIds: readonly string[];
+  readonly requiredExternalEvidence: typeof retentionEnforcementRequiredExternalEvidence;
+  readonly blockedReasons: readonly string[];
 }
 
 export interface RetentionTombstonePersistenceInput {
@@ -53,6 +71,51 @@ export interface RetentionTombstonePersistenceContract {
   restoreReplayGate: "restore_replay_after_before_queryable";
   redactedFields: readonly ["storageObjectKey", "redactedFields", "auditLogIds"];
   tenantIsolationKey: "tenantId";
+}
+
+export interface RetentionTombstonePersistenceClient {
+  readonly retentionTombstone: {
+    create(input: {
+      data: {
+        tenantId: string;
+        privacyRequestId?: string;
+        workerRunId: string;
+        sourceRecordId: string;
+        sourceRecordType: string;
+        category: string;
+        action: string;
+        reason: string;
+        dryRunFingerprint: string;
+        executedAt: Date;
+        restoreReplayAfter?: Date;
+        storageObjectKey?: string;
+        redactedFields: Record<string, unknown>;
+        auditLogIds: readonly string[];
+        legalHoldSkipped: boolean;
+        rollbackNote?: string;
+      };
+    }): Promise<{ id?: string } | unknown>;
+  };
+  readonly auditLog: {
+    create(input: {
+      data: {
+        tenantId: string;
+        action: "retention.tombstone.persisted";
+        entityType: "RetentionTombstone";
+        entityId: string;
+        metadata: Record<string, unknown>;
+      };
+    }): Promise<{ id?: string } | unknown>;
+  };
+}
+
+export interface RetentionTombstonePersistenceResult {
+  readonly persisted: true;
+  readonly auditAction: "retention.tombstone.persisted";
+  readonly tombstoneId: string;
+  readonly tenantId: string;
+  readonly legalHoldSkipped: boolean;
+  readonly restoreReplayRequired: boolean;
 }
 
 export const retentionEnforcementArtifactPaths = [
@@ -137,6 +200,7 @@ export type RetentionEnforcementCommand = (typeof retentionEnforcementCommands)[
 
 export type RetentionEnforcementExecutionPolicy = {
   localDryRunOnly: true;
+  tombstonePersistenceContractAvailable: true;
   scheduledWorkerExecutionRequiresExternalEvidence: true;
   postgresExecutionRequiresExternalEvidence: true;
   objectStorageExecutionRequiresExternalEvidence: true;
@@ -179,6 +243,7 @@ export type RetentionEnforcementEvidenceDecision = {
 export type RetentionEnforcementExecutionPlan = {
   status: "local-plan-ready";
   policy: RetentionEnforcementExecutionPolicy;
+  tombstonePersistenceContractAvailable: true;
   externalEvidenceRequired: typeof retentionEnforcementRequiredExternalEvidence;
   scheduledWorkerExecutionAllowed: false;
   postgresExecutionAllowed: false;
@@ -195,6 +260,7 @@ export type RetentionEnforcementExecutionPlan = {
 
 export const retentionEnforcementExecutionPolicy: RetentionEnforcementExecutionPolicy = {
   localDryRunOnly: true,
+  tombstonePersistenceContractAvailable: true,
   scheduledWorkerExecutionRequiresExternalEvidence: true,
   postgresExecutionRequiresExternalEvidence: true,
   objectStorageExecutionRequiresExternalEvidence: true,
@@ -252,6 +318,7 @@ export function buildRetentionEnforcementExecutionPlan(): RetentionEnforcementEx
   return {
     status: "local-plan-ready",
     policy: retentionEnforcementExecutionPolicy,
+    tombstonePersistenceContractAvailable: true,
     externalEvidenceRequired: retentionEnforcementRequiredExternalEvidence,
     scheduledWorkerExecutionAllowed: false,
     postgresExecutionAllowed: false,
@@ -265,11 +332,51 @@ export function buildRetentionEnforcementExecutionPlan(): RetentionEnforcementEx
     externalArtifacts: retentionEnforcementExternalArtifacts,
     disabledReasons: [
       "Scheduled worker execution requires production-like scheduler and worker runtime evidence.",
-      "Postgres delete/anonymize/export execution requires migrated database integration.",
+      "RetentionTombstone persistence contract is wired, but Postgres delete/anonymize/export execution requires migrated database integration.",
       "Object-storage delete/export execution requires live private storage integration.",
       "Backup/restore tombstone replay requires restore workflow evidence before restored data is queryable.",
       "Destructive rollback documentation requires approved incident/rollback evidence.",
       "Tenant-isolation retention proof requires integration tenants and records.",
+    ],
+  };
+}
+
+export function buildRetentionScheduledWorkerPlan(
+  input: RetentionEnforcementContractInput,
+  workerRunId = "retention_worker_dry_run_preview",
+): RetentionScheduledWorkerPlan {
+  const dryRun = buildRetentionEnforcementDryRun(input);
+  const dueSteps = dryRun.steps.filter((step) => !step.blocked);
+  const hasDatabaseAction = dueSteps.some((step) => step.action === "delete" || step.action === "anonymize");
+  const hasStorageAction = dueSteps.some((step) => step.category === "reference_file" && step.action === "delete");
+  const hasExportAction = dueSteps.some((step) => step.action === "export");
+  const legalHoldSkippedRecordIds = dryRun.steps
+    .filter((step) => step.action === "retain_legal_hold")
+    .map((step) => step.recordId);
+
+  return {
+    mode: dryRun.status === "ready" ? "external-evidence-required" : "dry-run-only",
+    destructiveExecutionAllowed: false,
+    workerRunId,
+    dryRunStatus: dryRun.status,
+    dueRecordCount: dueSteps.length,
+    databaseActions: hasDatabaseAction
+      ? ["load-due-retention-candidates", "apply-tenant-isolation-filter", "run-database-retention-worker"]
+      : ["load-due-retention-candidates", "apply-tenant-isolation-filter"],
+    storageActions: hasStorageAction ? ["run-storage-retention-worker"] : [],
+    exportActions: hasExportAction ? ["generate-export-artifact"] : [],
+    tombstoneActions: [
+      "persist-deletion-tombstone",
+      "persist-anonymization-tombstone",
+      "reconcile-dry-run-to-execution",
+      "replay-tombstones-after-restore",
+    ],
+    auditActions: ["skip-legal-hold-record", "write-retention-audit-log", "attach-destructive-action-rollback-note"],
+    legalHoldSkippedRecordIds,
+    requiredExternalEvidence: retentionEnforcementRequiredExternalEvidence,
+    blockedReasons: [
+      ...dryRun.blockers,
+      "Destructive DB/storage retention execution remains disabled until Postgres, object-storage, restore replay, rollback, and tenant-isolation evidence is captured.",
     ],
   };
 }
@@ -347,6 +454,68 @@ export function buildRetentionTombstonePersistenceContract(
   };
 }
 
+export async function persistRetentionTombstoneOutcome(
+  client: RetentionTombstonePersistenceClient,
+  input: RetentionTombstonePersistenceInput,
+): Promise<RetentionTombstonePersistenceResult> {
+  const metadata = buildRedactedRetentionEnforcementArtifact({
+    workerRunId: input.workerRunId,
+    sourceRecordType: input.sourceRecordType,
+    sourceRecordId: input.sourceRecordId,
+    category: input.category,
+    action: input.action,
+    reason: input.reason,
+    dryRunFingerprint: input.dryRunFingerprint,
+    storageObjectKey: input.storageObjectKey,
+    legalHoldSkipped: input.legalHoldSkipped,
+    rollbackNote: input.rollbackNote,
+  }) as Record<string, unknown>;
+
+  const tombstone = await client.retentionTombstone.create({
+    data: {
+      tenantId: input.tenantId,
+      ...(input.privacyRequestId ? { privacyRequestId: input.privacyRequestId } : {}),
+      workerRunId: input.workerRunId,
+      sourceRecordId: input.sourceRecordId,
+      sourceRecordType: input.sourceRecordType,
+      category: input.category,
+      action: input.action,
+      reason: input.reason,
+      dryRunFingerprint: input.dryRunFingerprint,
+      executedAt: new Date(input.executedAt),
+      ...(input.restoreReplayAfter ? { restoreReplayAfter: new Date(input.restoreReplayAfter) } : {}),
+      ...(input.storageObjectKey ? { storageObjectKey: input.storageObjectKey } : {}),
+      redactedFields: metadata,
+      auditLogIds: [],
+      legalHoldSkipped: input.legalHoldSkipped,
+      ...(input.rollbackNote ? { rollbackNote: input.rollbackNote } : {}),
+    },
+  });
+  const tombstoneId =
+    typeof tombstone === "object" && tombstone && "id" in tombstone && typeof tombstone.id === "string"
+      ? tombstone.id
+      : `${input.workerRunId}:${input.sourceRecordType}:${input.sourceRecordId}`;
+
+  await client.auditLog.create({
+    data: {
+      tenantId: input.tenantId,
+      action: "retention.tombstone.persisted",
+      entityType: "RetentionTombstone",
+      entityId: tombstoneId,
+      metadata,
+    },
+  });
+
+  return {
+    persisted: true,
+    auditAction: "retention.tombstone.persisted",
+    tombstoneId,
+    tenantId: input.tenantId,
+    legalHoldSkipped: input.legalHoldSkipped,
+    restoreReplayRequired: Boolean(input.restoreReplayAfter),
+  };
+}
+
 export function buildRetentionEnforcementContract(input: RetentionEnforcementContractInput) {
   const dryRun = buildRetentionEnforcementDryRun(input);
   const actions: RetentionWorkerAction[] = [
@@ -403,6 +572,21 @@ export const retentionEnforcementPreview = buildRetentionEnforcementContract({
     { id: "payment_hold", category: "payment_record", ageDays: 3000, legalHoldActive: true },
     { id: "audit_hold", category: "audit_log", ageDays: 5000 },
   ],
+  legalReviewApproved: false,
+  databaseWorkerConfigured: false,
+  storageWorkerConfigured: false,
+  auditLogConfigured: false,
+  backupPolicyDocumented: false,
+  restorePolicyDocumented: false,
+});
+
+export const retentionScheduledWorkerPlanPreview = buildRetentionScheduledWorkerPlan({
+  records: retentionEnforcementPreview.dryRun.steps.map((step) => ({
+    id: step.recordId,
+    category: step.category,
+    ageDays: 0,
+    legalHoldActive: step.action === "retain_legal_hold",
+  })),
   legalReviewApproved: false,
   databaseWorkerConfigured: false,
   storageWorkerConfigured: false,

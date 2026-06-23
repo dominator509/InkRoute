@@ -1,10 +1,30 @@
+import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { buildAvailabilityPersistencePlan } from "@inkroute/calendar";
+import { prisma } from "@inkroute/db";
 
 import { dashboardAvailabilityPersistenceContract } from "../../../../lib/availabilityPersistence";
-import { assertPermission, resolveDashboardActor } from "../../dashboardAuth";
+import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../../dashboardAuth";
+
+export const runtime = "nodejs";
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+function parseDate(value: unknown): Date | null {
+  if (typeof value !== "string" || value.trim().length === 0) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function hashIdempotencySubject(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function resultString(value: unknown, key: string): string | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const result = value as Record<string, unknown>;
+  return typeof result[key] === "string" ? result[key] : null;
+}
 
 export async function POST(request: NextRequest) {
   const actor = resolveDashboardActor(request);
@@ -26,17 +46,22 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const artistId = String(body?.artistId ?? "");
+  const timezone = String(body?.timezone ?? "");
+  const bookingRequestId = typeof body?.bookingRequestId === "string" ? body.bookingRequestId : undefined;
+  const availabilityWindowId = typeof body?.availabilityWindowId === "string" ? body.availabilityWindowId : undefined;
+  const rawIdempotencyKey = request.headers.get("idempotency-key") ?? (typeof body?.idempotencyKey === "string" ? body.idempotencyKey : undefined);
   const plan = buildAvailabilityPersistencePlan({
     tenantId,
-    artistId: String(body?.artistId ?? ""),
+    artistId,
     action: "create_slot_hold",
     startsAt: String(body?.startsAt ?? ""),
     endsAt: String(body?.endsAt ?? ""),
-    timezone: String(body?.timezone ?? ""),
+    timezone,
     actorId: actor.actorUserId,
-    ...(typeof body?.bookingRequestId === "string" ? { bookingRequestId: body.bookingRequestId } : {}),
-    ...(typeof body?.availabilityWindowId === "string" ? { availabilityWindowId: body.availabilityWindowId } : {}),
-    ...(typeof body?.idempotencyKey === "string" ? { idempotencyKey: body.idempotencyKey } : {}),
+    ...(bookingRequestId ? { bookingRequestId } : {}),
+    ...(availabilityWindowId ? { availabilityWindowId } : {}),
+    ...(rawIdempotencyKey ? { idempotencyKey: rawIdempotencyKey } : {}),
     conflictIds: Array.isArray(body?.conflictIds) ? body.conflictIds.map(String) : [],
     existingHoldIds: Array.isArray(body?.existingHoldIds) ? body.existingHoldIds.map(String) : [],
   });
@@ -52,6 +77,203 @@ export async function POST(request: NextRequest) {
       },
       { status: 409, headers: noStoreHeaders },
     );
+  }
+
+  const startsAt = parseDate(body?.startsAt);
+  const endsAt = parseDate(body?.endsAt);
+  if (!startsAt || !endsAt || startsAt >= endsAt) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: { code: "INVALID_HOLD_WINDOW", message: "Slot holds require valid startsAt and endsAt instants." },
+        plan,
+        readiness: dashboardAvailabilityPersistenceContract.readiness,
+        gapIds: ["GAP-056"],
+      },
+      { status: 400, headers: noStoreHeaders },
+    );
+  }
+
+  const requestHash = hashIdempotencySubject(
+    JSON.stringify({
+      tenantId,
+      artistId,
+      startsAt: startsAt.toISOString(),
+      endsAt: endsAt.toISOString(),
+      timezone,
+      bookingRequestId: bookingRequestId ?? null,
+      availabilityWindowId: availabilityWindowId ?? null,
+    }),
+  );
+  const idempotencyKey = rawIdempotencyKey ?? `calendar-hold:${tenantId}:${artistId}:${requestHash}`;
+
+  if (actor.source === "local-fallback" && process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      {
+        ok: false,
+        status: "repository-required",
+        error: {
+          code: "PROVIDER_CALENDAR_HOLD_PERSISTENCE_NOT_CONFIGURED",
+          message: "Production slot holds require DB-backed actor resolution, tenant-scoped persistence, idempotency proof, and audit logs; local fallback writes are disabled.",
+        },
+        productionBoundary: { localCalendarHoldFallbackDisabled: true },
+        plan,
+        readiness: dashboardAvailabilityPersistenceContract.readiness,
+        gapIds: ["GAP-056"],
+      },
+      { status: 503, headers: noStoreHeaders },
+    );
+  }
+
+  if (actor.source !== "local-fallback") {
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        const artist = await tx.artist.findFirst({ where: { id: artistId, tenantId }, select: { id: true, displayName: true } });
+        if (!artist) return { status: "artist_not_found" as const };
+
+        const idempotency = await tx.idempotencyKey.upsert({
+          where: { tenantId_scope_key: { tenantId, scope: "availability.slot_hold", key: idempotencyKey } },
+          create: {
+            tenantId,
+            scope: "availability.slot_hold",
+            key: idempotencyKey,
+            status: "pending",
+            requestHash,
+            metadata: {
+              action: "create_slot_hold",
+              artistId: artist.id,
+              startsAt: startsAt.toISOString(),
+              endsAt: endsAt.toISOString(),
+              timezone,
+              bookingRequestId: bookingRequestId ?? null,
+              availabilityWindowId: availabilityWindowId ?? null,
+            },
+          },
+          update: {},
+          select: { id: true, status: true, requestHash: true, result: true },
+        });
+
+        if (idempotency.requestHash !== requestHash) {
+          return { status: "idempotency_conflict" as const, idempotency };
+        }
+
+        if (idempotency.status === "completed") {
+          return {
+            status: "replayed" as const,
+            idempotency,
+            availabilityWindowId: resultString(idempotency.result, "availabilityWindowId"),
+            auditId: resultString(idempotency.result, "auditId"),
+          };
+        }
+
+        const overlapping = await tx.availabilityWindow.findFirst({
+          where: {
+            tenantId,
+            artistId: artist.id,
+            startsAt: { lt: endsAt },
+            endsAt: { gt: startsAt },
+            status: { in: ["open", "waitlist", "full"] },
+          },
+          select: { id: true },
+        });
+        if (overlapping) return { status: "conflict" as const, conflictId: overlapping.id };
+
+        const hold = await tx.availabilityWindow.create({
+          data: {
+            tenantId,
+            artistId: artist.id,
+            kind: "admin_hold",
+            status: "full",
+            startsAt,
+            endsAt,
+            timezone,
+            publicLabel: "Dashboard slot hold",
+            internalNotes: `Slot hold created by ${actor.actorUserId}`,
+          },
+          select: { id: true, artistId: true, startsAt: true, endsAt: true, timezone: true, status: true, kind: true },
+        });
+
+        const audit = await tx.auditLog.create({
+          data: {
+            tenantId,
+            actorUserId: actor.actorUserId,
+            action: "availability.slot_hold.create",
+            entityType: "AvailabilityWindow",
+            entityId: hold.id,
+            metadata: {
+              source: "dashboard-calendar-holds-route",
+              idempotencyKey,
+              idempotencyKeyId: idempotency.id,
+              requestHash,
+              bookingRequestId: bookingRequestId ?? null,
+              availabilityWindowId: availabilityWindowId ?? null,
+            },
+          },
+          select: { id: true },
+        });
+
+        await tx.idempotencyKey.update({
+          where: { tenantId_scope_key: { tenantId, scope: "availability.slot_hold", key: idempotencyKey } },
+          data: { status: "completed", result: { availabilityWindowId: hold.id, auditId: audit.id, requestHash } },
+        });
+
+        return { status: "created" as const, idempotency, hold, auditId: audit.id };
+      });
+
+      if (result.status === "artist_not_found") {
+        return NextResponse.json(
+          { ok: false, error: { code: "RELATED_RECORD_NOT_FOUND", message: "Slot hold artist must exist for this tenant." }, gapIds: ["GAP-056"] },
+          { status: 404, headers: noStoreHeaders },
+        );
+      }
+      if (result.status === "conflict") {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: { code: "AVAILABILITY_CONFLICT", message: "Slot hold overlaps an existing availability window." },
+            conflictId: result.conflictId,
+            gapIds: ["GAP-056"],
+          },
+          { status: 409, headers: noStoreHeaders },
+        );
+      }
+      if (result.status === "idempotency_conflict") {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: { code: "IDEMPOTENCY_CONFLICT", message: "Idempotency key was already used for a different slot-hold payload." },
+            idempotencyKeyId: result.idempotency.id,
+            gapIds: ["GAP-056"],
+            boundary: "Calendar hold idempotency is request-hash guarded and defaults to denial on mismatched replay payloads.",
+          },
+          { status: 409, headers: noStoreHeaders },
+        );
+      }
+
+      return NextResponse.json(
+        {
+          ok: true,
+          status: result.status === "replayed" ? "database-replayed" : "database-persisted",
+          availabilityWindowId: result.status === "replayed" ? result.availabilityWindowId : result.hold.id,
+          hold: result.status === "replayed" ? null : result.hold,
+          auditId: result.auditId,
+          idempotencyKeyId: result.idempotency.id,
+          idempotencyReplay: result.status === "replayed",
+          plan,
+          readiness: dashboardAvailabilityPersistenceContract.readiness,
+          gapIds: ["GAP-056"],
+          boundary: "Slot hold is tenant-scoped, idempotency-backed, and persisted as an AvailabilityWindow admin hold with AuditLog metadata; seeded race-condition and cross-tenant integration proof remains evidence-gated.",
+        },
+        { status: result.status === "replayed" ? 200 : 201, headers: noStoreHeaders },
+      );
+    } catch (error) {
+      if (process.env.NODE_ENV === "production" || !isDatabaseUnavailable(error)) {
+        return NextResponse.json(
+          { ok: false, error: { code: "AVAILABILITY_HOLD_PERSISTENCE_FAILED", message: "Slot hold could not be persisted." }, gapIds: ["GAP-056"] },
+          { status: 500, headers: noStoreHeaders },
+        );
+      }
+    }
   }
 
   return NextResponse.json(

@@ -15,7 +15,7 @@ export async function GET(_request: Request, context: { params: Promise<{ tenant
           gapIds: ["GAP-005", "GAP-033", "GAP-096", "GAP-097"],
         },
         productionBoundary: {
-          scaffoldedUploadPolicyDisabled: true,
+          localUploadPolicyPreviewDisabled: true,
           requiredBeforeEnablement: [
             "object storage provider and private bucket configuration",
             "provider-backed signed upload/download URLs",

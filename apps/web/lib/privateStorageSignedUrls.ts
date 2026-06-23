@@ -59,6 +59,54 @@ export interface PrivateStorageSignedUrlGrantPersistenceContract {
   revocationCheck: "tenant_id_file_asset_object_key_revoked_at";
 }
 
+export interface PrivateStorageSignedUrlPersistenceClient {
+  readonly fileAsset: {
+    updateMany(input: {
+      where: { id: string; tenantId: string; objectKey: string };
+      data: { signedUrlExpiresAt: Date; metadata: Record<string, unknown> };
+    }): Promise<{ count: number }>;
+  };
+  readonly signedUrlGrant: {
+    create(input: {
+      data: {
+        tenantId: string;
+        fileAssetId: string;
+        issuedByUserId: string;
+        recipientUserId?: string;
+        operation: string;
+        scope: string;
+        bucket: string;
+        objectKey: string;
+        signedUrlHash?: string;
+        expiresAt: Date;
+        revokedAt?: Date;
+        revokeReason?: string;
+        metadata: Record<string, unknown>;
+      };
+    }): Promise<unknown>;
+  };
+  readonly auditLog: {
+    create(input: {
+      data: {
+        tenantId: string;
+        actorUserId: string;
+        action: "private_storage.signed_url.created" | "private_storage.signed_url.revoked";
+        entityType: "SignedUrlGrant";
+        entityId: string;
+        metadata: Record<string, unknown>;
+      };
+    }): Promise<unknown>;
+  };
+}
+
+export interface PrivateStorageSignedUrlPersistenceResult {
+  readonly persisted: boolean;
+  readonly fileAssetUpdated: boolean;
+  readonly grantPersisted: true;
+  readonly auditAction: "private_storage.signed_url.created" | "private_storage.signed_url.revoked";
+  readonly rawSignedUrlStored: false;
+}
+
 export const privateStorageProviderEnvNames = [
   "S3_ENDPOINT",
   "S3_REGION",
@@ -166,6 +214,7 @@ export type PrivateStorageSignedUrlEvidenceDecision = {
 
 export type PrivateStorageSignedUrlExecutionPlan = {
   status: "local-plan-ready";
+  transactionalPersistenceContractAvailable: true;
   bucketAclExecutionAllowed: false;
   signedUploadExecutionAllowed: false;
   signedDownloadExecutionAllowed: false;
@@ -181,6 +230,7 @@ export type PrivateStorageSignedUrlExecutionPlan = {
 };
 
 export type PrivateStorageSignedUrlExecutionPolicy = {
+  transactionalPersistenceContractAvailable: true;
   bucketAclExecutionAllowed: false;
   signedUploadExecutionAllowed: false;
   signedDownloadExecutionAllowed: false;
@@ -234,6 +284,7 @@ export function buildRedactedPrivateStorageSignedUrlArtifact(value: unknown): un
 }
 
 export const privateStorageSignedUrlExecutionPolicy: PrivateStorageSignedUrlExecutionPolicy = {
+  transactionalPersistenceContractAvailable: true,
   bucketAclExecutionAllowed: false,
   signedUploadExecutionAllowed: false,
   signedDownloadExecutionAllowed: false,
@@ -245,6 +296,7 @@ export const privateStorageSignedUrlExecutionPolicy: PrivateStorageSignedUrlExec
 export function buildPrivateStorageSignedUrlExecutionPlan(): PrivateStorageSignedUrlExecutionPlan {
   return {
     status: "local-plan-ready",
+    transactionalPersistenceContractAvailable: true,
     bucketAclExecutionAllowed: false,
     signedUploadExecutionAllowed: false,
     signedDownloadExecutionAllowed: false,
@@ -260,7 +312,7 @@ export function buildPrivateStorageSignedUrlExecutionPlan(): PrivateStorageSigne
       "Private bucket ACL denial proof requires live S3/Supabase bucket access.",
       "Provider signed upload URL proof requires configured storage secrets.",
       "Provider signed download URL proof requires configured storage secrets and scan-approved objects.",
-      "SignedUrlGrant transactional persistence proof requires provider-backed storage/database execution.",
+      "SignedUrlGrant transactional persistence contract is wired, but proof still requires provider-backed storage/database execution.",
       "Approved derivative public-read proof requires live public/private storage access checks.",
     ],
   };
@@ -329,6 +381,76 @@ export function buildPrivateStorageSignedUrlGrantPersistenceContract(
     auditActions: ["private_storage.signed_url.created", "private_storage.signed_url.revoked"],
     redactedFields: ["signedUrl", "signedUrlHash"],
     revocationCheck: "tenant_id_file_asset_object_key_revoked_at",
+  };
+}
+
+export async function persistPrivateStorageSignedUrlGrant(
+  client: PrivateStorageSignedUrlPersistenceClient,
+  input: { grant: PrivateStorageSignedUrlGrantPersistenceInput; signedUrlHash?: string },
+): Promise<PrivateStorageSignedUrlPersistenceResult> {
+  const signedUrlHash = input.signedUrlHash ?? input.grant.signedUrlHash;
+  const expiresAt = new Date(input.grant.expiresAt);
+  const revokedAt = input.grant.revokedAt ? new Date(input.grant.revokedAt) : undefined;
+  const auditAction = revokedAt ? "private_storage.signed_url.revoked" : "private_storage.signed_url.created";
+  const metadata = buildRedactedPrivateStorageSignedUrlArtifact({
+    operation: input.grant.operation,
+    scope: input.grant.scope,
+    bucket: input.grant.bucket,
+    objectKey: input.grant.objectKey,
+    signedUrlHash,
+    expiresAt: input.grant.expiresAt,
+    revokedAt: input.grant.revokedAt,
+    revokeReason: input.grant.revokeReason,
+    rawSignedUrlStored: false,
+  }) as Record<string, unknown>;
+
+  const updated = await client.fileAsset.updateMany({
+    where: {
+      id: input.grant.fileAssetId,
+      tenantId: input.grant.tenantId,
+      objectKey: input.grant.objectKey,
+    },
+    data: {
+      signedUrlExpiresAt: expiresAt,
+      metadata,
+    },
+  });
+
+  await client.signedUrlGrant.create({
+    data: {
+      tenantId: input.grant.tenantId,
+      fileAssetId: input.grant.fileAssetId,
+      issuedByUserId: input.grant.issuedByUserId,
+      ...(input.grant.recipientUserId ? { recipientUserId: input.grant.recipientUserId } : {}),
+      operation: input.grant.operation,
+      scope: input.grant.scope,
+      bucket: input.grant.bucket,
+      objectKey: input.grant.objectKey,
+      ...(signedUrlHash ? { signedUrlHash } : {}),
+      expiresAt,
+      ...(revokedAt ? { revokedAt } : {}),
+      ...(input.grant.revokeReason ? { revokeReason: input.grant.revokeReason } : {}),
+      metadata,
+    },
+  });
+
+  await client.auditLog.create({
+    data: {
+      tenantId: input.grant.tenantId,
+      actorUserId: input.grant.issuedByUserId,
+      action: auditAction,
+      entityType: "SignedUrlGrant",
+      entityId: input.grant.fileAssetId,
+      metadata,
+    },
+  });
+
+  return {
+    persisted: updated.count === 1,
+    fileAssetUpdated: updated.count === 1,
+    grantPersisted: true,
+    auditAction,
+    rawSignedUrlStored: false,
   };
 }
 

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { inkrouteDemoTenant } from "@inkroute/config";
 import {
   buildSecurityHeaderPlan,
   buildTenantIsolationFixtures,
@@ -8,53 +9,34 @@ import {
   summarizeSecurityPosture,
   uploadPolicies,
 } from "@inkroute/security";
+import { assertPermission, dashboardApiGuardFailureResponse, resolveDashboardActor } from "../../dashboardAuth";
 
-const demoTenantId = "demo-studio-alpha";
 const allowedReadRoles = new Set(["owner", "studio_manager", "admin", "artist"]);
-const fallbackRole = "viewer";
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
-function normalizeHeaderValue(value: string | null): string | null {
-  const normalized = value?.trim();
-  return normalized && normalized.length > 0 ? normalized : null;
-}
-
-function resolveDashboardReader(request: NextRequest): { tenantId: string; role: string; userId: string } | { error: { status: number; code: string; message: string } } {
-  const tenantId = normalizeHeaderValue(request.headers.get("x-tenant-id"));
-  const role = normalizeHeaderValue(request.headers.get("x-user-role")) ?? fallbackRole;
-  const userId = normalizeHeaderValue(request.headers.get("x-user-id")) ?? "demo-dashboard-reader";
-
-  if (tenantId !== demoTenantId) {
-    return {
-      error: {
-        status: 403,
-        code: "TENANT_SCOPE_REQUIRED",
-        message: "Dashboard security posture requires an authenticated tenant scope.",
-      },
-    };
-  }
-
-  const normalizedRole = role.toLowerCase();
-
-  if (!allowedReadRoles.has(normalizedRole)) {
-    return {
-      error: {
-        status: 403,
-        code: "ROLE_NOT_AUTHORIZED",
-        message: "Dashboard security posture requires an operator role.",
-      },
-    };
-  }
-
-  return { tenantId, role: normalizedRole, userId };
-}
-
 export async function GET(request: NextRequest) {
-  const reader = resolveDashboardReader(request);
-  if ("error" in reader) {
+  let actor;
+  try {
+    actor = resolveDashboardActor(request);
+    assertPermission(actor, "tenant:read");
+  } catch (error) {
+    return dashboardApiGuardFailureResponse(error, "/api/security/trust-status") ?? NextResponse.json(
+      { ok: false, error: { code: "FORBIDDEN", message: "Dashboard security posture requires an authenticated tenant scope.", gapIds: ["GAP-095", "GAP-103"] } },
+      { status: 403, headers: noStoreHeaders },
+    );
+  }
+
+  if (!allowedReadRoles.has(actor.role)) {
     return NextResponse.json(
-      { ok: false, error: { code: reader.error.code, message: reader.error.message, gapIds: ["GAP-095", "GAP-103"] } },
-      { status: reader.error.status, headers: noStoreHeaders },
+      { ok: false, error: { code: "ROLE_NOT_AUTHORIZED", message: "Dashboard security posture requires an operator role.", gapIds: ["GAP-095", "GAP-103"] } },
+      { status: 403, headers: noStoreHeaders },
+    );
+  }
+
+  if (actor.tenantId !== inkrouteDemoTenant.id) {
+    return NextResponse.json(
+      { ok: false, error: { code: "TENANT_SCOPE_REQUIRED", message: "Dashboard security posture preview is limited to the configured local tenant until persisted membership evidence exists.", gapIds: ["GAP-095", "GAP-103"] } },
+      { status: 403, headers: noStoreHeaders },
     );
   }
 
@@ -69,14 +51,14 @@ export async function GET(request: NextRequest) {
             "Production dashboard trust status requires provider-backed session, persisted tenant membership, audit-ready route evidence, and current security runtime artifacts; header-only trust previews are disabled until provider-backed session evidence is captured.",
           gapIds: ["GAP-040", "GAP-095", "GAP-103", "GAP-104"],
         },
-        tenantId: reader.tenantId,
+        tenantId: actor.tenantId,
         actor: {
-          userId: reader.userId,
-          role: reader.role,
+          userId: actor.actorUserId,
+          role: actor.role,
         },
         summary: summarizeSecurityPosture(controls),
         productionBoundary: {
-          scaffoldedTrustPreviewDisabled: true,
+          headerOnlyTrustPreviewDisabled: true,
           requiresProviderBackedSession: true,
           requiresPersistedTenantMembership: true,
           requiresSecurityRuntimeEvidence: true,
@@ -91,10 +73,10 @@ export async function GET(request: NextRequest) {
     {
       ok: true,
       status: "local-preview",
-      tenantId: reader.tenantId,
+      tenantId: actor.tenantId,
       actor: {
-        userId: reader.userId,
-        role: reader.role,
+        userId: actor.actorUserId,
+        role: actor.role,
       },
       summary: summarizeSecurityPosture(controls),
       controls,

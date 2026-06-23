@@ -87,6 +87,7 @@ export const qualityGateRuntimeArtifactPaths = [
   "coverage/quality-gates-output.txt",
   "coverage/quality-all-output.txt",
   "coverage/quality-ci-job.json",
+  "coverage/quality-gate-redacted-evidence-bundle.json",
   "test-results/quality-gate-runtime",
 ] as const;
 
@@ -139,6 +140,7 @@ export const qualityGateRuntimeExternalArtifacts = [
   "coverage/quality-package-test.txt",
   "coverage/quality-all-output.txt",
   "coverage/quality-ci-job.json",
+  "coverage/quality-gate-redacted-evidence-bundle.json",
   "test-results/quality-gate-runtime",
 ] as const satisfies readonly QualityGateRuntimeArtifact[];
 
@@ -200,6 +202,20 @@ export interface QualityGateRuntimeArtifactReview {
   readonly safeForTracker: boolean;
 }
 
+export interface QualityGateRuntimeRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly artifactPath: "coverage/quality-gate-redacted-evidence-bundle.json";
+  readonly review: QualityGateRuntimeArtifactReview;
+  readonly requiredArtifacts: typeof qualityGateRuntimeArtifactPaths;
+  readonly requiredExternalEvidence: typeof qualityGateRuntimeRequiredExternalEvidence;
+  readonly packageTypecheckExecutionAllowed: false;
+  readonly packageTestExecutionAllowed: false;
+  readonly qualityAllExecutionAllowed: false;
+  readonly ciQualityJobExecutionAllowed: false;
+  readonly persistenceExecutionAllowed: false;
+  readonly ciArtifactCaptureExecutionAllowed: false;
+}
+
 export const qualityGateRuntimeLocalCommands = [
   "pnpm quality:docs",
   "pnpm quality:gaps",
@@ -223,6 +239,7 @@ export const qualityGateRuntimeRequiredExternalEvidence = [
   "GitHub Actions CI quality job URL, conclusion, and artifact bundle.",
   "Durable QualityGateRun persistence row captured from the target database.",
   "CI quality reports/artifacts uploaded or explicitly documented as unavailable.",
+  "Redacted quality gate evidence bundle must omit raw command output, CI URLs, database URLs, tenant IDs, contacts, provider IDs, and tokens.",
 ] as const;
 
 export type QualityGateRuntimeExecutionPolicy = {
@@ -308,6 +325,12 @@ export const qualityGateRuntimeMatrix = [
     id: "quality-ci-artifacts",
     command: "capture CI quality reports/artifacts",
     artifact: "coverage/quality-gate-runtime.json",
+    status: "artifact-gated",
+  },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted quality gate evidence bundle",
+    artifact: "coverage/quality-gate-redacted-evidence-bundle.json",
     status: "artifact-gated",
   },
 ] as const satisfies readonly QualityGateRuntimeMatrixEntry[];
@@ -551,6 +574,24 @@ export function buildQualityGateRuntimeArtifactReview(artifact: unknown): Qualit
     redactions,
     requiredExternalEvidence: qualityGateRuntimeRequiredExternalEvidence,
     safeForTracker: true,
+  };
+}
+
+export function buildQualityGateRuntimeRedactedEvidenceBundle(
+  artifact: unknown,
+): QualityGateRuntimeRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    artifactPath: "coverage/quality-gate-redacted-evidence-bundle.json",
+    review: buildQualityGateRuntimeArtifactReview(artifact),
+    requiredArtifacts: qualityGateRuntimeArtifactPaths,
+    requiredExternalEvidence: qualityGateRuntimeRequiredExternalEvidence,
+    packageTypecheckExecutionAllowed: false,
+    packageTestExecutionAllowed: false,
+    qualityAllExecutionAllowed: false,
+    ciQualityJobExecutionAllowed: false,
+    persistenceExecutionAllowed: false,
+    ciArtifactCaptureExecutionAllowed: false,
   };
 }
 

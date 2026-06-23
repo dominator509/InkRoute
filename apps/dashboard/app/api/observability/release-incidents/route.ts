@@ -141,6 +141,17 @@ export async function POST(request: NextRequest) {
         rollbackRequested,
         ...(typeof tenantCommunicationOwner === "string" ? { tenantCommunicationOwner } : {}),
       });
+
+      if (process.env.NODE_ENV === "production" && linkage.readiness.status !== "ready") {
+        return {
+          linkage,
+          auditId: null,
+          releaseRecordId: releaseRecord?.id ?? null,
+          releaseIncidentLinkIds: [],
+          providerEvidenceBlocked: true,
+        };
+      }
+
       const audit = await tx.auditLog.create({
         data: {
           tenantId,
@@ -222,10 +233,10 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      return { linkage, auditId: audit.id, releaseRecordId: releaseRecord?.id ?? null, releaseIncidentLinkIds };
+      return { linkage, auditId: audit.id, releaseRecordId: releaseRecord?.id ?? null, releaseIncidentLinkIds, providerEvidenceBlocked: false };
     });
 
-    if (process.env.NODE_ENV === "production" && result.linkage.readiness.status !== "ready") {
+    if (result.providerEvidenceBlocked) {
       return json(
         {
           ok: false,
@@ -241,6 +252,7 @@ export async function POST(request: NextRequest) {
           },
           productionBoundary: {
             liveReleaseIncidentProviderEvidenceRequired: true,
+            noWritesCommitted: true,
             blockers: result.linkage.readiness.blockers,
             requiredEvidence: result.linkage.readiness.requiredEvidence,
           },

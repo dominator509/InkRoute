@@ -22,6 +22,7 @@ import {
   buildDocumentationAuditEvidenceDecision,
   buildDocumentationAuditRuntimeArtifactReview,
   buildDocumentationAuditRuntimeExecutionPlan,
+  buildDocumentationAuditRuntimeRedactedEvidenceBundle,
   buildRedactedDocumentationAuditArtifact,
 } from "../lib/documentationAuditRuntime";
 
@@ -68,8 +69,10 @@ describe("documentation audit runtime contract", () => {
       "provider-review-evidence",
       "legal-review-evidence",
       "stale-provider-status-proof",
+      "redacted-evidence-bundle",
     ]);
     expect(documentationAuditRuntimeArtifactPaths).toContain("coverage/documentation-audit-runtime.json");
+    expect(documentationAuditRuntimeArtifactPaths).toContain("coverage/documentation-audit-redacted-evidence-bundle.json");
     expect(documentationAuditRuntimeArtifactPaths).toContain("test-results/documentation-audit-runtime");
   });
 
@@ -138,6 +141,7 @@ describe("documentation audit runtime contract", () => {
       "coverage/documentation-legal-review-redacted.json",
       "coverage/documentation-stale-provider-status-redacted.json",
       "coverage/documentation-ci-quality-docs.json",
+      "coverage/documentation-audit-redacted-evidence-bundle.json",
       "test-results/documentation-audit-runtime",
     ]);
     expect(decision.missingCommands).toEqual([
@@ -199,6 +203,7 @@ describe("documentation audit runtime contract", () => {
     expect(gapTracker).toContain("documentationAuditRuntimeExecutionPolicy");
     expect(gapTracker).toContain("documentationAuditRuntimeRequiredExternalEvidence");
     expect(gapTracker).toContain("buildDocumentationAuditRuntimeArtifactReview");
+    expect(gapTracker).toContain("buildDocumentationAuditRuntimeRedactedEvidenceBundle");
   });
 
   it("pins current documentation audit runtime proof files for GAP-124", () => {
@@ -277,6 +282,7 @@ describe("documentation audit runtime contract", () => {
         "coverage/documentation-legal-review-redacted.json",
         "coverage/documentation-stale-provider-status-redacted.json",
         "coverage/documentation-ci-quality-docs.json",
+        "coverage/documentation-audit-redacted-evidence-bundle.json",
       ]),
     );
     expect(plan.qualityDocsExecutionAllowed).toBe(false);
@@ -298,6 +304,9 @@ describe("documentation audit runtime contract", () => {
       providerDatabaseRequiredForPersistence: true,
     });
     expect(plan.externalEvidenceRequired).toBe(documentationAuditRuntimeRequiredExternalEvidence);
+    expect(plan.externalEvidenceRequired).toContain(
+      "Redacted documentation audit evidence bundle must omit raw CI logs, provider resource IDs, reviewer contacts, privileged communications, stale-provider URLs, and run URLs.",
+    );
   });
 
   it("redacts documentation audit artifacts before provider or legal evidence retention", () => {
@@ -314,7 +323,8 @@ describe("documentation audit runtime contract", () => {
     };
     const redacted = buildRedactedDocumentationAuditArtifact(rawArtifact);
     const review = buildDocumentationAuditRuntimeArtifactReview("coverage/documentation-provider-review-redacted.json", rawArtifact);
-    const serialized = JSON.stringify(review);
+    const bundle = buildDocumentationAuditRuntimeRedactedEvidenceBundle("coverage/documentation-provider-review-redacted.json", rawArtifact);
+    const serialized = JSON.stringify(bundle);
 
     expect(JSON.stringify(redacted)).not.toContain("github.com/dominator509");
     expect(serialized).not.toContain("provider_project_123");
@@ -343,8 +353,20 @@ describe("documentation audit runtime contract", () => {
         "Provider readiness review evidence must include redacted labels only and keep provider resource IDs out of repository artifacts.",
         "Legal readiness review evidence must redact attorney/reviewer contact details and privileged communications.",
         "Stale provider status proof and DocumentationAuditRun persistence must remain external until approved evidence exists.",
+        "Redacted documentation audit evidence bundle must omit raw CI logs, provider resource IDs, reviewer contacts, privileged communications, stale-provider URLs, and run URLs.",
       ]),
     );
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.sourceArtifactPath).toBe("coverage/documentation-provider-review-redacted.json");
+    expect(bundle.artifactPath).toBe("coverage/documentation-audit-redacted-evidence-bundle.json");
+    expect(bundle.review.containsUnredactedSensitiveValues).toBe(false);
+    expect(bundle.requiredArtifacts).toBe(documentationAuditRuntimeArtifactPaths);
+    expect(bundle.externalEvidenceRequired).toBe(documentationAuditRuntimeRequiredExternalEvidence);
+    expect(bundle.ciQualityDocsExecutionAllowed).toBe(false);
+    expect(bundle.providerReviewExecutionAllowed).toBe(false);
+    expect(bundle.legalReviewExecutionAllowed).toBe(false);
+    expect(bundle.staleProviderStatusExecutionAllowed).toBe(false);
+    expect(bundle.persistenceExecutionAllowed).toBe(false);
   });
 });
 

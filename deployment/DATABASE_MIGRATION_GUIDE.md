@@ -2,7 +2,7 @@
 
 ## Status
 
-Scaffolded only. Phase 2 added a broad Prisma schema and seed script, but no migration has been generated or applied in this sandbox.
+Local migration artifacts are present, including the broad Prisma schema, seed script, and checked-in migration directories under `packages/db/prisma/migrations`. Applying migrations, proving drift-free execution, and capturing provider-backed database evidence remain gated on a non-production database and redacted command artifacts.
 
 ## Non-production migration sequence
 

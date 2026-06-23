@@ -11,9 +11,11 @@ import {
   buildPrGapEvidenceEnforcementEvidenceDecision,
   buildPrGapEvidenceEnforcementExecutionPlan,
   buildPrGapEvidenceEnforcementExecutionRequiredEvidence,
+  buildPrGapEvidenceEnforcementRedactedEvidenceBundle,
   buildPrDiffEvidenceRuntimeArtifactReview,
   buildPrDiffEvidenceRuntimeExecutionPlan,
   buildPrDiffEvidenceRuntimeExecutionRequiredEvidence,
+  buildPrDiffEvidenceRuntimeRedactedEvidenceBundle,
   buildPrDiffEvidenceRuntimeReadinessPlan,
   buildPrDiffEvidenceEvidenceDecision,
   buildPrGapEvidenceEnforcementReadinessPlan,
@@ -410,6 +412,7 @@ describe("quality gates", () => {
     expect(gapTracker).toContain("prGapEvidenceEnforcementLocalArtifacts/prGapEvidenceEnforcementExternalArtifacts");
     expect(gapTracker).toContain("prGapEvidenceEnforcementRequiredExternalEvidence");
     expect(gapTracker).toContain("buildPrGapEvidenceEnforcementArtifactReview");
+    expect(gapTracker).toContain("buildPrGapEvidenceEnforcementRedactedEvidenceBundle");
 
     expect(prGapEvidenceEnforcementRunPersistenceContract.prismaModel).toBe("PrGapEvidenceEnforcementRun");
     expect(prGapEvidenceEnforcementRunPersistenceContract.tenantRelation).toBe("prGapEvidenceEnforcementRuns");
@@ -489,6 +492,7 @@ describe("quality gates", () => {
         "live failing PR merge-block evidence",
         "live passing PR evidence",
         "secret-safe PR gap enforcement log review",
+        "redacted PR gap evidence enforcement bundle",
       ]),
     );
     expect(plan.fixtureVerificationExecutionAllowed).toBe(false);
@@ -510,6 +514,9 @@ describe("quality gates", () => {
       localFixturesDoNotProveLiveEnforcement: true,
     });
     expect(plan.externalEvidenceRequired).toBe(prGapEvidenceEnforcementRequiredExternalEvidence);
+    expect(plan.externalEvidenceRequired).toContain(
+      "Redacted PR gap evidence enforcement bundle must omit raw PR URLs, run URLs, branch-protection payloads, provider IDs, actor identifiers, and command logs.",
+    );
   });
 
   it("redacts PR gap evidence enforcement artifacts before review or retention", () => {
@@ -526,7 +533,8 @@ describe("quality gates", () => {
     };
     const redacted = buildRedactedPrGapEvidenceEnforcementArtifact(rawArtifact);
     const review = buildPrGapEvidenceEnforcementArtifactReview("live failing PR merge-block evidence", rawArtifact);
-    const serialized = JSON.stringify(review);
+    const bundle = buildPrGapEvidenceEnforcementRedactedEvidenceBundle("live failing PR merge-block evidence", rawArtifact);
+    const serialized = JSON.stringify(bundle);
 
     expect(JSON.stringify(redacted)).not.toContain("github.com/dominator509");
     expect(serialized).not.toContain("owner@example.com");
@@ -555,8 +563,21 @@ describe("quality gates", () => {
         "Branch-protection evidence must prove required quality checks without exposing repository settings tokens or provider identifiers.",
         "Durable PrGapEvidenceEnforcementRun persistence must execute only in an approved provider-backed database.",
         "Secret-safe log review must redact check-run logs, command output, environment values, customer data, and provider IDs before retention.",
+        "Redacted PR gap evidence enforcement bundle must omit raw PR URLs, run URLs, branch-protection payloads, provider IDs, actor identifiers, and command logs.",
       ]),
     );
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.sourceArtifactPath).toBe("live failing PR merge-block evidence");
+    expect(bundle.artifactPath).toBe("redacted PR gap evidence enforcement bundle");
+    expect(bundle.review.containsUnredactedSensitiveValues).toBe(false);
+    expect(bundle.requiredArtifacts).toBe(requiredPrGapEvidenceEnforcementArtifacts);
+    expect(bundle.externalEvidenceRequired).toBe(prGapEvidenceEnforcementRequiredExternalEvidence);
+    expect(bundle.qualityAllExecutionAllowed).toBe(false);
+    expect(bundle.ciQualityExecutionAllowed).toBe(false);
+    expect(bundle.branchProtectionAuditExecutionAllowed).toBe(false);
+    expect(bundle.persistenceExecutionAllowed).toBe(false);
+    expect(bundle.liveFailingPrExecutionAllowed).toBe(false);
+    expect(bundle.livePassingPrExecutionAllowed).toBe(false);
   });
 
   it("blocks documentation audit readiness until scripts, reports, CI, inventory, provider, and legal evidence are complete", () => {
@@ -899,6 +920,7 @@ describe("quality gates", () => {
       "positive PR diff fixture artifact",
       "negative PR diff fixture artifact",
       "secret-safe PR diff log review",
+      "redacted PR diff evidence bundle",
     ]);
     expect(decision.missingCommands).toEqual([
       "GitHub Actions pull_request quality job",
@@ -954,6 +976,7 @@ describe("quality gates", () => {
     expect(gapTracker).toContain("prDiffEvidenceRuntimeLocalArtifacts/prDiffEvidenceRuntimeExternalArtifacts");
     expect(gapTracker).toContain("prDiffEvidenceRuntimeRequiredExternalEvidence");
     expect(gapTracker).toContain("buildPrDiffEvidenceRuntimeArtifactReview");
+    expect(gapTracker).toContain("buildPrDiffEvidenceRuntimeRedactedEvidenceBundle");
 
     expect(prDiffEvidenceRunPersistenceContract.prismaModel).toBe("PrDiffEvidenceRun");
     expect(prDiffEvidenceRunPersistenceContract.tenantRelation).toBe("prDiffEvidenceRuns");
@@ -1035,6 +1058,9 @@ describe("quality gates", () => {
       secretSafeLogReviewRequiredForClosure: true,
     });
     expect(plan.requiredExternalEvidence).toBe(prDiffEvidenceRuntimeRequiredExternalEvidence);
+    expect(plan.requiredExternalEvidence).toContain(
+      "Redacted PR diff evidence bundle must omit raw diff logs, PR URLs, branch names, database URLs, tenant IDs, contacts, provider IDs, and tokens.",
+    );
   });
 
   it("redacts PR diff evidence runtime artifacts before tracker or handoff use", () => {
@@ -1061,6 +1087,7 @@ describe("quality gates", () => {
     });
 
     const review = buildPrDiffEvidenceRuntimeArtifactReview(artifact);
+    const bundle = buildPrDiffEvidenceRuntimeRedactedEvidenceBundle(artifact);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(prDiffEvidenceRuntimeRequiredExternalEvidence);
     expect(review.redactions).toEqual(
@@ -1074,6 +1101,16 @@ describe("quality gates", () => {
       ]),
     );
     expect(review.requiredExternalEvidence).toBe(prDiffEvidenceRuntimeRequiredExternalEvidence);
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.artifactPath).toBe("redacted PR diff evidence bundle");
+    expect(bundle.review.safeForTracker).toBe(true);
+    expect(bundle.requiredArtifacts).toBe(requiredPrDiffEvidenceRuntimeArtifacts);
+    expect(bundle.requiredExternalEvidence).toBe(prDiffEvidenceRuntimeRequiredExternalEvidence);
+    expect(bundle.prGapAuditExecutionAllowed).toBe(false);
+    expect(bundle.fixtureVerificationExecutionAllowed).toBe(false);
+    expect(bundle.pullRequestCiExecutionAllowed).toBe(false);
+    expect(bundle.persistenceExecutionAllowed).toBe(false);
+    expect(bundle.branchProtectionEnforcementAllowed).toBe(false);
   });
 
   it("blocks semantic documentation readiness when static checks fail or runtime/provider/legal proof is conflated", () => {

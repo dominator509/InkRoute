@@ -2,7 +2,7 @@
 
 ## Status
 
-Scaffolded only. `.github/workflows/ci.yml` and `.github/workflows/release-governance.yml` exist, but no workflow has been executed in this sandbox.
+Source-controlled workflow contracts exist in `.github/workflows/ci.yml` and `.github/workflows/release-governance.yml`, with local runtime/evidence matrices tracked in the GAP docs. Fresh GitHub Actions execution, protected-environment approvals, provider secrets, deployment artifacts, and redacted CI evidence remain external gates.
 
 ## Required stages
 

@@ -7,6 +7,7 @@ import {
   buildDomainEventAuditExecutionPlan,
   buildDomainEventAuditRunData,
   buildRedactedDomainEventAuditArtifact,
+  executeDomainEventAuditLifecycleTransaction,
   persistDomainEventAuditRun,
   domainEventAuditArtifactPaths,
   domainEventAuditEvidenceFlags,
@@ -103,9 +104,10 @@ describe("domain event and audit transaction runtime contract", () => {
     expect(domainEventAuditRuntimeReadiness.requiredCommands).toBe(domainEventAuditRuntimeCommands);
     expect(domainEventAuditRuntimeReadiness.requiredControls).toBe(domainEventAuditRuntimeControls);
     expect(domainEventAuditRuntimeReadiness.requiredEvidence).toBe(domainEventAuditEvidenceFlags);
-    expect(domainEventAuditRuntimeReadiness.blockers).toContain(
+    expect(domainEventAuditRuntimeReadiness.blockers).not.toContain(
       "Booking/payment lifecycle services must execute writes inside Prisma transactions.",
     );
+    expect(domainEventAuditRuntimeReadiness.blockers).not.toContain("Tenant-scoped booking/payment repositories must be implemented.");
     expect(domainEventAuditRuntimeReadiness.blockers).toContain(
       "Replayed lifecycle mutations must return the original committed result without duplicate writes.",
     );
@@ -220,6 +222,93 @@ describe("domain event and audit transaction runtime contract", () => {
     expect(decision.missingControls).toEqual([]);
     expect(decision.missingEvidence).toEqual([]);
     expect(decision.requiredEvidence).toBe(domainEventAuditEvidenceFlags);
+  });
+
+  it("executes a local domain event/audit transaction contract with idempotency replay protection", async () => {
+    const calls: string[] = [];
+    let completedResult: unknown = null;
+    const repository: Parameters<typeof executeDomainEventAuditLifecycleTransaction>[0] = {
+      async $transaction<T>(callback) {
+        return callback({
+          idempotencyKey: {
+            async findUnique() {
+              calls.push("idempotencyKey.findUnique");
+              return completedResult ? { result: completedResult } : null;
+            },
+            async create() {
+              calls.push("idempotencyKey.create");
+              return {};
+            },
+            async update(args: { data: { result: unknown } }) {
+              calls.push("idempotencyKey.update");
+              completedResult = args.data.result;
+              return {};
+            },
+          },
+          bookingRequest: {
+            async update() {
+              calls.push("bookingRequest.update");
+              return {};
+            },
+          },
+          bookingStateEvent: {
+            async create() {
+              calls.push("bookingStateEvent.create");
+              return {};
+            },
+          },
+          payment: {
+            async update() {
+              calls.push("payment.update");
+              return {};
+            },
+          },
+          paymentAuditLog: {
+            async create() {
+              calls.push("paymentAuditLog.create");
+              return {};
+            },
+          },
+          auditLog: {
+            async create() {
+              calls.push("auditLog.create");
+              return {};
+            },
+          },
+        });
+      },
+    };
+
+    const committed = await executeDomainEventAuditLifecycleTransaction(repository, {
+      kind: "booking",
+      tenantId: "tenant_static",
+      actorUserId: "user_static",
+      subjectId: "booking_static",
+      previousStatus: "submitted",
+      nextStatus: "accepted",
+      idempotencyKey: "domain-event:booking:accepted",
+    });
+    const replayed = await executeDomainEventAuditLifecycleTransaction(repository, {
+      kind: "booking",
+      tenantId: "tenant_static",
+      actorUserId: "user_static",
+      subjectId: "booking_static",
+      previousStatus: "submitted",
+      nextStatus: "accepted",
+      idempotencyKey: "domain-event:booking:accepted",
+    });
+
+    expect(committed).toMatchObject({ status: "committed", kind: "booking", subjectId: "booking_static" });
+    expect(replayed).toMatchObject({ status: "replayed", kind: "booking", subjectId: "booking_static" });
+    expect(calls).toEqual([
+      "idempotencyKey.findUnique",
+      "idempotencyKey.create",
+      "bookingRequest.update",
+      "bookingStateEvent.create",
+      "auditLog.create",
+      "idempotencyKey.update",
+      "idempotencyKey.findUnique",
+    ]);
   });
 
   it("keeps domain event/audit execution classified, redacted, and transaction-gated", () => {

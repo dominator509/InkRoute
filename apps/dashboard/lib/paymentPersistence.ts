@@ -4,6 +4,7 @@ import {
   type CurrencyCode,
   type PaymentLifecycleAction,
   type PaymentLifecyclePersistencePlan,
+  type PaymentLifecycleWrite,
   type PaymentPersistenceRuntimeReadinessPlan,
 } from "@inkroute/payments";
 
@@ -49,6 +50,209 @@ export interface TenantPaymentRepository {
   findDashboardPayments(tenantId: string, limit: number): Promise<readonly unknown[]>;
 }
 
+type PrismaPaymentTransaction = {
+  deposit: {
+    create(args: unknown): Promise<unknown>;
+    updateMany(args: unknown): Promise<unknown>;
+  };
+  payment: {
+    create(args: unknown): Promise<unknown>;
+    updateMany(args: unknown): Promise<{ count: number }>;
+  };
+  refund: {
+    create(args: unknown): Promise<unknown>;
+  };
+  paymentAuditLog: {
+    create(args: unknown): Promise<unknown>;
+  };
+  bookingStateEvent: {
+    create(args: unknown): Promise<unknown>;
+  };
+  idempotencyKey: {
+    upsert(args: unknown): Promise<{ status?: string }>;
+  };
+};
+
+export interface PrismaPaymentClient {
+  $transaction<T>(handler: (tx: PrismaPaymentTransaction) => Promise<T>): Promise<T>;
+  bookingRequest: {
+    findFirst(args: unknown): Promise<{ id: string } | null>;
+  };
+  idempotencyKey: {
+    upsert(args: unknown): Promise<{ status: string }>;
+  };
+  payment: {
+    findMany(args: unknown): Promise<readonly unknown[]>;
+  };
+}
+
+function toJsonValue(value: unknown) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function paymentLifecycleEventType(action: PaymentLifecycleAction) {
+  return action === "mark_paid" ? "deposit_paid" : "note_added";
+}
+
+function paymentLifecycleOccurredAt(payload: Record<string, unknown>) {
+  return typeof payload.occurredAt === "string" ? new Date(payload.occurredAt) : new Date();
+}
+
+function paymentLifecycleStatus(plan: PaymentLifecyclePersistencePlan) {
+  return plan.targetStatus === "refunded" ? "refunded" : plan.targetStatus;
+}
+
+async function applyPrismaPaymentLifecycleWrite(
+  tx: PrismaPaymentTransaction,
+  plan: PaymentLifecyclePersistencePlan,
+  write: PaymentLifecycleWrite,
+) {
+  const payload = write.payload;
+  const occurredAt = paymentLifecycleOccurredAt(payload);
+  const paymentId = typeof payload.paymentId === "string" ? payload.paymentId : undefined;
+  const depositId = typeof payload.depositId === "string" ? payload.depositId : undefined;
+  const bookingRequestId = typeof payload.bookingRequestId === "string" ? payload.bookingRequestId : undefined;
+
+  switch (write.model) {
+    case "Deposit":
+      if (plan.action === "create_deposit") {
+        await tx.deposit.create({
+          data: {
+            tenantId: write.tenantId,
+            bookingRequestId,
+            amountCents: payload.amountCents,
+            currency: payload.currency,
+            status: "pending",
+          },
+        });
+        return;
+      }
+
+      await tx.deposit.updateMany({
+        where: {
+          tenantId: write.tenantId,
+          ...(depositId ? { id: depositId } : {}),
+          ...(bookingRequestId ? { bookingRequestId } : {}),
+        },
+        data: {
+          status: paymentLifecycleStatus(plan),
+          ...(plan.action === "mark_paid" ? { paidAt: occurredAt } : {}),
+        },
+      });
+      return;
+
+    case "Payment": {
+      if (paymentId) {
+        const updated = await tx.payment.updateMany({
+          where: { id: paymentId, tenantId: write.tenantId },
+          data: {
+            status: paymentLifecycleStatus(plan),
+            providerPaymentId: payload.providerPaymentIntentId ?? null,
+            providerSessionId: payload.providerSessionId ?? null,
+            ...(plan.action === "mark_paid" ? { paidAt: occurredAt } : {}),
+            ...(plan.action === "mark_failed" ? { failedAt: occurredAt } : {}),
+            metadata: toJsonValue({ lifecycleAction: plan.action, idempotencyKey: plan.idempotencyKey }),
+          },
+        });
+        if (updated.count > 0) return;
+      }
+
+      await tx.payment.create({
+        data: {
+          ...(paymentId ? { id: paymentId } : {}),
+          tenantId: write.tenantId,
+          bookingRequestId,
+          ...(depositId ? { depositId } : {}),
+          provider: payload.provider,
+          providerPaymentId: payload.providerPaymentIntentId ?? null,
+          providerSessionId: payload.providerSessionId ?? null,
+          status: paymentLifecycleStatus(plan),
+          amountCents: payload.amountCents,
+          currency: payload.currency,
+          metadata: toJsonValue({ lifecycleAction: plan.action, idempotencyKey: plan.idempotencyKey }),
+        },
+      });
+      return;
+    }
+
+    case "Refund":
+      await tx.refund.create({
+        data: {
+          tenantId: write.tenantId,
+          paymentId,
+          bookingRequestId,
+          ...(depositId ? { depositId } : {}),
+          providerRefundId: payload.providerChargeId ?? payload.providerPaymentIntentId ?? null,
+          status: "succeeded",
+          amountCents: payload.amountCents,
+          currency: payload.currency,
+          reason: `Lifecycle ${plan.action}`,
+        },
+      });
+      return;
+
+    case "PaymentAuditLog":
+      await tx.paymentAuditLog.create({
+        data: {
+          tenantId: write.tenantId,
+          ...(paymentId ? { paymentId } : {}),
+          ...(depositId ? { depositId } : {}),
+          actorUserId: typeof payload.actorId === "string" ? payload.actorId : null,
+          action: payload.action,
+          provider: payload.provider,
+          metadata: toJsonValue({
+            lifecycleAction: plan.action,
+            targetStatus: plan.targetStatus,
+            idempotencyKey: plan.idempotencyKey,
+            providerPaymentIntentId: payload.providerPaymentIntentId ?? null,
+            providerChargeId: payload.providerChargeId ?? null,
+            occurredAt: payload.occurredAt,
+            rawProviderPayloadStored: false,
+          }),
+        },
+      });
+      return;
+
+    case "BookingStateEvent":
+      if (!bookingRequestId) return;
+      await tx.bookingStateEvent.create({
+        data: {
+          tenantId: write.tenantId,
+          bookingRequestId,
+          actorUserId: typeof payload.actorId === "string" ? payload.actorId : null,
+          type: paymentLifecycleEventType(plan.action),
+          note: `Payment lifecycle ${plan.action} applied.`,
+          metadata: toJsonValue({
+            lifecycleAction: plan.action,
+            targetStatus: plan.targetStatus,
+            idempotencyKey: plan.idempotencyKey,
+            rawProviderPayloadStored: false,
+          }),
+        },
+      });
+      return;
+
+    case "IdempotencyKey":
+      await tx.idempotencyKey.upsert({
+        where: { tenantId_scope_key: { tenantId: write.tenantId, scope: "payment-lifecycle", key: plan.idempotencyKey } },
+        create: {
+          tenantId: write.tenantId,
+          scope: "payment-lifecycle",
+          key: plan.idempotencyKey,
+          status: "completed",
+          result: toJsonValue({ action: plan.action, targetStatus: plan.targetStatus }),
+          metadata: toJsonValue({ bookingRequestId, action: plan.action }),
+        },
+        update: {
+          status: "completed",
+          result: toJsonValue({ action: plan.action, targetStatus: plan.targetStatus, replayObserved: true }),
+          metadata: toJsonValue({ bookingRequestId, action: plan.action, replayObserved: true }),
+        },
+      });
+      return;
+  }
+}
+
 export interface InMemoryTenantPaymentRepositoryState {
   readonly idempotencyKeys: Map<string, { readonly tenantId: string; readonly action: PaymentLifecycleAction }>;
   readonly transactions: PaymentLifecyclePersistencePlan[];
@@ -83,6 +287,62 @@ export function createInMemoryTenantPaymentRepository(
     },
     async findDashboardPayments(tenantId, limit) {
       return (state.dashboardRows.get(tenantId) ?? []).slice(0, limit);
+    },
+  };
+}
+
+export function createPrismaTenantPaymentRepository(prisma: PrismaPaymentClient): TenantPaymentRepository {
+  return {
+    async assertTenantScope(input) {
+      if (!input.tenantId.trim()) throw new Error("Tenant scope is required before payment persistence.");
+      const booking = await prisma.bookingRequest.findFirst({
+        where: { id: input.bookingRequestId, tenantId: input.tenantId },
+        select: { id: true },
+      });
+      if (!booking) throw new Error("Payment lifecycle mutation crossed tenant or booking scope.");
+    },
+    async claimIdempotencyKey(key, tenantId, action) {
+      const idempotency = await prisma.idempotencyKey.upsert({
+        where: { tenantId_scope_key: { tenantId, scope: "payment-lifecycle", key } },
+        create: {
+          tenantId,
+          scope: "payment-lifecycle",
+          key,
+          status: "claimed",
+          metadata: toJsonValue({ action, repository: "prisma" }),
+        },
+        update: {
+          metadata: toJsonValue({ action, repository: "prisma", replayObserved: true }),
+        },
+        select: { status: true },
+      });
+
+      return idempotency.status === "completed" ? "replayed" : "claimed";
+    },
+    async runLifecycleTransaction(plan) {
+      await prisma.$transaction(async (tx) => {
+        for (const write of plan.writes) {
+          await applyPrismaPaymentLifecycleWrite(tx, plan, write);
+        }
+      });
+    },
+    async findDashboardPayments(tenantId, limit) {
+      return prisma.payment.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        select: {
+          id: true,
+          bookingRequestId: true,
+          depositId: true,
+          provider: true,
+          status: true,
+          amountCents: true,
+          currency: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
     },
   };
 }
@@ -208,16 +468,16 @@ export function buildPaymentPersistenceContract(): PaymentPersistenceContract {
       dbSchemaIncludesPaymentModels: true,
       repositoriesImplemented: true,
       tenantScopedQueriesEnforced: true,
-      transactionalMutationsImplemented: false,
+      transactionalMutationsImplemented: true,
       idempotencyStoreImplemented: true,
-      depositCreationPersisted: false,
-      providerSessionPersisted: false,
-      paidTransitionPersisted: false,
-      failedTransitionPersisted: false,
-      refundTransitionPersisted: false,
-      disputeTransitionPersisted: false,
-      paymentAuditLogPersistedForEveryMutation: false,
-      bookingStateEventPersistedForLifecycleChanges: false,
+      depositCreationPersisted: true,
+      providerSessionPersisted: true,
+      paidTransitionPersisted: true,
+      failedTransitionPersisted: true,
+      refundTransitionPersisted: true,
+      disputeTransitionPersisted: true,
+      paymentAuditLogPersistedForEveryMutation: true,
+      bookingStateEventPersistedForLifecycleChanges: true,
       crossTenantIsolationTestsPassed: false,
       replayIdempotencyTestsPassed: true,
       seededPostgresIntegrationTestsPassed: false,
@@ -233,7 +493,7 @@ export function buildPaymentPersistenceContract(): PaymentPersistenceContract {
     dashboardReadBoundary:
       "Dashboard payment list/detail routes already enforce RBAC, tenant scope, no-store, projection redaction, AuditLog rows, and PaymentAuditLog read rows.",
     boundary:
-      "Payment lifecycle now has a tenant-scoped repository/service contract and mutation write plans; real Prisma transaction execution and seeded Postgres proof remain gated.",
+      "Payment lifecycle now has tenant-scoped in-memory and Prisma repository/service contracts plus mutation write plans; real seeded Postgres execution proof remains gated.",
   };
 }
 

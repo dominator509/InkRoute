@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -19,6 +19,7 @@ import {
   calendarLaunchRuntimeExternalCommands,
   calendarLaunchRuntimeLocalCommands,
   calendarLaunchRuntimeCommands,
+  calendarLaunchSurfaceContract,
   calendarLaunchRuntimeMatrix,
   calendarLaunchRuntimeReadiness,
   calendarLaunchRuntimeProofFiles,
@@ -73,6 +74,16 @@ describe("calendar launch runtime contract", () => {
     ]);
     expect(calendarLaunchArtifactPaths).toContain("coverage/calendar-launch-runtime.json");
     expect(calendarLaunchArtifactPaths).toContain("test-results/calendar-launch-runtime");
+    expect(calendarLaunchSurfaceContract.map((entry) => entry.surfaceId)).toEqual([
+      "postgres-availability",
+      "concurrent-hold-race",
+      "tenant-isolated-availability",
+      "google-oauth-freebusy-sync",
+      "signed-ics-token-route",
+      "timezone-provider-matrix",
+      "dashboard-public-travel-smoke",
+      "ci-calendar-artifact-retention",
+    ]);
   });
 
   it("pins the CalendarLaunchRun persistence model and migration", () => {
@@ -178,9 +189,14 @@ describe("calendar launch runtime contract", () => {
   it("keeps calendar launch blockers explicit until provider/database evidence exists", () => {
     expect(calendarLaunchRuntimeReadiness.status).toBe("blocked");
     expect(calendarLaunchRuntimeReadiness.missingScripts).toEqual([]);
-    expect(calendarLaunchRuntimeReadiness.requiredCommands).toEqual(calendarLaunchRuntimeCommands);
-    expect(calendarLaunchRuntimeReadiness.requiredEvidence).toEqual(calendarLaunchRuntimeReadiness.requiredEvidence);
+    expect(calendarLaunchRuntimeReadiness.requiredCommands).toBe(calendarLaunchRuntimeCommands);
+    expect(buildCalendarLaunchDecisionRequiredEvidence(calendarLaunchRuntimeReadiness.requiredEvidence)).toBe(
+      calendarLaunchRequiredEvidence,
+    );
     expect(calendarLaunchRuntimeReadiness.blockers).toContain("Google OAuth client, redirect URI, and scopes must be configured.");
+    expect(calendarLaunchRuntimeReadiness.blockers).not.toContain(
+      "Signed ICS token hash, expiry, rotation, and revocation persistence must be configured.",
+    );
     expect(calendarLaunchRuntimeReadiness.blockers).toContain("Signed ICS access route smoke tests must pass.");
   });
 
@@ -333,9 +349,10 @@ describe("calendar launch runtime contract", () => {
     expect(gapTracker).toContain("buildCalendarLaunchDecisionRequiredEvidence");
     expect(gapTracker).toContain("calendarLaunchRequiredEvidence");
     expect(gapTracker).toContain("persistCalendarLaunchRun upsert seam");
-    expect(gapTracker).toContain("live calendar typecheck/tests, Postgres mutation integration, concurrent hold race rejection, tenant isolation, Google OAuth/sync, signed ICS runtime/import, timezone/provider QA, travel publish/cache, smoke tests, CI evidence, provider-backed persistCalendarLaunchRun execution, and secret-safe artifacts remain open");
+    expect(gapTracker).toContain("live calendar typecheck/tests, Postgres mutation integration, concurrent hold race rejection, tenant isolation, Google OAuth/sync, signed ICS token persistence source contract plus access/import execution, timezone/provider QA, travel publish/cache, smoke tests, CI evidence, provider-backed persistCalendarLaunchRun execution, and secret-safe artifacts remain open");
     expect(gapTracker).toContain("GAP-009 is calendar-launch-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("proof inventory");
+    expect(gapTracker).toContain("Calendar launch runtime identity assertions pin exported commands, readiness areas, artifacts, required evidence, and decision evidence helpers");
   });
 
   it("pins current calendar launch proof files for GAP-009", () => {
@@ -354,6 +371,38 @@ describe("calendar launch runtime contract", () => {
     expect(plan.externalCommands).toBe(calendarLaunchRuntimeExternalCommands);
     expect(plan.localArtifacts).toBe(calendarLaunchLocalArtifacts);
     expect(plan.externalArtifacts).toBe(calendarLaunchExternalArtifacts);
+    expect(plan.surfaceContract).toBe(calendarLaunchSurfaceContract);
+    expect(plan.surfaceContract).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          surfaceId: "postgres-availability",
+          readinessArea: "postgres-availability-integration",
+          requiredCommand: "availability Postgres integration tests",
+          requiredArtifact: "coverage/calendar-postgres-availability.json",
+          launchBoundary: "postgres",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "google-oauth-freebusy-sync",
+          readinessArea: "google-freebusy-smoke",
+          requiredCommand: "Google Calendar OAuth/freebusy/event-sync smoke tests",
+          requiredArtifact: "coverage/calendar-google-freebusy-sync.json",
+          launchBoundary: "google-provider",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "timezone-provider-matrix",
+          readinessArea: "timezone-dst-recurrence-qa",
+          requiredCommand: "timezone DST and provider render matrix QA",
+          requiredArtifact: "coverage/calendar-timezone-provider-matrix.json",
+          launchBoundary: "timezone-provider",
+          providerBackedEvidenceRequired: false,
+          redactedArtifactRequired: true,
+        }),
+      ]),
+    );
     expect(plan.localArtifacts).toContain("coverage/calendar-test.txt");
     expect(plan.externalArtifacts).toContain("coverage/calendar-secret-safe-artifacts.json");
     expect(plan.externalArtifacts).toContain("test-results/calendar-launch-runtime");

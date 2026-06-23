@@ -21,6 +21,7 @@ import {
   buildRepositoryGovernanceEvidenceDecision,
   buildRepositoryGovernanceRuntimeArtifactReview,
   buildRepositoryGovernanceRuntimeExecutionPlan,
+  buildRepositoryGovernanceRuntimeRedactedEvidenceBundle,
   buildRedactedRepositoryGovernanceArtifact,
 } from "../lib/repositoryGovernanceRuntime";
 
@@ -79,8 +80,10 @@ describe("repository governance runtime contract", () => {
       "secret-scanning-settings",
       "merge-rules-settings",
       "enforcement-test-pr",
+      "redacted-evidence-bundle",
     ]);
     expect(repositoryGovernanceRuntimeArtifactPaths).toContain("coverage/repository-governance-runtime.json");
+    expect(repositoryGovernanceRuntimeArtifactPaths).toContain("coverage/repository-governance-redacted-evidence-bundle.json");
     expect(repositoryGovernanceRuntimeArtifactPaths).toContain("test-results/repository-governance-runtime");
   });
 
@@ -147,6 +150,7 @@ describe("repository governance runtime contract", () => {
       "coverage/repository-security-settings-redacted.json",
       "coverage/repository-merge-rules-redacted.json",
       "coverage/repository-enforcement-test-pr-redacted.json",
+      "coverage/repository-governance-redacted-evidence-bundle.json",
       "test-results/repository-governance-runtime",
     ]);
     expect(decision.missingCommands).toEqual([
@@ -210,6 +214,7 @@ describe("repository governance runtime contract", () => {
     expect(gapTracker).toContain("repositoryGovernanceRuntimeExecutionPolicy");
     expect(gapTracker).toContain("repositoryGovernanceRuntimeRequiredExternalEvidence");
     expect(gapTracker).toContain("buildRepositoryGovernanceRuntimeArtifactReview");
+    expect(gapTracker).toContain("buildRepositoryGovernanceRuntimeRedactedEvidenceBundle");
   });
 
   it("pins current repository governance runtime proof files for GAP-125", () => {
@@ -289,6 +294,7 @@ describe("repository governance runtime contract", () => {
         "coverage/repository-security-settings-redacted.json",
         "coverage/repository-merge-rules-redacted.json",
         "coverage/repository-enforcement-test-pr-redacted.json",
+        "coverage/repository-governance-redacted-evidence-bundle.json",
       ]),
     );
     expect(plan.governanceAuditExecutionAllowed).toBe(false);
@@ -310,6 +316,9 @@ describe("repository governance runtime contract", () => {
       providerDatabaseRequiredForPersistence: true,
     });
     expect(plan.externalEvidenceRequired).toBe(repositoryGovernanceRuntimeRequiredExternalEvidence);
+    expect(plan.externalEvidenceRequired).toContain(
+      "Redacted repository governance evidence bundle must omit raw repository settings payloads, PR URLs, check-run URLs, tokens, actors, reviewer details, and provider identifiers.",
+    );
   });
 
   it("redacts repository governance artifacts before settings proof retention", () => {
@@ -326,7 +335,8 @@ describe("repository governance runtime contract", () => {
     };
     const redacted = buildRedactedRepositoryGovernanceArtifact(rawArtifact);
     const review = buildRepositoryGovernanceRuntimeArtifactReview("coverage/repository-branch-protection-redacted.json", rawArtifact);
-    const serialized = JSON.stringify(review);
+    const bundle = buildRepositoryGovernanceRuntimeRedactedEvidenceBundle("coverage/repository-branch-protection-redacted.json", rawArtifact);
+    const serialized = JSON.stringify(bundle);
 
     expect(JSON.stringify(redacted)).not.toContain("owner@example.com");
     expect(serialized).not.toContain("ghp_secret");
@@ -355,8 +365,22 @@ describe("repository governance runtime contract", () => {
         "Enforcement-test PR evidence must prove settings block unsafe merges without exposing PR URLs, check-run URLs, or private reviewer details.",
         "Secret scanning and security alert proof must redact provider identifiers and repository settings payloads.",
         "RepositoryGovernanceRun persistence must execute only against an approved provider-backed database.",
+        "Redacted repository governance evidence bundle must omit raw repository settings payloads, PR URLs, check-run URLs, tokens, actors, reviewer details, and provider identifiers.",
       ]),
     );
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.sourceArtifactPath).toBe("coverage/repository-branch-protection-redacted.json");
+    expect(bundle.artifactPath).toBe("coverage/repository-governance-redacted-evidence-bundle.json");
+    expect(bundle.review.containsUnredactedSensitiveValues).toBe(false);
+    expect(bundle.requiredArtifacts).toBe(repositoryGovernanceRuntimeArtifactPaths);
+    expect(bundle.externalEvidenceRequired).toBe(repositoryGovernanceRuntimeRequiredExternalEvidence);
+    expect(bundle.branchProtectionAuditExecutionAllowed).toBe(false);
+    expect(bundle.requiredChecksReviewExecutionAllowed).toBe(false);
+    expect(bundle.codeownersReviewTestExecutionAllowed).toBe(false);
+    expect(bundle.secretScanningReviewExecutionAllowed).toBe(false);
+    expect(bundle.securityAlertsReviewExecutionAllowed).toBe(false);
+    expect(bundle.mergeRulesReviewExecutionAllowed).toBe(false);
+    expect(bundle.persistenceExecutionAllowed).toBe(false);
   });
 });
 

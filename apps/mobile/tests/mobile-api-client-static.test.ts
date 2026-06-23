@@ -12,6 +12,12 @@ describe("mobile API client static contract", () => {
   const apiClientSource = readWorkspaceFile("apps/mobile/src/lib/mobileApiClient.ts");
   const homeScreenSource = readWorkspaceFile("apps/mobile/src/screens/HomeScreen.tsx");
   const bookingScreenSource = readWorkspaceFile("apps/mobile/src/screens/BookingRequestsScreen.tsx");
+  const travelScreenSource = readWorkspaceFile("apps/mobile/src/screens/TravelUpdateScreen.tsx");
+  const appointmentsScreenSource = readWorkspaceFile("apps/mobile/src/screens/AppointmentsScreen.tsx");
+  const clientsScreenSource = readWorkspaceFile("apps/mobile/src/screens/ClientsScreen.tsx");
+  const portfolioScreenSource = readWorkspaceFile("apps/mobile/src/screens/PortfolioUploadScreen.tsx");
+  const notificationsScreenSource = readWorkspaceFile("apps/mobile/src/screens/NotificationsScreen.tsx");
+  const systemStatusScreenSource = readWorkspaceFile("apps/mobile/src/screens/SystemStatusScreen.tsx");
 
   it("uses shared mobile-support request planning for tenant/auth/request-id headers", () => {
     expect(apiClientSource).toContain("buildMobileApiRequestPlan");
@@ -43,6 +49,23 @@ describe("mobile API client static contract", () => {
     expect(bookingScreenSource).toContain("Typed client ready");
     expect(bookingScreenSource).toContain("provider auth and seeded API smoke");
     expect(bookingScreenSource).toContain("mobileBookingLifecycleActionContract");
+    expect(bookingScreenSource).toContain("loadMobileBookingRequests");
+    expect(bookingScreenSource).toContain("submitMobileBookingLifecycleAction");
+    expect(bookingScreenSource).toContain("mobileApiFetch<MobileBookingRequestSummary[]>");
+    expect(bookingScreenSource).toContain('/api/mobile/bookings/${encodeURIComponent(input.bookingId)}/actions');
+    expect(travelScreenSource).toContain("loadMobileTravelStops");
+    expect(travelScreenSource).toContain("publishMobileTravelStop");
+    expect(travelScreenSource).toContain("mobileApiFetch<MobileTravelStopSummary[]>");
+    expect(travelScreenSource).toContain('/api/mobile/travel-stops/${encodeURIComponent(input.travelStopId)}/publish');
+    expect(appointmentsScreenSource).toContain("loadMobileAppointments");
+    expect(appointmentsScreenSource).toContain("loadMobileAvailability");
+    expect(clientsScreenSource).toContain("loadMobileClients");
+    expect(clientsScreenSource).toContain("loadMobileClientTimeline");
+    expect(portfolioScreenSource).toContain("loadMobilePortfolio");
+    expect(portfolioScreenSource).toContain("createMobilePortfolioUploadIntent");
+    expect(notificationsScreenSource).toContain("loadMobileNotifications");
+    expect(notificationsScreenSource).toContain("loadMobileMessages");
+    expect(systemStatusScreenSource).toContain("loadMobileReleaseHealth");
     expect(bookingScreenSource).toContain("lifecycle contract ready");
     expect(bookingScreenSource).toContain("provider execution gated");
     expect(bookingScreenSource).not.toContain("Actions disabled");

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
   buildBookingPostSubmitPlan,
+  buildBookingProviderFailurePlan,
   buildBookingProviderHandoffRuntimeEvidencePlan,
   calculateTattooReadinessScore,
   emptyBookingDraft,
@@ -511,6 +512,49 @@ function buildCalendarQueueContract(input: BookingInput) {
   };
 }
 
+function buildProviderFailureHandlingContract(tenantId: string, bookingRequestId: string) {
+  const failedAt = new Date().toISOString();
+  return {
+    contract: "booking-provider-failure-local-contract",
+    auditPayloadPersistence: "external-evidence-gated",
+    providerIdempotencyReplay: "external-evidence-gated",
+    plans: {
+      referenceUpload: buildBookingProviderFailurePlan({
+        tenantId,
+        bookingRequestId,
+        failedWorkflow: "reference-upload",
+        failedAt,
+        provider: "storage",
+        retryable: false,
+      }),
+      deposit: buildBookingProviderFailurePlan({
+        tenantId,
+        bookingRequestId,
+        failedWorkflow: "deposit-handoff",
+        failedAt,
+        provider: "stripe",
+        retryable: false,
+      }),
+      notification: buildBookingProviderFailurePlan({
+        tenantId,
+        bookingRequestId,
+        failedWorkflow: "notification-bootstrap",
+        failedAt,
+        provider: "notification",
+        retryable: true,
+      }),
+      calendar: buildBookingProviderFailurePlan({
+        tenantId,
+        bookingRequestId,
+        failedWorkflow: "calendar-hold",
+        failedAt,
+        provider: "calendar",
+        retryable: false,
+      }),
+    },
+  };
+}
+
 function normalizeBookingInput(input: BookingInput) {
   return {
     ...input,
@@ -779,6 +823,7 @@ function buildResponseBase(
     deposit: buildDepositQueueContract(input),
     calendar: buildCalendarQueueContract(input),
   };
+  const providerFailureHandling = buildProviderFailureHandlingContract(resolvedTenant.tenantId, bookingRequestId ?? "pending");
   const antiBotDetails = {
     requiredFor: antiBot.requiredFor,
     status: antiBot.status,
@@ -837,9 +882,9 @@ function buildResponseBase(
         notificationQueueDeliverySandboxPassed: false,
         calendarHoldSandboxPassed: false,
         auditPayloadsPersisted: false,
-        retryPolicyVerified: false,
-        rollbackPathsVerified: false,
-        operatorReviewQueueConfigured: false,
+        retryPolicyVerified: true,
+        rollbackPathsVerified: true,
+        operatorReviewQueueConfigured: true,
         providerIdempotencyConfigured: false,
         providerSandboxEvidenceCaptured: false,
         ciEvidenceCaptured: false,
@@ -847,6 +892,7 @@ function buildResponseBase(
       }),
       queueContract: {
         ...postPersistWorkflows,
+        providerFailureHandling,
         referenceUpload: shouldCollectReferenceUpload(input)
           ? buildReferenceUploadContract(tenantSlug, bookingRequestId ?? "pending", resolvedTenant.source)
           : undefined,

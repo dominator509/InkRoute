@@ -1,4 +1,4 @@
-﻿import { buildProviderSessionStoreReadinessPlan } from "@inkroute/auth";
+import { buildProviderSessionStoreReadinessPlan } from "@inkroute/auth";
 
 export type ProviderSessionRuntimeStatus =
   | "wired"
@@ -123,6 +123,7 @@ export const providerSessionRuntimeCommands = [
 ] as const;
 
 export const providerSessionRuntimeControls = [
+  "provider-callback-contract-map",
   "provider-identity-to-user-mapping",
   "server-side-tenant-member-lookup",
   "server-side-custom-role-lookup",
@@ -139,6 +140,7 @@ export const providerSessionRuntimeArtifactPaths = [
   "coverage/provider-session-auth-typecheck.txt",
   "coverage/provider-session-auth-test.txt",
   "coverage/provider-session-provider-env-redacted.json",
+  "coverage/provider-session-callback-contract.json",
   "coverage/provider-session-login-callback.json",
   "coverage/provider-session-logout-callback.json",
   "coverage/provider-session-callback-tenant-lookup.json",
@@ -147,6 +149,7 @@ export const providerSessionRuntimeArtifactPaths = [
   "coverage/provider-session-audit-log.json",
   "coverage/provider-session-tenant-isolation-smoke.json",
   "coverage/provider-session-mobile-revocation-smoke.json",
+  "coverage/provider-session-redacted-evidence-bundle.json",
   "test-results/provider-session-runtime",
 ] as const;
 
@@ -167,6 +170,121 @@ export const providerSessionRuntimeProofFiles = [
 export type ProviderSessionRuntimeCommand = (typeof providerSessionRuntimeCommands)[number];
 export type ProviderSessionRuntimeControl = (typeof providerSessionRuntimeControls)[number];
 export type ProviderSessionRuntimeArtifact = (typeof providerSessionRuntimeArtifactPaths)[number];
+
+export interface ProviderSessionRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly artifactPath: "coverage/provider-session-redacted-evidence-bundle.json";
+  readonly redactedArtifact: unknown;
+  readonly redactions: readonly string[];
+  readonly requiredArtifacts: typeof providerSessionRuntimeArtifactPaths;
+  readonly requiredExternalEvidence: typeof providerSessionRequiredExternalEvidence;
+  readonly providerExecutionAllowed: false;
+  readonly databaseExecutionAllowed: false;
+}
+
+export interface ProviderSessionSurfaceContractEntry {
+  readonly surfaceId: string;
+  readonly requiredControl: ProviderSessionRuntimeControl;
+  readonly requiredCommand: ProviderSessionRuntimeCommand;
+  readonly requiredArtifact: ProviderSessionRuntimeArtifact;
+  readonly sessionBoundary:
+    | "provider-config"
+    | "callback"
+    | "tenant-lookup"
+    | "session-store"
+    | "revocation"
+    | "security-controls"
+    | "audit-log"
+    | "tenant-isolation"
+    | "mobile-revocation"
+    | "persistence";
+  readonly providerBackedEvidenceRequired: boolean;
+  readonly redactedArtifactRequired: true;
+}
+
+export const providerSessionSurfaceContract: readonly ProviderSessionSurfaceContractEntry[] = [
+  {
+    surfaceId: "provider-selection-env",
+    requiredControl: "provider-callback-contract-map",
+    requiredCommand: "configure selected provider env and callbacks with redacted evidence",
+    requiredArtifact: "coverage/provider-session-provider-env-redacted.json",
+    sessionBoundary: "provider-config",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "login-callback",
+    requiredControl: "provider-identity-to-user-mapping",
+    requiredCommand: "provider-backed login callback test",
+    requiredArtifact: "coverage/provider-session-login-callback.json",
+    sessionBoundary: "callback",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "logout-callback",
+    requiredControl: "persisted-session-revocation",
+    requiredCommand: "provider-backed logout callback test",
+    requiredArtifact: "coverage/provider-session-logout-callback.json",
+    sessionBoundary: "revocation",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "session-callback-tenant-lookup",
+    requiredControl: "server-side-tenant-member-lookup",
+    requiredCommand: "provider-backed session callback and TenantMember lookup test",
+    requiredArtifact: "coverage/provider-session-callback-tenant-lookup.json",
+    sessionBoundary: "tenant-lookup",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "session-role-persistence",
+    requiredControl: "database-session-store",
+    requiredCommand: "persist User, TenantMember, CustomRole, session, and revocation lookups",
+    requiredArtifact: "coverage/provider-session-persistence.json",
+    sessionBoundary: "session-store",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "cookie-mobile-security",
+    requiredControl: "secure-dashboard-cookies",
+    requiredCommand: "verify secure dashboard cookies and mobile token storage/revocation",
+    requiredArtifact: "coverage/provider-session-security-controls.json",
+    sessionBoundary: "security-controls",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "auth-audit-log",
+    requiredControl: "auth-audit-log-writes",
+    requiredCommand: "write redacted AuditLog rows for auth lifecycle and denials",
+    requiredArtifact: "coverage/provider-session-audit-log.json",
+    sessionBoundary: "audit-log",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "tenant-isolation-smoke",
+    requiredControl: "cross-tenant-session-denial",
+    requiredCommand: "dashboard/API tenant isolation smoke tests",
+    requiredArtifact: "coverage/provider-session-tenant-isolation-smoke.json",
+    sessionBoundary: "tenant-isolation",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "mobile-revocation-smoke",
+    requiredControl: "secure-mobile-token-storage",
+    requiredCommand: "mobile session storage/revocation smoke tests",
+    requiredArtifact: "coverage/provider-session-mobile-revocation-smoke.json",
+    sessionBoundary: "mobile-revocation",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+] as const;
 
 export interface ProviderSessionEvidenceInput {
   readonly authPackageTypecheckPassed: boolean;
@@ -292,6 +410,8 @@ export interface ProviderSessionExecutionPolicy {
 export interface ProviderSessionExecutionPlan {
   readonly localCommands: typeof providerSessionRuntimeCommands;
   readonly controls: typeof providerSessionRuntimeControls;
+  readonly callbackContract: typeof providerSessionCallbackContract;
+  readonly surfaceContract: typeof providerSessionSurfaceContract;
   readonly artifactPaths: typeof providerSessionRuntimeArtifactPaths;
   readonly proofFiles: typeof providerSessionRuntimeProofFiles;
   readonly commandExecutionAllowed: false;
@@ -320,12 +440,15 @@ export const providerSessionRequiredExternalEvidence = [
   "Redacted auth AuditLog rows and tenant-isolation smoke evidence.",
   "Mobile session storage and revocation smoke evidence.",
   "Provider-backed persistProviderSessionRun execution evidence.",
+  "Redacted provider auth/session evidence bundle captured without raw provider IDs, tokens, cookies, emails, URLs, tenant IDs, session IDs, or actor identifiers.",
 ] as const;
 
 export function buildProviderSessionExecutionPlan(): ProviderSessionExecutionPlan {
   return {
     localCommands: providerSessionRuntimeCommands,
     controls: providerSessionRuntimeControls,
+    callbackContract: providerSessionCallbackContract,
+    surfaceContract: providerSessionSurfaceContract,
     artifactPaths: providerSessionRuntimeArtifactPaths,
     proofFiles: providerSessionRuntimeProofFiles,
     commandExecutionAllowed: false,
@@ -397,6 +520,12 @@ export const providerSessionRuntimeMatrix = [
     command: "dashboard/API tenant isolation smoke tests",
     artifact: "coverage/provider-session-tenant-isolation-smoke.json",
     status: "smoke-gated",
+  },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted provider auth/session evidence bundle",
+    artifact: "coverage/provider-session-redacted-evidence-bundle.json",
+    status: "provider-gated",
   },
   {
     id: "mobile-revocation-smoke",
@@ -617,3 +746,41 @@ export async function persistProviderSessionRun(
   });
 }
 
+
+function redactProviderSessionEvidenceArtifact(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactProviderSessionEvidenceArtifact(entry));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => {
+        if (/(provider|token|cookie|session|tenant|user|role|email|actor|url|secret|password|authorization|auth|audit|log|output)/i.test(key)) {
+          return [key, "[REDACTED]"];
+        }
+        return [key, redactProviderSessionEvidenceArtifact(entry)];
+      }),
+    );
+  }
+  if (typeof value === "string") {
+    return value
+      .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED]")
+      .replace(/https?:\/\/\S+/gi, "[REDACTED]")
+      .replace(/\b(?:github_pat|ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]+\b/g, "[REDACTED]");
+  }
+  return value;
+}
+
+export function buildProviderSessionRedactedEvidenceBundle(
+  artifact: unknown,
+): ProviderSessionRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    artifactPath: "coverage/provider-session-redacted-evidence-bundle.json",
+    redactedArtifact: redactProviderSessionEvidenceArtifact(artifact),
+    redactions: ["provider", "token", "cookie", "session", "tenant", "user", "role", "email", "actor", "url", "secret", "authorization", "audit", "log"],
+    requiredArtifacts: providerSessionRuntimeArtifactPaths,
+    requiredExternalEvidence: providerSessionRequiredExternalEvidence,
+    providerExecutionAllowed: false,
+    databaseExecutionAllowed: false,
+  };
+}

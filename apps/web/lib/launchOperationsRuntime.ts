@@ -1,4 +1,4 @@
-﻿import { buildLaunchOperationsRuntimeReadinessPlan } from "@inkroute/deployment";
+import { buildLaunchOperationsRuntimeReadinessPlan } from "@inkroute/deployment";
 import type { LaunchOperationCheckId } from "@inkroute/deployment";
 
 export type LaunchOperationsRuntimeStatus =
@@ -73,6 +73,7 @@ export const launchOperationsRuntimeArtifactPaths = [
   "coverage/launch-operations-communications-templates-redacted.json",
   "coverage/launch-operations-approval-redacted.json",
   "coverage/launch-operations-ci-run-redacted.json",
+  "coverage/launch-operations-redacted-evidence-bundle.json",
   "test-results/launch-operations-runtime"
 ] as const;
 
@@ -119,6 +120,7 @@ export const launchOperationsRuntimeRequiredExternalEvidence = [
   "Incident, rollback, privacy, and support drills must redact customer data, provider alert webhooks, and raw support transcripts.",
   "Monitoring dashboard and communications approval artifacts must redact provider URLs, contact details, and approval payloads.",
   "Explicit operations approval and CI launch-operations artifacts must remain redacted before repository retention.",
+  "Redacted launch operations evidence bundle captured without private contact details, provider alert webhooks, raw support transcripts, customer data, monitoring URLs, approval payloads, or CI run URLs.",
 ] as const;
 
 export type LaunchOperationsRuntimeExecutionPolicy = {
@@ -206,6 +208,16 @@ export interface LaunchOperationsRuntimeExecutionPlan {
   readonly ciArtifactExecutionAllowed: false;
   readonly executionPolicy: typeof launchOperationsRuntimeExecutionPolicy;
   readonly externalEvidenceRequired: typeof launchOperationsRuntimeRequiredExternalEvidence;
+}
+
+export interface LaunchOperationsRuntimeRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly artifactPath: "coverage/launch-operations-redacted-evidence-bundle.json";
+  readonly review: LaunchOperationsRuntimeArtifactReview;
+  readonly requiredArtifacts: typeof launchOperationsRuntimeArtifactPaths;
+  readonly externalEvidenceRequired: typeof launchOperationsRuntimeRequiredExternalEvidence;
+  readonly operationsApprovalExecutionAllowed: false;
+  readonly ciArtifactExecutionAllowed: false;
 }
 
 export interface LaunchOperationsRuntimeArtifactReview {
@@ -350,6 +362,21 @@ export function buildLaunchOperationsRuntimeArtifactReview(
   };
 }
 
+export function buildLaunchOperationsRuntimeRedactedEvidenceBundle(
+  artifactPath: LaunchOperationsRuntimeArtifact | string,
+  artifact: unknown,
+): LaunchOperationsRuntimeRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    artifactPath: "coverage/launch-operations-redacted-evidence-bundle.json",
+    review: buildLaunchOperationsRuntimeArtifactReview(artifactPath, artifact),
+    requiredArtifacts: launchOperationsRuntimeArtifactPaths,
+    externalEvidenceRequired: launchOperationsRuntimeRequiredExternalEvidence,
+    operationsApprovalExecutionAllowed: false,
+    ciArtifactExecutionAllowed: false,
+  };
+}
+
 export const launchOperationsRuntimeMatrix: readonly LaunchOperationsRuntimeMatrixEntry[] = [
   {
     id: "operations-verifier",
@@ -422,6 +449,12 @@ export const launchOperationsRuntimeMatrix: readonly LaunchOperationsRuntimeMatr
     command: "capture CI launch-operations artifacts",
     artifact: "coverage/launch-operations-ci-run-redacted.json",
     status: "ci-gated"
+  },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted launch operations evidence bundle",
+    artifact: "coverage/launch-operations-redacted-evidence-bundle.json",
+    status: "approval-gated"
   }
 ];
 

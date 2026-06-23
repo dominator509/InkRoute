@@ -126,6 +126,7 @@ export const prismaLifecycleArtifactPaths = [
   "coverage/prisma-drift-check-output.txt",
   "coverage/prisma-production-url-guard.json",
   "coverage/prisma-db-lifecycle-ci-job.json",
+  "coverage/prisma-lifecycle-redacted-evidence-bundle.json",
   "test-results/prisma-lifecycle-runtime",
 ] as const;
 
@@ -145,6 +146,17 @@ export const prismaLifecycleProofFiles = [
 export type PrismaLifecycleCommand = (typeof prismaLifecycleCommands)[number];
 export type PrismaLifecyclePackageScript = (typeof prismaLifecyclePackageScripts)[number];
 export type PrismaLifecycleArtifact = (typeof prismaLifecycleArtifactPaths)[number];
+
+export interface PrismaLifecycleRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly artifactPath: "coverage/prisma-lifecycle-redacted-evidence-bundle.json";
+  readonly redactedArtifact: unknown;
+  readonly redactions: readonly string[];
+  readonly requiredArtifacts: typeof prismaLifecycleArtifactPaths;
+  readonly requiredExternalEvidence: typeof prismaLifecycleRequiredExternalEvidence;
+  readonly databaseExecutionAllowed: false;
+  readonly providerExecutionAllowed: false;
+}
 
 export interface PrismaLifecycleEvidenceInput {
   readonly postgresProvisioned: boolean;
@@ -286,6 +298,7 @@ export const prismaLifecycleRequiredExternalEvidence = [
   "Production URL destructive-command guard proof.",
   "GitHub Actions or clean-checkout Prisma lifecycle evidence.",
   "Provider-backed persistPrismaLifecycleRun execution evidence.",
+  "Redacted Prisma lifecycle evidence bundle captured without raw database URLs, SQL containing secrets, command logs, tokens, URLs, or actor identifiers.",
 ] as const;
 
 export function buildPrismaLifecycleExecutionPlan(): PrismaLifecycleExecutionPlan {
@@ -356,6 +369,12 @@ export const prismaLifecycleRuntimeMatrix = [
     id: "ci-db-lifecycle",
     command: "GitHub Actions DB lifecycle evidence job",
     artifact: "coverage/prisma-db-lifecycle-ci-job.json",
+    status: "ci-gated",
+  },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted Prisma lifecycle evidence bundle",
+    artifact: "coverage/prisma-lifecycle-redacted-evidence-bundle.json",
     status: "ci-gated",
   },
 ] as const satisfies readonly PrismaLifecycleRuntimeMatrixEntry[];
@@ -561,3 +580,42 @@ export async function persistPrismaLifecycleRun(
 
 
 
+
+function redactPrismaLifecycleEvidenceArtifact(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactPrismaLifecycleEvidenceArtifact(entry));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => {
+        if (/(database|direct|url|connection|sql|token|secret|password|actor|email|log|output|environment|env)/i.test(key)) {
+          return [key, "[REDACTED]"];
+        }
+        return [key, redactPrismaLifecycleEvidenceArtifact(entry)];
+      }),
+    );
+  }
+  if (typeof value === "string") {
+    return value
+      .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED]")
+      .replace(/postgres(?:ql)?:\/\/\S+/gi, "[REDACTED]")
+      .replace(/https?:\/\/\S+/gi, "[REDACTED]")
+      .replace(/\b(?:github_pat|ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]+\b/g, "[REDACTED]");
+  }
+  return value;
+}
+
+export function buildPrismaLifecycleRedactedEvidenceBundle(
+  artifact: unknown,
+): PrismaLifecycleRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    artifactPath: "coverage/prisma-lifecycle-redacted-evidence-bundle.json",
+    redactedArtifact: redactPrismaLifecycleEvidenceArtifact(artifact),
+    redactions: ["database", "direct", "url", "connection", "sql", "token", "secret", "password", "actor", "email", "log", "output", "environment"],
+    requiredArtifacts: prismaLifecycleArtifactPaths,
+    requiredExternalEvidence: prismaLifecycleRequiredExternalEvidence,
+    databaseExecutionAllowed: false,
+    providerExecutionAllowed: false,
+  };
+}

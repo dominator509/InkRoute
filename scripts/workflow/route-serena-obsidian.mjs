@@ -58,11 +58,29 @@ const workflowToolingSignals = [
   "workflow script",
   "workflow routing",
   "optimize workflow",
-  "optimize workflow with serena",
-  "optimize workflow with obsidian",
   "workflow optimization",
   "optimize serena",
+  "optimize serena for this repo",
   "optimize obsidian",
+  "fix serena",
+  "repair serena",
+  "serena setup",
+  "serena health",
+  "serena diagnostics",
+  "diagnose serena",
+  "serena unavailable",
+  "serena not available",
+  "no callable serena",
+  "no serena tools",
+  "serena tools unavailable",
+  "serena mcp unavailable",
+  "serena noisy",
+  "serena mcp",
+  "serena project",
+  "serena indexing",
+  "serena lsp",
+  "serena tools",
+  "serena memory",
   "configure serena",
   "configure obsidian",
   "serena config",
@@ -99,12 +117,17 @@ const pairedToolingSignals = [
   "workflow",
   "optimize",
   "optimization",
+  "fix",
+  "repair",
   "routing",
   "router",
   "tool admission",
   "configure",
   "configuration",
   "setup",
+  "index",
+  "indexing",
+  "lsp",
   "vault",
   "bootstrap",
   "one-shot",
@@ -112,11 +135,69 @@ const pairedToolingSignals = [
 
 const namesBothWorkflowTools = text.includes("serena") && text.includes("obsidian");
 const namesOneWorkflowTool = text.includes("serena") || text.includes("obsidian");
+const serenaActivationSignals = [
+  "activate serena",
+  "activate current project",
+  "activate the current project",
+  "activate this project",
+  "use serena to activate",
+  "serena activate",
+  "serena activation",
+];
+const serenaMaintenanceSignals = [
+  "fix",
+  "repair",
+  "diagnose",
+  "diagnostics",
+  "health",
+  "setup",
+  "configure",
+  "configuration",
+  "optimize",
+  "optimization",
+  "index",
+  "indexing",
+  "lsp",
+  "project.yml",
+  ".serena",
+];
+const semanticLookupSignals = [
+  "find symbol",
+  "find symbols",
+  "find main",
+  "find the main",
+  "symbol lookup",
+  "symbols and references",
+  "symbol references",
+  "main backend",
+  "auth/session",
+  "session symbols",
+  "auth symbols",
+  "references",
+  "call sites",
+  "call-sites",
+  "trace route",
+  "route boundary",
+  "service boundary",
+  "owner lookup",
+  "find owner",
+  "where is",
+  "owns",
+];
+const isSemanticLookupRequest = namesOneWorkflowTool && hasAny(semanticLookupSignals);
+const isSerenaSemanticLookupRequest = isSemanticLookupRequest;
+const isSerenaActivationRequest =
+  text.includes("serena") &&
+  hasAny(serenaActivationSignals) &&
+  !isSemanticLookupRequest &&
+  !hasAny(serenaMaintenanceSignals);
 const isWorkflowToolingRequest =
-  hasAny(workflowToolingSignals) ||
-  hasRegex(workflowToolingPatterns) ||
-  (namesBothWorkflowTools && hasAny(pairedToolingSignals)) ||
-  (namesOneWorkflowTool && hasAny(["workflow", "routing", "router", "tool admission", "vault", "bootstrap"]));
+  !isSerenaActivationRequest &&
+  !isSemanticLookupRequest &&
+  (hasAny(workflowToolingSignals) ||
+    hasRegex(workflowToolingPatterns) ||
+    (namesBothWorkflowTools && hasAny(pairedToolingSignals)) ||
+    (namesOneWorkflowTool && hasAny(["workflow", "routing", "router", "tool admission", "vault", "bootstrap"])));
 
 const strictPacketRule =
   "Strict packet rule: name minimumFiles, read only that coherent set, patch once, and do not spend conditional Serena or Obsidian budget unless the named condition still exists after the first repo slice.";
@@ -192,6 +273,8 @@ const referenceSignals = [
   "references",
   "call sites",
   "call-sites",
+  "find references",
+  "reference search",
   "shared export",
   "exported contract",
   "breaking callers",
@@ -257,7 +340,7 @@ if (!text) {
 } else if (isWorkflowToolingRequest) {
   route = "Treat this as workflow/tooling. Patch the known workflow surfaces; do not call Serena or Obsidian as ceremony.";
   reason = "Serena/Obsidian workflow changes are owned by repo docs, .serena config/cards, the router script, and the local vault bootstrap.";
-  nextAction = "Use RTK on docs/ai/SERENA_OBSIDIAN_WORKFLOW.md, .serena/project.yml, .serena/memories/inkroute/*, scripts/workflow/route-serena-obsidian.mjs, and scripts/bootstrap-obsidian-vault.ps1 as needed. Prefer the router first, mirror the rule into the canonical doc/cards, and refresh vault notes only when repo-owned note text must mirror the new contract.";
+  nextAction = "Use RTK on docs/ai/SERENA_OBSIDIAN_WORKFLOW.md, .serena/project.yml, .serena/memories/inkroute/*, scripts/workflow/route-serena-obsidian.mjs, scripts/workflow/check-serena-config.mjs, and scripts/bootstrap-obsidian-vault.ps1 as needed. Prefer the router first, use the Serena config check for repo-side health, mirror the rule into the canonical doc/cards, and refresh vault notes only when repo-owned note text must mirror the new contract.";
   toolBudget = "Serena: 0. Obsidian: 0 live reads; use the bootstrap script for repo-owned note templates.";
   evidenceBudget = "Read budget: workflow router/doc/config/bootstrap surfaces only; do not inspect source packages.";
   doneShape = "Done: router, canonical doc, Serena card, vault template, and package shortcut aligned only where needed; validation not run unless requested.";
@@ -265,9 +348,35 @@ if (!text) {
     "scripts/workflow/route-serena-obsidian.mjs",
     "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
     ".serena/project.yml",
+    ".serena/memories/inkroute/activation.md",
     ".serena/memories/inkroute/workflow-optimizer.md",
+    ".serena/memories/inkroute/serena-health.md",
+    "scripts/workflow/check-serena-config.mjs",
     "scripts/bootstrap-obsidian-vault.ps1",
     "Projects/InkRoute/Workflow-Optimizer.md",
+  ];
+} else if (isSerenaActivationRequest) {
+  route = "Use live Serena project activation if the Serena tools are available; do not treat activation as workflow maintenance.";
+  reason = "A bare Serena activation request is an operational live-tool request, not a request to edit .serena config.";
+  nextAction = "Activate C:\\dev\\InkRoute with Serena. Read only .serena/memories/inkroute/activation.md after activation, then stop unless the user also asks for owner/reference lookup.";
+  toolBudget = "Serena: 1 activation call. Obsidian: 0. RTK: 0 unless Serena is unavailable or a concrete follow-up requires repo evidence.";
+  evidenceBudget = "Read budget: activation card only after successful activation; no broad repo summary and no memory-card sweep.";
+  doneShape = "Done: Serena project active, or one explicit unavailable-tool fallback stated with the next scoped RTK route.";
+  entrypoints = [
+    ".serena/memories/inkroute/activation.md",
+    ".serena/memories/inkroute/serena-health.md",
+  ];
+} else if (isSerenaSemanticLookupRequest) {
+  route = "Use live Serena for one semantic lookup after project activation if needed; do not treat this as Serena maintenance.";
+  reason = "The task pairs Serena activation/use with symbols, owners, references, call sites, or route/service-boundary discovery.";
+  nextAction = "Activate C:\\dev\\InkRoute if the Serena project is not active, read only .serena/memories/inkroute/activation.md, then run one owner/reference lookup that returns likely files, exported symbols, direct call-site risks, and no broad repo summary.";
+  toolBudget = "Serena: 1 semantic lookup after activation if needed. Obsidian: 0. RTK: only for the located file slice or fallback.";
+  evidenceBudget = "Read budget: activation card plus one owner/reference answer; then the located repo slice through RTK. If live Serena is unavailable, state that once and use scoped RTK search for the named symbols.";
+  doneShape = "Done: owner symbols/references identified, or one explicit unavailable-tool fallback plus the scoped RTK search path.";
+  entrypoints = [
+    ".serena/memories/inkroute/activation.md",
+    ".serena/memories/inkroute/routing-contract.md",
+    ".serena/memories/inkroute/serena-health.md",
   ];
 } else if (hasAny(exactSignals) || hasRegex(concretePathPatterns)) {
   route = "Skip Serena. Skip Obsidian. Use RTK on the exact repo slice.";
@@ -362,6 +471,7 @@ if (!text) {
   doneShape = "Done: concrete next file selected and patched, or one precise question/blocker returned.";
   entrypoints = [
     "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+    ".serena/memories/inkroute/activation.md",
     ".serena/memories/inkroute/tool-admission.md",
     "Projects/InkRoute/Tool-Admission.md",
   ];
@@ -371,6 +481,12 @@ const stopRule =
   "If Serena or Obsidian is unavailable, credential-gated, noisy, or ambiguous after one follow-up, stop lookup and use scoped RTK search.";
 
 const classifyRoute = () => {
+  if (isSerenaActivationRequest) {
+    return "serena-activation";
+  }
+  if (isSerenaSemanticLookupRequest) {
+    return "serena-semantic-lookup";
+  }
   if (isWorkflowToolingRequest) {
     return "workflow-tooling";
   }
@@ -411,6 +527,8 @@ const budgetForClassification = (classification) => {
 
   switch (classification) {
     case "owner-unknown":
+    case "serena-activation":
+    case "serena-semantic-lookup":
       return {
         ...zero,
         serenaLookups: 1,
@@ -483,8 +601,18 @@ const minimumFileSetByClassification = {
   "workflow-tooling": [
     "scripts/workflow/route-serena-obsidian.mjs",
     "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-    ".serena/project.yml or .serena/memories/inkroute/* only when the rule must be mirrored",
+    "scripts/workflow/check-serena-config.mjs only when repo-side Serena health checks change",
+    ".serena/project.yml or .serena/memories/inkroute/* only when the rule or health contract must be mirrored",
     "scripts/bootstrap-obsidian-vault.ps1 only when repo-owned vault templates must be mirrored",
+  ],
+  "serena-activation": [
+    ".serena/memories/inkroute/activation.md after successful activation",
+    ".serena/memories/inkroute/serena-health.md only if activation is unavailable or noisy",
+  ],
+  "serena-semantic-lookup": [
+    ".serena/memories/inkroute/activation.md after successful activation",
+    "one live Serena owner/reference answer",
+    "the located repo slice through RTK",
   ],
   "exact-seam": [
     "the named source/docs/package file",

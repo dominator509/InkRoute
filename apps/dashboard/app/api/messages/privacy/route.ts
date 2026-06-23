@@ -1,7 +1,14 @@
 ﻿import { NextResponse, type NextRequest } from "next/server";
 import type { MessagingPrivacyAction, MessagingRole } from "@inkroute/notifications";
 import { assertPermission, resolveDashboardActor } from "../../dashboardAuth";
-import { buildMessagingPrivacyPlanFromRequest, messagingPrivacyContract } from "../../../../lib/messagingPrivacy";
+import {
+  buildMessagingPrivacyPlanFromRequest,
+  isMessagingPrivacyActionAllowedForRole,
+  mapDashboardRoleToMessagingPrivacyRole,
+  messagingPrivacyActionRolePolicy,
+  messagingPrivacyContract,
+  messagingPrivacyRoleMismatchBlocker,
+} from "../../../../lib/messagingPrivacy";
 
 const actions: readonly MessagingPrivacyAction[] = ["redact_message", "authorize_message_view", "export_thread", "delete_thread", "apply_retention", "moderate_message"];
 const roles: readonly MessagingRole[] = ["client", "artist", "assistant", "studio_manager", "admin"];
@@ -12,13 +19,13 @@ function parseAction(value: unknown): MessagingPrivacyAction {
   return actions.includes(normalized as MessagingPrivacyAction) ? (normalized as MessagingPrivacyAction) : "authorize_message_view";
 }
 
-function parseRole(value: unknown, fallback: unknown): MessagingRole {
+function parseRole(value: unknown): MessagingRole {
   const parseRoleFromValue = (raw: unknown): MessagingRole | undefined =>
     typeof raw === "string" && roles.includes(raw.trim().toLowerCase() as MessagingRole)
       ? (raw.trim().toLowerCase() as MessagingRole)
       : undefined;
 
-  return parseRoleFromValue(value) ?? parseRoleFromValue(fallback) ?? "artist";
+  return parseRoleFromValue(value) ?? "assistant";
 }
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
@@ -57,10 +64,48 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot plan messaging privacy mutations for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
+  const action = parseAction(body.action);
+  const actorMessagingRole = mapDashboardRoleToMessagingPrivacyRole(actor.role);
+  const requestedRole = typeof body.role === "string" ? parseRole(body.role) : actorMessagingRole;
+  if (requestedRole !== actorMessagingRole) {
+    return NextResponse.json(
+      {
+        ok: false,
+        tenantId,
+        error: {
+          code: "MESSAGING_PRIVACY_ROLE_MISMATCH",
+          message: messagingPrivacyRoleMismatchBlocker,
+          gapIds: ["GAP-068"],
+        },
+        actorRole: actorMessagingRole,
+        requestedRole,
+        rolePolicy: messagingPrivacyActionRolePolicy,
+      },
+      { status: 403, headers: noStoreHeaders },
+    );
+  }
+  if (!isMessagingPrivacyActionAllowedForRole(action, actorMessagingRole)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        tenantId,
+        error: {
+          code: "MESSAGING_PRIVACY_ROLE_FORBIDDEN",
+          message: "Authenticated dashboard actor role is not allowed to perform this messaging privacy action.",
+          gapIds: ["GAP-068"],
+        },
+        action,
+        actorRole: actorMessagingRole,
+        allowedRoles: messagingPrivacyActionRolePolicy[action],
+      },
+      { status: 403, headers: noStoreHeaders },
+    );
+  }
+
   const plan = buildMessagingPrivacyPlanFromRequest({
     tenantId,
-    action: parseAction(body.action),
-    role: parseRole(body.role, actor.role),
+    action,
+    role: actorMessagingRole,
     actorId: actor.actorUserId,
     ...(typeof body.threadId === "string" ? { threadId: body.threadId } : {}),
     ...(typeof body.messageId === "string" ? { messageId: body.messageId } : {}),
@@ -90,6 +135,7 @@ export async function POST(request: NextRequest) {
         },
         plan,
         requiredRepositoryMethods: messagingPrivacyContract.requiredRepositoryMethods,
+        rolePolicy: messagingPrivacyActionRolePolicy,
         productionBoundary: {
           messagingPrivacyLocalContractFallbackDisabled: true,
           requiresPrivacyWorkflowPersistence: true,
@@ -108,6 +154,7 @@ export async function POST(request: NextRequest) {
       tenantId,
       plan,
       requiredRepositoryMethods: messagingPrivacyContract.requiredRepositoryMethods,
+      rolePolicy: messagingPrivacyActionRolePolicy,
       gapIds: ["GAP-068"],
       boundary: "Messaging privacy POST returns the local redaction/export/delete/retention/moderation contract; durable workflow repositories remain required for live execution.",
     },

@@ -5,6 +5,7 @@ import {
   buildMobileAuthArtifactReview,
   buildMobileAuthEvidenceDecision,
   buildMobileAuthExecutionPlan,
+  buildMobileAuthPersistedRunPayload,
   buildRedactedMobileAuthArtifact,
   mobileAuthArtifactPaths,
   mobileAuthEvidenceFlags,
@@ -16,6 +17,8 @@ import {
   mobileAuthRuntimeCommands,
   mobileAuthRuntimeMatrix,
   mobileAuthRuntimeReadiness,
+  mobileAuthSecureSessionLifecycleContract,
+  mobileAuthSurfaceContract,
 } from "../src/lib/mobileAuthRuntime";
 
 const root = resolve(__dirname, "../../..");
@@ -50,13 +53,28 @@ describe("mobile auth runtime contract", () => {
       "mobile-typecheck-test",
       "provider-login-logout",
       "securestore-token-storage",
+      "secure-session-lifecycle",
       "biometric-unlock",
       "refresh-logout-revocation-clearing",
       "tenant-role-cross-tenant-denial",
       "audit-persistence",
       "ios-android-device-smoke",
+      "persisted-run-payload",
+    ]);
+    expect(mobileAuthSurfaceContract.map((entry) => entry.surfaceId)).toEqual([
+      "provider-login-logout",
+      "securestore-token-storage",
+      "secure-session-lifecycle",
+      "biometric-unlock",
+      "refresh-logout-revocation-clearing",
+      "tenant-role-cross-tenant-denial",
+      "audit-persistence",
+      "ios-android-device-smoke",
+      "ci-secret-safe-artifacts",
     ]);
     expect(mobileAuthArtifactPaths).toContain("coverage/mobile-auth-runtime.json");
+    expect(mobileAuthArtifactPaths).toContain("coverage/mobile-auth-secure-session-lifecycle.json");
+    expect(mobileAuthArtifactPaths).toContain("coverage/mobile-auth-persisted-run-payload.json");
     expect(mobileAuthArtifactPaths).toContain("test-results/mobile-auth-runtime");
   });
 
@@ -97,7 +115,6 @@ describe("mobile auth runtime contract", () => {
     expect(mobileAuthRuntimeReadiness.missingScripts).toEqual([]);
     expect(mobileAuthRuntimeReadiness.requiredCommands).toBe(mobileAuthRuntimeCommands);
     expect(mobileAuthRuntimeReadiness.requiredEvidence).toBe(mobileAuthEvidenceFlags);
-    expect(mobileAuthRuntimeReadiness.requiredEvidence).toEqual(mobileAuthEvidenceFlags);
     expect(mobileAuthRuntimeReadiness.blockers).toContain("Mobile auth provider must be selected and configured before login/logout is production-ready.");
     expect(mobileAuthRuntimeReadiness.blockers).toContain("Secure token storage must be verified to avoid plaintext token persistence.");
     expect(mobileAuthRuntimeReadiness.blockers).toContain("Mobile login, refresh, logout, denial, revocation, and tenant-switch decisions must persist audit logs.");
@@ -112,7 +129,10 @@ describe("mobile auth runtime contract", () => {
 
     expect(decision.status).toBe("blocked");
     expect(decision.missingCommands).toContain("Expo device biometric unlock test");
+    expect(decision.missingArtifacts).toContain("coverage/mobile-auth-secure-session-lifecycle.json");
     expect(decision.missingArtifacts).toContain("coverage/mobile-auth-secret-safe-artifacts.json");
+    expect(decision.missingEvidence).toContain("secureSessionLifecycleCaptured");
+    expect(decision.missingEvidence).toContain("persistedRunPayloadCaptured");
     expect(decision.missingEvidence).toContain("secretSafeArtifactsCaptured");
     expect(decision.blockers).toContain("Pinned mobile auth commands must be run and captured.");
   });
@@ -152,8 +172,56 @@ describe("mobile auth runtime contract", () => {
     expect(plan.ciExecutionAllowed).toBe(false);
     expect(plan.localCommands).toBe(mobileAuthLocalCommands);
     expect(plan.externalCommands).toBe(mobileAuthExternalCommands);
+    expect(plan.surfaceContract).toBe(mobileAuthSurfaceContract);
+    expect(plan.surfaceContract).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          surfaceId: "provider-login-logout",
+          proofBoundary: "provider-session",
+          providerBackedEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+        expect.objectContaining({
+          surfaceId: "secure-session-lifecycle",
+          proofBoundary: "secure-session-lifecycle",
+          providerBackedEvidenceRequired: false,
+          deviceEvidenceRequired: false,
+        }),
+        expect.objectContaining({
+          surfaceId: "ci-secret-safe-artifacts",
+          proofBoundary: "ci-secret-safe",
+          providerBackedEvidenceRequired: true,
+          deviceEvidenceRequired: true,
+          redactedArtifactRequired: true,
+        }),
+      ]),
+    );
+    expect(plan.secureSessionLifecycleContract).toBe(mobileAuthSecureSessionLifecycleContract);
+    expect(mobileAuthSecureSessionLifecycleContract.clearingTransitions).toEqual([
+      "logout",
+      "revoked_session",
+      "tenant_mismatch",
+      "secure_store_unavailable",
+    ]);
+    expect(mobileAuthSecureSessionLifecycleContract.plaintextTokenStorageAllowed).toBe(false);
+    expect(mobileAuthSecureSessionLifecycleContract.auditDecisionRequiredForEveryTransition).toBe(true);
     expect(plan.requiredExternalEvidence).toBe(mobileAuthRequiredExternalEvidence);
+    expect(plan.requiredExternalEvidence).toContain("persisted MobileAuthRuntime run payload");
     expect(plan.requiredExternalEvidence).toContain("secret-safe mobile auth artifact review");
+  });
+
+  it("keeps the GAP-042 persisted run payload provider-backed and non-executing", () => {
+    const payload = buildMobileAuthPersistedRunPayload();
+
+    expect(payload.payloadId).toBe("gap-042-mobile-auth-persisted-run");
+    expect(payload.requiredArtifact).toBe("coverage/mobile-auth-persisted-run-payload.json");
+    expect(payload.providerBackedPersistenceRequired).toBe(true);
+    expect(payload.localPersistenceExecutionAllowed).toBe(false);
+    expect(payload.secureStoreDeviceEvidenceRequired).toBe(true);
+    expect(payload.tenantDenialEvidenceRequired).toBe(true);
+    expect(payload.auditPersistenceEvidenceRequired).toBe(true);
+    expect(payload.redactionRequired).toBe(true);
+    expect(payload.requiredExternalEvidence).toBe(mobileAuthRequiredExternalEvidence);
   });
 
   it("redacts GAP-042 mobile auth artifacts before secret-safe review", () => {
@@ -205,8 +273,11 @@ describe("mobile auth runtime contract", () => {
     expect(gapTracker).toContain("apps/mobile/src/lib/mobileAuthRuntime.ts");
     expect(gapTracker).toContain("GAP-042 is mobile-auth-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("buildMobileAuthExecutionPlan");
+    expect(gapTracker).toContain("mobileAuthSurfaceContract");
+    expect(gapTracker).toContain("mobileAuthSecureSessionLifecycleContract");
     expect(gapTracker).toContain("mobileAuthExecutionPolicy");
     expect(gapTracker).toContain("mobileAuthRequiredExternalEvidence");
+    expect(gapTracker).toContain("buildMobileAuthPersistedRunPayload");
     expect(gapTracker).toContain("buildRedactedMobileAuthArtifact");
     expect(gapTracker).toContain("buildMobileAuthArtifactReview");
     expect(mobileAuthArtifactPaths).toContain("coverage/mobile-auth-secret-safe-artifacts.json");

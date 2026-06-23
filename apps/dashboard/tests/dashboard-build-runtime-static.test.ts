@@ -93,7 +93,7 @@ describe("dashboard build/runtime verification contract", () => {
     expect(dashboardBuildRuntimeReadiness.status).toBe("blocked");
     expect(dashboardBuildRuntimeReadiness.missingScripts).toEqual([]);
     expect(dashboardBuildRuntimeReadiness.requiredCommands).toBe(dashboardBuildRuntimeReadinessRequiredCommands);
-    expect(dashboardBuildRuntimeReadiness.requiredEvidence).toEqual(dashboardLaunchEvidenceRequiredEvidence);
+    expect(dashboardBuildRuntimeReadiness.requiredEvidence).toBe(dashboardLaunchEvidenceRequiredEvidence);
     expect(dashboardBuildRuntimeReadiness.blockers).toContain("@inkroute/dashboard typecheck must pass.");
     expect(dashboardBuildRuntimeReadiness.blockers).toContain("@inkroute/dashboard build must pass.");
     expect(dashboardBuildRuntimeReadiness.blockers).toContain("Dashboard Playwright smoke tests must pass with seeded tenant data.");

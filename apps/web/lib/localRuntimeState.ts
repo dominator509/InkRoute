@@ -547,6 +547,38 @@ export function persistMessage(
   return record;
 }
 
+export function persistWaitlistSignupMessage(
+  tenantSlug: string,
+  input: {
+    citySlug: string;
+    clientName: string;
+    clientEmail: string;
+    phone?: string;
+    preferredStyle?: string;
+    placement?: string;
+    sizeEstimate?: string;
+    notes?: string;
+    marketingOptIn: boolean;
+    smsOptIn: boolean;
+  },
+): LocalMessageRecord {
+  const details = [
+    `City: ${input.citySlug}`,
+    input.preferredStyle ? `Style: ${input.preferredStyle}` : undefined,
+    input.placement ? `Placement: ${input.placement}` : undefined,
+    input.sizeEstimate ? `Size: ${input.sizeEstimate}` : undefined,
+    input.notes ? `Notes: ${input.notes}` : undefined,
+    `Marketing opt-in: ${input.marketingOptIn ? "yes" : "no"}`,
+    `SMS opt-in: ${input.smsOptIn ? "yes" : "no"}`,
+  ].filter((line): line is string => Boolean(line));
+
+  return persistMessage(tenantSlug, {
+    subject: `Waitlist signup: ${input.citySlug}`,
+    body: `${input.clientName} joined the travel waitlist.\n${details.join("\n")}`,
+    channel: "email",
+  });
+}
+
 export function persistErrorReport(
   tenantSlug: string,
   input: {

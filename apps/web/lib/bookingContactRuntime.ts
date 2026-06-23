@@ -1,4 +1,4 @@
-﻿import { buildBookingContactRuntimeEvidencePlan } from "@inkroute/booking";
+import { buildBookingContactRuntimeEvidencePlan } from "@inkroute/booking";
 
 export type BookingContactRuntimeStatus =
   | "wired"
@@ -200,7 +200,7 @@ export const bookingContactRuntimeMatrix = [
     status: "wired",
   },
   {
-    id: "contact-form-local-persistence",
+    id: "contact-form-db-first-persistence",
     command: "booking/contact API E2E tests",
     artifact: "coverage/booking-contact-contact-persistence.json",
     status: "persistence-gated",
@@ -369,7 +369,7 @@ export const bookingContactLocalCommands = [
   "pnpm --filter @inkroute/booking typecheck",
   "pnpm --filter @inkroute/booking test",
   "static booking/contact route handoff review",
-  "static contact local-persistence fail-closed review",
+  "static contact DB-first persistence and local-fallback fail-closed review",
 ] as const;
 
 export const bookingContactExternalCommands = [

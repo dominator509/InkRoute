@@ -28,7 +28,9 @@ describe("dashboard message read route contract", () => {
       expect(source).not.toContain('}, { status: 500 });');
     }
     expect(detailRouteSource).not.toContain('}, { status: 404 });');
-    expect(listRouteSource).not.toContain('}, { status: 400 });');
+    expect(listRouteSource).toContain("dashboardListQuerySchema.safeParse");
+    expect(listRouteSource).toContain('code: "VALIDATION_FAILED"');
+    expect(listRouteSource).toContain("query.data.limit");
   });
 
   it("uses Prisma message-thread reads with body/provider/contact redaction and audit logs", () => {

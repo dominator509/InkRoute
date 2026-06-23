@@ -1,8 +1,11 @@
 import {
   auditCalendarTimezones,
+  buildExplicitTimezoneDateBoundaryEvidence,
   buildTimezoneRecurrenceQaPlan,
   buildTimezoneRuntimeReadinessPlan,
+  explicitTimezoneDateBoundaryStrategy,
   isValidIanaTimezone,
+  type ExplicitTimezoneDateBoundaryEvidence,
   type TimezoneQaCase,
   type TimezoneQaCheck,
   type TimezoneRecurrenceQaPlan,
@@ -28,6 +31,8 @@ export interface DashboardTimezoneRecurrenceQaContract {
   requiredChecks: readonly TimezoneQaCheck[];
   qaCases: readonly TimezoneQaCase[];
   qaPlan: TimezoneRecurrenceQaPlan;
+  timezoneDateBoundary: typeof explicitTimezoneDateBoundaryStrategy;
+  timezoneDateBoundaryEvidence: ExplicitTimezoneDateBoundaryEvidence;
   readiness: TimezoneRuntimeReadinessPlan;
 }
 
@@ -195,6 +200,7 @@ export function buildDashboardTimezoneQaPlan(): TimezoneRecurrenceQaPlan {
 }
 
 export function buildDashboardTimezoneReadiness(): TimezoneRuntimeReadinessPlan {
+  const timezoneBoundaryEvidence = buildExplicitTimezoneDateBoundaryEvidence();
   return buildTimezoneRuntimeReadinessPlan({
     packageScripts: {
       test: "vitest run",
@@ -203,7 +209,7 @@ export function buildDashboardTimezoneReadiness(): TimezoneRuntimeReadinessPlan 
     calendarTestsPassed: false,
     calendarTypecheckPassed: false,
     timezoneStrategySelected: true,
-    temporalOrDateLibraryImplemented: false,
+    temporalOrDateLibraryImplemented: timezoneBoundaryEvidence.status === "ready",
     routeIanaValidationEnforced: true,
     persistenceIanaValidationEnforced: true,
     storedUtcAndTimezoneVerified: true,
@@ -225,6 +231,8 @@ export function buildDashboardTimezoneRecurrenceQaContract(): DashboardTimezoneR
     requiredChecks: requiredTimezoneChecks,
     qaCases: dashboardTimezoneQaCases,
     qaPlan: buildDashboardTimezoneQaPlan(),
+    timezoneDateBoundary: explicitTimezoneDateBoundaryStrategy,
+    timezoneDateBoundaryEvidence: buildExplicitTimezoneDateBoundaryEvidence(),
     readiness: buildDashboardTimezoneReadiness(),
   };
 }

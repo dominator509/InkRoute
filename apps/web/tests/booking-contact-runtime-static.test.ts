@@ -53,7 +53,7 @@ describe("booking/contact runtime evidence contract", () => {
     expect(bookingContactRuntimeMatrix.map((entry) => entry.id)).toEqual([
       "booking-and-web-package-gates",
       "public-route-post-submit-plan",
-      "contact-form-local-persistence",
+      "contact-form-db-first-persistence",
       "provider-gated-handoff-boundaries",
       "api-and-browser-e2e",
       "ci-secret-safe-artifacts",
@@ -87,13 +87,35 @@ describe("booking/contact runtime evidence contract", () => {
     expect(bookingTests).toContain("blocks booking/contact runtime evidence until route, UI, persistence, provider, E2E, CI, and artifact proof exist");
     expect(bookingRoute).toContain("buildBookingPostSubmitPlan");
     expect(bookingRoute).toContain("packagePostSubmitPlan");
+    expect(confirmationPage).toContain("loadConfirmationState");
+    expect(confirmationPage).toContain("loadDatabaseConfirmationState");
+    expect(confirmationPage).toContain("loadLocalConfirmationState");
+    expect(confirmationPage).toContain("tenantSlug");
+    expect(confirmationPage).toContain("bookingRequestId");
+    expect(confirmationPage).toContain("getBookingPostPersistWorkflows");
+    expect(confirmationPage).toContain("getBookingPostPersistWorkflowConsumers");
+    expect(confirmationPage).toContain("Confirmation state was read from tenant-scoped database records");
+    expect(confirmationPage).toContain("production local fallback remains disabled");
+    expect(confirmationPage).toContain("Persisted workflow state");
     expect(confirmationPage).toContain("Provider boundaries");
     expect(confirmationPage).toContain("booking request identifier");
     expect(confirmationPage).toContain("provider follow-up evidence remain runtime-gated");
+    expect(confirmationPage).not.toContain("This page is static");
     expect(confirmationPage).not.toContain("no request ID exists because there is no database write");
+    expect(contactRoute).toContain("resolveContactTenant");
+    expect(contactRoute).toContain("publicContactInputSchema.safeParse");
+    expect(contactRoute).toContain("tx.client.upsert");
+    expect(contactRoute).toContain("tx.messageThread.create");
+    expect(contactRoute).toContain("tx.message.create");
+    expect(contactRoute).toContain("tx.notification.create");
+    expect(contactRoute).toContain("tx.notificationDelivery.create");
+    expect(contactRoute).toContain("tx.notificationProviderHandoff.create");
+    expect(contactRoute).toContain("tx.idempotencyKey.upsert");
+    expect(contactRoute).toContain("tx.auditLog.create");
+    expect(contactRoute).toContain("contact.public_intake");
     expect(contactRoute).toContain("persistContactSubmission");
     expect(contactRoute).toContain("PROVIDER_CONTACT_PERSISTENCE_NOT_CONFIGURED");
-    expect(contactRoute).toContain("Production contact submissions require tenant-scoped database persistence");
+    expect(contactRoute).toContain("Contact submission could not be persisted to tenant-scoped database rows after validation.");
     expect(contactRoute).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(contactRoute).toContain("headers: noStoreHeaders");
     expect(contactRoute).not.toContain('headers: { "Cache-Control": "no-store" }');
@@ -300,6 +322,8 @@ describe("booking/contact runtime evidence contract", () => {
     expect(gapTracker).toContain("bookingContactExecutionPolicy");
     expect(gapTracker).toContain("bookingContactRequiredExternalEvidence");
     expect(gapTracker).toContain("GAP-029 is booking-contact-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("confirmation page DB-first persisted workflow state resolver");
+    expect(gapTracker).toContain("confirmation reads from tenant-scoped database records when tenantSlug and bookingRequestId are supplied");
     expect(gapTracker).toContain("live DB transaction integration, provider-backed persistBookingContactRun execution, tenant-isolation integration, browser/API E2E, provider sandbox handoff evidence, web typecheck/build, CI evidence, and secret-safe artifact review remain open");
     expect(gapTracker).toContain("proof inventory");
   });

@@ -27,6 +27,11 @@ describe("public content runtime evidence contract", () => {
   const configPackageJson = readRepoFile("packages/config/package.json");
   const configSource = readRepoFile("packages/config/src/index.ts");
   const configTests = readRepoFile("packages/config/tests/public-content.test.ts");
+  const validatorSource = readRepoFile("packages/validators/src/common.ts");
+  const publicPortfolioRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/portfolio/route.ts");
+  const publicTravelRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/travel/route.ts");
+  const publicReviewsRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/reviews/route.ts");
+  const publicFaqRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/faq/route.ts");
   const dashboardReviewRoute = readRepoFile("apps/dashboard/app/api/reviews/route.ts");
   const dashboardReviewTest = readRepoFile("apps/dashboard/tests/review-read-route-static.test.ts");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
@@ -68,6 +73,17 @@ describe("public content runtime evidence contract", () => {
     expect(configSource).toContain("privateOriginalAvailable: false");
     expect(configTests).toContain("normalizes tenant slugs and rejects unknown tenants");
     expect(configTests).toContain("blocks public content runtime evidence until repository wiring, redaction, cache, browser, and CI proof exist");
+    expect(validatorSource).toContain("publicReadQuerySchema");
+    expect(publicContentApiSource).toContain("export async function readPublicPortfolioItems");
+    expect(publicContentApiSource).toContain("export async function readPublicTravelStops");
+    expect(publicContentApiSource).toContain("export async function readPublicTestimonials");
+    expect(publicContentApiSource).toContain("resolvePublicTenantScope");
+    for (const routeSource of [publicPortfolioRoute, publicTravelRoute, publicReviewsRoute, publicFaqRoute]) {
+      expect(routeSource).toContain("publicReadQuerySchema.safeParse");
+      expect(routeSource).toContain('code: "VALIDATION_FAILED"');
+      expect(routeSource).toContain("query: { limit: query.data.limit }");
+      expect(routeSource).toContain(".slice(0, query.data.limit)");
+    }
     expect(dashboardReviewRoute).toContain("reviews");
     expect(dashboardReviewTest).toContain("private");
   });
@@ -80,6 +96,8 @@ describe("public content runtime evidence contract", () => {
     expect(publicContentRuntimeReadiness.blockers).toContain(
       "Tenant/domain resolver must graduate from the local demo resolver contract to persisted tenant records.",
     );
+    expect(publicContentRuntimeReadiness.blockers).not.toContain("Public content repository reads must cover tenant, artist, portfolio, travel, FAQ, testimonial, city, and style data.");
+    expect(publicContentRuntimeReadiness.blockers).not.toContain("Public routes and APIs must consume the repository-backed public content bundle.");
     expect(publicContentRuntimeReadiness.blockers).toContain(
       "Public API JSON must be proven free of tenant IDs, artist IDs, attribution keys, private object keys, plan/status fields, and non-public portfolio records.",
     );

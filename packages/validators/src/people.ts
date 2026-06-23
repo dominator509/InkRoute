@@ -53,7 +53,12 @@ export const clientProfileInputSchema = z.object({
   internalNotes: z.string().max(4000).optional(),
 });
 
+export const clientPrivateNoteInputSchema = z.object({
+  privateNote: z.string().trim().min(1).max(500),
+}).strict();
+
 export type ArtistInput = z.infer<typeof artistInputSchema>;
 export type StudioInput = z.infer<typeof studioInputSchema>;
 export type ClientInput = z.infer<typeof clientInputSchema>;
 export type ClientProfileInput = z.infer<typeof clientProfileInputSchema>;
+export type ClientPrivateNoteInput = z.infer<typeof clientPrivateNoteInputSchema>;

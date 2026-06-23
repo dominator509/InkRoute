@@ -8,6 +8,7 @@ export const authSessionTenantGuardArtifactPaths = [
   "coverage/auth-csrf-revocation-redacted.json",
   "coverage/auth-provider-session-redacted.json",
   "coverage/auth-cross-tenant-denial-redacted.json",
+  "coverage/auth-session-tenant-guard-external-evidence-packet.json",
   "test-results/auth-session-tenant-guards",
   "test-results/dashboard-auth-guards",
   "test-results/mobile-auth-guards",
@@ -61,6 +62,7 @@ export const authSessionTenantGuardRequiredExternalEvidence = [
   "provider-backed dashboard/mobile/API route guard proof",
   "CSRF-bound mutating route tests",
   "auth AuditLog persistence and cross-tenant route integration proof",
+  "auth/session external evidence packet with redacted provider, session, revocation, audit, and denial proof",
 ] as const;
 
 export type AuthSessionTenantGuardArtifact = (typeof authSessionTenantGuardArtifactPaths)[number];
@@ -79,6 +81,7 @@ export const authSessionTenantGuardExternalArtifacts = [
   "coverage/auth-csrf-revocation-redacted.json",
   "coverage/auth-provider-session-redacted.json",
   "coverage/auth-cross-tenant-denial-redacted.json",
+  "coverage/auth-session-tenant-guard-external-evidence-packet.json",
 ] as const satisfies readonly AuthSessionTenantGuardArtifact[];
 
 export type AuthSessionTenantGuardCommand = (typeof authSessionTenantGuardCommands)[number];
@@ -92,6 +95,7 @@ export type AuthSessionTenantGuardEvidenceInput = {
   persistedSessionRevocationProofCaptured: boolean;
   auditLogRedactionProofCaptured: boolean;
   crossTenantDenialProofCaptured: boolean;
+  externalEvidencePacketCaptured: boolean;
   requiredCommandsRun: readonly AuthSessionTenantGuardCommand[];
   capturedArtifacts: readonly AuthSessionTenantGuardArtifact[];
 };
@@ -121,6 +125,7 @@ export type AuthSessionTenantGuardExecutionPlan = {
   externalCommands: typeof authSessionTenantGuardExternalCommands;
   localArtifacts: typeof authSessionTenantGuardLocalArtifacts;
   externalArtifacts: typeof authSessionTenantGuardExternalArtifacts;
+  surfaceContract: typeof authSessionTenantGuardSurfaceContract;
   requiredExternalEvidence: typeof authSessionTenantGuardRequiredExternalEvidence;
   disabledReasons: readonly string[];
 };
@@ -140,6 +145,85 @@ export type AuthSessionTenantGuardArtifactReview = {
   redactedArtifact: unknown;
   requiredArtifacts: typeof authSessionTenantGuardArtifactPaths;
   retainedExternalGates: readonly string[];
+};
+
+export type AuthSessionTenantGuardExternalEvidencePacket = {
+  packetId: "gap-095-auth-session-tenant-guard-external-evidence";
+  requiredArtifact: "coverage/auth-session-tenant-guard-external-evidence-packet.json";
+  providerAuthExecutionAllowed: false;
+  persistedSessionExecutionAllowed: false;
+  routeIntegrationExecutionAllowed: false;
+  providerSessionEvidenceRequired: true;
+  sessionRevocationEvidenceRequired: true;
+  auditPersistenceEvidenceRequired: true;
+  crossTenantDenialEvidenceRequired: true;
+  redactionRequired: true;
+  requiredExternalEvidence: typeof authSessionTenantGuardRequiredExternalEvidence;
+  surfaceContract: typeof authSessionTenantGuardSurfaceContract;
+};
+
+export type AuthSessionTenantGuardRunPersistenceContract = {
+  model: "AuthSessionTenantGuardRun";
+  tenantRelation: "authSessionTenantGuardRuns";
+  storesCommandMatrix: true;
+  storesArtifactManifest: true;
+  storesProviderSessionEvidence: true;
+  storesRevocationEvidence: true;
+  storesAuditEvidence: true;
+  storesCrossTenantEvidence: true;
+  storesSecretSafeReview: true;
+};
+
+export const authSessionTenantGuardRunPersistenceContract: AuthSessionTenantGuardRunPersistenceContract = {
+  model: "AuthSessionTenantGuardRun",
+  tenantRelation: "authSessionTenantGuardRuns",
+  storesCommandMatrix: true,
+  storesArtifactManifest: true,
+  storesProviderSessionEvidence: true,
+  storesRevocationEvidence: true,
+  storesAuditEvidence: true,
+  storesCrossTenantEvidence: true,
+  storesSecretSafeReview: true,
+};
+
+export type AuthSessionTenantGuardRunRecordInput = {
+  tenantId: string;
+  runId: string;
+  commitSha?: string | null;
+  status: AuthSessionTenantGuardEvidenceDecision["status"];
+  providerLoginLogoutProofCaptured: boolean;
+  persistedSessionRevocationProofCaptured: boolean;
+  auditLogRedactionProofCaptured: boolean;
+  crossTenantDenialProofCaptured: boolean;
+  secretSafeReviewCaptured: boolean;
+  capturedArtifacts: readonly AuthSessionTenantGuardArtifact[];
+  requiredCommandsRun: readonly AuthSessionTenantGuardCommand[];
+};
+
+export type AuthSessionTenantGuardRunData = {
+  tenantId: string;
+  runId: string;
+  commitSha: string | null;
+  status: AuthSessionTenantGuardEvidenceDecision["status"];
+  commandMatrix: typeof authSessionTenantGuardCommands;
+  artifactManifest: readonly AuthSessionTenantGuardArtifact[];
+  providerLoginLogoutProofCaptured: boolean;
+  persistedSessionRevocationProofCaptured: boolean;
+  auditLogRedactionProofCaptured: boolean;
+  crossTenantDenialProofCaptured: boolean;
+  secretSafeReviewCaptured: boolean;
+  completedCommands: readonly AuthSessionTenantGuardCommand[];
+  redactedSummary: AuthSessionTenantGuardEvidenceDecision["redactedSummary"];
+};
+
+export type AuthSessionTenantGuardRunRepository = {
+  authSessionTenantGuardRun: {
+    upsert(input: {
+      where: { tenantId_runId: { tenantId: string; runId: string } };
+      create: AuthSessionTenantGuardRunData;
+      update: Omit<AuthSessionTenantGuardRunData, "tenantId" | "runId">;
+    }): Promise<unknown>;
+  };
 };
 
 const authSessionTenantGuardSecretPatterns = [
@@ -189,6 +273,90 @@ export const authSessionTenantGuardExecutionPolicy: AuthSessionTenantGuardExecut
   auditLogPersistenceExecutionAllowed: false,
 };
 
+export type AuthSessionTenantGuardSurfaceContractEntry = {
+  surfaceId: string;
+  requiredCommand: AuthSessionTenantGuardCommand;
+  requiredArtifact: AuthSessionTenantGuardArtifact;
+  guardBoundary:
+    | "dashboard-middleware"
+    | "dashboard-api"
+    | "mobile-session"
+    | "provider-callback"
+    | "session-revocation"
+    | "csrf-mutation"
+    | "audit-log"
+    | "cross-tenant";
+  providerBackedEvidenceRequired: boolean;
+  redactedArtifactRequired: true;
+};
+
+export const authSessionTenantGuardSurfaceContract: readonly AuthSessionTenantGuardSurfaceContractEntry[] = [
+  {
+    surfaceId: "dashboard-middleware-session-cookie-csrf",
+    requiredCommand: "pnpm vitest run apps/web/tests/auth-session-tenant-guard-static.test.ts apps/dashboard/tests/security-trust-route-static.test.ts apps/dashboard/tests/security-privacy-route-static.test.ts apps/mobile/tests/mobile-security-static.test.ts",
+    requiredArtifact: "coverage/auth-dashboard-middleware-guard.json",
+    guardBoundary: "dashboard-middleware",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "dashboard-api-tenant-reader-actor",
+    requiredCommand: "pnpm vitest run apps/web/tests/auth-session-tenant-guard-static.test.ts apps/dashboard/tests/security-trust-route-static.test.ts apps/dashboard/tests/security-privacy-route-static.test.ts apps/mobile/tests/mobile-security-static.test.ts",
+    requiredArtifact: "coverage/auth-dashboard-route-guard-matrix.json",
+    guardBoundary: "dashboard-api",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "mobile-session-tenant-guard",
+    requiredCommand: "mobile session storage/revocation smoke tests",
+    requiredArtifact: "coverage/auth-mobile-session-guard.json",
+    guardBoundary: "mobile-session",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "provider-login-logout-callbacks",
+    requiredCommand: "provider-backed login/logout integration tests",
+    requiredArtifact: "coverage/auth-provider-session-redacted.json",
+    guardBoundary: "provider-callback",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "persisted-session-revocation",
+    requiredCommand: "persist User, TenantMember, CustomRole, session, and revocation lookups",
+    requiredArtifact: "coverage/auth-csrf-revocation-redacted.json",
+    guardBoundary: "session-revocation",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "csrf-bound-mutations",
+    requiredCommand: "CSRF-bound mutating route tests",
+    requiredArtifact: "coverage/auth-csrf-revocation-redacted.json",
+    guardBoundary: "csrf-mutation",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "auth-audit-log-redaction",
+    requiredCommand: "auth audit-log persistence tests",
+    requiredArtifact: "coverage/auth-audit-log-redacted.json",
+    guardBoundary: "audit-log",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "cross-tenant-route-denial",
+    requiredCommand: "cross-tenant route integration tests",
+    requiredArtifact: "coverage/auth-cross-tenant-denial-redacted.json",
+    guardBoundary: "cross-tenant",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+] as const;
+
 export function buildAuthSessionTenantGuardExecutionPlan(): AuthSessionTenantGuardExecutionPlan {
   return {
     status: "local-plan-ready",
@@ -202,6 +370,7 @@ export function buildAuthSessionTenantGuardExecutionPlan(): AuthSessionTenantGua
     externalCommands: authSessionTenantGuardExternalCommands,
     localArtifacts: authSessionTenantGuardLocalArtifacts,
     externalArtifacts: authSessionTenantGuardExternalArtifacts,
+    surfaceContract: authSessionTenantGuardSurfaceContract,
     requiredExternalEvidence: authSessionTenantGuardRequiredExternalEvidence,
     disabledReasons: [
       "Provider auth execution requires selected provider credentials and configured callbacks.",
@@ -229,6 +398,61 @@ export function buildAuthSessionTenantGuardArtifactReview(rawArtifact: unknown):
   };
 }
 
+export function buildAuthSessionTenantGuardExternalEvidencePacket(): AuthSessionTenantGuardExternalEvidencePacket {
+  return {
+    packetId: "gap-095-auth-session-tenant-guard-external-evidence",
+    requiredArtifact: "coverage/auth-session-tenant-guard-external-evidence-packet.json",
+    providerAuthExecutionAllowed: false,
+    persistedSessionExecutionAllowed: false,
+    routeIntegrationExecutionAllowed: false,
+    providerSessionEvidenceRequired: true,
+    sessionRevocationEvidenceRequired: true,
+    auditPersistenceEvidenceRequired: true,
+    crossTenantDenialEvidenceRequired: true,
+    redactionRequired: true,
+    requiredExternalEvidence: authSessionTenantGuardRequiredExternalEvidence,
+    surfaceContract: authSessionTenantGuardSurfaceContract,
+  };
+}
+
+export function buildAuthSessionTenantGuardRunData(
+  input: AuthSessionTenantGuardRunRecordInput,
+): AuthSessionTenantGuardRunData {
+  return {
+    tenantId: input.tenantId,
+    runId: input.runId,
+    commitSha: input.commitSha ?? null,
+    status: input.status,
+    commandMatrix: authSessionTenantGuardCommands,
+    artifactManifest: input.capturedArtifacts,
+    providerLoginLogoutProofCaptured: input.providerLoginLogoutProofCaptured,
+    persistedSessionRevocationProofCaptured: input.persistedSessionRevocationProofCaptured,
+    auditLogRedactionProofCaptured: input.auditLogRedactionProofCaptured,
+    crossTenantDenialProofCaptured: input.crossTenantDenialProofCaptured,
+    secretSafeReviewCaptured: input.secretSafeReviewCaptured,
+    completedCommands: input.requiredCommandsRun,
+    redactedSummary: {
+      storesRawSessionTokens: false,
+      storesRawProviderPayloads: false,
+      providerSecretsRedacted: true,
+    },
+  };
+}
+
+export async function persistAuthSessionTenantGuardRun(
+  repository: AuthSessionTenantGuardRunRepository,
+  input: AuthSessionTenantGuardRunRecordInput,
+): Promise<unknown> {
+  const data = buildAuthSessionTenantGuardRunData(input);
+  const { tenantId: _tenantId, runId: _runId, ...update } = data;
+
+  return repository.authSessionTenantGuardRun.upsert({
+    where: { tenantId_runId: { tenantId: data.tenantId, runId: data.runId } },
+    create: data,
+    update,
+  });
+}
+
 export function buildAuthSessionTenantGuardEvidenceDecision(
   input: AuthSessionTenantGuardEvidenceInput,
 ): AuthSessionTenantGuardEvidenceDecision {
@@ -241,6 +465,7 @@ export function buildAuthSessionTenantGuardEvidenceDecision(
     !input.persistedSessionRevocationProofCaptured && "Capture persisted TenantMember/session/revocation lookup proof.",
     !input.auditLogRedactionProofCaptured && "Capture redacted auth AuditLog persistence proof.",
     !input.crossTenantDenialProofCaptured && "Capture cross-tenant dashboard/API/mobile denial proof.",
+    !input.externalEvidencePacketCaptured && "Capture auth/session external evidence packet.",
   ].filter(Boolean) as string[];
 
   const missingArtifacts = authSessionTenantGuardArtifactPaths.filter(

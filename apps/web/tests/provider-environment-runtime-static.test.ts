@@ -6,6 +6,7 @@ import {
   buildProviderEnvironmentRunData,
   buildProviderEnvironmentRuntimeEvidenceDecision,
   buildProviderEnvironmentRuntimeExecutionPlan,
+  buildProviderEnvironmentRuntimeRedactedHandoffPacket,
   buildRedactedProviderEnvironmentArtifact,
   persistProviderEnvironmentRun,
   providerEnvironmentRuntimeArtifactPaths,
@@ -71,10 +72,12 @@ describe("GAP-114 provider environment runtime wiring", () => {
       "github-environment-protections",
       "secret-store-destinations",
       "redacted-evidence-labels",
+      "redacted-handoff-packet",
       "ci-provider-environment-artifacts"
     ]);
     expect(providerEnvironmentRuntimeArtifactPaths).toContain("coverage/provider-secret-store-destinations-redacted.json");
     expect(providerEnvironmentRuntimeArtifactPaths).toContain("coverage/provider-strict-env-check-redacted.json");
+    expect(providerEnvironmentRuntimeArtifactPaths).toContain("coverage/provider-redacted-handoff-packet.json");
     expect(providerEnvironmentRuntimeArtifactPaths).toContain("test-results/provider-environment-runtime");
   });
 
@@ -132,6 +135,7 @@ describe("GAP-114 provider environment runtime wiring", () => {
     expect(gapTracker).toContain("GAP-114 is provider-environment-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("providerEnvironmentRuntimeLocalArtifacts");
     expect(gapTracker).toContain("providerEnvironmentRuntimeExternalArtifacts");
+    expect(gapTracker).toContain("buildProviderEnvironmentRuntimeRedactedHandoffPacket");
   });
 
   it("pins current provider environment runtime proof files for GAP-114", () => {
@@ -179,6 +183,7 @@ describe("GAP-114 provider environment runtime wiring", () => {
       githubEnvironmentProtectionsConfigured: false,
       secretStoreDestinationsConfigured: false,
       redactedEvidenceLabelsRecorded: true,
+      redactedHandoffPacketCaptured: false,
       ciProviderEnvironmentArtifactsCaptured: false,
       requiredCommandsRun: ["pnpm deploy:verify-provider-envs"],
       capturedArtifacts: ["coverage/provider-environment-runtime.json"],
@@ -269,6 +274,7 @@ describe("GAP-114 provider environment runtime wiring", () => {
         "Capture provider database migration dry-run proof.",
         "Capture GitHub environment protection audit proof.",
         "Capture secret-store destination proof.",
+        "Capture retained redacted provider-environment handoff packet proof.",
         "Capture CI provider-environment artifacts.",
         "Required command not recorded: pnpm deploy:check-env:strict",
         "Required command not recorded: provider database migration dry-run",
@@ -307,6 +313,7 @@ describe("GAP-114 provider environment runtime wiring", () => {
       githubEnvironmentProtectionsConfigured: true,
       secretStoreDestinationsConfigured: true,
       redactedEvidenceLabelsRecorded: true,
+      redactedHandoffPacketCaptured: true,
       ciProviderEnvironmentArtifactsCaptured: true,
       requiredCommandsRun: providerEnvironmentRuntimeCommands,
       capturedArtifacts: providerEnvironmentRuntimeArtifactPaths,
@@ -331,6 +338,7 @@ describe("GAP-114 provider environment runtime wiring", () => {
         "coverage/provider-environment-runtime.json",
         "coverage/provider-environment-verifier.json",
         "coverage/provider-redacted-handoff-labels.json",
+        "coverage/provider-redacted-handoff-packet.json",
         "test-results/provider-environment-runtime",
       ]),
     );
@@ -344,6 +352,7 @@ describe("GAP-114 provider environment runtime wiring", () => {
         "coverage/provider-sentry-release-smoke-redacted.json",
         "coverage/provider-github-environment-protection-redacted.json",
         "coverage/provider-secret-store-destinations-redacted.json",
+        "coverage/provider-redacted-handoff-packet.json",
         "coverage/provider-environment-ci-run-redacted.json",
       ]),
     );
@@ -389,7 +398,8 @@ describe("GAP-114 provider environment runtime wiring", () => {
     };
     const redacted = buildRedactedProviderEnvironmentArtifact(rawArtifact);
     const review = buildProviderEnvironmentRuntimeArtifactReview("coverage/provider-environment-ci-run-redacted.json", rawArtifact);
-    const serialized = JSON.stringify(review);
+    const packet = buildProviderEnvironmentRuntimeRedactedHandoffPacket(rawArtifact);
+    const serialized = JSON.stringify({ review, packet });
 
     expect(JSON.stringify(redacted)).not.toContain("project_live_abc123");
     expect(serialized).not.toContain("postgres://");
@@ -422,8 +432,16 @@ describe("GAP-114 provider environment runtime wiring", () => {
         "Secret-store destination evidence must include labels only and never committed secret values or provider resource IDs.",
         "Database, storage, EAS, Sentry, and GitHub protection artifacts must redact URLs, tokens, bucket names, project IDs, and user data.",
         "ProviderEnvironmentRun persistence must execute only against an approved provider-backed database.",
+        "Retained redacted provider-environment handoff packet must be captured before closure.",
       ]),
     );
+    expect(packet.status).toBe("redacted-handoff-packet-ready");
+    expect(packet.artifactPath).toBe("coverage/provider-redacted-handoff-packet.json");
+    expect(packet.surfaces).toBe(providerEnvironmentRuntimeSurfaces);
+    expect(packet.review.containsUnredactedSensitiveValues).toBe(false);
+    expect(packet.requiredArtifacts).toBe(providerEnvironmentRuntimeArtifactPaths);
+    expect(packet.externalEvidenceRequired).toBe(providerEnvironmentRuntimeRequiredExternalEvidence);
+    expect(packet.providerExecutionAllowed).toBe(false);
   });
 });
 

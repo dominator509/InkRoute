@@ -1,11 +1,15 @@
+import { createHash } from "node:crypto";
 import { rolePermissions } from "@inkroute/auth";
 import { prisma } from "@inkroute/db";
+import { dashboardTenantQuerySchema, tenantSettingsMutationSchema } from "@inkroute/validators";
 import { NextRequest, NextResponse } from "next/server";
 import { dashboardFeatureFlags, dashboardShellContext } from "../../../lib/demo";
 import {
   evaluateDashboardApiGuard,
   isDatabaseUnavailable,
 } from "../dashboardAuth";
+
+export const runtime = "nodejs";
 
 function redactEmail(value: string | null | undefined): string | null {
   if (!value) return null;
@@ -14,25 +18,24 @@ function redactEmail(value: string | null | undefined): string | null {
   return `${local.slice(0, 1)}***@${domain}`;
 }
 
-function optionalSettingString(value: unknown, maxLength: number): string | undefined {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  if (!trimmed) return undefined;
-  return trimmed.slice(0, maxLength);
-}
-
-function settingsMutationBody(value: unknown) {
-  const body = typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
-  return {
-    tenantId: optionalSettingString(body.tenantId, 160),
-    publicSiteName: optionalSettingString(body.publicSiteName, 160),
-    primaryLocale: optionalSettingString(body.primaryLocale, 32),
-    defaultTimezone: optionalSettingString(body.defaultTimezone, 120),
-    idempotencyKey: optionalSettingString(body.idempotencyKey, 180),
-  };
+function toJsonValue(value: unknown) {
+  return JSON.parse(JSON.stringify(value));
 }
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+function hashSettingsSubject(value: unknown): string {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+function resultRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+function resultString(value: unknown, key: string): string | null {
+  const result = resultRecord(value);
+  return typeof result?.[key] === "string" ? result[key] : null;
+}
 
 function settingsGuardFailureResponse(guard: ReturnType<typeof evaluateDashboardApiGuard>) {
   const safeReason = `${guard.status}:${guard.action}`;
@@ -56,8 +59,15 @@ export async function GET(request: NextRequest) {
     return settingsGuardFailureResponse(guard);
   }
   try {
-    const params = new URL(request.url).searchParams;
-  const tenantId = params.get("tenantId") ?? actor.tenantId;
+    const query = dashboardTenantQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
+  if (!query.success) {
+    return NextResponse.json(
+      { ok: false, error: { code: "VALIDATION_FAILED", message: "Settings query failed validation.", issues: query.error.flatten() } },
+      { status: 400, headers: noStoreHeaders },
+    );
+  }
+
+  const tenantId = query.data.tenantId ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
     return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query settings for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
@@ -265,7 +275,15 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const body = settingsMutationBody(await request.json().catch(() => ({})));
+    const parsed = tenantSettingsMutationSchema.safeParse(await request.json().catch(() => ({})));
+    if (!parsed.success) {
+      return NextResponse.json(
+        { ok: false, error: { code: "VALIDATION_FAILED", message: "Settings payload failed validation.", issues: parsed.error.flatten() } },
+        { status: 400, headers: noStoreHeaders },
+      );
+    }
+
+    const body = parsed.data;
     const tenantId = body.tenantId ?? actor.tenantId;
     if (tenantId !== actor.tenantId) {
       return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot update settings for another tenant." } }, { status: 403, headers: noStoreHeaders });
@@ -280,6 +298,11 @@ export async function PATCH(request: NextRequest) {
     if (Object.keys(update).length === 0) {
       return NextResponse.json({ ok: false, error: { code: "VALIDATION_FAILED", message: "At least one safe tenant setting is required." } }, { status: 400, headers: noStoreHeaders });
     }
+    const idempotencyKey =
+      request.headers.get("idempotency-key") ??
+      body.idempotencyKey ??
+      `settings-update:${tenantId}:${hashSettingsSubject({ update })}`;
+    const requestHash = hashSettingsSubject({ tenantId, update });
 
   if (actor.source === "local-fallback") {
     if (process.env.NODE_ENV === "production") {
@@ -316,6 +339,54 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
+      const idempotency = await tx.idempotencyKey.upsert({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-settings-update", key: idempotencyKey } },
+        create: {
+          tenantId,
+          scope: "dashboard-settings-update",
+          key: idempotencyKey,
+          requestHash,
+          status: "claimed",
+          metadata: toJsonValue({
+            route: "/api/settings",
+            action: "update_settings",
+            updatedFields: Object.keys(update),
+            rawSecretsStored: false,
+            rejectedFields: ["providerSecrets", "credentials", "legalPolicyCopy", "memberInvites", "customRoles"],
+          }),
+        },
+        update: {
+          metadata: toJsonValue({
+            route: "/api/settings",
+            action: "update_settings",
+            updatedFields: Object.keys(update),
+            replayObserved: true,
+            rawSecretsStored: false,
+            rejectedFields: ["providerSecrets", "credentials", "legalPolicyCopy", "memberInvites", "customRoles"],
+          }),
+        },
+        select: { id: true, key: true, requestHash: true, status: true, result: true },
+      });
+
+      if (idempotency.requestHash !== requestHash) {
+        return { status: "idempotency_conflict" as const, idempotency };
+      }
+
+      if (idempotency.status === "completed") {
+        return {
+          status: "replayed" as const,
+          idempotency,
+          tenant: {
+            id: resultString(idempotency.result, "tenantId") ?? tenantId,
+            publicSiteName: resultString(idempotency.result, "publicSiteName"),
+            primaryLocale: resultString(idempotency.result, "primaryLocale"),
+            defaultTimezone: resultString(idempotency.result, "defaultTimezone"),
+            updatedAt: resultString(idempotency.result, "updatedAt") ?? new Date(0).toISOString(),
+          },
+          audit: { id: resultString(idempotency.result, "auditId") },
+        };
+      }
+
       const tenant = await tx.tenant.update({
         where: { id: tenantId },
         data: update,
@@ -332,7 +403,8 @@ export async function PATCH(request: NextRequest) {
           metadata: {
             source: "dashboard-api",
             dashboardMutationAction: "update_settings",
-            idempotencyKey: request.headers.get("idempotency-key") ?? body.idempotencyKey ?? null,
+            idempotencyKey,
+            idempotencyKeyId: idempotency.id,
             updatedFields: Object.keys(update),
             rejectedFields: ["providerSecrets", "credentials", "legalPolicyCopy", "memberInvites", "customRoles"],
             rawSecretsStored: false,
@@ -341,8 +413,41 @@ export async function PATCH(request: NextRequest) {
         select: { id: true },
       });
 
-      return { tenant, audit };
+      await tx.idempotencyKey.update({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-settings-update", key: idempotencyKey } },
+        data: {
+          status: "completed",
+          result: toJsonValue({
+            tenantId: tenant.id,
+            auditId: audit.id,
+            updatedFields: Object.keys(update),
+            publicSiteName: tenant.publicSiteName,
+            primaryLocale: tenant.primaryLocale,
+            defaultTimezone: tenant.defaultTimezone,
+            updatedAt: tenant.updatedAt.toISOString(),
+            rawSecretsStored: false,
+            rejectedFields: ["providerSecrets", "credentials", "legalPolicyCopy", "memberInvites", "customRoles"],
+          }),
+        },
+        select: { id: true },
+      });
+
+      return { status: "persisted" as const, tenant, audit, idempotency };
     });
+
+    if (result.status === "idempotency_conflict") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: { code: "IDEMPOTENCY_CONFLICT", message: "Idempotency key was already used for a different settings payload." },
+          idempotencyKeyId: result.idempotency.id,
+          gapIds: ["GAP-007", "GAP-038", "GAP-040"],
+        },
+        { status: 409, headers: noStoreHeaders },
+      );
+    }
 
     return NextResponse.json(
       {
@@ -356,10 +461,12 @@ export async function PATCH(request: NextRequest) {
           publicSiteName: result.tenant.publicSiteName,
           primaryLocale: result.tenant.primaryLocale,
           defaultTimezone: result.tenant.defaultTimezone,
-          updatedAt: result.tenant.updatedAt.toISOString(),
+          updatedAt: typeof result.tenant.updatedAt === "string" ? result.tenant.updatedAt : result.tenant.updatedAt.toISOString(),
         },
         auditId: result.audit.id,
-        boundary: "Settings writes are limited to safe tenant profile metadata; provider secrets, member invites, custom roles, and legal policy copy remain gated.",
+        idempotencyKeyId: result.idempotency.id,
+        idempotencyReplay: result.status === "replayed",
+        boundary: "Settings writes are limited to idempotency-backed safe tenant profile metadata; provider secrets, member invites, custom roles, and legal policy copy remain gated.",
         gapIds: ["GAP-007", "GAP-038", "GAP-040"],
       },
       { headers: noStoreHeaders },

@@ -80,6 +80,7 @@ describe("signed ICS feed runtime contract", () => {
       "apps/web/tests/signed-ics-feed-runtime-static.test.ts",
       "apps/web/tests/ics-feed-route.test.ts",
       "apps/web/app/api/public/[tenantSlug]/calendar/[artistSlug]/travel.ics/route.ts",
+      "packages/db/prisma/schema.prisma",
       "testing/manifests/unit-test-manifest.json",
       ".github/workflows/ci.yml",
     ]));
@@ -96,6 +97,7 @@ describe("signed ICS feed runtime contract", () => {
     expect(calendarTests).toContain("buildSignedIcsFeedRuntimeReadinessPlan");
     expect(signedFeedSource).toContain("SignedIcsFeedRepository");
     expect(signedFeedSource).toContain("createInMemorySignedIcsFeedRepository");
+    expect(signedFeedSource).toContain("createPrismaSignedIcsFeedRepository");
     expect(signedFeedSource).toContain("persistAccessLog");
     expect(signedFeedSource).toContain("evaluateSignedIcsFeedRequest");
     expect(signedFeedStaticTest).toContain("plans hashed token creation and revocation");
@@ -259,6 +261,7 @@ describe("signed ICS feed runtime contract", () => {
     expect(gapTracker).toContain("durable/client-import evidence classifier");
     expect(gapTracker).toContain("signedIcsFeedDecisionRequiredEvidence");
     expect(gapTracker).toContain("local signed-feed repository contract");
+    expect(gapTracker).toContain("createPrismaSignedIcsFeedRepository");
     expect(gapTracker).toContain("GAP-055 is signed-ics-feed-runtime-matrix wired with durable/client-import evidence classifier");
     expect(gapTracker).toContain("buildSignedIcsFeedExecutionPlan");
     expect(gapTracker).toContain("signedIcsFeedExecutionPolicy");

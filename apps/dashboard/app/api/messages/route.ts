@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@inkroute/db";
+import { dashboardListQuerySchema } from "@inkroute/validators";
 import { dashboardRedactedMessageThreadDrafts } from "../../../lib/demo";
 import { buildDashboardMessagePersistencePlan, dashboardNotificationPersistenceContract } from "../../../lib/notificationPersistence";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
@@ -51,13 +52,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read messages." } }, { status: 403, headers: noStoreHeaders });
   }
 
-  const params = new URL(request.url).searchParams;
-  const tenantId = params.get("tenantId") ?? actor.tenantId;
+  const query = dashboardListQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
+  if (!query.success) {
+    return NextResponse.json(
+      { ok: false, error: { code: "VALIDATION_FAILED", message: "Dashboard message list query failed validation.", issues: query.error.flatten() } },
+      { status: 400, headers: noStoreHeaders },
+    );
+  }
+
+  const tenantId = query.data.tenantId ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
     return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query message threads for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
-  const limit = Math.min(Math.max(Number(params.get("limit") ?? 50), 1), 100);
+  const limit = query.data.limit;
 
   if (actor.source === "local-fallback") {
     if (process.env.NODE_ENV === "production") {

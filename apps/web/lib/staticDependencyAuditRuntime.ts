@@ -123,6 +123,7 @@ export const staticDependencyAuditArtifactPaths = [
   "coverage/static-dependency-dashboard-build-output.txt",
   "coverage/static-dependency-ci-job.json",
   "coverage/static-dependency-peer-version-review.json",
+  "coverage/static-dependency-redacted-evidence-bundle.json",
   "test-results/static-dependency-audit-runtime",
 ] as const;
 
@@ -164,6 +165,7 @@ export const staticDependencyAuditExternalArtifacts = [
   "coverage/static-dependency-dashboard-build-output.txt",
   "coverage/static-dependency-ci-job.json",
   "coverage/static-dependency-peer-version-review.json",
+  "coverage/static-dependency-redacted-evidence-bundle.json",
   "test-results/static-dependency-audit-runtime",
 ] as const satisfies readonly StaticDependencyAuditArtifact[];
 
@@ -180,6 +182,7 @@ export interface StaticDependencyAuditEvidenceInput {
   readonly peerVersionReviewCaptured: boolean;
   readonly runtimeResolutionProofCaptured: boolean;
   readonly staticDependencyAuditRunPersisted: boolean;
+  readonly redactedEvidenceBundleCaptured: boolean;
   readonly coveredAreas: readonly StaticDependencyAuditCoverageArea[];
   readonly capturedArtifacts: readonly StaticDependencyAuditArtifact[];
   readonly completedCommands: readonly StaticDependencyAuditCommand[];
@@ -224,6 +227,15 @@ export interface StaticDependencyAuditArtifactReview {
   readonly safeForTracker: boolean;
 }
 
+export interface StaticDependencyAuditRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly artifactPath: "coverage/static-dependency-redacted-evidence-bundle.json";
+  readonly review: StaticDependencyAuditArtifactReview;
+  readonly requiredArtifacts: typeof staticDependencyAuditArtifactPaths;
+  readonly requiredExternalEvidence: typeof staticDependencyAuditRequiredExternalEvidence;
+  readonly providerExecutionAllowed: false;
+}
+
 export const staticDependencyAuditLocalCommands = [
   "node scripts/workspace/audit-workspace-imports.mjs",
 ] as const satisfies readonly StaticDependencyAuditCommand[];
@@ -247,6 +259,7 @@ export const staticDependencyAuditRequiredExternalEvidence = [
   "Peer dependency compatibility and version warning review artifact.",
   "Runtime dependency resolution proof captured from the target workspace.",
   "Durable StaticDependencyAuditRun persistence row captured from the target database.",
+  "Redacted static dependency audit evidence bundle captured without raw install logs, registry URLs, tokens, database URLs, or package-owner identifiers.",
 ] as const;
 
 export type StaticDependencyAuditExecutionPolicy = {
@@ -329,6 +342,12 @@ export const staticDependencyAuditRuntimeMatrix = [
     command: "capture runtime dependency resolution proof",
     artifact: "coverage/static-dependency-audit-runtime.json",
     status: "runtime-resolution-gated",
+  },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted static dependency audit evidence bundle",
+    artifact: "coverage/static-dependency-redacted-evidence-bundle.json",
+    status: "ci-gated",
   },
 ] as const satisfies readonly StaticDependencyAuditRuntimeMatrixEntry[];
 
@@ -415,6 +434,9 @@ export function buildStaticDependencyAuditEvidenceDecision(
   }
   if (!input.staticDependencyAuditRunPersisted) {
     blockers.push("StaticDependencyAuditRun persistence row must be captured for durable auditability.");
+  }
+  if (!input.redactedEvidenceBundleCaptured) {
+    blockers.push("Redacted static dependency audit evidence bundle must be captured.");
   }
   if (missingCoverageAreas.length > 0) {
     blockers.push("Every required static dependency audit coverage area must be captured.");
@@ -517,6 +539,19 @@ export function buildStaticDependencyAuditArtifactReview(artifact: unknown): Sta
     redactions,
     requiredExternalEvidence: staticDependencyAuditRequiredExternalEvidence,
     safeForTracker: true,
+  };
+}
+
+export function buildStaticDependencyAuditRedactedEvidenceBundle(
+  artifact: unknown,
+): StaticDependencyAuditRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    artifactPath: "coverage/static-dependency-redacted-evidence-bundle.json",
+    review: buildStaticDependencyAuditArtifactReview(artifact),
+    requiredArtifacts: staticDependencyAuditArtifactPaths,
+    requiredExternalEvidence: staticDependencyAuditRequiredExternalEvidence,
+    providerExecutionAllowed: false,
   };
 }
 

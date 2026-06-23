@@ -1,4 +1,4 @@
-﻿import { buildAgentExecutionLedgerReadinessPlan } from "@inkroute/handoff";
+import { buildAgentExecutionLedgerReadinessPlan } from "@inkroute/handoff";
 import type { AgentTarget } from "@inkroute/handoff";
 
 export type AgentExecutionLedgerRuntimeStatus =
@@ -80,6 +80,7 @@ export const agentExecutionLedgerRuntimeArtifactPaths = [
   "coverage/agent-execution-gap-tracker-updates.json",
   "coverage/agent-execution-external-results-imported.json",
   "coverage/agent-execution-ci-run-redacted.json",
+  "coverage/agent-execution-redacted-evidence-bundle.json",
   "test-results/agent-execution-ledger-runtime",
 ] as const;
 
@@ -138,6 +139,7 @@ export const agentExecutionLedgerRuntimeRequiredExternalEvidence = [
   "Command transcripts, diffs, changed-file matrices, and provider evidence must redact secrets, environment values, URLs, customer data, and provider IDs.",
   "Secret-safety review must be recorded before any external execution result updates GAP_TRACKER rows.",
   "CI ledger artifacts must be retained with run URLs, provider labels, and raw logs redacted.",
+  "Redacted agent execution ledger evidence bundle captured without raw transcripts, diffs, provider IDs, URLs, environment values, customer data, or actor identifiers.",
 ] as const;
 
 export type AgentExecutionLedgerRuntimeExecutionPolicy = {
@@ -228,6 +230,17 @@ export interface AgentExecutionLedgerRuntimeExecutionPlan {
   readonly ciArtifactExecutionAllowed: false;
   readonly executionPolicy: typeof agentExecutionLedgerRuntimeExecutionPolicy;
   readonly externalEvidenceRequired: typeof agentExecutionLedgerRuntimeRequiredExternalEvidence;
+}
+
+export interface AgentExecutionLedgerRuntimeRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly artifactPath: "coverage/agent-execution-redacted-evidence-bundle.json";
+  readonly review: AgentExecutionLedgerRuntimeArtifactReview;
+  readonly requiredArtifacts: typeof agentExecutionLedgerRuntimeArtifactPaths;
+  readonly externalEvidenceRequired: typeof agentExecutionLedgerRuntimeRequiredExternalEvidence;
+  readonly externalAgentExecutionAllowed: false;
+  readonly transcriptImportExecutionAllowed: false;
+  readonly ciArtifactExecutionAllowed: false;
 }
 
 export interface AgentExecutionLedgerRuntimeArtifactReview {
@@ -372,6 +385,22 @@ export function buildAgentExecutionLedgerRuntimeArtifactReview(
   };
 }
 
+export function buildAgentExecutionLedgerRuntimeRedactedEvidenceBundle(
+  artifactPath: AgentExecutionLedgerRuntimeArtifact | string,
+  artifact: unknown,
+): AgentExecutionLedgerRuntimeRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    artifactPath: "coverage/agent-execution-redacted-evidence-bundle.json",
+    review: buildAgentExecutionLedgerRuntimeArtifactReview(artifactPath, artifact),
+    requiredArtifacts: agentExecutionLedgerRuntimeArtifactPaths,
+    externalEvidenceRequired: agentExecutionLedgerRuntimeRequiredExternalEvidence,
+    externalAgentExecutionAllowed: false,
+    transcriptImportExecutionAllowed: false,
+    ciArtifactExecutionAllowed: false,
+  };
+}
+
 export const agentExecutionLedgerRuntimeMatrix = [
   {
     id: "ledger-verifier",
@@ -455,6 +484,12 @@ export const agentExecutionLedgerRuntimeMatrix = [
     id: "ci-ledger-artifacts",
     command: "capture CI agent execution ledger artifacts",
     artifact: "coverage/agent-execution-ci-run-redacted.json",
+    status: "ci-gated",
+  },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted agent execution ledger evidence bundle",
+    artifact: "coverage/agent-execution-redacted-evidence-bundle.json",
     status: "ci-gated",
   },
 ] as const satisfies readonly AgentExecutionLedgerRuntimeMatrixEntry[];

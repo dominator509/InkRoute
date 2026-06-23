@@ -1,7 +1,21 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { GET as getAvailabilityPreview } from "../app/api/public/[tenantSlug]/availability-preview/route";
 
 describe("availability preview route", () => {
+  it("pins DB-first public availability read support without claiming hold persistence", () => {
+    const routeSource = readFileSync(join(process.cwd(), "apps/web/app/api/public/[tenantSlug]/availability-preview/route.ts"), "utf8");
+
+    expect(routeSource).toContain("prismaRuntime.tenant.findUnique");
+    expect(routeSource).toContain("availabilityWindows");
+    expect(routeSource).toContain('status: "database_preview_read_only"');
+    expect(routeSource).toContain("holdsPersisted: false");
+    expect(routeSource).toContain("conflictWritesPersisted: false");
+    expect(routeSource).toContain("providerSyncExecuted: false");
+    expect(routeSource).toContain("staticPreviewDisabled: true");
+  });
+
   it("returns 404 for unknown tenant availability previews", async () => {
     const response = await getAvailabilityPreview(new Request("https://local.test/api/public/unknown/availability-preview"), {
       params: Promise.resolve({ tenantSlug: "unknown" }),

@@ -1,7 +1,11 @@
-﻿import { NextResponse, type NextRequest } from "next/server";
-import { assertPermission, resolveDashboardActor } from "../../dashboardAuth";
+import { createHash } from "node:crypto";
+import { NextResponse, type NextRequest } from "next/server";
+import { prisma } from "@inkroute/db";
+import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../../dashboardAuth";
 import { buildDashboardSchedulerPlanFromAction, dashboardNotificationSchedulerContract } from "../../../../lib/notificationScheduler";
 import type { NotificationSchedulerAction } from "@inkroute/notifications";
+
+export const runtime = "nodejs";
 
 const schedulerActions: readonly NotificationSchedulerAction[] = ["schedule_sequence", "cancel_scheduled_jobs", "process_due_job", "retry_failed_job", "dead_letter_job"];
 
@@ -10,6 +14,23 @@ function parseAction(value: unknown): NotificationSchedulerAction {
 }
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+function hashSchedulerSubject(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function resultNumber(value: unknown, key: string): number | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const result = value as Record<string, unknown>;
+  return typeof result[key] === "number" ? result[key] : null;
+}
+
+function providerForChannel(channel: string): string {
+  if (channel === "email") return "resend";
+  if (channel === "sms") return "twilio";
+  if (channel === "push") return "expo";
+  return "in_app";
+}
 
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
@@ -60,11 +81,15 @@ export async function POST(request: NextRequest) {
 
   const action = parseAction(body.action);
   const now = typeof body.now === "string" ? body.now : new Date().toISOString();
+  const dbBackedActor = actor.source !== "local-fallback";
+  const requestedIdempotencyKey = typeof body.idempotencyKey === "string" ? body.idempotencyKey : `scheduler:${tenantId}:${action}`;
   const plan = buildDashboardSchedulerPlanFromAction({
     tenantId,
     action,
     now,
-    idempotencyKey: typeof body.idempotencyKey === "string" ? body.idempotencyKey : `scheduler:${tenantId}:${action}`,
+    idempotencyKey: requestedIdempotencyKey,
+    idempotencyStoreAvailable: dbBackedActor,
+    auditLogPersistenceAvailable: dbBackedActor,
     ...(typeof body.jobId === "string" ? { jobId: body.jobId } : {}),
     actorId: actor.actorUserId,
     ...(typeof body.appointmentId === "string" ? { appointmentId: body.appointmentId } : {}),
@@ -76,7 +101,7 @@ export async function POST(request: NextRequest) {
     ...(typeof body.maxAttempts === "number" ? { maxAttempts: body.maxAttempts } : {}),
   });
 
-  if (process.env.NODE_ENV === "production") {
+  if (actor.source === "local-fallback" && process.env.NODE_ENV === "production") {
     return NextResponse.json(
       {
         ok: false,
@@ -100,6 +125,259 @@ export async function POST(request: NextRequest) {
       },
       { status: 503, headers: noStoreHeaders },
     );
+  }
+
+  if (dbBackedActor && action === "schedule_sequence") {
+    if (plan.status === "blocked" || !plan.idempotencyKey) {
+      return NextResponse.json(
+        {
+          ok: false,
+          tenantId,
+          source: actor.source,
+          error: { code: "NOTIFICATION_SCHEDULER_PLAN_BLOCKED", message: "Scheduler sequence is not safe to persist." },
+          plan,
+          requiredRepositoryMethods: dashboardNotificationSchedulerContract.requiredRepositoryMethods,
+          gapIds: ["GAP-065", "GAP-066"],
+        },
+        { status: 409, headers: noStoreHeaders },
+      );
+    }
+
+    const requestHash = hashSchedulerSubject(
+      JSON.stringify({
+        tenantId,
+        action,
+        now,
+        appointmentId: typeof body.appointmentId === "string" ? body.appointmentId : null,
+        bookingRequestId: typeof body.bookingRequestId === "string" ? body.bookingRequestId : null,
+        appointmentStartsAt: typeof body.appointmentStartsAt === "string" ? body.appointmentStartsAt : null,
+        scheduledJobs: plan.scheduledJobs,
+      }),
+    );
+
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        const appointmentId = typeof body.appointmentId === "string" ? body.appointmentId : null;
+        const bookingRequestId = typeof body.bookingRequestId === "string" ? body.bookingRequestId : null;
+
+        if (appointmentId) {
+          const appointment = await tx.appointment.findFirst({
+            where: { id: appointmentId, tenantId },
+            select: { id: true },
+          });
+          if (!appointment) return { status: "related_not_found" as const, relation: "appointment" as const };
+        }
+
+        if (bookingRequestId) {
+          const bookingRequest = await tx.bookingRequest.findFirst({
+            where: { id: bookingRequestId, tenantId },
+            select: { id: true },
+          });
+          if (!bookingRequest) return { status: "related_not_found" as const, relation: "bookingRequest" as const };
+        }
+
+        const idempotency = await tx.idempotencyKey.upsert({
+          where: { tenantId_scope_key: { tenantId, scope: "notification.scheduler", key: plan.idempotencyKey ?? requestedIdempotencyKey } },
+          create: {
+            tenantId,
+            scope: "notification.scheduler",
+            key: plan.idempotencyKey ?? requestedIdempotencyKey,
+            status: "pending",
+            requestHash,
+            metadata: {
+              source: "dashboard-notification-scheduler-route",
+              action,
+              scheduledJobCount: plan.scheduledJobs.length,
+              providerDispatchEnabled: false,
+              workerExecutionEnabled: false,
+            },
+          },
+          update: {},
+          select: { id: true, status: true, requestHash: true, result: true },
+        });
+
+        if (idempotency.requestHash !== requestHash) {
+          return { status: "idempotency_conflict" as const, idempotency };
+        }
+
+        if (idempotency.status === "completed") {
+          return {
+            status: "replayed" as const,
+            idempotency,
+            notificationCount: resultNumber(idempotency.result, "notificationCount") ?? 0,
+            deliveryCount: resultNumber(idempotency.result, "deliveryCount") ?? 0,
+            handoffCount: resultNumber(idempotency.result, "handoffCount") ?? 0,
+          };
+        }
+
+        let notificationCount = 0;
+        let deliveryCount = 0;
+        let handoffCount = 0;
+
+        for (const [index, job] of plan.scheduledJobs.entries()) {
+          const notification = await tx.notification.create({
+            data: {
+              tenantId,
+              bookingRequestId,
+              appointmentId,
+              type: job.templateKey,
+              title: `Scheduled ${job.templateKey}`,
+              body: "Notification content is rendered by the provider worker; scheduler stores redacted job metadata only.",
+              status: "queued",
+              scheduledFor: new Date(job.scheduledAt),
+            },
+            select: { id: true },
+          });
+          notificationCount += 1;
+
+          for (const channel of job.recommendedChannels) {
+            const provider = providerForChannel(channel);
+            const destinationHash = hashSchedulerSubject(`${tenantId}:${channel}:${job.templateKey}:${index}`);
+            const delivery = await tx.notificationDelivery.create({
+              data: {
+                tenantId,
+                notificationId: notification.id,
+                channel,
+                status: "queued",
+                destinationHash,
+                provider,
+              },
+              select: { id: true },
+            });
+            deliveryCount += 1;
+
+            await tx.notificationProviderHandoff.create({
+              data: {
+                tenantId,
+                notificationId: notification.id,
+                deliveryId: delivery.id,
+                channel,
+                provider,
+                state: "queued",
+                idempotencyKey: `${plan.idempotencyKey}:${index}:${channel}`,
+                destinationHash,
+                sanitizedPayload: {
+                  action,
+                  templateKey: job.templateKey,
+                  scheduledAt: job.scheduledAt,
+                  scheduledOffsetMinutes: job.scheduledOffsetMinutes,
+                  providerDispatchEnabled: false,
+                  rawDestinationStored: false,
+                },
+                availableAt: new Date(job.scheduledAt),
+              },
+            });
+            handoffCount += 1;
+          }
+        }
+
+        const audit = await tx.auditLog.create({
+          data: {
+            tenantId,
+            actorUserId: actor.actorUserId,
+            action: "notification.scheduler.schedule_sequence",
+            entityType: "NotificationProviderHandoff",
+            entityId: plan.idempotencyKey,
+            metadata: {
+              source: "dashboard-notification-scheduler-route",
+              idempotencyKeyId: idempotency.id,
+              requestHash,
+              notificationCount,
+              deliveryCount,
+              handoffCount,
+              providerDispatchEnabled: false,
+              workerExecutionEnabled: false,
+            },
+          },
+          select: { id: true },
+        });
+
+        await tx.idempotencyKey.update({
+          where: { tenantId_scope_key: { tenantId, scope: "notification.scheduler", key: plan.idempotencyKey ?? requestedIdempotencyKey } },
+          data: {
+            status: "completed",
+            result: {
+              auditId: audit.id,
+              notificationCount,
+              deliveryCount,
+              handoffCount,
+              requestHash,
+              providerDispatchEnabled: false,
+              workerExecutionEnabled: false,
+            },
+          },
+        });
+
+        return { status: "persisted" as const, idempotency, auditId: audit.id, notificationCount, deliveryCount, handoffCount };
+      });
+
+      if (result.status === "related_not_found") {
+        return NextResponse.json(
+          {
+            ok: false,
+            tenantId,
+            source: actor.source,
+            error: { code: "RELATED_RECORD_NOT_FOUND", message: `Scheduler ${result.relation} must exist for this tenant.` },
+            gapIds: ["GAP-065", "GAP-066"],
+          },
+          { status: 404, headers: noStoreHeaders },
+        );
+      }
+
+      if (result.status === "idempotency_conflict") {
+        return NextResponse.json(
+          {
+            ok: false,
+            tenantId,
+            source: actor.source,
+            error: { code: "IDEMPOTENCY_CONFLICT", message: "Idempotency key was already used for a different scheduler payload." },
+            idempotencyKeyId: result.idempotency.id,
+            gapIds: ["GAP-065", "GAP-066"],
+            boundary: "Notification scheduler idempotency is request-hash guarded and defaults to denial on mismatched replay payloads.",
+          },
+          { status: 409, headers: noStoreHeaders },
+        );
+      }
+
+      return NextResponse.json(
+        {
+          ok: true,
+          tenantId,
+          source: actor.source,
+          persistence: "database",
+          status: result.status === "replayed" ? "database-replayed" : "database-persisted",
+          idempotencyKeyId: result.idempotency.id,
+          idempotencyReplay: result.status === "replayed",
+          notificationCount: result.notificationCount,
+          deliveryCount: result.deliveryCount,
+          handoffCount: result.handoffCount,
+          auditId: result.status === "persisted" ? result.auditId : null,
+          plan,
+          requiredRepositoryMethods: dashboardNotificationSchedulerContract.requiredRepositoryMethods,
+          gapIds: ["GAP-065", "GAP-066"],
+          boundary: "Scheduler schedule_sequence persists tenant-scoped Notification, NotificationDelivery, NotificationProviderHandoff, IdempotencyKey, and AuditLog rows without provider dispatch; worker execution remains evidence-gated.",
+        },
+        { status: result.status === "replayed" ? 200 : 201, headers: noStoreHeaders },
+      );
+    } catch (error) {
+      if (isDatabaseUnavailable(error)) {
+        return NextResponse.json(
+          {
+            ok: false,
+            tenantId,
+            source: actor.source,
+            error: { code: "DATABASE_UNAVAILABLE", message: "Notification scheduler persistence requires the dashboard database connection." },
+            gapIds: ["GAP-065", "GAP-066"],
+          },
+          { status: 503, headers: noStoreHeaders },
+        );
+      }
+
+      return NextResponse.json(
+        { ok: false, error: { code: "NOTIFICATION_SCHEDULER_PERSISTENCE_FAILED", message: "Notification scheduler jobs could not be persisted." }, gapIds: ["GAP-065", "GAP-066"] },
+        { status: 500, headers: noStoreHeaders },
+      );
+    }
   }
 
   return NextResponse.json(

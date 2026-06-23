@@ -374,6 +374,7 @@ export interface TestingLaunchExecutionPlan {
   readonly externalCommands: typeof testingLaunchExecutionExternalCommands;
   readonly localArtifacts: typeof testingLaunchExecutionLocalArtifacts;
   readonly externalArtifacts: typeof testingLaunchExecutionExternalArtifacts;
+  readonly surfaceContract: typeof testingLaunchExecutionSurfaceContract;
   readonly commandExecutionAllowed: false;
   readonly providerExecutionAllowed: false;
   readonly mobileDeviceExecutionAllowed: false;
@@ -389,6 +390,113 @@ export interface TestingLaunchExecutionArtifactReview {
   readonly requiredExternalEvidence: typeof testingLaunchExecutionRequiredExternalEvidence;
   readonly safeForTracker: boolean;
 }
+
+export interface TestingLaunchExecutionSurfaceContractEntry {
+  readonly surfaceId: string;
+  readonly requiredCommand: (typeof testingLaunchExecutionRuntimeCommands)[number];
+  readonly requiredArtifact: (typeof testingLaunchExecutionArtifactPaths)[number];
+  readonly executionBoundary:
+    | "local-command"
+    | "database"
+    | "provider-sandbox"
+    | "mobile-device"
+    | "ci-proof"
+    | "branch-protection"
+    | "artifact-review";
+  readonly externalEvidenceRequired: boolean;
+  readonly redactedArtifactRequired: true;
+}
+
+export const testingLaunchExecutionSurfaceContract: readonly TestingLaunchExecutionSurfaceContractEntry[] = [
+  {
+    surfaceId: "frozen-install",
+    requiredCommand: "pnpm install --frozen-lockfile",
+    requiredArtifact: "coverage/testing-frozen-install-output.txt",
+    executionBoundary: "local-command",
+    externalEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "static-manifest-typecheck",
+    requiredCommand: "pnpm typecheck",
+    requiredArtifact: "coverage/testing-typecheck-output.txt",
+    executionBoundary: "local-command",
+    externalEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "unit-coverage",
+    requiredCommand: "pnpm test:unit:coverage",
+    requiredArtifact: "coverage/testing-unit-coverage-summary.json",
+    executionBoundary: "local-command",
+    externalEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "playwright-e2e",
+    requiredCommand: "pnpm test:e2e",
+    requiredArtifact: "coverage/playwright-results.json",
+    executionBoundary: "local-command",
+    externalEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "web-dashboard-builds",
+    requiredCommand: "pnpm --filter @inkroute/web build",
+    requiredArtifact: "coverage/testing-web-build-output.txt",
+    executionBoundary: "local-command",
+    externalEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "database-integration",
+    requiredCommand: "Prisma/database integration test suite",
+    requiredArtifact: "coverage/testing-prisma-integration-output.json",
+    executionBoundary: "database",
+    externalEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "provider-sandbox",
+    requiredCommand: "provider sandbox test suite",
+    requiredArtifact: "coverage/testing-provider-sandbox-output-redacted.json",
+    executionBoundary: "provider-sandbox",
+    externalEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "mobile-simulator-device",
+    requiredCommand: "Expo simulator and device test suites",
+    requiredArtifact: "coverage/testing-mobile-device-output-redacted.json",
+    executionBoundary: "mobile-device",
+    externalEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "ci-quality-run",
+    requiredCommand: "GitHub Actions CI quality run with retained artifacts",
+    requiredArtifact: "coverage/testing-ci-quality-run-redacted.json",
+    executionBoundary: "ci-proof",
+    externalEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "branch-protection",
+    requiredCommand: "branch protection required-check proof",
+    requiredArtifact: "coverage/testing-branch-protection-required-checks-redacted.json",
+    executionBoundary: "branch-protection",
+    externalEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "secret-safe-artifacts",
+    requiredCommand: "GitHub Actions CI quality run with retained artifacts",
+    requiredArtifact: "coverage/testing-secret-safe-artifacts.json",
+    executionBoundary: "artifact-review",
+    externalEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+] as const;
 
 const sensitiveTestingLaunchExecutionKeyPattern =
   /(token|secret|password|authorization|cookie|email|phone|name|address|medical|payment|card|provider|tenant|user|client|patient|database|url|uri|dsn|key|id|trace|screenshot|video|payload|artifact)/iu;
@@ -503,6 +611,7 @@ export function buildTestingLaunchExecutionPlan(): TestingLaunchExecutionPlan {
     externalCommands: testingLaunchExecutionExternalCommands,
     localArtifacts: testingLaunchExecutionLocalArtifacts,
     externalArtifacts: testingLaunchExecutionExternalArtifacts,
+    surfaceContract: testingLaunchExecutionSurfaceContract,
     commandExecutionAllowed: false,
     providerExecutionAllowed: false,
     mobileDeviceExecutionAllowed: false,

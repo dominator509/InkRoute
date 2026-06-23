@@ -47,6 +47,10 @@ function normalizeIdempotencyKey(value: unknown): string | undefined {
   return trimmed ? trimmed.slice(0, 180) : undefined;
 }
 
+function toJsonValue(value: unknown) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 function toDashboardMutationAction(action: BookingLifecycleAction): DashboardMutationAction {
   switch (action) {
     case "accept":
@@ -137,6 +141,7 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
   }
 
   try {
+    const idempotencyKey = normalizeIdempotencyKey(input.idempotencyKey) ?? `booking-state:${tenantId}:${bookingId}:${action}`;
     const result = await prisma.$transaction(async (tx) => {
       const booking = await tx.bookingRequest.findFirst({
         where: { id: bookingId, tenantId },
@@ -147,7 +152,14 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
         return { status: "not_found" as const };
       }
 
-      const idempotencyKey = normalizeIdempotencyKey(input.idempotencyKey);
+      const existingIdempotency = await tx.idempotencyKey.findUnique({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-booking-state", key: idempotencyKey } },
+        select: { id: true, key: true, status: true, result: true },
+      });
+      if (existingIdempotency?.status === "completed" && existingIdempotency.result) {
+        return { status: "replayed" as const, idempotency: existingIdempotency };
+      }
+
       const reason = normalizeNote(input.note);
       const dashboardMutationPlan = buildDashboardMutationPlan({
         tenantId,
@@ -157,7 +169,7 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
         bookingRequestId: booking.id,
         currentStatus: booking.status as BookingStatus,
         occurredAt: new Date().toISOString(),
-        ...(idempotencyKey ? { idempotencyKey } : {}),
+        idempotencyKey,
       });
       const transitionPlanInput = {
         tenantId,
@@ -169,14 +181,42 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
         occurredAt: new Date().toISOString(),
         ...(reason ? { reason } : {}),
       } as const;
-      if (idempotencyKey !== undefined) {
-        (transitionPlanInput as typeof transitionPlanInput & { idempotencyKey: string }).idempotencyKey = idempotencyKey;
-      }
+      (transitionPlanInput as typeof transitionPlanInput & { idempotencyKey: string }).idempotencyKey = idempotencyKey;
       const plan = createBookingTransitionPlan(transitionPlanInput as Parameters<typeof createBookingTransitionPlan>[0]);
 
       if (!plan.canCommit || !plan.transition) {
         return { status: "invalid_transition" as const, plan, dashboardMutationPlan };
       }
+
+      const idempotency = await tx.idempotencyKey.upsert({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-booking-state", key: idempotencyKey } },
+        create: {
+          tenantId,
+          scope: "dashboard-booking-state",
+          key: idempotencyKey,
+          status: "claimed",
+          metadata: toJsonValue({
+            route: "/api/bookings/[bookingId]/state",
+            bookingId,
+            action,
+            fromStatus: booking.status,
+            actorRole: actor.role,
+            rawPayloadStored: false,
+          }),
+        },
+        update: {
+          metadata: toJsonValue({
+            route: "/api/bookings/[bookingId]/state",
+            bookingId,
+            action,
+            fromStatus: booking.status,
+            actorRole: actor.role,
+            replayObserved: true,
+            rawPayloadStored: false,
+          }),
+        },
+        select: { id: true, key: true },
+      });
 
       const updated = await tx.bookingRequest.update({
         where: { id: booking.id },
@@ -201,7 +241,8 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
             action,
             actorRole: actor.role,
             dashboardMutationPlan,
-            idempotencyKey: idempotencyKey ?? null,
+            idempotencyKey,
+            idempotencyKeyId: idempotency.id,
           },
         },
         select: { id: true, type: true, createdAt: true },
@@ -222,14 +263,32 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
             actorRole: actor.role,
             dashboardMutationAuditAction: dashboardMutationPlan.auditAction,
             dashboardMutationProviderBoundary: dashboardMutationPlan.providerBoundary,
-            idempotencyKey: idempotencyKey ?? null,
+            idempotencyKey,
+            idempotencyKeyId: idempotency.id,
             assignedToUserChanged: typeof input.assignedToUserId === "string" && input.assignedToUserId.trim() !== booking.assignedToUserId,
           },
         },
         select: { id: true, createdAt: true },
       });
 
-      return { status: "persisted" as const, plan, dashboardMutationPlan, booking: updated, event, audit };
+      await tx.idempotencyKey.update({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-booking-state", key: idempotencyKey } },
+        data: {
+          status: "completed",
+          result: toJsonValue({
+            bookingId: booking.id,
+            action,
+            fromStatus: booking.status,
+            toStatus: plan.transition.to,
+            eventId: event.id,
+            auditId: audit.id,
+            rawPayloadStored: false,
+          }),
+        },
+        select: { id: true },
+      });
+
+      return { status: "persisted" as const, plan, dashboardMutationPlan, booking: updated, event, audit, idempotency };
     });
 
     if (result.status === "not_found") {
@@ -243,6 +302,23 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
       );
     }
 
+    if (result.status === "replayed") {
+      return NextResponse.json(
+        {
+          ok: true,
+          source: actor.source,
+          tenantId,
+          bookingId,
+          replayed: true,
+          idempotencyKeyId: result.idempotency.id,
+          result: result.idempotency.result,
+          gapIds: ["GAP-007", "GAP-037", "GAP-038"],
+          boundary: "Booking lifecycle mutation replay returned the previously persisted idempotency result without duplicating BookingStateEvent or AuditLog rows.",
+        },
+        { headers: noStoreHeaders },
+      );
+    }
+
     return NextResponse.json(
       {
         ok: true,
@@ -251,10 +327,11 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
         booking: result.booking,
         event: result.event,
         auditId: result.audit.id,
+        idempotencyKeyId: result.idempotency.id,
         dashboardMutationPlan: result.dashboardMutationPlan,
         transition: result.plan.transition,
         gapIds: ["GAP-007", "GAP-037", "GAP-038"],
-        boundary: "Booking lifecycle mutation persisted in one tenant-scoped transaction with BookingStateEvent and AuditLog rows.",
+        boundary: "Booking lifecycle mutation persisted in one tenant-scoped transaction with IdempotencyKey, BookingStateEvent, and AuditLog rows.",
       },
       { headers: noStoreHeaders },
     );

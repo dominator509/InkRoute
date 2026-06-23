@@ -63,6 +63,9 @@ describe("release persistence RBAC runtime seam", () => {
     expect(releaseRoute).toContain("resolveReleaseApprovalState");
     expect(releaseRoute).toContain("RELEASE_CONCURRENCY_CONFLICT");
     expect(releaseRoute).toContain("membershipLookup");
+    expect(releaseRoute).toContain("tx.idempotencyKey.upsert");
+    expect(releaseRoute).toContain("tx.idempotencyKey.update");
+    expect(releaseRoute).toContain("idempotencyKeyId");
     expect(releaseRoute).toContain("buildReleaseWorkflowOrchestrationMetadata");
     expect(releaseRoute).toContain("releasePersistenceRbacArtifactPaths");
     expect(releaseRoute).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
@@ -73,6 +76,9 @@ describe("release persistence RBAC runtime seam", () => {
     expect(flagRoute).toContain("assertPermissionWithTenantMembership");
     expect(flagRoute).toContain("x-feature-flag-expected-version");
     expect(flagRoute).toContain("FEATURE_FLAG_CONCURRENCY_CONFLICT");
+    expect(flagRoute).toContain("tx.idempotencyKey.upsert");
+    expect(flagRoute).toContain("tx.idempotencyKey.update");
+    expect(flagRoute).toContain("idempotencyKeyId");
     expect(flagRoute).toContain("settings-write-approved");
     expect(flagRoute).toContain("feature-flag-runtime-invalidation-applied");
     expect(flagRoute).toContain("previousEnabled");

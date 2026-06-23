@@ -34,11 +34,15 @@ describe("dashboard SEO publication route contract", () => {
     expect(routeSource).toContain("tx.auditLog.create");
   });
 
-  it("keeps associations and revalidation explicit until dedicated stores exist", () => {
+  it("persists idempotency, associations, and revalidation as dedicated database rows", () => {
     expect(routeSource).toContain("relatedFaqIds");
     expect(routeSource).toContain("relatedReviewIds");
     expect(routeSource).toContain("relatedImageIds");
     expect(routeSource).toContain("revalidation: plan.revalidation");
+    expect(routeSource).toContain("tx.idempotencyKey.create");
+    expect(routeSource).toContain("seoPublicationRevalidationJob.create");
+    expect(routeSource).toContain("seoPublicationAssociation.createMany");
+    expect(routeSource).toContain('associationPersistence: "database"');
     expect(routeSource).toContain('persistence: "dry-run"');
     expect(routeSource).toContain("SEO publication mutation contract with idempotency, revalidation, and audit metadata");
     expect(routeSource).not.toContain("SEO publication mutation plan only");

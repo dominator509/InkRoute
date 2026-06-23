@@ -21,6 +21,7 @@ import {
   buildQualityGateEvidenceDecision,
   buildQualityGateRuntimeArtifactReview,
   buildQualityGateRuntimeExecutionPlan,
+  buildQualityGateRuntimeRedactedEvidenceBundle,
   buildRedactedQualityGateArtifact,
 } from "../lib/qualityGateRuntime";
 
@@ -65,8 +66,10 @@ describe("quality gate runtime contract", () => {
       "quality-all",
       "quality-ci-job",
       "quality-ci-artifacts",
+      "redacted-evidence-bundle",
     ]);
     expect(qualityGateRuntimeArtifactPaths).toContain("coverage/quality-gate-runtime.json");
+    expect(qualityGateRuntimeArtifactPaths).toContain("coverage/quality-gate-redacted-evidence-bundle.json");
     expect(qualityGateRuntimeArtifactPaths).toContain("test-results/quality-gate-runtime");
   });
 
@@ -143,6 +146,7 @@ describe("quality gate runtime contract", () => {
       "coverage/quality-gates-output.txt",
       "coverage/quality-all-output.txt",
       "coverage/quality-ci-job.json",
+      "coverage/quality-gate-redacted-evidence-bundle.json",
       "test-results/quality-gate-runtime",
     ]);
     expect(decision.missingCommands).toEqual([
@@ -209,6 +213,7 @@ describe("quality gate runtime contract", () => {
     expect(gapTracker).toContain("qualityGateRuntimeLocalArtifacts");
     expect(gapTracker).toContain("qualityGateRuntimeExternalArtifacts");
     expect(gapTracker).toContain("buildQualityGateRuntimeArtifactReview");
+    expect(gapTracker).toContain("buildQualityGateRuntimeRedactedEvidenceBundle");
   });
 
   it("pins current quality gate runtime proof files for GAP-126", () => {
@@ -284,6 +289,7 @@ describe("quality gate runtime contract", () => {
       "coverage/quality-package-test.txt",
       "coverage/quality-all-output.txt",
       "coverage/quality-ci-job.json",
+      "coverage/quality-gate-redacted-evidence-bundle.json",
       "test-results/quality-gate-runtime",
     ]);
     expect(plan).toMatchObject({
@@ -312,6 +318,9 @@ describe("quality gate runtime contract", () => {
     expect(plan.requiredExternalEvidence).toBe(qualityGateRuntimeRequiredExternalEvidence);
     expect(plan.requiredExternalEvidence).toContain("GitHub Actions CI quality job URL, conclusion, and artifact bundle.");
     expect(plan.requiredExternalEvidence).toContain("Durable QualityGateRun persistence row captured from the target database.");
+    expect(plan.requiredExternalEvidence).toContain(
+      "Redacted quality gate evidence bundle must omit raw command output, CI URLs, database URLs, tenant IDs, contacts, provider IDs, and tokens.",
+    );
   });
 
   it("redacts quality gate runtime artifacts before tracker or handoff use", () => {
@@ -338,6 +347,7 @@ describe("quality gate runtime contract", () => {
     });
 
     const review = buildQualityGateRuntimeArtifactReview(artifact);
+    const bundle = buildQualityGateRuntimeRedactedEvidenceBundle(artifact);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(qualityGateRuntimeRequiredExternalEvidence);
     expect(review.redactions).toEqual(
@@ -351,6 +361,17 @@ describe("quality gate runtime contract", () => {
       ]),
     );
     expect(review.requiredExternalEvidence).toContain("pnpm quality:all output captured after all quality gates run together.");
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.artifactPath).toBe("coverage/quality-gate-redacted-evidence-bundle.json");
+    expect(bundle.review.safeForTracker).toBe(true);
+    expect(bundle.requiredArtifacts).toBe(qualityGateRuntimeArtifactPaths);
+    expect(bundle.requiredExternalEvidence).toBe(qualityGateRuntimeRequiredExternalEvidence);
+    expect(bundle.packageTypecheckExecutionAllowed).toBe(false);
+    expect(bundle.packageTestExecutionAllowed).toBe(false);
+    expect(bundle.qualityAllExecutionAllowed).toBe(false);
+    expect(bundle.ciQualityJobExecutionAllowed).toBe(false);
+    expect(bundle.persistenceExecutionAllowed).toBe(false);
+    expect(bundle.ciArtifactCaptureExecutionAllowed).toBe(false);
   });
 });
 

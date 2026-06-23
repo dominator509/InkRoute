@@ -31,6 +31,7 @@ import {
   buildSignedIcsFeedRuntimeReadinessPlan,
   buildSignedIcsFeedDraft,
   buildSignedIcsFeedTokenHash,
+  buildExplicitTimezoneDateBoundaryEvidence,
   buildTimezoneRecurrenceQaPlan,
   buildTimezoneRuntimeReadinessPlan,
   buildTravelPublishMutationPlan,
@@ -38,6 +39,7 @@ import {
   auditCalendarTimezones,
   detectCalendarConflicts,
   evaluateSignedIcsFeedAccess,
+  explicitTimezoneDateBoundaryStrategy,
   isValidIanaTimezone,
   type CalendarTimeBlock,
 } from "../src/index";
@@ -286,6 +288,23 @@ describe("calendar availability", () => {
       id: "block:bad_block",
       status: "fail",
     });
+  });
+
+  it("exports an explicit dependency-light timezone/date boundary strategy", () => {
+    const evidence = buildExplicitTimezoneDateBoundaryEvidence({
+      sampleInstant: "2026-06-08T16:00:00.000Z",
+      sampleTimezone: "America/Los_Angeles",
+    });
+
+    expect(explicitTimezoneDateBoundaryStrategy).toMatchObject({
+      strategy: "intl-datetimeformat",
+      storesUtcInstants: true,
+      requiresIanaTimezoneAtBoundaries: true,
+      proofArtifact: "coverage/timezone-recurrence-temporal-library.json",
+    });
+    expect(evidence.status).toBe("ready");
+    expect(evidence.boundarySources).toEqual(["route", "persistence", "provider", "render"]);
+    expect(evidence.renderedLabel).toContain("2026");
   });
 
   it("plans transactional availability window and slot hold persistence", () => {

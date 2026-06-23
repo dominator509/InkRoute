@@ -121,6 +121,7 @@ export const agentTaskTrackingRuntimeArtifactPaths = [
   "coverage/agent-task-tracking-gap-links.json",
   "coverage/agent-task-tracking-status-traceability.json",
   "coverage/agent-task-tracking-ci-run-redacted.json",
+  "coverage/agent-task-tracking-redacted-evidence-bundle.json",
   "test-results/agent-task-tracking-runtime",
 ] as const;
 
@@ -198,11 +199,26 @@ export interface AgentTaskTrackingRuntimeArtifactReview {
   readonly externalEvidenceRequired: typeof agentTaskTrackingRuntimeRequiredExternalEvidence;
 }
 
+export interface AgentTaskTrackingRuntimeRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly sourceArtifactPath: AgentTaskTrackingRuntimeArtifact | string;
+  readonly artifactPath: "coverage/agent-task-tracking-redacted-evidence-bundle.json";
+  readonly review: AgentTaskTrackingRuntimeArtifactReview;
+  readonly requiredArtifacts: typeof agentTaskTrackingRuntimeArtifactPaths;
+  readonly externalEvidenceRequired: typeof agentTaskTrackingRuntimeRequiredExternalEvidence;
+  readonly githubIssueCreationAllowed: false;
+  readonly githubProjectSyncAllowed: false;
+  readonly statusTraceabilityExecutionAllowed: false;
+  readonly ciArtifactExecutionAllowed: false;
+  readonly persistenceExecutionAllowed: false;
+}
+
 export const agentTaskTrackingRuntimeRequiredExternalEvidence = [
   "GitHub issue creation and Project sync must be performed only in approved GitHub context with tracking URLs redacted.",
   "Handoff doc links, GAP_TRACKER links, and status traceability artifacts must redact issue URLs, project item URLs, actors, and private metadata.",
   "CI agent task tracking artifacts must redact run URLs, tokens, provider labels, and raw logs before retention.",
   "AgentTaskTrackingRun persistence must execute only against an approved provider-backed database.",
+  "Redacted agent task tracking evidence bundle must omit raw issue URLs, project item URLs, tracking URLs, actors, provider labels, run URLs, and private metadata.",
 ] as const;
 
 export const agentTaskTrackingRuntimeLocalArtifacts = [
@@ -348,6 +364,25 @@ export function buildAgentTaskTrackingRuntimeArtifactReview(
   };
 }
 
+export function buildAgentTaskTrackingRuntimeRedactedEvidenceBundle(
+  artifactPath: AgentTaskTrackingRuntimeArtifact | string,
+  artifact: unknown,
+): AgentTaskTrackingRuntimeRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    sourceArtifactPath: artifactPath,
+    artifactPath: "coverage/agent-task-tracking-redacted-evidence-bundle.json",
+    review: buildAgentTaskTrackingRuntimeArtifactReview(artifactPath, artifact),
+    requiredArtifacts: agentTaskTrackingRuntimeArtifactPaths,
+    externalEvidenceRequired: agentTaskTrackingRuntimeRequiredExternalEvidence,
+    githubIssueCreationAllowed: false,
+    githubProjectSyncAllowed: false,
+    statusTraceabilityExecutionAllowed: false,
+    ciArtifactExecutionAllowed: false,
+    persistenceExecutionAllowed: false,
+  };
+}
+
 export const agentTaskTrackingRuntimeMatrix = [
   {
     id: "task-sync-verifier",
@@ -389,6 +424,12 @@ export const agentTaskTrackingRuntimeMatrix = [
     id: "ci-task-tracking-artifacts",
     command: "capture CI agent task tracking artifacts",
     artifact: "coverage/agent-task-tracking-ci-run-redacted.json",
+    status: "traceability-gated",
+  },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted agent task tracking evidence bundle",
+    artifact: "coverage/agent-task-tracking-redacted-evidence-bundle.json",
     status: "traceability-gated",
   },
 ] as const satisfies readonly AgentTaskTrackingRuntimeMatrixEntry[];

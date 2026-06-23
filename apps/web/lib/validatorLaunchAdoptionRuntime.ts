@@ -133,6 +133,50 @@ export async function persistValidatorLaunchAdoptionRun(
   });
 }
 
+export interface ValidatorRouteAdoptionScanTarget {
+  readonly route: string;
+  readonly family: "public" | "dashboard" | "webhook" | "provider";
+  readonly source: string;
+  readonly requiredSchemaSymbols: readonly string[];
+  readonly sideEffectSymbols: readonly string[];
+}
+
+export interface ValidatorRouteAdoptionScanResult {
+  readonly route: string;
+  readonly family: ValidatorRouteAdoptionScanTarget["family"];
+  readonly usesSharedSchemas: boolean;
+  readonly validatesBeforeSideEffects: boolean;
+  readonly missingSchemaSymbols: readonly string[];
+  readonly firstSchemaOffset: number;
+  readonly firstSideEffectOffset: number;
+}
+
+const firstSymbolOffset = (source: string, symbols: readonly string[]) => {
+  const offsets = symbols.map((symbol) => source.indexOf(symbol)).filter((offset) => offset >= 0);
+  return offsets.length > 0 ? Math.min(...offsets) : -1;
+};
+
+export function buildValidatorRouteAdoptionScan(
+  targets: readonly ValidatorRouteAdoptionScanTarget[],
+): readonly ValidatorRouteAdoptionScanResult[] {
+  return targets.map((target) => {
+    const missingSchemaSymbols = target.requiredSchemaSymbols.filter((symbol) => !target.source.includes(symbol));
+    const firstSchemaOffset = firstSymbolOffset(target.source, target.requiredSchemaSymbols);
+    const firstSideEffectOffset = firstSymbolOffset(target.source, target.sideEffectSymbols);
+
+    return {
+      route: target.route,
+      family: target.family,
+      usesSharedSchemas: missingSchemaSymbols.length === 0,
+      validatesBeforeSideEffects:
+        firstSchemaOffset >= 0 && (firstSideEffectOffset === -1 || firstSchemaOffset < firstSideEffectOffset),
+      missingSchemaSymbols,
+      firstSchemaOffset,
+      firstSideEffectOffset,
+    };
+  });
+}
+
 export const validatorLaunchAdoptionRuntimeCommands = [
   "pnpm --filter @inkroute/validators typecheck",
   "pnpm --filter @inkroute/validators test",

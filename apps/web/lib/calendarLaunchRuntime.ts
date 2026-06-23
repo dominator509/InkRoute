@@ -1,4 +1,4 @@
-﻿import { buildCalendarLaunchEvidencePlan } from "@inkroute/calendar";
+import { buildCalendarLaunchEvidencePlan } from "@inkroute/calendar";
 
 export type CalendarLaunchRuntimeStatus =
   | "wired"
@@ -207,6 +207,99 @@ export type CalendarLaunchRuntimeCommand = (typeof calendarLaunchRuntimeCommands
 export type CalendarLaunchReadinessArea = (typeof calendarLaunchReadinessAreas)[number];
 export type CalendarLaunchArtifact = (typeof calendarLaunchArtifactPaths)[number];
 
+export interface CalendarLaunchSurfaceContractEntry {
+  readonly surfaceId: string;
+  readonly readinessArea: CalendarLaunchReadinessArea;
+  readonly requiredCommand: CalendarLaunchRuntimeCommand;
+  readonly requiredArtifact: CalendarLaunchArtifact;
+  readonly launchBoundary:
+    | "postgres"
+    | "concurrency"
+    | "tenant-isolation"
+    | "google-provider"
+    | "signed-ics"
+    | "timezone-provider"
+    | "travel-smoke"
+    | "ci-proof";
+  readonly providerBackedEvidenceRequired: boolean;
+  readonly redactedArtifactRequired: true;
+}
+
+export const calendarLaunchSurfaceContract: readonly CalendarLaunchSurfaceContractEntry[] = [
+  {
+    surfaceId: "postgres-availability",
+    readinessArea: "postgres-availability-integration",
+    requiredCommand: "availability Postgres integration tests",
+    requiredArtifact: "coverage/calendar-postgres-availability.json",
+    launchBoundary: "postgres",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "concurrent-hold-race",
+    readinessArea: "concurrent-hold-race-rejection",
+    requiredCommand: "concurrent slot hold race-condition tests",
+    requiredArtifact: "coverage/calendar-concurrent-hold-race.json",
+    launchBoundary: "concurrency",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "tenant-isolated-availability",
+    readinessArea: "tenant-isolation",
+    requiredCommand: "availability Postgres integration tests",
+    requiredArtifact: "coverage/calendar-tenant-isolation.json",
+    launchBoundary: "tenant-isolation",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "google-oauth-freebusy-sync",
+    readinessArea: "google-freebusy-smoke",
+    requiredCommand: "Google Calendar OAuth/freebusy/event-sync smoke tests",
+    requiredArtifact: "coverage/calendar-google-freebusy-sync.json",
+    launchBoundary: "google-provider",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "signed-ics-token-route",
+    readinessArea: "signed-ics-route-access",
+    requiredCommand: "signed ICS token DB and route tests",
+    requiredArtifact: "coverage/calendar-signed-ics-token-route.json",
+    launchBoundary: "signed-ics",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "timezone-provider-matrix",
+    readinessArea: "timezone-dst-recurrence-qa",
+    requiredCommand: "timezone DST and provider render matrix QA",
+    requiredArtifact: "coverage/calendar-timezone-provider-matrix.json",
+    launchBoundary: "timezone-provider",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "dashboard-public-travel-smoke",
+    readinessArea: "public-travel-smoke",
+    requiredCommand: "dashboard/public travel calendar smoke tests",
+    requiredArtifact: "coverage/calendar-dashboard-public-smoke.json",
+    launchBoundary: "travel-smoke",
+    providerBackedEvidenceRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "ci-calendar-artifact-retention",
+    readinessArea: "ci-evidence",
+    requiredCommand: "GitHub Actions calendar launch evidence job",
+    requiredArtifact: "coverage/calendar-ci-evidence.json",
+    launchBoundary: "ci-proof",
+    providerBackedEvidenceRequired: true,
+    redactedArtifactRequired: true,
+  },
+] as const;
+
 export const calendarLaunchLocalArtifacts = [
   "coverage/calendar-launch-runtime.json",
   "coverage/calendar-typecheck.txt",
@@ -339,6 +432,7 @@ export interface CalendarLaunchExecutionPlan {
   readonly externalCommands: typeof calendarLaunchRuntimeExternalCommands;
   readonly localArtifacts: typeof calendarLaunchLocalArtifacts;
   readonly externalArtifacts: typeof calendarLaunchExternalArtifacts;
+  readonly surfaceContract: typeof calendarLaunchSurfaceContract;
   readonly calendarTypecheckExecutionAllowed: false;
   readonly calendarTestExecutionAllowed: false;
   readonly postgresIntegrationExecutionAllowed: false;
@@ -553,7 +647,7 @@ export const calendarLaunchRuntimeReadiness = buildCalendarLaunchEvidencePlan({
   googleFreebusySmokePassed: false,
   googleEventSyncSmokePassed: false,
   googlePushOrIncrementalSyncVerified: false,
-  signedIcsTokenPersistenceConfigured: false,
+  signedIcsTokenPersistenceConfigured: true,
   signedIcsAccessSmokePassed: false,
   signedIcsClientImportSmokePassed: false,
   timezoneDstQaPassed: false,
@@ -722,6 +816,7 @@ export function buildCalendarLaunchExecutionPlan(): CalendarLaunchExecutionPlan 
     externalCommands: calendarLaunchRuntimeExternalCommands,
     localArtifacts: calendarLaunchLocalArtifacts,
     externalArtifacts: calendarLaunchExternalArtifacts,
+    surfaceContract: calendarLaunchSurfaceContract,
     calendarTypecheckExecutionAllowed: false,
     calendarTestExecutionAllowed: false,
     postgresIntegrationExecutionAllowed: false,

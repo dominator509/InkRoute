@@ -1,10 +1,11 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   buildAgentExecutionLedgerRuntimeArtifactReview,
   buildAgentExecutionLedgerRuntimeEvidenceDecision,
   buildAgentExecutionLedgerRuntimeExecutionPlan,
+  buildAgentExecutionLedgerRuntimeRedactedEvidenceBundle,
   buildRedactedAgentExecutionLedgerArtifact,
   agentExecutionLedgerRuntimeArtifactPaths,
   agentExecutionLedgerRuntimeCommands,
@@ -86,6 +87,7 @@ describe("agent execution ledger runtime contract", () => {
       "secret-safe-result-import",
       "gap-tracker-updates",
       "ci-ledger-artifacts",
+      "redacted-evidence-bundle",
     ]);
     expect(agentExecutionLedgerRuntimeMatrix).toEqual(
       expect.arrayContaining([
@@ -93,11 +95,13 @@ describe("agent execution ledger runtime contract", () => {
         expect.objectContaining({ id: "changed-files-matrix", artifact: "coverage/agent-execution-diff-summary-redacted.json" }),
         expect.objectContaining({ id: "provider-evidence-labels", artifact: "coverage/agent-execution-provider-evidence-redacted.json" }),
         expect.objectContaining({ id: "secret-safety-review", artifact: "coverage/agent-execution-secret-safety-review.json" }),
+        expect.objectContaining({ id: "redacted-evidence-bundle", artifact: "coverage/agent-execution-redacted-evidence-bundle.json" }),
         expect.objectContaining({ id: "ci-ledger-artifacts", command: "capture CI agent execution ledger artifacts" })
       ])
     );
     expect(agentExecutionLedgerRuntimeArtifactPaths).toContain("coverage/agent-execution-external-results-imported.json");
     expect(agentExecutionLedgerRuntimeArtifactPaths).toContain("test-results/agent-execution-ledger-runtime");
+    expect(agentExecutionLedgerRuntimeArtifactPaths).toContain("coverage/agent-execution-redacted-evidence-bundle.json");
   });
 
   it("keeps the queue, redacted ledger, verifier, package scripts, and package tests aligned", () => {
@@ -154,6 +158,7 @@ describe("agent execution ledger runtime contract", () => {
     expect(gapTracker).toContain("agentExecutionLedgerRuntimeExecutionPolicy");
     expect(gapTracker).toContain("agentExecutionLedgerRuntimeRequiredExternalEvidence");
     expect(gapTracker).toContain("buildAgentExecutionLedgerRuntimeArtifactReview");
+    expect(gapTracker).toContain("buildAgentExecutionLedgerRuntimeRedactedEvidenceBundle");
   });
 
   it("pins current agent execution ledger runtime proof files for GAP-119", () => {
@@ -280,6 +285,7 @@ describe("agent execution ledger runtime contract", () => {
         "coverage/agent-execution-secret-safety-review.json",
         "coverage/agent-execution-external-results-imported.json",
         "coverage/agent-execution-ci-run-redacted.json",
+        "coverage/agent-execution-redacted-evidence-bundle.json",
       ]),
     );
     expect(blockedDecision.handoffPolicy).toEqual({
@@ -361,6 +367,9 @@ describe("agent execution ledger runtime contract", () => {
       ciProviderRequiredForLedgerArtifacts: true,
     });
     expect(plan.externalEvidenceRequired).toBe(agentExecutionLedgerRuntimeRequiredExternalEvidence);
+    expect(plan.externalEvidenceRequired).toContain(
+      "Redacted agent execution ledger evidence bundle captured without raw transcripts, diffs, provider IDs, URLs, environment values, customer data, or actor identifiers.",
+    );
   });
 
   it("redacts agent execution artifacts before ledger import or retention", () => {
@@ -378,6 +387,7 @@ describe("agent execution ledger runtime contract", () => {
     };
     const redacted = buildRedactedAgentExecutionLedgerArtifact(rawArtifact);
     const review = buildAgentExecutionLedgerRuntimeArtifactReview("coverage/agent-execution-command-transcripts-redacted.json", rawArtifact);
+    const bundle = buildAgentExecutionLedgerRuntimeRedactedEvidenceBundle("coverage/agent-execution-command-transcripts-redacted.json", rawArtifact);
     const serialized = JSON.stringify(review);
 
     expect(JSON.stringify(redacted)).not.toContain("sk_live_secret");
@@ -402,6 +412,14 @@ describe("agent execution ledger runtime contract", () => {
       ]),
     );
     expect(review.externalEvidenceRequired).toBe(agentExecutionLedgerRuntimeRequiredExternalEvidence);
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.artifactPath).toBe("coverage/agent-execution-redacted-evidence-bundle.json");
+    expect(bundle.review.containsUnredactedSensitiveValues).toBe(false);
+    expect(bundle.requiredArtifacts).toBe(agentExecutionLedgerRuntimeArtifactPaths);
+    expect(bundle.externalEvidenceRequired).toBe(agentExecutionLedgerRuntimeRequiredExternalEvidence);
+    expect(bundle.externalAgentExecutionAllowed).toBe(false);
+    expect(bundle.transcriptImportExecutionAllowed).toBe(false);
+    expect(bundle.ciArtifactExecutionAllowed).toBe(false);
     expect(review.externalEvidenceRequired).toEqual(
       expect.arrayContaining([
         "External Codex, Jules, Claude Code, and local-terminal execution results must be imported only after completion with redacted transcripts.",

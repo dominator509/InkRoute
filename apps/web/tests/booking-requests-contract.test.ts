@@ -144,6 +144,11 @@ describe("booking request queue/consumer contracts", () => {
     expect(routeSource).toContain("providerHandoffRuntimeEvidencePlan");
     expect(routeSource).toContain("acceptedBookingGateEnforced: true");
     expect(routeSource).toContain("persistedWorkerQueueConfigured: true");
+    expect(routeSource).toContain("buildProviderFailureHandlingContract");
+    expect(routeSource).toContain("booking-provider-failure-local-contract");
+    expect(routeSource).toContain("retryPolicyVerified: true");
+    expect(routeSource).toContain("rollbackPathsVerified: true");
+    expect(routeSource).toContain("operatorReviewQueueConfigured: true");
     expect(routeSource).toContain("providerIdempotencyConfigured: false");
     expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(routeSource).toContain('{ ...noStoreHeaders, "Retry-After": String(rateLimit.retryAfterSeconds) }');

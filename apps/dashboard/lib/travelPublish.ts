@@ -133,7 +133,7 @@ export function buildDashboardTravelPublishReadiness(): TravelPublishRuntimeRead
     dashboardMutationRouteImplemented: true,
     dashboardAuthorizationEnforced: true,
     persistedTravelRepositoryImplemented: true,
-    publicDataApiImplemented: false,
+    publicDataApiImplemented: true,
     cacheRevalidationCalledAfterCommit: true,
     cityWaitlistMatchingImplemented: true,
     consentFilteredNotificationQueueImplemented: true,

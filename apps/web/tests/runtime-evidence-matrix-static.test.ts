@@ -22,6 +22,7 @@ import {
   buildRuntimeEvidenceDecision,
   buildRuntimeEvidenceDecisionRequiredEvidence,
   buildRuntimeEvidenceExecutionPlan,
+  buildRuntimeEvidenceRedactedEvidenceBundle,
 } from "../lib/runtimeEvidenceMatrix";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -77,8 +78,10 @@ describe("runtime evidence matrix contract", () => {
       "dashboard-build",
       "ci-runtime-readiness",
       "production-blockers-visible",
+      "redacted-evidence-bundle",
     ]);
     expect(runtimeEvidenceArtifactPaths).toContain("coverage/runtime-evidence-matrix.json");
+    expect(runtimeEvidenceArtifactPaths).toContain("coverage/runtime-evidence-redacted-evidence-bundle.json");
     expect(runtimeEvidenceArtifactPaths).toContain("test-results/runtime-evidence-matrix");
   });
 
@@ -147,6 +150,7 @@ describe("runtime evidence matrix contract", () => {
       redactedEvidenceLabelsCaptured: false,
       productionBlockersVisible: true,
       runtimeEvidenceRunPersisted: false,
+      redactedEvidenceBundleCaptured: false,
       passedRequirementIds: ["dependency-install"],
       capturedArtifacts: [
         "coverage/runtime-evidence-matrix.json",
@@ -177,6 +181,7 @@ describe("runtime evidence matrix contract", () => {
       "coverage/runtime-evidence-web-build-output.txt",
       "coverage/runtime-evidence-dashboard-build-output.txt",
       "coverage/runtime-evidence-ci-job.json",
+      "coverage/runtime-evidence-redacted-evidence-bundle.json",
       "test-results/runtime-evidence-matrix",
     ]);
     expect(decision.missingCommands).toEqual([
@@ -200,6 +205,7 @@ describe("runtime evidence matrix contract", () => {
     expect(decision.requiredEvidence).toBe(runtimeEvidenceRequiredEvidence);
     expect(decision.blockers).toContain("Runtime evidence is missing for pnpm install.");
     expect(decision.blockers).toContain("RuntimeEvidenceRun persistence row must be captured for durable auditability.");
+    expect(decision.blockers).toContain("Redacted runtime evidence bundle must be captured.");
     expect(decision.blockers).toContain("Every required runtime evidence requirement must have passing evidence.");
   });
 
@@ -220,6 +226,7 @@ describe("runtime evidence matrix contract", () => {
       redactedEvidenceLabelsCaptured: true,
       productionBlockersVisible: true,
       runtimeEvidenceRunPersisted: true,
+      redactedEvidenceBundleCaptured: true,
       passedRequirementIds: runtimeEvidenceRequirementIds,
       capturedArtifacts: runtimeEvidenceArtifactPaths,
       completedCommands: runtimeEvidenceCommands,
@@ -248,6 +255,7 @@ describe("runtime evidence matrix contract", () => {
     expect(gapTracker).toContain("runtimeEvidenceRequiredEvidence");
     expect(gapTracker).toContain("runtimeEvidenceRequiredExternalEvidence");
     expect(gapTracker).toContain("buildRuntimeEvidenceArtifactReview");
+    expect(gapTracker).toContain("buildRuntimeEvidenceRedactedEvidenceBundle");
   });
 
   it("pins current runtime evidence matrix proof files for GAP-132", () => {
@@ -286,6 +294,7 @@ describe("runtime evidence matrix contract", () => {
     expect(plan.externalArtifacts).toBe(runtimeEvidenceExternalArtifacts);
     expect(plan.localArtifacts).toEqual(["coverage/runtime-evidence-production-blockers.json"]);
     expect(plan.externalArtifacts).toContain("coverage/runtime-evidence-ci-job.json");
+    expect(plan.externalArtifacts).toContain("coverage/runtime-evidence-redacted-evidence-bundle.json");
     expect(plan.externalArtifacts).toContain("test-results/runtime-evidence-matrix");
     expect(plan).toMatchObject({
       installExecutionAllowed: false,
@@ -315,6 +324,7 @@ describe("runtime evidence matrix contract", () => {
       "Redacted command evidence for install, workspace, handoff, quality, typecheck, unit, and build commands.",
     );
     expect(plan.requiredExternalEvidence).toContain("Durable RuntimeEvidenceRun persistence row captured from the target database.");
+    expect(plan.requiredExternalEvidence).toContain("Redacted runtime evidence bundle captured without raw command logs, CI URLs, database URLs, tokens, or operator identifiers.");
   });
 
   it("redacts runtime evidence artifacts before tracker or handoff use", () => {
@@ -341,6 +351,7 @@ describe("runtime evidence matrix contract", () => {
     });
 
     const review = buildRuntimeEvidenceArtifactReview(artifact);
+    const bundle = buildRuntimeEvidenceRedactedEvidenceBundle(artifact);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(runtimeEvidenceRequiredExternalEvidence);
     expect(review.redactions).toEqual(
@@ -354,6 +365,12 @@ describe("runtime evidence matrix contract", () => {
       ]),
     );
     expect(review.requiredExternalEvidence).toContain("Production blockers remain visible in runtime evidence until resolved.");
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.artifactPath).toBe("coverage/runtime-evidence-redacted-evidence-bundle.json");
+    expect(bundle.review.safeForTracker).toBe(true);
+    expect(bundle.requiredArtifacts).toBe(runtimeEvidenceArtifactPaths);
+    expect(bundle.requiredExternalEvidence).toBe(runtimeEvidenceRequiredExternalEvidence);
+    expect(bundle.providerExecutionAllowed).toBe(false);
   });
 });
 

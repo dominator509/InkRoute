@@ -191,8 +191,10 @@ describe("GAP-074 SEO analytics attribution wiring", () => {
     expect(analyticsRouteSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(analyticsRouteSource).not.toContain('}, { status: 400 });');
     expect(analyticsRouteSource).not.toContain('}, { status: 404 });');
+    expect(analyticsRouteSource).toContain("persistSeoAnalyticsAttribution(prisma");
+    expect(analyticsRouteSource).toContain("database_persisted");
     expect(analyticsRouteSource).toContain("accepted_without_provider_persistence");
-    expect(analyticsRouteSource).toContain("PROVIDER_SEO_ANALYTICS_NOT_CONFIGURED");
+    expect(analyticsRouteSource).toContain("DATABASE_UNAVAILABLE");
     expect(analyticsRouteSource).toContain("previewAnalyticsAcceptanceDisabled");
   });
 
@@ -343,6 +345,7 @@ describe("GAP-074 SEO analytics attribution wiring", () => {
   it("pins durable AnalyticsEvent and Campaign attribution persistence seams", () => {
     const schema = readFileSync(join(process.cwd(), "packages/db/prisma/schema.prisma"), "utf8");
     const migration = readFileSync(join(process.cwd(), "packages/db/prisma/migrations/20260613000100_add_analytics_attribution/migration.sql"), "utf8");
+    const searchConsoleMigration = readFileSync(join(process.cwd(), "packages/db/prisma/migrations/20260613000200_add_search_console_persistence/migration.sql"), "utf8");
     const event = buildPublicSeoAnalyticsEvent({
       tenantId: "tenant_001",
       name: "booking_request_submitted",
@@ -354,10 +357,16 @@ describe("GAP-074 SEO analytics attribution wiring", () => {
 
     expect(schema).toContain("model AnalyticsEvent");
     expect(schema).toContain("model Campaign");
+    expect(schema).toContain("model SearchConsoleImportedRow");
+    expect(schema).toContain("model SearchConsoleOperationRun");
     expect(schema).toContain("analyticsEvents  AnalyticsEvent[]");
     expect(schema).toContain("campaigns        Campaign[]");
+    expect(schema).toContain("searchConsoleImportedRows SearchConsoleImportedRow[]");
+    expect(schema).toContain("searchConsoleOperationRuns SearchConsoleOperationRun[]");
     expect(migration).toContain('CREATE TABLE "AnalyticsEvent"');
     expect(migration).toContain('CREATE TABLE "Campaign"');
+    expect(searchConsoleMigration).toContain('CREATE TABLE "SearchConsoleImportedRow"');
+    expect(searchConsoleMigration).toContain('CREATE TABLE "SearchConsoleOperationRun"');
     expect(data).toMatchObject({
       tenantId: "tenant_001",
       name: "booking_request_submitted",

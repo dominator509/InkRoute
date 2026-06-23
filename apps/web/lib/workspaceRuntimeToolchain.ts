@@ -123,6 +123,7 @@ export const workspaceRuntimeToolchainArtifactPaths = [
   "coverage/workspace-dashboard-build-output.txt",
   "coverage/workspace-ci-job.json",
   "coverage/workspace-production-blockers.json",
+  "coverage/workspace-runtime-redacted-evidence-bundle.json",
   "test-results/workspace-runtime-toolchain",
 ] as const;
 
@@ -173,6 +174,7 @@ export interface WorkspaceRuntimeToolchainEvidenceInput {
   readonly ciEvidenceCaptured: boolean;
   readonly productionBlockersVisible: boolean;
   readonly workspaceRuntimeToolchainRunPersisted: boolean;
+  readonly redactedEvidenceBundleCaptured: boolean;
   readonly capturedReports: readonly WorkspaceRuntimeToolchainGeneratedReport[];
   readonly capturedArtifacts: readonly WorkspaceRuntimeToolchainArtifact[];
   readonly completedCommands: readonly WorkspaceRuntimeToolchainCommand[];
@@ -216,6 +218,15 @@ export interface WorkspaceRuntimeToolchainArtifactReview {
   readonly safeForTracker: boolean;
 }
 
+export interface WorkspaceRuntimeToolchainRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly artifactPath: "coverage/workspace-runtime-redacted-evidence-bundle.json";
+  readonly review: WorkspaceRuntimeToolchainArtifactReview;
+  readonly requiredArtifacts: typeof workspaceRuntimeToolchainArtifactPaths;
+  readonly requiredExternalEvidence: typeof workspaceRuntimeToolchainRequiredExternalEvidence;
+  readonly providerExecutionAllowed: false;
+}
+
 export const workspaceRuntimeToolchainLocalCommands = [
   "pnpm --filter @inkroute/workspace typecheck",
   "pnpm --filter @inkroute/workspace test",
@@ -238,6 +249,7 @@ export const workspaceRuntimeToolchainRequiredExternalEvidence = [
   "GitHub Actions Phase 18 workspace runtime readiness job URL and conclusion.",
   "Durable WorkspaceRuntimeToolchainRun persistence row captured from the target database.",
   "Runtime readiness report keeps production blockers visible in redacted evidence.",
+  "Redacted workspace runtime evidence bundle captured without raw install logs, CI URLs, database URLs, tokens, or operator identifiers.",
 ] as const;
 
 export const workspaceRuntimeToolchainLocalArtifacts = [
@@ -254,6 +266,7 @@ export const workspaceRuntimeToolchainExternalArtifacts = [
   "coverage/workspace-web-build-output.txt",
   "coverage/workspace-dashboard-build-output.txt",
   "coverage/workspace-ci-job.json",
+  "coverage/workspace-runtime-redacted-evidence-bundle.json",
   "test-results/workspace-runtime-toolchain",
 ] as const satisfies readonly WorkspaceRuntimeToolchainArtifact[];
 
@@ -353,6 +366,12 @@ export const workspaceRuntimeToolchainMatrix = [
     artifact: "coverage/workspace-production-blockers.json",
     status: "wired",
   },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted workspace runtime evidence bundle",
+    artifact: "coverage/workspace-runtime-redacted-evidence-bundle.json",
+    status: "ci-gated",
+  },
 ] as const satisfies readonly WorkspaceRuntimeToolchainMatrixEntry[];
 
 export const workspaceRuntimeToolchainReadiness = buildWorkspaceRuntimeToolchainReadinessPlan({
@@ -397,6 +416,9 @@ export function buildWorkspaceRuntimeToolchainEvidenceDecision(
 
   if (!input.workspaceRuntimeToolchainRunPersisted) {
     blockers.push("WorkspaceRuntimeToolchainRun persistence row must be captured for durable auditability.");
+  }
+  if (!input.redactedEvidenceBundleCaptured) {
+    blockers.push("Redacted workspace runtime evidence bundle must be captured.");
   }
   if (missingReports.length > 0) {
     blockers.push("Every required workspace runtime report must be captured.");
@@ -497,6 +519,19 @@ export function buildWorkspaceRuntimeToolchainArtifactReview(
     redactions,
     requiredExternalEvidence: workspaceRuntimeToolchainRequiredExternalEvidence,
     safeForTracker: true,
+  };
+}
+
+export function buildWorkspaceRuntimeToolchainRedactedEvidenceBundle(
+  artifact: unknown,
+): WorkspaceRuntimeToolchainRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    artifactPath: "coverage/workspace-runtime-redacted-evidence-bundle.json",
+    review: buildWorkspaceRuntimeToolchainArtifactReview(artifact),
+    requiredArtifacts: workspaceRuntimeToolchainArtifactPaths,
+    requiredExternalEvidence: workspaceRuntimeToolchainRequiredExternalEvidence,
+    providerExecutionAllowed: false,
   };
 }
 

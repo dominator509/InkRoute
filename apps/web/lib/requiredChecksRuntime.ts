@@ -147,6 +147,7 @@ export const requiredChecksRuntimeArtifactPaths = [
   "coverage/required-checks-repository-settings-redacted.json",
   "coverage/required-checks-failing-pr-redacted.json",
   "coverage/required-checks-codeowners-review-redacted.json",
+  "coverage/required-checks-redacted-evidence-bundle.json",
   "test-results/required-checks-runtime",
 ] as const;
 
@@ -181,6 +182,7 @@ export interface RequiredChecksEvidenceInput {
   readonly ciQualityJobPassed: boolean;
   readonly redactedSettingsEvidenceCaptured: boolean;
   readonly requiredChecksRunPersisted: boolean;
+  readonly redactedEvidenceBundleCaptured: boolean;
   readonly configuredBranchProtectionChecks: readonly string[];
   readonly configuredRepositorySettings: readonly string[];
   readonly capturedArtifacts: readonly RequiredChecksRuntimeArtifact[];
@@ -223,6 +225,15 @@ export interface RequiredChecksRuntimeArtifactReview {
   readonly safeForTracker: boolean;
 }
 
+export interface RequiredChecksRuntimeRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly artifactPath: "coverage/required-checks-redacted-evidence-bundle.json";
+  readonly review: RequiredChecksRuntimeArtifactReview;
+  readonly requiredArtifacts: typeof requiredChecksRuntimeArtifactPaths;
+  readonly requiredExternalEvidence: typeof requiredChecksRuntimeRequiredExternalEvidence;
+  readonly providerExecutionAllowed: false;
+}
+
 export const requiredChecksRuntimeLocalCommands = [
   "pnpm quality:required-checks",
   "pnpm quality:all",
@@ -241,6 +252,7 @@ export const requiredChecksRuntimeRequiredExternalEvidence = [
   "Failing quality-gate PR merge-block evidence captured from GitHub.",
   "CODEOWNERS review enforcement evidence captured from GitHub.",
   "Durable RequiredChecksRun persistence row captured from the target database.",
+  "Redacted required-checks evidence bundle captured without raw GitHub settings, tokens, URLs, or actor identifiers.",
 ] as const;
 
 export const requiredChecksRuntimeLocalArtifacts = [
@@ -254,6 +266,7 @@ export const requiredChecksRuntimeExternalArtifacts = [
   "coverage/required-checks-repository-settings-redacted.json",
   "coverage/required-checks-failing-pr-redacted.json",
   "coverage/required-checks-codeowners-review-redacted.json",
+  "coverage/required-checks-redacted-evidence-bundle.json",
   "test-results/required-checks-runtime",
 ] as const satisfies readonly RequiredChecksRuntimeArtifact[];
 
@@ -334,6 +347,12 @@ export const requiredChecksRuntimeMatrix = [
     artifact: "coverage/required-checks-codeowners-review-redacted.json",
     status: "branch-protection-gated",
   },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted required-checks evidence bundle",
+    artifact: "coverage/required-checks-redacted-evidence-bundle.json",
+    status: "repository-settings-gated",
+  },
 ] as const satisfies readonly RequiredChecksRuntimeMatrixEntry[];
 
 export const requiredChecksRuntimeReadiness = buildRequiredChecksRuntimeReadinessPlan({
@@ -400,6 +419,9 @@ export function buildRequiredChecksEvidenceDecision(input: RequiredChecksEvidenc
   }
   if (!input.requiredChecksRunPersisted) {
     blockers.push("RequiredChecksRun persistence row must be captured for durable auditability.");
+  }
+  if (!input.redactedEvidenceBundleCaptured) {
+    blockers.push("Redacted required-checks evidence bundle must be captured.");
   }
   if (missingArtifacts.length > 0) {
     blockers.push("Every required checks artifact must be captured.");
@@ -493,6 +515,19 @@ export function buildRequiredChecksRuntimeArtifactReview(artifact: unknown): Req
     redactions,
     requiredExternalEvidence: requiredChecksRuntimeRequiredExternalEvidence,
     safeForTracker: true,
+  };
+}
+
+export function buildRequiredChecksRuntimeRedactedEvidenceBundle(
+  artifact: unknown,
+): RequiredChecksRuntimeRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    artifactPath: "coverage/required-checks-redacted-evidence-bundle.json",
+    review: buildRequiredChecksRuntimeArtifactReview(artifact),
+    requiredArtifacts: requiredChecksRuntimeArtifactPaths,
+    requiredExternalEvidence: requiredChecksRuntimeRequiredExternalEvidence,
+    providerExecutionAllowed: false,
   };
 }
 

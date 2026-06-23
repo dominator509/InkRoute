@@ -414,7 +414,7 @@ export const smsProviderRuntimeReadiness: SmsProviderRuntimeReadiness = {
   blockers: [
     "Real Twilio SDK credentials and messaging service must be configured in a secret store.",
     "Legal-approved SMS consent, STOP, and HELP copy must be finalized before provider-backed sends.",
-    "SMS webhook route must verify Twilio signatures cryptographically against raw bodies and request URLs.",
+    "SMS webhook route signature verification, request URL validation, and invalid-signature rejection evidence must be captured.",
     "NotificationDelivery, ProviderEvent, suppression, inbound thread, and idempotency persistence must be durable and transactional.",
     "Sent, delivered, failed, STOP, and HELP provider flows must be tested against the sandbox.",
     "SMS provider CI evidence and secret-safe artifact review must be captured.",

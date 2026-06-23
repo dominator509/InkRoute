@@ -14,6 +14,7 @@ import {
   appE2eRuntimeReadiness,
   appE2eRuntimeRequiredExternalEvidence,
   appE2eRuntimeRunPersistencePreview,
+  appE2eRuntimeSurfaceContract,
   appE2eRuntimeSpecFiles,
   buildAppE2eRuntimeArtifactReview,
   buildAppE2eRuntimeRunData,
@@ -59,6 +60,17 @@ describe("GAP-106 app E2E runtime wiring", () => {
       ])
     );
     expect(appE2eRuntimeMatrix.map((entry) => entry.id)).toEqual([
+      "web-build-runtime",
+      "dashboard-build-runtime",
+      "playwright-chromium-install",
+      "public-booking-security-seo",
+      "dashboard-smoke-security-operator",
+      "e2e-manifest-verification",
+      "trace-media-retention",
+      "ci-e2e-artifacts",
+      "failure-hardening"
+    ]);
+    expect(appE2eRuntimeSurfaceContract.map((entry) => entry.surfaceId)).toEqual([
       "web-build-runtime",
       "dashboard-build-runtime",
       "playwright-chromium-install",
@@ -205,6 +217,7 @@ describe("GAP-106 app E2E runtime wiring", () => {
     expect(gapTracker).toContain("App E2E runtime evidence classifier wired and Playwright proof gated");
     expect(gapTracker).toContain("GAP-106 is app-e2e-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("persistAppE2eRuntimeRun upsert seam");
+    expect(gapTracker).toContain("appE2eRuntimeSurfaceContract");
   });
 
   it("classifies GAP-106 evidence as blocked until Playwright runtime proof is captured", () => {
@@ -265,6 +278,8 @@ describe("GAP-106 app E2E runtime wiring", () => {
         "coverage/app-e2e-dashboard-smoke-results.json",
       ]),
     );
+    expect(blockedDecision.requiredCommands).toBe(appE2eRuntimeCommands);
+    expect(blockedDecision.requiredEvidence).toBe(appE2eRuntimeArtifactPaths);
     expect(blockedDecision.e2ePolicy).toEqual({
       chromiumInstallRequired: true,
       traceScreenshotVideoRetentionRequired: true,
@@ -321,6 +336,33 @@ describe("GAP-106 app E2E runtime wiring", () => {
     expect(plan.externalCommands).toBe(appE2eRuntimeExternalCommands);
     expect(plan.localArtifacts).toBe(appE2eRuntimeLocalArtifacts);
     expect(plan.externalArtifacts).toBe(appE2eRuntimeExternalArtifacts);
+    expect(plan.surfaceContract).toBe(appE2eRuntimeSurfaceContract);
+    expect(plan.surfaceContract).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        surfaceId: "playwright-chromium-install",
+        requiredCommand: "pnpm exec playwright install --with-deps chromium",
+        requiredArtifact: "coverage/app-e2e-playwright-install.log",
+        runtimeBoundary: "browser-install",
+        browserRuntimeRequired: true,
+        redactedArtifactRequired: true,
+      }),
+      expect.objectContaining({
+        surfaceId: "dashboard-smoke-security-operator",
+        requiredCommand: "pnpm test:e2e --project=dashboard-chromium",
+        requiredArtifact: "coverage/app-e2e-dashboard-smoke-results.json",
+        runtimeBoundary: "dashboard-e2e",
+        browserRuntimeRequired: true,
+        redactedArtifactRequired: true,
+      }),
+      expect.objectContaining({
+        surfaceId: "failure-hardening",
+        requiredCommand: "GitHub Actions CI E2E job",
+        requiredArtifact: "test-results/app-e2e-runtime",
+        runtimeBoundary: "failure-hardening",
+        browserRuntimeRequired: true,
+        redactedArtifactRequired: true,
+      }),
+    ]));
     expect(plan.externalArtifacts).toEqual(expect.arrayContaining([
       "coverage/app-e2e-web-build.log",
       "coverage/app-e2e-dashboard-runtime.log",

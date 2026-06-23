@@ -799,6 +799,7 @@ export const requiredPrGapEvidenceEnforcementArtifacts = [
   "live failing PR merge-block evidence",
   "live passing PR evidence",
   "secret-safe PR gap enforcement log review",
+  "redacted PR gap evidence enforcement bundle",
 ] as const;
 
 export const requiredPrGapEvidenceEnforcementCommands = [
@@ -870,6 +871,21 @@ export interface PrGapEvidenceEnforcementArtifactReview {
   readonly externalEvidenceRequired: typeof prGapEvidenceEnforcementRequiredExternalEvidence;
 }
 
+export interface PrGapEvidenceEnforcementRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly sourceArtifactPath: PrGapEvidenceEnforcementArtifact | string;
+  readonly artifactPath: "redacted PR gap evidence enforcement bundle";
+  readonly review: PrGapEvidenceEnforcementArtifactReview;
+  readonly requiredArtifacts: typeof requiredPrGapEvidenceEnforcementArtifacts;
+  readonly externalEvidenceRequired: typeof prGapEvidenceEnforcementRequiredExternalEvidence;
+  readonly qualityAllExecutionAllowed: false;
+  readonly ciQualityExecutionAllowed: false;
+  readonly branchProtectionAuditExecutionAllowed: false;
+  readonly persistenceExecutionAllowed: false;
+  readonly liveFailingPrExecutionAllowed: false;
+  readonly livePassingPrExecutionAllowed: false;
+}
+
 export type PrGapEvidenceEnforcementExecutionRequiredEvidence = readonly [
   ...typeof prGapEvidenceEnforcementReadinessRequiredEvidence,
   "Durable PrGapEvidenceEnforcementRun row containing fixture, PR audit, branch protection, live PR, and merge-block proof.",
@@ -891,6 +907,7 @@ export const prGapEvidenceEnforcementRequiredExternalEvidence = [
   "Branch-protection evidence must prove required quality checks without exposing repository settings tokens or provider identifiers.",
   "Durable PrGapEvidenceEnforcementRun persistence must execute only in an approved provider-backed database.",
   "Secret-safe log review must redact check-run logs, command output, environment values, customer data, and provider IDs before retention.",
+  "Redacted PR gap evidence enforcement bundle must omit raw PR URLs, run URLs, branch-protection payloads, provider IDs, actor identifiers, and command logs.",
 ] as const;
 
 export const prGapEvidenceEnforcementLocalCommands = [
@@ -1179,6 +1196,26 @@ export function buildPrGapEvidenceEnforcementArtifactReview(
     redactions: [...redactions].sort(),
     containsUnredactedSensitiveValues: false,
     externalEvidenceRequired: prGapEvidenceEnforcementRequiredExternalEvidence,
+  };
+}
+
+export function buildPrGapEvidenceEnforcementRedactedEvidenceBundle(
+  artifactPath: PrGapEvidenceEnforcementArtifact | string,
+  artifact: unknown,
+): PrGapEvidenceEnforcementRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    sourceArtifactPath: artifactPath,
+    artifactPath: "redacted PR gap evidence enforcement bundle",
+    review: buildPrGapEvidenceEnforcementArtifactReview(artifactPath, artifact),
+    requiredArtifacts: requiredPrGapEvidenceEnforcementArtifacts,
+    externalEvidenceRequired: prGapEvidenceEnforcementRequiredExternalEvidence,
+    qualityAllExecutionAllowed: false,
+    ciQualityExecutionAllowed: false,
+    branchProtectionAuditExecutionAllowed: false,
+    persistenceExecutionAllowed: false,
+    liveFailingPrExecutionAllowed: false,
+    livePassingPrExecutionAllowed: false,
   };
 }
 
@@ -1661,6 +1698,7 @@ export const requiredPrDiffEvidenceRuntimeArtifacts = [
   "positive PR diff fixture artifact",
   "negative PR diff fixture artifact",
   "secret-safe PR diff log review",
+  "redacted PR diff evidence bundle",
 ] as const;
 
 export const requiredPrDiffEvidenceRuntimeCommands = [
@@ -1729,6 +1767,19 @@ export interface PrDiffEvidenceRuntimeArtifactReview {
   readonly safeForTracker: boolean;
 }
 
+export interface PrDiffEvidenceRuntimeRedactedEvidenceBundle {
+  readonly status: "redacted-evidence-bundle-ready";
+  readonly artifactPath: "redacted PR diff evidence bundle";
+  readonly review: PrDiffEvidenceRuntimeArtifactReview;
+  readonly requiredArtifacts: typeof requiredPrDiffEvidenceRuntimeArtifacts;
+  readonly requiredExternalEvidence: typeof prDiffEvidenceRuntimeRequiredExternalEvidence;
+  readonly prGapAuditExecutionAllowed: false;
+  readonly fixtureVerificationExecutionAllowed: false;
+  readonly pullRequestCiExecutionAllowed: false;
+  readonly persistenceExecutionAllowed: false;
+  readonly branchProtectionEnforcementAllowed: false;
+}
+
 export type PrDiffEvidenceRuntimeExecutionRequiredEvidence = readonly [
   ...typeof prDiffEvidenceRuntimeReadinessRequiredEvidence,
   "Durable PrDiffEvidenceRun row containing diff audit, fixture, evidence rule, and artifact matrices.",
@@ -1751,6 +1802,7 @@ export const prDiffEvidenceRuntimeRequiredExternalEvidence = [
   "Durable PrDiffEvidenceRun persistence row captured from the target database.",
   "Redacted branch-protection evidence proving required PR diff checks block unsafe merges.",
   "Secret-safe log review artifact proving no tokens, provider IDs, customer data, or raw URLs are exposed.",
+  "Redacted PR diff evidence bundle must omit raw diff logs, PR URLs, branch names, database URLs, tenant IDs, contacts, provider IDs, and tokens.",
 ] as const;
 
 export const prDiffEvidenceRuntimeLocalCommands = [
@@ -2012,6 +2064,23 @@ export function buildPrDiffEvidenceRuntimeArtifactReview(artifact: unknown): PrD
     redactions,
     requiredExternalEvidence: prDiffEvidenceRuntimeRequiredExternalEvidence,
     safeForTracker: true,
+  };
+}
+
+export function buildPrDiffEvidenceRuntimeRedactedEvidenceBundle(
+  artifact: unknown,
+): PrDiffEvidenceRuntimeRedactedEvidenceBundle {
+  return {
+    status: "redacted-evidence-bundle-ready",
+    artifactPath: "redacted PR diff evidence bundle",
+    review: buildPrDiffEvidenceRuntimeArtifactReview(artifact),
+    requiredArtifacts: requiredPrDiffEvidenceRuntimeArtifacts,
+    requiredExternalEvidence: prDiffEvidenceRuntimeRequiredExternalEvidence,
+    prGapAuditExecutionAllowed: false,
+    fixtureVerificationExecutionAllowed: false,
+    pullRequestCiExecutionAllowed: false,
+    persistenceExecutionAllowed: false,
+    branchProtectionEnforcementAllowed: false,
   };
 }
 

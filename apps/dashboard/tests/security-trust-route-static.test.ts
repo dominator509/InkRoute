@@ -7,17 +7,17 @@ const pageSource = readFileSync(join(process.cwd(), "apps/dashboard/app/trust/pa
 
 describe("dashboard trust status route static contract", () => {
   it("keeps trust posture reads tenant- and role-scoped with no-store responses", () => {
-    expect(routeSource).toContain("resolveDashboardReader");
-    expect(routeSource).toContain('request.headers.get("x-tenant-id")');
+    expect(routeSource).toContain("resolveDashboardActor(request)");
+    expect(routeSource).toContain('assertPermission(actor, "tenant:read")');
+    expect(routeSource).toContain("dashboardApiGuardFailureResponse");
     expect(routeSource).toContain("allowedReadRoles");
-    expect(routeSource).toContain("function normalizeHeaderValue(value: string | null): string | null");
-    expect(routeSource).toContain("const fallbackRole = \"viewer\";");
+    expect(routeSource).toContain("inkrouteDemoTenant.id");
     expect(routeSource).toContain("TENANT_SCOPE_REQUIRED");
     expect(routeSource).toContain("ROLE_NOT_AUTHORIZED");
     expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(routeSource).toContain("headers: noStoreHeaders");
     expect(routeSource).not.toContain('headers: { "Cache-Control": "no-store" }');
-    expect(routeSource).toContain("const normalizedRole = role.toLowerCase()");
+    expect(routeSource).not.toContain("demoTenantId");
   });
 
   it("returns security posture helper outputs without enabling production controls", () => {
@@ -28,7 +28,7 @@ describe("dashboard trust status route static contract", () => {
     expect(routeSource).toContain("csrfControlPlans");
     expect(routeSource).toContain("rateLimitRules");
     expect(routeSource).toContain("DASHBOARD_TRUST_STATUS_PROVIDER_AUTH_NOT_CONFIGURED");
-    expect(routeSource).toContain("scaffoldedTrustPreviewDisabled");
+    expect(routeSource).toContain("headerOnlyTrustPreviewDisabled");
     expect(routeSource).toContain("requiresProviderBackedSession");
     expect(routeSource).toContain("Production requires auth");
   });

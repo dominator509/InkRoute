@@ -53,6 +53,8 @@ Implemented/scaffolded deliverables:
 - `/about`, `/portfolio`, `/travel`, `/aftercare`, `/faq`, `/contact`, and static `/booking` preview pages
 - Static city landing pages at `/cities/[citySlug]`
 - Static style landing pages at `/styles/[styleSlug]`
+- Public content API reads for `/api/public/[tenantSlug]/portfolio`, `/travel`, `/reviews`, `/faq`, `/seo/cities/[citySlug]`, and `/seo/styles/[styleSlug]` with tenant-scoped DB paths where schema exists, redacted public projections, non-production demo fallback, and production fallback disabled
+- Public waitlist signup API at `/api/public/[tenantSlug]/waitlists` with shared validation, local rate limiting, DB-backed client/message/notification-intent persistence, redacted non-production fallback, and production fallback disabled
 - Expanded public demo content in `@inkroute/config`
 - Reusable public web components under `apps/web/components`
 - Expanded structured data helper boundaries in `@inkroute/seo`
@@ -61,14 +63,14 @@ Implemented/scaffolded deliverables:
 Still required:
 - Dependency installation and `next build` verification
 - Browser, accessibility, Lighthouse, Core Web Vitals, and SEO crawl audits
-- Database/API-backed public content
+- Runtime proof for database/API-backed public content, including seeded database route smoke, API JSON and rendered HTML redaction, cache revalidation, browser, accessibility, Lighthouse, Core Web Vitals, and SEO crawl audits
 - Real image assets, storage, optimized derivatives, and `next/image` implementation
 - Live booking/contact submissions
 - Tenant/domain resolution
 
 ## Phase 4 — Booking Flow
 
-**Status:** Partially implemented as a non-persistent client-side booking preview; runtime verification externally blocked.
+**Status:** Partially implemented as a DB-oriented booking/contact flow with local contracts wired; provider/runtime verification externally blocked.
 
 Implemented/scaffolded deliverables:
 - Client-side multi-step booking flow at `/booking`
@@ -76,14 +78,14 @@ Implemented/scaffolded deliverables:
 - Dependency-light `@inkroute/booking` package with booking steps, Tattoo Readiness Score, travel CTA helper, and lifecycle transitions
 - Local-only reference image metadata capture with explicit signed-upload/storage boundary
 - Policy, age, privacy, and deposit boundary acknowledgements using demo copy only
-- Validation-only `POST /api/public/[tenantSlug]/booking-requests` route that returns `501` after shared Zod validation because persistence is not wired
+- `POST /api/public/[tenantSlug]/booking-requests` route with shared validation, tenant resolution, anti-bot proof, DB-first `BookingRequest`/`BookingStateEvent`/`AuditLog` writes, encryption-policy metadata for sensitive fields, and non-production local fallback
 - Demo config for booking styles, placements, budget ranges, date windows, and provider boundaries
 
 Still required:
 - Dependency installation and Next.js build/runtime verification
-- Real server submission from the client flow
-- Tenant/domain resolution, rate limiting, bot protection, and CSRF-safe public form strategy
-- Prisma persistence for Client, BookingRequest, BookingStateEvent, ReferenceImage, and AuditLog
+- Live runtime/build verification and provider-backed persistence evidence
+- Production public-form abuse controls beyond the local anti-bot/rate-limit contract
+- Seeded tenant-isolation and route integration proof for booking/contact DB transactions
 - Signed reference image uploads and private storage enforcement
 - Stripe deposit session handoff after artist acceptance or policy rule match
 - Email/SMS/push notification queueing and delivery logs
@@ -96,12 +98,14 @@ Still required:
 
 Implemented/scaffolded deliverables:
 - Static dashboard routes for overview, booking inbox/detail, appointment calendar, travel manager, portfolio manager, client CRM/detail, payments/deposits, form builder, SEO manager, notification templates, error reports, release/feature flags, and tenant settings
+- Dashboard appointment creation API route now validates tenant-scoped booking/artist/client/travel/studio records, persists Appointment + BookingStateEvent + AuditLog in one transaction, and exposes deferred deposit/notification/calendar lifecycle intents; provider execution and integration-test evidence remain gated.
+- Dashboard metrics API route at `/api/metrics` with tenant-scoped aggregate DB reads, dashboard auth/RBAC, no-store responses, AuditLog metadata, non-production demo fallback, and production fallback disabled
 - Reusable dashboard components and demo data under `apps/dashboard`
 - Disabled action panels that label auth/API/database/provider boundaries
 
 Still required:
 - Auth/session/tenant guard
-- Tenant-scoped Prisma loaders and API/server actions
+- Tenant-scoped Prisma loaders and API/server actions beyond the currently wired read/aggregate route contracts
 - Real mutations, audit logs, provider integrations, privacy controls, tests, and Next.js build verification
 
 ## Phase 6 — Mobile App
@@ -136,13 +140,13 @@ Still required:
 
 ## Phase 7 — Payments, Deposits, and No-Show Protection
 
-**Status:** Partially implemented as dependency-light policy engine and Stripe boundary scaffold; live processing externally blocked.
+**Status:** Partially implemented as dependency-light policy engine plus DB-first local payment/webhook boundaries; live Stripe processing externally blocked.
 
 Implemented/scaffolded deliverables:
 - Expanded `@inkroute/payments` with policy versioning, deposit risk scoring, city/travel/no-show/late-cancel premiums, refund eligibility, no-show forfeiture evaluation, webhook interpretation, receipt/export helpers, and Stripe Checkout session draft generation
 - Added public deposit preview page at `/booking/deposit-preview`
-- Added validation-only/501 `POST /api/public/[tenantSlug]/deposit-sessions` route boundary
-- Added validation-only/501 `POST /api/webhooks/stripe` route boundary that reads raw body and requires a `Stripe-Signature` header before returning the production blockers
+- Added DB-first `POST /api/public/[tenantSlug]/deposit-sessions` draft boundary with production local-fallback fail-closed behavior
+- Added `POST /api/webhooks/stripe` boundary that requires `Stripe-Signature`, verifies `STRIPE_WEBHOOK_SECRET` when configured, writes replay/audit rows when durable tenant/payment context is available, and keeps provider proof gated
 - Upgraded dashboard payments view with policy/risk/refund/no-show/receipt/webhook previews
 - Expanded payment validators and handoff docs
 
@@ -230,9 +234,9 @@ Still planned/external:
 
 Implemented in Phase 11:
 - `@inkroute/observability` package with redaction helpers, severity classification, fingerprinting, alert-route drafts, Sentry/OpenTelemetry/GitHub boundary records, sanitized issue drafts, and agentic bug-fix workflow helpers.
-- Public fallback error-report route that validates JSON and returns a redacted draft with `501` because persistence/rate-limiting are not wired.
-- Dashboard error-report API boundary that exposes required auth/RBAC/persistence work and returns `501`.
-- Sentry webhook boundary that inspects payload shape and returns `501` because signature verification and issue sync are not wired.
+- Public fallback error-report route with validation, redaction, request correlation, local rate-limit/bot metadata, DB-first `ErrorReport`/`AbuseEvent`/`AuditLog` persistence where available, and production local-fallback fail-closed behavior.
+- Dashboard error-report API with shared auth/RBAC guard, redacted DB/local read/write paths, no-store responses, and production fallback guard.
+- Sentry webhook boundary that requires a provider signature, verifies `SENTRY_WEBHOOK_SECRET` when configured, records provider delivery/idempotency and audit reconciliation when tenant ownership is available, and fails closed in production without durable persistence.
 - Web and dashboard `global-error.tsx` fallback components.
 - Expanded dashboard observability command center and mobile crash-reporting preview.
 
@@ -251,13 +255,13 @@ Still planned/external:
 Implemented/scaffolded deliverables:
 - Dependency-light `@inkroute/releases` package for release candidates, release gates, migration compatibility, feature flag evaluation, release notes, rollback drafts, health checks, and mobile OTA compatibility.
 - Dashboard `/releases` control-plane preview with release gates, feature flags, EAS Update plan, rollback draft, CI/CD guardrail plan, release notes, and audit drafts.
-- Dashboard API boundaries for release and feature flag reads/mutations; mutation routes return `501` until persistence/RBAC/CI are wired.
+- Dashboard API boundaries for release and feature flag reads/mutations with auth shim, validation, IdempotencyKey-backed persistence/audit contracts, and local fallback where allowed; protected-environment, provenance, provider route tests, and CI proof remain gated.
 - Public limited release-health preview route.
 - Mobile system status release/OTA preview.
 - Manual dry-run `.github/workflows/release-governance.yml` scaffold with deployment-gated jobs intentionally disabled.
 
 Still external/blocking:
-- ReleaseRecord/FeatureFlag persistence and RBAC.
+- Provider-backed ReleaseRecord/FeatureFlag persistence proof, RBAC proof, and CI route evidence.
 - GitHub Actions deployment jobs, protected environments, and secrets.
 - Vercel deployments.
 - Prisma migration dry-run/deploy gates.
@@ -273,13 +277,13 @@ Implemented/scaffolded deliverables:
 - Dependency-light `@inkroute/security` package for sensitive-field classification, redaction, upload validation drafts, tenant isolation fixtures, rate-limit rules, CSRF plans, security header drafts, privacy request drafts, legal placeholders, and trust checklist summaries.
 - Dashboard `/trust` control-plane preview for security controls, upload validation, tenant isolation fixtures, rate limits, CSRF, headers, privacy requests, redaction, and legal placeholders.
 - Public `/trust`, `/privacy`, `/terms`, and `/consent-disclaimer` placeholder pages marked `noindex` and not final legal content.
-- Public API boundaries for upload policy, secure upload intent drafts, and privacy request drafts; route boundaries return scaffolded data or `501` for non-implemented persistence/provider work.
-- Dashboard API boundaries for trust status and privacy request drafts.
+- Public API boundaries for upload policy, secure upload intents, and privacy requests with validation, local contracts, DB-first persistence where wired, and production local-fallback fail-closed behavior for sensitive workflows.
+- Dashboard API boundaries for trust status and privacy request intake; dashboard privacy requests now enforce auth/RBAC, rate limits, DB-backed `PrivacyRequest` + redacted `AuditLog` writes where available, and production local-fallback fail-closed behavior.
 - Mobile system status trust/security preview.
 
 Still external/blocking:
 - Real auth/session provider and tenant-scoped route/data guards.
-- Key management and application-level encryption for medical notes, provider tokens, consent signatures, and private assets.
+- Key management/application-level encryption local contracts for medical notes and provider-token intake are wired with readiness/rotation metadata; runtime KMS/key lifecycle proof and broader provider-token operational hardening remain gated.
 - Signed S3/Supabase uploads, malware scanning, EXIF/GPS stripping, public derivative pipeline, and private ACL verification.
 - Distributed rate-limit store, bot/spam controls, CSRF/session enforcement, and security header runtime deployment.
 - Privacy request persistence/workers and verified export/delete/retention workflows.

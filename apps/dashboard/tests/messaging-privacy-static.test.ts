@@ -22,12 +22,19 @@ describe("messaging privacy contract", () => {
     expect(privacySource).toContain('action: "delete_thread"');
     expect(privacySource).toContain('action: "apply_retention"');
     expect(privacySource).toContain('action: "moderate_message"');
+    expect(privacySource).toContain("messagingPrivacyActionRolePolicy");
+    expect(privacySource).toContain("isMessagingPrivacyActionAllowedForRole");
+    expect(privacySource).toContain("isMessagingPrivacyAttachmentAllowedForRole");
     expect(privacySource).toContain("authorizeAttachment");
     expect(privacySource).toContain("spamScore");
   });
 
   it("defines repository seams for privacy events, redactions, workflows, audit, and idempotency", () => {
     expect(privacySource).toContain("MessagingPrivacyRepository");
+    expect(privacySource).toContain("MessagingPrivacyPrismaRepositoryClient");
+    expect(privacySource).toContain("createPrismaMessagingPrivacyRepository");
+    expect(privacySource).toContain("messagePrivacyEvent");
+    expect(privacySource).toContain("messageAuditLog");
     expect(privacySource).toContain("createInMemoryMessagingPrivacyRepository");
     expect(privacySource).toContain("buildRedactedMessagingPrivacyPayload");
     expect(privacySource).toContain("claimIdempotencyKey");
@@ -59,8 +66,10 @@ describe("messaging privacy contract", () => {
     const {
       buildMessagingPrivacyPlanFromRequest,
       createInMemoryMessagingPrivacyRepository,
+      createPrismaMessagingPrivacyRepository,
       executeMessagingPrivacyPlan,
     } = await import("../lib/messagingPrivacy");
+    expect(createPrismaMessagingPrivacyRepository).toBeTypeOf("function");
     const repository = createInMemoryMessagingPrivacyRepository();
     const exportPlan = buildMessagingPrivacyPlanFromRequest({
       tenantId: "tenant_demo",
@@ -128,6 +137,21 @@ describe("messaging privacy contract", () => {
       { tenantId: "tenant_demo", action: "moderate_message", spamScore: 91, rateLimitAllowed: false },
     ]);
     expect(snapshot.auditLogs).toHaveLength(2);
+
+    const assistantAttachmentPlan = buildMessagingPrivacyPlanFromRequest({
+      tenantId: "tenant_demo",
+      action: "authorize_message_view",
+      role: "assistant",
+      actorId: "assistant_demo",
+      messageId: "message_private_attachment",
+      body: "redacted preview",
+      bodyRedacted: true,
+      attachmentUrl: "https://storage.example.test/private/file?token=secret",
+      attachmentPolicyApproved: true,
+      idempotencyKey: "privacy:view:message_private_attachment",
+    });
+    expect(assistantAttachmentPlan.status).toBe("blocked");
+    expect(assistantAttachmentPlan.blockers).toContain("Secure attachment policy denies this role access to private or signed message attachments.");
   });
 
   it("wires a dashboard privacy API boundary with RBAC, tenant scope, no-store, and planning output", () => {
@@ -137,9 +161,14 @@ describe("messaging privacy contract", () => {
     expect(routeSource).toContain('assertPermission(actor, "message:write")');
     expect(routeSource).toContain('code: "TENANT_MISMATCH"');
     expect(routeSource).toContain("buildMessagingPrivacyPlanFromRequest");
-    expect(routeSource).toContain("role: parseRole(body.role, actor.role)");
+    expect(routeSource).toContain("mapDashboardRoleToMessagingPrivacyRole(actor.role)");
+    expect(routeSource).toContain("MESSAGING_PRIVACY_ROLE_MISMATCH");
+    expect(routeSource).toContain("MESSAGING_PRIVACY_ROLE_FORBIDDEN");
+    expect(routeSource).toContain("role: actorMessagingRole");
+    expect(routeSource).not.toContain("role: parseRole(body.role, actor.role)");
     expect(routeSource).toContain("MESSAGING_PRIVACY_WORKFLOW_PERSISTENCE_NOT_CONFIGURED");
     expect(routeSource).toContain("messagingPrivacyLocalContractFallbackDisabled");
+    expect(routeSource).toContain("rolePolicy: messagingPrivacyActionRolePolicy");
     expect(routeSource).toContain("Messaging privacy POST returns the local redaction/export/delete/retention/moderation contract");
     expect(routeSource).not.toContain("messagingPrivacyPlanOnlyWritesDisabled");
     expect(routeSource).not.toContain("plan-only responses are disabled");

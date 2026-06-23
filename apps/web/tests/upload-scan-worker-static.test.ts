@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -8,6 +8,7 @@ import {
   buildUploadScanWorkerEvidenceDecision,
   buildUploadScanWorkerExecutionPlan,
   buildUploadScanWorkerPlan,
+  persistUploadScanWorkerOutcome,
   uploadScanWorkerArtifactPaths,
   uploadScanWorkerCommands,
   uploadScanWorkerExternalArtifacts,
@@ -57,6 +58,10 @@ describe("GAP-096 upload scan worker static contract", () => {
     expect(worker).toContain("generate-normalized-derivative");
     expect(worker).toContain("persist-fileasset-scan-status");
     expect(worker).toContain("write-upload-scan-audit-log");
+    expect(worker).toContain("UploadScanWorkerPersistenceClient");
+    expect(worker).toContain("persistUploadScanWorkerOutcome");
+    expect(worker).toContain('action: "upload.scan_verdict"');
+    expect(worker).toContain("where: { id: input.plan.fileAssetId, tenantId: input.plan.tenantId }");
   });
 
   it("quarantines unscanned uploads and rejects spoofed or malware inputs through package scan rules", () => {
@@ -224,7 +229,7 @@ describe("GAP-096 upload scan worker static contract", () => {
       expect.arrayContaining([
         "Capture object-storage byte inspection proof.",
         "Capture malware scanner provider verdict proof.",
-        "Capture FileAsset scan-status and derivative persistence proof.",
+        "Capture provider-backed FileAsset scan-status and derivative persistence proof.",
         "Capture private-original and public-derivative access proof.",
         "Required command not recorded: object-storage byte inspection integration test",
         "Required command not recorded: malware scan provider integration test",
@@ -264,12 +269,14 @@ describe("GAP-096 upload scan worker static contract", () => {
     const plan = buildUploadScanWorkerExecutionPlan();
 
     expect(plan.objectStorageExecutionAllowed).toBe(false);
+    expect(plan.fileAssetPersistenceContractAvailable).toBe(true);
     expect(plan.malwareScannerExecutionAllowed).toBe(false);
     expect(plan.fileAssetPersistenceExecutionAllowed).toBe(false);
     expect(plan.storageQuarantineExecutionAllowed).toBe(false);
     expect(plan.privatePublicAccessExecutionAllowed).toBe(false);
     expect(plan.policy).toBe(uploadScanWorkerExecutionPolicy);
     expect(plan.policy).toEqual({
+      fileAssetPersistenceContractAvailable: true,
       objectStorageExecutionAllowed: false,
       malwareScannerExecutionAllowed: false,
       fileAssetPersistenceExecutionAllowed: false,
@@ -297,11 +304,62 @@ describe("GAP-096 upload scan worker static contract", () => {
     expect(plan.requiredExternalEvidence).toEqual([
       "object-storage byte inspection integration proof",
       "malware scanner provider verdict proof",
-      "FileAsset scan-status and derivative persistence proof",
+      "provider-backed FileAsset scan-status and derivative persistence proof",
       "storage quarantine/rejection proof",
       "private-original/public-derivative access proof",
     ]);
     expect(plan.disabledReasons.join(" ")).toContain("Object-storage byte inspection requires live storage object reads.");
+    expect(plan.disabledReasons.join(" ")).toContain("FileAsset scan-status persistence contract is wired");
+  });
+
+  it("persists scan outcomes through a tenant-scoped FileAsset update and redacted AuditLog write contract", async () => {
+    const writes: unknown[] = [];
+    const plan = buildUploadScanWorkerPlan({
+      tenantId: "tenant_demo",
+      fileAssetId: "fileasset_clean",
+      objectKey: "private/tenant_demo/portfolio/fileasset_clean.jpg",
+      kind: "portfolio_public",
+      filename: "portfolio.jpg",
+      declaredMimeType: "image/jpeg",
+      sizeBytes: 512000,
+      fileSignatureHex: "ffd8ffe00010",
+      malwareVerdict: "clean",
+      exifMetadataPresent: true,
+      normalizedDerivativeGenerated: true,
+      scanProviderConfigured: true,
+      declaredByAuthenticatedUser: true,
+    });
+
+    const result = await persistUploadScanWorkerOutcome(
+      {
+        fileAsset: {
+          async updateMany(input) {
+            writes.push(input);
+            return { count: 1 };
+          },
+        },
+        auditLog: {
+          async create(input) {
+            writes.push(input);
+            return {};
+          },
+        },
+      },
+      { plan, scanProvider: "scanner-test", now: new Date("2026-06-22T19:20:00.000Z") },
+    );
+
+    expect(result).toMatchObject({
+      persisted: true,
+      scanStatus: "approved",
+      auditAction: "upload.scan_verdict",
+      fileAssetUpdated: true,
+      quarantineRequired: false,
+      publicDerivativeAllowed: true,
+    });
+    expect(JSON.stringify(writes)).toContain('"tenantId":"tenant_demo"');
+    expect(JSON.stringify(writes)).toContain('"entityType":"FileAsset"');
+    expect(JSON.stringify(writes)).toContain('"action":"upload.scan_verdict"');
+    expect(JSON.stringify(writes)).not.toContain("private/tenant_demo/portfolio/fileasset_clean.jpg");
   });
 
   it("redacts GAP-096 scanner and storage artifacts before review", () => {
@@ -335,4 +393,5 @@ describe("GAP-096 upload scan worker static contract", () => {
     ]));
   });
 });
+
 

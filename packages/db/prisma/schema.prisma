@@ -353,16 +353,27 @@ model Tenant {
   referenceImages  ReferenceImage[]
   messageThreads   MessageThread[]
   messages         Message[]
+  messagePrivacyEvents MessagePrivacyEvent[]
+  messageAuditLogs MessageAuditLog[]
   notifications    Notification[]
   notificationDeliveries NotificationDelivery[]
   notificationProviderHandoffs NotificationProviderHandoff[]
+  notificationJobs NotificationJob[]
+  deadLetterJobs   DeadLetterJob[]
+  notificationWorkerAuditLogs NotificationWorkerAuditLog[]
   providerEvents   ProviderEvent[]
   notificationChannelPreferences NotificationChannelPreference[]
   notificationSuppressions NotificationSuppression[]
+  pushTokens      PushToken[]
+  notificationInteractions NotificationInteraction[]
+  preferenceTokens PreferenceToken[]
+  tenantNotificationSettings TenantNotificationSetting[]
   reviews          Review[]
   seoCityPages     SeoCityPage[]
   seoStylePages    SeoStylePage[]
   seoRedirects     SeoRedirect[]
+  seoPublicationRevalidationJobs SeoPublicationRevalidationJob[]
+  seoPublicationAssociations SeoPublicationAssociation[]
   auditLogs        AuditLog[]
   signedUrlGrants  SignedUrlGrant[]
   privacyRequests  PrivacyRequest[]
@@ -833,6 +844,40 @@ model CalendarEvent {
   @@index([tenantId, startsAt])
   @@index([tenantId, externalEventId])
   @@index([tenantId, appointmentId])
+}
+
+model SignedIcsFeedToken {
+  id                    String    @id @default(cuid())
+  tenantSlug            String
+  artistSlug            String
+  tokenHash             String
+  expiresAt             DateTime
+  revokedAt             DateTime?
+  createdBy             String
+  rotatedFromTokenHash  String?
+  revokedBy             String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([tenantSlug, artistSlug, tokenHash])
+  @@index([tenantSlug, artistSlug])
+  @@index([tenantSlug, artistSlug, revokedAt])
+}
+
+model SignedIcsFeedAccessLog {
+  id          String   @id @default(cuid())
+  tenantSlug  String
+  artistSlug  String
+  tokenHash   String?
+  status      String
+  allowed     Boolean
+  userAgent   String?
+  ipHash      String?
+  occurredAt  DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([tenantSlug, artistSlug, occurredAt])
+  @@index([tenantSlug, artistSlug, allowed])
 }
 
 model BookingRequest {
@@ -1382,6 +1427,46 @@ model Message {
   @@index([providerMessageId])
 }
 
+model MessagePrivacyEvent {
+  id                String   @id @default(cuid())
+  tenantId          String
+  action            String
+  threadId          String?
+  messageId         String?
+  actorUserId       String?
+  role              String?
+  status            String   @default("queued")
+  workflowStatus    String?
+  retentionDays     Int?
+  redactionFindings Json?
+  metadata          Json?
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([tenantId, action, createdAt])
+  @@index([tenantId, threadId])
+  @@index([tenantId, messageId])
+  @@index([tenantId, workflowStatus])
+}
+
+model MessageAuditLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  action      String
+  threadId    String?
+  messageId   String?
+  actorUserId String?
+  role        String?
+  metadata    Json?
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, action, createdAt])
+  @@index([tenantId, threadId])
+  @@index([tenantId, messageId])
+}
+
 model Notification {
   id               String              @id @default(cuid())
   tenantId         String
@@ -1480,6 +1565,73 @@ model NotificationProviderHandoff {
   @@index([tenantId, notificationId])
 }
 
+model NotificationJob {
+  id                String              @id @default(cuid())
+  tenantId          String
+  notificationId    String?
+  deliveryId        String?
+  providerHandoffId String?
+  sourceAction      String
+  templateKey       String?
+  channel           NotificationChannel @default(in_app)
+  state             String              @default("queued")
+  idempotencyKey    String
+  appointmentId     String?
+  bookingRequestId  String?
+  actorUserId       String?
+  attempts          Int                 @default(0)
+  maxAttempts       Int                 @default(5)
+  scheduledAt       DateTime
+  availableAt       DateTime            @default(now())
+  lockedAt          DateTime?
+  processedAt       DateTime?
+  cancelledAt       DateTime?
+  payload           Json
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey, sourceAction])
+  @@index([tenantId, state, availableAt])
+  @@index([tenantId, appointmentId])
+  @@index([tenantId, bookingRequestId])
+  @@index([tenantId, providerHandoffId])
+}
+
+model DeadLetterJob {
+  id                String   @id @default(cuid())
+  tenantId          String
+  notificationJobId String?
+  deliveryId        String?
+  providerHandoffId String?
+  reason            String
+  attempts          Int      @default(0)
+  payload           Json
+  createdAt         DateTime @default(now())
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, notificationJobId])
+  @@index([tenantId, providerHandoffId])
+  @@index([tenantId, createdAt])
+}
+
+model NotificationWorkerAuditLog {
+  id                String   @id @default(cuid())
+  tenantId          String
+  notificationJobId String?
+  deliveryId        String?
+  providerHandoffId String?
+  action            String
+  actorUserId       String?
+  metadata          Json
+  createdAt         DateTime @default(now())
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, notificationJobId, createdAt])
+  @@index([tenantId, providerHandoffId, createdAt])
+  @@index([tenantId, action, createdAt])
+}
+
 model ProviderEvent {
   id                String                @id @default(cuid())
   tenantId          String
@@ -1504,6 +1656,49 @@ model ProviderEvent {
   @@index([tenantId, provider, eventType, createdAt])
   @@index([tenantId, providerMessageId])
   @@index([tenantId, replayDetected])
+}
+
+model PushToken {
+  id               String              @id @default(cuid())
+  tenantId         String
+  userId           String
+  deviceId         String
+  provider         String              @default("expo")
+  tokenHash        String
+  tokenMasked      String?
+  active           Boolean             @default(true)
+  permissionStatus String
+  optIn            Boolean             @default(true)
+  disabledAt       DateTime?
+  metadata         Json?
+  registeredAt     DateTime            @default(now())
+  lastSeenAt       DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider, deviceId])
+  @@index([tenantId, userId, active])
+  @@index([tenantId, provider, tokenHash])
+}
+
+model NotificationInteraction {
+  id              String              @id @default(cuid())
+  tenantId        String
+  notificationId  String
+  userId          String?
+  channel         NotificationChannel
+  interactionType String
+  routePath       String?
+  idempotencyKey  String
+  metadata        Json?
+  occurredAt      DateTime            @default(now())
+  createdAt       DateTime            @default(now())
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, notificationId, occurredAt])
+  @@index([tenantId, channel, interactionType])
 }
 
 model NotificationChannelPreference {
@@ -1550,6 +1745,42 @@ model NotificationSuppression {
   @@index([tenantId, channel, active])
   @@index([tenantId, provider, source])
   @@index([tenantId, expiresAt])
+}
+
+model PreferenceToken {
+  id          String   @id @default(cuid())
+  tenantId    String
+  clientId    String
+  tokenHash   String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, tokenHash])
+  @@index([tenantId, clientId])
+  @@index([tenantId, expiresAt])
+}
+
+model TenantNotificationSetting {
+  id               String              @id @default(cuid())
+  tenantId         String
+  channel          NotificationChannel
+  marketingEnabled Boolean             @default(true)
+  transactionalEnabled Boolean         @default(true)
+  quietHoursStart  String?
+  quietHoursEnd    String?
+  timezone         String?
+  legalCopyApproved Boolean            @default(false)
+  metadata         Json?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, channel])
+  @@index([tenantId, channel])
 }
 
 model IdempotencyKey {
@@ -1677,6 +1908,40 @@ model SeoRedirect {
 
   @@unique([tenantId, fromPath])
   @@index([tenantId, isActive])
+}
+
+model SeoPublicationRevalidationJob {
+  id          String   @id @default(cuid())
+  tenantId    String
+  entityType  String
+  entityId    String
+  action      String
+  tags        Json
+  status      String   @default("queued")
+  auditLogId  String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, status, createdAt])
+}
+
+model SeoPublicationAssociation {
+  id          String   @id @default(cuid())
+  tenantId    String
+  entityType  String
+  entityId    String
+  relatedKind String
+  relatedId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, entityType, entityId, relatedKind, relatedId])
+  @@index([tenantId, relatedKind, relatedId])
+  @@index([tenantId, entityType, entityId])
 }
 
 model AuditLog {

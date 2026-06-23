@@ -45,6 +45,7 @@ export interface Phase9AppRuntimeBuildExecutionPolicy {
 
 export interface Phase9AppRuntimeBuildExecutionPlan {
   readonly policy: typeof phase9AppRuntimeBuildExecutionPolicy;
+  readonly surfaceContract: typeof phase9AppRuntimeBuildSurfaceContract;
   readonly commandExecutionAllowed: false;
   readonly buildExecutionAllowed: false;
   readonly routeExecutionAllowed: false;
@@ -59,6 +60,19 @@ export interface Phase9AppRuntimeBuildExecutionPlan {
   readonly externalCommands: typeof phase9AppRuntimeBuildExternalCommands;
   readonly requiredExternalEvidence: typeof phase9AppRuntimeBuildRequiredExternalEvidence;
   readonly runtimePlan: ReturnType<typeof buildPhase9RuntimeExecutionPlan>;
+}
+
+export interface Phase9AppRuntimeBuildRunEvidencePacket {
+  readonly packetId: "gap-070-phase9-app-runtime-build-run-evidence";
+  readonly requiredArtifact: "coverage/phase9-app-runtime-build-run-evidence-packet.json";
+  readonly localRunPersistenceExecutionAllowed: false;
+  readonly providerDisabledEvidenceRequired: true;
+  readonly browserOrDeviceEvidenceRequired: true;
+  readonly bookingToNotificationRuntimeEvidenceRequired: true;
+  readonly ciEvidenceRequired: true;
+  readonly redactionRequired: true;
+  readonly requiredExternalEvidence: typeof phase9AppRuntimeBuildRequiredExternalEvidence;
+  readonly surfaceContract: typeof phase9AppRuntimeBuildSurfaceContract;
 }
 
 export const phase9AppRuntimeBuildExecutionPolicy = {
@@ -117,11 +131,13 @@ export const phase9AppRuntimeBuildRequiredExternalEvidence = [
   "Expo simulator/device notification smoke artifacts",
   "booking-to-notification runtime smoke output",
   "CI Phase 9 app runtime/build artifacts",
+  "Phase 9 app runtime/build run evidence packet",
   "secret-safe Phase 9 runtime/build artifact review",
 ] as const;
 
 export const buildPhase9AppRuntimeBuildExecutionPlan = (): Phase9AppRuntimeBuildExecutionPlan => ({
   policy: phase9AppRuntimeBuildExecutionPolicy,
+  surfaceContract: phase9AppRuntimeBuildSurfaceContract,
   commandExecutionAllowed: false,
   buildExecutionAllowed: false,
   routeExecutionAllowed: false,
@@ -159,9 +175,23 @@ export const phase9AppRuntimeBuildRuntimeArtifactPaths = [
   "coverage/phase9-booking-to-notification-runtime-redacted.json",
   "coverage/phase9-provider-disabled-runtime-proof.json",
   "coverage/phase9-app-runtime-build-ci-evidence.json",
+  "coverage/phase9-app-runtime-build-run-evidence-packet.json",
   "coverage/phase9-app-runtime-build-secret-safe-artifacts.json",
   "test-results/phase9-app-runtime-build",
 ] as const;
+
+export const buildPhase9AppRuntimeBuildRunEvidencePacket = (): Phase9AppRuntimeBuildRunEvidencePacket => ({
+  packetId: "gap-070-phase9-app-runtime-build-run-evidence",
+  requiredArtifact: "coverage/phase9-app-runtime-build-run-evidence-packet.json",
+  localRunPersistenceExecutionAllowed: false,
+  providerDisabledEvidenceRequired: true,
+  browserOrDeviceEvidenceRequired: true,
+  bookingToNotificationRuntimeEvidenceRequired: true,
+  ciEvidenceRequired: true,
+  redactionRequired: true,
+  requiredExternalEvidence: phase9AppRuntimeBuildRequiredExternalEvidence,
+  surfaceContract: phase9AppRuntimeBuildSurfaceContract,
+});
 
 export const phase9AppRuntimeBuildRuntimeProofFiles = [
   "apps/dashboard/package.json",
@@ -189,6 +219,109 @@ export const phase9AppRuntimeBuildRuntimeProofFiles = [
 
 export type Phase9AppRuntimeBuildEvidenceArtifact = (typeof phase9AppRuntimeBuildRuntimeArtifactPaths)[number];
 
+export interface Phase9AppRuntimeBuildSurfaceContractEntry {
+  readonly surfaceId: string;
+  readonly requiredCommand: string;
+  readonly requiredArtifact: Phase9AppRuntimeBuildEvidenceArtifact;
+  readonly runtimeBoundary:
+    | "local-static"
+    | "web-build"
+    | "dashboard-build"
+    | "mobile"
+    | "route-runtime"
+    | "playwright"
+    | "provider-disabled"
+    | "expo-device"
+    | "booking-notification"
+    | "ci-proof"
+    | "artifact-review";
+  readonly providerSendsDisabledRequired: boolean;
+  readonly redactedArtifactRequired: true;
+}
+
+export const phase9AppRuntimeBuildSurfaceContract: readonly Phase9AppRuntimeBuildSurfaceContractEntry[] = [
+  {
+    surfaceId: "web-build",
+    requiredCommand: "pnpm --filter @inkroute/web build",
+    requiredArtifact: "coverage/phase9-web-build.log",
+    runtimeBoundary: "web-build",
+    providerSendsDisabledRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "dashboard-build",
+    requiredCommand: "pnpm --filter @inkroute/dashboard build",
+    requiredArtifact: "coverage/phase9-dashboard-build.log",
+    runtimeBoundary: "dashboard-build",
+    providerSendsDisabledRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "mobile-typecheck",
+    requiredCommand: "pnpm --filter @inkroute/mobile typecheck",
+    requiredArtifact: "coverage/phase9-mobile-typecheck.txt",
+    runtimeBoundary: "mobile",
+    providerSendsDisabledRequired: false,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "notification-routes",
+    requiredCommand: "pnpm vitest run apps/web/tests/notification-messaging-routes.test.ts",
+    requiredArtifact: "coverage/phase9-notification-routes.json",
+    runtimeBoundary: "route-runtime",
+    providerSendsDisabledRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "dashboard-playwright-smoke",
+    requiredCommand: "Playwright dashboard templates/messages smoke tests",
+    requiredArtifact: "coverage/phase9-dashboard-template-smoke-redacted.json",
+    runtimeBoundary: "playwright",
+    providerSendsDisabledRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "expo-device-notification",
+    requiredCommand: "Expo device notification screen smoke test",
+    requiredArtifact: "coverage/phase9-expo-device-notification-smoke-redacted.json",
+    runtimeBoundary: "expo-device",
+    providerSendsDisabledRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "booking-to-notification-runtime",
+    requiredCommand: "booking-to-notification runtime smoke with provider sends disabled",
+    requiredArtifact: "coverage/phase9-booking-to-notification-runtime-redacted.json",
+    runtimeBoundary: "booking-notification",
+    providerSendsDisabledRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "provider-disabled-proof",
+    requiredCommand: "prove provider sends disabled or sandboxed during runtime smoke",
+    requiredArtifact: "coverage/phase9-provider-disabled-runtime-proof.json",
+    runtimeBoundary: "provider-disabled",
+    providerSendsDisabledRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "ci-phase9-gate",
+    requiredCommand: "GitHub Actions Phase 9 app runtime/build gate",
+    requiredArtifact: "coverage/phase9-app-runtime-build-ci-evidence.json",
+    runtimeBoundary: "ci-proof",
+    providerSendsDisabledRequired: true,
+    redactedArtifactRequired: true,
+  },
+  {
+    surfaceId: "secret-safe-artifacts",
+    requiredCommand: "review Phase 9 runtime/build artifacts for provider tokens, message bodies, PII, and secrets",
+    requiredArtifact: "coverage/phase9-app-runtime-build-secret-safe-artifacts.json",
+    runtimeBoundary: "artifact-review",
+    providerSendsDisabledRequired: true,
+    redactedArtifactRequired: true,
+  },
+] as const;
+
 export interface Phase9AppRuntimeBuildEvidenceInput {
   readonly testingTypecheckPassed: boolean;
   readonly testingTestsPassed: boolean;
@@ -209,6 +342,7 @@ export interface Phase9AppRuntimeBuildEvidenceInput {
   readonly bookingToNotificationRuntimePassed: boolean;
   readonly providerDisabledRuntimeProofCaptured: boolean;
   readonly ciEvidenceCaptured: boolean;
+  readonly runEvidencePacketCaptured: boolean;
   readonly secretSafeArtifactReviewPassed: boolean;
   readonly capturedArtifacts: readonly Phase9AppRuntimeBuildEvidenceArtifact[];
 }
@@ -219,6 +353,7 @@ export const phase9AppRuntimeBuildDecisionRequiredEvidence = [
   "dashboard templates/messages Playwright smoke and provider-disabled state evidence",
   "mobile notification screen simulator and device smoke evidence",
   "booking-to-notification runtime, provider-disabled, artifact, and CI required-gate evidence",
+  "Phase 9 app runtime/build run evidence packet with provider-disabled, browser/device, runtime, CI, and redaction proof",
   "secret-safe review of retained Phase 9 app runtime/build artifacts",
 ] as const;
 
@@ -263,6 +398,9 @@ export const buildPhase9AppRuntimeBuildEvidenceDecision = (
       ? ["Provider-disabled runtime proof is missing."]
       : []),
     ...(!input.ciEvidenceCaptured ? ["Phase 9 app runtime/build CI evidence is missing."] : []),
+    ...(!input.runEvidencePacketCaptured
+      ? ["Phase 9 app runtime/build run evidence packet is missing."]
+      : []),
     ...(!input.secretSafeArtifactReviewPassed
       ? ["Secret-safe Phase 9 runtime/build artifact review evidence is missing."]
       : []),
@@ -302,6 +440,7 @@ export const phase9AppRuntimeBuildRuntimeMatrix = [
   { id: "booking-to-notification", command: "booking-to-notification runtime smoke with provider sends disabled", artifact: "coverage/phase9-booking-to-notification-runtime-redacted.json", status: "provider-disabled-gated" },
   { id: "provider-disabled-proof", command: "prove provider sends disabled or sandboxed during runtime smoke", artifact: "coverage/phase9-provider-disabled-runtime-proof.json", status: "provider-disabled-gated" },
   { id: "ci-phase9-gate", command: "GitHub Actions Phase 9 app runtime/build gate", artifact: "coverage/phase9-app-runtime-build-ci-evidence.json", status: "ci-gated" },
+  { id: "run-evidence-packet", command: "capture Phase 9 app runtime/build run evidence packet", artifact: "coverage/phase9-app-runtime-build-run-evidence-packet.json", status: "ci-gated" },
   { id: "secret-safe-artifacts", command: "review Phase 9 runtime/build artifacts for provider tokens, message bodies, PII, and secrets", artifact: "coverage/phase9-app-runtime-build-secret-safe-artifacts.json", status: "ci-gated" },
 ] as const satisfies readonly Phase9AppRuntimeBuildRuntimeMatrixEntry[];
 

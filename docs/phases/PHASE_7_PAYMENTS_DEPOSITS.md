@@ -33,12 +33,12 @@ All markdown files in the extracted Phase 6 ZIP were enumerated and reviewed bef
   - `POST /api/public/[tenantSlug]/deposit-sessions`
   - validates minimal JSON shape manually
   - calculates policy and returns a Checkout session draft
-  - intentionally returns `501 STRIPE_CHECKOUT_NOT_IMPLEMENTED`
+  - persists a tenant-scoped draft deposit/payment/idempotency/audit contract where the DB path is available and fails closed for production local fallback
 - Added Stripe webhook route boundary:
   - `POST /api/webhooks/stripe`
   - reads raw request text and detects `Stripe-Signature` header
   - interprets event type for planning
-  - intentionally returns `501 STRIPE_WEBHOOK_NOT_IMPLEMENTED`
+  - requires `STRIPE_WEBHOOK_SECRET` before production processing, records replay/audit rows when durable tenant/payment context is available, and keeps Stripe CLI/provider proof gated
 - Added public static page:
   - `/booking/deposit-preview`
   - shows deposit policy, refund, no-show, and Checkout handoff data without collecting payment
@@ -58,7 +58,7 @@ All markdown files in the extracted Phase 6 ZIP were enumerated and reviewed bef
 
 - Dependency-light payment policy code that can be typechecked without Stripe SDK.
 - Safe session-draft generation that avoids live Stripe calls.
-- Public and webhook API boundary files that clearly return 501 until production requirements are satisfied.
+- Public and webhook API boundary files that now enforce guarded local DB/idempotency/audit contracts while still failing closed until live Stripe/provider proof exists.
 - Dashboard and public UI surfaces that expose payment/no-show/refund concepts without pretending to process payments.
 
 ## Scaffolded only

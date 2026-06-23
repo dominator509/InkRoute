@@ -22,6 +22,7 @@ import {
   buildStaticDependencyAuditDecisionRequiredEvidence,
   buildStaticDependencyAuditEvidenceDecision,
   buildStaticDependencyAuditExecutionPlan,
+  buildStaticDependencyAuditRedactedEvidenceBundle,
 } from "../lib/staticDependencyAuditRuntime";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -76,8 +77,10 @@ describe("static dependency audit runtime contract", () => {
       "ci-workspace-resolution",
       "peer-version-review",
       "runtime-resolution-proof",
+      "redacted-evidence-bundle",
     ]);
     expect(staticDependencyAuditArtifactPaths).toContain("coverage/static-dependency-audit-runtime.json");
+    expect(staticDependencyAuditArtifactPaths).toContain("coverage/static-dependency-redacted-evidence-bundle.json");
     expect(staticDependencyAuditArtifactPaths).toContain("test-results/static-dependency-audit-runtime");
   });
 
@@ -150,6 +153,7 @@ describe("static dependency audit runtime contract", () => {
       peerVersionReviewCaptured: false,
       runtimeResolutionProofCaptured: false,
       staticDependencyAuditRunPersisted: false,
+      redactedEvidenceBundleCaptured: false,
       coveredAreas: [
         "declared-workspace-dependencies",
         "workspace-source-imports",
@@ -180,6 +184,7 @@ describe("static dependency audit runtime contract", () => {
       "coverage/static-dependency-dashboard-build-output.txt",
       "coverage/static-dependency-ci-job.json",
       "coverage/static-dependency-peer-version-review.json",
+      "coverage/static-dependency-redacted-evidence-bundle.json",
       "test-results/static-dependency-audit-runtime",
     ]);
     expect(decision.missingCommands).toEqual([
@@ -202,6 +207,7 @@ describe("static dependency audit runtime contract", () => {
     expect(decision.requiredEvidence).toBe(staticDependencyAuditRequiredEvidence);
     expect(decision.blockers).toContain("@inkroute/workspace package tests must pass after the static dependency audit patch.");
     expect(decision.blockers).toContain("StaticDependencyAuditRun persistence row must be captured for durable auditability.");
+    expect(decision.blockers).toContain("Redacted static dependency audit evidence bundle must be captured.");
     expect(decision.blockers).toContain("Every required static dependency audit coverage area must be captured.");
   });
 
@@ -219,6 +225,7 @@ describe("static dependency audit runtime contract", () => {
       peerVersionReviewCaptured: true,
       runtimeResolutionProofCaptured: true,
       staticDependencyAuditRunPersisted: true,
+      redactedEvidenceBundleCaptured: true,
       coveredAreas: staticDependencyAuditCoverageAreas,
       capturedArtifacts: staticDependencyAuditArtifactPaths,
       completedCommands: staticDependencyAuditCommands,
@@ -253,6 +260,7 @@ describe("static dependency audit runtime contract", () => {
     expect(gapTracker).toContain("staticDependencyAuditLocalArtifacts");
     expect(gapTracker).toContain("staticDependencyAuditExternalArtifacts");
     expect(gapTracker).toContain("buildStaticDependencyAuditArtifactReview");
+    expect(gapTracker).toContain("buildStaticDependencyAuditRedactedEvidenceBundle");
   });
 
   it("pins current static dependency audit runtime proof files for GAP-131", () => {
@@ -296,6 +304,7 @@ describe("static dependency audit runtime contract", () => {
       "coverage/static-dependency-dashboard-build-output.txt",
       "coverage/static-dependency-ci-job.json",
       "coverage/static-dependency-peer-version-review.json",
+      "coverage/static-dependency-redacted-evidence-bundle.json",
       "test-results/static-dependency-audit-runtime",
     ]);
     expect(plan).toMatchObject({
@@ -322,6 +331,7 @@ describe("static dependency audit runtime contract", () => {
       providerDatabaseRequiredForPersistence: true,
     });
     expect(plan.requiredExternalEvidence).toBe(staticDependencyAuditRequiredExternalEvidence);
+    expect(plan.requiredExternalEvidence).toContain("Redacted static dependency audit evidence bundle captured without raw install logs, registry URLs, tokens, database URLs, or package-owner identifiers.");
   });
 
   it("redacts static dependency audit artifacts before tracker or handoff use", () => {
@@ -352,6 +362,7 @@ describe("static dependency audit runtime contract", () => {
     });
 
     const review = buildStaticDependencyAuditArtifactReview(artifact);
+    const bundle = buildStaticDependencyAuditRedactedEvidenceBundle(artifact);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(staticDependencyAuditRequiredExternalEvidence);
     expect(review.redactions).toEqual(
@@ -364,6 +375,12 @@ describe("static dependency audit runtime contract", () => {
         "persistence.databaseUrl",
       ]),
     );
+    expect(bundle.status).toBe("redacted-evidence-bundle-ready");
+    expect(bundle.artifactPath).toBe("coverage/static-dependency-redacted-evidence-bundle.json");
+    expect(bundle.review.safeForTracker).toBe(true);
+    expect(bundle.requiredArtifacts).toBe(staticDependencyAuditArtifactPaths);
+    expect(bundle.requiredExternalEvidence).toBe(staticDependencyAuditRequiredExternalEvidence);
+    expect(bundle.providerExecutionAllowed).toBe(false);
   });
 });
 

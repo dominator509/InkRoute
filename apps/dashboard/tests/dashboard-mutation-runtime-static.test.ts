@@ -27,10 +27,12 @@ describe("dashboard mutation runtime contract", () => {
   const bookingSource = readRepoFile("packages/booking/src/index.ts");
   const bookingTests = readRepoFile("packages/booking/tests/booking-readiness.test.ts");
   const bookingStateRoute = readRepoFile("apps/dashboard/app/api/bookings/[bookingId]/state/route.ts");
+  const appointmentRoute = readRepoFile("apps/dashboard/app/api/appointments/route.ts");
   const bookingStateRouteTest = readRepoFile("apps/dashboard/tests/booking-state-route-static.test.ts");
   const messageRoute = readRepoFile("apps/dashboard/app/api/messages/route.ts");
   const messageActionPanel = readRepoFile("apps/dashboard/components/MessageActionPanel.tsx");
   const notificationPersistenceTest = readRepoFile("apps/dashboard/tests/notification-persistence-static.test.ts");
+  const notificationQueueRoute = readRepoFile("apps/dashboard/app/api/notifications/queue/route.ts");
   const calendarHoldRoute = readRepoFile("apps/dashboard/app/api/calendar/holds/route.ts");
   const availabilityPersistenceTest = readRepoFile("apps/dashboard/tests/availability-persistence-static.test.ts");
   const travelPublishRoute = readRepoFile("apps/dashboard/app/api/travel/publish/route.ts");
@@ -53,6 +55,8 @@ describe("dashboard mutation runtime contract", () => {
   const formReadRouteTest = readRepoFile("apps/dashboard/tests/form-read-route-static.test.ts");
   const featureFlagRoute = readRepoFile("apps/dashboard/app/api/feature-flags/route.ts");
   const featureFlagRouteTest = readRepoFile("apps/dashboard/tests/feature-flag-route-static.test.ts");
+  const releaseRoute = readRepoFile("apps/dashboard/app/api/releases/route.ts");
+  const releaseRouteTest = readRepoFile("apps/dashboard/tests/release-route-static.test.ts");
   const bookingLifecycleActionPanel = readRepoFile("apps/dashboard/components/BookingLifecycleActionPanel.tsx");
   const disabledActionPanel = readRepoFile("apps/dashboard/components/DisabledActionPanel.tsx");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
@@ -123,8 +127,25 @@ describe("dashboard mutation runtime contract", () => {
     expect(bookingStateRoute).toContain("buildDashboardMutationPlan");
     expect(bookingStateRoute).toContain("dashboardMutationPlan");
     expect(bookingStateRoute).toContain("prisma.$transaction");
+    expect(bookingStateRoute).toContain("tx.idempotencyKey.upsert");
+    expect(bookingStateRoute).toContain("tx.idempotencyKey.update");
+    expect(bookingStateRoute).toContain("existingIdempotency?.status");
     expect(bookingStateRoute).toContain("tx.bookingStateEvent.create");
     expect(bookingStateRoute).toContain("tx.auditLog.create");
+    expect(appointmentRoute).toContain('export const runtime = "nodejs"');
+    expect(appointmentRoute).toContain("dashboard-appointment-create");
+    expect(appointmentRoute).toContain("tx.idempotencyKey.upsert");
+    expect(appointmentRoute).toContain('idempotency.status === "completed"');
+    expect(appointmentRoute).toContain("tx.appointment.findFirst");
+    expect(appointmentRoute).toContain("tx.appointment.create");
+    expect(appointmentRoute).toContain("tx.bookingStateEvent.create");
+    expect(appointmentRoute).toContain("tx.auditLog.create");
+    expect(appointmentRoute).toContain("tx.idempotencyKey.update");
+    expect(appointmentRoute).toContain("calendarProviderInserted: false");
+    expect(appointmentRoute).toContain("depositSessionCreated: false");
+    expect(appointmentRoute).toContain("notificationDispatched: false");
+    expect(appointmentRoute).toContain("idempotencyKeyId");
+    expect(appointmentRoute).toContain("idempotencyReplay");
     expect(bookingLifecycleActionPanel).toContain("fetch(`/api/bookings/${bookingId}/state`");
     expect(bookingLifecycleActionPanel).toContain("idempotencyKey");
     expect(bookingLifecycleActionPanel).toContain("BookingStateEvent writes");
@@ -138,15 +159,52 @@ describe("dashboard mutation runtime contract", () => {
     expect(messageActionPanel).toContain('fetch("/api/messages"');
     expect(messageActionPanel).toContain("Queue safe follow-up");
     expect(notificationPersistenceTest).toContain("wires dashboard message POST");
+    expect(notificationQueueRoute).toContain('export const runtime = "nodejs"');
+    expect(notificationQueueRoute).toContain("tx.idempotencyKey.upsert");
+    expect(notificationQueueRoute).toContain("requestHash");
+    expect(notificationQueueRoute).toContain('status: "idempotency_conflict"');
+    expect(notificationQueueRoute).toContain('code: "IDEMPOTENCY_CONFLICT"');
+    expect(notificationQueueRoute).toContain("tx.idempotencyKey.update");
+    expect(notificationQueueRoute).toContain("idempotencyKeyId");
+    expect(notificationQueueRoute).toContain("idempotencyReplay");
     expect(calendarHoldRoute).toContain("buildAvailabilityPersistencePlan");
+    expect(calendarHoldRoute).toContain('export const runtime = "nodejs"');
     expect(calendarHoldRoute).toContain("create_slot_hold");
+    expect(calendarHoldRoute).toContain("tx.idempotencyKey.upsert");
+    expect(calendarHoldRoute).toContain('idempotency.status === "completed"');
+    expect(calendarHoldRoute).toContain('status: "idempotency_conflict"');
+    expect(calendarHoldRoute).toContain('code: "IDEMPOTENCY_CONFLICT"');
+    expect(calendarHoldRoute).toContain("tx.availabilityWindow.create");
+    expect(calendarHoldRoute).toContain("tx.auditLog.create");
+    expect(calendarHoldRoute).toContain("tx.idempotencyKey.update");
+    expect(calendarHoldRoute).toContain("idempotencyKeyId");
+    expect(calendarHoldRoute).toContain("idempotencyReplay");
+    expect(calendarHoldRoute).toContain("localCalendarHoldFallbackDisabled");
     expect(availabilityPersistenceTest).toContain("apps/dashboard/app/api/calendar/holds/route.ts");
     expect(travelPublishRoute).toContain("buildTravelPublishMutationPlan");
+    expect(travelPublishRoute).toContain("database-persisted");
+    expect(travelPublishRoute).toContain('export const runtime = "nodejs"');
+    expect(travelPublishRoute).toContain("auditLog.create");
+    expect(travelPublishRoute).toContain("idempotencyKey.upsert");
+    expect(travelPublishRoute).toContain('idempotency.status === "completed"');
+    expect(travelPublishRoute).toContain('status: "idempotency_conflict"');
+    expect(travelPublishRoute).toContain("idempotencyKeyId");
+    expect(travelPublishRoute).toContain("idempotencyReplay");
     expect(travelPublishRoute).toContain("repository-required");
     expect(travelPublishActionPanel).toContain('fetch("/api/travel/publish"');
     expect(travelPublishActionPanel).toContain("Submit publish draft");
     expect(travelPublishTest).toContain("wires the dashboard travel publish API through the mutation plan");
     expect(imageSeoRoute).toContain('assertPermission(actor, "portfolio:write")');
+    expect(imageSeoRoute).toContain('export const runtime = "nodejs"');
+    expect(imageSeoRoute).toContain("tx.portfolioItem.findFirst");
+    expect(imageSeoRoute).toContain("tx.idempotencyKey.upsert");
+    expect(imageSeoRoute).toContain('idempotency.status === "completed"');
+    expect(imageSeoRoute).toContain('status: "idempotency_conflict"');
+    expect(imageSeoRoute).toContain("tx.fileAsset.findUnique");
+    expect(imageSeoRoute).toContain('status: "file_asset_tenant_conflict"');
+    expect(imageSeoRoute).toContain("tx.idempotencyKey.update");
+    expect(imageSeoRoute).toContain("idempotencyKeyId");
+    expect(imageSeoRoute).toContain("idempotencyReplay");
     expect(imageSeoRoute).toContain("PROVIDER_IMAGE_SEO_PERSISTENCE_NOT_CONFIGURED");
     expect(imageSeoActionPanel).toContain('fetch("/api/portfolio/image-seo-pipeline"');
     expect(imageSeoActionPanel).toContain("Generate derivative draft");
@@ -155,6 +213,13 @@ describe("dashboard mutation runtime contract", () => {
     expect(settingsRoute).toContain('evaluateDashboardApiGuard(request, "settings:write"');
     expect(settingsRoute).toContain('dashboardMutationAction: "update_settings"');
     expect(settingsRoute).toContain("PROVIDER_SETTINGS_PERSISTENCE_NOT_CONFIGURED");
+    expect(settingsRoute).toContain("tx.idempotencyKey.upsert");
+    expect(settingsRoute).toContain("requestHash");
+    expect(settingsRoute).toContain('idempotency.status === "completed"');
+    expect(settingsRoute).toContain('code: "IDEMPOTENCY_CONFLICT"');
+    expect(settingsRoute).toContain("tx.idempotencyKey.update");
+    expect(settingsRoute).toContain("idempotencyKeyId");
+    expect(settingsRoute).toContain("idempotencyReplay");
     expect(settingsActionPanel).toContain('fetch("/api/settings"');
     expect(settingsActionPanel).toContain("Save settings draft");
     expect(settingsTest).toContain("guards safe settings writes");
@@ -176,6 +241,9 @@ describe("dashboard mutation runtime contract", () => {
     expect(formDetailRoute).toContain("export async function PATCH");
     expect(formDetailRoute).toContain('assertPermission(actor, "form:write")');
     expect(formDetailRoute).toContain('dashboardMutationAction: "archive_form_version"');
+    expect(formDetailRoute).toContain("tx.idempotencyKey.upsert");
+    expect(formDetailRoute).toContain("tx.idempotencyKey.update");
+    expect(formDetailRoute).toContain("idempotencyKeyId");
     expect(formDetailRoute).toContain("PROVIDER_FORM_WRITE_PERSISTENCE_NOT_CONFIGURED");
     expect(formDetailRoute).toContain('persistence: "local-contract"');
     expect(formDetailRoute).not.toContain('persistence: "local-plan-only"');
@@ -190,17 +258,39 @@ describe("dashboard mutation runtime contract", () => {
     expect(formReadRouteTest).toContain("archive-only form metadata write seam");
     expect(featureFlagRoute).toContain("tx.featureFlag.upsert");
     expect(featureFlagRoute).toContain("feature_flag:update");
+    expect(featureFlagRoute).toContain("requestHash");
+    expect(featureFlagRoute).toContain('idempotency.status === "completed"');
+    expect(featureFlagRoute).toContain('code: "IDEMPOTENCY_CONFLICT"');
+    expect(featureFlagRoute).toContain("idempotencyReplay");
     expect(featureFlagRouteTest).toContain("tx.auditLog.create");
+    expect(releaseRoute).toContain("releaseRollbackInputSchema.safeParse");
+    expect(releaseRoute).toContain("dashboard-release-rollback");
+    expect(releaseRoute).toContain('dashboardMutationAction: "rollback_release"');
+    expect(releaseRoute).toContain('action: "release:rollback:intent"');
+    expect(releaseRoute).toContain("providerRollbackExecuted: false");
+    expect(releaseRoute).toContain("protectedEnvironmentTouched: false");
+    expect(releaseRouteTest).toContain("PROVIDER_RELEASE_ROLLBACK_NOT_CONFIGURED");
   });
 
   it("keeps provider/UI blockers explicit until every dashboard mutation is executable and tested", () => {
     expect(dashboardMutationRuntimeReadiness.status).toBe("blocked");
     expect(dashboardMutationRuntimeReadiness.missingScripts).toEqual([]);
-    expect(dashboardMutationRuntimeReadiness.missingApiRoutes).toContain("create_reference_upload_intent");
-    expect(dashboardMutationRuntimeReadiness.missingServerActions).toContain("create_reference_upload_intent");
+    expect(dashboardMutationRuntimeReadiness.missingApiRoutes).not.toContain("create_reference_upload_intent");
+    expect(dashboardMutationRuntimeReadiness.missingServerActions).not.toContain("create_reference_upload_intent");
+    expect(dashboardMutationRuntimeReadiness.missingApiRoutes).not.toContain("publish_portfolio_item");
+    expect(dashboardMutationRuntimeReadiness.missingServerActions).not.toContain("publish_portfolio_item");
+    expect(dashboardMutationRuntimeReadiness.missingRouteTests).not.toContain("publish_portfolio_item");
+    expect(dashboardMutationRuntimeProofFiles).toContain("apps/dashboard/app/api/files/signed-upload/route.ts");
+    expect(dashboardMutationRuntimeProofFiles).toContain("apps/dashboard/app/api/portfolio/route.ts");
+    expect(dashboardMutationRuntimeProofFiles).toContain("apps/dashboard/tests/portfolio-read-route-static.test.ts");
+    expect(dashboardMutationRuntimeProofFiles).toContain("apps/dashboard/app/api/releases/route.ts");
+    expect(dashboardMutationRuntimeProofFiles).toContain("apps/dashboard/tests/release-route-static.test.ts");
     expect(dashboardMutationRuntimeReadiness.missingRouteTests).not.toContain("update_settings");
-    expect(dashboardMutationRuntimeReadiness.requiredCommands).toEqual(dashboardMutationRuntimeCommands);
-    expect(dashboardMutationRuntimeReadiness.requiredEvidence).toEqual(dashboardMutationExecutionRequiredEvidence);
+    expect(dashboardMutationRuntimeReadiness.missingApiRoutes).not.toContain("rollback_release");
+    expect(dashboardMutationRuntimeReadiness.missingServerActions).not.toContain("rollback_release");
+    expect(dashboardMutationRuntimeReadiness.missingRouteTests).not.toContain("rollback_release");
+    expect(dashboardMutationRuntimeReadiness.requiredCommands).toBe(dashboardMutationRuntimeCommands);
+    expect(dashboardMutationRuntimeReadiness.requiredEvidence).toBe(dashboardMutationExecutionRequiredEvidence);
     expect(dashboardMutationRuntimeReadiness.blockers).toContain("Dashboard mutation surfaces must expose gated action UI and explicit feedback states before runtime readiness.");
     expect(dashboardMutationRuntimeReadiness.blockers).not.toContain("Dashboard mutation surfaces must expose gated actions instead of disabled placeholder copy before runtime readiness.");
     expect(disabledActionPanel).toContain("disabled");
@@ -270,14 +360,14 @@ describe("dashboard mutation runtime contract", () => {
       operatorReviewNote: "private operator note",
     });
 
-    expect(executionPlan.localCommands).toEqual(dashboardMutationLocalCommands);
+    expect(executionPlan.localCommands).toBe(dashboardMutationLocalCommands);
     expect(executionPlan.localCommands).toEqual([
       "pnpm --filter @inkroute/booking typecheck",
       "pnpm --filter @inkroute/booking test",
       "static booking lifecycle mutation route review",
       "static gated mutation UI inventory review",
     ]);
-    expect(executionPlan.externalCommands).toEqual(dashboardMutationExternalCommands);
+    expect(executionPlan.externalCommands).toBe(dashboardMutationExternalCommands);
     expect(executionPlan.externalCommands).toEqual([
       "pnpm --filter @inkroute/dashboard typecheck",
       "pnpm --filter @inkroute/dashboard build",
@@ -288,13 +378,13 @@ describe("dashboard mutation runtime contract", () => {
       "dashboard mutation UI feedback-state tests",
       "GitHub Actions dashboard mutation execution evidence job",
     ]);
-    expect(executionPlan.commandExecutionAllowed).toEqual(false);
-    expect(executionPlan.databaseExecutionAllowed).toEqual(false);
-    expect(executionPlan.providerExecutionAllowed).toEqual(false);
-    expect(executionPlan.rollbackExecutionAllowed).toEqual(false);
-    expect(executionPlan.uiExecutionAllowed).toEqual(false);
-    expect(executionPlan.ciExecutionAllowed).toEqual(false);
-    expect(executionPlan.executionPolicy).toEqual(dashboardMutationExecutionPolicy);
+    expect(executionPlan.commandExecutionAllowed).toBe(false);
+    expect(executionPlan.databaseExecutionAllowed).toBe(false);
+    expect(executionPlan.providerExecutionAllowed).toBe(false);
+    expect(executionPlan.rollbackExecutionAllowed).toBe(false);
+    expect(executionPlan.uiExecutionAllowed).toBe(false);
+    expect(executionPlan.ciExecutionAllowed).toBe(false);
+    expect(executionPlan.executionPolicy).toBe(dashboardMutationExecutionPolicy);
     expect(executionPlan.executionPolicy).toEqual({
       codexMayClassifyStaticMutationReadiness: true,
       allMutationRoutesRequiredForClosure: true,
@@ -304,11 +394,11 @@ describe("dashboard mutation runtime contract", () => {
       gatedUiFeedbackRequiredForClosure: true,
       secretSafeArtifactsRequiredForClosure: true,
     });
-    expect(executionPlan.requiredExternalEvidence).toEqual(dashboardMutationRequiredExternalEvidence);
+    expect(executionPlan.requiredExternalEvidence).toBe(dashboardMutationRequiredExternalEvidence);
     expect(executionPlan.requiredExternalEvidence).toContain("idempotency persistence proof before provider side effects");
     expect(executionPlan.requiredExternalEvidence).toContain("provider rollback and retry integration evidence");
     expect(executionPlan.requiredExternalEvidence).toContain("secret-safe dashboard mutation artifact review");
-    expect(artifactReview.requiredExternalEvidence).toEqual(dashboardMutationRequiredExternalEvidence);
+    expect(artifactReview.requiredExternalEvidence).toBe(dashboardMutationRequiredExternalEvidence);
     expect(artifactReview.redactions).toEqual([
       "tenantDomain",
       "clientEmail",
@@ -321,7 +411,7 @@ describe("dashboard mutation runtime contract", () => {
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("stripe_pi_private");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("provider-token");
     expect(JSON.stringify(artifactReview.artifact)).toContain("dashboard mutation evidence captured");
-    expect(artifactReview.secretSafe).toEqual(true);
+    expect(artifactReview.secretSafe).toBe(true);
     expect(directRedaction.redactions).toEqual(["operatorReviewNote"]);
     expect(JSON.stringify(directRedaction.artifact)).toContain("safe dashboard mutation evidence");
   });

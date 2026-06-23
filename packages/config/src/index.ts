@@ -456,7 +456,7 @@ export const bookingPolicyAcknowledgements = [
   },
   {
     id: "privacyAcknowledged",
-    label: "I understand sensitive notes and reference files must be stored privately once persistence is implemented.",
+    label: "I understand sensitive notes and reference files are handled through private storage/encryption contracts, with provider execution still evidence-gated.",
   },
   {
     id: "depositBoundaryAcknowledged",
@@ -467,8 +467,8 @@ export const bookingPolicyAcknowledgements = [
 export const bookingIntegrationBoundaries = [
   {
     label: "Reference uploads",
-    status: "Scaffolded only",
-    detail: "The Phase 4 form captures local file metadata only. Signed uploads, storage ACLs, malware scanning, and private/public derivative handling remain external work.",
+    status: "Local contract wired",
+    detail: "The Phase 4 form captures local file metadata and the booking API emits signed-upload handoff evidence; provider signed URLs, storage ACLs, malware scanning, and private/public derivative proof remain external work.",
   },
   {
     label: "Deposit step",
@@ -478,12 +478,12 @@ export const bookingIntegrationBoundaries = [
   {
     label: "Notifications",
     status: "Provider-gated",
-    detail: "Email, SMS, and push notifications require provider credentials, compliance language, delivery logging, and opt-out handling.",
+    detail: "Local notification handoff, preference, suppression, and delivery-log contracts are wired; email, SMS, push, List-Unsubscribe, STOP/HELP, and live delivery proof still require provider credentials and compliance review.",
   },
   {
     label: "Calendar sync",
     status: "Externally dependent",
-    detail: "Google Calendar OAuth, conflict checks, ICS exports, buffer rules, and timezone verification remain planned integrations.",
+    detail: "Local availability/travel calendar previews and hold contracts are wired; Google Calendar OAuth, provider conflict checks, event sync, push channels, buffer rules, and timezone verification remain externally gated.",
   },
 ] as const;
 

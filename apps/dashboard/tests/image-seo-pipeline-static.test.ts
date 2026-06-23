@@ -57,13 +57,26 @@ describe("GAP-077 image SEO pipeline boundary", () => {
   });
 
   it("guards the dashboard processing route with RBAC, tenant isolation, transactions, and audit logs", () => {
+    expect(routeSource).toContain('export const runtime = "nodejs"');
     expect(routeSource).toContain('assertPermission(actor, "portfolio:read")');
     expect(routeSource).toContain('assertPermission(actor, "portfolio:write")');
     expect(routeSource).toContain("tenantId !== actor.tenantId");
     expect(routeSource).toContain("prisma.$transaction");
+    expect(routeSource).toContain("tx.portfolioItem.findFirst");
+    expect(routeSource).toContain("tx.idempotencyKey.upsert");
+    expect(routeSource).toContain('idempotency.status === "completed"');
+    expect(routeSource).toContain('status: "idempotency_conflict"');
+    expect(routeSource).toContain('code: "IDEMPOTENCY_CONFLICT"');
+    expect(routeSource).toContain("tx.fileAsset.findUnique");
+    expect(routeSource).toContain('status: "file_asset_tenant_conflict"');
+    expect(routeSource).toContain('code: "TENANT_ASSET_CONFLICT"');
     expect(routeSource).toContain("tx.fileAsset.upsert");
     expect(routeSource).toContain("tx.portfolioImage.create");
     expect(routeSource).toContain("tx.auditLog.create");
+    expect(routeSource).toContain("tx.idempotencyKey.update");
+    expect(routeSource).toContain("idempotencyKeyId");
+    expect(routeSource).toContain("idempotencyReplay");
+    expect(routeSource).toContain("requestHash");
     expect(routeSource).toContain("sourceObjectKey: \"[redacted-dashboard-field]\"");
     expect(routeSource).toContain("PROVIDER_IMAGE_SEO_PERSISTENCE_NOT_CONFIGURED");
     expect(routeSource).toContain("localImageSeoDryRunFallbackDisabled");
