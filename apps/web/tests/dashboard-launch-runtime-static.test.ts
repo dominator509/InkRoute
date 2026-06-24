@@ -180,6 +180,11 @@ describe("dashboard launch runtime contract", () => {
       "Redact private client, medical, payment, consent, and system fields before serialization.",
       "Capture secret-safe build, smoke, and CI artifacts for launch closeout.",
     ]);
+    expect(dashboardLaunchRuntimeReadiness.tenantScopedApisImplemented).toBe(true);
+    expect(dashboardLaunchRuntimeReadiness.prismaRepositoriesImplemented).toBe(true);
+    expect(dashboardLaunchRuntimeReadiness.realMutationsEnabled).toBe(true);
+    expect(dashboardLaunchRuntimeReadiness.mutationAuditLogsPersisted).toBe(true);
+    expect(dashboardLaunchRuntimeReadiness.providerActionsImplemented).toBe(false);
     expect(buildDashboardLaunchDecisionRequiredEvidence(dashboardLaunchRuntimeReadiness.requiredEvidence)).toBe(
       dashboardLaunchRequiredEvidence,
     );
@@ -305,7 +310,7 @@ describe("dashboard launch runtime contract", () => {
     expect(gapTracker).toContain("buildDashboardLaunchDecisionRequiredEvidence");
     expect(gapTracker).toContain("dashboardLaunchRequiredEvidence");
     expect(gapTracker).toContain("persistDashboardLaunchRun upsert seam");
-    expect(gapTracker).toContain("live dashboard typecheck/build/test, Playwright, seeded tenant data, provider auth, Prisma repositories, real mutations, provider actions, RBAC/cross-tenant denial, field redaction, launch states, CI evidence, provider-backed persistDashboardLaunchRun execution, and secret-safe artifacts remain open");
+    expect(gapTracker).toContain("live dashboard typecheck/build/test, Playwright, seeded tenant data, provider auth, provider actions, RBAC/cross-tenant denial, field redaction, launch states, CI evidence, provider-backed persistDashboardLaunchRun execution, and secret-safe artifacts remain open");
     expect(gapTracker).toContain("GAP-007 is dashboard-launch-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("proof inventory");
     expect(gapTracker).toContain("Dashboard launch runtime identity assertions pin exported commands, controls, artifacts, required evidence, and decision evidence helpers");

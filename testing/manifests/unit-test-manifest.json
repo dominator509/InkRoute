@@ -2356,7 +2356,7 @@
       "verifies": [
         "GAP-007 DashboardLaunchRun Prisma model and app row contract plus dashboard launch runtime matrix covers dashboard typecheck/build/test, Playwright smoke, seeded tenant data, provider-backed auth, tenant-scoped APIs, Prisma repositories, real mutations, AuditLog persistence, provider actions, RBAC denial, cross-tenant denial, field redaction, loading/empty/error states, CI evidence, and secret-safe artifacts",
         "GAP-007 dashboard scripts, launch helper, middleware, mutation route, redaction tests, CI labels, artifact paths, and tracker row remain wired without claiming dashboard launch readiness",
-        "GAP-007 readiness keeps provider-backed runtime, persistence, mutation, RBAC, redaction, launch state, CI, and artifact evidence explicit blockers"
+        "GAP-007 readiness keeps provider-backed runtime, RBAC, redaction, launch state, CI, and artifact evidence explicit blockers while source-wired tenant APIs, repositories, mutations, and AuditLog persistence are tracked as implemented"
       ],
       "blockedBy": [
         "Static dashboard launch runtime test execution pending",
