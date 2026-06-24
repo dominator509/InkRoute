@@ -1566,6 +1566,7 @@ export const databaseOperationsRuntimeRequiredCommands = [
       "pnpm deploy:verify-database-ops",
       "pnpm db:generate",
       "pnpm --filter @inkroute/db db:validate",
+      "pnpm db:migrate",
       "database migration dry-run",
       "database generated SQL review",
       "database staging migration apply",

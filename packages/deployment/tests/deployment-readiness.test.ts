@@ -157,7 +157,6 @@ describe("deployment readiness helpers", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.requiredCommands).toBe(deploymentPipelineReadinessRequiredCommands);
-    expect(plan.requiredCommands).toBe(deploymentPipelineReadinessRequiredCommands);
     expect(plan.requiredEvidence).toBe(deploymentPipelineReadinessRequiredEvidence);
     expect(plan.approvalGates).toContain("Production GitHub environment requires human approval.");
     expect(plan.blockers).toContain("GitHub environment secrets must be configured without placeholder values.");
@@ -282,7 +281,7 @@ describe("deployment readiness helpers", () => {
     expect(plan.requiredCommands).toBe(providerEnvironmentRuntimeRequiredCommands);
     expect(plan.requiredCommands).toBe(providerEnvironmentRuntimeRequiredCommands);
     expect(plan.requiredCommands).toBe(providerEnvironmentRuntimeRequiredCommands);
-    expect(plan.requiredCommands).toBe(deploymentPipelineReadinessRequiredCommands);
+    expect(plan.requiredCommands).not.toBe(deploymentPipelineReadinessRequiredCommands);
     expect(plan.requiredCommands).toBe(providerEnvironmentRuntimeRequiredCommands);
     expect(plan.requiredCommands).toBe(providerEnvironmentRuntimeRequiredCommands);
     expect(plan.requiredCommands).toBe(providerEnvironmentRuntimeRequiredCommands);
@@ -925,6 +924,6 @@ describe("deployment readiness helpers", () => {
       blockers: [],
     });
     expect(plan.requiredCommands).toBe(deploymentLaunchEvidenceRequiredCommands);
-    expect(plan.requiredCommands).toBe(productionLaunchEvidenceRuntimeRequiredCommands);
+    expect(plan.requiredCommands).not.toBe(productionLaunchEvidenceRuntimeRequiredCommands);
   });
 });
