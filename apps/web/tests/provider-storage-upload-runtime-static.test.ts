@@ -398,6 +398,7 @@ describe("provider storage upload runtime contract", () => {
     expect(providerStorageUploadRuntimeProofFiles).toContain("packages/security/package.json");
     expect(providerStorageUploadRuntimeProofFiles).toContain("apps/web/package.json");
     expect(providerStorageUploadRuntimeProofFiles).toContain("apps/web/lib/providerStorageUploadRuntime.ts");
+    expect(providerStorageUploadRuntimeProofFiles).toContain("apps/dashboard/app/api/files/signed-upload/route.ts");
     expect(dashboardSignedUploadRoute.length).toBeGreaterThan(0);
     expect(providerStorageUploadRuntimeProofFiles).toContain("apps/web/tests/provider-storage-upload-runtime-static.test.ts");
     for (const proofFile of providerStorageUploadRuntimeProofFiles) {

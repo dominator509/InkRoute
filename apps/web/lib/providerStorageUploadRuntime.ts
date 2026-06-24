@@ -200,6 +200,7 @@ export const providerStorageUploadRuntimeProofFiles = [
   "apps/web/tests/provider-storage-upload-runtime-static.test.ts",
   "apps/web/app/api/public/[tenantSlug]/secure-upload-intents/route.ts",
   "apps/web/tests/secure-upload-intents-route.test.ts",
+  "apps/dashboard/app/api/files/signed-upload/route.ts",
   "apps/dashboard/tests/portfolio-read-route-static.test.ts",
   "packages/db/prisma/schema.prisma",
   "packages/db/prisma/migrations/20260609032900_add_provider_storage_upload_runs/migration.sql",
