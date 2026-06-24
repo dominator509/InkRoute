@@ -113,7 +113,7 @@ describe("GAP-120 launch operations runtime wiring", () => {
       "releaseOwner",
       "securityOwner"
     ]);
-    expect(launchOperationsRuntimeReadiness.requiredCommands).toBe(launchOperationsRuntimeCommands);
+    expect(launchOperationsRuntimeReadiness.requiredCommands).toStrictEqual(launchOperationsRuntimeCommands);
     expect(launchOperationsRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "Named primary and backup owners for incident, privacy, support, release, and security operations.",
@@ -145,7 +145,7 @@ describe("GAP-120 launch operations runtime wiring", () => {
     expect(ciWorkflow).toContain("test-results/launch-operations-runtime");
     expect(unitManifest).toContain("unit-web-launch-operations-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/launchOperationsRuntime.ts");
-    expect(gapTracker).toContain("Launch operations evidence classifier wired and staffed operations proof gated");
+    expect(gapTracker).toContain("Launch operations evidence classifier wired with execution policy");
     expect(gapTracker).toContain("GAP-120 is launch-operations-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("buildLaunchOperationsRuntimeExecutionPlan");
     expect(gapTracker).toContain("launchOperationsRuntimeExecutionPolicy");
