@@ -45,8 +45,8 @@ function appointmentLifecycleIntents(input: { depositRequiredCents?: number; sta
           reason: "No depositRequiredCents was supplied for this appointment.",
         },
     notification: {
-      status: "deferred",
-      reason: "Client/staff notification dispatch is queued by the notification scheduler/worker after Appointment persistence.",
+      status: "queued_local_intent",
+      reason: "A local NotificationJob handoff is queued transactionally after Appointment persistence; provider dispatch remains worker/provider-gated.",
       gapIds: ["GAP-010", "GAP-038", "GAP-065"],
     },
     calendar: {
@@ -184,7 +184,8 @@ export async function POST(request: NextRequest) {
             lifecycleIntents,
             calendarProviderInserted: false,
             depositSessionCreated: false,
-            notificationDispatched: false,
+            notificationJobPlanned: true,
+            notificationProviderExecution: "deferred",
           }),
         },
         update: {
@@ -199,7 +200,8 @@ export async function POST(request: NextRequest) {
             lifecycleIntents,
             calendarProviderInserted: false,
             depositSessionCreated: false,
-            notificationDispatched: false,
+            notificationJobPlanned: true,
+            notificationProviderExecution: "deferred",
           }),
         },
         select: { id: true, status: true, result: true },
@@ -257,9 +259,10 @@ export async function POST(request: NextRequest) {
             booking: replayBooking,
             event,
             lifecycleIntents,
+            notificationJob: null,
             dashboardMutationPlan: {
               replayed: true,
-              providerBoundary: "Appointment idempotency replay; provider calendar, deposit, and notification execution remain deferred workflow intents.",
+              providerBoundary: "Appointment idempotency replay; provider calendar, deposit, and notification execution remain deferred after the local NotificationJob handoff intent.",
             },
             idempotency,
           };
@@ -411,6 +414,36 @@ export async function POST(request: NextRequest) {
         select: { id: true, createdAt: true },
       });
 
+      const notificationJob = await tx.notificationJob.create({
+        data: {
+          tenantId,
+          sourceAction: "appointment.create.notification",
+          sourceEntityType: "Appointment",
+          sourceEntityId: appointment.id,
+          templateKey: "appointment_created",
+          channel: "in_app",
+          state: "queued",
+          priority: 5,
+          idempotencyKey: `${idempotencyKey}:appointment-notification`,
+          actorUserId: actor.actorUserId,
+          scheduledAt: new Date(now),
+          availableAt: new Date(now),
+          payload: {
+            source: "dashboard-api",
+            providerExecution: "deferred",
+            appointmentId: appointment.id,
+            bookingRequestId: booking.id,
+            clientId: input.clientId,
+            artistId: input.artistId,
+            startsAt: input.startsAt,
+            endsAt: input.endsAt,
+            timezone: input.timezone,
+            gapIds: ["GAP-010", "GAP-038", "GAP-065"],
+          },
+        },
+        select: { id: true, state: true, templateKey: true, channel: true, createdAt: true },
+      });
+
       await tx.idempotencyKey.update({
         where: { tenantId_scope_key: { tenantId, scope: "dashboard-appointment-create", key: idempotencyKey } },
         data: {
@@ -421,14 +454,16 @@ export async function POST(request: NextRequest) {
             eventId: event.id,
             auditId: audit.id,
             lifecycleIntents,
+            notificationJobId: notificationJob.id,
+            notificationJobQueued: true,
+            notificationProviderExecution: "deferred",
             calendarProviderInserted: false,
             depositSessionCreated: false,
-            notificationDispatched: false,
           }),
         },
       });
 
-      return { status: "persisted" as const, appointment, booking: updatedBooking, event, audit, lifecycleIntents, dashboardMutationPlan, idempotency };
+      return { status: "persisted" as const, appointment, booking: updatedBooking, event, audit, notificationJob, lifecycleIntents, dashboardMutationPlan, idempotency };
     });
 
     if (result.status === "booking_not_found") {
@@ -472,12 +507,13 @@ export async function POST(request: NextRequest) {
         booking: result.booking,
         event: result.event,
         auditId: result.status === "persisted" ? result.audit.id : null,
+        notificationJob: result.notificationJob,
         idempotencyKeyId: result.idempotency.id,
         idempotencyReplay: result.status === "replayed",
         lifecycleIntents: result.lifecycleIntents,
         dashboardMutationPlan: result.dashboardMutationPlan,
         gapIds: ["GAP-007", "GAP-037", "GAP-038"],
-        boundary: "Appointment creation is idempotency-backed and persisted in one tenant-scoped transaction with BookingStateEvent and AuditLog rows; provider calendar, deposit, and notification execution remain deferred workflow intents.",
+        boundary: "Appointment creation is idempotency-backed and persisted in one tenant-scoped transaction with BookingStateEvent, AuditLog, and local NotificationJob handoff rows; provider calendar, deposit, and notification execution remain deferred workflow intents.",
       },
       { status: result.status === "persisted" ? 201 : 200, headers: noStoreHeaders },
     );

@@ -140,10 +140,15 @@ describe("dashboard mutation runtime contract", () => {
     expect(appointmentRoute).toContain("tx.appointment.create");
     expect(appointmentRoute).toContain("tx.bookingStateEvent.create");
     expect(appointmentRoute).toContain("tx.auditLog.create");
+    expect(appointmentRoute).toContain("tx.notificationJob.create");
+    expect(appointmentRoute).toContain('sourceAction: "appointment.create.notification"');
+    expect(appointmentRoute).toContain('templateKey: "appointment_created"');
+    expect(appointmentRoute).toContain('providerExecution: "deferred"');
+    expect(appointmentRoute).toContain("notificationJobQueued: true");
     expect(appointmentRoute).toContain("tx.idempotencyKey.update");
     expect(appointmentRoute).toContain("calendarProviderInserted: false");
     expect(appointmentRoute).toContain("depositSessionCreated: false");
-    expect(appointmentRoute).toContain("notificationDispatched: false");
+    expect(appointmentRoute).toContain("notificationProviderExecution");
     expect(appointmentRoute).toContain("idempotencyKeyId");
     expect(appointmentRoute).toContain("idempotencyReplay");
     expect(bookingLifecycleActionPanel).toContain("fetch(`/api/bookings/${bookingId}/state`");
