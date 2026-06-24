@@ -140,6 +140,11 @@ describe("dashboard mutation runtime contract", () => {
     expect(appointmentRoute).toContain("tx.appointment.create");
     expect(appointmentRoute).toContain("tx.bookingStateEvent.create");
     expect(appointmentRoute).toContain("tx.auditLog.create");
+    expect(appointmentRoute).toContain("tx.deposit.create");
+    expect(appointmentRoute).toContain("tx.paymentAuditLog.create");
+    expect(appointmentRoute).toContain('action: "deposit:draft:create_from_appointment"');
+    expect(appointmentRoute).toContain("depositDraftPersisted");
+    expect(appointmentRoute).toContain("stripeCheckoutCreated: false");
     expect(appointmentRoute).toContain("tx.notificationJob.create");
     expect(appointmentRoute).toContain('sourceAction: "appointment.create.notification"');
     expect(appointmentRoute).toContain('templateKey: "appointment_created"');

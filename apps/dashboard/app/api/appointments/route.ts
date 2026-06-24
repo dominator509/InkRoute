@@ -35,8 +35,8 @@ function appointmentLifecycleIntents(input: { depositRequiredCents?: number; sta
   return {
     deposit: input.depositRequiredCents !== undefined
       ? {
-          status: "deferred",
-          reason: "Deposit session/provider collection is handled by the payment workflow after Appointment persistence.",
+          status: "draft_persisted_after_appointment",
+          reason: "A local Deposit draft is persisted transactionally after Appointment persistence; Stripe checkout/provider collection remains payment-workflow gated.",
           amountCents: input.depositRequiredCents,
           gapIds: ["GAP-038", "GAP-060"],
         }
@@ -183,6 +183,7 @@ export async function POST(request: NextRequest) {
             ),
             lifecycleIntents,
             calendarProviderInserted: false,
+            depositDraftPlanned: input.depositRequiredCents !== undefined,
             depositSessionCreated: false,
             notificationJobPlanned: true,
             notificationProviderExecution: "deferred",
@@ -199,6 +200,7 @@ export async function POST(request: NextRequest) {
             ),
             lifecycleIntents,
             calendarProviderInserted: false,
+            depositDraftPlanned: input.depositRequiredCents !== undefined,
             depositSessionCreated: false,
             notificationJobPlanned: true,
             notificationProviderExecution: "deferred",
@@ -259,6 +261,7 @@ export async function POST(request: NextRequest) {
             booking: replayBooking,
             event,
             lifecycleIntents,
+            depositDraft: null,
             notificationJob: null,
             dashboardMutationPlan: {
               replayed: true,
@@ -414,6 +417,56 @@ export async function POST(request: NextRequest) {
         select: { id: true, createdAt: true },
       });
 
+      const depositDraft =
+        input.depositRequiredCents !== undefined
+          ? await tx.deposit.create({
+              data: {
+                tenantId,
+                bookingRequestId: booking.id,
+                appointmentId: appointment.id,
+                amountCents: input.depositRequiredCents,
+                currency: "usd",
+                status: "pending",
+                policySnapshot: {
+                  source: "dashboard-api",
+                  action: "appointment.create.deposit_draft",
+                  providerCollection: "deferred",
+                  stripeCheckoutCreated: false,
+                  appointmentId: appointment.id,
+                  bookingRequestId: booking.id,
+                  idempotencyKeyId: idempotency.id,
+                  gapIds: ["GAP-038", "GAP-060"],
+                },
+              },
+              select: { id: true, amountCents: true, currency: true, status: true, createdAt: true },
+            })
+          : null;
+
+      const depositAudit =
+        depositDraft !== null
+          ? await tx.paymentAuditLog.create({
+              data: {
+                tenantId,
+                depositId: depositDraft.id,
+                actorUserId: actor.actorUserId,
+                action: "deposit:draft:create_from_appointment",
+                provider: "stripe",
+                metadata: {
+                  source: "dashboard-api",
+                  appointmentId: appointment.id,
+                  bookingRequestId: booking.id,
+                  amountCents: depositDraft.amountCents,
+                  currency: depositDraft.currency,
+                  stripeCheckoutCreated: false,
+                  providerCollection: "deferred",
+                  idempotencyKeyId: idempotency.id,
+                  gapIds: ["GAP-038", "GAP-060"],
+                },
+              },
+              select: { id: true, createdAt: true },
+            })
+          : null;
+
       const notificationJob = await tx.notificationJob.create({
         data: {
           tenantId,
@@ -454,6 +507,10 @@ export async function POST(request: NextRequest) {
             eventId: event.id,
             auditId: audit.id,
             lifecycleIntents,
+            depositDraftId: depositDraft?.id ?? null,
+            depositAuditId: depositAudit?.id ?? null,
+            depositDraftPersisted: depositDraft !== null,
+            stripeCheckoutCreated: false,
             notificationJobId: notificationJob.id,
             notificationJobQueued: true,
             notificationProviderExecution: "deferred",
@@ -463,7 +520,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return { status: "persisted" as const, appointment, booking: updatedBooking, event, audit, notificationJob, lifecycleIntents, dashboardMutationPlan, idempotency };
+      return { status: "persisted" as const, appointment, booking: updatedBooking, event, audit, depositDraft, depositAudit, notificationJob, lifecycleIntents, dashboardMutationPlan, idempotency };
     });
 
     if (result.status === "booking_not_found") {
@@ -507,13 +564,15 @@ export async function POST(request: NextRequest) {
         booking: result.booking,
         event: result.event,
         auditId: result.status === "persisted" ? result.audit.id : null,
+        depositDraft: result.depositDraft,
+        depositAuditId: result.status === "persisted" ? result.depositAudit?.id ?? null : null,
         notificationJob: result.notificationJob,
         idempotencyKeyId: result.idempotency.id,
         idempotencyReplay: result.status === "replayed",
         lifecycleIntents: result.lifecycleIntents,
         dashboardMutationPlan: result.dashboardMutationPlan,
         gapIds: ["GAP-007", "GAP-037", "GAP-038"],
-        boundary: "Appointment creation is idempotency-backed and persisted in one tenant-scoped transaction with BookingStateEvent, AuditLog, and local NotificationJob handoff rows; provider calendar, deposit, and notification execution remain deferred workflow intents.",
+        boundary: "Appointment creation is idempotency-backed and persisted in one tenant-scoped transaction with BookingStateEvent, AuditLog, local Deposit draft, PaymentAuditLog, and local NotificationJob handoff rows when requested; provider calendar, Stripe checkout, and notification execution remain deferred workflow intents.",
       },
       { status: result.status === "persisted" ? 201 : 200, headers: noStoreHeaders },
     );
