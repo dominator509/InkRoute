@@ -21,6 +21,9 @@ describe("Stripe Checkout route static contract", () => {
 
   it("defines provider and persistence adapter seams before live Stripe calls", () => {
     expect(checkoutSource).toContain("StripeCheckoutProviderAdapter");
+    expect(checkoutSource).toContain("createStripeCheckoutProviderAdapter");
+    expect(checkoutSource).toContain("stripe.checkout.sessions.create");
+    expect(checkoutSource).toContain("idempotencyKey: input.idempotencyKey");
     expect(checkoutSource).toContain("createCheckoutSession");
     expect(checkoutSource).toContain("runTenantScopedCheckoutPersistenceTransaction");
     expect(checkoutSource).toContain('phase: "before_provider_call"');

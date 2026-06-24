@@ -183,6 +183,8 @@ describe("live Stripe payments runtime contract", () => {
     expect(stripeCheckoutSource).toContain('import Stripe from "stripe"');
     expect(stripeCheckoutSource).toContain("STRIPE_CHECKOUT_API_VERSION");
     expect(stripeCheckoutSource).toContain("buildStripeCheckoutSdkConfig");
+    expect(stripeCheckoutSource).toContain("createStripeCheckoutProviderAdapter");
+    expect(stripeCheckoutSource).toContain("stripe.checkout.sessions.create");
     expect(stripeCheckoutSource).toContain("idempotencyHeaderRequired");
     expect(paymentsSource).toContain("buildLiveStripePaymentsReadinessPlan");
     expect(paymentsSource).toContain("verifyStripeWebhookSignature");
@@ -356,7 +358,7 @@ describe("live Stripe payments runtime contract", () => {
     expect(gapTracker).toContain("liveStripePaymentsRuntimeLocalArtifacts");
     expect(gapTracker).toContain("liveStripePaymentsRuntimeExternalArtifacts");
     expect(gapTracker).toContain("persistLiveStripePaymentsRun upsert seam");
-    expect(gapTracker).toContain("Stripe secret/webhook configuration, real Checkout writes, provider idempotency persistence, lifecycle reconciliation, refunds/disputes, Stripe CLI, booking-to-paid E2E, CI evidence, provider-backed persistLiveStripePaymentsRun execution, and secret-safe artifacts remain open");
+    expect(gapTracker).toContain("Stripe secret/webhook configuration, provider-backed Checkout adapter execution/provider session persistence, provider idempotency persistence, lifecycle reconciliation, refunds/disputes, Stripe CLI, booking-to-paid E2E, CI evidence, provider-backed persistLiveStripePaymentsRun execution, and secret-safe artifacts remain open");
     expect(gapTracker).toContain("GAP-004 is live-stripe-payments-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("proof inventory");
   });

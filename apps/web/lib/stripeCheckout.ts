@@ -44,6 +44,50 @@ export interface StripeCheckoutProviderAdapter {
   }): Promise<StripeCheckoutProviderSession>;
 }
 
+export function createStripeCheckoutProviderAdapter(stripe: StripeSdkClient): StripeCheckoutProviderAdapter {
+  return {
+    async createCheckoutSession(input) {
+      const session = await stripe.checkout.sessions.create(
+        {
+          mode: input.draft.mode,
+          client_reference_id: input.draft.clientReferenceId,
+          ...(input.draft.customerEmail ? { customer_email: input.draft.customerEmail } : {}),
+          line_items: [
+            {
+              quantity: input.draft.lineItem.quantity,
+              price_data: {
+                currency: input.draft.lineItem.currency,
+                unit_amount: input.draft.lineItem.amountCents,
+                product_data: {
+                  name: input.draft.lineItem.name,
+                  description: input.draft.lineItem.description,
+                },
+              },
+            },
+          ],
+          metadata: input.draft.metadata,
+          success_url: input.draft.successUrl,
+          cancel_url: input.draft.cancelUrl,
+        },
+        {
+          idempotencyKey: input.idempotencyKey,
+        },
+      );
+      const paymentIntentId =
+        typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : session.payment_intent?.id;
+
+      return {
+        provider: "stripe",
+        id: session.id,
+        url: session.url ?? "",
+        ...(paymentIntentId ? { paymentIntentId } : {}),
+      };
+    },
+  };
+}
+
 export interface StripeCheckoutPersistenceAdapter {
   runTenantScopedCheckoutPersistenceTransaction<T>(
     input: {
