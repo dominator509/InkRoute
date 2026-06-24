@@ -178,7 +178,7 @@ export const bookingProviderHandoffRuntimeReadiness = buildBookingProviderHandof
   stripeDepositSessionSandboxPassed: false,
   notificationQueueDeliverySandboxPassed: false,
   calendarHoldSandboxPassed: false,
-  auditPayloadsPersisted: false,
+  auditPayloadsPersisted: true,
   retryPolicyVerified: true,
   rollbackPathsVerified: true,
   operatorReviewQueueConfigured: true,

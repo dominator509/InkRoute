@@ -148,7 +148,7 @@ The public website now has static demo city/style routes plus DB-oriented public
 - Applies local rate limit and enforces anti-bot proof (`x-inkroute-bot-proof`) for DB-backed writes; DB persistence is denied with `BOT_PROTECTION_REQUIRED` when proof is absent/invalid.
 - Persists `BookingRequest`, `BookingStateEvent`, and `AuditLog` rows to Postgres when DB is available.
 - Enforces key-policy checks for sensitive persistence and emits encryption readiness, rotation-state/action, round-trip proof, key-cache refresh evidence, and provider-token readiness in response metadata + audit payloads.
-- Produces scope-aware post-persist workflow contracts (`notification`, `deposit`, `calendar`, `reference-upload`) with signed reference-upload handoff contract fields for downstream queue/worker handoff.
+- Produces scope-aware post-persist workflow contracts (`notification`, `deposit`, `calendar`, `reference-upload`) with signed reference-upload handoff contract fields for downstream queue/worker handoff and persists redacted provider-handoff audit metadata on DB-backed booking writes.
 - Captures provider-token-intake detection metadata and blocks DB persistence when encryption readiness is invalid for token-bearing payloads.
 - Falls back to local runtime draft persistence when DB is unavailable, with matching DB/local workflow plan shapes.
 

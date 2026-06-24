@@ -644,15 +644,6 @@ function persistBookingPostPersistWorkflows(
   return getBookingPostPersistWorkflows(tenantSlug, bookingRequestId);
 }
 
-function countPlannedPostPersistWorkflows(
-  input: BookingInput,
-  tenantSlug: string,
-  bookingRequestId: string,
-  workflowScope: TenantResolution["source"],
-) {
-  return buildPostPersistWorkflowPlans(input, tenantSlug, bookingRequestId, workflowScope).length;
-}
-
 async function persistBookingRequestToDatabase(
   tenantSlug: string,
   tenantId: string,
@@ -742,7 +733,20 @@ async function persistBookingRequestToDatabase(
       },
     });
 
-    const workflowCount = countPlannedPostPersistWorkflows(input, tenantSlug, booking.id, "database");
+    const workflowPlans = buildPostPersistWorkflowPlans(input, tenantSlug, booking.id, "database");
+    const workflowCount = workflowPlans.length;
+    const providerHandoffAuditPayloads = workflowPlans.map((workflow) => ({
+      type: workflow.type,
+      status: workflow.status,
+      consumer:
+        typeof workflow.payload.consumer === "string"
+          ? workflow.payload.consumer
+          : typeof workflow.payload.queueHint === "string"
+            ? workflow.payload.queueHint
+            : "provider-handoff-worker",
+      providerExecution: "deferred",
+      payloadStored: "redacted-audit-metadata",
+    }));
 
     const event = await tx.bookingStateEvent.create({
       data: {
@@ -791,6 +795,15 @@ async function persistBookingRequestToDatabase(
             providerToken: providerTokenPolicy,
           },
           keyLifecycle: buildKeyLifecycleSnapshot(encryptionPolicy, providerTokenPolicy, cacheVersion),
+          providerHandoffAudit: {
+            workflowCount,
+            payloadsPersisted: true,
+            payloads: providerHandoffAuditPayloads,
+            providerExecution: "deferred",
+            providerIdempotencyConfigured: false,
+            secretSafe: true,
+            gapIds: ["GAP-034"],
+          },
         }),
       },
     });
@@ -881,7 +894,7 @@ function buildResponseBase(
         stripeDepositSessionSandboxPassed: false,
         notificationQueueDeliverySandboxPassed: false,
         calendarHoldSandboxPassed: false,
-        auditPayloadsPersisted: false,
+        auditPayloadsPersisted: resolvedTenant.source === "database",
         retryPolicyVerified: true,
         rollbackPathsVerified: true,
         operatorReviewQueueConfigured: true,

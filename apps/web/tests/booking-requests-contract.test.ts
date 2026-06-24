@@ -144,6 +144,9 @@ describe("booking request queue/consumer contracts", () => {
     expect(routeSource).toContain("providerHandoffRuntimeEvidencePlan");
     expect(routeSource).toContain("acceptedBookingGateEnforced: true");
     expect(routeSource).toContain("persistedWorkerQueueConfigured: true");
+    expect(routeSource).toContain("providerHandoffAudit");
+    expect(routeSource).toContain("payloadsPersisted: true");
+    expect(routeSource).toContain('auditPayloadsPersisted: resolvedTenant.source === "database"');
     expect(routeSource).toContain("buildProviderFailureHandlingContract");
     expect(routeSource).toContain("booking-provider-failure-local-contract");
     expect(routeSource).toContain("retryPolicyVerified: true");
