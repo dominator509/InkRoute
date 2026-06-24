@@ -40,6 +40,9 @@ describe("GAP-097 private storage signed URL contract", () => {
     expect(source).toContain("persist-signed-url-grant");
     expect(source).toContain("write-private-storage-audit-log");
     expect(source).toContain("PrivateStorageSignedUrlPersistenceClient");
+    expect(source).toContain("PrivateStorageProviderSigner");
+    expect(source).toContain("createPrivateStorageProviderSigner");
+    expect(source).toContain("rawSignedUrlStored: false");
     expect(source).toContain("persistPrivateStorageSignedUrlGrant");
     expect(source).toContain("rawSignedUrlStored: false");
     expect(source).toContain("where: {");
@@ -147,8 +150,13 @@ describe("GAP-097 private storage signed URL contract", () => {
       expect.arrayContaining([
         "S3 or Supabase private object storage provider must be configured.",
         "Storage provider environment variables must be configured without exposing secrets.",
-        "Provider signed upload URLs must be implemented with tenant-scoped object keys.",
       ]),
+    );
+    expect(privateStorageSignedUrlRuntimeContract.blockers).not.toContain(
+      "Provider signed upload URLs must be implemented with tenant-scoped object keys.",
+    );
+    expect(privateStorageSignedUrlRuntimeContract.blockers).not.toContain(
+      "Provider signed download URLs must be implemented with scan/revocation gates.",
     );
     expect(privateStorageSignedUrlRuntimeContract.blockers).not.toContain(
       "SignedUrlGrant persistence must record issuer, recipient, object key, scope, expiry, and use status.",

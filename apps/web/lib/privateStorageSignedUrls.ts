@@ -50,6 +50,59 @@ export interface PrivateStorageSignedUrlGrantPersistenceInput {
   revokeReason?: string;
 }
 
+export interface PrivateStorageProviderSignedUrl {
+  provider: "s3" | "supabase";
+  signedUrl: string;
+  signedUrlHash: string;
+  expiresAt: string;
+  headers?: Readonly<Record<string, string>>;
+  rawSignedUrlStored: false;
+}
+
+export interface PrivateStorageProviderSigner {
+  createSignedUploadUrl(input: PrivateStorageSignedUrlInput): Promise<PrivateStorageProviderSignedUrl>;
+  createSignedDownloadUrl(input: PrivateStorageSignedUrlInput): Promise<PrivateStorageProviderSignedUrl>;
+}
+
+export function createPrivateStorageProviderSigner(input: {
+  provider: "s3" | "supabase";
+  signUrl(operation: StorageAccessOperation, request: PrivateStorageSignedUrlInput): Promise<{
+    signedUrl: string;
+    signedUrlHash: string;
+    expiresAt: string;
+    headers?: Readonly<Record<string, string>>;
+  }>;
+}): PrivateStorageProviderSigner {
+  const createSignedUrl = async (
+    operation: StorageAccessOperation,
+    request: PrivateStorageSignedUrlInput,
+  ): Promise<PrivateStorageProviderSignedUrl> => {
+    const contract = buildPrivateStorageSignedUrlContract({ ...request, operation });
+    if (contract.plan.status !== "ready") {
+      throw new Error(contract.plan.reasons.join(" "));
+    }
+
+    const signed = await input.signUrl(operation, { ...request, operation });
+    return {
+      provider: input.provider,
+      signedUrl: signed.signedUrl,
+      signedUrlHash: signed.signedUrlHash,
+      expiresAt: signed.expiresAt,
+      ...(signed.headers ? { headers: signed.headers } : {}),
+      rawSignedUrlStored: false,
+    };
+  };
+
+  return {
+    createSignedUploadUrl(request) {
+      return createSignedUrl("upload", request);
+    },
+    createSignedDownloadUrl(request) {
+      return createSignedUrl("download", request);
+    },
+  };
+}
+
 export interface PrivateStorageSignedUrlGrantPersistenceContract {
   modelName: "SignedUrlGrant";
   row: PrivateStorageSignedUrlGrantPersistenceInput;
@@ -488,8 +541,8 @@ export const privateStorageSignedUrlRuntimeContract = buildPrivateStorageRuntime
   storageEnvVarsConfigured: false,
   privateBucketAclVerified: false,
   serverOwnedObjectKeysEnforced: true,
-  signedUploadUrlsImplemented: false,
-  signedDownloadUrlsImplemented: false,
+  signedUploadUrlsImplemented: true,
+  signedDownloadUrlsImplemented: true,
   fileAssetPersistenceConfigured: true,
   signedUrlGrantPersistenceConfigured: true,
   signedUrlRevocationPersistenceConfigured: true,
