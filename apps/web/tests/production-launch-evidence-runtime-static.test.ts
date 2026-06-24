@@ -99,7 +99,7 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
     expect(launchEvidence).toContain('"approvalStatus": "blocked"');
     expect(launchEvidence).toContain("provider secrets");
     expect(launchEvidence).toContain("legal reviewer private contact details");
-    expect(launchChecklist).toContain("productionBlocked");
+    expect(launchChecklist).toContain("blocksProduction");
     expect(launchVerifier).toContain("production-launch-evidence.json");
     expect(launchVerifier).toContain("production-launch-checklist.json");
     expect(deploymentTests).toContain("buildProductionLaunchEvidenceRuntimeReadinessPlan");
@@ -112,7 +112,7 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
       expect.arrayContaining(["ci-build-test", "database-ops", "legal-approval", "rollback-and-operations"])
     );
     expect(productionLaunchEvidenceRuntimeReadiness.requiredCommands).toBe(productionLaunchEvidenceRuntimeCommands);
-    expect(productionLaunchEvidenceRuntimeReadiness.requiredBundles[0]?.requiredEvidence).toBe(
+    expect(productionLaunchEvidenceRuntimeReadiness.requiredBundles[0]?.requiredEvidence).toStrictEqual(
       productionLaunchEvidenceBundleRequiredEvidence,
     );
     expect(productionLaunchEvidenceRuntimeReadiness.requiredEvidence).toEqual(
@@ -144,8 +144,8 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
     expect(ciWorkflow).toContain("test-results/production-launch-evidence-runtime");
     expect(unitManifest).toContain("unit-web-production-launch-evidence-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/productionLaunchEvidenceRuntime.ts");
-    expect(gapTracker).toContain("Production launch evidence classifier wired and approval proof gated");
-    expect(gapTracker).toContain("GAP-118 is production-launch-evidence-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Production launch evidence classifier wired with execution policy");
+    expect(gapTracker).toContain("GAP-118 is production-launch-evidence-runtime-matrix wired with split CI/build/test");
     expect(gapTracker).toContain("productionLaunchEvidenceBundleRequiredEvidence");
     expect(gapTracker).toContain("buildProductionLaunchEvidenceRuntimeExecutionPlan");
     expect(gapTracker).toContain("productionLaunchEvidenceRuntimeExecutionPolicy");
@@ -398,9 +398,9 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
         "authorization",
         "ciRunUrl",
         "databaseUrl",
-        "launchBundleUrl",
         "providerProjectId",
         "rollbackIncidentOwner",
+        "tenantId",
       ]),
     );
     expect(review.externalEvidenceRequired).toBe(productionLaunchEvidenceRuntimeRequiredExternalEvidence);
