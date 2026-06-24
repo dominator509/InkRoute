@@ -379,8 +379,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     storageVisibility: validation.storageVisibility,
     scanStatus: "pending",
     providerConfigured: false,
-    auditLogConfigured: false,
-    fileAssetStoreConfigured: false,
+    auditLogConfigured: resolvedTenant.source === "database",
+    fileAssetStoreConfigured: resolvedTenant.source === "database",
   });
   const referenceUploadProviderEvidencePlan = input.kind === "reference_private"
     ? buildReferenceUploadProviderEvidencePlan({
@@ -396,9 +396,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
       malwareScanConfigured: false,
       quarantineFlowVerified: false,
       privateBucketAclVerified: privateStoragePlan.bucketAcl === "private" && privateStoragePlan.publicReadAllowed === false,
-      fileAssetRowsPersisted: false,
-      bookingReferenceImageRowsPersisted: false,
-      auditLogRowsPersisted: false,
+      fileAssetRowsPersisted: resolvedTenant.source === "database",
+      bookingReferenceImageRowsPersisted: resolvedTenant.source === "database" && input.kind === "reference_private",
+      auditLogRowsPersisted: resolvedTenant.source === "database",
       privateFetchDenied: false,
       crossTenantFetchDenied: false,
       ciEvidenceCaptured: false,

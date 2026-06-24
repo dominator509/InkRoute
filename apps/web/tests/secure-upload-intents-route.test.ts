@@ -94,6 +94,10 @@ describe("public secure upload intent route", () => {
 
     expect(privateStoragePlan.requiredControls).toBe(privateStorageAccessRequiredControls);
     expect(providerEvidencePlan.requiredControls).toBe(referenceUploadProviderEvidenceRequiredControls);
+    expect(routeSource).toContain('auditLogConfigured: resolvedTenant.source === "database"');
+    expect(routeSource).toContain('fileAssetRowsPersisted: resolvedTenant.source === "database"');
+    expect(routeSource).toContain('bookingReferenceImageRowsPersisted: resolvedTenant.source === "database" && input.kind === "reference_private"');
+    expect(routeSource).toContain('auditLogRowsPersisted: resolvedTenant.source === "database"');
   });
 
   it("rejects malformed upload intent JSON before tenant persistence", async () => {

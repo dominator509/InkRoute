@@ -90,6 +90,9 @@ describe("reference upload provider runtime contract", () => {
     expect(referenceUploadProviderRuntimeReadiness.blockers).toContain(
       "Private reference fetch-denial tests must prove anonymous public reads fail.",
     );
+    expect(referenceUploadProviderRuntimeReadiness.blockers).not.toContain("FileAsset persistence evidence is required.");
+    expect(referenceUploadProviderRuntimeReadiness.blockers).not.toContain("BookingReferenceImage persistence evidence is required.");
+    expect(referenceUploadProviderRuntimeReadiness.blockers).not.toContain("AuditLog persistence evidence is required.");
   });
 
   it("blocks reference upload provider completion when provider, scan, persistence, denial, CI, or safe evidence is missing", () => {
