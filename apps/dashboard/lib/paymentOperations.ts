@@ -55,6 +55,105 @@ export interface PaymentOperationProviderResult {
   redactedPayload: Record<string, unknown>;
 }
 
+export interface StripePaymentOperationsClient {
+  refunds: {
+    create(
+      input: { charge?: string; payment_intent?: string; amount: number; metadata: Record<string, string> },
+      options: { idempotencyKey: string },
+    ): Promise<{ id: string; status?: string | null; amount?: number | null }>;
+  };
+  disputes: {
+    update(
+      disputeId: string,
+      input: { metadata: Record<string, string> },
+      options: { idempotencyKey: string },
+    ): Promise<{ id: string; status?: string | null }>;
+  };
+}
+
+function getProviderPayloadValue(plan: PaymentOperationsWorkflowPlan, key: string): string | number | null {
+  for (const write of plan.writes) {
+    const payload = write.payload as Record<string, unknown>;
+    const value = payload[key];
+    if (typeof value === "string" || typeof value === "number") return value;
+  }
+  return null;
+}
+
+export function createStripePaymentOperationProvider(
+  stripe: StripePaymentOperationsClient,
+): (plan: PaymentOperationsWorkflowPlan) => Promise<PaymentOperationProviderResult | null> {
+  return async (plan) => {
+    if (!plan.idempotencyKey) {
+      throw new Error("Stripe payment operation requires an idempotency key.");
+    }
+
+    if (plan.providerCall === "stripe.refunds.create") {
+      const amount = getProviderPayloadValue(plan, "refundAmountCents");
+      const charge = getProviderPayloadValue(plan, "providerChargeId");
+      const paymentIntent = getProviderPayloadValue(plan, "providerPaymentIntentId");
+      if (typeof amount !== "number" || amount <= 0) {
+        throw new Error("Stripe refund operation requires a positive refund amount.");
+      }
+      if (typeof charge !== "string" && typeof paymentIntent !== "string") {
+        throw new Error("Stripe refund operation requires a provider charge or payment intent id.");
+      }
+
+      const refund = await stripe.refunds.create(
+        {
+          ...(typeof charge === "string" ? { charge } : {}),
+          ...(typeof paymentIntent === "string" ? { payment_intent: paymentIntent } : {}),
+          amount,
+          metadata: {
+            operation: plan.action,
+            idempotencyKey: plan.idempotencyKey,
+          },
+        },
+        { idempotencyKey: plan.idempotencyKey },
+      );
+
+      return buildRedactedPaymentOperationProviderResult({
+        providerCall: plan.providerCall,
+        providerReference: refund.id,
+        payload: {
+          id: refund.id,
+          status: refund.status ?? null,
+          amount: refund.amount ?? amount,
+        },
+      });
+    }
+
+    if (plan.providerCall === "stripe.disputes.update") {
+      const disputeId = getProviderPayloadValue(plan, "providerChargeId");
+      if (typeof disputeId !== "string") {
+        throw new Error("Stripe dispute evidence operation requires a provider dispute id.");
+      }
+
+      const dispute = await stripe.disputes.update(
+        disputeId,
+        {
+          metadata: {
+            operation: plan.action,
+            idempotencyKey: plan.idempotencyKey,
+          },
+        },
+        { idempotencyKey: plan.idempotencyKey },
+      );
+
+      return buildRedactedPaymentOperationProviderResult({
+        providerCall: plan.providerCall,
+        providerReference: dispute.id,
+        payload: {
+          id: dispute.id,
+          status: dispute.status ?? null,
+        },
+      });
+    }
+
+    return null;
+  };
+}
+
 const paymentOperationProviderPrivateKeys = [
   "client_secret",
   "secret",

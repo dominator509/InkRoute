@@ -163,6 +163,11 @@ describe("dashboard payment operation contract", () => {
   it("checks tenant authorization before idempotency and provider execution", () => {
     expect(operationSource.indexOf("authorizePaymentOperationTenant")).toBeLessThan(operationSource.indexOf("claimIdempotencyKey"));
     expect(operationSource.indexOf("authorizePaymentOperationTenant")).toBeLessThan(operationSource.indexOf("executeProviderCall"));
+    expect(operationSource).toContain("createStripePaymentOperationProvider");
+    expect(operationSource).toContain("stripe.refunds.create");
+    expect(operationSource).toContain("stripe.disputes.update");
+    expect(operationSource).toContain("idempotencyKey: plan.idempotencyKey");
+    expect(operationSource).toContain("buildRedactedPaymentOperationProviderResult");
     expect(operationSource).toContain("tenantAuthorization.blockers");
   });
 
