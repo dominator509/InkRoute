@@ -197,6 +197,10 @@ describe("provider storage upload runtime contract", () => {
     expect(dashboardSignedUploadRoute).toContain("tx.auditLog.create");
     expect(dashboardSignedUploadRoute).toContain("tx.idempotencyKey.update");
     expect(dashboardSignedUploadRoute).toContain("providerUrlMinted: false");
+    expect(dashboardSignedUploadRoute).toContain("buildSignedUploadIntentPlan");
+    expect(dashboardSignedUploadRoute).toContain("buildPrivateStorageAccessPlan");
+    expect(dashboardSignedUploadRoute).toContain("signedUploadHandoffPlanned");
+    expect(dashboardSignedUploadRoute).toContain("privateStorageAccessStatus");
     expect(dashboardSignedUploadRoute).toContain("malwareScanExecuted: false");
     expect(dashboardSignedUploadRoute).toContain("bucketAclVerified: false");
     expect(dashboardSignedUploadRoute).toContain("idempotencyKeyId");

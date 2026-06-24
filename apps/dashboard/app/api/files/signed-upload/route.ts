@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { prisma } from "@inkroute/db";
+import { buildPrivateStorageAccessPlan, buildSignedUploadIntentPlan, type UploadAssetKind } from "@inkroute/security";
 import { fileAssetInputSchema } from "@inkroute/validators";
 import { NextRequest, NextResponse } from "next/server";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../../dashboardAuth";
@@ -21,6 +22,15 @@ function hashGrant(input: { tenantId: string; bucket: string; objectKey: string;
 
 function toJsonValue(value: unknown) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function uploadAssetKindForFileAsset(kind: string): UploadAssetKind | null {
+  if (kind === "portfolio_original" || kind === "portfolio_derivative") return "portfolio_public";
+  if (kind === "reference_image") return "reference_private";
+  if (kind === "consent_signature") return "consent_signature";
+  if (kind === "healed_follow_up") return "healed_follow_up";
+  if (kind === "document") return "document_private";
+  return null;
 }
 
 function resultFileAssetId(result: unknown): string | null {
@@ -112,6 +122,34 @@ export async function POST(request: NextRequest) {
 
   try {
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const uploadAssetKind = uploadAssetKindForFileAsset(input.kind);
+    const signedUploadIntentPlan = uploadAssetKind
+      ? buildSignedUploadIntentPlan({
+        kind: uploadAssetKind,
+        filename: input.originalFilename,
+        mimeType: input.mimeType,
+        sizeBytes: input.sizeBytes,
+        declaredByAuthenticatedUser: true,
+        tenantId,
+        subjectId: createHash("sha256").update(`${input.bucket}:${input.objectKey}:${input.kind}`).digest("hex"),
+        expiresInSeconds: 15 * 60,
+      })
+      : null;
+    const privateStorageAccessPlan = uploadAssetKind
+      ? buildPrivateStorageAccessPlan({
+        kind: uploadAssetKind,
+        operation: "upload",
+        tenantId,
+        subjectId: createHash("sha256").update(`${input.bucket}:${input.objectKey}:${input.kind}`).digest("hex"),
+        objectKey: input.objectKey,
+        storageVisibility: input.visibility,
+        expiresInSeconds: 15 * 60,
+        now: new Date().toISOString(),
+        expiresAt: expiresAt.toISOString(),
+        scanApproved: false,
+        providerConfigured: false,
+      })
+      : null;
     const result = await prisma.$transaction(async (tx) => {
       const idempotency = await tx.idempotencyKey.upsert({
         where: { tenantId_scope_key: { tenantId, scope: "dashboard-signed-upload-intent", key: idempotencyKey } },
@@ -127,6 +165,7 @@ export async function POST(request: NextRequest) {
             providerUrlMinted: false,
             malwareScanExecuted: false,
             bucketAclVerified: false,
+            signedUploadHandoffPlanned: signedUploadIntentPlan?.accepted ?? false,
           }),
         },
         update: {
@@ -138,6 +177,7 @@ export async function POST(request: NextRequest) {
             providerUrlMinted: false,
             malwareScanExecuted: false,
             bucketAclVerified: false,
+            signedUploadHandoffPlanned: signedUploadIntentPlan?.accepted ?? false,
           }),
         },
         select: { id: true, status: true, result: true },
@@ -182,6 +222,8 @@ export async function POST(request: NextRequest) {
             ...(input.metadata ?? {}),
             providerUploadUrlMinted: false,
             providerExecution: "deferred",
+            signedUploadIntentPlan,
+            privateStorageAccessPlan,
           },
         },
         select: { id: true, bucket: true, objectKey: true, kind: true, visibility: true, scanStatus: true, createdAt: true },
@@ -200,6 +242,8 @@ export async function POST(request: NextRequest) {
           expiresAt,
           metadata: {
             providerUrlMinted: false,
+            signedUploadHandoffPlanned: signedUploadIntentPlan?.accepted ?? false,
+            privateStorageAccessStatus: privateStorageAccessPlan?.status ?? "unsupported_file_kind",
             requiredNextStep: "provider-backed signed upload URL minting",
           },
         },
@@ -217,6 +261,8 @@ export async function POST(request: NextRequest) {
             source: "dashboard-api",
             grantId: grant.id,
             providerUrlMinted: false,
+            signedUploadHandoffPlanned: signedUploadIntentPlan?.accepted ?? false,
+            privateStorageAccessStatus: privateStorageAccessPlan?.status ?? "unsupported_file_kind",
             idempotencyKeyId: idempotency.id,
             boundary: "FileAsset and SignedUrlGrant intent only; provider signed URL minting, malware scan, metadata stripping, bucket ACL proof, and cross-tenant provider denial remain gated.",
           },
@@ -233,6 +279,7 @@ export async function POST(request: NextRequest) {
             signedUrlGrantId: grant.id,
             auditId: audit.id,
             providerUrlMinted: false,
+            signedUploadHandoffPlanned: signedUploadIntentPlan?.accepted ?? false,
             malwareScanExecuted: false,
             bucketAclVerified: false,
           }),
@@ -254,7 +301,15 @@ export async function POST(request: NextRequest) {
         persistence: "database",
         fileAsset: { ...result.fileAsset, createdAt: result.fileAsset.createdAt.toISOString() },
         signedUrlGrant: { ...result.grant, expiresAt: result.grant.expiresAt.toISOString(), createdAt: result.grant.createdAt.toISOString() },
-        upload: { providerUrlMinted: false, uploadUrl: null, requiredNextStep: "provider-backed signed upload URL minting" },
+        upload: {
+          providerUrlMinted: false,
+          uploadUrl: null,
+          signedUploadHandoffPlanned: signedUploadIntentPlan?.accepted ?? false,
+          privateStorageAccessStatus: privateStorageAccessPlan?.status ?? "unsupported_file_kind",
+          requiredNextStep: "provider-backed signed upload URL minting",
+        },
+        signedUploadIntentPlan,
+        privateStorageAccessPlan,
         auditId: result.status === "created" ? result.audit.id : null,
         idempotencyKeyId: result.idempotency.id,
         idempotencyReplay: result.status === "replayed",
