@@ -130,7 +130,7 @@ describe("GAP-120 launch operations runtime wiring", () => {
         "Launch operations must have named primary and backup ownership for incident, privacy, support, release, and security.",
         "pnpm deploy:verify-ops must pass.",
         "Alert routing test must prove critical alerts reach the on-call owner.",
-        "Communications template approval"
+        "Incident, maintenance, and privacy response templates must be approved before launch."
       ])
     );
   });
