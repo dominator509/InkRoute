@@ -114,7 +114,16 @@ describe("GAP-120 launch operations runtime wiring", () => {
       "securityOwner"
     ]);
     expect(launchOperationsRuntimeReadiness.requiredCommands).toStrictEqual(launchOperationsRuntimeCommands);
-    expect(launchOperationsRuntimeReadiness.requiredEvidence).toStrictEqual(launchOperationsRuntimeArtifactPaths);
+    expect(launchOperationsRuntimeReadiness.requiredEvidence).toStrictEqual([
+      "Named primary and backup owners for incident, privacy, support, release, and security operations.",
+      "Alert routing test proving critical alerts reach the on-call owner within SLA.",
+      "Incident drill notes with severity classification, tenant-safe communications, and postmortem template.",
+      "Rollback drill labels for web, dashboard, mobile OTA, and database restore or forward-fix.",
+      "Privacy request export/delete drill with identity verification and audit log labels.",
+      "Support escalation transcript label with privacy-safe redaction and acknowledgement SLA.",
+      "Production monitoring dashboard, uptime check, Sentry alert, and release-health proof.",
+      "Approved incident, maintenance, and privacy communications templates."
+    ]);
     expect(launchOperationsRuntimeReadiness.blockers).toEqual(
       expect.arrayContaining([
         "Launch operations evidence must include every required operations check.",
