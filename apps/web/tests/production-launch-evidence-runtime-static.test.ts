@@ -111,7 +111,9 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
     expect(productionLaunchEvidenceRuntimeReadiness.incompleteBundles).toEqual(
       expect.arrayContaining(["ci-build-test", "database-ops", "legal-approval", "rollback-and-operations"])
     );
-    expect(productionLaunchEvidenceRuntimeReadiness.requiredCommands).toBe(productionLaunchEvidenceRuntimeCommands);
+    expect(productionLaunchEvidenceRuntimeReadiness.requiredCommands).toStrictEqual(
+      productionLaunchEvidenceRuntimeCommands,
+    );
     expect(productionLaunchEvidenceRuntimeReadiness.requiredBundles[0]?.requiredEvidence).toStrictEqual(
       productionLaunchEvidenceBundleRequiredEvidence,
     );
