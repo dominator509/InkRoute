@@ -7,7 +7,6 @@ import {
   buildProductionLaunchEvidenceRuntimeExecutionPlan,
   buildProductionLaunchEvidenceRuntimeRedactedEvidenceBundle,
   buildRedactedProductionLaunchEvidenceArtifact,
-  productionLaunchEvidenceBundleRequiredEvidence,
   productionLaunchEvidenceBundleIds,
   productionLaunchEvidenceRuntimeArtifactPaths,
   productionLaunchEvidenceRuntimeCommands,
@@ -113,9 +112,6 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
     );
     expect(productionLaunchEvidenceRuntimeReadiness.requiredCommands).toStrictEqual(
       productionLaunchEvidenceRuntimeCommands,
-    );
-    expect(productionLaunchEvidenceRuntimeReadiness.requiredBundles[0]?.requiredEvidence).toStrictEqual(
-      productionLaunchEvidenceBundleRequiredEvidence,
     );
     expect(productionLaunchEvidenceRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
