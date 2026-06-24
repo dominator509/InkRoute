@@ -118,6 +118,7 @@ export async function POST(request: NextRequest) {
     const guestSpotUrl = normalizeOptionalText(input.guestSpotUrl);
     const publicNotes = normalizeOptionalText(input.publicNotes);
     const internalNotes = normalizeOptionalText(input.internalNotes);
+    const now = new Date();
     const result = await prisma.$transaction(async (tx) => {
       const idempotency = await tx.idempotencyKey.upsert({
         where: { tenantId_scope_key: { tenantId, scope: "dashboard-travel-schedule-create", key: idempotencyKey } },
@@ -132,7 +133,8 @@ export async function POST(request: NextRequest) {
             scheduleHash: hashIdempotencySubject(`${input.artistId}:${input.travelCityId}:${input.title}:${input.startsAt}`),
             rawNotesStoredInResult: false,
             publicCacheRevalidated: false,
-            notificationFanoutQueued: false,
+            notificationFanoutQueued: true,
+            notificationProviderExecution: "deferred",
           }),
         },
         update: {
@@ -143,7 +145,8 @@ export async function POST(request: NextRequest) {
             scheduleHash: hashIdempotencySubject(`${input.artistId}:${input.travelCityId}:${input.title}:${input.startsAt}`),
             rawNotesStoredInResult: false,
             publicCacheRevalidated: false,
-            notificationFanoutQueued: false,
+            notificationFanoutQueued: true,
+            notificationProviderExecution: "deferred",
           }),
         },
         select: { id: true, status: true, result: true },
@@ -242,6 +245,34 @@ export async function POST(request: NextRequest) {
         select: { id: true, createdAt: true },
       });
 
+      const notificationJob = await tx.notificationJob.create({
+        data: {
+          tenantId,
+          sourceAction: "travel.schedule.waitlist_fanout",
+          templateKey: "travel_schedule_waitlist_fanout",
+          channel: "in_app",
+          state: "queued",
+          idempotencyKey: `${idempotencyKey}:waitlist-fanout`,
+          actorUserId: actor.actorUserId,
+          scheduledAt: now,
+          availableAt: now,
+          payload: toJsonValue({
+            route: "/api/travel/schedules",
+            travelScheduleId: travelSchedule.id,
+            travelCityId: travelSchedule.travelCityId,
+            artistId: travelSchedule.artistId,
+            bookingStatus: travelSchedule.bookingStatus,
+            startsAt: travelSchedule.startsAt.toISOString(),
+            endsAt: travelSchedule.endsAt.toISOString(),
+            timezone: travelSchedule.timezone,
+            providerExecution: "deferred",
+            rawNotesStoredInResult: false,
+            publicCacheRevalidated: false,
+          }),
+        },
+        select: { id: true, state: true, sourceAction: true, templateKey: true },
+      });
+
       await tx.idempotencyKey.update({
         where: { tenantId_scope_key: { tenantId, scope: "dashboard-travel-schedule-create", key: idempotencyKey } },
         data: {
@@ -249,15 +280,16 @@ export async function POST(request: NextRequest) {
           result: toJsonValue({
             travelScheduleId: travelSchedule.id,
             auditId: audit.id,
+            notificationJobId: notificationJob.id,
             created: true,
             rawNotesStoredInResult: false,
             publicCacheRevalidated: false,
-            notificationFanoutQueued: false,
+            notificationFanoutQueued: true,
           }),
         },
       });
 
-      return { status: "created" as const, travelSchedule, audit, idempotency };
+      return { status: "created" as const, travelSchedule, audit, notificationJob, idempotency };
     });
 
     if (result.status === "artist_not_found" || result.status === "travel_city_not_found" || result.status === "studio_not_found") {
@@ -280,10 +312,11 @@ export async function POST(request: NextRequest) {
           createdAt: result.travelSchedule.createdAt.toISOString(),
         },
         auditId: result.status === "created" ? result.audit.id : null,
+        notificationJob: result.status === "created" ? result.notificationJob : null,
         idempotencyKeyId: result.idempotency.id,
         idempotencyReplay: result.status === "replayed",
         gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-046", "GAP-047"],
-        boundary: "Dashboard travel schedule creation is tenant-scoped, no-store, idempotency-backed, and audited; public cache/SEO/notification fanout and integration tests remain evidence-gated.",
+        boundary: "Dashboard travel schedule creation is tenant-scoped, no-store, idempotency-backed, audited, and queues a local NotificationJob fanout intent; public cache/SEO, provider sends, worker execution, and integration tests remain evidence-gated.",
       },
       { status: result.status === "created" ? 201 : 200, headers: noStoreHeaders },
     );

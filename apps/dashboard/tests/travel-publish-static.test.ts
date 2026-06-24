@@ -188,10 +188,13 @@ describe("dashboard travel publish contract", () => {
     expect(travelScheduleRouteSource).toContain("tx.travelSchedule.findFirst");
     expect(travelScheduleRouteSource).toContain("tx.travelSchedule.create");
     expect(travelScheduleRouteSource).toContain("tx.auditLog.create");
+    expect(travelScheduleRouteSource).toContain("tx.notificationJob.create");
     expect(travelScheduleRouteSource).toContain("tx.idempotencyKey.update");
     expect(travelScheduleRouteSource).toContain("rawNotesStoredInResult: false");
     expect(travelScheduleRouteSource).toContain("publicCacheRevalidated: false");
-    expect(travelScheduleRouteSource).toContain("notificationFanoutQueued: false");
+    expect(travelScheduleRouteSource).toContain("notificationFanoutQueued: true");
+    expect(travelScheduleRouteSource).toContain("notificationProviderExecution");
+    expect(travelScheduleRouteSource).toContain("provider sends, worker execution, and integration tests remain evidence-gated");
     expect(travelScheduleRouteSource).toContain("idempotencyKeyId");
     expect(travelScheduleRouteSource).toContain("idempotencyReplay");
     expect(travelScheduleRouteSource).toContain("idempotency-backed");
