@@ -85,6 +85,8 @@ describe("provider webhook runtime contract", () => {
     expect(readRepoFile("apps/web/lib/providerNotificationWebhookPersistence.ts")).toContain("inboundThreadBoundary");
     expect(emailRouteSource).toContain("not-attempted-production-signature-gated");
     expect(smsRouteSource).toContain("not-attempted-production-signature-gated");
+    expect(emailRouteSource).toContain("verifyEmailWebhookSignature");
+    expect(smsRouteSource).toContain("verifySmsWebhookSignature");
     expect(emailRouteSource).toContain("EMAIL_PROVIDER_WEBHOOK_SECRET_NOT_CONFIGURED");
     expect(smsRouteSource).toContain("SMS_PROVIDER_WEBHOOK_AUTH_TOKEN_NOT_CONFIGURED");
     expect(emailRouteSource).toContain("not-attempted-production-secret-gated");
@@ -105,10 +107,12 @@ describe("provider webhook runtime contract", () => {
     expect(providerWebhookRuntimeReadiness.status).toBe("blocked");
     expect(providerWebhookRuntimeReadiness.missingScripts).toEqual([]);
     expect(providerWebhookRuntimeReadiness.requiredEvidence).toBe(providerWebhookDecisionRequiredEvidence);
-    expect(providerWebhookRuntimeReadiness.blockers).toContain("Email provider cryptographic signature verification evidence must be captured before webhook readiness.");
-    expect(providerWebhookRuntimeReadiness.blockers).toContain("SMS provider cryptographic signature verification evidence must be captured before webhook readiness.");
+    expect(providerWebhookRuntimeReadiness.blockers).not.toContain("Email provider cryptographic signature verification evidence must be captured before webhook readiness.");
+    expect(providerWebhookRuntimeReadiness.blockers).not.toContain("SMS provider cryptographic signature verification evidence must be captured before webhook readiness.");
     expect(providerWebhookRuntimeReadiness.blockers).not.toContain("Email provider cryptographic signature verification must be implemented.");
     expect(providerWebhookRuntimeReadiness.blockers).not.toContain("SMS provider cryptographic signature verification must be implemented.");
+    expect(providerWebhookRuntimeReadiness.blockers).toContain("Provider webhook secrets must be configured in a secret store.");
+    expect(providerWebhookRuntimeReadiness.blockers).toContain("Route-level invalid-signature rejection tests must pass.");
     expect(providerWebhookRuntimeReadiness.blockers).toContain("Delivery-log updates must be exactly-once under replay and concurrent callbacks.");
     expect(providerWebhookRuntimeReadiness.blockers).toContain("Failed webhook verification or reconciliation must emit alerting.");
   });
