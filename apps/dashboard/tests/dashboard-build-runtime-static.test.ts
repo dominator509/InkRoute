@@ -94,6 +94,11 @@ describe("dashboard build/runtime verification contract", () => {
     expect(dashboardBuildRuntimeReadiness.missingScripts).toEqual([]);
     expect(dashboardBuildRuntimeReadiness.requiredCommands).toBe(dashboardBuildRuntimeReadinessRequiredCommands);
     expect(dashboardBuildRuntimeReadiness.requiredEvidence).toBe(dashboardLaunchEvidenceRequiredEvidence);
+    expect(dashboardBuildRuntimeReadiness.tenantScopedApisImplemented).toBe(true);
+    expect(dashboardBuildRuntimeReadiness.prismaRepositoriesImplemented).toBe(true);
+    expect(dashboardBuildRuntimeReadiness.realMutationsEnabled).toBe(true);
+    expect(dashboardBuildRuntimeReadiness.mutationAuditLogsPersisted).toBe(true);
+    expect(dashboardBuildRuntimeReadiness.providerActionsImplemented).toBe(false);
     expect(dashboardBuildRuntimeReadiness.blockers).toContain("@inkroute/dashboard typecheck must pass.");
     expect(dashboardBuildRuntimeReadiness.blockers).toContain("@inkroute/dashboard build must pass.");
     expect(dashboardBuildRuntimeReadiness.blockers).toContain("Dashboard Playwright smoke tests must pass with seeded tenant data.");
