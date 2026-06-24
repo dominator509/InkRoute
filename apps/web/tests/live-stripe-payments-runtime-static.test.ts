@@ -202,6 +202,15 @@ describe("live Stripe payments runtime contract", () => {
     expect(liveStripePaymentsRuntimeReadiness.blockers).not.toContain(
       "Stripe SDK must be installed and pinned before live provider payment readiness can close.",
     );
+    expect(liveStripePaymentsRuntimeReadiness.blockers).not.toContain(
+      "Deposit session route must create real Stripe Checkout sessions in provider-backed mode.",
+    );
+    expect(liveStripePaymentsRuntimeReadiness.blockers).not.toContain(
+      "Stripe refund execution must be implemented and authorized.",
+    );
+    expect(liveStripePaymentsRuntimeReadiness.blockers).not.toContain(
+      "Stripe dispute workflow must be implemented or explicitly blocked with audit evidence.",
+    );
     expect(liveStripePaymentsRuntimeReadiness.blockers).toContain(
       "Stripe secret key must be configured through the secret store.",
     );
@@ -358,8 +367,9 @@ describe("live Stripe payments runtime contract", () => {
     expect(gapTracker).toContain("liveStripePaymentsRuntimeLocalArtifacts");
     expect(gapTracker).toContain("liveStripePaymentsRuntimeExternalArtifacts");
     expect(gapTracker).toContain("persistLiveStripePaymentsRun upsert seam");
-    expect(gapTracker).toContain("Stripe secret/webhook configuration, provider-backed Checkout adapter execution/provider session persistence, provider idempotency persistence, lifecycle reconciliation, refunds/disputes, Stripe CLI, booking-to-paid E2E, CI evidence, provider-backed persistLiveStripePaymentsRun execution, and secret-safe artifacts remain open");
+    expect(gapTracker).toContain("Stripe live secret/webhook configuration proof, live Checkout provider execution proof/provider session persistence, provider idempotency result persistence beyond local draft IdempotencyKey and ProviderWebhookDelivery rows, lifecycle reconciliation, live refund/dispute execution proof, Stripe CLI, booking-to-paid E2E, CI evidence, provider-backed persistLiveStripePaymentsRun execution, and secret-safe artifacts remain open");
     expect(gapTracker).toContain("GAP-004 is live-stripe-payments-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Checkout adapter source hook plus dashboard refund/dispute Stripe provider callback source hook");
     expect(gapTracker).toContain("proof inventory");
   });
 
@@ -369,6 +379,8 @@ describe("live Stripe payments runtime contract", () => {
     expect(liveStripePaymentsRuntimeProofFiles).toContain("apps/web/lib/stripeCheckout.ts");
     expect(liveStripePaymentsRuntimeProofFiles).toContain("apps/web/lib/liveStripePaymentsRuntime.ts");
     expect(liveStripePaymentsRuntimeProofFiles).toContain("apps/web/tests/live-stripe-payments-runtime-static.test.ts");
+    expect(liveStripePaymentsRuntimeProofFiles).toContain("apps/dashboard/lib/paymentOperations.ts");
+    expect(liveStripePaymentsRuntimeProofFiles).toContain("apps/dashboard/tests/payment-operations-static.test.ts");
     for (const proofFile of liveStripePaymentsRuntimeProofFiles) {
       expect(readRepoFile(proofFile).length).toBeGreaterThan(0);
     }
