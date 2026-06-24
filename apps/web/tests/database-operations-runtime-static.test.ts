@@ -111,7 +111,7 @@ describe("GAP-117 database operations runtime wiring", () => {
 
   it("keeps readiness blocked until provider DB, Prisma lifecycle, migration, backup, tenant isolation, branch promotion, and safety proof exists", () => {
     expect(databaseOperationsRuntimeReadiness.status).toBe("blocked");
-    expect(databaseOperationsRuntimeReadiness.missingCommands).toEqual([]);
+    expect(databaseOperationsRuntimeReadiness.missingCommands).toEqual(["pnpm db:migrate"]);
     expect(databaseOperationsRuntimeReadiness.missingScripts).toEqual([]);
     expect(databaseOperationsRuntimeReadiness.missingChecks).toEqual(
       expect.arrayContaining(["staging-branch-provisioned", "migration-dry-run", "backup-restore-drill", "branch-promotion"])
@@ -150,8 +150,8 @@ describe("GAP-117 database operations runtime wiring", () => {
     expect(ciWorkflow).toContain("test-results/database-operations-runtime");
     expect(unitManifest).toContain("unit-web-database-operations-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/databaseOperationsRuntime.ts");
-    expect(gapTracker).toContain("Database operations evidence classifier wired and provider DB proof gated");
-    expect(gapTracker).toContain("GAP-117 is database-operations-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Database operations evidence classifier wired with execution policy");
+    expect(gapTracker).toContain("GAP-117 is database-operations-runtime-matrix wired with split migration dry-run");
     expect(gapTracker).toContain("databaseOperationsRuntimeCommands");
     expect(gapTracker).toContain("buildDatabaseOperationsRuntimeExecutionPlan");
     expect(gapTracker).toContain("databaseOperationsRuntimeExecutionPolicy");
