@@ -24,3 +24,13 @@ Scaffolded provider decision matrix. No provider is configured in this repositor
 ## Decision rule
 
 Use managed providers until product-market fit is proven. Avoid self-hosting auth, object storage, payment, SMS, or crash infrastructure before tenant isolation, security, and launch QA are verified.
+
+## Evidence contract
+
+Provider provisioning evidence is tracked in `deployment/manifests/provider-environment-evidence.json` and verified with:
+
+```bash
+pnpm deploy:verify-provider-envs
+```
+
+Keep the manifest redacted. It may name provider type, environment, required proof category, secret-store destination, and status, but must not contain raw provider project IDs, database URLs, bucket names, tokens, webhook secrets, or private console links.

@@ -37,6 +37,34 @@ export interface LocalBookingRecord {
   events: LocalBookingEventRecord[];
 }
 
+export type LocalBookingWorkflowType = "notification" | "reference-upload" | "deposit" | "calendar";
+export type LocalWorkflowExecutionScope = "database" | "local-fallback";
+
+export type LocalBookingWorkflowConsumerType = LocalBookingWorkflowType;
+export type LocalBookingWorkflowConsumerStatus = "queued" | "succeeded" | "blocked";
+
+export interface LocalBookingWorkflowRecord {
+  id: string;
+  tenantId: string;
+  bookingRequestId: string;
+  type: LocalBookingWorkflowType;
+  status: "pending" | "queued" | "blocked";
+  payload: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface LocalBookingWorkflowConsumerRecord {
+  id: string;
+  tenantId: string;
+  bookingRequestId: string;
+  workflowRecordId: string;
+  scope: LocalWorkflowExecutionScope;
+  type: LocalBookingWorkflowConsumerType;
+  status: LocalBookingWorkflowConsumerStatus;
+  result: Record<string, unknown>;
+  createdAt: string;
+}
+
 export interface LocalDepositSessionRecord {
   id: string;
   tenantId: string;
@@ -98,13 +126,27 @@ export interface LocalWebhookEventRecord {
   createdAt: string;
 }
 
+export interface LocalContactSubmissionRecord {
+  id: string;
+  tenantId: string;
+  name: string;
+  email: string;
+  subject: string;
+  redactedSubmission: Record<string, unknown>;
+  auditMetadata: Record<string, unknown>;
+  createdAt: string;
+}
+
 export interface LocalTenantState {
   bookings: Map<string, LocalBookingRecord>;
   depositSessions: Map<string, LocalDepositSessionRecord>;
   messages: Map<string, LocalMessageRecord>;
   uploadIntents: Map<string, LocalUploadIntentRecord>;
+  postPersistWorkflows: Map<string, LocalBookingWorkflowRecord>;
+  postPersistWorkflowConsumers: Map<string, LocalBookingWorkflowConsumerRecord>;
   errorReports: Map<string, LocalErrorReportRecord>;
   webhookEvents: Map<string, LocalWebhookEventRecord>;
+  contactSubmissions: Map<string, LocalContactSubmissionRecord>;
 }
 
 type TenantStore = Map<MaybeTenantSlug, LocalTenantState>;
@@ -171,8 +213,11 @@ function getTenantState(tenantSlug: string): LocalTenantState {
     depositSessions: new Map(),
     messages: new Map(),
     uploadIntents: new Map(),
+    postPersistWorkflows: new Map(),
+    postPersistWorkflowConsumers: new Map(),
     errorReports: new Map(),
     webhookEvents: new Map(),
+    contactSubmissions: new Map(),
   };
   tenantStates.set(tenantSlug, created);
   return created;
@@ -191,7 +236,7 @@ export function checkRateLimit(ruleId: string, tenantSlug: string, identifier: s
       remaining: 0,
       retryAfterSeconds: 0,
       status: "rule_not_found",
-      warning: "No scaffolded rate-limit rule found; route is unmetered in local fallback.",
+      warning: "No local-contract rate-limit rule found; route is unmetered in local fallback.",
       maxRequests: 0,
       windowSeconds: 0,
     };
@@ -220,8 +265,8 @@ export function checkRateLimit(ruleId: string, tenantSlug: string, identifier: s
     retryAfterSeconds,
     status: allowed ? "allow" : "throttle",
     warning: allowed
-      ? "Local scaffolded rate limit passed."
-      : "Local scaffolding blocked this request because the rule threshold has been reached.",
+      ? "Local-contract rate limit passed."
+      : "Local-contract rate limit blocked this request because the rule threshold has been reached.",
     maxRequests: rule.maxRequests,
     windowSeconds: rule.windowSeconds,
   };
@@ -236,23 +281,23 @@ export function persistBookingRequest(tenantSlug: string, input: BookingRequestI
     id: requestId,
     tenantId,
     artistId: input.artistId,
-    clientId: input.clientId,
-    travelCityId: input.travelCityId,
     status: "submitted" as BookingStatus,
     clientName: input.clientName,
     clientEmail: input.clientEmail,
     preferredCity: input.preferredCity,
-    preferredDate: input.preferredDate,
     style: input.style,
     placement: input.placement,
     sizeEstimate: input.sizeEstimate,
-    budgetMin: input.budgetMin,
-    budgetMax: input.budgetMax,
     ideaSummary: input.ideaSummary,
     readinessScore: buildReadiness(input),
     policyAccepted: input.policyAccepted,
-    portfolioAttributionId: input.portfolioAttributionId,
     createdAt: now,
+    ...(input.clientId ? { clientId: input.clientId } : {}),
+    ...(input.travelCityId ? { travelCityId: input.travelCityId } : {}),
+    ...(input.preferredDate ? { preferredDate: input.preferredDate } : {}),
+    ...(input.budgetMin !== undefined ? { budgetMin: input.budgetMin } : {}),
+    ...(input.budgetMax !== undefined ? { budgetMax: input.budgetMax } : {}),
+    ...(input.portfolioAttributionId ? { portfolioAttributionId: input.portfolioAttributionId } : {}),
   };
 
   const record: LocalBookingRecord = {
@@ -271,6 +316,120 @@ export function persistBookingRequest(tenantSlug: string, input: BookingRequestI
 
   tenant.bookings.set(requestId, record);
   return record;
+}
+
+export function persistBookingPostPersistWorkflow(
+  tenantSlug: string,
+  input: Omit<LocalBookingWorkflowRecord, "id" | "tenantId" | "createdAt">,
+): LocalBookingWorkflowRecord {
+  const tenant = getTenantState(tenantSlug);
+  const now = nowIsoDate();
+  const id = nextId("workflow");
+  const record: LocalBookingWorkflowRecord = {
+    ...input,
+    id,
+    tenantId: resolveTenant(tenantSlug)?.tenantId ?? tenantSlug,
+    createdAt: now,
+  };
+
+  tenant.postPersistWorkflows.set(id, record);
+  return record;
+}
+
+export function getBookingPostPersistWorkflows(tenantSlug: string, bookingRequestId: string): LocalBookingWorkflowRecord[] {
+  return Array.from(getTenantState(tenantSlug).postPersistWorkflows.values())
+    .filter((record) => record.bookingRequestId === bookingRequestId)
+    .sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1));
+}
+
+function safeString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function resolveWorkflowResultMessage(workflowPayload: Record<string, unknown>): string {
+  const subject = safeString(workflowPayload.subject);
+  return subject ?? "Workflow produced by booking persistence contract.";
+}
+
+export function executeBookingPostPersistWorkflowConsumers(
+  tenantSlug: string,
+  bookingRequestId: string,
+  scope: LocalWorkflowExecutionScope,
+): LocalBookingWorkflowConsumerRecord[] {
+  const tenant = getTenantState(tenantSlug);
+  const tenantId = resolveTenant(tenantSlug)?.tenantId ?? tenantSlug;
+  const workflows = getBookingPostPersistWorkflows(tenantSlug, bookingRequestId);
+  const executed: LocalBookingWorkflowConsumerRecord[] = [];
+
+  for (const workflow of workflows) {
+    const result: Record<string, unknown> = {
+      workflowType: workflow.type,
+      bookingRequestId,
+      consumerScope: scope,
+    };
+    let status: LocalBookingWorkflowConsumerStatus = "queued";
+
+    if (workflow.type === "notification") {
+      const consumedMessage = persistMessage(tenantSlug, {
+        subject: `Booking workflow: ${resolveWorkflowResultMessage(workflow.payload as Record<string, unknown>)}`,
+        body: "Workflow consumer queued a placeholder notification artifact for producer/tenant handoff.",
+        channel: "email",
+      });
+      status = "succeeded";
+      result.messageId = consumedMessage.id;
+      result.status = consumedMessage.status;
+      result.redactedPayload = consumedMessage.redactedPayload;
+      result.deliveryGapIds = workflow.payload.gapIds ?? [];
+    } else if (workflow.type === "reference-upload") {
+      if (scope === "local-fallback") {
+        const upload = persistUploadIntent(tenantSlug, {
+          kind: "reference_private",
+          filename: `${bookingRequestId}-reference.jpg`,
+          mimeType: "image/jpeg",
+          sizeBytes: 65536,
+          visibility: "client_private",
+        });
+        status = "succeeded";
+        result.uploadIntentId = upload.id;
+        result.signedUploadUrl = upload.signedUploadUrl;
+        result.uploadVisibility = upload.visibility;
+      } else {
+        status = "blocked";
+        result.expectedHandoff = workflow.payload;
+        result.reason =
+          "Database-scope reference-upload workflow should be handed to an external reference-upload worker that validates and persists signed intents.";
+      }
+    } else if (workflow.type === "deposit") {
+      status = "blocked";
+      result.reason = "Deposit workflow is gated behind GAP-004 provider and policy readiness.";
+    } else if (workflow.type === "calendar") {
+      status = "blocked";
+      result.reason = "Calendar workflow is gated behind GAP-009 provider token and hold persistence readiness.";
+    }
+
+    const execution: LocalBookingWorkflowConsumerRecord = {
+      id: nextId("consumer"),
+      tenantId,
+      bookingRequestId,
+      workflowRecordId: workflow.id,
+      scope,
+      type: workflow.type,
+      status,
+      result,
+      createdAt: nowIsoDate(),
+    };
+
+    tenant.postPersistWorkflowConsumers.set(execution.id, execution);
+    executed.push(execution);
+  }
+
+  return executed.sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1));
+}
+
+export function getBookingPostPersistWorkflowConsumers(tenantSlug: string, bookingRequestId?: string): LocalBookingWorkflowConsumerRecord[] {
+  const all = Array.from(getTenantState(tenantSlug).postPersistWorkflowConsumers.values());
+  const filtered = bookingRequestId ? all.filter((record) => record.bookingRequestId === bookingRequestId) : all;
+  return filtered.sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1));
 }
 
 export function getBookingRequest(tenantSlug: string, bookingRequestId: string): LocalBookingRecord | undefined {
@@ -378,14 +537,46 @@ export function persistMessage(
     body: input.body,
     status: "queued",
     channel: input.channel,
-    relatedBookingRequestId: input.relatedBookingRequestId,
-    relatedAppointmentId: input.relatedAppointmentId,
     redactedPayload,
     createdAt: now,
+    ...(input.relatedBookingRequestId ? { relatedBookingRequestId: input.relatedBookingRequestId } : {}),
+    ...(input.relatedAppointmentId ? { relatedAppointmentId: input.relatedAppointmentId } : {}),
   };
 
   tenant.messages.set(id, record);
   return record;
+}
+
+export function persistWaitlistSignupMessage(
+  tenantSlug: string,
+  input: {
+    citySlug: string;
+    clientName: string;
+    clientEmail: string;
+    phone?: string;
+    preferredStyle?: string;
+    placement?: string;
+    sizeEstimate?: string;
+    notes?: string;
+    marketingOptIn: boolean;
+    smsOptIn: boolean;
+  },
+): LocalMessageRecord {
+  const details = [
+    `City: ${input.citySlug}`,
+    input.preferredStyle ? `Style: ${input.preferredStyle}` : undefined,
+    input.placement ? `Placement: ${input.placement}` : undefined,
+    input.sizeEstimate ? `Size: ${input.sizeEstimate}` : undefined,
+    input.notes ? `Notes: ${input.notes}` : undefined,
+    `Marketing opt-in: ${input.marketingOptIn ? "yes" : "no"}`,
+    `SMS opt-in: ${input.smsOptIn ? "yes" : "no"}`,
+  ].filter((line): line is string => Boolean(line));
+
+  return persistMessage(tenantSlug, {
+    subject: `Waitlist signup: ${input.citySlug}`,
+    body: `${input.clientName} joined the travel waitlist.\n${details.join("\n")}`,
+    channel: "email",
+  });
 }
 
 export function persistErrorReport(
@@ -412,11 +603,11 @@ export function persistErrorReport(
   const record: LocalErrorReportRecord = {
     id,
     tenantId,
-    release: input.release,
     message: input.message,
     redactedRecord,
-    route: input.route,
     createdAt: now,
+    ...(input.route ? { route: input.route } : {}),
+    ...(input.release ? { release: input.release } : {}),
   };
 
   tenant.errorReports.set(id, record);
@@ -453,10 +644,50 @@ export function persistWebhookEvent(
     eventType: input.eventType,
     receivedSignatureHeader: input.signatureHeader,
     payloadLength: input.payloadLength,
-    interpretation: input.interpretation,
     createdAt: now,
+    ...(input.interpretation ? { interpretation: input.interpretation } : {}),
   };
 
   tenant.webhookEvents.set(id, record);
   return record;
+}
+
+
+export function persistContactSubmission(
+  tenantSlug: string,
+  input: { name: string; email: string; subject?: string; message: string; source?: string; clientIp?: string },
+): LocalContactSubmissionRecord {
+  const tenant = getTenantState(tenantSlug);
+  const tenantId = resolveTenant(tenantSlug)?.tenantId ?? tenantSlug;
+  const now = nowIsoDate();
+  const id = nextId("contact");
+  const subject = safeText(input.subject, "General contact");
+  const redactedSubmission = redactRecord({
+    name: input.name,
+    email: input.email,
+    subject,
+    message: input.message,
+  });
+  const record: LocalContactSubmissionRecord = {
+    id,
+    tenantId,
+    name: input.name,
+    email: input.email,
+    subject,
+    redactedSubmission,
+    auditMetadata: {
+      route: "/api/public/[tenantSlug]/contact",
+      source: input.source ?? "public_contact_form",
+      clientIp: input.clientIp ?? "unknown-ip",
+      persistence: "local-runtime",
+      notificationBoundary: "provider-gated",
+    },
+    createdAt: now,
+  };
+  tenant.contactSubmissions.set(id, record);
+  return record;
+}
+
+export function getContactSubmissions(tenantSlug: string): LocalContactSubmissionRecord[] {
+  return Array.from(getTenantState(tenantSlug).contactSubmissions.values()).sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1));
 }

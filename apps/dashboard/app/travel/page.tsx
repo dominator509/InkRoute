@@ -1,8 +1,8 @@
 import { demoTravelStops } from "@inkroute/config";
 import { DashboardPageHeader } from "../../components/DashboardPageHeader";
-import { DisabledActionPanel } from "../../components/DisabledActionPanel";
 import { StatusPill } from "../../components/StatusPill";
-import { dashboardBookingRows, dashboardTravelPublishPlans } from "../../lib/demo";
+import { TravelPublishActionPanel } from "../../components/TravelPublishActionPanel";
+import { dashboardProjectedBookingRows, dashboardTravelPublishPlans } from "../../lib/demo";
 
 export default function TravelScheduleManagerPage() {
   return (
@@ -10,12 +10,12 @@ export default function TravelScheduleManagerPage() {
       <DashboardPageHeader
         eyebrow="Nomad Mode"
         title="Travel schedule manager"
-        description="Manage city stops, guest spots, waitlists, flash availability, calendar blocks, and public schedule revalidation. This Phase 8 surface remains static and non-mutating."
+        description="Manage city stops, guest spots, waitlists, flash availability, calendar blocks, and public schedule revalidation. Tenant-scoped redacted travel read APIs now exist; publish mutations and provider sync remain gated."
       />
 
       <section className="grid three">
         {demoTravelStops.map((stop) => {
-          const matchingRequests = dashboardBookingRows.filter((booking) => booking.city.startsWith(stop.city));
+          const matchingRequests = dashboardProjectedBookingRows.filter((booking) => booking.city.startsWith(stop.city));
           const publishPlan = dashboardTravelPublishPlans.find((plan) => plan.travelStopId === stop.id);
           return (
             <article className="card travel-admin-card" key={stop.id}>
@@ -67,11 +67,7 @@ export default function TravelScheduleManagerPage() {
         </article>
       </section>
 
-      <DisabledActionPanel
-        title="Travel publishing actions"
-        description="City updates should persist to Postgres, update waitlists, create audit logs, create or update calendar blocks, and trigger public site cache revalidation before production."
-        actions={["Add city", "Publish guest spot", "Open waitlist", "Generate availability", "Trigger public revalidation", "Queue calendar sync"]}
-      />
+      <TravelPublishActionPanel />
     </main>
   );
 }

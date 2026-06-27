@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "source": "GAP-013 legal/compliance",
+  "status": "review-required",
+  "items": [
+    {
+      "id": "privacy-policy",
+      "status": "missing"
+    },
+    {
+      "id": "terms-of-service",
+      "status": "missing"
+    },
+    {
+      "id": "tattoo-consent",
+      "status": "missing"
+    },
+    {
+      "id": "medical-acknowledgments",
+      "status": "missing"
+    },
+    {
+      "id": "payments-refunds",
+      "status": "missing"
+    },
+    {
+      "id": "sms-notifications",
+      "status": "missing"
+    },
+    {
+      "id": "aftercare-copy",
+      "status": "missing"
+    }
+  ],
+  "note": "Populate only redacted evidence labels after counsel review. Do not paste privileged legal advice, secrets, or client data."
+}

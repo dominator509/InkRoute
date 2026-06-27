@@ -142,7 +142,7 @@ Current state:
 - The workflow checks that release scaffold files exist.
 - Preview and production deployment jobs are intentionally disabled.
 - No Vercel, EAS, Sentry, Search Console, or database deployment secret is configured.
-- Dashboard release controls are non-mutating previews or `501` boundaries.
+- Dashboard release controls expose guarded local persistence contracts, but deployment jobs, protected approvals, provider-backed route evidence, and production mutations remain disabled until configured.
 
 Before enabling deployment jobs:
 
@@ -175,11 +175,29 @@ Dependency-free commands available now:
 ```bash
 pnpm deploy:check-env
 pnpm deploy:check-env:strict
+pnpm deploy:verify-provider-envs
+pnpm deploy:verify-secrets
+pnpm deploy:verify-mobile
+pnpm deploy:verify-database-ops
+pnpm deploy:verify-launch-evidence
+pnpm deploy:verify-ops
 pnpm deploy:checklist
 pnpm deploy:gaps
 ```
 
 In this sandbox, the non-strict environment check and checklist scripts passed against `.env.example`. Strict production checks require a real `.env.local` or provider-injected runtime environment and are expected to fail until secrets are configured.
+
+Provider environment evidence must be recorded through `deployment/manifests/provider-environment-evidence.json` using redacted labels only. Do not commit provider project IDs, database URLs, bucket names, webhook secrets, access tokens, or private console URLs; store those in provider secret managers and GitHub/EAS/Vercel/Sentry environments, then keep only proof categories and safe evidence labels in git.
+
+Secret-management readiness is tracked in `deployment/manifests/secret-management-audit.json` and verified with `pnpm deploy:verify-secrets`. The manifest is an audit contract, not a secret store: it may list secret names, destinations, rotation cadence, owners/evidence categories, and redacted proof labels, but it must never contain secret values.
+
+Mobile deployment readiness is tracked in `deployment/manifests/mobile-deployment-evidence.json` and verified with `pnpm deploy:verify-mobile`. It verifies that the committed EAS/app config remains deployment-gated until real EAS projects, builds, push, crash, and OTA rollback evidence exist.
+
+Database operations readiness is tracked in `deployment/manifests/database-operations-evidence.json` and verified with `pnpm deploy:verify-database-ops`. It checks the required migration/seed/backup/restore/tenant-isolation evidence contract without requiring or exposing live database URLs.
+
+Production launch evidence is tracked in `deployment/manifests/production-launch-evidence.json` and verified with `pnpm deploy:verify-launch-evidence`. It keeps launch approval blocked until all redacted evidence bundles are verified.
+
+Launch operations readiness is tracked in `deployment/manifests/launch-operations-evidence.json` and verified with `pnpm deploy:verify-ops`. It keeps incident, support, privacy, monitoring, on-call, communications, and rollback operations blocked until owners and drills are proven with redacted evidence.
 
 ### Phase 15 runbook index
 

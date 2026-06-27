@@ -10,21 +10,21 @@ This is not production-ready because the schema has not been validated by Prisma
 
 | Domain | Models in Prisma schema | Status |
 | --- | --- | --- |
-| Tenancy | Tenant, TenantDomain, FeatureFlag | Scaffolded, migration unverified |
-| Users/RBAC | User, TenantMember, CustomRole | Scaffolded, auth/session integration pending |
-| Artist/studio | Artist, Studio | Scaffolded |
-| Client CRM | Client, ClientProfile | Scaffolded; encryption service pending |
-| Portfolio | TattooStyle, PortfolioItem, PortfolioImage, FileAsset | Scaffolded; storage integration pending |
-| Travel/Nomad Mode | TravelCity, TravelSchedule, AvailabilityWindow | Scaffolded; conflict/timezone tests pending |
+| Tenancy | Tenant, TenantDomain, FeatureFlag | Schema plus release/feature-flag local persistence contracts wired; provider-backed migration/runtime proof pending |
+| Users/RBAC | User, TenantMember, CustomRole | Schema plus dashboard auth/RBAC shim contracts wired; live auth/session integration pending |
+| Artist/studio | Artist, Studio | Schema present; provider/runtime proof pending |
+| Client CRM | Client, ClientProfile | Schema present; sensitive-write encryption policy contracts partially wired, full provider-backed lifecycle proof pending |
+| Portfolio | TattooStyle, PortfolioItem, PortfolioImage, FileAsset | Schema plus local FileAsset/SignedUrlGrant persistence contracts wired; storage provider integration pending |
+| Travel/Nomad Mode | TravelCity, TravelSchedule, AvailabilityWindow | Schema plus dashboard travel/availability local persistence contracts wired; conflict/timezone/provider proof pending |
 | Calendar | CalendarConnection, CalendarEvent | Scaffolded; provider OAuth/sync pending |
-| Booking | BookingRequest, BookingStateEvent, Appointment | Scaffolded; API/state machine tests pending |
-| Payments | Deposit, Payment, Refund, PaymentAuditLog | Scaffolded; Stripe/webhook integration pending |
-| Intake/consent/safety | IntakeForm, IntakeQuestion, IntakeResponse, ConsentForm, ConsentSignature, MedicalSafetyAcknowledgment | Scaffolded; legal review and encryption pending |
-| Files/uploads | FileAsset, ReferenceImage | Scaffolded; object storage/signed URL flow pending |
-| Messaging/notifications | MessageThread, Message, Notification, NotificationDelivery | Scaffolded; email/SMS/push providers pending |
+| Booking | BookingRequest, BookingStateEvent, Appointment | Schema plus booking request DB-first route/state/audit contracts wired; seeded integration/runtime proof pending |
+| Payments | Deposit, Payment, Refund, PaymentAuditLog | Schema plus deposit draft/webhook replay/audit local contracts wired; Stripe provider proof pending |
+| Intake/consent/safety | IntakeForm, IntakeQuestion, IntakeResponse, ConsentForm, ConsentSignature, MedicalSafetyAcknowledgment | Schema plus dashboard form metadata and privacy/legal review contracts wired; legal/provider proof pending |
+| Files/uploads | FileAsset, ReferenceImage | Schema plus local signed-upload/FileAsset/ReferenceImage contracts wired; object storage provider proof pending |
+| Messaging/notifications | MessageThread, Message, Notification, NotificationDelivery | Schema plus DB-first message/contact/preference/notification handoff contracts wired; email/SMS/push providers pending |
 | Reputation | Review | Scaffolded |
 | SEO | SeoCityPage, SeoStylePage, SeoRedirect | Scaffolded; dynamic page routes pending |
-| Audit/errors/releases | AuditLog, ErrorReport, ReleaseRecord | Scaffolded; observability wiring pending |
+| Audit/errors/releases | AuditLog, ErrorReport, ReleaseRecord | Schema plus error-report, provider-webhook, release, and audit local contracts wired; provider/CI proof pending |
 
 ## Enum/state machine inventory
 
@@ -33,6 +33,8 @@ The schema now defines enums for tenant/user/member status, booking events, appo
 ## Tenant isolation pattern
 
 Every tenant-owned model added in Phase 2 includes `tenantId`. Application queries must still enforce tenant scope, because schema presence alone does not prevent an unsafe query.
+
+`@inkroute/db` now includes dependency-light tenant scope helpers and a model inventory contract in `packages/db/prisma/tenant-isolation-contract.json`. These helpers are not a substitute for live repository tests; they define the contract that future Prisma services must use before `GAP-022` can close.
 
 Required query shape:
 
@@ -48,7 +50,7 @@ Never trust a client-submitted `tenantId` without validating the authenticated u
 
 ## Sensitive data posture
 
-The schema intentionally stores sensitive fields as encrypted string placeholders, including client birthdate, emergency contact, medical notes, allergies, skin concerns, provider tokens, and consent metadata. The encryption service is not implemented yet and is tracked in `GAP_TRACKER.md` as a production blocker.
+The schema keeps sensitive columns as strings so application-level encryption can store ciphertext and key metadata without exposing plaintext. Local encryption/key-policy contracts are wired for booking medical notes and provider-token intake, including rotation/readiness metadata and fail-closed invalid-key behavior. Runtime KMS/key lifecycle proof, provider-token operational coverage, and broader sensitive-field integration remain tracked in `GAP_TRACKER.md` as production evidence gates.
 
 Sensitive objects:
 - Client PII and phone/email.
@@ -80,6 +82,8 @@ A seed script now exists at `packages/db/prisma/seed.ts`. It creates a fake noma
 
 The seed file is **untested** because dependencies and Prisma Client generation are not available in this sandbox.
 
+Static seed readiness is tracked in `packages/db/prisma/seed-readiness.json` and verified with `pnpm db:verify-seed`. This verifies seed command wiring, fake/demo markers, expected model writes, legal placeholder language, and obvious production-provider pattern bans. It does not replace `pnpm db:generate`, `pnpm db:migrate`, or `pnpm db:seed` against a development database.
+
 ## Migration strategy
 
 Required next steps in a local/dev environment:
@@ -92,11 +96,26 @@ pnpm db:migrate
 pnpm db:seed
 ```
 
+The deployment evidence contract for database operations is `deployment/manifests/database-operations-evidence.json`; run `pnpm deploy:verify-database-ops` to confirm the required backup, migration, seed, branch promotion, destructive-change, and tenant-isolation evidence slots are present before attaching live provider proof.
+
 Recommended migration name:
 
 ```bash
 pnpm --filter @inkroute/db prisma migrate dev --schema prisma/schema.prisma --name phase_2_domain_model
 ```
+
+## Migration compatibility enforcement
+
+Release governance now treats database changes as production-blocking until Prisma compatibility evidence is attached. The release helper in `packages/releases/src/index.ts` classifies migration inputs as none, expand-only, contract, or destructive and requires:
+
+- `prisma validate` against `packages/db/prisma/schema.prisma`.
+- `prisma migrate diff` against a staging or production-like database URL before deploy.
+- Destructive SQL scan for `DROP TABLE`, `DROP COLUMN`, `ALTER TABLE ... DROP`, and `TRUNCATE`.
+- Backup snapshot evidence and explicit approval for destructive changes.
+- Expand/contract sequencing for non-backward-compatible changes.
+- Forward-fix-first recovery policy attached to the release record, with restore reserved for approved incident scenarios.
+
+The scaffolded `.github/workflows/release-governance.yml` includes a `Prisma migration compatibility dry run` step wired to `DATABASE_URL`. It intentionally fails without a real database URL rather than silently approving migrations.
 
 ## Verification required before closing Phase 2 database gaps
 
@@ -109,7 +128,7 @@ pnpm --filter @inkroute/db prisma migrate dev --schema prisma/schema.prisma --na
 
 ## Phase 7 payment persistence note
 
-The Prisma schema already includes `Deposit`, `Payment`, `Refund`, and `PaymentAuditLog` models. Phase 7 added payment policy/session/webhook helper code, but it did not add migrations, repositories, or transactional persistence. Production payment work must store `policySnapshot`, provider session/payment/refund IDs, amount/currency/status, paid/failed timestamps, and tenant-scoped audit logs idempotently. Stripe metadata must reference internal IDs only and must not contain medical notes, consent text, private messages, or reference-image URLs.
+The Prisma schema already includes `Deposit`, `Payment`, `Refund`, and `PaymentAuditLog` models. Dashboard and public deposit-session routes now persist local DB draft records transactionally, including `policySnapshot`, pending `Payment`, idempotency metadata, and tenant-scoped `PaymentAuditLog` rows before any provider redirect. Production payment work still must add provider Checkout/PaymentIntent execution, provider session/payment/refund IDs, paid/failed timestamps, replay-safe webhook reconciliation, and sandbox/live evidence. Stripe metadata must reference internal IDs only and must not contain medical notes, consent text, private messages, or reference-image URLs.
 
 ## Phase 8 calendar persistence note
 

@@ -74,6 +74,8 @@ The following must be reviewed by a qualified attorney before production:
 
 This is tracked as `GAP-013`.
 
+Legal review evidence is tracked in `docs/legal/manifests/legal-review-evidence.json` and verified with `pnpm legal:verify-review`. This verifier is expected to fail until every required legal item is marked approved with a redacted evidence label. Do not paste privileged attorney communications, secrets, or client data into repository evidence.
+
 ## Backup/recovery plan
 
 Before launch:
@@ -93,12 +95,12 @@ Before launch:
 
 ## Phase 4 booking security note
 
-The Phase 4 booking flow intentionally keeps all client data in browser state and does not persist it. The local reference image selector records metadata for preview only and does not upload bytes. The validation-only booking API route returns `501` for valid input because the following security controls must exist before production submission is enabled:
+The Phase 4 booking flow now submits through the tenant-scoped public booking API. The local reference image selector still records metadata for preview only and does not upload bytes. The booking API validates shared schemas, enforces anti-bot proof before DB writes, persists booking/audit state when the database path is available, encrypts sensitive medical-note payloads through the local key-policy contract, and disables non-durable local fallback in production. The following controls still gate production submission proof:
 
-- Public tenant/domain resolution that cannot be spoofed.
-- Rate limiting and bot/spam protection for public booking requests.
-- Server-side validation through shared schemas.
-- Transactional tenant-scoped writes for booking and audit records.
+- Provider-backed tenant/domain resolution evidence that cannot be spoofed.
+- Distributed rate limiting and bot/spam protection evidence for public booking requests.
+- Server-side validation through shared schemas, plus route/runtime proof.
+- Transactional tenant-scoped booking and audit write evidence against a provider-backed database.
 - Redaction of medical/safety notes from logs and error responses.
 - Application-level encryption for sensitive notes once stored.
 - Signed private upload flow for reference images.
@@ -180,17 +182,17 @@ The Phase 12 scaffold does not implement these controls. They are tracked in `GA
 
 ## Phase 13 security/privacy/trust notes
 
-Current status: **scaffolded only**. Phase 13 adds `@inkroute/security`, dashboard/public/mobile trust previews, legal placeholders, upload validation drafts, rate-limit and CSRF plans, security header drafts, privacy request drafts, and tenant isolation fixtures. These are implementation contracts, not active security controls.
+Current status: **local contracts wired; production proof gated**. Phase 13 adds `@inkroute/security`, dashboard/public/mobile trust previews, legal placeholders, upload validation and signed-upload contracts, rate-limit and CSRF plans, security header drafts, privacy request intake contracts, tenant isolation fixtures, abuse-event persistence seams, and encryption/key-policy readiness metadata. These are source/runtime contracts, not proof that live provider infrastructure, legal approval, or production controls are complete.
 
 Production requirements before handling real client data:
 
-- Implement real dashboard/mobile authentication, session revocation, secure cookies, mobile token storage, and tenant membership checks.
-- Enforce RBAC and tenant filters in every loader, mutation, API route, provider worker, and background job.
+- Prove real dashboard/mobile authentication, session revocation, secure cookies, mobile token storage, and tenant membership checks against provider-backed sessions.
+- Enforce and verify RBAC and tenant filters in every loader, mutation, API route, provider worker, and background job.
 - Add field-level access for medical notes, consent signatures, reference images, private messages, payments, provider tokens, and audit logs.
-- Implement application-level encryption and key rotation for medical/safety fields, provider OAuth tokens, emergency contact data, consent signatures, and other private assets.
-- Wire signed S3/Supabase uploads, server-generated object keys, MIME and file-signature validation, EXIF/GPS stripping, malware scanning/quarantine, private ACLs, and public derivative approval.
-- Add distributed rate limiting, bot/spam controls, CSRF/session protection, and security headers in the web/dashboard runtime.
-- Implement privacy request persistence, identity verification, export/delete/rectification workers, retention/legal holds, and audit logs.
+- Extend and prove application-level encryption/key rotation beyond the local medical-note and provider-token readiness contracts to every medical/safety field, provider OAuth token, emergency contact field, consent signature, and private asset.
+- Wire provider-backed signed S3/Supabase uploads, server-generated object keys, MIME and file-signature validation, EXIF/GPS stripping, malware scanning/quarantine, private ACLs, and public derivative approval.
+- Add and prove distributed rate limiting, bot/spam controls, CSRF/session protection, and security headers in the web/dashboard runtime.
+- Complete privacy request identity verification, export/delete/rectification workers, retention/legal holds, private file deletion, tombstone execution, and audit evidence beyond the local intake/persistence contracts.
 - Complete attorney review for privacy policy, terms, consent, medical acknowledgments, SMS opt-in/STOP/HELP, aftercare, deposit, cancellation, no-show, refund, tax, and SaaS terms language.
 - Add automated tenant-isolation, authorization, upload, privacy, redaction, header, and abuse-control tests.
 
@@ -210,3 +212,5 @@ Phase 15 adds deployment and launch runbooks, but no production security control
 - incident/privacy/support runbook drills.
 
 These remain tracked in the gap tracker, especially `GAP-095` through `GAP-104` and `GAP-113` through `GAP-120`.
+
+Launch operations evidence is tracked in `deployment/manifests/launch-operations-evidence.json` and verified with `pnpm deploy:verify-ops`. This must remain blocked until incident, privacy, support, monitoring, on-call, communication, and rollback drills have redacted proof.

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { inkrouteDemoArtist } from "@inkroute/config";
+import { inkrouteDemoArtist, inkrouteDemoTenant } from "@inkroute/config";
 import { CtaBand } from "../../components/CtaBand";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Contact page demo for a nomadic tattoo artist booking website, with live form submission and rate limiting still planned.",
+  description: "Contact page for a nomadic tattoo artist booking website, with tenant-scoped local persistence and provider-gated notification delivery.",
 };
 
 export default function ContactPage() {
@@ -15,7 +15,7 @@ export default function ContactPage() {
           <div>
             <p className="eyebrow">Contact boundary</p>
             <h1>Keep general questions separate from serious booking requests.</h1>
-            <p>The public contact page is static in Phase 3. Live submission, rate limiting, spam protection, and notification delivery are still gap-tracked.</p>
+            <p>General contact now posts to a tenant-scoped local persistence API with redacted audit metadata. Booking requests still belong in the guided flow, and notification delivery remains provider-gated.</p>
           </div>
           <aside className="panel-card large">
             <p className="eyebrow">Artist</p>
@@ -27,25 +27,30 @@ export default function ContactPage() {
       </section>
       <section className="section compact">
         <div className="container contact-grid">
-          <form className="demo-form" aria-label="Static contact form preview">
+          <form className="demo-form" method="post" action={`/api/public/${inkrouteDemoTenant.slug}/contact`} aria-label="Tenant-scoped contact form">
             <label>
               Name
-              <input name="name" placeholder="Your name" disabled />
+              <input name="name" placeholder="Your name" required minLength={2} />
             </label>
             <label>
               Email
-              <input name="email" placeholder="you@example.com" disabled />
+              <input name="email" placeholder="you@example.com" required inputMode="email" />
+            </label>
+            <label>
+              Subject
+              <input name="subject" placeholder="General question, travel week, press, or collaboration" />
             </label>
             <label>
               Message
-              <textarea name="message" placeholder="Static preview only" disabled />
+              <textarea name="message" placeholder="Keep sensitive medical, payment, or private reference details in the guided booking flow." required minLength={10} />
             </label>
-            <p className="muted">Disabled intentionally: contact API, validation, rate limiting, and email delivery are not wired.</p>
+            <button className="button" type="submit">Send contact request</button>
+            <p className="muted">Submissions persist in local tenant runtime with redacted audit metadata. Email/SMS delivery remains provider-gated until sandbox evidence exists.</p>
           </form>
           <div className="stack">
             <div className="mini-row">Booking requests should use the guided request page.</div>
             <div className="mini-row">Sensitive details should not be sent through a generic contact form.</div>
-            <div className="mini-row">Future notifications should create delivery logs and redact private content.</div>
+            <div className="mini-row">Future notifications must create delivery logs and redact private content.</div>
           </div>
         </div>
       </section>

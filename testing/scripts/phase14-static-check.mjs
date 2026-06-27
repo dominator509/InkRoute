@@ -3,7 +3,15 @@ import { join } from "node:path";
 
 const root = process.cwd();
 const packageJson = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-const requiredScripts = ["test:unit", "test:e2e", "test:manifest", "test:phase14:static"];
+const requiredScripts = [
+  "test:unit",
+  "test:unit:coverage",
+  "typecheck",
+  "test:e2e",
+  "test:performance:budgets",
+  "test:manifest",
+  "test:phase14:static",
+];
 const missingScripts = requiredScripts.filter((script) => !packageJson.scripts?.[script]);
 
 const packagePath = join(root, "packages/testing/package.json");

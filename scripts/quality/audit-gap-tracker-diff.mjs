@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from "node:fs";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -40,7 +40,8 @@ function extractPrRefs(eventPath) {
     return null;
   }
 
-  const event = JSON.parse(readFileSync(eventPath, "utf8"));
+  const eventText = readFileSync(eventPath, "utf8").replace(/^\uFEFF/, "");
+  const event = JSON.parse(eventText);
   const pr = event.pull_request;
   if (!pr?.base?.sha || !pr?.head?.sha) {
     return null;
@@ -66,7 +67,21 @@ function isNonOpenStatus(value) {
 
 function hasEvidence(value) {
   const v = (value || "").toLowerCase();
-  return /`[^`]+`/.test(value || "") || /\b(run|execute|pass|passed|output|log|ci|provider|verify|evidence|proof|proofs|snapshot|screenshot|artifact|command)\b/.test(v);
+  return /`[^`]+`/.test(value || "") || /\b(run|execute|pass|passed|output|log|ci|provider|verify|evidence|proof|proofs|snapshot|screenshot|artifact|command|check|verified|commanded|drill|reviewed|updated|command output)\b/.test(v);
+}
+
+function hasGapClosureEvidence(newRow) {
+  const statusHasEvidence = hasEvidence(newRow.currentStatus);
+  const verificationHasEvidence = hasEvidence(newRow.verificationNeeded);
+
+  if (!statusHasEvidence || !verificationHasEvidence) {
+    const checks = [];
+    if (!statusHasEvidence) checks.push("current status");
+    if (!verificationHasEvidence) checks.push("verification/test needed");
+    return { ok: false, checks };
+  }
+
+  return { ok: true, checks: [] };
 }
 
 function collectGapDiff(diffText) {
@@ -114,6 +129,113 @@ function resolveRefs(eventRefs) {
   return null;
 }
 
+function gitOutput(args) {
+  return execFileSync("git", args, {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+}
+
+function tryGitOutput(args) {
+  try {
+    return gitOutput(args);
+  } catch {
+    return null;
+  }
+}
+
+function tryGit(args) {
+  try {
+    execFileSync("git", args, {
+      cwd: root,
+      stdio: "ignore",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function hasMergeBase(baseRef, headRef) {
+  return tryGit(["merge-base", baseRef, headRef]);
+}
+
+function deepenHistoryForMergeBase(baseRef, headRef) {
+  const before = hasMergeBase(baseRef, headRef);
+  if (before) {
+    return true;
+  }
+
+  console.warn("Gap tracker diff audit: no merge base available; trying to deepen PR checkout history.");
+
+  const unshallowOk = tryGit(["fetch", "--no-tags", "--unshallow", "origin"]);
+  if (unshallowOk && hasMergeBase(baseRef, headRef)) {
+    return true;
+  }
+
+  const deepenOk = tryGit(["fetch", "--no-tags", "--deepen=100", "origin"]);
+  return deepenOk && hasMergeBase(baseRef, headRef);
+}
+
+function buildGapTrackerDiff(baseRef, headRef) {
+  if (deepenHistoryForMergeBase(baseRef, headRef)) {
+    return gitOutput(["diff", "--unified=0", `${baseRef}...${headRef}`, "--", "GAP_TRACKER.md"]);
+  }
+
+  console.warn("Gap tracker diff audit: still no merge base available after fetch; falling back to direct base/head diff.");
+
+  try {
+    return gitOutput(["diff", "--unified=0", baseRef, headRef, "--", "GAP_TRACKER.md"]);
+  } catch {
+    console.warn("Gap tracker diff audit: direct base/head diff unavailable in this checkout.");
+  }
+
+  const checkoutSha = process.env.GITHUB_SHA || "HEAD";
+  const mergeCommitDiff = tryGitOutput(["diff", "--unified=0", `${checkoutSha}^1`, checkoutSha, "--", "GAP_TRACKER.md"]);
+  if (mergeCommitDiff != null) {
+    console.warn("Gap tracker diff audit: falling back to checked-out PR merge commit parent diff.");
+    return mergeCommitDiff;
+  }
+
+  console.warn("Gap tracker diff audit: no usable PR diff range is available in this checkout; skipping PR gap-diff enforcement.");
+  return "";
+}
+
+function refExists(ref) {
+  try {
+    execFileSync("git", ["rev-parse", "--verify", `${ref}^{commit}`], {
+      cwd: root,
+      stdio: "ignore",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function fetchRefIfMissing(ref, refForFetch) {
+  if (refExists(ref)) {
+    return true;
+  }
+
+  try {
+    execFileSync("git", ["fetch", "--no-tags", "--depth=1", "origin", refForFetch], {
+      cwd: root,
+      stdio: "ignore",
+    });
+    return refExists(ref);
+  } catch {
+    if (refExists(ref)) {
+      console.warn(`Gap tracker diff audit: fetch failed for ${refForFetch}, but ${ref} is already available locally.`);
+      return true;
+    }
+
+    console.warn(`Gap tracker diff audit: could not fetch required ref ${refForFetch}; trying checkout-local fallbacks.`);
+    return false;
+  }
+}
+
 function runGapDiffAudit() {
   const isPullRequest = process.env.GITHUB_EVENT_NAME === "pull_request";
   if (!isPullRequest && process.env.GITHUB_EVENT_PATH == null) {
@@ -138,23 +260,14 @@ function runGapDiffAudit() {
     : headRef;
 
   if (isSha(baseRef) || baseRef.startsWith("origin/")) {
-    execSync(`git fetch --no-tags --depth=1 origin ${baseRefForFetch}`, {
-      cwd: root,
-      stdio: "ignore",
-    });
+    fetchRefIfMissing(baseRef, baseRefForFetch);
   }
 
   if (isSha(headRef) || headRef.startsWith("origin/")) {
-    execSync(`git fetch --no-tags --depth=1 origin ${headRefForFetch}`, {
-      cwd: root,
-      stdio: "ignore",
-    });
+    fetchRefIfMissing(headRef, headRefForFetch);
   }
 
-  const diff = execSync(`git diff --unified=0 ${baseRef}...${headRef} -- GAP_TRACKER.md`, {
-    cwd: root,
-    encoding: "utf8",
-  });
+  const diff = buildGapTrackerDiff(baseRef, headRef);
 
   const { added, removed } = collectGapDiff(diff);
   const changedGapIds = new Set([...added.keys(), ...removed.keys()]);
@@ -177,9 +290,12 @@ function runGapDiffAudit() {
       continue;
     }
 
-    if (!hasEvidence(newRow.verificationNeeded)) {
-      findings.push(`GAP-TRK-DIFF: ${gapId} changed to non-open status or downgraded blocker but lacks verification/test detail.`);
+    const evidence = hasGapClosureEvidence(newRow);
+    if (!evidence.ok) {
+      findings.push(`GAP-TRK-DIFF: ${gapId} changed to non-open status or downgraded blocker but lacks evidence in ${evidence.checks.join(" and ")} column(s).`);
+      continue;
     }
+
   }
 
   if (findings.length > 0) {

@@ -31,7 +31,9 @@ All markdown files in the extracted Phase 3 ZIP were enumerated and reviewed bef
   - parses JSON
   - validates against `bookingRequestInputSchema`
   - returns `400` for invalid JSON/schema
-  - returns `501 BOOKING_PERSISTENCE_NOT_IMPLEMENTED` for valid data because persistence and integrations are not wired
+  - resolves tenant scope, enforces anti-bot proof for DB writes, and writes `BookingRequest`, `BookingStateEvent`, and `AuditLog` rows when the database path is available
+  - emits encryption-policy/rotation metadata for sensitive medical notes and falls back only to redacted local runtime state outside production
+  - returns provider handoff evidence for reference uploads, deposits, notifications, and calendar work without claiming provider execution
 - Expanded `@inkroute/config` with booking styles, placements, budget ranges, date windows, policy acknowledgement copy, and integration boundary copy.
 - Updated `apps/web/package.json` with `@inkroute/booking` and `@inkroute/validators` workspace dependencies.
 - Updated root `tsconfig.base.json` path aliases for `@inkroute/booking`.

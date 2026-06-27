@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import {
   buildDeploymentPlan,
   buildHandoffTasks,
@@ -7,7 +7,14 @@ import {
 } from "@inkroute/deployment";
 import { deploymentReadinessMutationSchema, type DeploymentReadinessMutationInput } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
-import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
+import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../../dashboardAuth";
+import {
+  buildCicdDeploymentAutomationContract,
+  buildDeploymentProviderGateMatrix,
+  buildReleaseRecordCiResultMetadata,
+  buildReleaseRecordCiResultWritePlan,
+  cicdDeploymentAutomationArtifactPaths,
+} from "../../../../lib/cicdDeploymentAutomation";
 
 declare const process: { env: Record<string, string | undefined> };
 
@@ -32,6 +39,8 @@ type DeploymentGetPayload = {
   checklist: ReturnType<typeof buildProductionLaunchChecklist>;
   handoffTasks: ReturnType<typeof buildHandoffTasks>;
   gapIds: string[];
+  cicdAutomation?: ReturnType<typeof buildCicdDeploymentAutomationContract>;
+  providerGates?: ReturnType<typeof buildDeploymentProviderGateMatrix>;
   boundary: string;
 };
 
@@ -50,9 +59,15 @@ type DeploymentPostPayload = {
   auditId?: string;
   persistence: "database" | "local-fallback";
   gapIds: string[];
+  ciResult?: ReturnType<typeof buildReleaseRecordCiResultMetadata>;
+  ciResultWritePlan?: ReturnType<typeof buildReleaseRecordCiResultWritePlan>;
+  cicdAutomation?: ReturnType<typeof buildCicdDeploymentAutomationContract>;
+  providerGates?: ReturnType<typeof buildDeploymentProviderGateMatrix>;
+  artifactPaths?: typeof cicdDeploymentAutomationArtifactPaths;
 };
 
 const deploymentGapIds = ["GAP-014", "GAP-015", "GAP-089", "GAP-114", "GAP-115"];
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
 const operationPolicies: Record<DeploymentReadinessMutationInput["operation"], DeploymentOperationPolicy> = {
   "readiness-review": {
@@ -134,6 +149,8 @@ function buildPayload(actor: ReturnType<typeof resolveDashboardActor>, environme
     checklist: buildProductionLaunchChecklist(),
     handoffTasks: buildHandoffTasks(),
     gapIds: deploymentGapIds,
+    cicdAutomation: buildCicdDeploymentAutomationContract(),
+    providerGates: buildDeploymentProviderGateMatrix(),
     boundary:
       "Readiness route is now auth-guarded with tenant scope and audit-ready metadata, but deployment actions remain external to this API until CI/CD environments and provider credentials are provisioned.",
   };
@@ -161,10 +178,26 @@ function buildPostSuccessPayload(
     },
     environment: resolvedEnvironment,
     plan: buildDeploymentPlan(input.targetEnvironment),
-    requestId: input.requestId,
+    ...(input.requestId === undefined ? {} : { requestId: input.requestId }),
     persistence: actor.source === "local-fallback" ? "local-fallback" : "database",
     ...(auditId ? { auditId } : {}),
     gapIds: deploymentGapIds,
+    ciResult: buildReleaseRecordCiResultMetadata({
+      workflowRunId: input.requestId ?? null,
+      workflowRunUrl: null,
+      releaseVersion: null,
+      releaseChannel: input.targetEnvironment,
+      commitSha: null,
+      status: policy.implemented ? "requested" : "blocked",
+    }),
+    ciResultWritePlan: buildReleaseRecordCiResultWritePlan({
+      workflowRunId: input.requestId ?? null,
+      workflowRunUrl: null,
+      status: policy.implemented ? "requested" : "blocked",
+    }),
+    cicdAutomation: buildCicdDeploymentAutomationContract(),
+    providerGates: buildDeploymentProviderGateMatrix(),
+    artifactPaths: cicdDeploymentAutomationArtifactPaths,
     ...(policy.implemented ? {} : {
       warning:
         "This response indicates blocked or staged workflow actions only; this API records request metadata for auditability but does not perform external provider calls.",
@@ -177,11 +210,84 @@ export async function GET(request: NextRequest) {
   try {
     assertPermission(actor, "release:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read deployment readiness." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read deployment readiness." } }, { status: 403, headers: noStoreHeaders });
+  }
+
+  const params = new URL(request.url).searchParams;
+  const tenantId = params.get("tenantId") ?? actor.tenantId;
+  if (tenantId !== actor.tenantId) {
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query deployment readiness for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const environment = buildEnvironmentSnapshot("production");
-  return NextResponse.json(buildPayload(actor, environment));
+  if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_DEPLOYMENT_READINESS_NOT_CONFIGURED",
+            message: "Production deployment readiness reads require DB-backed actor resolution and auditable control-plane persistence; local fallback snapshots are disabled.",
+            gapIds: deploymentGapIds,
+          },
+          productionBoundary: { localDeploymentReadinessFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
+    return NextResponse.json(buildPayload(actor, environment), { headers: noStoreHeaders });
+  }
+
+  try {
+    const auditLogModel = prisma.auditLog as { create: (args: unknown) => Promise<{ id: string }> };
+    const audit = await auditLogModel.create({
+      data: {
+        tenantId,
+        actorUserId: actor.actorUserId,
+        action: "deployment:readiness:read",
+        entityType: "DeploymentReadiness",
+        metadata: {
+          source: actor.source,
+          targetEnvironment: "production",
+          productionBlocked: environment.productionBlocked,
+          missingRequiredNames: environment.missingRequiredNames,
+          redactedFields: ["DATABASE_URL", "DIRECT_URL", "AUTH_SECRET", "STRIPE_SECRET_KEY", "SENTRY_AUTH_TOKEN", "VERCEL_TOKEN"],
+          cicdAutomation: buildCicdDeploymentAutomationContract(),
+          providerGates: buildDeploymentProviderGateMatrix(),
+          artifactPaths: cicdDeploymentAutomationArtifactPaths,
+        },
+      },
+      select: { id: true },
+    });
+
+    return NextResponse.json({ ...buildPayload(actor, environment), auditId: audit.id }, { headers: noStoreHeaders });
+  } catch (error) {
+    if (isDatabaseUnavailable(error)) {
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json(
+          {
+            ok: false,
+            source: actor.source,
+            tenantId,
+            error: {
+              code: "PROVIDER_DEPLOYMENT_READINESS_NOT_CONFIGURED",
+              message: "Production deployment readiness reads require the dashboard database connection; audit-free fallback snapshots are disabled.",
+              gapIds: deploymentGapIds,
+            },
+            productionBoundary: { localDeploymentReadinessFallbackDisabled: true },
+          },
+          { status: 503, headers: noStoreHeaders },
+        );
+      }
+
+      return NextResponse.json({ ...buildPayload(actor, environment), warning: "Database unavailable; deployment readiness read audit was not persisted." }, { headers: noStoreHeaders });
+    }
+
+    return NextResponse.json({ ok: false, error: { code: "DEPLOYMENT_READINESS_READ_FAILED", message: "Deployment readiness could not be loaded." } }, { status: 500, headers: noStoreHeaders });
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -189,14 +295,14 @@ export async function POST(request: NextRequest) {
   try {
     assertPermission(actor, "release:write");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to trigger deployment operations." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to trigger deployment operations." } }, { status: 403, headers: noStoreHeaders });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Deployment readiness body must be valid JSON." } }, { status: 400 });
+    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Deployment readiness body must be valid JSON." } }, { status: 400, headers: noStoreHeaders });
   }
 
   const parsed = deploymentReadinessMutationSchema.safeParse(body);
@@ -210,7 +316,7 @@ export async function POST(request: NextRequest) {
           issues: parsed.error.flatten(),
         },
       },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -219,11 +325,29 @@ export async function POST(request: NextRequest) {
   const environment = buildEnvironmentSnapshot(input.targetEnvironment);
 
   if (actor.source === "local-fallback") {
-    return NextResponse.json(buildPostSuccessPayload(actor, input, undefined, environment), { status: policy.statusCode });
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId: actor.tenantId,
+          error: {
+            code: "PROVIDER_DEPLOYMENT_READINESS_NOT_CONFIGURED",
+            message: "Production deployment readiness writes require DB-backed actor resolution and auditable control-plane persistence; local fallback requests are disabled.",
+            gapIds: deploymentGapIds,
+          },
+          productionBoundary: { localDeploymentReadinessFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
+    return NextResponse.json(buildPostSuccessPayload(actor, input, undefined, environment), { status: policy.statusCode, headers: noStoreHeaders });
   }
 
   try {
-    const audit = await prisma.auditLog.create({
+    const auditLogModel = prisma.auditLog as { create: (args: unknown) => Promise<{ id: string }> };
+    const audit = await auditLogModel.create({
       data: {
         tenantId: actor.tenantId,
         actorUserId: actor.actorUserId,
@@ -237,17 +361,53 @@ export async function POST(request: NextRequest) {
           blockerIds: input.blockerIds ?? [],
           source: actor.source,
           implemented: policy.implemented,
+          ciResult: buildReleaseRecordCiResultMetadata({
+            workflowRunId: input.requestId ?? null,
+            workflowRunUrl: null,
+            releaseVersion: null,
+            releaseChannel: input.targetEnvironment,
+            commitSha: null,
+            status: policy.implemented ? "requested" : "blocked",
+          }),
+          ciResultWritePlan: buildReleaseRecordCiResultWritePlan({
+            workflowRunId: input.requestId ?? null,
+            workflowRunUrl: null,
+            status: policy.implemented ? "requested" : "blocked",
+          }),
+          cicdAutomation: buildCicdDeploymentAutomationContract(),
+          providerGates: buildDeploymentProviderGateMatrix(),
+          artifactPaths: cicdDeploymentAutomationArtifactPaths,
         },
       },
     });
 
     const payload = buildPostSuccessPayload(actor, input, audit.id, environment);
-    return NextResponse.json(payload, { status: policy.statusCode });
+    return NextResponse.json(payload, { status: policy.statusCode, headers: noStoreHeaders });
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
-      return NextResponse.json(buildPostSuccessPayload(actor, input, undefined, environment), { status: 200 });
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json(
+          {
+            ok: false,
+            source: actor.source,
+            tenantId: actor.tenantId,
+            error: {
+              code: "PROVIDER_DEPLOYMENT_READINESS_NOT_CONFIGURED",
+              message: "Production deployment readiness writes require the dashboard database connection; audit-free fallback requests are disabled.",
+              gapIds: deploymentGapIds,
+            },
+            productionBoundary: { localDeploymentReadinessFallbackDisabled: true },
+          },
+          { status: 503, headers: noStoreHeaders },
+        );
+      }
+
+      return NextResponse.json(buildPostSuccessPayload(actor, input, undefined, environment), { status: 200, headers: noStoreHeaders });
     }
 
-    return NextResponse.json({ ok: false, error: { code: "DEPLOYMENT_READINESS_FAILED", message: "Could not persist deployment readiness request." } }, { status: 500 });
+    return NextResponse.json({ ok: false, error: { code: "DEPLOYMENT_READINESS_FAILED", message: "Could not persist deployment readiness request." } }, { status: 500, headers: noStoreHeaders });
   }
 }
+
+
+

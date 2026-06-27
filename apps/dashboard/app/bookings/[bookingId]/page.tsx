@@ -1,9 +1,9 @@
 import { getAvailableBookingActions } from "@inkroute/booking";
+import { BookingLifecycleActionPanel } from "../../../components/BookingLifecycleActionPanel";
 import { DashboardPageHeader } from "../../../components/DashboardPageHeader";
-import { DisabledActionPanel } from "../../../components/DisabledActionPanel";
 import { StatusPill } from "../../../components/StatusPill";
 import { Timeline } from "../../../components/Timeline";
-import { bookingStatusActionSummary, clientTimeline, dashboardBookingRows, dashboardPayments } from "../../../lib/demo";
+import { bookingStatusActionSummary, clientTimeline, dashboardProjectedBookingRows, dashboardProjectedPayments } from "../../../lib/demo";
 
 interface BookingDetailPageProps {
   params: Promise<{ bookingId: string }>;
@@ -14,26 +14,26 @@ function centsToUsd(cents: number) {
 }
 
 export function generateStaticParams() {
-  return dashboardBookingRows.map((booking) => ({ bookingId: booking.id }));
+  return dashboardProjectedBookingRows.map((booking) => ({ bookingId: booking.id }));
 }
 
 export default async function BookingDetailPage({ params }: BookingDetailPageProps) {
   const { bookingId } = await params;
-  const booking = dashboardBookingRows.find((row) => row.id === bookingId);
+  const booking = dashboardProjectedBookingRows.find((row) => row.id === bookingId);
 
   if (!booking) {
     throw new Error(`Booking ${bookingId} was not found in the Phase 5 static demo data.`);
   }
 
-  const payment = dashboardPayments.find((item) => item.bookingId === booking.id);
-  const actions = getAvailableBookingActions(booking.status).map((action) => action.action.replace(/_/g, " "));
+  const payment = dashboardProjectedPayments.find((item) => item.bookingId === booking.id);
+  const actions = getAvailableBookingActions(booking.status).map((action) => action.action);
 
   return (
     <main>
       <DashboardPageHeader
         eyebrow="Booking detail"
         title={`${booking.clientName} · ${booking.city}`}
-        description="Static booking detail page showing the target review experience for artists, assistants, and studio managers. Mutations are disabled until API, auth, and audit logging exist."
+        description="Booking detail page showing projected request data and the dashboard lifecycle API boundary for artists, assistants, and studio managers."
         actions={<a className="secondary-link" href="/bookings">Back to inbox</a>}
       />
 
@@ -59,7 +59,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
           <dl className="detail-list">
             <div><dt>Deposit estimate</dt><dd>{payment ? centsToUsd(payment.amountCents) : "Not calculated"}</dd></div>
             <div><dt>Status</dt><dd>{payment?.status ?? "missing"}</dd></div>
-            <div><dt>Provider</dt><dd>{payment?.provider ?? "not wired"}</dd></div>
+            <div><dt>Provider</dt><dd>{payment?.provider ?? "provider proof gated"}</dd></div>
           </dl>
           <ul className="compact-list">
             {booking.notes.map((note) => <li key={note}>{note}</li>)}
@@ -67,11 +67,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
         </article>
       </section>
 
-      <DisabledActionPanel
-        title="Lifecycle actions"
-        description="These buttons show intended artist actions but are disabled because mutations, RBAC, tenant checks, state event writes, notification queues, and audit logs are not implemented."
-        actions={actions.length > 0 ? actions : ["Archive"]}
-      />
+      <BookingLifecycleActionPanel bookingId={booking.id} actions={actions} />
 
       <section className="grid two spacious">
         <article className="card">

@@ -1,6 +1,25 @@
 {
   "phase": "14",
   "status": "credential_gated",
+  "suites": [
+    {
+      "id": "unit-provider-webhook-contracts",
+      "file": "apps/web/tests/provider-webhook-contracts.test.ts",
+      "priority": "critical",
+      "verifies": [
+        "provider test plan coverage",
+        "Stripe webhook signature and raw-body contract",
+        "email webhook signature and idempotency boundary",
+        "SMS webhook signature, STOP, and replay boundary",
+        "Sentry webhook signature and delivery idempotency contract"
+      ],
+      "blockedBy": [
+        "Provider sandbox credentials remain outside git",
+        "Live Stripe/Resend/Twilio/Sentry webhook deliveries remain unexecuted",
+        "Google Calendar OAuth sandbox remains credential-gated"
+      ]
+    }
+  ],
   "providers": [
     {
       "name": "Stripe",

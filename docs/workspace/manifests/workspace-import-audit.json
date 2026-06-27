@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-06-06T16:06:48.531Z",
+  "generatedAt": "2026-06-09T01:02:41.095Z",
   "source": "Phase 18 workspace runtime readiness",
   "status": "pass",
   "projectsChecked": 25,
-  "sourceFilesChecked": 176,
+  "sourceFilesChecked": 809,
   "workspacePackages": [
     "@inkroute/analytics",
     "@inkroute/auth",
@@ -55,10 +55,46 @@
   ],
   "importRecords": [
     {
+      "sourcePath": "apps/dashboard/app/api/dashboardAuth.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/auth",
+      "importSpecifier": "@inkroute/auth"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/dashboardAuth.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/dashboardAuth.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/deployment/readiness/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/db",
+      "importSpecifier": "@inkroute/db"
+    },
+    {
       "sourcePath": "apps/dashboard/app/api/deployment/readiness/route.ts",
       "ownerPackageName": "@inkroute/dashboard",
       "importedPackageName": "@inkroute/deployment",
       "importSpecifier": "@inkroute/deployment"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/deployment/readiness/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/validators",
+      "importSpecifier": "@inkroute/validators"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/error-reports/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/db",
+      "importSpecifier": "@inkroute/db"
     },
     {
       "sourcePath": "apps/dashboard/app/api/error-reports/route.ts",
@@ -67,10 +103,22 @@
       "importSpecifier": "@inkroute/observability"
     },
     {
+      "sourcePath": "apps/dashboard/app/api/error-reports/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/error-reports/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/validators",
+      "importSpecifier": "@inkroute/validators"
+    },
+    {
       "sourcePath": "apps/dashboard/app/api/feature-flags/route.ts",
       "ownerPackageName": "@inkroute/dashboard",
-      "importedPackageName": "@inkroute/config",
-      "importSpecifier": "@inkroute/config"
+      "importedPackageName": "@inkroute/db",
+      "importSpecifier": "@inkroute/db"
     },
     {
       "sourcePath": "apps/dashboard/app/api/feature-flags/route.ts",
@@ -79,16 +127,28 @@
       "importSpecifier": "@inkroute/releases"
     },
     {
+      "sourcePath": "apps/dashboard/app/api/feature-flags/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/validators",
+      "importSpecifier": "@inkroute/validators"
+    },
+    {
       "sourcePath": "apps/dashboard/app/api/releases/route.ts",
       "ownerPackageName": "@inkroute/dashboard",
-      "importedPackageName": "@inkroute/config",
-      "importSpecifier": "@inkroute/config"
+      "importedPackageName": "@inkroute/db",
+      "importSpecifier": "@inkroute/db"
     },
     {
       "sourcePath": "apps/dashboard/app/api/releases/route.ts",
       "ownerPackageName": "@inkroute/dashboard",
       "importedPackageName": "@inkroute/releases",
       "importSpecifier": "@inkroute/releases"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/releases/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/validators",
+      "importSpecifier": "@inkroute/validators"
     },
     {
       "sourcePath": "apps/dashboard/app/api/security/privacy-requests/route.ts",
@@ -137,6 +197,12 @@
       "ownerPackageName": "@inkroute/dashboard",
       "importedPackageName": "@inkroute/config",
       "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/dashboard/components/StatusPill.tsx",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/ui",
+      "importSpecifier": "@inkroute/ui"
     },
     {
       "sourcePath": "apps/dashboard/lib/demo.ts",
@@ -221,6 +287,12 @@
       "ownerPackageName": "@inkroute/dashboard",
       "importedPackageName": "@inkroute/seo",
       "importSpecifier": "@inkroute/seo"
+    },
+    {
+      "sourcePath": "apps/dashboard/middleware.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
     },
     {
       "sourcePath": "apps/mobile/App.tsx",
@@ -345,6 +417,30 @@
     {
       "sourcePath": "apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts",
       "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/booking",
+      "importSpecifier": "@inkroute/booking"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/db",
+      "importSpecifier": "@inkroute/db"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/validators",
+      "importSpecifier": "@inkroute/validators"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/booking-requests/test-helpers.ts",
+      "ownerPackageName": "@inkroute/web",
       "importedPackageName": "@inkroute/validators",
       "importSpecifier": "@inkroute/validators"
     },
@@ -367,6 +463,18 @@
       "importSpecifier": "@inkroute/payments"
     },
     {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/error-reports/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/db",
+      "importSpecifier": "@inkroute/db"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/error-reports/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/validators",
+      "importSpecifier": "@inkroute/validators"
+    },
+    {
       "sourcePath": "apps/web/app/api/public/[tenantSlug]/messages/route.ts",
       "ownerPackageName": "@inkroute/web",
       "importedPackageName": "@inkroute/notifications",
@@ -383,6 +491,18 @@
       "ownerPackageName": "@inkroute/web",
       "importedPackageName": "@inkroute/security",
       "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/release-health/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/release-health/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/db",
+      "importSpecifier": "@inkroute/db"
     },
     {
       "sourcePath": "apps/web/app/api/public/[tenantSlug]/release-health/route.ts",
@@ -405,6 +525,12 @@
     {
       "sourcePath": "apps/web/app/api/webhooks/email/route.ts",
       "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/api/webhooks/email/route.ts",
+      "ownerPackageName": "@inkroute/web",
       "importedPackageName": "@inkroute/notifications",
       "importSpecifier": "@inkroute/notifications"
     },
@@ -417,8 +543,20 @@
     {
       "sourcePath": "apps/web/app/api/webhooks/sms/route.ts",
       "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/app/api/webhooks/sms/route.ts",
+      "ownerPackageName": "@inkroute/web",
       "importedPackageName": "@inkroute/notifications",
       "importSpecifier": "@inkroute/notifications"
+    },
+    {
+      "sourcePath": "apps/web/app/api/webhooks/stripe/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
     },
     {
       "sourcePath": "apps/web/app/api/webhooks/stripe/route.ts",
@@ -567,6 +705,12 @@
     {
       "sourcePath": "apps/web/components/PortfolioCard.tsx",
       "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/components/PortfolioCard.tsx",
+      "ownerPackageName": "@inkroute/web",
       "importedPackageName": "@inkroute/types",
       "importSpecifier": "@inkroute/types"
     },
@@ -589,6 +733,36 @@
       "importSpecifier": "@inkroute/observability"
     },
     {
+      "sourcePath": "apps/web/lib/localRuntimeState.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/booking",
+      "importSpecifier": "@inkroute/booking"
+    },
+    {
+      "sourcePath": "apps/web/lib/localRuntimeState.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/config",
+      "importSpecifier": "@inkroute/config"
+    },
+    {
+      "sourcePath": "apps/web/lib/localRuntimeState.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/web/lib/localRuntimeState.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "apps/web/lib/localRuntimeState.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/validators",
+      "importSpecifier": "@inkroute/validators"
+    },
+    {
       "sourcePath": "apps/web/lib/securityDemo.ts",
       "ownerPackageName": "@inkroute/web",
       "importedPackageName": "@inkroute/security",
@@ -605,6 +779,42 @@
       "ownerPackageName": "@inkroute/web",
       "importedPackageName": "@inkroute/seo",
       "importSpecifier": "@inkroute/seo"
+    },
+    {
+      "sourcePath": "apps/web/middleware.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/web/tests/dashboard-security-runtime-middleware-static.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/web/tests/privacy-requests-dashboard-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/web/tests/privacy-requests-public-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/web/tests/secure-upload-intents-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
+    },
+    {
+      "sourcePath": "apps/web/tests/security-runtime-middleware-static.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@inkroute/security",
+      "importSpecifier": "@inkroute/security"
     },
     {
       "sourcePath": "packages/analytics/src/index.ts",
@@ -671,7 +881,1060 @@
       "ownerPackageName": "@inkroute/seo",
       "importedPackageName": "@inkroute/types",
       "importSpecifier": "@inkroute/types"
+    },
+    {
+      "sourcePath": "packages/seo/tests/seo-engine.test.ts",
+      "ownerPackageName": "@inkroute/seo",
+      "importedPackageName": "@inkroute/types",
+      "importSpecifier": "@inkroute/types"
     }
   ],
-  "findings": []
+  "externalImportRecords": [
+    {
+      "sourcePath": "apps/dashboard/app/api/dashboardAuth.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/deployment/readiness/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/error-reports/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/feature-flags/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/releases/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/security/privacy-requests/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/api/security/trust-status/route.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/global-error.tsx",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "apps/dashboard/app/layout.tsx",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "apps/dashboard/components/DashboardPageHeader.tsx",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "apps/dashboard/middleware.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/dashboard/next.config.mjs",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/dashboard/tests/e2e/dashboard-a11y.spec.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@playwright/test",
+      "importSpecifier": "@playwright/test"
+    },
+    {
+      "sourcePath": "apps/dashboard/tests/e2e/dashboard-smoke.spec.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@playwright/test",
+      "importSpecifier": "@playwright/test"
+    },
+    {
+      "sourcePath": "apps/dashboard/tests/e2e/operator-surfaces.spec.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@playwright/test",
+      "importSpecifier": "@playwright/test"
+    },
+    {
+      "sourcePath": "apps/dashboard/tests/e2e/security-runtime.spec.ts",
+      "ownerPackageName": "@inkroute/dashboard",
+      "importedPackageName": "@playwright/test",
+      "importSpecifier": "@playwright/test"
+    },
+    {
+      "sourcePath": "apps/mobile/App.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "expo-status-bar",
+      "importSpecifier": "expo-status-bar"
+    },
+    {
+      "sourcePath": "apps/mobile/App.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "apps/mobile/App.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/src/components/BoundaryCard.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/src/components/MobileCard.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "apps/mobile/src/components/MobileCard.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/src/components/MobilePill.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/src/components/MobileScreen.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "apps/mobile/src/components/MobileScreen.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/src/components/ScreenTabs.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/src/components/StatCard.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/src/screens/AppointmentsScreen.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/src/screens/AuthScreen.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/src/screens/BookingRequestsScreen.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/src/screens/ClientsScreen.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/src/screens/HomeScreen.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/src/screens/NotificationsScreen.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/src/screens/OfflineNotesScreen.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/src/screens/PortfolioUploadScreen.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/src/screens/SystemStatusScreen.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/src/screens/TravelUpdateScreen.tsx",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "react-native",
+      "importSpecifier": "react-native"
+    },
+    {
+      "sourcePath": "apps/mobile/tests/mobile-security-static.test.ts",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/mobile/tests/mobile-static.test.ts",
+      "ownerPackageName": "@inkroute/mobile",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/app/about/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/aftercare/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/deposit-sessions/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/error-reports/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/messages/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/notification-previews/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/privacy-requests/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/release-health/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/secure-upload-intents/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/seo-preview/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/sitemap-preview/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/app/api/public/[tenantSlug]/upload-policy/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/app/api/webhooks/email/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/app/api/webhooks/sentry/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/app/api/webhooks/sms/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/app/api/webhooks/stripe/route.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/app/booking/BookingFlowClient.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "apps/web/app/booking/confirmation/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/booking/deposit-preview/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/booking/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/cities/[citySlug]/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/cities/[citySlug]/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/navigation"
+    },
+    {
+      "sourcePath": "apps/web/app/consent-disclaimer/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/contact/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/faq/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/global-error.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "apps/web/app/layout.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/layout.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "apps/web/app/portfolio/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/privacy/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/robots.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/sitemap.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/styles/[styleSlug]/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/styles/[styleSlug]/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/navigation"
+    },
+    {
+      "sourcePath": "apps/web/app/terms/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/travel/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/app/trust/page.tsx",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/middleware.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/next.config.mjs",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next"
+    },
+    {
+      "sourcePath": "apps/web/tests/availability-preview-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/booking-requests-contract.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/tests/booking-requests-contract.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/dashboard-deployment-readiness-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/tests/dashboard-deployment-readiness-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/dashboard-release-rbac-static.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/dashboard-security-runtime-middleware-static.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/dashboard-trust-status-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/tests/dashboard-trust-status-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/e2e/public-a11y.spec.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@playwright/test",
+      "importSpecifier": "@playwright/test"
+    },
+    {
+      "sourcePath": "apps/web/tests/e2e/public-booking.spec.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@playwright/test",
+      "importSpecifier": "@playwright/test"
+    },
+    {
+      "sourcePath": "apps/web/tests/e2e/public-seo.spec.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@playwright/test",
+      "importSpecifier": "@playwright/test"
+    },
+    {
+      "sourcePath": "apps/web/tests/e2e/security-runtime.spec.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "@playwright/test",
+      "importSpecifier": "@playwright/test"
+    },
+    {
+      "sourcePath": "apps/web/tests/feature-flag-runtime-static.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/ics-feed-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/notification-messaging-routes.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/tests/notification-messaging-routes.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/observability-routes.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/tests/observability-routes.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/observability-ui-static.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/payment-routes.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/tests/payment-routes.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/privacy-requests-dashboard-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/tests/privacy-requests-dashboard-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/privacy-requests-public-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/tests/privacy-requests-public-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/provider-webhook-contracts.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/provider-webhook-routes.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/tests/provider-webhook-routes.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/release-automation-static.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/release-health-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/secure-upload-intents-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/tests/secure-upload-intents-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/security-next-config-static.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/security-runtime-middleware-static.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/security-runtime-middleware.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "next",
+      "importSpecifier": "next/server"
+    },
+    {
+      "sourcePath": "apps/web/tests/security-runtime-middleware.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "apps/web/tests/sitemap-route.test.ts",
+      "ownerPackageName": "@inkroute/web",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/analytics/tests/attribution.test.ts",
+      "ownerPackageName": "@inkroute/analytics",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/auth/tests/authorization.test.ts",
+      "ownerPackageName": "@inkroute/auth",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/booking/tests/booking-readiness.test.ts",
+      "ownerPackageName": "@inkroute/booking",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/calendar/tests/availability-conflicts.test.ts",
+      "ownerPackageName": "@inkroute/calendar",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/config/tests/dashboard-data.test.ts",
+      "ownerPackageName": "@inkroute/config",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/config/tests/public-content.test.ts",
+      "ownerPackageName": "@inkroute/config",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/db/prisma/seed.ts",
+      "ownerPackageName": "@inkroute/db",
+      "importedPackageName": "@prisma/client",
+      "importSpecifier": "@prisma/client"
+    },
+    {
+      "sourcePath": "packages/db/src/prisma.ts",
+      "ownerPackageName": "@inkroute/db",
+      "importedPackageName": "@prisma/client",
+      "importSpecifier": "@prisma/client"
+    },
+    {
+      "sourcePath": "packages/db/tests/db-integration-plan.test.ts",
+      "ownerPackageName": "@inkroute/db",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/db/tests/tenant-scope.test.ts",
+      "ownerPackageName": "@inkroute/db",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/deployment/tests/deployment-readiness.test.ts",
+      "ownerPackageName": "@inkroute/deployment",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/handoff/tests/handoff-plan.test.ts",
+      "ownerPackageName": "@inkroute/handoff",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/mobile/tests/mobile-support.test.ts",
+      "ownerPackageName": "@inkroute/mobile-support",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/notifications/tests/delivery-plan.test.ts",
+      "ownerPackageName": "@inkroute/notifications",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/observability/tests/redaction-report.test.ts",
+      "ownerPackageName": "@inkroute/observability",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/payments/tests/deposit-policy.test.ts",
+      "ownerPackageName": "@inkroute/payments",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/quality/tests/quality-gates.test.ts",
+      "ownerPackageName": "@inkroute/quality",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/releases/tests/feature-flags.test.ts",
+      "ownerPackageName": "@inkroute/releases",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/releases/tests/release-governance-workflow.test.ts",
+      "ownerPackageName": "@inkroute/releases",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/security/tests/encryption-rotation.test.ts",
+      "ownerPackageName": "@inkroute/security",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/security/tests/upload-policy.test.ts",
+      "ownerPackageName": "@inkroute/security",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/seo/tests/seo-engine.test.ts",
+      "ownerPackageName": "@inkroute/seo",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/testing/tests/testing-manifest.test.ts",
+      "ownerPackageName": "@inkroute/testing",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/ui/src/badge.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "clsx",
+      "importSpecifier": "clsx"
+    },
+    {
+      "sourcePath": "packages/ui/src/badge.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "packages/ui/src/button.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "clsx",
+      "importSpecifier": "clsx"
+    },
+    {
+      "sourcePath": "packages/ui/src/button.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "packages/ui/src/card.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "clsx",
+      "importSpecifier": "clsx"
+    },
+    {
+      "sourcePath": "packages/ui/src/card.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "packages/ui/src/dialog.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "clsx",
+      "importSpecifier": "clsx"
+    },
+    {
+      "sourcePath": "packages/ui/src/dialog.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "packages/ui/src/field.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "clsx",
+      "importSpecifier": "clsx"
+    },
+    {
+      "sourcePath": "packages/ui/src/field.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "packages/ui/src/input.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "clsx",
+      "importSpecifier": "clsx"
+    },
+    {
+      "sourcePath": "packages/ui/src/input.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "packages/ui/src/nav.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "clsx",
+      "importSpecifier": "clsx"
+    },
+    {
+      "sourcePath": "packages/ui/src/nav.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "packages/ui/src/surface.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "clsx",
+      "importSpecifier": "clsx"
+    },
+    {
+      "sourcePath": "packages/ui/src/surface.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "packages/ui/src/textarea.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "clsx",
+      "importSpecifier": "clsx"
+    },
+    {
+      "sourcePath": "packages/ui/src/textarea.tsx",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "react",
+      "importSpecifier": "react"
+    },
+    {
+      "sourcePath": "packages/ui/tests/ui-contract.test.ts",
+      "ownerPackageName": "@inkroute/ui",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/validators/src/booking.ts",
+      "ownerPackageName": "@inkroute/validators",
+      "importedPackageName": "zod",
+      "importSpecifier": "zod"
+    },
+    {
+      "sourcePath": "packages/validators/src/common.ts",
+      "ownerPackageName": "@inkroute/validators",
+      "importedPackageName": "zod",
+      "importSpecifier": "zod"
+    },
+    {
+      "sourcePath": "packages/validators/src/enums.ts",
+      "ownerPackageName": "@inkroute/validators",
+      "importedPackageName": "zod",
+      "importSpecifier": "zod"
+    },
+    {
+      "sourcePath": "packages/validators/src/forms.ts",
+      "ownerPackageName": "@inkroute/validators",
+      "importedPackageName": "zod",
+      "importSpecifier": "zod"
+    },
+    {
+      "sourcePath": "packages/validators/src/messaging.ts",
+      "ownerPackageName": "@inkroute/validators",
+      "importedPackageName": "zod",
+      "importSpecifier": "zod"
+    },
+    {
+      "sourcePath": "packages/validators/src/observability.ts",
+      "ownerPackageName": "@inkroute/validators",
+      "importedPackageName": "zod",
+      "importSpecifier": "zod"
+    },
+    {
+      "sourcePath": "packages/validators/src/payments.ts",
+      "ownerPackageName": "@inkroute/validators",
+      "importedPackageName": "zod",
+      "importSpecifier": "zod"
+    },
+    {
+      "sourcePath": "packages/validators/src/people.ts",
+      "ownerPackageName": "@inkroute/validators",
+      "importedPackageName": "zod",
+      "importSpecifier": "zod"
+    },
+    {
+      "sourcePath": "packages/validators/src/portfolio.ts",
+      "ownerPackageName": "@inkroute/validators",
+      "importedPackageName": "zod",
+      "importSpecifier": "zod"
+    },
+    {
+      "sourcePath": "packages/validators/src/release.ts",
+      "ownerPackageName": "@inkroute/validators",
+      "importedPackageName": "zod",
+      "importSpecifier": "zod"
+    },
+    {
+      "sourcePath": "packages/validators/src/seo.ts",
+      "ownerPackageName": "@inkroute/validators",
+      "importedPackageName": "zod",
+      "importSpecifier": "zod"
+    },
+    {
+      "sourcePath": "packages/validators/src/tenancy.ts",
+      "ownerPackageName": "@inkroute/validators",
+      "importedPackageName": "zod",
+      "importSpecifier": "zod"
+    },
+    {
+      "sourcePath": "packages/validators/src/travel.ts",
+      "ownerPackageName": "@inkroute/validators",
+      "importedPackageName": "zod",
+      "importSpecifier": "zod"
+    },
+    {
+      "sourcePath": "packages/validators/tests/schemas.test.ts",
+      "ownerPackageName": "@inkroute/validators",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    },
+    {
+      "sourcePath": "packages/workspace/tests/workspace-audit.test.ts",
+      "ownerPackageName": "@inkroute/workspace",
+      "importedPackageName": "vitest",
+      "importSpecifier": "vitest"
+    }
+  ],
+  "findings": [],
+  "entrypointFindings": []
 }

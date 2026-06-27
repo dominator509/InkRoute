@@ -353,14 +353,108 @@ model Tenant {
   referenceImages  ReferenceImage[]
   messageThreads   MessageThread[]
   messages         Message[]
+  messagePrivacyEvents MessagePrivacyEvent[]
+  messageAuditLogs MessageAuditLog[]
   notifications    Notification[]
   notificationDeliveries NotificationDelivery[]
+  notificationProviderHandoffs NotificationProviderHandoff[]
+  notificationJobs NotificationJob[]
+  deadLetterJobs   DeadLetterJob[]
+  notificationWorkerAuditLogs NotificationWorkerAuditLog[]
+  providerEvents   ProviderEvent[]
+  notificationChannelPreferences NotificationChannelPreference[]
+  notificationSuppressions NotificationSuppression[]
+  pushTokens      PushToken[]
+  notificationInteractions NotificationInteraction[]
+  preferenceTokens PreferenceToken[]
+  tenantNotificationSettings TenantNotificationSetting[]
   reviews          Review[]
   seoCityPages     SeoCityPage[]
   seoStylePages    SeoStylePage[]
   seoRedirects     SeoRedirect[]
+  seoPublicationRevalidationJobs SeoPublicationRevalidationJob[]
+  seoPublicationAssociations SeoPublicationAssociation[]
   auditLogs        AuditLog[]
+  signedUrlGrants  SignedUrlGrant[]
+  privacyRequests  PrivacyRequest[]
+  retentionTombstones RetentionTombstone[]
+  legalDocumentVersions LegalDocumentVersion[]
+  legalAcceptanceAudits LegalAcceptanceAudit[]
+  abuseEvents     AbuseEvent[]
+  securityMiddlewareEvidence SecurityMiddlewareEvidence[]
+  securityCoverageRuns SecurityCoverageRun[]
+  securityAppRuntimeRuns SecurityAppRuntimeRun[]
+  phase14RunnerRuns Phase14RunnerRun[]
+  appE2eRuntimeRuns AppE2eRuntimeRun[]
+  dbIntegrationRuns DbIntegrationRun[]
+  mobileTestingRuns MobileTestingRun[]
+  accessibilityVisualRuns AccessibilityVisualRun[]
+  providerContractRuns ProviderContractRun[]
+  ciCoverageRuns CiCoverageRun[]
+  performanceLoadRuns PerformanceLoadRun[]
+  deploymentToolingRuns DeploymentToolingRun[]
+  providerEnvironmentRuns ProviderEnvironmentRun[]
+  secretManagementRuns SecretManagementRun[]
+  mobileDeploymentRuns MobileDeploymentRun[]
+  databaseOperationsRuns DatabaseOperationsRun[]
+  productionLaunchEvidenceRuns ProductionLaunchEvidenceRun[]
+  launchOperationsRuns LaunchOperationsRun[]
+  agentExecutionLedgerRuns AgentExecutionLedgerRun[]
+  handoffToolingRuns HandoffToolingRun[]
+  agentTaskTrackingRuns AgentTaskTrackingRun[]
+  prGapEvidenceEnforcementRuns PrGapEvidenceEnforcementRun[]
+  documentationAuditRuns DocumentationAuditRun[]
+  repositoryGovernanceRuns RepositoryGovernanceRun[]
+  qualityGateRuns QualityGateRun[]
+  prDiffEvidenceRuns PrDiffEvidenceRun[]
+  semanticDocumentationRuns SemanticDocumentationRun[]
+  requiredChecksRuns RequiredChecksRun[]
+  workspaceRuntimeToolchainRuns WorkspaceRuntimeToolchainRun[]
+  staticDependencyAuditRuns StaticDependencyAuditRun[]
+  runtimeEvidenceRuns RuntimeEvidenceRun[]
+  workspaceRequiredChecksRuns WorkspaceRequiredChecksRun[]
+  dependencyInstallRuns DependencyInstallRun[]
+  prismaLifecycleRuns PrismaLifecycleRun[]
+  providerSessionRuns ProviderSessionRun[]
+  liveStripePaymentsRuns LiveStripePaymentsRun[]
+  providerStorageUploadRuns ProviderStorageUploadRun[]
+  publicWebLaunchRuns PublicWebLaunchRun[]
+  dashboardLaunchRuns DashboardLaunchRun[]
+  mobileLaunchRuns MobileLaunchRun[]
+  calendarLaunchRuns CalendarLaunchRun[]
+  notificationLaunchRuns NotificationLaunchRun[]
+  observabilityLaunchRuns ObservabilityLaunchRun[]
+  testingLaunchExecutionRuns TestingLaunchExecutionRun[]
+  legalReviewRuns LegalReviewRun[]
+  deploymentLaunchEvidenceRuns DeploymentLaunchEvidenceRun[]
+  releaseLaunchControlRuns ReleaseLaunchControlRun[]
+  uiPackageAdoptionRuns UiPackageAdoptionRun[]
+  seedRuntimeExecutionRuns SeedRuntimeExecutionRun[]
+  prismaValidationRuns PrismaValidationRun[]
+  validatorLaunchAdoptionRuns ValidatorLaunchAdoptionRun[]
+  tenantIsolationRuns TenantIsolationRun[]
+  domainAuthorizationRuns DomainAuthorizationRun[]
+  domainEventAuditRuns DomainEventAuditRun[]
+  privacyRetentionRuns PrivacyRetentionRun[]
+  publicContentRuns PublicContentRun[]
+  webBuildRuntimeRuns WebBuildRuntimeRun[]
+  portfolioImagePerformanceRuns PortfolioImagePerformanceRun[]
+  bookingContactRuns BookingContactRun[]
+  seoA11yPerformanceAuditRuns SeoA11yPerformanceAuditRun[]
+  bookingFlowRuntimeRuns BookingFlowRuntimeRun[]
+  bookingPersistenceApiRuns BookingPersistenceApiRun[]
+  analyticsEvents  AnalyticsEvent[]
+  campaigns        Campaign[]
+  searchConsoleImportedRows SearchConsoleImportedRow[]
+  searchConsoleOperationRuns SearchConsoleOperationRun[]
+  idempotencyKeys  IdempotencyKey[]
+  notificationReadStates NotificationReadState[]
+  notificationDeliveryStatusTransitions NotificationDeliveryStatusTransition[]
   errors           ErrorReport[]
+  providerWebhookDeliveries ProviderWebhookDelivery[]
+  alertDeliveries  AlertDelivery[]
+  githubIssueLinks GithubIssueLink[]
+  releaseIncidentLinks ReleaseIncidentLink[]
   releases         ReleaseRecord[]
   flags            FeatureFlag[]
 
@@ -403,6 +497,9 @@ model User {
   notifications         Notification[]
   auditLogs             AuditLog[]
   releases              ReleaseRecord[]
+  privacyRequests       PrivacyRequest[]
+  legalAcceptanceAudits LegalAcceptanceAudit[]
+  abuseEvents           AbuseEvent[]
 }
 
 model TenantMember {
@@ -524,6 +621,7 @@ model Client {
   sentMessages   Message[]
   notifications  Notification[]
   reviews        Review[]
+  privacyRequests PrivacyRequest[]
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
@@ -748,6 +846,40 @@ model CalendarEvent {
   @@index([tenantId, appointmentId])
 }
 
+model SignedIcsFeedToken {
+  id                    String    @id @default(cuid())
+  tenantSlug            String
+  artistSlug            String
+  tokenHash             String
+  expiresAt             DateTime
+  revokedAt             DateTime?
+  createdBy             String
+  rotatedFromTokenHash  String?
+  revokedBy             String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([tenantSlug, artistSlug, tokenHash])
+  @@index([tenantSlug, artistSlug])
+  @@index([tenantSlug, artistSlug, revokedAt])
+}
+
+model SignedIcsFeedAccessLog {
+  id          String   @id @default(cuid())
+  tenantSlug  String
+  artistSlug  String
+  tokenHash   String?
+  status      String
+  allowed     Boolean
+  userAgent   String?
+  ipHash      String?
+  occurredAt  DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([tenantSlug, artistSlug, occurredAt])
+  @@index([tenantSlug, artistSlug, allowed])
+}
+
 model BookingRequest {
   id                     String        @id @default(cuid())
   tenantId               String
@@ -801,6 +933,85 @@ model BookingRequest {
   @@index([tenantId, travelCityId])
   @@index([artistId, createdAt])
   @@index([clientId, createdAt])
+}
+
+model AnalyticsEvent {
+  id               String   @id @default(cuid())
+  tenantId         String
+  name             String
+  payload          Json
+  bookingRequestId String?
+  portfolioItemId  String?
+  source           String?
+  medium           String?
+  campaign         String?
+  idempotencyKey   String?
+  occurredAt       DateTime @default(now())
+  createdAt        DateTime @default(now())
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, name, occurredAt])
+  @@index([tenantId, campaign])
+  @@index([tenantId, bookingRequestId])
+  @@index([tenantId, portfolioItemId])
+}
+
+model Campaign {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  source              String?
+  medium              String?
+  campaign            String
+  firstSeenAt         DateTime @default(now())
+  lastSeenAt          DateTime @default(now())
+  eventCount          Int      @default(0)
+  bookingRequestCount Int      @default(0)
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, source, medium, campaign])
+  @@index([tenantId, lastSeenAt])
+}
+
+model SearchConsoleImportedRow {
+  id          String   @id @default(cuid())
+  tenantId    String
+  siteUrl     String
+  query       String
+  page        String
+  clicks      Int      @default(0)
+  impressions Int      @default(0)
+  ctr         Float?
+  position    Float?
+  rangeStart  DateTime
+  rangeEnd    DateTime
+  importedAt  DateTime @default(now())
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, siteUrl, query, page, rangeStart, rangeEnd])
+  @@index([tenantId, importedAt])
+  @@index([tenantId, query])
+  @@index([tenantId, page])
+}
+
+model SearchConsoleOperationRun {
+  id             String   @id @default(cuid())
+  tenantId       String
+  runId          String
+  operation      String
+  siteUrl        String
+  status         String
+  idempotencyKey String
+  artifactManifest Json
+  providerMetadata Json?
+  startedAt      DateTime @default(now())
+  completedAt    DateTime?
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey])
+  @@unique([tenantId, runId])
+  @@index([tenantId, operation, status])
+  @@index([tenantId, startedAt])
 }
 
 model BookingStateEvent {
@@ -1097,6 +1308,16 @@ model FileAsset {
   checksumSha256   String?
   publicUrl        String?
   signedUrlExpiresAt DateTime?
+  scanStatus       String          @default("pending")
+  detectedMimeType String?
+  malwareVerdict   String?
+  scanProvider     String?
+  scanCheckedAt    DateTime?
+  quarantineReason String?
+  derivativeObjectKey String?
+  derivativeMimeType String?
+  metadataStripped Boolean         @default(false)
+  storageVisibility String?
   metadata         Json?
   tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   uploadedByUser   User?           @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
@@ -1104,12 +1325,42 @@ model FileAsset {
   portfolioImages  PortfolioImage[]
   referenceImages  ReferenceImage[]
   consentSignatures ConsentSignature[]
+  signedUrlGrants  SignedUrlGrant[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
   @@unique([bucket, objectKey])
   @@index([tenantId, kind])
   @@index([tenantId, visibility])
+  @@index([tenantId, scanStatus])
+  @@index([tenantId, derivativeObjectKey])
+}
+
+model SignedUrlGrant {
+  id              String    @id @default(cuid())
+  tenantId        String
+  fileAssetId     String
+  issuedByUserId  String
+  recipientUserId String?
+  operation       String
+  scope           String
+  bucket          String
+  objectKey       String
+  signedUrlHash   String?
+  expiresAt       DateTime
+  usedAt          DateTime?
+  revokedAt       DateTime?
+  revokeReason    String?
+  metadata        Json?
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fileAsset       FileAsset @relation(fields: [fileAssetId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId, fileAssetId])
+  @@index([tenantId, objectKey])
+  @@index([tenantId, expiresAt])
+  @@index([tenantId, revokedAt])
 }
 
 model ReferenceImage {
@@ -1176,6 +1427,46 @@ model Message {
   @@index([providerMessageId])
 }
 
+model MessagePrivacyEvent {
+  id                String   @id @default(cuid())
+  tenantId          String
+  action            String
+  threadId          String?
+  messageId         String?
+  actorUserId       String?
+  role              String?
+  status            String   @default("queued")
+  workflowStatus    String?
+  retentionDays     Int?
+  redactionFindings Json?
+  metadata          Json?
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([tenantId, action, createdAt])
+  @@index([tenantId, threadId])
+  @@index([tenantId, messageId])
+  @@index([tenantId, workflowStatus])
+}
+
+model MessageAuditLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  action      String
+  threadId    String?
+  messageId   String?
+  actorUserId String?
+  role        String?
+  metadata    Json?
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, action, createdAt])
+  @@index([tenantId, threadId])
+  @@index([tenantId, messageId])
+}
+
 model Notification {
   id               String              @id @default(cuid())
   tenantId         String
@@ -1194,6 +1485,7 @@ model Notification {
   bookingRequest   BookingRequest?     @relation(fields: [bookingRequestId], references: [id], onDelete: SetNull)
   appointment      Appointment?        @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   deliveries       NotificationDelivery[]
+  providerHandoffs NotificationProviderHandoff[]
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
 
@@ -1216,12 +1508,315 @@ model NotificationDelivery {
   deliveredAt    DateTime?
   tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   notification   Notification        @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  statusTransitions NotificationDeliveryStatusTransition[]
+  providerHandoffs NotificationProviderHandoff[]
+  providerEvents ProviderEvent[]
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
   @@index([tenantId, status])
   @@index([notificationId])
   @@index([providerMessageId])
+}
+
+model NotificationDeliveryStatusTransition {
+  id             String             @id @default(cuid())
+  tenantId       String
+  deliveryId     String
+  fromStatus     NotificationStatus?
+  toStatus       NotificationStatus
+  actorUserId    String?
+  reason         String
+  metadata       Json?
+  createdAt      DateTime           @default(now())
+  tenant         Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  delivery       NotificationDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, deliveryId, createdAt])
+  @@index([tenantId, toStatus])
+}
+
+model NotificationProviderHandoff {
+  id               String               @id @default(cuid())
+  tenantId         String
+  notificationId   String
+  deliveryId       String
+  threadId         String?
+  messageId        String?
+  channel          NotificationChannel
+  provider         String
+  state            String               @default("queued")
+  idempotencyKey   String
+  destinationHash  String?
+  sanitizedPayload Json
+  attempts         Int                  @default(0)
+  availableAt      DateTime             @default(now())
+  lockedAt         DateTime?
+  processedAt      DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  tenant           Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  notification     Notification         @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  delivery         NotificationDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey, provider])
+  @@index([tenantId, state, availableAt])
+  @@index([tenantId, deliveryId])
+  @@index([tenantId, notificationId])
+}
+
+model NotificationJob {
+  id                String              @id @default(cuid())
+  tenantId          String
+  notificationId    String?
+  deliveryId        String?
+  providerHandoffId String?
+  sourceAction      String
+  templateKey       String?
+  channel           NotificationChannel @default(in_app)
+  state             String              @default("queued")
+  idempotencyKey    String
+  appointmentId     String?
+  bookingRequestId  String?
+  actorUserId       String?
+  attempts          Int                 @default(0)
+  maxAttempts       Int                 @default(5)
+  scheduledAt       DateTime
+  availableAt       DateTime            @default(now())
+  lockedAt          DateTime?
+  processedAt       DateTime?
+  cancelledAt       DateTime?
+  payload           Json
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey, sourceAction])
+  @@index([tenantId, state, availableAt])
+  @@index([tenantId, appointmentId])
+  @@index([tenantId, bookingRequestId])
+  @@index([tenantId, providerHandoffId])
+}
+
+model DeadLetterJob {
+  id                String   @id @default(cuid())
+  tenantId          String
+  notificationJobId String?
+  deliveryId        String?
+  providerHandoffId String?
+  reason            String
+  attempts          Int      @default(0)
+  payload           Json
+  createdAt         DateTime @default(now())
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, notificationJobId])
+  @@index([tenantId, providerHandoffId])
+  @@index([tenantId, createdAt])
+}
+
+model NotificationWorkerAuditLog {
+  id                String   @id @default(cuid())
+  tenantId          String
+  notificationJobId String?
+  deliveryId        String?
+  providerHandoffId String?
+  action            String
+  actorUserId       String?
+  metadata          Json
+  createdAt         DateTime @default(now())
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, notificationJobId, createdAt])
+  @@index([tenantId, providerHandoffId, createdAt])
+  @@index([tenantId, action, createdAt])
+}
+
+model ProviderEvent {
+  id                String                @id @default(cuid())
+  tenantId          String
+  deliveryId        String?
+  provider          String
+  eventId           String
+  eventType         String
+  providerMessageId String?
+  normalizedStatus  NotificationStatus?
+  idempotencyKey    String
+  payloadSummary    Json
+  replayDetected    Boolean               @default(false)
+  rawPayloadStored  Boolean               @default(false)
+  processedAt       DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  tenant            Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  delivery          NotificationDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, provider, eventId])
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, provider, eventType, createdAt])
+  @@index([tenantId, providerMessageId])
+  @@index([tenantId, replayDetected])
+}
+
+model PushToken {
+  id               String              @id @default(cuid())
+  tenantId         String
+  userId           String
+  deviceId         String
+  provider         String              @default("expo")
+  tokenHash        String
+  tokenMasked      String?
+  active           Boolean             @default(true)
+  permissionStatus String
+  optIn            Boolean             @default(true)
+  disabledAt       DateTime?
+  metadata         Json?
+  registeredAt     DateTime            @default(now())
+  lastSeenAt       DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider, deviceId])
+  @@index([tenantId, userId, active])
+  @@index([tenantId, provider, tokenHash])
+}
+
+model NotificationInteraction {
+  id              String              @id @default(cuid())
+  tenantId        String
+  notificationId  String
+  userId          String?
+  channel         NotificationChannel
+  interactionType String
+  routePath       String?
+  idempotencyKey  String
+  metadata        Json?
+  occurredAt      DateTime            @default(now())
+  createdAt       DateTime            @default(now())
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, notificationId, occurredAt])
+  @@index([tenantId, channel, interactionType])
+}
+
+model NotificationChannelPreference {
+  id               String              @id @default(cuid())
+  tenantId         String
+  subjectType      String
+  subjectId        String
+  channel          NotificationChannel
+  optedIn          Boolean             @default(true)
+  quietHoursStart  String?
+  quietHoursEnd    String?
+  timezone         String?
+  rateLimitWindow  String?
+  rateLimitCount   Int?
+  source           String              @default("preference_center")
+  metadata         Json?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, subjectType, subjectId, channel])
+  @@index([tenantId, channel, optedIn])
+  @@index([tenantId, subjectType, subjectId])
+}
+
+model NotificationSuppression {
+  id                String              @id @default(cuid())
+  tenantId          String
+  channel           NotificationChannel
+  provider          String?
+  destinationHash   String
+  reason            String
+  source            String
+  providerEventId   String?
+  active            Boolean             @default(true)
+  rawPayloadStored  Boolean             @default(false)
+  metadata          Json?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  expiresAt         DateTime?
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, channel, destinationHash, reason])
+  @@index([tenantId, channel, active])
+  @@index([tenantId, provider, source])
+  @@index([tenantId, expiresAt])
+}
+
+model PreferenceToken {
+  id          String   @id @default(cuid())
+  tenantId    String
+  clientId    String
+  tokenHash   String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, tokenHash])
+  @@index([tenantId, clientId])
+  @@index([tenantId, expiresAt])
+}
+
+model TenantNotificationSetting {
+  id               String              @id @default(cuid())
+  tenantId         String
+  channel          NotificationChannel
+  marketingEnabled Boolean             @default(true)
+  transactionalEnabled Boolean         @default(true)
+  quietHoursStart  String?
+  quietHoursEnd    String?
+  timezone         String?
+  legalCopyApproved Boolean            @default(false)
+  metadata         Json?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, channel])
+  @@index([tenantId, channel])
+}
+
+model IdempotencyKey {
+  id          String   @id @default(cuid())
+  tenantId    String
+  scope       String
+  key         String
+  status      String   @default("claimed")
+  result      Json?
+  metadata    Json?
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, scope, key])
+  @@index([tenantId, scope, status])
+  @@index([tenantId, expiresAt])
+}
+
+model NotificationReadState {
+  id          String   @id @default(cuid())
+  tenantId    String
+  threadId    String
+  messageId   String?
+  actorUserId String?
+  clientId    String?
+  readAt      DateTime @default(now())
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, threadId, actorUserId, clientId])
+  @@index([tenantId, threadId, readAt])
+  @@index([tenantId, messageId])
 }
 
 model Review {
@@ -1315,6 +1910,40 @@ model SeoRedirect {
   @@index([tenantId, isActive])
 }
 
+model SeoPublicationRevalidationJob {
+  id          String   @id @default(cuid())
+  tenantId    String
+  entityType  String
+  entityId    String
+  action      String
+  tags        Json
+  status      String   @default("queued")
+  auditLogId  String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, status, createdAt])
+}
+
+model SeoPublicationAssociation {
+  id          String   @id @default(cuid())
+  tenantId    String
+  entityType  String
+  entityId    String
+  relatedKind String
+  relatedId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, entityType, entityId, relatedKind, relatedId])
+  @@index([tenantId, relatedKind, relatedId])
+  @@index([tenantId, entityType, entityId])
+}
+
 model AuditLog {
   id          String   @id @default(cuid())
   tenantId    String
@@ -1331,6 +1960,2486 @@ model AuditLog {
   @@index([tenantId, entityType, entityId])
 }
 
+model PrivacyRequest {
+  id                         String    @id @default(cuid())
+  tenantId                   String
+  requesterUserId            String?
+  clientId                   String?
+  requestType                String
+  status                     String    @default("intake_received")
+  requesterEmail             String
+  requesterName              String?
+  identityProofStatus        String    @default("pending")
+  tenantRelationshipStatus   String    @default("pending")
+  requesterMismatchDeniedAt  DateTime?
+  dueAt                      DateTime
+  legalHold                  Boolean   @default(false)
+  legalHoldReason            String?
+  exportArtifactObjectKey    String?
+  deletionTombstoneObjectKey String?
+  workerCursor               String?
+  fulfillmentMetadata        Json?
+  statusHistory              Json?
+  redactedSubmission         Json?
+  closedAt                   DateTime?
+  tenant                     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requesterUser              User?     @relation(fields: [requesterUserId], references: [id], onDelete: SetNull)
+  client                     Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, requestType])
+  @@index([tenantId, requesterEmail])
+  @@index([tenantId, dueAt])
+  @@index([tenantId, legalHold])
+}
+
+model RetentionTombstone {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  privacyRequestId   String?
+  workerRunId        String
+  sourceRecordId     String
+  sourceRecordType   String
+  category           String
+  action             String
+  reason             String
+  dryRunFingerprint  String
+  executedAt         DateTime
+  restoreReplayAfter DateTime?
+  storageObjectKey   String?
+  redactedFields     Json?
+  auditLogIds        Json?
+  legalHoldSkipped   Boolean  @default(false)
+  rollbackNote       String?
+  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([tenantId, workerRunId])
+  @@index([tenantId, sourceRecordType, sourceRecordId])
+  @@index([tenantId, category])
+  @@index([tenantId, restoreReplayAfter])
+}
+
+model LegalDocumentVersion {
+  id                   String   @id @default(cuid())
+  tenantId             String
+  documentType         String
+  jurisdiction         String
+  version              String
+  reviewedCopyHash     String
+  reviewerName         String?
+  reviewerFirm         String?
+  approvedAt           DateTime?
+  effectiveAt          DateTime?
+  supersededAt         DateTime?
+  noindexUntilApproved Boolean  @default(true)
+  rollbackFromVersion  String?
+  evidenceObjectKey    String?
+  tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([tenantId, documentType, version])
+  @@index([tenantId, documentType, approvedAt])
+  @@index([tenantId, jurisdiction])
+}
+
+model LegalAcceptanceAudit {
+  id                     String   @id @default(cuid())
+  tenantId               String
+  legalDocumentVersionId String
+  acceptedByUserId       String?
+  subjectEmailHash       String?
+  acceptanceContext      String
+  acceptedVersion        String
+  ipHash                 String?
+  userAgentHash          String?
+  metadata               Json?
+  tenant                 Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  legalDocumentVersion   LegalDocumentVersion @relation(fields: [legalDocumentVersionId], references: [id], onDelete: Cascade)
+  acceptedByUser         User?    @relation(fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+  createdAt              DateTime @default(now())
+
+  @@index([tenantId, legalDocumentVersionId])
+  @@index([tenantId, acceptedVersion])
+  @@index([tenantId, createdAt])
+}
+
+model AbuseEvent {
+  id                     String   @id @default(cuid())
+  tenantId               String
+  actorUserId            String?
+  routeFamily            String
+  routePattern           String
+  abuseKeyHash           String
+  ipHash                 String?
+  userAgentHash          String?
+  action                 String
+  reason                 String
+  limiterProvider        String?
+  limiterDecision        String
+  observedRequests       Int?
+  windowSeconds          Int?
+  botChallengeRequired   Boolean  @default(false)
+  providerSignatureValid Boolean?
+  alertDispatchedAt      DateTime?
+  failClosed             Boolean  @default(false)
+  redactedMetadata       Json?
+  tenant                 Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actor                  User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  createdAt              DateTime @default(now())
+
+  @@index([tenantId, routeFamily, createdAt])
+  @@index([tenantId, abuseKeyHash])
+  @@index([tenantId, action])
+  @@index([tenantId, failClosed])
+}
+
+model SecurityMiddlewareEvidence {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  surface                         String
+  environment                     String
+  routePattern                    String
+  headerSmokePassed               Boolean  @default(false)
+  productionHstsVerified          Boolean  @default(false)
+  previewLocalHstsSuppressed      Boolean  @default(false)
+  cspProviderConnectSrcVerified   Boolean  @default(false)
+  cspFrameBaseFormInvariantPassed Boolean  @default(false)
+  csrfAttackRejected              Boolean  @default(false)
+  csrfValidSessionAllowed         Boolean  @default(false)
+  sameSiteSessionBoundVerified    Boolean  @default(false)
+  signedWebhookBypassReviewed     Boolean  @default(false)
+  artifactObjectKey               String?
+  redactedMetadata                Json?
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+
+  @@index([tenantId, surface, environment])
+  @@index([tenantId, routePattern])
+  @@index([tenantId, createdAt])
+}
+
+model SecurityCoverageRun {
+  id                    String   @id @default(cuid())
+  tenantId              String
+  runId                 String
+  commitSha             String?
+  status                String
+  suiteMatrix           Json
+  providerGatedSuites   Json?
+  artifactManifest      Json
+  failureFixturesPath   String?
+  dbIsolationCovered    Boolean  @default(false)
+  storageNegativeCovered Boolean @default(false)
+  privacyWorkflowCovered Boolean @default(false)
+  roleBoundaryCovered   Boolean  @default(false)
+  ciRunUrl              String?
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model SecurityAppRuntimeRun {
+  id                         String   @id @default(cuid())
+  tenantId                   String
+  runId                      String
+  commitSha                  String?
+  status                     String
+  targetMatrix               Json
+  artifactManifest           Json
+  webTypecheckPassed         Boolean  @default(false)
+  webBuildPassed             Boolean  @default(false)
+  dashboardTypecheckPassed   Boolean  @default(false)
+  dashboardBuildPassed       Boolean  @default(false)
+  mobileTypecheckPassed      Boolean  @default(false)
+  routeSmokePassed           Boolean  @default(false)
+  middlewareSmokePassed      Boolean  @default(false)
+  browserRuntimeSmokePassed  Boolean  @default(false)
+  mobileDeviceSmokePassed    Boolean  @default(false)
+  deviceGatedTargets         Json?
+  ciRunUrl                   String?
+  tenant                     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model Phase14RunnerRun {
+  id                         String   @id @default(cuid())
+  tenantId                   String
+  runId                      String
+  commitSha                  String?
+  status                     String
+  commandMatrix              Json
+  artifactManifest           Json
+  frozenInstallPassed        Boolean  @default(false)
+  lockfileReproducible       Boolean  @default(false)
+  staticChecksPassed         Boolean  @default(false)
+  manifestChecksPassed       Boolean  @default(false)
+  typecheckPassed            Boolean  @default(false)
+  unitPassed                 Boolean  @default(false)
+  playwrightBrowsersInstalled Boolean @default(false)
+  e2ePassed                  Boolean  @default(false)
+  ciPassed                   Boolean  @default(false)
+  runnerFailuresTriaged      Boolean  @default(false)
+  runnerFixesCommitted       Boolean  @default(false)
+  scaffoldCoveragePreserved  Boolean  @default(false)
+  flakyPolicyDocumented      Boolean  @default(false)
+  triageArtifactPath         String?
+  scaffoldDiffArtifactPath   String?
+  flakyPolicyArtifactPath    String?
+  ciRunUrl                   String?
+  tenant                     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model AppE2eRuntimeRun {
+  id                           String   @id @default(cuid())
+  tenantId                     String
+  runId                        String
+  commitSha                    String?
+  status                       String
+  runtimeMatrix                Json
+  specFiles                    Json
+  artifactManifest             Json
+  webBuildPassed               Boolean  @default(false)
+  dashboardBuildPassed         Boolean  @default(false)
+  webRuntimeStarted            Boolean  @default(false)
+  dashboardRuntimeStarted      Boolean  @default(false)
+  chromiumInstalled            Boolean  @default(false)
+  publicSpecsPassed            Boolean  @default(false)
+  dashboardSpecsPassed         Boolean  @default(false)
+  e2eManifestVerified          Boolean  @default(false)
+  tracesRetained               Boolean  @default(false)
+  screenshotsRetained          Boolean  @default(false)
+  videosRetained               Boolean  @default(false)
+  ciE2ePassed                  Boolean  @default(false)
+  flakyRetriesConfigured       Boolean  @default(false)
+  hardenedFailuresCommitted    Boolean  @default(false)
+  failureHardeningArtifactPath String?
+  ciRunUrl                     String?
+  tenant                       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model DbIntegrationRun {
+  id                             String   @id @default(cuid())
+  tenantId                       String
+  runId                          String
+  commitSha                      String?
+  status                         String
+  runtimeMatrix                  Json
+  artifactManifest               Json
+  nonProductionPostgresProvisioned Boolean @default(false)
+  databaseUrlConfigured          Boolean  @default(false)
+  directUrlConfigured            Boolean  @default(false)
+  prismaValidatePassed           Boolean  @default(false)
+  prismaGeneratePassed           Boolean  @default(false)
+  prismaMigratePassed            Boolean  @default(false)
+  prismaSeedPassed               Boolean  @default(false)
+  seedVerificationPassed         Boolean  @default(false)
+  tenantIsolationPassed          Boolean  @default(false)
+  workflowPersistencePassed      Boolean  @default(false)
+  auditLogIntegrationPassed      Boolean  @default(false)
+  destructiveResetGuarded        Boolean  @default(false)
+  rollbackDocumented             Boolean  @default(false)
+  redactedTranscriptPath         String?
+  ciRunUrl                       String?
+  tenant                         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                      DateTime @default(now())
+  updatedAt                      DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model MobileTestingRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String?
+  status                          String
+  executionMatrix                 Json
+  checklistIds                    Json
+  artifactManifest                Json
+  mobileSupportTypecheckPassed    Boolean  @default(false)
+  mobileSupportTestsPassed        Boolean  @default(false)
+  mobileAppTypecheckPassed        Boolean  @default(false)
+  mobileStaticTestsPassed         Boolean  @default(false)
+  expoDependenciesInstalled       Boolean  @default(false)
+  expoRuntimeStarted              Boolean  @default(false)
+  iosSimulatorSmokePassed         Boolean  @default(false)
+  androidEmulatorSmokePassed      Boolean  @default(false)
+  physicalDeviceChecklistCompleted Boolean @default(false)
+  biometricQaPassed               Boolean  @default(false)
+  tenantApiSyncQaPassed           Boolean  @default(false)
+  offlineReconnectQaPassed        Boolean  @default(false)
+  pushDeliveryQaPassed            Boolean  @default(false)
+  crashCaptureQaPassed            Boolean  @default(false)
+  easPreviewBuildPassed           Boolean  @default(false)
+  easUpdateRollbackPassed         Boolean  @default(false)
+  accessibilityQaPassed           Boolean  @default(false)
+  ciMobileChecksPassed            Boolean  @default(false)
+  ciRunUrl                        String?
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model AccessibilityVisualRun {
+  id                           String   @id @default(cuid())
+  tenantId                     String
+  runId                        String
+  commitSha                    String?
+  status                       String
+  runtimeMatrix                Json
+  specFiles                    Json
+  artifactManifest             Json
+  webA11ySpecPassed            Boolean  @default(false)
+  dashboardA11ySpecPassed      Boolean  @default(false)
+  axeReportsCollected          Boolean  @default(false)
+  lighthouseBudgetsPassed      Boolean  @default(false)
+  contrastAuditPassed          Boolean  @default(false)
+  responsiveChecksPassed       Boolean  @default(false)
+  screenReaderPassCompleted    Boolean  @default(false)
+  mobileAccessibilityQaPassed  Boolean  @default(false)
+  visualBaselinesCaptured      Boolean  @default(false)
+  visualDiffsReviewed          Boolean  @default(false)
+  artifactsRetained            Boolean  @default(false)
+  ciAccessibilityVisualPassed  Boolean  @default(false)
+  regressionsTriagedAndFixed   Boolean  @default(false)
+  triageArtifactPath           String?
+  ciRunUrl                     String?
+  tenant                       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model ProviderContractRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String?
+  status                          String
+  runtimeMatrix                   Json
+  artifactManifest                Json
+  staticWebhookContractsPassed    Boolean  @default(false)
+  providerManifestVerified        Boolean  @default(false)
+  rawBodyFixturesCommitted        Boolean  @default(false)
+  replayIdempotencyFixturesCommitted Boolean @default(false)
+  stripeCliWebhookPassed          Boolean  @default(false)
+  stripeIdempotencyVerified       Boolean  @default(false)
+  googleCalendarOauthPassed       Boolean  @default(false)
+  googleCalendarSyncVerified      Boolean  @default(false)
+  storageSignedUrlPassed          Boolean  @default(false)
+  storageUploadDownloadPassed     Boolean  @default(false)
+  resendSandboxPassed             Boolean  @default(false)
+  twilioSandboxPassed             Boolean  @default(false)
+  expoPushSandboxPassed           Boolean  @default(false)
+  sentryCaptureVerified           Boolean  @default(false)
+  authSessionFixturesPassed       Boolean  @default(false)
+  rateLimitStorePassed            Boolean  @default(false)
+  redactedArtifactsRetained       Boolean  @default(false)
+  ciProviderContractPassed        Boolean  @default(false)
+  ciRunUrl                        String?
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model CiCoverageRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String?
+  status                          String
+  reportingMatrix                 Json
+  artifactManifest                Json
+  frozenInstallPassed             Boolean  @default(false)
+  typecheckPassed                 Boolean  @default(false)
+  unitCoveragePassed              Boolean  @default(false)
+  unitCoverageThresholdsPassed    Boolean  @default(false)
+  e2ePassed                       Boolean  @default(false)
+  vitestReportsUploaded           Boolean  @default(false)
+  playwrightReportsUploaded       Boolean  @default(false)
+  tracesScreenshotsVideosRetained Boolean  @default(false)
+  testSummaryPublished            Boolean  @default(false)
+  artifactRetentionVerified       Boolean  @default(false)
+  failedDebugArtifactsVerified    Boolean  @default(false)
+  flakyPolicyDocumented           Boolean  @default(false)
+  ciRunPassed                     Boolean  @default(false)
+  branchProtectionRequiresCi      Boolean  @default(false)
+  branchProtectionArtifactPath    String?
+  ciRunUrl                        String?
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model PerformanceLoadRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String?
+  status                          String
+  runtimeMatrix                   Json
+  artifactManifest                Json
+  performanceBudgetVerifierPassed Boolean  @default(false)
+  lighthouseCiPassed              Boolean  @default(false)
+  coreWebVitalsWithinBudget       Boolean  @default(false)
+  publicRouteBudgetsPassed        Boolean  @default(false)
+  dashboardRouteBudgetsPassed     Boolean  @default(false)
+  bookingLoadTestPassed           Boolean  @default(false)
+  webhookBurstTestPassed          Boolean  @default(false)
+  uploadIntentLoadTestPassed      Boolean  @default(false)
+  dbExplainPlansPassed            Boolean  @default(false)
+  imageOptimizationBenchmarksPassed Boolean @default(false)
+  regressionThresholdsConfigured  Boolean  @default(false)
+  performanceArtifactsRetained    Boolean  @default(false)
+  ciPerformanceJobPassed          Boolean  @default(false)
+  regressionsTriagedAndFixed      Boolean  @default(false)
+  triageArtifactPath              String?
+  ciRunUrl                        String?
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model DeploymentToolingRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String?
+  status                              String
+  runtimeMatrix                       Json
+  artifactManifest                    Json
+  frozenInstallPassed                 Boolean  @default(false)
+  deploymentPackageTypecheckPassed    Boolean  @default(false)
+  deploymentPackageTestsPassed        Boolean  @default(false)
+  routeContractTestsPassed            Boolean  @default(false)
+  deployCheckEnvPassed                Boolean  @default(false)
+  deployChecklistPassed               Boolean  @default(false)
+  deployGapsPassed                    Boolean  @default(false)
+  dashboardBuildPassed                Boolean  @default(false)
+  dashboardPageSmokePassed            Boolean  @default(false)
+  dashboardReadinessApiSmokePassed    Boolean  @default(false)
+  rollbackPreflightVerified           Boolean  @default(false)
+  productionApprovalBoundaryVerified  Boolean  @default(false)
+  ciDeploymentReportsCaptured         Boolean  @default(false)
+  blockerOwnersDocumented             Boolean  @default(false)
+  blockerOwnerArtifactPath            String?
+  ciRunUrl                            String?
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model ProviderEnvironmentRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  environmentMatrix                       Json
+  surfaceMatrix                           Json
+  artifactManifest                        Json
+  verifierPassed                          Boolean  @default(false)
+  strictEnvCheckPassed                    Boolean  @default(false)
+  previewProvisioned                      Boolean  @default(false)
+  stagingProvisioned                      Boolean  @default(false)
+  productionProvisioned                   Boolean  @default(false)
+  webDashboardSmokePassed                 Boolean  @default(false)
+  databaseMigrationDryRunPassed           Boolean  @default(false)
+  storagePrivateAclSmokePassed            Boolean  @default(false)
+  mobilePreviewBuildPassed                Boolean  @default(false)
+  observabilitySourceMapSmokePassed       Boolean  @default(false)
+  githubEnvironmentProtectionsConfigured  Boolean  @default(false)
+  secretStoreDestinationsConfigured       Boolean  @default(false)
+  redactedEvidenceLabelsRecorded          Boolean  @default(false)
+  ciProviderEnvironmentArtifactsCaptured  Boolean  @default(false)
+  redactedHandoffArtifactPath             String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model SecretManagementRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  productionSecretInventory               Json
+  auditManifest                           Json
+  artifactManifest                        Json
+  verifierPassed                          Boolean  @default(false)
+  strictEnvCheckPassed                    Boolean  @default(false)
+  providerSecretStoresConfigured          Boolean  @default(false)
+  maskedCiLogsCaptured                    Boolean  @default(false)
+  providerAuditLogsCaptured               Boolean  @default(false)
+  rotationCadenceDocumented               Boolean  @default(false)
+  dualControlPolicyDocumented             Boolean  @default(false)
+  incidentRotationTabletopDocumented      Boolean  @default(false)
+  committedSecretScanPassed               Boolean  @default(false)
+  ciSecretManagementArtifactsCaptured     Boolean  @default(false)
+  redactedProviderStoreArtifactPath        String?
+  maskedCiLogArtifactPath                 String?
+  providerAuditLogArtifactPath            String?
+  incidentRotationTabletopArtifactPath     String?
+  committedSecretScanArtifactPath          String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model MobileDeploymentRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  buildProfileMatrix                      Json
+  qaEvidenceMatrix                        Json
+  artifactManifest                        Json
+  verifierPassed                          Boolean  @default(false)
+  easDevelopmentBuildPassed               Boolean  @default(false)
+  easPreviewIosBuildPassed                Boolean  @default(false)
+  easPreviewAndroidBuildPassed            Boolean  @default(false)
+  easProductionIosBuildPassed             Boolean  @default(false)
+  easProductionAndroidBuildPassed         Boolean  @default(false)
+  easChannelsConfigured                   Boolean  @default(false)
+  nativeCredentialsConfigured             Boolean  @default(false)
+  pushCredentialsConfigured               Boolean  @default(false)
+  deviceQaPassed                          Boolean  @default(false)
+  pushTokenSmokePassed                    Boolean  @default(false)
+  sentryCrashCapturePassed                Boolean  @default(false)
+  otaPreviewPublishPassed                 Boolean  @default(false)
+  otaRollbackRehearsed                    Boolean  @default(false)
+  runtimePolicyParityVerified             Boolean  @default(false)
+  storeReadinessReviewed                  Boolean  @default(false)
+  redactedBuildArtifactsRecorded          Boolean  @default(false)
+  ciMobileDeploymentArtifactsCaptured     Boolean  @default(false)
+  redactedBuildArtifactPath               String?
+  deviceQaArtifactPath                    String?
+  otaRollbackArtifactPath                 String?
+  storeReadinessArtifactPath              String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model DatabaseOperationsRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  operationCheckMatrix                    Json
+  destructiveSqlScan                      Json
+  artifactManifest                        Json
+  providerBranchProvisioned               Boolean  @default(false)
+  secretStoreReferenceConfigured          Boolean  @default(false)
+  verifierPassed                          Boolean  @default(false)
+  prismaGeneratePassed                    Boolean  @default(false)
+  prismaValidatePassed                    Boolean  @default(false)
+  migrationDryRunPassed                   Boolean  @default(false)
+  generatedSqlReviewed                    Boolean  @default(false)
+  destructiveSqlScanPassed                Boolean  @default(false)
+  stagingMigrationApplied                 Boolean  @default(false)
+  seedPolicyVerified                      Boolean  @default(false)
+  backupRestoreDrillPassed                Boolean  @default(false)
+  tenantIsolationSmokePassed              Boolean  @default(false)
+  branchPromotionApproved                 Boolean  @default(false)
+  productionDataSafetyReviewed            Boolean  @default(false)
+  ciDatabaseOperationsArtifactsCaptured   Boolean  @default(false)
+  providerBranchArtifactPath              String?
+  migrationDryRunArtifactPath             String?
+  destructiveSqlScanArtifactPath          String?
+  backupRestoreArtifactPath               String?
+  tenantIsolationArtifactPath             String?
+  branchPromotionArtifactPath             String?
+  productionDataSafetyArtifactPath        String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model ProductionLaunchEvidenceRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  launchBundleMatrix                      Json
+  checklistBlockers                       Json
+  unsafeEvidenceFindings                  Json
+  artifactManifest                        Json
+  verifierPassed                          Boolean  @default(false)
+  ciBuildTestEvidenceVerified             Boolean  @default(false)
+  databaseOperationsEvidenceVerified      Boolean  @default(false)
+  providerSecretEvidenceVerified          Boolean  @default(false)
+  securityPrivacyTrustEvidenceVerified    Boolean  @default(false)
+  accessibilitySeoPerformanceVerified     Boolean  @default(false)
+  mobileReleaseEvidenceVerified           Boolean  @default(false)
+  legalApprovalVerified                   Boolean  @default(false)
+  rollbackOperationsEvidenceVerified      Boolean  @default(false)
+  checklistBlockersRetained               Boolean  @default(false)
+  unsafeEvidenceScanPassed                Boolean  @default(false)
+  explicitProductionApprovalCaptured      Boolean  @default(false)
+  ciLaunchEvidenceArtifactsCaptured       Boolean  @default(false)
+  launchEvidenceBundleArtifactPath        String?
+  checklistBlockerArtifactPath            String?
+  unsafeEvidenceArtifactPath              String?
+  legalApprovalArtifactPath               String?
+  rollbackOperationsArtifactPath          String?
+  explicitApprovalArtifactPath            String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model LaunchOperationsRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  ownerCoverageMatrix                     Json
+  operationCheckMatrix                    Json
+  unsafeEvidenceFindings                  Json
+  artifactManifest                        Json
+  verifierPassed                          Boolean  @default(false)
+  namedPrimaryBackupOwnersAssigned        Boolean  @default(false)
+  onCallCoverageVerified                  Boolean  @default(false)
+  alertRoutingTestPassed                  Boolean  @default(false)
+  supportEscalationDrillPassed            Boolean  @default(false)
+  privacyRequestDrillPassed               Boolean  @default(false)
+  incidentDrillPassed                     Boolean  @default(false)
+  rollbackDrillPassed                     Boolean  @default(false)
+  productionMonitoringVerified            Boolean  @default(false)
+  communicationsTemplatesApproved         Boolean  @default(false)
+  unsafeEvidenceScanPassed                Boolean  @default(false)
+  explicitOperationsApprovalCaptured      Boolean  @default(false)
+  ciLaunchOperationsArtifactsCaptured     Boolean  @default(false)
+  ownerCoverageArtifactPath               String?
+  alertRoutingArtifactPath                String?
+  supportEscalationArtifactPath           String?
+  privacyRequestDrillArtifactPath         String?
+  incidentDrillArtifactPath               String?
+  rollbackDrillArtifactPath               String?
+  monitoringDashboardArtifactPath         String?
+  communicationsTemplateArtifactPath      String?
+  operationsApprovalArtifactPath          String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model AgentExecutionLedgerRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  queueTaskMatrix                         Json
+  ledgerExecutionMatrix                   Json
+  changedFilesMatrix                      Json
+  evidenceArtifactManifest                Json
+  verifierPassed                          Boolean  @default(false)
+  handoffAuditPassed                      Boolean  @default(false)
+  handoffDocsVerified                     Boolean  @default(false)
+  handoffNextComputed                     Boolean  @default(false)
+  queueLedgerParityVerified               Boolean  @default(false)
+  agentCommandPlansRecorded               Boolean  @default(false)
+  redactedCommandTranscriptsCaptured      Boolean  @default(false)
+  changedFilesRecorded                    Boolean  @default(false)
+  providerEvidenceCaptured                Boolean  @default(false)
+  remainingGapsRecorded                   Boolean  @default(false)
+  secretSafetyReviewed                    Boolean  @default(false)
+  gapTrackerUpdated                       Boolean  @default(false)
+  externalAgentResultsImported            Boolean  @default(false)
+  ciLedgerArtifactsCaptured               Boolean  @default(false)
+  commandTranscriptArtifactPath           String?
+  diffSummaryArtifactPath                 String?
+  providerEvidenceArtifactPath            String?
+  secretSafetyArtifactPath                String?
+  gapTrackerUpdateArtifactPath            String?
+  externalResultsImportArtifactPath       String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model HandoffToolingRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  rootScriptMatrix                        Json
+  packageScriptMatrix                     Json
+  reportArtifactManifest                  Json
+  ciEvidenceManifest                      Json
+  dependenciesInstalled                   Boolean  @default(false)
+  packageTypecheckPassed                  Boolean  @default(false)
+  packageTestsPassed                      Boolean  @default(false)
+  verifyDocsPassed                        Boolean  @default(false)
+  handoffAuditPassed                      Boolean  @default(false)
+  handoffNextPassed                       Boolean  @default(false)
+  verifyLedgerPassed                      Boolean  @default(false)
+  verifyToolingPassed                     Boolean  @default(false)
+  verifyTaskSyncPassed                    Boolean  @default(false)
+  handoffAllPassed                        Boolean  @default(false)
+  queueLedgerParityVerified               Boolean  @default(false)
+  ciRunCaptured                           Boolean  @default(false)
+  reportArtifactsCaptured                 Boolean  @default(false)
+  installArtifactPath                     String?
+  packageTypecheckArtifactPath            String?
+  packageTestArtifactPath                 String?
+  handoffScriptArtifactPath               String?
+  toolingVerifierArtifactPath             String?
+  handoffAllArtifactPath                  String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model AgentTaskTrackingRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  queueTaskMatrix                         Json
+  plannedIssueMatrix                      Json
+  trackingLinkMatrix                      Json
+  artifactManifest                        Json
+  verifierPassed                          Boolean  @default(false)
+  queueIssueParityVerified                Boolean  @default(false)
+  defaultLabelsApplied                    Boolean  @default(false)
+  targetPriorityLabelsApplied             Boolean  @default(false)
+  gapIdsLinked                            Boolean  @default(false)
+  acceptanceEvidenceFieldsLinked          Boolean  @default(false)
+  githubIssuesCreated                     Boolean  @default(false)
+  githubProjectItemsLinked                Boolean  @default(false)
+  redactedTrackingUrlsRecorded            Boolean  @default(false)
+  handoffDocsLinked                       Boolean  @default(false)
+  gapTrackerLinked                        Boolean  @default(false)
+  statusUpdatesTraceable                  Boolean  @default(false)
+  ciTaskTrackingArtifactsCaptured         Boolean  @default(false)
+  issueCreateArtifactPath                 String?
+  projectSyncArtifactPath                 String?
+  docLinksArtifactPath                    String?
+  gapLinksArtifactPath                    String?
+  statusTraceabilityArtifactPath          String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model PrGapEvidenceEnforcementRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  fixtureMatrix                           Json
+  prAuditMatrix                           Json
+  branchProtectionEvidence                Json
+  artifactManifest                        Json
+  prGapAuditPassedWithoutContext          Boolean  @default(false)
+  prGapAuditPassedWithMergeFallback       Boolean  @default(false)
+  positiveFixturePassed                   Boolean  @default(false)
+  negativeFixtureFailed                   Boolean  @default(false)
+  productionBlockerDowngradeCovered       Boolean  @default(false)
+  closedRowFixtureCovered                 Boolean  @default(false)
+  noSecretLogsVerified                    Boolean  @default(false)
+  ciPullRequestStepWired                  Boolean  @default(false)
+  branchProtectionRequiresQualityJob      Boolean  @default(false)
+  liveFailingPrEvidenceCaptured           Boolean  @default(false)
+  livePassingPrEvidenceCaptured           Boolean  @default(false)
+  mergeBlockProofCaptured                 Boolean  @default(false)
+  fixtureArtifactPath                     String?
+  prGapAuditArtifactPath                  String?
+  branchProtectionArtifactPath            String?
+  liveFailingPrArtifactPath               String?
+  livePassingPrArtifactPath               String?
+  secretSafeLogReviewArtifactPath         String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model DocumentationAuditRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  auditReportMatrix                       Json
+  documentationConsistencyFindings        Json
+  reviewEvidenceManifest                  Json
+  artifactManifest                        Json
+  qualityDocsPassed                       Boolean  @default(false)
+  markdownLinkAuditPassed                 Boolean  @default(false)
+  documentationConsistencyPassed          Boolean  @default(false)
+  documentationInventoryPassed            Boolean  @default(false)
+  apiRouteReferencesPassed                Boolean  @default(false)
+  providerReadinessLanguagePassed         Boolean  @default(false)
+  legalReadinessLanguagePassed            Boolean  @default(false)
+  workspaceInventoryPassed                Boolean  @default(false)
+  generatedReportsCaptured                Boolean  @default(false)
+  ciQualityDocsEvidenceCaptured           Boolean  @default(false)
+  providerReviewEvidenceCaptured          Boolean  @default(false)
+  legalReviewEvidenceCaptured             Boolean  @default(false)
+  staleProviderStatusProofCaptured        Boolean  @default(false)
+  linkAuditArtifactPath                   String?
+  consistencyAuditArtifactPath            String?
+  inventoryAuditArtifactPath              String?
+  providerReviewArtifactPath              String?
+  legalReviewArtifactPath                 String?
+  staleProviderStatusArtifactPath         String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model RepositoryGovernanceRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  sourcePrerequisiteMatrix                Json
+  externalSettingsMatrix                  Json
+  enforcementTestMatrix                   Json
+  artifactManifest                        Json
+  governanceAuditPassed                   Boolean  @default(false)
+  qualityAllGovernancePassed              Boolean  @default(false)
+  requiredFilesPresent                    Boolean  @default(false)
+  codeownersCoveragePassed                Boolean  @default(false)
+  prTemplateEvidenceTermsPresent          Boolean  @default(false)
+  issueTemplateEvidenceTermsPresent       Boolean  @default(false)
+  ciGovernanceTermsPresent                Boolean  @default(false)
+  branchProtectionActive                  Boolean  @default(false)
+  requiredStatusChecksEnforced            Boolean  @default(false)
+  codeownersReviewRequired                Boolean  @default(false)
+  secretScanningEnabled                   Boolean  @default(false)
+  dependabotOrSecurityAlertsEnabled       Boolean  @default(false)
+  mergeRulesConfigured                    Boolean  @default(false)
+  enforcementTestPrCaptured               Boolean  @default(false)
+  redactedSettingsEvidenceCaptured        Boolean  @default(false)
+  governanceAuditArtifactPath             String?
+  qualityAllArtifactPath                  String?
+  branchProtectionArtifactPath            String?
+  requiredChecksArtifactPath              String?
+  codeownersReviewArtifactPath            String?
+  securitySettingsArtifactPath            String?
+  mergeRulesArtifactPath                  String?
+  enforcementTestPrArtifactPath           String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model QualityGateRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  commandMatrix                           Json
+  generatedManifestMatrix                 Json
+  artifactManifest                        Json
+  packageTypecheckPassed                  Boolean  @default(false)
+  packageTestsPassed                      Boolean  @default(false)
+  qualityDocsPassed                       Boolean  @default(false)
+  qualityGapsPassed                       Boolean  @default(false)
+  qualityPrGapFixturesPassed              Boolean  @default(false)
+  qualityGovernancePassed                 Boolean  @default(false)
+  qualityRequiredChecksPassed             Boolean  @default(false)
+  qualityGatesSummaryPassed               Boolean  @default(false)
+  qualityAllPassed                        Boolean  @default(false)
+  markdownLinkManifestGenerated           Boolean  @default(false)
+  documentationConsistencyManifestGenerated Boolean @default(false)
+  documentationInventoryManifestGenerated Boolean  @default(false)
+  gapEvidenceManifestGenerated            Boolean  @default(false)
+  prGapFixtureManifestGenerated           Boolean  @default(false)
+  repositoryGovernanceManifestGenerated   Boolean  @default(false)
+  requiredChecksManifestGenerated         Boolean  @default(false)
+  qualityGatesManifestGenerated           Boolean  @default(false)
+  ciQualityJobPassed                      Boolean  @default(false)
+  ciArtifactsCaptured                     Boolean  @default(false)
+  packageTypecheckArtifactPath            String?
+  packageTestArtifactPath                 String?
+  qualityAllArtifactPath                  String?
+  qualityCiJobArtifactPath                String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model PrDiffEvidenceRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  diffAuditMatrix                         Json
+  fixtureMatrix                           Json
+  evidenceRuleMatrix                      Json
+  artifactManifest                        Json
+  diffAuditScriptPresent                  Boolean  @default(false)
+  prContextDetectionImplemented           Boolean  @default(false)
+  missingPrContextSkipsSafely             Boolean  @default(false)
+  gapRowParserCoversTrackerColumns        Boolean  @default(false)
+  closureRequiresStatusEvidence           Boolean  @default(false)
+  closureRequiresVerificationEvidence     Boolean  @default(false)
+  blockerDowngradeRequiresEvidence        Boolean  @default(false)
+  unrelatedGapChangesIgnored              Boolean  @default(false)
+  shallowCheckoutFallbackImplemented      Boolean  @default(false)
+  positiveFixturePassed                   Boolean  @default(false)
+  negativeFixtureFailed                   Boolean  @default(false)
+  ciPullRequestStepWired                  Boolean  @default(false)
+  secretSafeLogsVerified                  Boolean  @default(false)
+  noPrContextArtifactPath                 String?
+  mergeFallbackArtifactPath               String?
+  positiveFixtureArtifactPath             String?
+  negativeFixtureArtifactPath             String?
+  secretSafeLogReviewArtifactPath         String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model SemanticDocumentationRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  semanticCheckMatrix                     Json
+  proofBoundaryMatrix                     Json
+  artifactManifest                        Json
+  qualityDocsPassed                       Boolean  @default(false)
+  structuralLinksPassed                   Boolean  @default(false)
+  concreteRepoPathsPassed                 Boolean  @default(false)
+  productionReadinessClaimsPassed         Boolean  @default(false)
+  apiRouteReferencesPassed                Boolean  @default(false)
+  providerReadinessLanguagePassed         Boolean  @default(false)
+  legalReadinessLanguagePassed            Boolean  @default(false)
+  appPackageInventoryPassed               Boolean  @default(false)
+  documentationInventoryContractCurrent   Boolean  @default(false)
+  ciQualityDocsEvidenceCaptured           Boolean  @default(false)
+  runtimeProofSeparated                   Boolean  @default(false)
+  providerProofSeparated                  Boolean  @default(false)
+  legalReviewSeparated                    Boolean  @default(false)
+  linkPathArtifactPath                    String?
+  consistencyArtifactPath                 String?
+  inventoryArtifactPath                   String?
+  ciQualityDocsArtifactPath               String?
+  runtimeBoundaryArtifactPath             String?
+  providerBoundaryArtifactPath            String?
+  legalBoundaryArtifactPath               String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model RequiredChecksRun {
+  id                                 String   @id @default(cuid())
+  tenantId                           String
+  runId                              String
+  commitSha                          String?
+  status                             String
+  packageScriptMatrix                Json
+  ciWorkflowTermMatrix               Json
+  branchProtectionCheckMatrix        Json
+  repositorySettingsMatrix           Json
+  artifactManifest                   Json
+  requiredChecksAuditPassed          Boolean  @default(false)
+  qualityAllChainsRequiredChecks     Boolean  @default(false)
+  branchProtectionEvidenceCaptured   Boolean  @default(false)
+  failingQualityPrBlocked            Boolean  @default(false)
+  codeownersReviewActive             Boolean  @default(false)
+  requiredPackageScriptsPresent      Boolean  @default(false)
+  ciWorkflowTermsPresent             Boolean  @default(false)
+  branchProtectionChecksConfigured   Boolean  @default(false)
+  repositorySettingsConfigured       Boolean  @default(false)
+  ciQualityJobPassed                 Boolean  @default(false)
+  redactedSettingsEvidenceCaptured   Boolean  @default(false)
+  requiredChecksAuditArtifactPath    String?
+  qualityAllArtifactPath             String?
+  branchProtectionArtifactPath       String?
+  failingQualityPrArtifactPath       String?
+  codeownersReviewArtifactPath       String?
+  repositorySettingsArtifactPath     String?
+  ciRunUrl                           String?
+  tenant                             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                          DateTime @default(now())
+  updatedAt                          DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model WorkspaceRuntimeToolchainRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String?
+  status                              String
+  commandMatrix                       Json
+  generatedReportManifest             Json
+  artifactManifest                    Json
+  productionBlockerManifest           Json
+  toolchainAuditPassed                Boolean  @default(false)
+  packageTypecheckPassed              Boolean  @default(false)
+  packageTestsPassed                  Boolean  @default(false)
+  workspaceToolchainPassed            Boolean  @default(false)
+  workspaceAllPassed                  Boolean  @default(false)
+  dependencyInstallEvidenceCaptured   Boolean  @default(false)
+  webBuildEvidenceCaptured            Boolean  @default(false)
+  dashboardBuildEvidenceCaptured      Boolean  @default(false)
+  ciWorkspaceJobPassed                Boolean  @default(false)
+  ciEvidenceCaptured                  Boolean  @default(false)
+  productionBlockersVisible           Boolean  @default(false)
+  packageTypecheckArtifactPath        String?
+  packageTestArtifactPath             String?
+  workspaceToolchainArtifactPath      String?
+  workspaceAllArtifactPath            String?
+  dependencyInstallArtifactPath       String?
+  webBuildArtifactPath                String?
+  dashboardBuildArtifactPath          String?
+  ciWorkspaceJobArtifactPath          String?
+  productionBlockerArtifactPath       String?
+  ciRunUrl                            String?
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model StaticDependencyAuditRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  commandMatrix                           Json
+  coverageAreaManifest                    Json
+  locallyVerifiedAudit                    Json
+  artifactManifest                        Json
+  peerVersionReviewManifest               Json
+  workspaceImportAuditPassed              Boolean  @default(false)
+  workspacePackageTestsPassed             Boolean  @default(false)
+  workspacePackageTypecheckPassed         Boolean  @default(false)
+  dependencyInstallEvidenceCaptured       Boolean  @default(false)
+  workspaceTypecheckPassed                Boolean  @default(false)
+  webBuildEvidenceCaptured                Boolean  @default(false)
+  dashboardBuildEvidenceCaptured          Boolean  @default(false)
+  ciWorkspaceResolutionPassed             Boolean  @default(false)
+  ciEvidenceCaptured                      Boolean  @default(false)
+  peerVersionReviewCaptured               Boolean  @default(false)
+  runtimeResolutionProofCaptured          Boolean  @default(false)
+  workspaceImportAuditArtifactPath        String?
+  workspacePackageTestArtifactPath        String?
+  workspacePackageTypecheckArtifactPath   String?
+  dependencyInstallArtifactPath           String?
+  workspaceTypecheckArtifactPath          String?
+  webBuildArtifactPath                    String?
+  dashboardBuildArtifactPath              String?
+  ciWorkspaceResolutionArtifactPath       String?
+  peerVersionReviewArtifactPath           String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model RuntimeEvidenceRun {
+  id                                String   @id @default(cuid())
+  tenantId                          String
+  runId                             String
+  commitSha                         String?
+  status                            String
+  commandMatrix                     Json
+  requirementManifest               Json
+  artifactManifest                  Json
+  redactedEvidenceManifest          Json
+  productionBlockerManifest         Json
+  installEvidenceCaptured           Boolean  @default(false)
+  runtimeEvidenceCommandPassed      Boolean  @default(false)
+  workspaceAllPassed                Boolean  @default(false)
+  handoffAllPassed                  Boolean  @default(false)
+  qualityAllPassed                  Boolean  @default(false)
+  typecheckPassed                   Boolean  @default(false)
+  unitTestsPassed                   Boolean  @default(false)
+  webBuildEvidenceCaptured          Boolean  @default(false)
+  dashboardBuildEvidenceCaptured    Boolean  @default(false)
+  ciRuntimeReadinessPassed          Boolean  @default(false)
+  ciEvidenceCaptured                Boolean  @default(false)
+  runtimeEvidenceAuditPassed        Boolean  @default(false)
+  redactedEvidenceLabelsCaptured    Boolean  @default(false)
+  productionBlockersVisible         Boolean  @default(false)
+  installArtifactPath               String?
+  runtimeEvidenceArtifactPath       String?
+  workspaceAllArtifactPath          String?
+  handoffAllArtifactPath            String?
+  qualityAllArtifactPath            String?
+  typecheckArtifactPath             String?
+  unitTestArtifactPath              String?
+  webBuildArtifactPath              String?
+  dashboardBuildArtifactPath        String?
+  ciRuntimeReadinessArtifactPath    String?
+  productionBlockerArtifactPath     String?
+  ciRunUrl                          String?
+  tenant                            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                         DateTime @default(now())
+  updatedAt                         DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model WorkspaceRequiredChecksRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  commandMatrix                           Json
+  branchProtectionCheckMatrix             Json
+  artifactManifest                        Json
+  mergeBlockProofManifest                 Json
+  redactedLogManifest                     Json
+  requiredChecksAuditPassed               Boolean  @default(false)
+  workspaceRequiredChecksPassed           Boolean  @default(false)
+  workspaceAllPassed                      Boolean  @default(false)
+  qualityRequiredChecksPassed             Boolean  @default(false)
+  ciQualityJobPassed                      Boolean  @default(false)
+  branchProtectionEvidenceCaptured        Boolean  @default(false)
+  branchProtectionChecksConfigured        Boolean  @default(false)
+  failingWorkspaceAuditBlocksMerge        Boolean  @default(false)
+  prGapDiffCheckBlocksMerge               Boolean  @default(false)
+  evidenceCaptured                        Boolean  @default(false)
+  logsRedacted                            Boolean  @default(false)
+  workspaceRequiredChecksArtifactPath     String?
+  workspaceAllArtifactPath                String?
+  qualityRequiredChecksArtifactPath       String?
+  ciQualityArtifactPath                   String?
+  branchProtectionArtifactPath            String?
+  failingWorkspacePrArtifactPath          String?
+  failingPrGapDiffArtifactPath            String?
+  redactedLogsArtifactPath                String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model DependencyInstallRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String?
+  status                          String
+  commandMatrix                   Json
+  sourceFileManifest              Json
+  artifactManifest                Json
+  productionBlockerManifest       Json
+  packageJsonPresent              Boolean  @default(false)
+  pnpmWorkspacePresent            Boolean  @default(false)
+  pnpmLockfilePresent             Boolean  @default(false)
+  packageManagerPinned            Boolean  @default(false)
+  lockfileCommitted               Boolean  @default(false)
+  corepackEnabled                 Boolean  @default(false)
+  installCommandPassed            Boolean  @default(false)
+  frozenLockfileInstallPassed     Boolean  @default(false)
+  workspaceAuditPassed            Boolean  @default(false)
+  typecheckPassed                 Boolean  @default(false)
+  lintPassed                      Boolean  @default(false)
+  unitTestsPassed                 Boolean  @default(false)
+  ciQualityJobPassed              Boolean  @default(false)
+  ciEvidenceCaptured              Boolean  @default(false)
+  productionBlockersVisible       Boolean  @default(false)
+  corepackArtifactPath            String?
+  installArtifactPath             String?
+  frozenLockfileArtifactPath      String?
+  workspaceAllArtifactPath        String?
+  typecheckArtifactPath           String?
+  lintArtifactPath                String?
+  unitTestArtifactPath            String?
+  ciQualityJobArtifactPath        String?
+  productionBlockerArtifactPath   String?
+  ciRunUrl                        String?
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model PrismaLifecycleRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String?
+  status                              String
+  commandMatrix                       Json
+  packageScriptManifest               Json
+  artifactManifest                    Json
+  sqlReviewManifest                   Json
+  driftCheckManifest                  Json
+  postgresProvisioned                 Boolean  @default(false)
+  databaseUrlConfigured               Boolean  @default(false)
+  directUrlConfigured                 Boolean  @default(false)
+  prismaValidatePassed                Boolean  @default(false)
+  prismaGeneratePassed                Boolean  @default(false)
+  migrationGenerated                  Boolean  @default(false)
+  migrationSqlReviewed                Boolean  @default(false)
+  migrationAppliedToDevDb             Boolean  @default(false)
+  seedReadinessVerified               Boolean  @default(false)
+  seedScriptPassed                    Boolean  @default(false)
+  destructiveProductionUrlGuarded     Boolean  @default(false)
+  migrationDriftChecked               Boolean  @default(false)
+  commandEvidenceCaptured             Boolean  @default(false)
+  ciEvidenceCaptured                  Boolean  @default(false)
+  validateArtifactPath                String?
+  generateArtifactPath                String?
+  migrateArtifactPath                 String?
+  seedReadinessArtifactPath           String?
+  seedArtifactPath                    String?
+  sqlReviewArtifactPath               String?
+  driftCheckArtifactPath              String?
+  productionUrlGuardArtifactPath      String?
+  ciDbLifecycleArtifactPath           String?
+  ciRunUrl                            String?
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model ProviderSessionRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  commandMatrix                           Json
+  controlManifest                         Json
+  artifactManifest                        Json
+  providerConfigurationManifest           Json
+  tenantIsolationManifest                 Json
+  authPackageTypecheckPassed              Boolean  @default(false)
+  authPackageTestsPassed                  Boolean  @default(false)
+  providerSelected                        Boolean  @default(false)
+  providerEnvConfigured                   Boolean  @default(false)
+  loginCallbackWired                      Boolean  @default(false)
+  logoutCallbackWired                     Boolean  @default(false)
+  sessionCallbackWired                    Boolean  @default(false)
+  userProvisioningConfigured              Boolean  @default(false)
+  tenantMembershipLookupPersisted         Boolean  @default(false)
+  customRoleLookupPersisted               Boolean  @default(false)
+  databaseSessionStoreConfigured          Boolean  @default(false)
+  sessionRevocationPersisted              Boolean  @default(false)
+  secureDashboardCookiesConfigured        Boolean  @default(false)
+  mobileTokenStorageConfigured            Boolean  @default(false)
+  auditLogWritesConfigured                Boolean  @default(false)
+  providerBackedTestsPassed               Boolean  @default(false)
+  crossTenantSmokeTestsPassed             Boolean  @default(false)
+  commandEvidenceCaptured                 Boolean  @default(false)
+  authTypecheckArtifactPath               String?
+  authTestArtifactPath                    String?
+  providerEnvArtifactPath                 String?
+  loginCallbackArtifactPath               String?
+  logoutCallbackArtifactPath              String?
+  sessionCallbackArtifactPath             String?
+  persistenceArtifactPath                 String?
+  securityControlsArtifactPath            String?
+  auditLogArtifactPath                    String?
+  tenantIsolationSmokeArtifactPath        String?
+  mobileRevocationSmokeArtifactPath       String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model LiveStripePaymentsRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  commandMatrix                           Json
+  readinessAreaManifest                   Json
+  artifactManifest                        Json
+  stripeConfigurationManifest             Json
+  lifecycleEvidenceManifest               Json
+  paymentsPackageTypecheckPassed          Boolean  @default(false)
+  paymentsPackageTestsPassed              Boolean  @default(false)
+  paymentRoutesTestsPassed                Boolean  @default(false)
+  stripeSdkInstalled                      Boolean  @default(false)
+  stripeSecretConfigured                  Boolean  @default(false)
+  stripeWebhookSecretConfigured           Boolean  @default(false)
+  stripeApiVersionPinned                  Boolean  @default(false)
+  checkoutProviderCallImplemented         Boolean  @default(false)
+  paymentIntentLifecycleHandled           Boolean  @default(false)
+  providerIdempotencyStoreBackedByDb      Boolean  @default(false)
+  checkoutSessionPersisted                Boolean  @default(false)
+  webhookRawBodyVerificationConfigured    Boolean  @default(false)
+  webhookReplayProtectionPersisted        Boolean  @default(false)
+  dbReconciliationTransactional           Boolean  @default(false)
+  refundExecutionImplemented              Boolean  @default(false)
+  disputeWorkflowImplemented              Boolean  @default(false)
+  stripeCliLifecycleVerified              Boolean  @default(false)
+  bookingToPaidE2eVerified                Boolean  @default(false)
+  crossTenantPaymentIsolationVerified     Boolean  @default(false)
+  ciPaymentEvidenceCaptured               Boolean  @default(false)
+  secretSafeArtifactsCaptured             Boolean  @default(false)
+  paymentsTypecheckArtifactPath           String?
+  paymentsTestArtifactPath                String?
+  paymentRoutesTestArtifactPath           String?
+  stripeSdkConfigArtifactPath             String?
+  checkoutProviderCallArtifactPath        String?
+  webhookLifecycleArtifactPath            String?
+  dbReconciliationArtifactPath            String?
+  refundDisputeArtifactPath               String?
+  stripeCliLifecycleArtifactPath          String?
+  bookingToPaidE2eArtifactPath            String?
+  ciPaymentEvidenceArtifactPath           String?
+  secretSafeArtifactsPath                 String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model ProviderStorageUploadRun {
+  id                                         String   @id @default(cuid())
+  tenantId                                   String
+  runId                                      String
+  commitSha                                  String?
+  status                                     String
+  commandMatrix                              Json
+  readinessAreaManifest                      Json
+  artifactManifest                           Json
+  providerConfigurationManifest              Json
+  bucketPolicyManifest                       Json
+  scanDerivativeManifest                     Json
+  securityTestsPassed                        Boolean  @default(false)
+  securityTypecheckPassed                    Boolean  @default(false)
+  webUploadRouteTestsPassed                  Boolean  @default(false)
+  webTypecheckPassed                         Boolean  @default(false)
+  storageProviderSelected                    Boolean  @default(false)
+  storageProviderConfigured                  Boolean  @default(false)
+  storageSecretsConfigured                   Boolean  @default(false)
+  privateBucketAclVerified                   Boolean  @default(false)
+  derivativeBucketPolicyVerified             Boolean  @default(false)
+  signedUploadUrlsProviderBacked             Boolean  @default(false)
+  signedDownloadUrlsProviderBacked           Boolean  @default(false)
+  serverOwnedObjectKeysEnforced              Boolean  @default(false)
+  fileAssetPersistenceTransactional          Boolean  @default(false)
+  auditLogPersistenceConfigured              Boolean  @default(false)
+  linkTablePersistenceConfigured             Boolean  @default(false)
+  signedUrlGrantPersistenceConfigured        Boolean  @default(false)
+  malwareScanProviderConfigured              Boolean  @default(false)
+  scanVerdictPersistenceConfigured           Boolean  @default(false)
+  metadataStrippingWorkerConfigured          Boolean  @default(false)
+  publicDerivativeGenerationConfigured       Boolean  @default(false)
+  privateOriginalPublicReadDenied            Boolean  @default(false)
+  approvedDerivativePublicReadVerified       Boolean  @default(false)
+  tenantScopedProviderIntegrationTestsPassed Boolean  @default(false)
+  privacyRetentionEnforced                   Boolean  @default(false)
+  ciEvidenceCaptured                         Boolean  @default(false)
+  secretSafeArtifactsCaptured                Boolean  @default(false)
+  securityTypecheckArtifactPath              String?
+  securityTestArtifactPath                   String?
+  webTypecheckArtifactPath                   String?
+  uploadRouteTestArtifactPath                String?
+  providerConfigArtifactPath                 String?
+  bucketPolicyArtifactPath                   String?
+  signedUrlProviderArtifactPath              String?
+  fileAssetPersistenceArtifactPath           String?
+  scanDerivativeWorkerArtifactPath           String?
+  privateOriginalDenialArtifactPath          String?
+  tenantIsolationArtifactPath                String?
+  retentionArtifactPath                      String?
+  ciEvidenceArtifactPath                     String?
+  secretSafeArtifactsPath                    String?
+  ciRunUrl                                   String?
+  tenant                                     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                                  DateTime @default(now())
+  updatedAt                                  DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model PublicWebLaunchRun {
+  id                                       String   @id @default(cuid())
+  tenantId                                 String
+  runId                                    String
+  commitSha                                String?
+  status                                   String
+  commandMatrix                            Json
+  readinessAreaManifest                    Json
+  artifactManifest                         Json
+  providerRouteManifest                    Json
+  runtimeSeoManifest                       Json
+  legalRouteReviewManifest                 Json
+  webTypecheckPassed                       Boolean  @default(false)
+  webBuildPassed                           Boolean  @default(false)
+  webTestsPassed                           Boolean  @default(false)
+  webRouteSmokePassed                      Boolean  @default(false)
+  webPlaywrightDesktopPassed               Boolean  @default(false)
+  webPlaywrightMobilePassed                Boolean  @default(false)
+  accessibilityAuditPassed                 Boolean  @default(false)
+  lighthousePerformancePassed              Boolean  @default(false)
+  apiRoutesUseTenantScopedPersistence      Boolean  @default(false)
+  providerBackedRoutesVerified             Boolean  @default(false)
+  localRuntimeFallbackDisabledForProduction Boolean @default(false)
+  realPortfolioDerivativesConfigured       Boolean  @default(false)
+  placeholderAssetsRemovedOrDocumented     Boolean  @default(false)
+  sitemapRuntimeVerified                   Boolean  @default(false)
+  robotsRuntimeVerified                    Boolean  @default(false)
+  jsonLdRuntimeVerified                    Boolean  @default(false)
+  canonicalRuntimeVerified                 Boolean  @default(false)
+  privacyAndLegalRoutesReviewed            Boolean  @default(false)
+  ciEvidenceCaptured                       Boolean  @default(false)
+  launchArtifactsSecretSafe                Boolean  @default(false)
+  webTypecheckArtifactPath                 String?
+  webBuildArtifactPath                     String?
+  webTestArtifactPath                      String?
+  routeSmokeArtifactPath                   String?
+  playwrightDesktopArtifactPath            String?
+  playwrightMobileArtifactPath             String?
+  axeAuditArtifactPath                     String?
+  lighthouseArtifactPath                   String?
+  providerRoutesArtifactPath               String?
+  mediaDerivativesArtifactPath             String?
+  runtimeSeoArtifactPath                   String?
+  legalRoutesArtifactPath                  String?
+  ciEvidenceArtifactPath                   String?
+  secretSafeArtifactsPath                  String?
+  ciRunUrl                                 String?
+  tenant                                   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                                DateTime @default(now())
+  updatedAt                                DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model DashboardLaunchRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  commandMatrix                           Json
+  controlManifest                         Json
+  artifactManifest                        Json
+  tenantApiManifest                       Json
+  launchStateManifest                     Json
+  dashboardTypecheckPassed                Boolean  @default(false)
+  dashboardBuildPassed                    Boolean  @default(false)
+  dashboardUnitTestsPassed                Boolean  @default(false)
+  dashboardPlaywrightSmokePassed          Boolean  @default(false)
+  seededTenantDataAvailable               Boolean  @default(false)
+  providerBackedAuthConfigured            Boolean  @default(false)
+  tenantScopedApisImplemented             Boolean  @default(false)
+  prismaRepositoriesImplemented           Boolean  @default(false)
+  realMutationsEnabled                    Boolean  @default(false)
+  mutationAuditLogsPersisted              Boolean  @default(false)
+  providerActionsImplemented              Boolean  @default(false)
+  rbacDenialTestsPassed                   Boolean  @default(false)
+  crossTenantDenialTestsPassed            Boolean  @default(false)
+  fieldRedactionVerified                  Boolean  @default(false)
+  loadingEmptyErrorStatesVerified         Boolean  @default(false)
+  ciEvidenceCaptured                      Boolean  @default(false)
+  dashboardArtifactsSecretSafe            Boolean  @default(false)
+  dashboardTypecheckArtifactPath          String?
+  dashboardBuildArtifactPath              String?
+  dashboardTestArtifactPath               String?
+  playwrightSmokeArtifactPath             String?
+  seededTenantDataArtifactPath            String?
+  providerAuthSmokeArtifactPath           String?
+  tenantScopedApisArtifactPath            String?
+  prismaRepositoriesArtifactPath          String?
+  mutationAuditLogArtifactPath            String?
+  rbacCrossTenantDenialArtifactPath       String?
+  fieldRedactionArtifactPath              String?
+  launchStatesArtifactPath                String?
+  ciEvidenceArtifactPath                  String?
+  secretSafeArtifactsPath                 String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model MobileLaunchRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String?
+  status                              String
+  commandMatrix                       Json
+  readinessAreaManifest               Json
+  artifactManifest                    Json
+  deviceQaManifest                    Json
+  providerQaManifest                  Json
+  easRuntimeManifest                  Json
+  mobileSupportTypecheckPassed        Boolean  @default(false)
+  mobileSupportTestsPassed            Boolean  @default(false)
+  mobileAppTypecheckPassed            Boolean  @default(false)
+  mobileAppTestsPassed                Boolean  @default(false)
+  expoRuntimeStarted                  Boolean  @default(false)
+  iosSimulatorSmokePassed             Boolean  @default(false)
+  androidEmulatorSmokePassed          Boolean  @default(false)
+  easPreviewBuildPassed               Boolean  @default(false)
+  easPreviewUpdatePassed              Boolean  @default(false)
+  authSessionBiometricQaPassed        Boolean  @default(false)
+  tenantApiClientQaPassed             Boolean  @default(false)
+  pushNotificationQaPassed            Boolean  @default(false)
+  encryptedOfflineStoreQaPassed       Boolean  @default(false)
+  uploadFlowQaPassed                  Boolean  @default(false)
+  crashReportingQaPassed              Boolean  @default(false)
+  otaUpdateRollbackQaPassed           Boolean  @default(false)
+  physicalDeviceQaCompleted           Boolean  @default(false)
+  accessibilityQaPassed               Boolean  @default(false)
+  appJsonProjectConfigured            Boolean  @default(false)
+  easChannelsConfigured               Boolean  @default(false)
+  ciEvidenceCaptured                  Boolean  @default(false)
+  launchArtifactsSecretSafe           Boolean  @default(false)
+  mobileSupportTypecheckArtifactPath  String?
+  mobileSupportTestArtifactPath       String?
+  mobileAppTypecheckArtifactPath      String?
+  mobileAppTestArtifactPath           String?
+  expoRuntimeArtifactPath             String?
+  iosSimulatorSmokeArtifactPath       String?
+  androidEmulatorSmokeArtifactPath    String?
+  easPreviewBuildArtifactPath         String?
+  easPreviewUpdateArtifactPath        String?
+  authApiPushOfflineQaArtifactPath    String?
+  uploadCrashOtaQaArtifactPath        String?
+  physicalDeviceQaArtifactPath        String?
+  accessibilityQaArtifactPath         String?
+  ciEvidenceArtifactPath              String?
+  secretSafeArtifactsPath             String?
+  ciRunUrl                            String?
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model CalendarLaunchRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  commandMatrix                           Json
+  readinessAreaManifest                   Json
+  artifactManifest                        Json
+  googleSyncManifest                      Json
+  signedIcsManifest                       Json
+  timezoneQaManifest                      Json
+  calendarTypecheckPassed                 Boolean  @default(false)
+  calendarTestsPassed                     Boolean  @default(false)
+  availabilityRepositoriesImplemented     Boolean  @default(false)
+  availabilityPostgresIntegrationPassed   Boolean  @default(false)
+  concurrentHoldRaceTestsPassed           Boolean  @default(false)
+  tenantIsolationTestsPassed              Boolean  @default(false)
+  googleOauthConfigured                   Boolean  @default(false)
+  googleEncryptedTokensConfigured         Boolean  @default(false)
+  googleWorkerEnabled                     Boolean  @default(false)
+  googleFreebusySmokePassed               Boolean  @default(false)
+  googleEventSyncSmokePassed              Boolean  @default(false)
+  googlePushOrIncrementalSyncVerified     Boolean  @default(false)
+  signedIcsTokenPersistenceConfigured     Boolean  @default(false)
+  signedIcsAccessSmokePassed              Boolean  @default(false)
+  signedIcsClientImportSmokePassed        Boolean  @default(false)
+  timezoneDstQaPassed                     Boolean  @default(false)
+  providerRenderMatrixPassed              Boolean  @default(false)
+  travelPublishPersistencePassed          Boolean  @default(false)
+  cacheRevalidationVerified               Boolean  @default(false)
+  dashboardCalendarSmokePassed            Boolean  @default(false)
+  publicTravelSmokePassed                 Boolean  @default(false)
+  ciEvidenceCaptured                      Boolean  @default(false)
+  calendarArtifactsSecretSafe             Boolean  @default(false)
+  calendarTypecheckArtifactPath           String?
+  calendarTestArtifactPath                String?
+  postgresAvailabilityArtifactPath        String?
+  concurrentHoldRaceArtifactPath          String?
+  tenantIsolationArtifactPath             String?
+  googleOauthArtifactPath                 String?
+  googleFreebusySyncArtifactPath          String?
+  googlePushIncrementalArtifactPath       String?
+  signedIcsTokenRouteArtifactPath         String?
+  icsClientImportsArtifactPath            String?
+  timezoneProviderMatrixArtifactPath      String?
+  travelPublishCacheArtifactPath          String?
+  dashboardPublicSmokeArtifactPath        String?
+  ciEvidenceArtifactPath                  String?
+  secretSafeArtifactsPath                 String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model NotificationLaunchRun {
+  id                                    String   @id @default(cuid())
+  tenantId                              String
+  runId                                 String
+  commitSha                             String?
+  status                                String
+  commandMatrix                         Json
+  controlManifest                       Json
+  artifactManifest                      Json
+  providerSendManifest                  Json
+  suppressionManifest                   Json
+  webhookReplayManifest                 Json
+  notificationsTypecheckPassed          Boolean  @default(false)
+  notificationsTestsPassed              Boolean  @default(false)
+  providerSdksConfigured                Boolean  @default(false)
+  resendSandboxSendPassed               Boolean  @default(false)
+  twilioSandboxSendPassed               Boolean  @default(false)
+  expoPushDeviceSendPassed              Boolean  @default(false)
+  queueWorkerImplemented                Boolean  @default(false)
+  deliveryPersistenceConfigured         Boolean  @default(false)
+  providerEventPersistenceConfigured    Boolean  @default(false)
+  messageThreadPersistenceConfigured    Boolean  @default(false)
+  messagePersistenceConfigured          Boolean  @default(false)
+  preferenceCenterImplemented           Boolean  @default(false)
+  unsubscribeStopSuppressionTested      Boolean  @default(false)
+  quietHoursRateLimitTested             Boolean  @default(false)
+  signedWebhookVerificationPassed       Boolean  @default(false)
+  retryDeadLetterFlowTested             Boolean  @default(false)
+  tenantIsolationTestsPassed            Boolean  @default(false)
+  redactionPrivacyReviewPassed          Boolean  @default(false)
+  ciEvidenceCaptured                    Boolean  @default(false)
+  secretSafeArtifactsCaptured           Boolean  @default(false)
+  notificationTypecheckArtifactPath     String?
+  notificationTestArtifactPath          String?
+  providerSandboxArtifactPath           String?
+  resendSandboxArtifactPath             String?
+  twilioSandboxArtifactPath             String?
+  expoPushDeviceArtifactPath            String?
+  queueWorkerArtifactPath               String?
+  persistenceArtifactPath               String?
+  preferenceSuppressionArtifactPath     String?
+  webhookSignatureReplayArtifactPath    String?
+  retryDeadLetterArtifactPath           String?
+  tenantIsolationArtifactPath           String?
+  redactionPrivacyArtifactPath          String?
+  ciEvidenceArtifactPath                String?
+  secretSafeArtifactsPath               String?
+  ciRunUrl                              String?
+  tenant                                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                             DateTime @default(now())
+  updatedAt                             DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model ObservabilityLaunchRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  commandMatrix                           Json
+  controlManifest                         Json
+  artifactManifest                        Json
+  sdkConfigurationManifest                Json
+  captureEvidenceManifest                 Json
+  alertReleaseManifest                    Json
+  observabilityTypecheckPassed            Boolean  @default(false)
+  observabilityTestsPassed                Boolean  @default(false)
+  webBuildPassed                          Boolean  @default(false)
+  dashboardBuildPassed                    Boolean  @default(false)
+  mobileTypecheckPassed                   Boolean  @default(false)
+  sentryWebSdkConfigured                  Boolean  @default(false)
+  sentryDashboardSdkConfigured            Boolean  @default(false)
+  sentryMobileSdkConfigured               Boolean  @default(false)
+  openTelemetryExporterConfigured         Boolean  @default(false)
+  structuredLoggingConfigured             Boolean  @default(false)
+  sourceMapsUploaded                      Boolean  @default(false)
+  mobileDebugSymbolsUploaded              Boolean  @default(false)
+  forcedWebCaptureVerified                Boolean  @default(false)
+  forcedDashboardCaptureVerified          Boolean  @default(false)
+  forcedApiCaptureVerified                Boolean  @default(false)
+  forcedWebhookCaptureVerified            Boolean  @default(false)
+  forcedMobileCrashVerified               Boolean  @default(false)
+  errorReportPersistenceConfigured        Boolean  @default(false)
+  dashboardTenantTriageReadsVerified      Boolean  @default(false)
+  sentryWebhookSignatureReplayVerified    Boolean  @default(false)
+  alertRoutingVerified                    Boolean  @default(false)
+  releaseIncidentLinkageVerified          Boolean  @default(false)
+  redactionNoPiiVerified                  Boolean  @default(false)
+  ciEvidenceCaptured                      Boolean  @default(false)
+  secretSafeArtifactsCaptured             Boolean  @default(false)
+  observabilityTypecheckArtifactPath      String?
+  observabilityTestArtifactPath           String?
+  webBuildArtifactPath                    String?
+  dashboardBuildArtifactPath              String?
+  mobileTypecheckArtifactPath             String?
+  sentrySdkArtifactPath                   String?
+  otelPipelineArtifactPath                String?
+  structuredLoggingArtifactPath           String?
+  sourceMapsDebugSymbolsArtifactPath      String?
+  forcedCapturesArtifactPath              String?
+  errorReportPersistenceArtifactPath      String?
+  dashboardTriageArtifactPath             String?
+  providerWebhookArtifactPath             String?
+  alertRoutingArtifactPath                String?
+  releaseLinkageArtifactPath              String?
+  redactionReviewArtifactPath             String?
+  ciEvidenceArtifactPath                  String?
+  secretSafeArtifactsPath                 String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model TestingLaunchExecutionRun {
+  id                                 String   @id @default(cuid())
+  tenantId                           String
+  runId                              String
+  commitSha                          String?
+  status                             String
+  commandMatrix                      Json
+  artifactManifest                   Json
+  coverageReportManifest             Json
+  playwrightReportManifest           Json
+  policyEvidenceManifest             Json
+  lockfileInstallPassed              Boolean  @default(false)
+  staticChecksPassed                 Boolean  @default(false)
+  manifestChecksPassed               Boolean  @default(false)
+  typecheckPassed                    Boolean  @default(false)
+  unitTestsPassed                    Boolean  @default(false)
+  unitCoveragePassed                 Boolean  @default(false)
+  e2eTestsPassed                     Boolean  @default(false)
+  webBuildPassed                     Boolean  @default(false)
+  dashboardBuildPassed               Boolean  @default(false)
+  prismaIntegrationTestsPassed       Boolean  @default(false)
+  providerSandboxTestsPassed         Boolean  @default(false)
+  securityTestsPassed                Boolean  @default(false)
+  mobileSimulatorTestsPassed         Boolean  @default(false)
+  mobileDeviceTestsPassed            Boolean  @default(false)
+  coverageThresholdsMet              Boolean  @default(false)
+  coverageArtifactsUploaded          Boolean  @default(false)
+  playwrightArtifactsUploaded        Boolean  @default(false)
+  junitJsonReportsPublished          Boolean  @default(false)
+  ciRunPassed                        Boolean  @default(false)
+  branchProtectionRequiresCi         Boolean  @default(false)
+  flakyTestPolicyDocumented          Boolean  @default(false)
+  failureDebugArtifactsVerified      Boolean  @default(false)
+  secretSafeArtifactsCaptured        Boolean  @default(false)
+  frozenInstallArtifactPath          String?
+  phase14StaticArtifactPath          String?
+  manifestArtifactPath               String?
+  typecheckArtifactPath              String?
+  unitOutputArtifactPath             String?
+  unitCoverageArtifactPath           String?
+  e2eOutputArtifactPath              String?
+  playwrightReportArtifactPath       String?
+  webBuildArtifactPath               String?
+  dashboardBuildArtifactPath         String?
+  prismaIntegrationArtifactPath      String?
+  providerSandboxArtifactPath        String?
+  securityArtifactPath               String?
+  mobileSimulatorArtifactPath        String?
+  mobileDeviceArtifactPath           String?
+  ciQualityRunArtifactPath           String?
+  branchProtectionArtifactPath       String?
+  flakyPolicyArtifactPath            String?
+  failureDebugArtifactPath           String?
+  secretSafeArtifactPath             String?
+  ciRunUrl                           String?
+  tenant                             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                          DateTime @default(now())
+  updatedAt                          DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model LegalReviewRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String?
+  status                                  String
+  requiredReviewItemManifest              Json
+  approvedReviewItemManifest              Json
+  artifactManifest                        Json
+  redactedEvidenceLabelManifest           Json
+  launchBlockerManifest                   Json
+  legalReviewAuditPassed                  Boolean  @default(false)
+  redactedEvidenceLabelsPresent           Boolean  @default(false)
+  privilegedAdviceExcluded                Boolean  @default(false)
+  placeholderCopyReplacedAfterApproval    Boolean  @default(false)
+  legalVerifyCommandPassed                Boolean  @default(false)
+  ciQualityGateIncludesLegalReview        Boolean  @default(false)
+  ciLegalEvidenceCaptured                 Boolean  @default(false)
+  productionLaunchBlockedUntilApproval    Boolean  @default(false)
+  qualifiedCounselApprovalCaptured        Boolean  @default(false)
+  legalReviewAuditArtifactPath            String?
+  qualityGatesArtifactPath                String?
+  qualityAllArtifactPath                  String?
+  ciQualityJobArtifactPath                String?
+  counselApprovalRedactedArtifactPath     String?
+  placeholderReplacementArtifactPath      String?
+  privilegedAdviceExclusionArtifactPath   String?
+  ciRunUrl                                String?
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model DeploymentLaunchEvidenceRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String
+  status                          String
+  commandMatrix                   Json
+  artifactManifest                Json
+  providerGateEvidenceCaptured    Boolean  @default(false)
+  environmentGateEvidenceCaptured Boolean  @default(false)
+  databaseGateEvidenceCaptured    Boolean  @default(false)
+  mobileGateEvidenceCaptured      Boolean  @default(false)
+  ciGateEvidenceCaptured          Boolean  @default(false)
+  rollbackGateEvidenceCaptured    Boolean  @default(false)
+  secretSafeArtifactsCaptured     Boolean  @default(false)
+  evidencePacketPath              String?
+  providerArtifactSafetyPath      String?
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model ReleaseLaunchControlRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String
+  status                          String
+  commandMatrix                   Json
+  artifactManifest                Json
+  persistenceEvidenceCaptured     Boolean  @default(false)
+  governanceEvidenceCaptured      Boolean  @default(false)
+  migrationGateEvidenceCaptured   Boolean  @default(false)
+  rollbackEvidenceCaptured        Boolean  @default(false)
+  mobileGovernanceEvidenceCaptured Boolean @default(false)
+  ciArtifactEvidenceCaptured      Boolean  @default(false)
+  secretSafeArtifactsCaptured     Boolean  @default(false)
+  releaseHealthEnvelopePath       String?
+  rollbackDrillArtifactPath       String?
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model UiPackageAdoptionRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String
+  status                          String
+  commandMatrix                   Json
+  artifactManifest                Json
+  primitiveAdoptionEvidenceCaptured Boolean @default(false)
+  formNavDialogEvidenceCaptured   Boolean  @default(false)
+  accessibilityEvidenceCaptured   Boolean  @default(false)
+  keyboardFocusEvidenceCaptured   Boolean  @default(false)
+  visualSmokeEvidenceCaptured     Boolean  @default(false)
+  buildSmokeEvidenceCaptured      Boolean  @default(false)
+  designTokenDocsEvidenceCaptured Boolean  @default(false)
+  secretSafeArtifactsCaptured     Boolean  @default(false)
+  styleRegressionReviewPath       String?
+  visualArtifactManifestPath      String?
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model SeedRuntimeExecutionRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String
+  status                              String
+  commandMatrix                       Json
+  artifactManifest                    Json
+  databaseProvisioningEvidenceCaptured Boolean @default(false)
+  prismaLifecycleEvidenceCaptured     Boolean  @default(false)
+  seedCommandEvidenceCaptured         Boolean  @default(false)
+  seededDomainQueryEvidenceCaptured   Boolean  @default(false)
+  appSmokeEvidenceCaptured            Boolean  @default(false)
+  commandTranscriptEvidenceCaptured   Boolean  @default(false)
+  ciCleanCheckoutEvidenceCaptured     Boolean  @default(false)
+  secretSafeArtifactsCaptured         Boolean  @default(false)
+  seededTenantSlug                    String?
+  commandTranscriptPath               String?
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model PrismaValidationRun {
+  id                                String   @id @default(cuid())
+  tenantId                          String
+  runId                             String
+  commitSha                         String
+  schemaPath                        String
+  databaseUrlMode                   String
+  status                            String
+  commandMatrix                     Json
+  artifactManifest                  Json
+  relationNameEvidenceCaptured      Boolean  @default(false)
+  manyToManyEvidenceCaptured        Boolean  @default(false)
+  enumCompatibilityEvidenceCaptured Boolean  @default(false)
+  generatedSqlEvidenceCaptured      Boolean  @default(false)
+  secretSafeArtifactsCaptured       Boolean  @default(false)
+  validateOutputPath                String?
+  generatedSqlReviewPath            String?
+  createdAt                         DateTime @default(now())
+  updatedAt                         DateTime @updatedAt
+  tenant                            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model ValidatorLaunchAdoptionRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String
+  status                          String
+  commandMatrix                   Json
+  artifactManifest                Json
+  schemaDomainEvidenceCaptured    Boolean  @default(false)
+  routeAdoptionEvidenceCaptured   Boolean  @default(false)
+  malformedPayloadEvidenceCaptured Boolean @default(false)
+  tenantScopeEvidenceCaptured     Boolean  @default(false)
+  sensitiveFieldEvidenceCaptured  Boolean  @default(false)
+  ciEvidenceCaptured              Boolean  @default(false)
+  secretSafeArtifactsCaptured     Boolean  @default(false)
+  routeAdoptionReportPath         String?
+  sensitiveFieldReportPath        String?
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model TenantIsolationRun {
+  id                                    String   @id @default(cuid())
+  tenantId                              String
+  runId                                 String
+  commitSha                             String
+  status                                String
+  commandMatrix                         Json
+  artifactManifest                      Json
+  databaseLifecycleEvidenceCaptured     Boolean  @default(false)
+  repositoryAdoptionEvidenceCaptured    Boolean  @default(false)
+  tenantOwnedModelCoverageCaptured      Boolean  @default(false)
+  crossTenantDenialEvidenceCaptured     Boolean  @default(false)
+  missingTenantRejectionEvidenceCaptured Boolean @default(false)
+  auditRowEvidenceCaptured              Boolean  @default(false)
+  fixtureCleanupEvidenceCaptured        Boolean  @default(false)
+  ciEvidenceCaptured                    Boolean  @default(false)
+  secretSafeArtifactsCaptured           Boolean  @default(false)
+  modelCoverageReportPath               String?
+  denialMatrixReportPath                String?
+  createdAt                             DateTime @default(now())
+  updatedAt                             DateTime @updatedAt
+  tenant                                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model DomainAuthorizationRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String
+  status                              String
+  commandMatrix                       Json
+  artifactManifest                    Json
+  providerSessionEvidenceCaptured     Boolean  @default(false)
+  customRoleEvidenceCaptured          Boolean  @default(false)
+  routeGuardEvidenceCaptured          Boolean  @default(false)
+  roleMatrixEvidenceCaptured          Boolean  @default(false)
+  fieldRedactionEvidenceCaptured      Boolean  @default(false)
+  auditLogEvidenceCaptured            Boolean  @default(false)
+  csrfRevocationEvidenceCaptured      Boolean  @default(false)
+  ciEvidenceCaptured                  Boolean  @default(false)
+  secretSafeArtifactsCaptured         Boolean  @default(false)
+  routeGuardReportPath                String?
+  auditLogReportPath                  String?
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model DomainEventAuditRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String
+  status                              String
+  commandMatrix                       Json
+  artifactManifest                    Json
+  transactionServiceEvidenceCaptured  Boolean  @default(false)
+  repositoryEvidenceCaptured          Boolean  @default(false)
+  atomicityEvidenceCaptured           Boolean  @default(false)
+  eventAuditPersistenceEvidenceCaptured Boolean @default(false)
+  idempotencyReplayEvidenceCaptured   Boolean  @default(false)
+  rollbackEvidenceCaptured            Boolean  @default(false)
+  denialEvidenceCaptured              Boolean  @default(false)
+  databaseCiEvidenceCaptured          Boolean  @default(false)
+  secretSafeArtifactsCaptured         Boolean  @default(false)
+  transactionReportPath               String?
+  idempotencyReportPath               String?
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model PrivacyRetentionRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String
+  status                              String
+  commandMatrix                       Json
+  artifactManifest                    Json
+  attorneyApprovalEvidenceCaptured    Boolean  @default(false)
+  workerPersistenceEvidenceCaptured   Boolean  @default(false)
+  prismaDryRunEvidenceCaptured        Boolean  @default(false)
+  objectStorageDryRunEvidenceCaptured Boolean  @default(false)
+  tenantIsolationEvidenceCaptured     Boolean  @default(false)
+  legalHoldEvidenceCaptured           Boolean  @default(false)
+  tombstoneReplayEvidenceCaptured     Boolean  @default(false)
+  ciEvidenceCaptured                  Boolean  @default(false)
+  secretSafeArtifactsCaptured         Boolean  @default(false)
+  retentionReportPath                 String?
+  tombstoneReplayReportPath           String?
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model PublicContentRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String
+  status                                  String
+  commandMatrix                           Json
+  artifactManifest                        Json
+  tenantDomainResolverEvidenceCaptured    Boolean  @default(false)
+  repositoryReadEvidenceCaptured          Boolean  @default(false)
+  routeApiAdoptionEvidenceCaptured        Boolean  @default(false)
+  seededContentEvidenceCaptured           Boolean  @default(false)
+  apiJsonRedactionEvidenceCaptured        Boolean  @default(false)
+  renderedHtmlRedactionEvidenceCaptured   Boolean  @default(false)
+  privatePortfolioExclusionEvidenceCaptured Boolean @default(false)
+  cacheRevalidationEvidenceCaptured       Boolean  @default(false)
+  browserCiEvidenceCaptured               Boolean  @default(false)
+  secretSafeArtifactsCaptured             Boolean  @default(false)
+  resolverReportPath                      String?
+  redactionReportPath                     String?
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model WebBuildRuntimeRun {
+  id                              String   @id @default(cuid())
+  tenantId                        String
+  runId                           String
+  commitSha                       String
+  status                          String
+  commandMatrix                   Json
+  artifactManifest                Json
+  prismaClientEvidenceCaptured    Boolean  @default(false)
+  typecheckEvidenceCaptured       Boolean  @default(false)
+  buildEvidenceCaptured           Boolean  @default(false)
+  browserSmokeEvidenceCaptured    Boolean  @default(false)
+  fallbackEvidenceCaptured        Boolean  @default(false)
+  exactOptionalEvidenceCaptured   Boolean  @default(false)
+  secretSafeArtifactsCaptured     Boolean  @default(false)
+  typecheckOutputPath             String?
+  buildOutputPath                 String?
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+  tenant                          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model PortfolioImagePerformanceRun {
+  id                                    String   @id @default(cuid())
+  tenantId                              String
+  runId                                 String
+  commitSha                             String
+  status                                String
+  commandMatrix                         Json
+  artifactManifest                      Json
+  derivativeFixtureEvidenceCaptured     Boolean  @default(false)
+  nextImageEvidenceCaptured             Boolean  @default(false)
+  exifStrippingEvidenceCaptured         Boolean  @default(false)
+  privateOriginalDenialEvidenceCaptured Boolean  @default(false)
+  browserRenderingEvidenceCaptured      Boolean  @default(false)
+  lighthouseEvidenceCaptured            Boolean  @default(false)
+  ciEvidenceCaptured                    Boolean  @default(false)
+  secretSafeArtifactsCaptured           Boolean  @default(false)
+  derivativeFixtureReportPath           String?
+  lighthouseReportPath                  String?
+  createdAt                             DateTime @default(now())
+  updatedAt                             DateTime @updatedAt
+  tenant                                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model BookingContactRun {
+  id                                    String   @id @default(cuid())
+  tenantId                              String
+  runId                                 String
+  commitSha                             String
+  status                                String
+  commandMatrix                         Json
+  artifactManifest                      Json
+  databasePersistenceEvidenceCaptured   Boolean  @default(false)
+  tenantIsolationEvidenceCaptured       Boolean  @default(false)
+  providerHandoffEvidenceCaptured       Boolean  @default(false)
+  noLivePaymentEvidenceCaptured         Boolean  @default(false)
+  apiE2eEvidenceCaptured                Boolean  @default(false)
+  browserE2eEvidenceCaptured            Boolean  @default(false)
+  webBuildEvidenceCaptured              Boolean  @default(false)
+  ciEvidenceCaptured                    Boolean  @default(false)
+  secretSafeArtifactsCaptured           Boolean  @default(false)
+  e2eReportPath                         String?
+  providerBoundaryReportPath            String?
+  createdAt                             DateTime @default(now())
+  updatedAt                             DateTime @updatedAt
+  tenant                                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model SeoA11yPerformanceAuditRun {
+  id                                      String   @id @default(cuid())
+  tenantId                                String
+  runId                                   String
+  commitSha                               String
+  status                                  String
+  commandMatrix                           Json
+  artifactManifest                        Json
+  renderedCrawlEvidenceCaptured           Boolean  @default(false)
+  schemaValidatorEvidenceCaptured         Boolean  @default(false)
+  sitemapCanonicalEvidenceCaptured        Boolean  @default(false)
+  axeEvidenceCaptured                     Boolean  @default(false)
+  lighthouseCwvEvidenceCaptured           Boolean  @default(false)
+  mobileVisualQaEvidenceCaptured          Boolean  @default(false)
+  accessibilityFixEvidenceCaptured        Boolean  @default(false)
+  ciEvidenceCaptured                      Boolean  @default(false)
+  secretSafeArtifactsCaptured             Boolean  @default(false)
+  crawlReportPath                         String?
+  lighthouseReportPath                    String?
+  createdAt                               DateTime @default(now())
+  updatedAt                               DateTime @updatedAt
+  tenant                                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model BookingFlowRuntimeRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String
+  status                              String
+  commandMatrix                       Json
+  artifactManifest                    Json
+  dependencyInstallEvidenceCaptured   Boolean  @default(false)
+  prismaGenerationEvidenceCaptured    Boolean  @default(false)
+  webTypecheckBuildEvidenceCaptured   Boolean  @default(false)
+  routeRuntimeSmokeEvidenceCaptured   Boolean  @default(false)
+  browserSmokeEvidenceCaptured        Boolean  @default(false)
+  databaseSmokeEvidenceCaptured       Boolean  @default(false)
+  providerBoundaryEvidenceCaptured    Boolean  @default(false)
+  ciEvidenceCaptured                  Boolean  @default(false)
+  secretSafeArtifactsCaptured         Boolean  @default(false)
+  routeSmokeReportPath                String?
+  browserSmokeReportPath              String?
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
+model BookingPersistenceApiRun {
+  id                                  String   @id @default(cuid())
+  tenantId                            String
+  runId                               String
+  commitSha                           String
+  status                              String
+  commandMatrix                       Json
+  artifactManifest                    Json
+  routeContractEvidenceCaptured       Boolean  @default(false)
+  webTypecheckBuildEvidenceCaptured   Boolean  @default(false)
+  prismaGenerationEvidenceCaptured    Boolean  @default(false)
+  databaseTransactionEvidenceCaptured Boolean  @default(false)
+  nextRouteSmokeEvidenceCaptured      Boolean  @default(false)
+  providerBoundaryEvidenceCaptured    Boolean  @default(false)
+  ciEvidenceCaptured                  Boolean  @default(false)
+  secretSafeArtifactsCaptured         Boolean  @default(false)
+  transactionSmokeReportPath          String?
+  nextRouteSmokeReportPath            String?
+  createdAt                           DateTime @default(now())
+  updatedAt                           DateTime @updatedAt
+  tenant                              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, runId])
+  @@index([tenantId, status])
+  @@index([commitSha])
+}
+
 model ErrorReport {
   id             String            @id @default(cuid())
   tenantId       String?
@@ -1344,12 +4453,97 @@ model ErrorReport {
   userAgent      String?
   metadata       Json?
   tenant         Tenant?           @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  providerWebhookDeliveries ProviderWebhookDelivery[]
+  alertDeliveries AlertDelivery[]
+  githubIssueLink GithubIssueLink?
+  releaseIncidentLinks ReleaseIncidentLink[]
   createdAt      DateTime          @default(now())
   resolvedAt     DateTime?
 
   @@index([tenantId, severity, createdAt])
   @@index([tenantId, status])
   @@index([stackHash])
+}
+
+model ProviderWebhookDelivery {
+  id                    String            @id @default(cuid())
+  tenantId              String
+  provider              String
+  providerDeliveryId    String
+  idempotencyKey        String
+  providerFingerprint   String?
+  errorReportId         String?
+  action                String
+  targetErrorStatus     ErrorReportStatus @default(open)
+  statusMutationApplied Boolean           @default(false)
+  rawPayloadStored      Boolean           @default(false)
+  sanitizedPayload      Json
+  replayedAt            DateTime?
+  processedAt           DateTime          @default(now())
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  tenant                Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  errorReport           ErrorReport?      @relation(fields: [errorReportId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, providerDeliveryId])
+  @@unique([provider, idempotencyKey])
+  @@index([tenantId, processedAt])
+  @@index([tenantId, providerFingerprint])
+  @@index([errorReportId])
+}
+
+model AlertDelivery {
+  id                       String       @id @default(cuid())
+  tenantId                 String
+  errorReportId            String?
+  fingerprint              String
+  provider                 String
+  route                    String
+  deliveryState            String
+  acknowledgementState     String
+  retryPolicy              String
+  deadLetterState          String
+  attemptCount             Int          @default(0)
+  nextAttemptAt            DateTime?
+  acknowledgedAt           DateTime?
+  providerCallbackReceivedAt DateTime?
+  sanitizedPayload         Json
+  providerCallbackPayload  Json?
+  suppressExternalDelivery Boolean      @default(false)
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+  tenant                   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  errorReport              ErrorReport? @relation(fields: [errorReportId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, deliveryState, createdAt])
+  @@index([tenantId, acknowledgementState])
+  @@index([tenantId, fingerprint])
+  @@index([errorReportId])
+}
+
+model GithubIssueLink {
+  id                       String      @id @default(cuid())
+  tenantId                 String
+  errorReportId            String      @unique
+  approvalAuditLogId       String
+  provider                 String      @default("github")
+  repository               String
+  issueUrl                 String
+  issueNumber              Int?
+  dispatchState            String
+  reportFingerprint        String
+  dashboardStatusSynced    Boolean     @default(true)
+  providerDispatchExecuted Boolean     @default(false)
+  rawProviderPayloadStored Boolean     @default(false)
+  artifactPaths            Json
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime    @updatedAt
+  tenant                   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  errorReport              ErrorReport @relation(fields: [errorReportId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, repository, issueNumber])
+  @@index([tenantId, dispatchState, createdAt])
+  @@index([tenantId, reportFingerprint])
 }
 
 model ReleaseRecord {
@@ -1359,15 +4553,51 @@ model ReleaseRecord {
   version         String
   channel         ReleaseChannel
   commitSha       String?
+  ciWorkflowRunId  String?
+  ciWorkflowRunUrl String?
+  ciStatus        String?
+  ciCompletedAt   DateTime?
   notes           String
   migrationVersion String?
   mobileRuntimeVersion String?
   tenant          Tenant?        @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   releasedByUser  User?          @relation(fields: [releasedByUserId], references: [id], onDelete: SetNull)
+  incidentLinks   ReleaseIncidentLink[]
   createdAt       DateTime       @default(now())
 
   @@index([tenantId, channel, createdAt])
   @@index([version, channel])
+  @@index([ciWorkflowRunId])
+}
+
+model ReleaseIncidentLink {
+  id                              String         @id @default(cuid())
+  tenantId                        String
+  releaseRecordId                 String?
+  releaseId                       String
+  releaseVersion                  String
+  environment                     String
+  errorReportId                   String
+  auditLogId                      String
+  incidentStatus                  String
+  rollbackRequested               Boolean        @default(false)
+  tenantCommunicationOwner        String
+  rollbackCommunicationHandoffPersisted Boolean  @default(false)
+  tenantScopedIncidentIsolationVerified Boolean  @default(false)
+  sanitizedPayloadsVerified       Boolean        @default(false)
+  liveProviderEvidenceCaptured    Boolean        @default(false)
+  rawPayloadStored                Boolean        @default(false)
+  artifactPaths                   Json
+  createdAt                       DateTime       @default(now())
+  updatedAt                       DateTime       @updatedAt
+  tenant                          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  releaseRecord                   ReleaseRecord? @relation(fields: [releaseRecordId], references: [id], onDelete: SetNull)
+  errorReport                     ErrorReport    @relation(fields: [errorReportId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, releaseId, errorReportId])
+  @@index([tenantId, releaseVersion, environment])
+  @@index([releaseRecordId])
+  @@index([errorReportId])
 }
 
 model FeatureFlag {

@@ -1,8 +1,41 @@
-import { Text, View } from "react-native";
+﻿import { Text, View } from "react-native";
 import { MobileCard } from "../components/MobileCard";
 import { MobilePill } from "../components/MobilePill";
 import { MobileScreen } from "../components/MobileScreen";
+import { mobileApiFetch, type MobileApiResponseEnvelope, type MobileApiSession } from "../lib/mobileApiClient";
+import { mobilePushContractPreview } from "../lib/mobilePush";
 import { mobileAutomationSequence, mobileNotificationPlans, notificationPreviews } from "../lib/mobileDemo";
+
+export interface MobileNotificationSummary {
+  id: string;
+  title: string;
+  body: string;
+  readAt?: string | null;
+}
+
+export function loadMobileNotifications(
+  session: MobileApiSession,
+  requestId = `mobile-notifications:${session.tenantId}`,
+): Promise<MobileApiResponseEnvelope<MobileNotificationSummary[]>> {
+  return mobileApiFetch<MobileNotificationSummary[]>(session, {
+    domain: "notifications",
+    method: "GET",
+    path: "/api/mobile/notifications",
+    requestId,
+  });
+}
+
+export function loadMobileMessages(
+  session: MobileApiSession,
+  requestId = `mobile-messages:${session.tenantId}`,
+): Promise<MobileApiResponseEnvelope<unknown[]>> {
+  return mobileApiFetch<unknown[]>(session, {
+    domain: "notifications",
+    method: "GET",
+    path: "/api/mobile/messages",
+    requestId,
+  });
+}
 
 function planTone(status: string) {
   if (status === "allowed") return "good" as const;
@@ -15,8 +48,22 @@ export function NotificationsScreen() {
     <MobileScreen
       eyebrow="Push architecture"
       title="Client and artist alerts"
-      summary="Template previews, consent routing, and automation sequences are imported from @inkroute/notifications. Expo push, email, SMS, delivery logs, and opt-out controls are not wired."
+      summary="Template previews, consent routing, and automation sequences are imported from @inkroute/notifications. Expo push now exposes app-side registration, provider runtime gates, receipt replay, invalid-token suppression, and safe tap-routing contracts."
     >
+      <MobileCard title="Push runtime contract" eyebrow="GAP-063" detail={mobilePushContractPreview.boundary}>
+        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+          <MobilePill label={mobilePushContractPreview.registration.shouldPersistToken ? "token registration planned" : "token blocked"} tone="good" />
+          <MobilePill label={mobilePushContractPreview.localContract.localContractReady ? "local contract ready" : "local contract blocked"} tone={mobilePushContractPreview.localContract.localContractReady ? "good" : "danger"} />
+          <MobilePill label={mobilePushContractPreview.delivery.status === "ready" ? "delivery log planned" : "delivery blocked"} tone="good" />
+          <MobilePill label={mobilePushContractPreview.receipt.shouldMarkPushTokenInactive ? "invalid token suppression" : "receipt tracked"} tone="warn" />
+          <MobilePill label={`provider ${mobilePushContractPreview.provider.runtimeReadiness.status}`} tone={mobilePushContractPreview.provider.runtimeReadiness.status === "ready" ? "good" : "danger"} />
+          <MobilePill label={`tap route ${mobilePushContractPreview.tap.routePath ?? "blocked"}`} tone={mobilePushContractPreview.tap.status === "ready" ? "good" : "danger"} />
+        </View>
+        <Text style={{ color: "#a8a29e", marginTop: 8 }}>
+          Token preview: {mobilePushContractPreview.registration.tokenMasked ?? "not registered"} | receipt: {mobilePushContractPreview.receipt.normalizedStatus} | Expo gates: {mobilePushContractPreview.provider.runtimeReadiness.blockers.length}
+        </Text>
+      </MobileCard>
+
       {notificationPreviews.map((notification) => (
         <MobileCard key={notification.key} title={notification.key.replace(/_/g, " ")} detail={notification.body}>
           <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
@@ -44,7 +91,7 @@ export function NotificationsScreen() {
           {mobileAutomationSequence.slice(0, 5).map((step) => (
             <View key={step.id} style={{ gap: 4 }}>
               <Text style={{ color: "#fafaf9", fontWeight: "900" }}>{step.templateKey.replace(/_/g, " ")}</Text>
-              <Text style={{ color: "#d6d3d1" }}>{step.trigger} · offset {step.scheduledOffsetMinutes} minutes · {step.status}</Text>
+              <Text style={{ color: "#d6d3d1" }}>{step.trigger} | offset {step.scheduledOffsetMinutes} minutes | {step.status}</Text>
             </View>
           ))}
         </View>

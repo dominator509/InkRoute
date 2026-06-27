@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.0
@@ -20,12 +22,1354 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Verify Phase 14 testing manifests
         run: pnpm test:phase14:static && pnpm test:manifest
+      - name: Run Phase 15 launch operations runtime contracts
+        run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/launch-operations-runtime-static.test.ts
+
+      - name: Upload Phase 15 launch operations runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: launch-operations-runtime-artifacts
+          path: |
+            coverage/launch-operations-runtime.json
+            coverage/launch-operations-verifier.json
+            coverage/launch-operations-owner-coverage-redacted.json
+            coverage/launch-operations-alert-routing-redacted.json
+            coverage/launch-operations-support-escalation-redacted.json
+            coverage/launch-operations-privacy-request-drill-redacted.json
+            coverage/launch-operations-incident-drill-redacted.json
+            coverage/launch-operations-rollback-drill-redacted.json
+            coverage/launch-operations-monitoring-dashboard-redacted.json
+            coverage/launch-operations-communications-templates-redacted.json
+            coverage/launch-operations-approval-redacted.json
+            coverage/launch-operations-ci-run-redacted.json
+            test-results/launch-operations-runtime
+          if-no-files-found: warn
+      - name: Run Phase 15 production launch evidence runtime contracts
+        run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/production-launch-evidence-runtime-static.test.ts
+
+      - name: Upload Phase 15 production launch evidence runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-launch-evidence-runtime-artifacts
+          path: |
+            coverage/production-launch-evidence-runtime.json
+            coverage/production-launch-verifier.json
+            coverage/production-launch-ci-build-test-redacted.json
+            coverage/production-launch-database-ops-redacted.json
+            coverage/production-launch-provider-secret-redacted.json
+            coverage/production-launch-security-privacy-redacted.json
+            coverage/production-launch-a11y-seo-performance-redacted.json
+            coverage/production-launch-mobile-release-redacted.json
+            coverage/production-launch-legal-approval-redacted.json
+            coverage/production-launch-rollback-operations-redacted.json
+            coverage/production-launch-checklist-blockers.json
+            coverage/production-launch-approval-redacted.json
+            coverage/production-launch-ci-run-redacted.json
+            test-results/production-launch-evidence-runtime
+          if-no-files-found: warn
+      - name: Run Phase 15 database operations runtime contracts
+        run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/database-operations-runtime-static.test.ts
+
+      - name: Upload Phase 15 database operations runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-operations-runtime-artifacts
+          path: |
+            coverage/database-operations-runtime.json
+            coverage/database-operations-verifier.json
+            coverage/database-provider-branch-redacted.json
+            coverage/database-prisma-generate.log
+            coverage/database-prisma-validate.log
+            coverage/database-migration-dry-run-redacted.json
+            coverage/database-destructive-sql-scan.json
+            coverage/database-staging-migration-apply-redacted.json
+            coverage/database-seed-policy-redacted.json
+            coverage/database-backup-restore-drill-redacted.json
+            coverage/database-tenant-isolation-smoke-redacted.json
+            coverage/database-branch-promotion-approval-redacted.json
+            coverage/database-production-data-safety-review.md
+            coverage/database-operations-ci-run-redacted.json
+            test-results/database-operations-runtime
+          if-no-files-found: warn
+      - name: Run Phase 15 mobile deployment runtime contracts
+        run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/mobile-deployment-runtime-static.test.ts
+
+      - name: Upload Phase 15 mobile deployment runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-deployment-runtime-artifacts
+          path: |
+            coverage/mobile-deployment-runtime.json
+            coverage/mobile-deployment-verifier.json
+            coverage/mobile-eas-development-build-redacted.json
+            coverage/mobile-eas-preview-build-redacted.json
+            coverage/mobile-eas-production-build-redacted.json
+            coverage/mobile-ios-build-redacted.json
+            coverage/mobile-android-build-redacted.json
+            coverage/mobile-device-qa-checklist-redacted.json
+            coverage/mobile-push-token-smoke-redacted.json
+            coverage/mobile-sentry-crash-capture-redacted.json
+            coverage/mobile-ota-rollback-redacted.json
+            coverage/mobile-runtime-policy.json
+            coverage/mobile-native-credentials-redacted.json
+            coverage/mobile-store-readiness-redacted.json
+            coverage/mobile-deployment-ci-run-redacted.json
+            test-results/mobile-deployment-runtime
+          if-no-files-found: warn
+      - name: Run Phase 15 secret management runtime contracts
+        run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/secret-management-runtime-static.test.ts
+
+      - name: Upload Phase 15 secret management runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: secret-management-runtime-artifacts
+          path: |
+            coverage/secret-management-runtime.json
+            coverage/secret-management-verifier.json
+            coverage/secret-strict-env-check-redacted.json
+            coverage/secret-provider-store-destinations-redacted.json
+            coverage/secret-masked-ci-logs-redacted.json
+            coverage/secret-provider-audit-logs-redacted.json
+            coverage/secret-rotation-policy.json
+            coverage/secret-incident-rotation-tabletop.md
+            coverage/secret-committed-scan.json
+            coverage/secret-management-ci-run-redacted.json
+            test-results/secret-management-runtime
+          if-no-files-found: warn
+      - name: Run Phase 15 provider environment runtime contracts
+        run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/provider-environment-runtime-static.test.ts
+
+      - name: Upload Phase 15 provider environment runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-environment-runtime-artifacts
+          path: |
+            coverage/provider-environment-runtime.json
+            coverage/provider-environment-verifier.json
+            coverage/provider-strict-env-check-redacted.json
+            coverage/provider-web-dashboard-smoke-redacted.json
+            coverage/provider-database-migration-dry-run-redacted.json
+            coverage/provider-storage-private-acl-redacted.json
+            coverage/provider-mobile-eas-preview-redacted.json
+            coverage/provider-sentry-release-smoke-redacted.json
+            coverage/provider-github-environment-protection-redacted.json
+            coverage/provider-secret-store-destinations-redacted.json
+            coverage/provider-redacted-handoff-labels.json
+            coverage/provider-environment-ci-run-redacted.json
+            test-results/provider-environment-runtime
+          if-no-files-found: warn
+      - name: Run Phase 15 deployment tooling runtime contracts
+        run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/deployment-tooling-runtime-static.test.ts apps/web/tests/dashboard-deployment-readiness-route.test.ts apps/dashboard/tests/deployment-readiness-route-static.test.ts
+
+      - name: Upload Phase 15 deployment tooling runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-tooling-runtime-artifacts
+          path: |
+            coverage/deployment-tooling-runtime.json
+            coverage/deployment-install.log
+            coverage/deployment-package-typecheck.log
+            coverage/deployment-package-tests.json
+            coverage/deployment-route-contracts.json
+            coverage/deploy-check-env.json
+            coverage/deploy-checklist.json
+            coverage/deploy-gaps.json
+            coverage/deployment-dashboard-build.log
+            coverage/deployment-dashboard-page-smoke.json
+            coverage/deployment-readiness-api-smoke.json
+            coverage/deployment-rollback-preflight.json
+            coverage/deployment-production-approval-boundary.json
+            coverage/deployment-ci-reports-redacted.json
+            coverage/deployment-blocker-owner-list.json
+            test-results/deployment-tooling-runtime
+          if-no-files-found: warn
+      - name: Run Phase 15 deployment launch evidence runtime contracts
+        run: pnpm --filter @inkroute/deployment test && pnpm vitest run apps/web/tests/deployment-launch-evidence-runtime-static.test.ts
+
+      - name: Upload Phase 15 deployment launch evidence runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-launch-evidence-runtime-artifacts
+          path: |
+            coverage/deployment-launch-evidence-runtime.json
+            coverage/deployment-launch-package-typecheck.txt
+            coverage/deployment-launch-package-test.txt
+            coverage/deployment-provider-envs-redacted.json
+            coverage/deployment-secrets-redacted.json
+            coverage/deployment-vercel-projects-redacted.json
+            coverage/deployment-preview-smoke-redacted.json
+            coverage/deployment-production-dry-run-redacted.json
+            coverage/deployment-github-environment-approval-redacted.json
+            coverage/deployment-strict-env-check-redacted.json
+            coverage/deployment-database-migration-dry-run-redacted.json
+            coverage/deployment-backup-restore-drill-redacted.json
+            coverage/deployment-storage-provider-redacted.json
+            coverage/deployment-eas-project-redacted.json
+            coverage/deployment-eas-preview-build-redacted.json
+            coverage/deployment-native-credentials-redacted.json
+            coverage/deployment-ota-rollback-redacted.json
+            coverage/deployment-ci-gate-redacted.json
+            coverage/deployment-sentry-release-upload-redacted.json
+            coverage/deployment-rollback-drill-redacted.json
+            coverage/deployment-launch-evidence-packet-redacted.json
+            coverage/deployment-provider-artifact-safety.json
+            test-results/deployment-launch-evidence-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 15 deployment manifests
-        run: pnpm deploy:check-env && pnpm deploy:checklist && pnpm deploy:gaps
+        run: pnpm deploy:check-env && pnpm deploy:verify-provider-envs && pnpm deploy:verify-secrets && pnpm deploy:verify-mobile && pnpm deploy:verify-database-ops && pnpm deploy:verify-launch-evidence && pnpm deploy:verify-ops && pnpm deploy:checklist && pnpm deploy:gaps
+      - name: Run Phase 16 agent execution ledger runtime contracts
+        run: pnpm --filter @inkroute/handoff test && pnpm vitest run apps/web/tests/agent-execution-ledger-runtime-static.test.ts
+
+      - name: Upload Phase 16 agent execution ledger runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-execution-ledger-runtime-artifacts
+          path: |
+            coverage/agent-execution-ledger-runtime.json
+            coverage/agent-execution-ledger-verifier.json
+            coverage/agent-execution-handoff-audit.json
+            coverage/agent-execution-queue-summary.json
+            coverage/agent-execution-codex-results-redacted.json
+            coverage/agent-execution-jules-results-redacted.json
+            coverage/agent-execution-claude-results-redacted.json
+            coverage/agent-execution-local-results-redacted.json
+            coverage/agent-execution-command-artifacts-redacted.json
+            coverage/agent-execution-gap-tracker-update.json
+            coverage/agent-execution-secret-safety-review.json
+            coverage/agent-execution-ci-run-redacted.json
+            test-results/agent-execution-ledger-runtime
+          if-no-files-found: warn
+      - name: Run Phase 16 handoff tooling runtime contracts
+        run: pnpm --filter @inkroute/handoff test && pnpm vitest run apps/web/tests/handoff-tooling-runtime-static.test.ts
+
+      - name: Upload Phase 16 handoff tooling runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: handoff-tooling-runtime-artifacts
+          path: |
+            coverage/handoff-tooling-runtime.json
+            coverage/handoff-tooling-install-output.txt
+            coverage/handoff-tooling-package-typecheck.txt
+            coverage/handoff-tooling-package-test.txt
+            coverage/handoff-verify-docs.json
+            coverage/handoff-audit.json
+            coverage/handoff-next.json
+            coverage/handoff-ledger-verification.json
+            coverage/handoff-tooling-verification.json
+            coverage/handoff-task-sync.json
+            coverage/handoff-all-output.txt
+            coverage/handoff-tooling-ci-run.json
+            test-results/handoff-tooling-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 16 agent task tracking runtime contracts
+        run: pnpm --filter @inkroute/handoff test && pnpm vitest run apps/web/tests/agent-task-tracking-runtime-static.test.ts
+
+      - name: Upload Phase 16 agent task tracking runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-task-tracking-runtime-artifacts
+          path: |
+            coverage/agent-task-tracking-runtime.json
+            coverage/agent-task-tracking-sync-verifier.json
+            coverage/agent-task-tracking-issue-create-redacted.json
+            coverage/agent-task-tracking-project-sync-redacted.json
+            coverage/agent-task-tracking-doc-links.json
+            coverage/agent-task-tracking-gap-links.json
+            coverage/agent-task-tracking-status-traceability.json
+            coverage/agent-task-tracking-ci-run-redacted.json
+            test-results/agent-task-tracking-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 16 handoff manifests
-        run: pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next
+        run: pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next && pnpm handoff:verify-ledger && pnpm handoff:verify-tooling && pnpm handoff:verify-task-sync
+      - name: Run Phase 11 mobile crash runtime contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/mobile/tests/mobile-crash-runtime-static.test.ts apps/mobile/tests/mobile-crash-static.test.ts
+
+      - name: Upload Phase 11 mobile crash runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-crash-runtime-artifacts
+          path: |
+            coverage/mobile-crash-runtime.json
+            coverage/mobile-crash-observability-typecheck.txt
+            coverage/mobile-crash-observability-test.txt
+            coverage/mobile-crash-app-typecheck.txt
+            coverage/mobile-crash-sentry-expo-config-redacted.json
+            coverage/mobile-crash-fallback-reporter.json
+            coverage/mobile-crash-release-eas-tags.json
+            coverage/mobile-crash-before-send-redaction.json
+            coverage/mobile-crash-pii-redaction-tests.json
+            coverage/mobile-crash-source-map-upload-redacted.json
+            coverage/mobile-crash-debug-symbol-upload-redacted.json
+            coverage/mobile-crash-simulator-forced-redacted.json
+            coverage/mobile-crash-device-forced-redacted.json
+            coverage/mobile-crash-error-report-persistence.json
+            coverage/mobile-crash-dashboard-triage.json
+            coverage/mobile-crash-offline-buffering.json
+            coverage/mobile-crash-no-pii-provider-payload.json
+            coverage/mobile-crash-secret-safe-artifacts.json
+            test-results/mobile-crash-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 11 observability launch runtime contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/observability-launch-runtime-static.test.ts
+
+      - name: Upload Phase 11 observability launch runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: observability-launch-runtime-artifacts
+          path: |
+            coverage/observability-launch-runtime.json
+            coverage/observability-typecheck.txt
+            coverage/observability-test.txt
+            coverage/observability-web-build.txt
+            coverage/observability-dashboard-build.txt
+            coverage/observability-mobile-typecheck.txt
+            coverage/observability-sentry-sdk.json
+            coverage/observability-otel-pipeline.json
+            coverage/observability-structured-logging.json
+            coverage/observability-source-maps-debug-symbols.json
+            coverage/observability-forced-captures.json
+            coverage/observability-error-report-persistence.json
+            coverage/observability-dashboard-triage.json
+            coverage/observability-provider-webhook.json
+            coverage/observability-alert-routing.json
+            coverage/observability-release-linkage.json
+            coverage/observability-redaction-review.json
+            coverage/observability-ci-evidence.json
+            coverage/observability-secret-safe-artifacts.json
+            test-results/observability-launch-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 18 workspace runtime toolchain contracts
+        run: pnpm --filter @inkroute/workspace test && pnpm vitest run apps/web/tests/workspace-runtime-toolchain-static.test.ts
+
+      - name: Upload Phase 18 workspace runtime toolchain artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-runtime-toolchain-artifacts
+          path: |
+            coverage/workspace-runtime-toolchain.json
+            coverage/workspace-package-typecheck.txt
+            coverage/workspace-package-test.txt
+            coverage/workspace-toolchain-output.txt
+            coverage/workspace-all-output.txt
+            coverage/workspace-install-output.txt
+            coverage/workspace-web-build-output.txt
+            coverage/workspace-dashboard-build-output.txt
+            coverage/workspace-ci-job.json
+            coverage/workspace-production-blockers.json
+            test-results/workspace-runtime-toolchain
+          if-no-files-found: warn
+
+      - name: Run Phase 18 runtime evidence matrix contracts
+        run: pnpm --filter @inkroute/workspace test && pnpm vitest run apps/web/tests/runtime-evidence-matrix-static.test.ts
+
+      - name: Upload Phase 18 runtime evidence matrix artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-evidence-matrix-artifacts
+          path: |
+            coverage/runtime-evidence-matrix.json
+            coverage/runtime-evidence-install-output.txt
+            coverage/runtime-evidence-workspace-output.txt
+            coverage/runtime-evidence-workspace-all-output.txt
+            coverage/runtime-evidence-handoff-all-output.txt
+            coverage/runtime-evidence-quality-all-output.txt
+            coverage/runtime-evidence-typecheck-output.txt
+            coverage/runtime-evidence-unit-output.txt
+            coverage/runtime-evidence-web-build-output.txt
+            coverage/runtime-evidence-dashboard-build-output.txt
+            coverage/runtime-evidence-ci-job.json
+            coverage/runtime-evidence-production-blockers.json
+            test-results/runtime-evidence-matrix
+          if-no-files-found: warn
+
+      - name: Run Phase 18 workspace required checks runtime contracts
+        run: pnpm --filter @inkroute/workspace test && pnpm vitest run apps/web/tests/workspace-required-checks-runtime-static.test.ts
+
+      - name: Upload Phase 18 workspace required checks runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-required-checks-runtime-artifacts
+          path: |
+            coverage/workspace-required-checks-runtime.json
+            coverage/workspace-required-checks-output.txt
+            coverage/workspace-required-checks-all-output.txt
+            coverage/workspace-required-checks-quality-output.txt
+            coverage/workspace-required-checks-ci-quality.json
+            coverage/workspace-required-checks-branch-protection-redacted.json
+            coverage/workspace-required-checks-failing-workspace-pr-redacted.json
+            coverage/workspace-required-checks-failing-gap-diff-pr-redacted.json
+            coverage/workspace-required-checks-redacted-logs.json
+            test-results/workspace-required-checks-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 18 static dependency audit runtime contracts
+        run: pnpm --filter @inkroute/workspace test && pnpm vitest run apps/web/tests/static-dependency-audit-runtime-static.test.ts
+
+      - name: Upload Phase 18 static dependency audit runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-dependency-audit-runtime-artifacts
+          path: |
+            coverage/static-dependency-audit-runtime.json
+            coverage/static-dependency-audit-output.txt
+            coverage/static-dependency-workspace-package-test.txt
+            coverage/static-dependency-workspace-package-typecheck.txt
+            coverage/static-dependency-install-output.txt
+            coverage/static-dependency-typecheck-output.txt
+            coverage/static-dependency-web-build-output.txt
+            coverage/static-dependency-dashboard-build-output.txt
+            coverage/static-dependency-ci-job.json
+            coverage/static-dependency-peer-version-review.json
+            test-results/static-dependency-audit-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 1 UI package adoption runtime contracts
+        run: pnpm --filter @inkroute/ui test && pnpm vitest run apps/web/tests/ui-package-adoption-runtime-static.test.ts
+
+      - name: Upload Phase 1 UI package adoption runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-package-adoption-runtime-artifacts
+          path: |
+            coverage/ui-package-adoption-runtime.json
+            coverage/ui-package-typecheck.txt
+            coverage/ui-package-test.txt
+            coverage/ui-export-contract.json
+            coverage/ui-web-adoption-smoke.json
+            coverage/ui-dashboard-adoption-smoke.json
+            coverage/ui-form-field-adoption.json
+            coverage/ui-nav-surface-adoption.json
+            coverage/ui-dialog-adoption.json
+            coverage/ui-accessibility-smoke.json
+            coverage/ui-keyboard-focus-smoke.json
+            coverage/ui-storybook-visual-smoke.json
+            coverage/ui-visual-regression-artifacts-redacted.json
+            coverage/ui-web-build.txt
+            coverage/ui-dashboard-build.txt
+            coverage/ui-app-smoke-tests.json
+            coverage/ui-style-regression-review.md
+            coverage/ui-design-token-docs.json
+            coverage/ui-secret-safe-artifacts.json
+            test-results/ui-package-adoption-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 1 dependency install runtime contracts
+        run: pnpm --filter @inkroute/workspace test && pnpm vitest run apps/web/tests/dependency-install-runtime-static.test.ts
+
+      - name: Upload Phase 1 dependency install runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-install-runtime-artifacts
+          path: |
+            coverage/dependency-install-runtime.json
+            coverage/dependency-corepack-output.txt
+            coverage/dependency-install-output.txt
+            coverage/dependency-frozen-lockfile-output.txt
+            coverage/dependency-workspace-all-output.txt
+            coverage/dependency-typecheck-output.txt
+            coverage/dependency-lint-output.txt
+            coverage/dependency-unit-output.txt
+            coverage/dependency-ci-quality-job.json
+            coverage/dependency-production-blockers.json
+            test-results/dependency-install-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 2 domain event audit runtime contracts
+        run: pnpm --filter @inkroute/booking test && pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/domain-event-audit-runtime-static.test.ts
+
+      - name: Upload Phase 2 domain event audit runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: domain-event-audit-runtime-artifacts
+          path: |
+            coverage/domain-event-audit-runtime.json
+            coverage/domain-event-booking-typecheck.txt
+            coverage/domain-event-booking-test.txt
+            coverage/domain-event-payments-typecheck.txt
+            coverage/domain-event-payments-test.txt
+            coverage/domain-event-prisma-transactions-redacted.json
+            coverage/domain-event-tenant-repositories.json
+            coverage/domain-event-booking-atomicity.json
+            coverage/domain-event-payment-atomicity.json
+            coverage/domain-event-booking-state-events.json
+            coverage/domain-event-audit-logs-redacted.json
+            coverage/domain-event-payment-audit-logs-redacted.json
+            coverage/domain-event-idempotency-persistence.json
+            coverage/domain-event-idempotency-replay.json
+            coverage/domain-event-provider-rollback.json
+            coverage/domain-event-invalid-transition-denial.json
+            coverage/domain-event-cross-tenant-denial.json
+            coverage/domain-event-database-evidence-redacted.json
+            coverage/domain-event-ci-evidence.json
+            coverage/domain-event-secret-safe-artifacts.json
+            test-results/domain-event-audit-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 2 domain authorization runtime contracts
+        run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/domain-authorization-runtime-static.test.ts
+
+      - name: Upload Phase 2 domain authorization runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: domain-authorization-runtime-artifacts
+          path: |
+            coverage/domain-authorization-runtime.json
+            coverage/domain-authorization-auth-typecheck.txt
+            coverage/domain-authorization-auth-test.txt
+            coverage/domain-authorization-provider-session-redacted.json
+            coverage/domain-authorization-custom-role-db-redacted.json
+            coverage/domain-authorization-dashboard-middleware.json
+            coverage/domain-authorization-api-route-guards.json
+            coverage/domain-authorization-server-action-guards.json
+            coverage/domain-authorization-role-matrix.json
+            coverage/domain-authorization-custom-role-routes.json
+            coverage/domain-authorization-cross-tenant-denial.json
+            coverage/domain-authorization-field-redaction.json
+            coverage/domain-authorization-audit-rows-redacted.json
+            coverage/domain-authorization-csrf-session-binding.json
+            coverage/domain-authorization-session-revocation.json
+            coverage/domain-authorization-ci-evidence.json
+            coverage/domain-authorization-secret-safe-artifacts.json
+            test-results/domain-authorization-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 2 tenant isolation runtime contracts
+        run: pnpm --filter @inkroute/db test && pnpm vitest run apps/web/tests/tenant-isolation-runtime-static.test.ts
+
+      - name: Upload Phase 2 tenant isolation runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenant-isolation-runtime-artifacts
+          path: |
+            coverage/tenant-isolation-runtime.json
+            coverage/tenant-isolation-db-typecheck.txt
+            coverage/tenant-isolation-db-test.txt
+            coverage/tenant-isolation-prisma-generate.txt
+            coverage/tenant-isolation-prisma-migrate.txt
+            coverage/tenant-isolation-db-seed.txt
+            coverage/tenant-isolation-fixtures-redacted.json
+            coverage/tenant-isolation-repository-helper-adoption.json
+            coverage/tenant-isolation-model-coverage.json
+            coverage/tenant-isolation-cross-tenant-read-denial.json
+            coverage/tenant-isolation-cross-tenant-write-denial.json
+            coverage/tenant-isolation-missing-tenant-write-rejection.json
+            coverage/tenant-isolation-audit-rows-redacted.json
+            coverage/tenant-isolation-fixture-cleanup.json
+            coverage/tenant-isolation-database-evidence-redacted.json
+            coverage/tenant-isolation-ci-evidence.json
+            coverage/tenant-isolation-secret-safe-artifacts.json
+            test-results/tenant-isolation-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 2 seed runtime execution contracts
+        run: pnpm --filter @inkroute/db test && pnpm vitest run apps/web/tests/seed-runtime-execution-static.test.ts
+
+      - name: Upload Phase 2 seed runtime execution artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed-runtime-execution-artifacts
+          path: |
+            coverage/seed-runtime-execution.json
+            coverage/seed-readiness-verifier-output.txt
+            coverage/seed-fake-data-legal-placeholder-proof.json
+            coverage/seed-production-provider-ban.json
+            coverage/seed-postgres-provisioning-redacted.json
+            coverage/seed-database-url-redacted.json
+            coverage/seed-prisma-validate-output.txt
+            coverage/seed-prisma-generate-output.txt
+            coverage/seed-prisma-migrate-output.txt
+            coverage/seed-command-output.txt
+            coverage/seeded-tenant-query.json
+            coverage/seeded-tenant-members-query.json
+            coverage/seeded-booking-workflow-query.json
+            coverage/seeded-payments-files-messages-query.json
+            coverage/seeded-seo-release-flags-query.json
+            coverage/seeded-audit-logs-query.json
+            coverage/seed-web-api-smoke.json
+            coverage/seed-dashboard-smoke.json
+            coverage/seed-command-transcript-redacted.log
+            coverage/seed-ci-clean-checkout-evidence.json
+            test-results/seed-runtime-execution
+          if-no-files-found: warn
+
+      - name: Run Phase 2 Prisma lifecycle runtime contracts
+        run: pnpm --filter @inkroute/db test && pnpm vitest run apps/web/tests/prisma-lifecycle-runtime-static.test.ts
+
+      - name: Upload Phase 2 Prisma lifecycle runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prisma-lifecycle-runtime-artifacts
+          path: |
+            coverage/prisma-lifecycle-runtime.json
+            coverage/prisma-validate-output.txt
+            coverage/prisma-generate-output.txt
+            coverage/prisma-migrate-output.txt
+            coverage/prisma-seed-readiness-output.txt
+            coverage/prisma-seed-output.txt
+            coverage/prisma-migration-sql-review.json
+            coverage/prisma-drift-check-output.txt
+            coverage/prisma-production-url-guard.json
+            coverage/prisma-db-lifecycle-ci-job.json
+            test-results/prisma-lifecycle-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 1 provider session runtime contracts
+        run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/provider-session-runtime-static.test.ts
+
+      - name: Upload Phase 1 provider session runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-session-runtime-artifacts
+          path: |
+            coverage/provider-session-runtime.json
+            coverage/provider-session-auth-typecheck.txt
+            coverage/provider-session-auth-test.txt
+            coverage/provider-session-provider-env-redacted.json
+            coverage/provider-session-login-callback.json
+            coverage/provider-session-logout-callback.json
+            coverage/provider-session-callback-tenant-lookup.json
+            coverage/provider-session-persistence.json
+            coverage/provider-session-security-controls.json
+            coverage/provider-session-audit-log.json
+            coverage/provider-session-tenant-isolation-smoke.json
+            coverage/provider-session-mobile-revocation-smoke.json
+            test-results/provider-session-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 7 Stripe Checkout runtime contracts
+        run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/stripe-checkout-runtime-static.test.ts apps/web/tests/stripe-checkout-static.test.ts
+
+      - name: Upload Phase 7 Stripe Checkout runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stripe-checkout-runtime-artifacts
+          path: |
+            coverage/stripe-checkout-runtime.json
+            coverage/stripe-checkout-payments-typecheck.txt
+            coverage/stripe-checkout-payments-test.txt
+            coverage/stripe-checkout-web-typecheck.txt
+            coverage/stripe-checkout-route-tests.json
+            coverage/stripe-checkout-sdk-config-redacted.json
+            coverage/stripe-checkout-secret-store-redacted.json
+            coverage/stripe-checkout-api-version.json
+            coverage/stripe-checkout-signed-token-auth.json
+            coverage/stripe-checkout-idempotency-before-provider.json
+            coverage/stripe-checkout-provider-session-persistence.json
+            coverage/stripe-checkout-payment-audit-log.json
+            coverage/stripe-checkout-tenant-transaction.json
+            coverage/stripe-checkout-redirect-allowlist.json
+            coverage/stripe-checkout-safe-browser-response.json
+            coverage/stripe-checkout-invalid-expired-token.json
+            coverage/stripe-checkout-webhook-reconciliation.json
+            coverage/stripe-checkout-test-mode-provider-redacted.json
+            coverage/stripe-checkout-secret-safe-artifacts.json
+            test-results/stripe-checkout-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 7 Stripe webhook runtime contracts
+        run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/stripe-webhook-runtime-static.test.ts apps/web/tests/stripe-webhook-static.test.ts
+
+      - name: Upload Phase 7 Stripe webhook runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stripe-webhook-runtime-artifacts
+          path: |
+            coverage/stripe-webhook-runtime.json
+            coverage/stripe-webhook-payments-typecheck.txt
+            coverage/stripe-webhook-payments-test.txt
+            coverage/stripe-webhook-web-typecheck.txt
+            coverage/stripe-webhook-route-tests.json
+            coverage/stripe-webhook-construct-event-raw-body-redacted.json
+            coverage/stripe-webhook-secret-redacted.json
+            coverage/stripe-webhook-invalid-stale-signatures.json
+            coverage/stripe-webhook-replay-protection.json
+            coverage/stripe-webhook-supported-events.json
+            coverage/stripe-webhook-provider-object-fetch.json
+            coverage/stripe-webhook-tenant-resolution.json
+            coverage/stripe-webhook-payment-persistence.json
+            coverage/stripe-webhook-audit-log.json
+            coverage/stripe-webhook-booking-state-event.json
+            coverage/stripe-webhook-tenant-transaction.json
+            coverage/stripe-webhook-amount-currency-mismatch.json
+            coverage/stripe-webhook-cli-replay-redacted.json
+            coverage/stripe-webhook-secret-safe-artifacts.json
+            test-results/stripe-webhook-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 7 live Stripe payments runtime contracts
+        run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/live-stripe-payments-runtime-static.test.ts
+
+      - name: Upload Phase 7 live Stripe payments runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-stripe-payments-runtime-artifacts
+          path: |
+            coverage/live-stripe-payments-runtime.json
+            coverage/live-stripe-payments-typecheck.txt
+            coverage/live-stripe-payments-test.txt
+            coverage/live-stripe-payment-routes-test.txt
+            coverage/live-stripe-sdk-config-redacted.json
+            coverage/live-stripe-checkout-provider-call.json
+            coverage/live-stripe-webhook-lifecycle.json
+            coverage/live-stripe-db-reconciliation.json
+            coverage/live-stripe-refund-dispute-workflows.json
+            coverage/live-stripe-cli-lifecycle.json
+            coverage/live-stripe-booking-to-paid-e2e.json
+            coverage/live-stripe-ci-payment-evidence.json
+            coverage/live-stripe-secret-safe-artifacts.json
+            test-results/live-stripe-payments-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 1 provider storage upload runtime contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/provider-storage-upload-runtime-static.test.ts
+
+      - name: Upload Phase 1 provider storage upload runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-storage-upload-runtime-artifacts
+          path: |
+            coverage/provider-storage-upload-runtime.json
+            coverage/provider-storage-security-typecheck.txt
+            coverage/provider-storage-security-test.txt
+            coverage/provider-storage-web-typecheck.txt
+            coverage/provider-storage-upload-route-test.txt
+            coverage/provider-storage-config-redacted.json
+            coverage/provider-storage-bucket-policy.json
+            coverage/provider-storage-signed-url-provider.json
+            coverage/provider-storage-fileasset-persistence.json
+            coverage/provider-storage-scan-derivative-worker.json
+            coverage/provider-storage-private-original-denial.json
+            coverage/provider-storage-tenant-isolation.json
+            coverage/provider-storage-retention.json
+            coverage/provider-storage-ci-evidence.json
+            coverage/provider-storage-secret-safe-artifacts.json
+            test-results/provider-storage-upload-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 3 public web launch runtime contracts
+        run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/web/tests/public-web-launch-runtime-static.test.ts
+      - name: Upload Phase 3 public web launch runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-web-launch-runtime-artifacts
+          path: |
+            coverage/public-web-launch-runtime.json
+            coverage/public-web-typecheck.txt
+            coverage/public-web-build.txt
+            coverage/public-web-test.txt
+            coverage/public-web-route-smoke.json
+            coverage/public-web-playwright-desktop.json
+            coverage/public-web-playwright-mobile.json
+            coverage/public-web-axe-audit.json
+            coverage/public-web-lighthouse.json
+            coverage/public-web-provider-routes.json
+            coverage/public-web-media-derivatives.json
+            coverage/public-web-runtime-seo.json
+            coverage/public-web-legal-routes.json
+            coverage/public-web-ci-evidence.json
+            coverage/public-web-secret-safe-artifacts.json
+            test-results/public-web-launch-runtime
+          if-no-files-found: warn
+      - name: Run Phase 5 dashboard auth guard runtime contracts
+        run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/dashboard/tests/dashboard-auth-guard-runtime-static.test.ts
+
+      - name: Upload Phase 5 dashboard auth guard runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-auth-guard-runtime-artifacts
+          path: |
+            coverage/dashboard-auth-guard-runtime.json
+            coverage/dashboard-auth-auth-typecheck.txt
+            coverage/dashboard-auth-auth-test.txt
+            coverage/dashboard-auth-dashboard-typecheck.txt
+            coverage/dashboard-auth-dashboard-build.txt
+            coverage/dashboard-auth-middleware-guard.json
+            coverage/dashboard-auth-layout-guard.json
+            coverage/dashboard-auth-api-helper-guard.json
+            coverage/dashboard-auth-provider-session-redacted.json
+            coverage/dashboard-auth-tenantmember-customrole-redacted.json
+            coverage/dashboard-auth-unauthorized-states.json
+            coverage/dashboard-auth-auditlog-redacted.json
+            coverage/dashboard-auth-browser-login-logout.json
+            coverage/dashboard-auth-browser-tenant-switch.json
+            coverage/dashboard-auth-browser-cross-tenant-denial.json
+            coverage/dashboard-auth-no-store-cache.json
+            coverage/dashboard-auth-ci-evidence.json
+            coverage/dashboard-auth-secret-safe-artifacts.json
+            test-results/dashboard-auth-guard-runtime
+          if-no-files-found: warn
+      - name: Run Phase 5 dashboard data layer runtime contracts
+        run: pnpm --filter @inkroute/config test && pnpm vitest run apps/dashboard/tests/dashboard-data-layer-runtime-static.test.ts apps/dashboard/tests/booking-state-route-static.test.ts apps/dashboard/tests/client-read-route-static.test.ts apps/dashboard/tests/payment-read-route-static.test.ts apps/dashboard/tests/portfolio-read-route-static.test.ts apps/dashboard/tests/travel-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/seo-read-route-static.test.ts apps/dashboard/tests/settings-read-route-static.test.ts apps/dashboard/tests/calendar-read-route-static.test.ts apps/dashboard/tests/review-read-route-static.test.ts
+
+      - name: Upload Phase 5 dashboard data layer runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-data-layer-runtime-artifacts
+          path: |
+            coverage/dashboard-data-layer-runtime.json
+            coverage/dashboard-data-config-typecheck.txt
+            coverage/dashboard-data-config-test.txt
+            coverage/dashboard-data-dashboard-typecheck.txt
+            coverage/dashboard-data-dashboard-build.txt
+            coverage/dashboard-data-prisma-loader-matrix.json
+            coverage/dashboard-data-route-wiring-matrix.json
+            coverage/dashboard-data-static-demo-removal.json
+            coverage/dashboard-data-seeded-db-smoke.json
+            coverage/dashboard-data-tenant-isolation.json
+            coverage/dashboard-data-rbac-redaction.json
+            coverage/dashboard-data-sensitive-read-auditlog.json
+            coverage/dashboard-data-no-store-cache.json
+            coverage/dashboard-data-ci-evidence.json
+            coverage/dashboard-data-secret-safe-artifacts.json
+            test-results/dashboard-data-layer-runtime
+          if-no-files-found: warn
+      - name: Run Phase 5 dashboard mutation runtime contracts
+        run: pnpm --filter @inkroute/booking test && pnpm vitest run apps/dashboard/tests/dashboard-mutation-runtime-static.test.ts apps/dashboard/tests/booking-state-route-static.test.ts
+
+      - name: Upload Phase 5 dashboard mutation runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-mutation-runtime-artifacts
+          path: |
+            coverage/dashboard-mutation-runtime.json
+            coverage/dashboard-mutation-booking-typecheck.txt
+            coverage/dashboard-mutation-booking-test.txt
+            coverage/dashboard-mutation-dashboard-typecheck.txt
+            coverage/dashboard-mutation-dashboard-build.txt
+            coverage/dashboard-mutation-action-route-matrix.json
+            coverage/dashboard-mutation-server-action-matrix.json
+            coverage/dashboard-mutation-booking-state-route.json
+            coverage/dashboard-mutation-prisma-transactions.json
+            coverage/dashboard-mutation-idempotency.json
+            coverage/dashboard-mutation-auditlog.json
+            coverage/dashboard-mutation-tenant-rbac-denial.json
+            coverage/dashboard-mutation-provider-rollback-retry.json
+            coverage/dashboard-mutation-gated-ui-feedback.json
+            coverage/dashboard-mutation-ci-evidence.json
+            coverage/dashboard-mutation-secret-safe-artifacts.json
+            test-results/dashboard-mutation-runtime
+          if-no-files-found: warn
+      - name: Run Phase 5 dashboard build/runtime verification contracts
+        run: pnpm vitest run apps/dashboard/tests/dashboard-build-runtime-static.test.ts
+
+      - name: Upload Phase 5 dashboard build/runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-build-runtime-artifacts
+          path: |
+            coverage/dashboard-build-runtime.json
+            coverage/dashboard-install-output.txt
+            coverage/dashboard-next-react-types.txt
+            coverage/dashboard-typecheck.txt
+            coverage/dashboard-build.txt
+            coverage/dashboard-test.txt
+            coverage/dashboard-browser-home.json
+            coverage/dashboard-browser-bookings.json
+            coverage/dashboard-browser-clients.json
+            coverage/dashboard-browser-payments.json
+            coverage/dashboard-browser-portfolio.json
+            coverage/dashboard-browser-travel.json
+            coverage/dashboard-browser-messages.json
+            coverage/dashboard-browser-settings.json
+            coverage/dashboard-next15-runtime-smoke.json
+            coverage/dashboard-build-ci-evidence.json
+            coverage/dashboard-build-secret-safe-artifacts.json
+            test-results/dashboard-build-runtime
+          if-no-files-found: warn
+      - name: Run Phase 5 dashboard privacy runtime contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/dashboard/tests/dashboard-privacy-runtime-static.test.ts apps/dashboard/tests/security-privacy-route-static.test.ts apps/dashboard/tests/security-trust-route-static.test.ts
+
+      - name: Upload Phase 5 dashboard privacy runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-privacy-runtime-artifacts
+          path: |
+            coverage/dashboard-privacy-runtime.json
+            coverage/dashboard-privacy-security-typecheck.txt
+            coverage/dashboard-privacy-security-test.txt
+            coverage/dashboard-privacy-dashboard-typecheck.txt
+            coverage/dashboard-privacy-dashboard-build.txt
+            coverage/dashboard-privacy-route-projection-matrix.json
+            coverage/dashboard-privacy-route-tests.json
+            coverage/dashboard-privacy-request-store.json
+            coverage/dashboard-privacy-export-workflow.json
+            coverage/dashboard-privacy-delete-anonymize-workflow.json
+            coverage/dashboard-privacy-private-file-deletion.json
+            coverage/dashboard-privacy-auditlog-redacted.json
+            coverage/dashboard-privacy-sanitized-logs.json
+            coverage/dashboard-privacy-sanitized-errors.json
+            coverage/dashboard-privacy-legal-approval-redacted.json
+            coverage/dashboard-privacy-ci-evidence.json
+            coverage/dashboard-privacy-secret-safe-artifacts.json
+            test-results/dashboard-privacy-runtime
+          if-no-files-found: warn
+      - name: Run Phase 5 dashboard test execution runtime contracts
+        run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/dashboard/tests/dashboard-test-runtime-static.test.ts apps/dashboard/tests/dashboard-auth-guard-runtime-static.test.ts apps/dashboard/tests/dashboard-data-layer-runtime-static.test.ts apps/dashboard/tests/dashboard-mutation-runtime-static.test.ts apps/dashboard/tests/dashboard-build-runtime-static.test.ts
+
+      - name: Upload Phase 5 dashboard test execution runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-test-runtime-artifacts
+          path: |
+            coverage/dashboard-test-runtime.json
+            coverage/dashboard-test-testing-typecheck.txt
+            coverage/dashboard-test-testing-test.txt
+            coverage/dashboard-test-dashboard-typecheck.txt
+            coverage/dashboard-test-dashboard-build.txt
+            coverage/dashboard-test-dashboard-unit.txt
+            coverage/dashboard-test-route-rendering.json
+            coverage/dashboard-test-auth-rbac-tenant.json
+            coverage/dashboard-test-booking-mutation-lifecycle.json
+            coverage/dashboard-test-provider-safe-states.json
+            coverage/dashboard-test-axe-accessibility.json
+            coverage/dashboard-test-keyboard-navigation.json
+            coverage/dashboard-test-playwright-critical-flow.json
+            coverage/dashboard-test-ci-artifacts.json
+            coverage/dashboard-test-branch-protection.json
+            coverage/dashboard-test-flaky-policy.json
+            coverage/dashboard-test-secret-safe-artifacts.json
+            test-results/dashboard-test-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 5 dashboard launch runtime contracts
+        run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/dashboard-launch-runtime-static.test.ts
+
+      - name: Upload Phase 5 dashboard launch runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-launch-runtime-artifacts
+          path: |
+            coverage/dashboard-launch-runtime.json
+            coverage/dashboard-typecheck.txt
+            coverage/dashboard-build.txt
+            coverage/dashboard-test.txt
+            coverage/dashboard-playwright-smoke.json
+            coverage/dashboard-seeded-tenant-data.json
+            coverage/dashboard-provider-auth-smoke.json
+            coverage/dashboard-tenant-scoped-apis.json
+            coverage/dashboard-prisma-repositories.json
+            coverage/dashboard-mutation-auditlog.json
+            coverage/dashboard-rbac-cross-tenant-denial.json
+            coverage/dashboard-field-redaction.json
+            coverage/dashboard-loading-empty-error-states.json
+            coverage/dashboard-ci-evidence.json
+            coverage/dashboard-secret-safe-artifacts.json
+            test-results/dashboard-launch-runtime
+          if-no-files-found: warn
+      - name: Run Phase 6 mobile auth runtime contracts
+        run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/mobile/tests/mobile-auth-runtime-static.test.ts apps/mobile/tests/mobile-auth-static.test.ts
+
+      - name: Upload Phase 6 mobile auth runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-auth-runtime-artifacts
+          path: |
+            coverage/mobile-auth-runtime.json
+            coverage/mobile-auth-auth-typecheck.txt
+            coverage/mobile-auth-auth-test.txt
+            coverage/mobile-auth-app-typecheck.txt
+            coverage/mobile-auth-app-test.txt
+            coverage/mobile-auth-provider-login-logout-redacted.json
+            coverage/mobile-auth-securestore-redacted.json
+            coverage/mobile-auth-biometric-device-redacted.json
+            coverage/mobile-auth-refresh-logout-revocation.json
+            coverage/mobile-auth-tenant-role-denial.json
+            coverage/mobile-auth-auditlog-redacted.json
+            coverage/mobile-auth-ios-android-smoke-redacted.json
+            coverage/mobile-auth-secret-safe-artifacts.json
+            test-results/mobile-auth-runtime
+          if-no-files-found: warn
+      - name: Run Phase 6 mobile API sync runtime contracts
+        run: pnpm --filter @inkroute/mobile-support test && pnpm vitest run apps/mobile/tests/mobile-api-runtime-static.test.ts apps/mobile/tests/mobile-api-client-static.test.ts
+
+      - name: Upload Phase 6 mobile API sync runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-api-runtime-artifacts
+          path: |
+            coverage/mobile-api-runtime.json
+            coverage/mobile-api-support-typecheck.txt
+            coverage/mobile-api-support-test.txt
+            coverage/mobile-api-app-typecheck.txt
+            coverage/mobile-api-app-test.txt
+            coverage/mobile-api-client-contract.json
+            coverage/mobile-api-provider-token-exchange-redacted.json
+            coverage/mobile-api-screen-domain-matrix.json
+            coverage/mobile-api-static-data-replacement.json
+            coverage/mobile-api-seeded-smoke.json
+            coverage/mobile-api-expired-auth-denial.json
+            coverage/mobile-api-cross-tenant-denial.json
+            coverage/mobile-api-offline-idempotency.json
+            coverage/mobile-api-offline-replay.json
+            coverage/mobile-api-ios-android-smoke-redacted.json
+            coverage/mobile-api-secret-safe-artifacts.json
+            test-results/mobile-api-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 6 mobile offline sync runtime contracts
+        run: pnpm --filter @inkroute/mobile-support test && pnpm vitest run apps/mobile/tests/offline-sync-runtime-static.test.ts apps/mobile/tests/offline-sync-static.test.ts
+
+      - name: Upload Phase 6 mobile offline sync runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-offline-sync-runtime-artifacts
+          path: |
+            coverage/mobile-offline-sync-runtime.json
+            coverage/mobile-offline-sync-support-typecheck.txt
+            coverage/mobile-offline-sync-support-test.txt
+            coverage/mobile-offline-sync-app-typecheck.txt
+            coverage/mobile-offline-sync-app-test.txt
+            coverage/mobile-offline-sync-adapter-contract.json
+            coverage/mobile-offline-sync-encrypted-store-redacted.json
+            coverage/mobile-offline-sync-at-rest-proof-redacted.json
+            coverage/mobile-offline-sync-device-restart.json
+            coverage/mobile-offline-sync-reconnect-worker.json
+            coverage/mobile-offline-sync-retry-backoff.json
+            coverage/mobile-offline-sync-conflict-resolution.json
+            coverage/mobile-offline-sync-server-conflict-tests.json
+            coverage/mobile-offline-sync-idempotency-persistence.json
+            coverage/mobile-offline-sync-audit-persistence.json
+            coverage/mobile-offline-sync-airplane-mode-redacted.json
+            coverage/mobile-offline-sync-secret-safe-artifacts.json
+            test-results/mobile-offline-sync-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 6 mobile OTA updates runtime contracts
+        run: pnpm --filter @inkroute/releases test && pnpm vitest run apps/mobile/tests/mobile-updates-runtime-static.test.ts apps/mobile/tests/mobile-updates-static.test.ts
+
+      - name: Upload Phase 6 mobile OTA updates runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-updates-runtime-artifacts
+          path: |
+            coverage/mobile-updates-runtime.json
+            coverage/mobile-updates-releases-typecheck.txt
+            coverage/mobile-updates-releases-test.txt
+            coverage/mobile-updates-app-typecheck.txt
+            coverage/mobile-updates-app-config-project.json
+            coverage/mobile-updates-eas-json-channels.json
+            coverage/mobile-updates-credentials-redacted.json
+            coverage/mobile-updates-preview-native-build-redacted.json
+            coverage/mobile-updates-production-native-build-redacted.json
+            coverage/mobile-updates-preview-ota-publish-redacted.json
+            coverage/mobile-updates-device-receipt-redacted.json
+            coverage/mobile-updates-rollback-republish-redacted.json
+            coverage/mobile-updates-compatibility-check.json
+            coverage/mobile-updates-adoption-monitoring.json
+            coverage/mobile-updates-release-health-monitoring.json
+            coverage/mobile-updates-secret-safe-artifacts.json
+            test-results/mobile-updates-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 6 mobile QA runtime contracts
+        run: pnpm --filter @inkroute/mobile-support test && pnpm vitest run apps/mobile/tests/mobile-qa-runtime-static.test.ts apps/mobile/tests/mobile-qa-static.test.ts
+
+      - name: Upload Phase 6 mobile QA runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-qa-runtime-artifacts
+          path: |
+            coverage/mobile-qa-runtime.json
+            coverage/mobile-qa-support-typecheck.txt
+            coverage/mobile-qa-support-test.txt
+            coverage/mobile-qa-app-typecheck.txt
+            coverage/mobile-qa-app-test.txt
+            coverage/mobile-qa-component-render.json
+            coverage/mobile-qa-ios-simulator-redacted.json
+            coverage/mobile-qa-android-emulator-redacted.json
+            coverage/mobile-qa-physical-device-redacted.json
+            coverage/mobile-qa-accessibility.json
+            coverage/mobile-qa-offline-reconnect-redacted.json
+            coverage/mobile-qa-push-redacted.json
+            coverage/mobile-qa-crash-redacted.json
+            coverage/mobile-qa-ota-rollback-redacted.json
+            coverage/mobile-qa-manifest-sync.json
+            coverage/mobile-qa-ci-hooks.json
+            coverage/mobile-qa-artifact-retention.json
+            coverage/mobile-qa-secret-safe-artifacts.json
+            test-results/mobile-qa-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 6 mobile launch runtime contracts
+        run: pnpm --filter @inkroute/mobile-support test && pnpm vitest run apps/web/tests/mobile-launch-runtime-static.test.ts
+
+      - name: Upload Phase 6 mobile launch runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-launch-runtime-artifacts
+          path: |
+            coverage/mobile-launch-runtime.json
+            coverage/mobile-support-typecheck.txt
+            coverage/mobile-support-test.txt
+            coverage/mobile-app-typecheck.txt
+            coverage/mobile-app-test.txt
+            coverage/mobile-expo-runtime.json
+            coverage/mobile-ios-simulator-smoke.json
+            coverage/mobile-android-emulator-smoke.json
+            coverage/mobile-eas-preview-build.json
+            coverage/mobile-eas-preview-update.json
+            coverage/mobile-auth-api-push-offline-qa.json
+            coverage/mobile-upload-crash-ota-qa.json
+            coverage/mobile-physical-device-qa.json
+            coverage/mobile-accessibility-qa.json
+            coverage/mobile-ci-evidence.json
+            coverage/mobile-secret-safe-artifacts.json
+            test-results/mobile-launch-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 8 calendar launch runtime contracts
+        run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/web/tests/calendar-launch-runtime-static.test.ts
+
+      - name: Upload Phase 8 calendar launch runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calendar-launch-runtime-artifacts
+          path: |
+            coverage/calendar-launch-runtime.json
+            coverage/calendar-typecheck.txt
+            coverage/calendar-test.txt
+            coverage/calendar-postgres-availability.json
+            coverage/calendar-concurrent-hold-race.json
+            coverage/calendar-tenant-isolation.json
+            coverage/calendar-google-oauth-redacted.json
+            coverage/calendar-google-freebusy-sync.json
+            coverage/calendar-google-push-incremental.json
+            coverage/calendar-signed-ics-token-route.json
+            coverage/calendar-ics-client-imports.json
+            coverage/calendar-timezone-provider-matrix.json
+            coverage/calendar-travel-publish-cache.json
+            coverage/calendar-dashboard-public-smoke.json
+            coverage/calendar-ci-evidence.json
+            coverage/calendar-secret-safe-artifacts.json
+            test-results/calendar-launch-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 9 notification launch runtime contracts
+        run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/web/tests/notification-launch-runtime-static.test.ts
+
+      - name: Upload Phase 9 notification launch runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notification-launch-runtime-artifacts
+          path: |
+            coverage/notification-launch-runtime.json
+            coverage/notification-typecheck.txt
+            coverage/notification-test.txt
+            coverage/notification-provider-sandbox.json
+            coverage/notification-resend-sandbox.json
+            coverage/notification-twilio-sandbox.json
+            coverage/notification-expo-push-device.json
+            coverage/notification-queue-worker.json
+            coverage/notification-persistence.json
+            coverage/notification-preference-suppression.json
+            coverage/notification-webhook-signature-replay.json
+            coverage/notification-retry-dead-letter.json
+            coverage/notification-tenant-isolation.json
+            coverage/notification-redaction-privacy.json
+            coverage/notification-ci-evidence.json
+            coverage/notification-secret-safe-artifacts.json
+            test-results/notification-launch-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 18 workspace runtime readiness
-        run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness || true
+        run: pnpm workspace:imports && pnpm workspace:scripts && pnpm workspace:readiness && pnpm workspace:runtime-evidence && pnpm workspace:required-checks && pnpm workspace:toolchain
+      - name: Run Phase 17 quality gate runtime contracts
+        run: pnpm --filter @inkroute/quality test && pnpm vitest run apps/web/tests/quality-gate-runtime-static.test.ts
+
+      - name: Upload Phase 17 quality gate runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-gate-runtime-artifacts
+          path: |
+            coverage/quality-gate-runtime.json
+            coverage/quality-package-typecheck.txt
+            coverage/quality-package-test.txt
+            coverage/quality-docs-output.txt
+            coverage/quality-gaps-output.txt
+            coverage/quality-pr-gap-fixtures-output.txt
+            coverage/quality-governance-output.txt
+            coverage/quality-required-checks-output.txt
+            coverage/quality-gates-output.txt
+            coverage/quality-all-output.txt
+            coverage/quality-ci-job.json
+            test-results/quality-gate-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 16 documentation audit runtime contracts
+        run: pnpm --filter @inkroute/quality test && pnpm vitest run apps/web/tests/documentation-audit-runtime-static.test.ts
+
+      - name: Upload Phase 16 documentation audit runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-audit-runtime-artifacts
+          path: |
+            coverage/documentation-audit-runtime.json
+            coverage/documentation-link-audit-output.txt
+            coverage/documentation-consistency-output.txt
+            coverage/documentation-inventory-output.txt
+            coverage/documentation-provider-review-redacted.json
+            coverage/documentation-legal-review-redacted.json
+            coverage/documentation-stale-provider-status-redacted.json
+            coverage/documentation-ci-quality-docs.json
+            test-results/documentation-audit-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 16 repository governance runtime contracts
+        run: pnpm --filter @inkroute/quality test && pnpm vitest run apps/web/tests/repository-governance-runtime-static.test.ts
+
+      - name: Upload Phase 16 repository governance runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repository-governance-runtime-artifacts
+          path: |
+            coverage/repository-governance-runtime.json
+            coverage/repository-governance-audit-output.txt
+            coverage/repository-governance-quality-all-output.txt
+            coverage/repository-branch-protection-redacted.json
+            coverage/repository-required-checks-redacted.json
+            coverage/repository-codeowners-review-redacted.json
+            coverage/repository-security-settings-redacted.json
+            coverage/repository-merge-rules-redacted.json
+            coverage/repository-enforcement-test-pr-redacted.json
+            test-results/repository-governance-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 17 required checks runtime contracts
+        run: pnpm --filter @inkroute/quality test && pnpm vitest run apps/web/tests/required-checks-runtime-static.test.ts
+
+      - name: Upload Phase 17 required checks runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: required-checks-runtime-artifacts
+          path: |
+            coverage/required-checks-runtime.json
+            coverage/required-checks-audit-output.txt
+            coverage/required-checks-quality-all-output.txt
+            coverage/required-checks-branch-protection-redacted.json
+            coverage/required-checks-repository-settings-redacted.json
+            coverage/required-checks-failing-pr-redacted.json
+            coverage/required-checks-codeowners-review-redacted.json
+            test-results/required-checks-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 17 semantic documentation runtime contracts
+        run: pnpm --filter @inkroute/quality test && pnpm vitest run apps/web/tests/semantic-documentation-runtime-static.test.ts
+
+      - name: Upload Phase 17 semantic documentation runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semantic-documentation-runtime-artifacts
+          path: |
+            coverage/semantic-documentation-runtime.json
+            coverage/semantic-documentation-link-path-output.txt
+            coverage/semantic-documentation-consistency-output.txt
+            coverage/semantic-documentation-inventory-output.txt
+            coverage/semantic-documentation-ci-quality-docs.json
+            coverage/semantic-documentation-runtime-proof-boundary.json
+            coverage/semantic-documentation-provider-proof-boundary.json
+            coverage/semantic-documentation-legal-review-boundary.json
+            test-results/semantic-documentation-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 1 legal review runtime contracts
+        run: pnpm --filter @inkroute/quality test && pnpm vitest run apps/web/tests/legal-review-runtime-static.test.ts
+
+      - name: Upload Phase 1 legal review runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legal-review-runtime-artifacts
+          path: |
+            coverage/legal-review-runtime.json
+            coverage/legal-review-audit-output.txt
+            coverage/legal-review-quality-gates-output.txt
+            coverage/legal-review-quality-all-output.txt
+            coverage/legal-review-ci-quality-job.json
+            coverage/legal-review-counsel-approval-redacted.json
+            coverage/legal-review-placeholder-replacement.json
+            coverage/legal-review-privileged-advice-exclusion.json
+            test-results/legal-review-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 7 payment policy legal runtime contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/payment-policy-legal-runtime-static.test.ts
+
+      - name: Upload Phase 7 payment policy legal runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payment-policy-legal-runtime-artifacts
+          path: |
+            coverage/payment-policy-legal-runtime.json
+            coverage/payment-policy-security-typecheck.txt
+            coverage/payment-policy-security-test.txt
+            coverage/payment-policy-web-typecheck.txt
+            coverage/payment-policy-dashboard-typecheck.txt
+            coverage/payment-policy-attorney-approval-redacted.json
+            coverage/payment-policy-tax-approval-redacted.json
+            coverage/payment-policy-approved-copy-diff.json
+            coverage/payment-policy-acceptance-audit.json
+            coverage/payment-policy-versioning.json
+            coverage/payment-policy-e2e-approved-language.json
+            coverage/payment-policy-rollback-plan.json
+            test-results/payment-policy-legal-runtime
+          if-no-files-found: warn
+
       - name: Verify Phase 17 quality gates
         run: pnpm quality:all
       - name: Verify PR GAP tracker diff evidence
@@ -33,8 +1377,1997 @@ jobs:
         run: pnpm quality:pr-gaps
       - run: pnpm typecheck
       - run: pnpm lint
-      - run: pnpm test:unit
+      - name: Run unit tests with coverage
+        run: pnpm test:unit:coverage
+      - name: Run Phase 7 payment persistence runtime contracts
+        run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/dashboard/tests/payment-persistence-runtime-static.test.ts apps/dashboard/tests/payment-persistence-static.test.ts
+
+      - name: Upload Phase 7 payment persistence runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payment-persistence-runtime-artifacts
+          path: |
+            coverage/payment-persistence-runtime.json
+            coverage/payment-persistence-payments-typecheck.txt
+            coverage/payment-persistence-payments-test.txt
+            coverage/payment-persistence-prisma-validate.txt
+            coverage/payment-persistence-repository-contract.json
+            coverage/payment-persistence-tenant-scope.json
+            coverage/payment-persistence-transactions.json
+            coverage/payment-persistence-idempotency.json
+            coverage/payment-persistence-deposit-create.json
+            coverage/payment-persistence-provider-session.json
+            coverage/payment-persistence-paid-failed-transitions.json
+            coverage/payment-persistence-refund-dispute-transitions.json
+            coverage/payment-persistence-audit-log.json
+            coverage/payment-persistence-booking-state-event.json
+            coverage/payment-persistence-cross-tenant-denial.json
+            coverage/payment-persistence-replay-idempotency.json
+            coverage/payment-persistence-seeded-postgres.json
+            coverage/payment-persistence-dashboard-repository-reads.json
+            coverage/payment-persistence-secret-safe-artifacts.json
+            test-results/payment-persistence-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 7 payment operations runtime contracts
+        run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/dashboard/tests/payment-operations-runtime-static.test.ts apps/dashboard/tests/payment-operations-static.test.ts
+
+      - name: Upload Phase 7 payment operations runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payment-operations-runtime-artifacts
+          path: |
+            coverage/payment-operations-runtime.json
+            coverage/payment-operations-payments-typecheck.txt
+            coverage/payment-operations-payments-test.txt
+            coverage/payment-operations-dashboard-typecheck.txt
+            coverage/payment-operations-dashboard-unit-tests.json
+            coverage/payment-operations-authorized-actions.json
+            coverage/payment-operations-stripe-refund-redacted.json
+            coverage/payment-operations-refund-persistence.json
+            coverage/payment-operations-no-show-audit.json
+            coverage/payment-operations-dispute-evidence-redacted.json
+            coverage/payment-operations-dispute-provider-sync-redacted.json
+            coverage/payment-operations-receipt-generation.json
+            coverage/payment-operations-receipt-delivery-redacted.json
+            coverage/payment-operations-accounting-export-redacted.json
+            coverage/payment-operations-tax-accounting-approval-redacted.json
+            coverage/payment-operations-idempotency.json
+            coverage/payment-operations-audit-log.json
+            coverage/payment-operations-tenant-authorization.json
+            coverage/payment-operations-dashboard-e2e-redacted.json
+            coverage/payment-operations-secret-safe-artifacts.json
+            test-results/payment-operations-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 7 payment automation runtime contracts
+        run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/payment-automation-runtime-static.test.ts apps/web/tests/payment-automation-static.test.ts apps/web/tests/payment-routes.test.ts
+
+      - name: Upload Phase 7 payment automation runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payment-automation-runtime-artifacts
+          path: |
+            coverage/payment-automation-runtime.json
+            coverage/payment-automation-payments-typecheck.txt
+            coverage/payment-automation-payments-test.txt
+            coverage/payment-automation-route-boundary.json
+            coverage/payment-automation-stripe-signature.json
+            coverage/payment-automation-stripe-cli-lifecycle-redacted.log
+            coverage/payment-automation-db-reconciliation.json
+            coverage/payment-automation-booking-to-paid-e2e-redacted.json
+            coverage/payment-automation-refund-no-show-dispute.json
+            coverage/payment-automation-receipt-export.json
+            coverage/payment-automation-cross-tenant.json
+            coverage/payment-automation-replay-idempotency.json
+            coverage/payment-automation-ci-job.json
+            coverage/payment-automation-artifact-retention.json
+            coverage/payment-automation-secret-safe-artifacts.json
+            test-results/payment-automation-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 7 payment lifecycle contracts
+        run: pnpm --filter @inkroute/payments test && pnpm vitest run apps/web/tests/payment-routes.test.ts apps/web/tests/stripe-webhook-static.test.ts apps/web/tests/payment-automation-static.test.ts apps/dashboard/tests/payment-operations-static.test.ts apps/dashboard/tests/payment-read-route-static.test.ts
+      - name: Run Phase 8 signed ICS feed runtime contracts
+        run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/web/tests/signed-ics-feed-runtime-static.test.ts apps/web/tests/signed-ics-feed-static.test.ts apps/web/tests/ics-feed-route.test.ts
+
+      - name: Upload Phase 8 signed ICS feed runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-ics-feed-runtime-artifacts
+          path: |
+            coverage/signed-ics-feed-runtime.json
+            coverage/signed-ics-feed-calendar-typecheck.txt
+            coverage/signed-ics-feed-calendar-test.txt
+            coverage/signed-ics-feed-web-typecheck.txt
+            coverage/signed-ics-feed-route-tests.json
+            coverage/signed-ics-feed-token-create-hash.json
+            coverage/signed-ics-feed-token-persistence.json
+            coverage/signed-ics-feed-expiry-rotation.json
+            coverage/signed-ics-feed-revocation-ui.json
+            coverage/signed-ics-feed-revocation-api.json
+            coverage/signed-ics-feed-revoked-route-rejection.json
+            coverage/signed-ics-feed-tenant-artist-scope.json
+            coverage/signed-ics-feed-access-log-persistence.json
+            coverage/signed-ics-feed-cache-headers.json
+            coverage/signed-ics-feed-apple-import-redacted.json
+            coverage/signed-ics-feed-google-import-redacted.json
+            coverage/signed-ics-feed-outlook-import-redacted.json
+            coverage/signed-ics-feed-secret-safe-artifacts.json
+            test-results/signed-ics-feed-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 8 availability persistence runtime contracts
+        run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/dashboard/tests/availability-persistence-runtime-static.test.ts apps/dashboard/tests/availability-persistence-static.test.ts
+
+      - name: Upload Phase 8 availability persistence runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: availability-persistence-runtime-artifacts
+          path: |
+            coverage/availability-persistence-runtime.json
+            coverage/availability-persistence-calendar-typecheck.txt
+            coverage/availability-persistence-calendar-test.txt
+            coverage/availability-persistence-prisma-validate.txt
+            coverage/availability-persistence-schema-models.json
+            coverage/availability-persistence-repository-contract.json
+            coverage/availability-persistence-tenant-scope.json
+            coverage/availability-persistence-window-transaction.json
+            coverage/availability-persistence-slot-hold-transaction.json
+            coverage/availability-persistence-appointment-confirmation.json
+            coverage/availability-persistence-hold-release.json
+            coverage/availability-persistence-audit-log.json
+            coverage/availability-persistence-idempotency.json
+            coverage/availability-persistence-conflict-rows.json
+            coverage/availability-persistence-concurrent-hold.json
+            coverage/availability-persistence-overlap-rejection.json
+            coverage/availability-persistence-cross-tenant-denial.json
+            coverage/availability-persistence-seeded-postgres.json
+            coverage/availability-persistence-dashboard-api-repository.json
+            coverage/availability-persistence-secret-safe-artifacts.json
+            test-results/availability-persistence-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 8 Google Calendar sync runtime contracts
+        run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/dashboard/tests/google-calendar-sync-runtime-static.test.ts apps/dashboard/tests/google-calendar-sync-static.test.ts
+
+      - name: Upload Phase 8 Google Calendar sync runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: google-calendar-sync-runtime-artifacts
+          path: |
+            coverage/google-calendar-sync-runtime.json
+            coverage/google-calendar-sync-calendar-typecheck.txt
+            coverage/google-calendar-sync-calendar-test.txt
+            coverage/google-calendar-sync-sdk-client-redacted.json
+            coverage/google-calendar-sync-oauth-app-redacted.json
+            coverage/google-calendar-sync-oauth-callback-redacted.json
+            coverage/google-calendar-sync-scopes.json
+            coverage/google-calendar-sync-encrypted-token-repository.json
+            coverage/google-calendar-sync-provider-worker.json
+            coverage/google-calendar-sync-freebusy-smoke-redacted.json
+            coverage/google-calendar-sync-event-crud-smoke-redacted.json
+            coverage/google-calendar-sync-full-incremental-sync.json
+            coverage/google-calendar-sync-invalid-token-recovery.json
+            coverage/google-calendar-sync-push-renewal.json
+            coverage/google-calendar-sync-push-webhook.json
+            coverage/google-calendar-sync-retry-backoff.json
+            coverage/google-calendar-sync-idempotency.json
+            coverage/google-calendar-sync-audit-log.json
+            coverage/google-calendar-sync-tenant-isolation.json
+            coverage/google-calendar-sync-test-calendar-artifacts-redacted.json
+            coverage/google-calendar-sync-secret-safe-artifacts.json
+            test-results/google-calendar-sync-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 8 timezone recurrence QA runtime contracts
+        run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/dashboard/tests/timezone-recurrence-qa-runtime-static.test.ts apps/dashboard/tests/timezone-recurrence-qa-static.test.ts
+
+      - name: Upload Phase 8 timezone recurrence runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: timezone-recurrence-runtime-artifacts
+          path: |
+            coverage/timezone-recurrence-runtime.json
+            coverage/timezone-recurrence-calendar-typecheck.txt
+            coverage/timezone-recurrence-calendar-test.txt
+            coverage/timezone-recurrence-strategy.json
+            coverage/timezone-recurrence-temporal-library.json
+            coverage/timezone-recurrence-route-iana-validation.json
+            coverage/timezone-recurrence-persistence-iana-validation.json
+            coverage/timezone-recurrence-utc-plus-timezone-storage.json
+            coverage/timezone-recurrence-dst-spring.json
+            coverage/timezone-recurrence-dst-fall.json
+            coverage/timezone-recurrence-expansion.json
+            coverage/timezone-recurrence-all-day-travel.json
+            coverage/timezone-recurrence-cross-city-render.json
+            coverage/timezone-recurrence-provider-render.json
+            coverage/timezone-recurrence-google-render-redacted.json
+            coverage/timezone-recurrence-ics-render-redacted.json
+            coverage/timezone-recurrence-seeded-persistence.json
+            coverage/timezone-recurrence-secret-safe-artifacts.json
+            test-results/timezone-recurrence-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 8 calendar automation runtime contracts
+        run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/web/tests/calendar-automation-runtime-static.test.ts apps/web/tests/calendar-automation-static.test.ts apps/web/tests/ics-feed-route.test.ts apps/web/tests/availability-preview-route.test.ts
+
+      - name: Upload Phase 8 calendar automation runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calendar-automation-runtime-artifacts
+          path: |
+            coverage/calendar-automation-runtime.json
+            coverage/calendar-automation-calendar-typecheck.txt
+            coverage/calendar-automation-calendar-test.txt
+            coverage/calendar-automation-signed-ics-route.json
+            coverage/calendar-automation-availability-preview-route.json
+            coverage/calendar-automation-postgres-integration.json
+            coverage/calendar-automation-google-provider-redacted.json
+            coverage/calendar-automation-timezone-provider-matrix.json
+            coverage/calendar-automation-dashboard-playwright-redacted.json
+            coverage/calendar-automation-public-travel-playwright-redacted.json
+            coverage/calendar-automation-concurrent-hold-race.json
+            coverage/calendar-automation-signed-ics-revocation-db.json
+            coverage/calendar-automation-ci-job.json
+            coverage/calendar-automation-artifact-retention.json
+            coverage/calendar-automation-secret-safe-artifacts.json
+            test-results/calendar-automation-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 8 travel publish runtime contracts
+        run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/dashboard/tests/travel-publish-runtime-static.test.ts apps/dashboard/tests/travel-publish-static.test.ts
+
+      - name: Upload Phase 8 travel publish runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: travel-publish-runtime-artifacts
+          path: |
+            coverage/travel-publish-runtime.json
+            coverage/travel-publish-calendar-typecheck.txt
+            coverage/travel-publish-calendar-test.txt
+            coverage/travel-publish-dashboard-typecheck.txt
+            coverage/travel-publish-web-typecheck.txt
+            coverage/travel-publish-static-contract.json
+            coverage/travel-publish-repository-integration.json
+            coverage/travel-publish-public-data-api.json
+            coverage/travel-publish-cache-revalidation.json
+            coverage/travel-publish-waitlist-matching.json
+            coverage/travel-publish-notification-provider-redacted.json
+            coverage/travel-publish-mobile-sync.json
+            coverage/travel-publish-dashboard-sync.json
+            coverage/travel-publish-web-sync.json
+            coverage/travel-publish-audit-log.json
+            coverage/travel-publish-rollback.json
+            coverage/travel-publish-tenant-isolation.json
+            coverage/travel-publish-dashboard-public-e2e-redacted.json
+            coverage/travel-publish-ci-evidence.json
+            coverage/travel-publish-secret-safe-artifacts.json
+            test-results/travel-publish-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 8 calendar lifecycle contracts
+        run: pnpm --filter @inkroute/calendar test && pnpm vitest run apps/web/tests/ics-feed-route.test.ts apps/web/tests/availability-preview-route.test.ts apps/web/tests/signed-ics-feed-static.test.ts apps/web/tests/calendar-automation-static.test.ts apps/dashboard/tests/availability-persistence-static.test.ts apps/dashboard/tests/google-calendar-sync-static.test.ts apps/dashboard/tests/timezone-recurrence-qa-static.test.ts apps/dashboard/tests/travel-publish-static.test.ts
+      - name: Upload Vitest coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-coverage
+          path: |
+            coverage/unit
+            coverage/**/*.json
+            coverage/**/*.lcov
+          if-no-files-found: warn
+      - name: Upload payment lifecycle artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payment-lifecycle-artifacts
+          path: |
+            coverage/payment-*.json
+            coverage/stripe-*-redacted.log
+            coverage/playwright-payment-results.json
+            test-results/payments
+          if-no-files-found: warn
+      - name: Upload calendar lifecycle artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calendar-lifecycle-artifacts
+          path: |
+            coverage/calendar-*.json
+            coverage/signed-ics-*.json
+            coverage/google-provider-redacted.json
+            coverage/timezone-provider-matrix.json
+            coverage/playwright-calendar-*.json
+            coverage/playwright-public-travel-results.json
+            test-results/calendar
+            test-results/travel
+          if-no-files-found: warn
+      - name: Run Phase 9 email provider runtime contracts
+        run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/web/tests/email-provider-runtime-static.test.ts apps/web/tests/email-provider-static.test.ts
+
+      - name: Upload Phase 9 email provider runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: email-provider-runtime-artifacts
+          path: |
+            coverage/email-provider-runtime.json
+            coverage/email-provider-notifications-typecheck.txt
+            coverage/email-provider-notifications-test.txt
+            coverage/email-provider-static-contract.json
+            coverage/email-provider-resend-sdk.json
+            coverage/email-provider-domain-verification-redacted.json
+            coverage/email-provider-raw-body-signature.json
+            coverage/email-provider-delivery-persistence.json
+            coverage/email-provider-provider-event-persistence.json
+            coverage/email-provider-suppression-persistence.json
+            coverage/email-provider-sandbox-delivered-redacted.json
+            coverage/email-provider-sandbox-bounced-redacted.json
+            coverage/email-provider-sandbox-complained-redacted.json
+            coverage/email-provider-unsubscribe-suppression.json
+            coverage/email-provider-invalid-signature-route.json
+            coverage/email-provider-ci-evidence.json
+            coverage/email-provider-secret-safe-artifacts.json
+            test-results/email-provider-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 9 SMS provider runtime contracts
+        run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/web/tests/sms-provider-runtime-static.test.ts apps/web/tests/sms-provider-static.test.ts
+
+      - name: Upload Phase 9 SMS provider runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sms-provider-runtime-artifacts
+          path: |
+            coverage/sms-provider-runtime.json
+            coverage/sms-provider-notifications-typecheck.txt
+            coverage/sms-provider-notifications-test.txt
+            coverage/sms-provider-static-contract.json
+            coverage/sms-provider-twilio-sdk.json
+            coverage/sms-provider-messaging-service-redacted.json
+            coverage/sms-provider-consent-copy-approval.json
+            coverage/sms-provider-consent-proof.json
+            coverage/sms-provider-quiet-hours.json
+            coverage/sms-provider-raw-body-signature.json
+            coverage/sms-provider-request-url-validation.json
+            coverage/sms-provider-delivery-persistence.json
+            coverage/sms-provider-provider-event-persistence.json
+            coverage/sms-provider-suppression-persistence.json
+            coverage/sms-provider-inbound-thread-persistence.json
+            coverage/sms-provider-sandbox-sent-redacted.json
+            coverage/sms-provider-sandbox-delivered-redacted.json
+            coverage/sms-provider-sandbox-failed-redacted.json
+            coverage/sms-provider-stop-suppression.json
+            coverage/sms-provider-help-inbound-thread.json
+            coverage/sms-provider-invalid-signature-route.json
+            coverage/sms-provider-ci-evidence.json
+            coverage/sms-provider-secret-safe-artifacts.json
+            test-results/sms-provider-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 9 notification persistence runtime contracts
+        run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/dashboard/tests/notification-persistence-runtime-static.test.ts apps/dashboard/tests/notification-persistence-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts
+
+      - name: Upload Phase 9 notification persistence runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notification-persistence-runtime-artifacts
+          path: |
+            coverage/notification-persistence-runtime.json
+            coverage/notification-persistence-notifications-typecheck.txt
+            coverage/notification-persistence-notifications-test.txt
+            coverage/notification-persistence-dashboard-typecheck.txt
+            coverage/notification-persistence-static-contract.json
+            coverage/notification-persistence-prisma-schema.json
+            coverage/notification-persistence-repository-contract.json
+            coverage/notification-persistence-message-transaction.json
+            coverage/notification-persistence-notification-delivery.json
+            coverage/notification-persistence-audit-log.json
+            coverage/notification-persistence-idempotency-key.json
+            coverage/notification-persistence-read-state.json
+            coverage/notification-persistence-status-transition.json
+            coverage/notification-persistence-provider-worker-handoff.json
+            coverage/notification-persistence-rbac-redaction.json
+            coverage/notification-persistence-tenant-isolation.json
+            coverage/notification-persistence-postgres-integration.json
+            coverage/notification-persistence-ci-evidence.json
+            coverage/notification-persistence-secret-safe-artifacts.json
+            test-results/notification-persistence-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 9 notification scheduler runtime contracts
+        run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/dashboard/tests/notification-scheduler-runtime-static.test.ts apps/dashboard/tests/notification-scheduler-static.test.ts
+
+      - name: Upload Phase 9 notification scheduler runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notification-scheduler-runtime-artifacts
+          path: |
+            coverage/notification-scheduler-runtime.json
+            coverage/notification-scheduler-notifications-typecheck.txt
+            coverage/notification-scheduler-notifications-test.txt
+            coverage/notification-scheduler-dashboard-typecheck.txt
+            coverage/notification-scheduler-static-contract.json
+            coverage/notification-scheduler-queue-backend.json
+            coverage/notification-scheduler-notification-job-persistence.json
+            coverage/notification-scheduler-dead-letter-persistence.json
+            coverage/notification-scheduler-worker-audit-persistence.json
+            coverage/notification-scheduler-idempotency-key.json
+            coverage/notification-scheduler-scheduler-process.json
+            coverage/notification-scheduler-worker-process.json
+            coverage/notification-scheduler-provider-dispatch.json
+            coverage/notification-scheduler-due-job-concurrency.json
+            coverage/notification-scheduler-retry-backoff.json
+            coverage/notification-scheduler-cancellation.json
+            coverage/notification-scheduler-postgres-queue.json
+            coverage/notification-scheduler-ci-evidence.json
+            coverage/notification-scheduler-secret-safe-artifacts.json
+            test-results/notification-scheduler-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 9 provider webhook runtime contracts
+        run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/web/tests/provider-webhook-runtime-static.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/provider-webhook-routes.test.ts
+
+      - name: Upload Phase 9 provider webhook runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-webhook-runtime-artifacts
+          path: |
+            coverage/provider-webhook-runtime.json
+            coverage/provider-webhook-notifications-typecheck.txt
+            coverage/provider-webhook-notifications-test.txt
+            coverage/provider-webhook-route-tests.json
+            coverage/provider-webhook-contract-tests.json
+            coverage/provider-webhook-email-signature.json
+            coverage/provider-webhook-sms-signature.json
+            coverage/provider-webhook-push-receipt-source.json
+            coverage/provider-webhook-provider-event-persistence.json
+            coverage/provider-webhook-exactly-once-delivery.json
+            coverage/provider-webhook-suppression-persistence.json
+            coverage/provider-webhook-inbound-routing.json
+            coverage/provider-webhook-invalid-push-token.json
+            coverage/provider-webhook-failed-alerting.json
+            coverage/provider-webhook-sandbox-replay.json
+            coverage/provider-webhook-concurrent-callbacks.json
+            coverage/provider-webhook-ci-evidence.json
+            coverage/provider-webhook-secret-safe-artifacts.json
+            test-results/provider-webhook-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 9 preference center runtime contracts
+        run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/web/tests/preference-center-runtime-static.test.ts apps/web/tests/preference-center-static.test.ts
+
+      - name: Upload Phase 9 preference center runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preference-center-runtime-artifacts
+          path: |
+            coverage/preference-center-runtime.json
+            coverage/preference-center-notifications-typecheck.txt
+            coverage/preference-center-notifications-test.txt
+            coverage/preference-center-static-contract.json
+            coverage/preference-center-route-api.json
+            coverage/preference-center-dashboard-settings.json
+            coverage/preference-center-token-crypto.json
+            coverage/preference-center-token-hash-persistence.json
+            coverage/preference-center-token-expiry-forgery-reuse.json
+            coverage/preference-center-client-preference-persistence.json
+            coverage/preference-center-suppression-persistence.json
+            coverage/preference-center-tenant-settings-persistence.json
+            coverage/preference-center-audit-log-persistence.json
+            coverage/preference-center-idempotency-key.json
+            coverage/preference-center-list-unsubscribe-provider.json
+            coverage/preference-center-legal-copy-approval.json
+            coverage/preference-center-pre-send-suppression.json
+            coverage/preference-center-ci-evidence.json
+            coverage/preference-center-secret-safe-artifacts.json
+            test-results/preference-center-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 9 messaging privacy runtime contracts
+        run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/dashboard/tests/messaging-privacy-runtime-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts
+
+      - name: Upload Phase 9 messaging privacy runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: messaging-privacy-runtime-artifacts
+          path: |
+            coverage/messaging-privacy-runtime.json
+            coverage/messaging-privacy-notifications-typecheck.txt
+            coverage/messaging-privacy-notifications-test.txt
+            coverage/messaging-privacy-dashboard-typecheck.txt
+            coverage/messaging-privacy-static-contract.json
+            coverage/messaging-privacy-redaction-service.json
+            coverage/messaging-privacy-role-visibility.json
+            coverage/messaging-privacy-api-authorization.json
+            coverage/messaging-privacy-unauthorized-role-denial.json
+            coverage/messaging-privacy-attachment-authorization.json
+            coverage/messaging-privacy-export-workflow.json
+            coverage/messaging-privacy-delete-workflow.json
+            coverage/messaging-privacy-retention-workflow.json
+            coverage/messaging-privacy-retention-job.json
+            coverage/messaging-privacy-provider-payload-omission.json
+            coverage/messaging-privacy-moderation-rate-limit.json
+            coverage/messaging-privacy-audit-log.json
+            coverage/messaging-privacy-idempotency-key.json
+            coverage/messaging-privacy-postgres-retention.json
+            coverage/messaging-privacy-ci-evidence.json
+            coverage/messaging-privacy-secret-safe-artifacts.json
+            test-results/messaging-privacy-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 9 notification automation runtime contracts
+        run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/web/tests/notification-automation-runtime-static.test.ts apps/web/tests/notification-automation-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts
+
+      - name: Upload Phase 9 notification automation runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notification-automation-runtime-artifacts
+          path: |
+            coverage/notification-automation-runtime.json
+            coverage/notification-automation-notifications-typecheck.txt
+            coverage/notification-automation-notifications-test.txt
+            coverage/notification-automation-public-routes.json
+            coverage/notification-automation-provider-webhook-routes.json
+            coverage/notification-automation-queue-integration.json
+            coverage/notification-automation-dashboard-template-smoke-redacted.json
+            coverage/notification-automation-dashboard-message-smoke-redacted.json
+            coverage/notification-automation-mobile-smoke.json
+            coverage/notification-automation-expo-device-qa-redacted.json
+            coverage/notification-automation-provider-email-redacted.json
+            coverage/notification-automation-provider-sms-redacted.json
+            coverage/notification-automation-provider-push-receipt-redacted.json
+            coverage/notification-automation-preference-opt-out.json
+            coverage/notification-automation-sms-stop.json
+            coverage/notification-automation-retention-export-delete.json
+            coverage/notification-automation-booking-deposit-e2e-redacted.json
+            coverage/notification-automation-aftercare-e2e-redacted.json
+            coverage/notification-automation-travel-waitlist-e2e-redacted.json
+            coverage/notification-automation-ci-evidence.json
+            coverage/notification-automation-secret-safe-artifacts.json
+            test-results/notification-automation-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 9 notification and messaging lifecycle contracts
+        run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/email-provider-static.test.ts apps/web/tests/sms-provider-static.test.ts apps/web/tests/preference-center-static.test.ts apps/web/tests/notification-automation-static.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/notification-persistence-static.test.ts apps/dashboard/tests/notification-scheduler-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
+
+      - name: Run Phase 10 SEO publication runtime contracts
+        run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/dashboard/tests/seo-publication-runtime-static.test.ts apps/dashboard/tests/seo-publication-route-static.test.ts apps/dashboard/tests/seo-read-route-static.test.ts
+
+      - name: Upload Phase 10 SEO publication runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-publication-runtime-artifacts
+          path: |
+            coverage/seo-publication-runtime.json
+            coverage/seo-publication-seo-typecheck.txt
+            coverage/seo-publication-seo-test.txt
+            coverage/seo-publication-dashboard-build.txt
+            coverage/seo-publication-static-contract.json
+            coverage/seo-publication-city-prisma.json
+            coverage/seo-publication-style-prisma.json
+            coverage/seo-publication-redirect-prisma.json
+            coverage/seo-publication-tenant-isolation.json
+            coverage/seo-publication-rbac-denial.json
+            coverage/seo-publication-idempotency-store.json
+            coverage/seo-publication-revalidation-job.json
+            coverage/seo-publication-faq-review-image-associations.json
+            coverage/seo-publication-audit-log.json
+            coverage/seo-publication-dashboard-publish-flow-redacted.json
+            coverage/seo-publication-dashboard-edit-flow-redacted.json
+            coverage/seo-publication-dashboard-archive-flow-redacted.json
+            coverage/seo-publication-ci-evidence.json
+            coverage/seo-publication-secret-safe-artifacts.json
+            test-results/seo-publication-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 10 canonical/domain runtime contracts
+        run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/web/tests/canonical-domain-runtime-static.test.ts apps/web/tests/sitemap-route.test.ts
+
+      - name: Upload Phase 10 canonical/domain runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: canonical-domain-runtime-artifacts
+          path: |
+            coverage/canonical-domain-runtime.json
+            coverage/canonical-domain-seo-typecheck.txt
+            coverage/canonical-domain-seo-test.txt
+            coverage/canonical-domain-web-build.txt
+            coverage/canonical-domain-static-contract.json
+            coverage/canonical-domain-tenant-domain-repository.json
+            coverage/canonical-domain-seo-redirect-repository.json
+            coverage/canonical-domain-custom-domain-route.json
+            coverage/canonical-domain-duplicate-canonical-runtime.json
+            coverage/canonical-domain-sitemap-noindex-crawl.json
+            coverage/canonical-domain-deployment-domain-proof.json
+            coverage/canonical-domain-ci-evidence.json
+            coverage/canonical-domain-secret-safe-artifacts.json
+            test-results/canonical-domain-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 10 SEO publication contracts
+        run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/dashboard/tests/seo-read-route-static.test.ts apps/dashboard/tests/seo-publication-route-static.test.ts apps/web/tests/sitemap-route.test.ts apps/web/tests/canonical-domain-runtime-static.test.ts apps/web/tests/structured-data-crawl-qa-static.test.ts
+
+      - name: Run Phase 10 structured-data crawl runtime contracts
+        run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/web/tests/structured-data-crawl-qa-static.test.ts apps/web/tests/sitemap-route.test.ts apps/web/tests/canonical-domain-runtime-static.test.ts
+
+      - name: Upload structured data crawl artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: structured-data-crawl-artifacts
+          path: |
+            coverage/structured-data-crawl.json
+            coverage/rich-results-compatible-report.json
+            coverage/structured-data-secret-safe-artifacts.json
+            coverage/structured-data-ci-evidence.json
+            coverage/structured-data-production-content-decision.json
+            coverage/structured-data-jsonld-extraction.json
+            coverage/structured-data-web-build.txt
+            coverage/sitemap-canonical-noindex-crawl.json
+            coverage/unsupported-schema-review.json
+            coverage/structured-data-closeout.md
+            test-results/structured-data-crawl
+          if-no-files-found: warn
+      - name: Run Phase 10 SEO analytics attribution runtime contracts
+        run: pnpm --filter @inkroute/analytics test && pnpm vitest run apps/web/tests/seo-analytics-attribution-static.test.ts
+
+      - name: Upload SEO analytics attribution artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-analytics-attribution-artifacts
+          path: |
+            coverage/seo-analytics-attribution.json
+            coverage/seo-analytics-secret-safe-artifacts.json
+            coverage/seo-analytics-ci-evidence.json
+            coverage/seo-analytics-booking-attribution-integration.json
+            coverage/search-console-import-credentials-redacted.json
+            coverage/seo-analytics-campaign-persistence.json
+            coverage/seo-analytics-event-persistence.json
+            coverage/seo-analytics-idempotency-store.json
+            coverage/seo-analytics-ingestion-redaction.json
+            coverage/seo-analytics-public-cookie-capture.json
+            coverage/seo-analytics-analytics-test.txt
+            coverage/seo-analytics-analytics-typecheck.txt
+            coverage/seo-analytics-dashboard-report.json
+            coverage/search-console-import-fixture.json
+            coverage/playwright-seo-attribution-results.json
+            test-results/seo-analytics
+          if-no-files-found: warn
+      - name: Run Phase 10 Search Console runtime contracts
+        run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/dashboard/tests/search-console-route-static.test.ts
+
+      - name: Upload Search Console artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: search-console-artifacts
+          path: |
+            coverage/search-console-provider-route.json
+            coverage/search-console-secret-safe-artifacts.json
+            coverage/search-console-ci-evidence.json
+            coverage/search-console-provider-sandbox-redacted.json
+            coverage/search-console-idempotency-store.json
+            coverage/search-console-background-job.json
+            coverage/search-console-imported-row-persistence.json
+            coverage/search-console-verified-property-proof-redacted.json
+            coverage/search-console-required-env-redacted.json
+            coverage/search-console-seo-test.txt
+            coverage/search-console-seo-typecheck.txt
+            coverage/search-console-dashboard-status.json
+            coverage/search-console-import-fixture.json
+            coverage/search-console-sitemap-submission-redacted.json
+            test-results/search-console
+          if-no-files-found: warn
+      - name: Run Phase 10 SEO app runtime and build gate
+        run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm vitest run apps/web/tests/phase10-seo-runtime-build-static.test.ts apps/web/tests/sitemap-route.test.ts apps/web/tests/canonical-domain-runtime-static.test.ts apps/web/tests/structured-data-crawl-qa-static.test.ts apps/dashboard/tests/seo-read-route-static.test.ts apps/dashboard/tests/seo-publication-route-static.test.ts apps/dashboard/tests/search-console-route-static.test.ts
+
+      - name: Upload Phase 10 SEO runtime/build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase10-seo-runtime-build-artifacts
+          path: |
+            coverage/phase10-seo-*.json
+            coverage/phase10-seo-runtime-secret-safe-artifacts.json
+            coverage/phase10-seo-runtime-ci-evidence.json
+            coverage/phase10-search-console-provider-execution-redacted.json
+            coverage/phase10-seo-static-contracts.json
+            coverage/phase10-seo-dashboard-build.json
+            coverage/phase10-seo-web-build.json
+            coverage/phase10-seo-testing-typecheck.txt
+            coverage/phase10-seo-testing-package.json
+            coverage/phase10-dashboard-seo-*.json
+            coverage/phase10-rendered-*.json
+            coverage/phase10-sitemap-runtime.json
+            coverage/phase10-api-preview-runtime.json
+            coverage/phase10-canonical-runtime.json
+            test-results/phase10-seo-web
+            test-results/phase10-seo-dashboard
+            test-results/structured-data-crawl
+          if-no-files-found: warn
+      - name: Run Phase 10 image SEO pipeline runtime contracts
+        run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/dashboard/tests/image-seo-pipeline-static.test.ts
+
+      - name: Upload image SEO pipeline artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-seo-pipeline-artifacts
+          path: |
+            coverage/image-seo-pipeline-plan.json
+            coverage/image-seo-secret-safe-artifacts.json
+            coverage/image-seo-ci-evidence.json
+            coverage/image-seo-audit-log.json
+            coverage/image-seo-fileasset-portfolioimage-persistence.json
+            coverage/image-seo-storage-transform.json
+            coverage/image-seo-seo-test.txt
+            coverage/image-seo-seo-typecheck.txt
+            coverage/image-seo-private-original-acl.json
+            coverage/image-seo-public-derivative-load.json
+            coverage/image-seo-cdn-headers.json
+            coverage/lighthouse-image-seo-audit.json
+            test-results/image-seo-pipeline
+          if-no-files-found: warn
+      - name: Run Phase 10 SEO automated test gate
+        run: pnpm --filter @inkroute/seo test && pnpm --filter @inkroute/seo typecheck && pnpm vitest run apps/web/tests/seo-automated-tests-static.test.ts apps/web/tests/sitemap-route.test.ts apps/web/tests/canonical-domain-runtime-static.test.ts apps/web/tests/structured-data-crawl-qa-static.test.ts apps/web/tests/phase10-seo-runtime-build-static.test.ts apps/dashboard/tests/search-console-route-static.test.ts apps/dashboard/tests/image-seo-pipeline-static.test.ts
+
+      - name: Upload SEO automated test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-automated-test-artifacts
+          path: |
+            coverage/seo-automated-test-gate.json
+            coverage/seo-automated-secret-safe-artifacts.json
+            coverage/seo-automated-ci-evidence.json
+            coverage/seo-automated-linked-gap076-runtime-build.json
+            coverage/seo-automated-linked-gap073-crawl.json
+            coverage/seo-automated-route-contracts.json
+            coverage/seo-automated-seo-package-typecheck.txt
+            coverage/seo-automated-seo-package-test.txt
+            coverage/phase10-seo-*.json
+            coverage/structured-data-crawl.json
+            coverage/image-seo-pipeline-plan.json
+            coverage/search-console-provider-route.json
+            test-results/seo-automated
+          if-no-files-found: warn
+      - name: Run Phase 11 observability runtime verification contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/observability-runtime-verification-static.test.ts apps/web/tests/observability-routes.test.ts apps/dashboard/tests/error-report-route-static.test.ts
+
+      - name: Upload observability runtime verification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: observability-runtime-verification-artifacts
+          path: |
+            coverage/observability-*.json
+            coverage/observability-no-pii-artifact-audit.json
+            coverage/observability-provider-webhook-proof-redacted.json
+            coverage/observability-runtime-static-contract.json
+            coverage/observability-package-test.txt
+            coverage/observability-package-typecheck.txt
+            coverage/observability-*.png
+            coverage/observability-*-redacted.json
+            coverage/observability-runtime-closeout.md
+            test-results/observability/web
+            test-results/observability/dashboard
+            test-results/observability/mobile
+          if-no-files-found: warn
+      - name: Run Phase 11 Sentry SDK implementation contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/sentry-sdk-runtime-static.test.ts apps/mobile/tests/mobile-crash-static.test.ts
+
+      - name: Upload Sentry SDK implementation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentry-sdk-implementation-artifacts
+          path: |
+            coverage/sentry-sdk-*.json
+            coverage/sentry-sdk-ci-evidence.json
+            coverage/sentry-live-mobile-capture-redacted.json
+            coverage/sentry-live-dashboard-capture-redacted.json
+            coverage/sentry-live-web-capture-redacted.json
+            coverage/sentry-expo-source-map-upload-redacted.json
+            coverage/sentry-sdk-env-secrets-redacted.json
+            coverage/sentry-sdk-mobile-react-native-package.json
+            coverage/sentry-sdk-dashboard-nextjs-package.json
+            coverage/sentry-sdk-web-nextjs-package.json
+            coverage/sentry-sdk-static-contract.json
+            coverage/sentry-sdk-observability-test.txt
+            coverage/sentry-sdk-observability-typecheck.txt
+            coverage/sentry-source-map-upload-redacted.json
+            coverage/sentry-debug-symbol-upload-redacted.json
+            coverage/sentry-provider-no-pii-proof-redacted.json
+            test-results/sentry-sdk
+          if-no-files-found: warn
+      - name: Run Phase 11 error-report ingest hardening contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/error-report-ingest-hardening-static.test.ts apps/web/tests/observability-routes.test.ts apps/dashboard/tests/error-report-route-static.test.ts
+
+      - name: Upload error-report ingest hardening artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-report-ingest-hardening-artifacts
+          path: |
+            coverage/error-report-ingest-hardening.json
+            coverage/error-report-secret-safe-artifacts.json
+            coverage/error-report-ci-evidence.json
+            coverage/error-report-redacted-persistence-no-pii.json
+            coverage/error-report-provider-replay-no-pii-redacted.json
+            coverage/error-report-route-static-contracts.json
+            coverage/error-report-observability-test.txt
+            coverage/error-report-observability-typecheck.txt
+            coverage/error-report-bot-protection.json
+            coverage/error-report-distributed-rate-limit.json
+            coverage/error-report-request-correlation.json
+            coverage/error-report-provider-forwarding-redacted.json
+            coverage/error-report-postgres-tenant-isolation.json
+            test-results/error-report-ingest
+          if-no-files-found: warn
+      - name: Run Phase 11 provider webhook reconciliation contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/provider-webhook-reconciliation-static.test.ts apps/web/tests/observability-routes.test.ts
+
+      - name: Upload provider webhook reconciliation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-webhook-reconciliation-artifacts
+          path: |
+            coverage/provider-webhook-reconciliation.json
+            coverage/provider-webhook-no-pii-artifact-audit.json
+            coverage/provider-webhook-durable-delivery-constraint.json
+            coverage/provider-webhook-signature-replay.json
+            coverage/provider-webhook-route-static-contracts.json
+            coverage/provider-webhook-observability-test.txt
+            coverage/provider-webhook-observability-typecheck.txt
+            coverage/provider-webhook-idempotency.json
+            coverage/provider-webhook-error-status-mutation.json
+            coverage/provider-webhook-sanitized-payload-redacted.json
+            coverage/provider-webhook-live-sentry-proof-redacted.json
+            test-results/provider-webhook-reconciliation
+          if-no-files-found: warn
+      - name: Run Phase 11 alert escalation runtime contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/alert-escalation-runtime-static.test.ts
+
+      - name: Upload alert escalation runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alert-escalation-runtime-artifacts
+          path: |
+            coverage/alert-escalation-runtime.json
+            coverage/alert-secret-safe-artifacts.json
+            coverage/alert-ci-evidence.json
+            coverage/alert-provider-callbacks-redacted.json
+            coverage/alert-quiet-hours-routing.json
+            coverage/alert-on-call-schedule.json
+            coverage/alert-provider-credentials-redacted.json
+            coverage/alert-worker-executor.json
+            coverage/alert-route-static-contract.json
+            coverage/alert-observability-test.txt
+            coverage/alert-observability-typecheck.txt
+            coverage/alert-worker-retry-dead-letter.json
+            coverage/alert-acknowledgement-state.json
+            coverage/alert-sanitized-payload-redacted.json
+            coverage/alert-live-critical-pager-redacted.json
+            coverage/alert-live-high-slack-redacted.json
+            test-results/observability-alerts
+          if-no-files-found: warn
+      - name: Run Phase 11 OpenTelemetry runtime contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/opentelemetry-runtime-static.test.ts
+
+      - name: Upload OpenTelemetry runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opentelemetry-runtime-artifacts
+          path: |
+            coverage/opentelemetry-runtime-middleware.json
+            coverage/opentelemetry-secret-safe-artifacts.json
+            coverage/opentelemetry-ci-evidence.json
+            coverage/opentelemetry-no-pii-artifact-audit.json
+            coverage/opentelemetry-service-metadata-sampling.json
+            coverage/opentelemetry-worker-runtime.json
+            coverage/opentelemetry-dashboard-middleware.json
+            coverage/opentelemetry-sdk-exporter-install.json
+            coverage/opentelemetry-runtime-static-contract.json
+            coverage/opentelemetry-observability-test.txt
+            coverage/opentelemetry-observability-typecheck.txt
+            coverage/opentelemetry-request-trace-propagation.json
+            coverage/opentelemetry-structured-log-redacted.json
+            coverage/opentelemetry-errorreport-correlation.json
+            coverage/opentelemetry-high-risk-export-suppression.json
+            coverage/opentelemetry-live-backend-proof-redacted.json
+            test-results/opentelemetry-runtime
+          if-no-files-found: warn
+      - name: Run Phase 11 GitHub issue automation contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/dashboard/tests/github-issue-automation-static.test.ts
+
+      - name: Upload GitHub issue automation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: github-issue-automation-artifacts
+          path: |
+            coverage/github-issue-automation-approval.json
+            coverage/github-issue-secret-safe-artifacts.json
+            coverage/github-issue-ci-evidence.json
+            coverage/github-issue-no-pii-artifact-audit.json
+            coverage/github-issue-provider-credentials-redacted.json
+            coverage/github-issue-dashboard-approval-ui.json
+            coverage/github-issue-route-static-contract.json
+            coverage/github-issue-observability-test.txt
+            coverage/github-issue-observability-typecheck.txt
+            coverage/github-issue-human-approval-audit.json
+            coverage/github-issue-create-request-redacted.json
+            coverage/github-issue-errorreport-link.json
+            coverage/github-issue-dashboard-status-sync.json
+            coverage/github-issue-live-dispatch-redacted.json
+            test-results/github-issue-automation
+          if-no-files-found: warn
+      - name: Run Phase 11 observability automated coverage contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/web/tests/observability-routes.test.ts apps/web/tests/observability-ui-static.test.ts apps/web/tests/observability-automated-coverage-static.test.ts apps/mobile/tests/mobile-crash-static.test.ts apps/mobile/tests/mobile-crash-proof-static.test.ts
+
+      - name: Upload observability automated coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: observability-automated-coverage-artifacts
+          path: |
+            coverage/observability-automated-coverage.json
+            coverage/observability-automated-closeout.md
+            coverage/observability-automated-ui-static.json
+            coverage/observability-automated-route-static.json
+            coverage/observability-automated-web-typecheck.txt
+            coverage/observability-automated-package-test.txt
+            coverage/observability-global-error-rendered.json
+            coverage/observability-dashboard-triage-smoke.json
+            coverage/observability-playwright-triage-results.json
+            coverage/observability-mobile-simulator-crash-ui.json
+            coverage/observability-mobile-device-crash-proof-redacted.json
+            coverage/observability-webhook-ingest-coverage.json
+            test-results/observability-automated
+            test-results/observability-browser
+            test-results/observability-mobile
+          if-no-files-found: warn
+      - name: Run Phase 12 release runtime verification contracts
+        run: pnpm --filter @inkroute/releases test && pnpm vitest run apps/web/tests/release-health-route.test.ts apps/web/tests/release-runtime-verification-static.test.ts apps/dashboard/tests/release-route-static.test.ts apps/dashboard/tests/feature-flag-route-static.test.ts
+
+      - name: Upload release runtime verification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-runtime-verification-artifacts
+          path: |
+            coverage/release-runtime-verification.json
+            coverage/release-health-route-smoke.json
+            coverage/release-dashboard-route-smoke.json
+            coverage/release-feature-flag-route-smoke.json
+            coverage/release-web-build.log
+            coverage/release-dashboard-build.log
+            coverage/release-mobile-typecheck.log
+            coverage/release-governance-workflow-dry-run-redacted.json
+            test-results/release-runtime
+            test-results/release-governance
+          if-no-files-found: warn
+      - name: Run Phase 12 release persistence RBAC contracts
+        run: pnpm --filter @inkroute/releases test && pnpm vitest run apps/web/tests/dashboard-release-rbac-static.test.ts apps/dashboard/tests/release-route-static.test.ts apps/dashboard/tests/feature-flag-route-static.test.ts apps/dashboard/tests/release-persistence-rbac-static.test.ts
+
+      - name: Upload release persistence RBAC artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-persistence-rbac-artifacts
+          path: |
+            coverage/release-persistence-rbac.json
+            coverage/release-approval-state-machine.json
+            coverage/release-optimistic-concurrency.json
+            coverage/release-membership-lookup.json
+            coverage/release-rendered-workflow-smoke.json
+            coverage/release-orchestration-hook.json
+            coverage/release-db-backed-route-proof.json
+            test-results/release-persistence-rbac
+          if-no-files-found: warn
+      - name: Run Phase 12 CI/CD deployment automation contracts
+        run: pnpm --filter @inkroute/releases test && pnpm vitest run packages/releases/tests/release-governance-workflow.test.ts apps/dashboard/tests/deployment-readiness-route-static.test.ts apps/dashboard/tests/cicd-deployment-automation-static.test.ts
+
+      - name: Upload CI/CD deployment automation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cicd-deployment-automation-artifacts
+          path: |
+            coverage/cicd-deployment-automation.json
+            coverage/cicd-protected-environments-redacted.json
+            coverage/cicd-vercel-deploy-smoke.json
+            coverage/cicd-prisma-migrate-dry-run.json
+            coverage/cicd-eas-update-publish-redacted.json
+            coverage/cicd-sentry-artifact-upload-redacted.json
+            coverage/cicd-search-console-submission-redacted.json
+            coverage/cicd-release-record-result-write.json
+            coverage/cicd-live-workflow-dispatch-redacted.json
+            test-results/cicd-deployment-automation
+          if-no-files-found: warn
+      - name: Run Phase 12 feature flag runtime integration contracts
+        run: pnpm --filter @inkroute/releases test && pnpm vitest run apps/web/tests/feature-flag-runtime-static.test.ts apps/web/tests/feature-flag-runtime-integration-static.test.ts apps/dashboard/tests/feature-flag-route-static.test.ts
+
+      - name: Upload feature flag runtime integration artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feature-flag-runtime-integration-artifacts
+          path: |
+            coverage/feature-flag-runtime-resolver.json
+            coverage/feature-flag-cache-invalidation.json
+            coverage/feature-flag-provider-kill-switch.json
+            coverage/feature-flag-rollout-bucket.json
+            coverage/feature-flag-tenant-safe-public-payload.json
+            coverage/feature-flag-live-rollout-proof-redacted.json
+            test-results/feature-flag-runtime
+          if-no-files-found: warn
+      - name: Run Phase 12 mobile OTA production enablement contracts
+        run: pnpm --filter @inkroute/releases test && pnpm vitest run apps/mobile/tests/mobile-static.test.ts apps/mobile/tests/mobile-updates-static.test.ts apps/mobile/tests/mobile-ota-production-static.test.ts
+
+      - name: Upload mobile OTA production artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-ota-production-artifacts
+          path: |
+            coverage/mobile-ota-production-enablement.json
+            coverage/mobile-ota-expo-project-redacted.json
+            coverage/mobile-ota-preview-native-build.json
+            coverage/mobile-ota-production-native-build.json
+            coverage/mobile-ota-preview-update-id-redacted.json
+            coverage/mobile-ota-device-adoption-redacted.json
+            coverage/mobile-ota-adoption-monitoring.json
+            coverage/mobile-ota-rollback-republish-redacted.json
+            coverage/mobile-ota-release-health-link.json
+            test-results/mobile-ota-production
+          if-no-files-found: warn
+      - name: Run Phase 12 migration runtime dry-run contracts
+        run: pnpm --filter @inkroute/releases test && pnpm vitest run packages/releases/tests/release-governance-workflow.test.ts apps/dashboard/tests/migration-runtime-dry-run-static.test.ts
+
+      - name: Upload migration runtime dry-run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-runtime-dry-run-artifacts
+          path: |
+            coverage/migration-runtime-dry-run.json
+            coverage/migration-prisma-validate.json
+            coverage/migration-prisma-diff.sql
+            coverage/migration-destructive-sql-scan.json
+            coverage/migration-backup-snapshot-redacted.json
+            coverage/migration-expand-contract-plan.json
+            coverage/migration-forward-fix-restore-policy.json
+            coverage/migration-rollback-evidence.json
+            coverage/migration-github-actions-dry-run.json
+            test-results/migration-runtime-dry-run
+          if-no-files-found: warn
+      - name: Run Phase 12 release incident linkage contracts
+        run: pnpm --filter @inkroute/observability test && pnpm vitest run apps/dashboard/tests/release-incident-linkage-static.test.ts
+
+      - name: Upload release incident linkage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-incident-linkage-artifacts
+          path: |
+            coverage/release-incident-linkage.json
+            coverage/release-sentry-tags-source-maps-redacted.json
+            coverage/release-errorreport-link-persistence.json
+            coverage/release-record-incident-link.json
+            coverage/release-rollback-communication-handoff.json
+            coverage/release-dashboard-filter-smoke.json
+            coverage/release-tenant-incident-isolation.json
+            coverage/release-incident-sanitized-payload-redacted.json
+            coverage/release-incident-live-provider-proof-redacted.json
+            test-results/release-incident-linkage
+          if-no-files-found: warn
+      - name: Run Phase 12 release automated coverage contracts
+        run: pnpm --filter @inkroute/releases test && pnpm vitest run apps/web/tests/release-health-route.test.ts apps/web/tests/release-automation-static.test.ts apps/web/tests/release-automated-coverage-static.test.ts apps/mobile/tests/mobile-static.test.ts
+
+      - name: Upload release automated coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-automated-coverage-artifacts
+          path: |
+            coverage/release-automated-coverage.json
+            coverage/release-dashboard-playwright-smoke.json
+            coverage/release-provider-backed-route-integration.json
+            coverage/release-expo-render-smoke.json
+            coverage/release-expo-device-ota-proof-redacted.json
+            coverage/release-github-actions-execution-redacted.json
+            coverage/release-real-secrets-environments-redacted.json
+            test-results/release-automated
+            test-results/release-dashboard
+            test-results/release-provider
+            test-results/release-expo
+          if-no-files-found: warn
+      - name: Run Phase 13 auth session tenant guard contracts
+        run: pnpm --filter @inkroute/auth test && pnpm vitest run apps/web/tests/auth-session-tenant-guard-static.test.ts apps/dashboard/tests/security-trust-route-static.test.ts apps/dashboard/tests/security-privacy-route-static.test.ts apps/mobile/tests/mobile-security-static.test.ts
+
+      - name: Upload auth session tenant guard artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-session-tenant-guard-artifacts
+          path: |
+            coverage/auth-session-tenant-guard-runtime.json
+            coverage/auth-dashboard-middleware-guard.json
+            coverage/auth-dashboard-route-guard-matrix.json
+            coverage/auth-mobile-session-guard.json
+            coverage/auth-csrf-revocation-redacted.json
+            coverage/auth-provider-session-redacted.json
+            coverage/auth-cross-tenant-denial-redacted.json
+            test-results/auth-session-tenant-guards
+            test-results/dashboard-auth-guards
+            test-results/mobile-auth-guards
+          if-no-files-found: warn
+      - name: Run Phase 13 upload scan worker contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts apps/web/tests/upload-scan-worker-static.test.ts
+
+      - name: Upload upload scan worker artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upload-scan-worker-artifacts
+          path: |
+            coverage/upload-scan-worker-plan.json
+            coverage/upload-magic-byte-verification.json
+            coverage/upload-malware-scan-redacted.json
+            coverage/upload-exif-gps-strip.json
+            coverage/upload-normalized-derivative.json
+            coverage/upload-fileasset-scan-persistence.json
+            coverage/upload-quarantine-rejection.json
+            test-results/upload-scan-worker
+          if-no-files-found: warn
+      - name: Run Phase 13 private storage signed URL contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/secure-upload-intents-route.test.ts apps/web/tests/private-storage-signed-url-static.test.ts
+
+      - name: Upload private storage signed URL artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-storage-signed-url-artifacts
+          path: |
+            coverage/private-storage-signed-url-plan.json
+            coverage/private-storage-provider-env-redacted.json
+            coverage/private-storage-private-acl-denial.json
+            coverage/private-storage-signed-upload-url.json
+            coverage/private-storage-signed-download-url.json
+            coverage/private-storage-signed-url-revocation.json
+            coverage/private-storage-fileasset-grant-persistence.json
+            coverage/private-storage-public-derivative-access.json
+            test-results/private-storage-signed-urls
+          if-no-files-found: warn
+      - name: Run Phase 13 privacy request workflow contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/privacy-requests-public-route.test.ts apps/web/tests/privacy-requests-dashboard-route.test.ts apps/web/tests/privacy-request-workflow-static.test.ts apps/dashboard/tests/security-privacy-route-static.test.ts
+
+      - name: Upload privacy request workflow artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-request-workflow-artifacts
+          path: |
+            coverage/privacy-request-workflow-plan.json
+            coverage/privacy-identity-proof-redacted.json
+            coverage/privacy-tenant-relationship-proof.json
+            coverage/privacy-status-transition-persistence.json
+            coverage/privacy-export-artifact-redacted.json
+            coverage/privacy-delete-anonymize-tombstones.json
+            coverage/privacy-storage-export-delete.json
+            coverage/privacy-third-party-redaction.json
+            coverage/privacy-legal-hold-denial.json
+            coverage/privacy-notification-version-redacted.json
+            coverage/privacy-audit-log-persistence.json
+            test-results/privacy-request-workflow
+          if-no-files-found: warn
+      - name: Run Phase 13 retention enforcement contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/retention-enforcement-static.test.ts apps/web/tests/privacy-request-workflow-static.test.ts
+
+      - name: Upload retention enforcement artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retention-enforcement-artifacts
+          path: |
+            coverage/retention-enforcement-dry-run.json
+            coverage/retention-scheduled-worker.json
+            coverage/retention-postgres-execution.json
+            coverage/retention-object-storage-execution.json
+            coverage/retention-export-artifacts-redacted.json
+            coverage/retention-deletion-tombstones.json
+            coverage/retention-anonymization-tombstones.json
+            coverage/retention-legal-hold-skips.json
+            coverage/retention-audit-log-persistence.json
+            coverage/retention-backup-restore-tombstone-replay.json
+            coverage/retention-destructive-rollback.md
+            test-results/retention-enforcement
+          if-no-files-found: warn
+      - name: Run Phase 12 release launch control runtime contracts
+        run: pnpm --filter @inkroute/releases test && pnpm vitest run apps/web/tests/release-launch-control-runtime-static.test.ts
+
+      - name: Upload Phase 12 release launch control runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-launch-control-runtime-artifacts
+          path: |
+            coverage/release-launch-control-runtime.json
+            coverage/release-package-typecheck.txt
+            coverage/release-package-test.txt
+            coverage/release-record-persistence-redacted.json
+            coverage/release-feature-flag-persistence-redacted.json
+            coverage/release-rbac-tenant-scope-redacted.json
+            coverage/release-optimistic-concurrency.json
+            coverage/release-audit-rows-redacted.json
+            coverage/release-protected-environments-redacted.json
+            coverage/release-signed-provenance-redacted.json
+            coverage/release-ci-required-checks-redacted.json
+            coverage/release-preview-deploy-redacted.json
+            coverage/release-production-approval-dry-run-redacted.json
+            coverage/release-migration-gate-dry-run-redacted.json
+            coverage/release-incident-linked-rollback-redacted.json
+            coverage/release-eas-update-governance-redacted.json
+            coverage/release-rollout-controls-redacted.json
+            coverage/release-kill-switch-drill-redacted.json
+            coverage/release-health-envelope.json
+            coverage/release-provider-route-tests-redacted.json
+            coverage/release-ci-artifacts-redacted.json
+            coverage/release-secret-safe-artifacts.json
+            test-results/release-launch-control-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 2 privacy retention runtime contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/privacy-retention-runtime-static.test.ts
+
+      - name: Upload Phase 2 privacy retention runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-retention-runtime-artifacts
+          path: |
+            coverage/privacy-retention-runtime.json
+            coverage/privacy-retention-security-typecheck.txt
+            coverage/privacy-retention-security-test.txt
+            coverage/privacy-retention-attorney-approval-redacted.json
+            coverage/privacy-retention-worker-output-redacted.json
+            coverage/privacy-retention-prisma-dry-run-redacted.json
+            coverage/privacy-retention-object-storage-dry-run-redacted.json
+            coverage/privacy-retention-tenant-isolation.json
+            coverage/privacy-retention-legal-hold.json
+            coverage/privacy-retention-tombstone-replay.json
+            coverage/privacy-retention-ci-evidence.json
+            coverage/privacy-retention-secret-safe-artifacts.json
+            test-results/privacy-retention-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 3 public content runtime contracts
+        run: pnpm --filter @inkroute/config test && pnpm vitest run apps/web/tests/public-content-runtime-static.test.ts
+
+      - name: Upload Phase 3 public content runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-content-runtime-artifacts
+          path: |
+            coverage/public-content-runtime.json
+            coverage/public-content-config-typecheck.txt
+            coverage/public-content-config-test.txt
+            coverage/public-content-web-typecheck.txt
+            coverage/public-content-web-build.txt
+            coverage/public-content-resolver-wiring.json
+            coverage/public-content-seeded-db-cms-redacted.json
+            coverage/public-content-api-json-redaction.json
+            coverage/public-content-rendered-html-redaction.json
+            coverage/public-content-cache-revalidation.json
+            coverage/public-content-browser-smoke.json
+            coverage/public-content-ci-evidence.json
+            test-results/public-content-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 3 portfolio image performance runtime contracts
+        run: pnpm --filter @inkroute/config test && pnpm vitest run apps/web/tests/portfolio-image-performance-runtime-static.test.ts
+
+      - name: Upload Phase 3 portfolio image performance runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portfolio-image-performance-runtime-artifacts
+          path: |
+            coverage/portfolio-image-performance-runtime.json
+            coverage/portfolio-image-config-typecheck.txt
+            coverage/portfolio-image-config-test.txt
+            coverage/portfolio-image-web-typecheck.txt
+            coverage/portfolio-image-web-build.txt
+            coverage/portfolio-image-derivative-fixtures.json
+            coverage/portfolio-image-next-image-wiring.json
+            coverage/portfolio-image-private-original-denial.json
+            coverage/portfolio-image-browser-rendering.json
+            coverage/portfolio-image-lighthouse.json
+            coverage/portfolio-image-ci-evidence.json
+            test-results/portfolio-image-performance-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 4 booking contact runtime contracts
+        run: pnpm --filter @inkroute/booking test && pnpm vitest run apps/web/tests/booking-contact-runtime-static.test.ts
+
+      - name: Upload Phase 4 booking contact runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking-contact-runtime-artifacts
+          path: |
+            coverage/booking-contact-runtime.json
+            coverage/booking-contact-booking-typecheck.txt
+            coverage/booking-contact-booking-test.txt
+            coverage/booking-contact-web-typecheck.txt
+            coverage/booking-contact-web-build.txt
+            coverage/booking-contact-route-plan.json
+            coverage/booking-contact-contact-persistence.json
+            coverage/booking-contact-provider-boundaries.json
+            coverage/booking-contact-api-e2e.json
+            coverage/booking-contact-browser-e2e.json
+            coverage/booking-contact-ci-evidence.json
+            test-results/booking-contact-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 4 booking persistence API runtime contracts
+        run: pnpm vitest run apps/web/tests/booking-persistence-api-runtime-static.test.ts
+
+      - name: Upload Phase 4 booking persistence API runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking-persistence-api-runtime-artifacts
+          path: |
+            coverage/booking-persistence-api-runtime.json
+            coverage/booking-persistence-contract-test.txt
+            coverage/booking-persistence-web-typecheck.txt
+            coverage/booking-persistence-web-build.txt
+            coverage/booking-persistence-prisma-generate.txt
+            coverage/booking-persistence-next-route-smoke.json
+            coverage/booking-persistence-db-transaction.json
+            coverage/booking-persistence-provider-workers.json
+            coverage/booking-persistence-secret-safe-artifacts.json
+            test-results/booking-persistence-api-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 4 booking flow runtime contracts
+        run: pnpm vitest run apps/web/tests/booking-flow-runtime-static.test.ts
+
+      - name: Upload Phase 4 booking flow runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking-flow-runtime-artifacts
+          path: |
+            coverage/booking-flow-runtime.json
+            coverage/booking-flow-install.txt
+            coverage/booking-flow-prisma-generate.txt
+            coverage/booking-flow-web-typecheck.txt
+            coverage/booking-flow-web-build.txt
+            coverage/booking-flow-contract-test.txt
+            coverage/booking-flow-next-route-smoke.json
+            coverage/booking-flow-local-fallback.json
+            coverage/booking-flow-db-transaction-smoke.json
+            coverage/booking-flow-provider-boundaries.json
+            coverage/booking-flow-client-server-boundaries.json
+            coverage/booking-flow-secret-safe-artifacts.json
+            test-results/booking-flow-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 4 reference upload provider runtime contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/reference-upload-provider-runtime-static.test.ts apps/web/tests/secure-upload-intents-route.test.ts
+
+      - name: Upload Phase 4 reference upload provider runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reference-upload-provider-runtime-artifacts
+          path: |
+            coverage/reference-upload-provider-runtime.json
+            coverage/reference-upload-security-typecheck.txt
+            coverage/reference-upload-security-test.txt
+            coverage/reference-upload-web-typecheck.txt
+            coverage/reference-upload-route-test.txt
+            coverage/reference-upload-provider-signed-url-redacted.json
+            coverage/reference-upload-byte-verification.json
+            coverage/reference-upload-magic-byte-validation.json
+            coverage/reference-upload-malware-scan-quarantine.json
+            coverage/reference-upload-fileasset-persistence.json
+            coverage/reference-upload-booking-reference-image-persistence.json
+            coverage/reference-upload-auditlog-persistence.json
+            coverage/reference-upload-private-acl.json
+            coverage/reference-upload-private-fetch-denial.json
+            coverage/reference-upload-cross-tenant-denial.json
+            coverage/reference-upload-ci-evidence.json
+            coverage/reference-upload-secret-safe-artifacts.json
+            test-results/reference-upload-provider-runtime
+          if-no-files-found: warn
+      - name: Run Phase 4 booking provider handoff runtime contracts
+        run: pnpm --filter @inkroute/booking test && pnpm vitest run apps/web/tests/booking-provider-handoff-runtime-static.test.ts apps/web/tests/booking-requests-contract.test.ts
+
+      - name: Upload Phase 4 booking provider handoff runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking-provider-handoff-runtime-artifacts
+          path: |
+            coverage/booking-provider-handoff-runtime.json
+            coverage/booking-provider-handoff-booking-typecheck.txt
+            coverage/booking-provider-handoff-booking-test.txt
+            coverage/booking-provider-handoff-payments-test.txt
+            coverage/booking-provider-handoff-notifications-test.txt
+            coverage/booking-provider-handoff-calendar-test.txt
+            coverage/booking-provider-handoff-route-plan.json
+            coverage/booking-provider-handoff-worker-queue.json
+            coverage/booking-provider-handoff-reference-upload-worker.json
+            coverage/booking-provider-handoff-stripe-sandbox-redacted.json
+            coverage/booking-provider-handoff-notification-sandbox-redacted.json
+            coverage/booking-provider-handoff-calendar-sandbox-redacted.json
+            coverage/booking-provider-handoff-audit-payloads.json
+            coverage/booking-provider-handoff-retry-rollback.json
+            coverage/booking-provider-handoff-idempotency.json
+            coverage/booking-provider-handoff-ci-evidence.json
+            coverage/booking-provider-handoff-secret-safe-artifacts.json
+            test-results/booking-provider-handoff-runtime
+          if-no-files-found: warn
+      - name: Run Phase 10 SEO accessibility performance audit contracts
+        run: pnpm --filter @inkroute/seo test && pnpm vitest run apps/web/tests/seo-a11y-performance-audit-runtime-static.test.ts
+
+      - name: Upload Phase 10 SEO accessibility performance audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-a11y-performance-audit-artifacts
+          path: |
+            coverage/seo-a11y-performance-runtime.json
+            coverage/seo-a11y-seo-typecheck.txt
+            coverage/seo-a11y-seo-test.txt
+            coverage/seo-a11y-web-typecheck.txt
+            coverage/seo-a11y-web-build.txt
+            coverage/seo-a11y-browser-crawl.json
+            coverage/seo-a11y-schema-validator.json
+            coverage/seo-a11y-sitemap-canonical.json
+            coverage/seo-a11y-axe.json
+            coverage/seo-a11y-lighthouse-cwv.json
+            coverage/seo-a11y-mobile-visual-qa.json
+            coverage/seo-a11y-ci-evidence.json
+            test-results/seo-a11y-performance-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 13 legal review evidence contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/legal-review-evidence-static.test.ts
+
+      - name: Upload legal review evidence artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legal-review-evidence-artifacts
+          path: |
+            coverage/legal-review-packet.json
+            coverage/legal-attorney-approvals-redacted.json
+            coverage/legal-jurisdiction-policy-versions.json
+            coverage/legal-consent-version-persistence.json
+            coverage/legal-public-page-smoke.json
+            coverage/legal-noindex-removal-after-approval.json
+            coverage/legal-acceptance-audit-persistence.json
+            coverage/legal-dashboard-acceptance-ui.json
+            coverage/legal-payment-policy-review-redacted.json
+            coverage/legal-copy-rollback-plan.md
+            test-results/legal-review
+          if-no-files-found: warn
+      - name: Run Phase 13 abuse control runtime contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/abuse-control-runtime-static.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/privacy-requests-public-route.test.ts apps/web/tests/error-report-ingest-hardening-static.test.ts
+
+      - name: Upload abuse control runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: abuse-control-runtime-artifacts
+          path: |
+            coverage/abuse-control-runtime.json
+            coverage/abuse-rate-limit-distributed.json
+            coverage/abuse-bot-challenge.json
+            coverage/abuse-provider-webhook-bypass.json
+            coverage/abuse-invalid-webhook-challenge.json
+            coverage/abuse-event-redaction.json
+            coverage/abuse-alert-delivery-redacted.json
+            coverage/abuse-fail-closed.json
+            test-results/abuse-control-runtime
+          if-no-files-found: warn
+      - name: Run Phase 13 security middleware runtime contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/security-runtime-middleware.test.ts apps/web/tests/security-runtime-middleware-static.test.ts apps/web/tests/dashboard-security-runtime-middleware-static.test.ts apps/web/tests/security-middleware-runtime-static.test.ts
+
+      - name: Upload security middleware runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-middleware-runtime-artifacts
+          path: |
+            coverage/security-middleware-runtime.json
+            coverage/security-web-header-browser-smoke.json
+            coverage/security-dashboard-header-browser-smoke.json
+            coverage/security-production-hsts.json
+            coverage/security-preview-local-hsts-suppression.json
+            coverage/security-provider-csp-connect-src.json
+            coverage/security-csp-frame-base-form-invariants.json
+            coverage/security-csrf-attack-rejection.json
+            coverage/security-csrf-valid-session-binding.json
+            coverage/security-webhook-csrf-bypass-review.json
+            test-results/security-middleware-runtime
+          if-no-files-found: warn
+      - name: Run Phase 13 security automated coverage contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/security-automated-coverage-static.test.ts apps/web/tests/secure-upload-intents-route.test.ts apps/web/tests/privacy-requests-public-route.test.ts apps/web/tests/privacy-requests-dashboard-route.test.ts apps/web/tests/dashboard-trust-status-route.test.ts apps/web/tests/security-runtime-middleware.test.ts apps/web/tests/security-runtime-middleware-static.test.ts apps/web/tests/dashboard-security-runtime-middleware-static.test.ts
+
+      - name: Upload security automated coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-automated-coverage-artifacts
+          path: |
+            coverage/security-automated-coverage.json
+            coverage/security-package-tests.json
+            coverage/security-route-vitest.json
+            coverage/security-middleware-runtime.json
+            coverage/security-middleware-static.json
+            coverage/security-web-playwright.json
+            coverage/security-dashboard-playwright.json
+            coverage/security-db-tenant-isolation.json
+            coverage/security-storage-provider-negative.json
+            coverage/security-privacy-workflow-integration.json
+            coverage/security-role-boundary-authenticated.json
+            coverage/security-failure-mode-fixtures.md
+            test-results/security-automated
+          if-no-files-found: warn
+      - name: Run Phase 13 security app runtime verification contracts
+        run: pnpm --filter @inkroute/security test && pnpm vitest run apps/web/tests/security-next-config-static.test.ts apps/mobile/tests/mobile-security-static.test.ts apps/web/tests/security-app-runtime-verification-static.test.ts
+
+      - name: Upload security app runtime verification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-app-runtime-verification-artifacts
+          path: |
+            coverage/security-app-runtime-verification.json
+            coverage/security-web-typecheck.log
+            coverage/security-web-build.log
+            coverage/security-dashboard-typecheck.log
+            coverage/security-dashboard-build.log
+            coverage/security-mobile-typecheck.log
+            coverage/security-next-config-static.json
+            coverage/security-mobile-system-status-static.json
+            coverage/security-web-route-smoke.json
+            coverage/security-dashboard-route-smoke.json
+            coverage/security-middleware-smoke.json
+            coverage/security-browser-runtime-smoke.json
+            coverage/security-mobile-device-smoke.json
+            test-results/security-app-runtime
+          if-no-files-found: warn
+      - name: Run Phase 14 testing launch execution runtime contracts
+        run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/testing-launch-execution-runtime-static.test.ts
+
+      - name: Upload Phase 14 testing launch execution runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testing-launch-execution-runtime-artifacts
+          path: |
+            coverage/testing-launch-execution-runtime.json
+            coverage/testing-frozen-install-output.txt
+            coverage/testing-phase14-static-output.txt
+            coverage/testing-manifest-output.txt
+            coverage/testing-typecheck-output.txt
+            coverage/testing-unit-output.json
+            coverage/testing-unit-coverage
+            coverage/testing-unit-coverage-summary.json
+            coverage/testing-e2e-output.json
+            coverage/playwright-report
+            coverage/playwright-results.json
+            coverage/playwright-junit.xml
+            coverage/playwright-traces
+            coverage/playwright-screenshots
+            coverage/playwright-videos
+            coverage/testing-web-build-output.txt
+            coverage/testing-dashboard-build-output.txt
+            coverage/testing-prisma-integration-output.json
+            coverage/testing-provider-sandbox-output-redacted.json
+            coverage/testing-security-output.json
+            coverage/testing-mobile-simulator-output.json
+            coverage/testing-mobile-device-output-redacted.json
+            coverage/testing-ci-quality-run-redacted.json
+            coverage/testing-branch-protection-required-checks-redacted.json
+            coverage/testing-flaky-policy.md
+            coverage/testing-failure-debug-artifacts.json
+            coverage/testing-secret-safe-artifacts.json
+            test-results/testing-launch-execution-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 14 performance load runtime contracts
+        run: pnpm test:performance:budgets && pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/performance-load-runtime-static.test.ts
+
+      - name: Upload Phase 14 performance load runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-load-runtime-artifacts
+          path: |
+            coverage/performance-load-runtime.json
+            coverage/performance-budget-verification.json
+            coverage/performance-lighthouse-ci.json
+            coverage/performance-core-web-vitals.json
+            coverage/performance-public-route-budgets.json
+            coverage/performance-dashboard-route-budgets.json
+            coverage/performance-booking-load.json
+            coverage/performance-webhook-burst.json
+            coverage/performance-upload-intent-load.json
+            coverage/performance-db-explain-analyze.json
+            coverage/performance-image-optimization.json
+            coverage/performance-regression-thresholds.json
+            coverage/performance-ci-run-redacted.json
+            coverage/performance-regression-triage.md
+            test-results/performance-load-runtime
+          if-no-files-found: warn
+      - name: Run Phase 14 CI coverage reporting contracts
+        run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/ci-coverage-reporting-static.test.ts
+
+      - name: Publish Phase 14 CI coverage reporting summary
+        if: always()
+        run: |
+          mkdir -p coverage
+          cat > coverage/ci-test-summary.md <<'EOF'
+          # Phase 14 CI coverage reporting
+          - Frozen install, typecheck, unit coverage, and Playwright E2E are wired in CI.
+          - Vitest coverage and Playwright HTML/JSON/JUnit artifacts are uploaded when present.
+          - Passing CI, branch protection, flaky quarantine, and failed-debug artifact proof remain external evidence gates.
+          EOF
+          cat coverage/ci-test-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Phase 14 CI coverage reporting artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-coverage-reporting-artifacts
+          path: |
+            coverage/ci-coverage-reporting.json
+            coverage/unit
+            coverage/unit/coverage-final.json
+            coverage/unit/lcov.info
+            coverage/playwright-report
+            coverage/playwright-results.json
+            coverage/playwright-junit.xml
+            coverage/playwright-traces
+            coverage/playwright-screenshots
+            coverage/playwright-videos
+            coverage/ci-test-summary.md
+            coverage/ci-artifact-retention.json
+            coverage/ci-branch-protection-redacted.json
+            coverage/ci-flaky-policy.md
+            coverage/ci-failed-test-debug-artifacts.json
+            test-results/ci-coverage-reporting
+          if-no-files-found: warn
+      - name: Run Phase 14 provider contract runtime contracts
+        run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/provider-contract-runtime-static.test.ts
+
+      - name: Upload Phase 14 provider contract runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-contract-runtime-artifacts
+          path: |
+            coverage/provider-contract-runtime.json
+            coverage/provider-contract-static-suite.json
+            coverage/provider-contract-manifest-check.json
+            coverage/provider-raw-body-fixtures.json
+            coverage/provider-replay-idempotency-fixtures.json
+            coverage/provider-stripe-cli-redacted.log
+            coverage/provider-stripe-idempotency.json
+            coverage/provider-google-calendar-oauth-redacted.json
+            coverage/provider-google-calendar-sync-redacted.json
+            coverage/provider-storage-signed-url.json
+            coverage/provider-storage-upload-download.json
+            coverage/provider-email-sandbox-redacted.json
+            coverage/provider-sms-sandbox-redacted.json
+            coverage/provider-push-sandbox-redacted.json
+            coverage/provider-sentry-capture-redacted.json
+            coverage/provider-auth-session-fixtures.json
+            coverage/provider-rate-limit-store.json
+            coverage/provider-contract-ci-run-redacted.json
+            test-results/provider-contract-runtime
+          if-no-files-found: warn
+      - name: Run Phase 14 accessibility visual runtime contracts
+        run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/accessibility-visual-runtime-static.test.ts
+
+      - name: Upload Phase 14 accessibility visual runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-visual-runtime-artifacts
+          path: |
+            coverage/accessibility-visual-runtime.json
+            coverage/accessibility-web-a11y-results.json
+            coverage/accessibility-dashboard-a11y-results.json
+            coverage/accessibility-web-axe-report.json
+            coverage/accessibility-dashboard-axe-report.json
+            coverage/accessibility-lighthouse-budgets.json
+            coverage/accessibility-contrast-audit.json
+            coverage/accessibility-responsive-layout.json
+            coverage/accessibility-screen-reader-notes.md
+            coverage/accessibility-mobile-qa.json
+            coverage/visual-baselines
+            coverage/visual-diffs
+            coverage/accessibility-visual-regression-triage.md
+            coverage/accessibility-visual-ci-run-redacted.json
+            test-results/accessibility-visual-runtime
+          if-no-files-found: warn
+      - name: Run Phase 14 mobile testing execution contracts
+        run: pnpm --filter @inkroute/mobile-support test && pnpm vitest run packages/mobile/tests/mobile-testing-execution-static.test.ts
+
+      - name: Upload Phase 14 mobile testing execution artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-testing-execution-artifacts
+          path: |
+            coverage/mobile-testing-execution.json
+            coverage/mobile-expo-install.log
+            coverage/mobile-expo-runtime.log
+            coverage/mobile-support-typecheck.log
+            coverage/mobile-support-test-results.json
+            coverage/mobile-app-typecheck.log
+            coverage/mobile-static-test-results.json
+            coverage/mobile-ios-simulator-smoke.json
+            coverage/mobile-android-emulator-smoke.json
+            coverage/mobile-physical-device-checklist.json
+            coverage/mobile-biometric-qa-redacted.json
+            coverage/mobile-tenant-api-sync-redacted.json
+            coverage/mobile-offline-reconnect-redacted.json
+            coverage/mobile-push-delivery-redacted.json
+            coverage/mobile-crash-capture-redacted.json
+            coverage/mobile-eas-preview-build-redacted.json
+            coverage/mobile-eas-update-rollback-redacted.json
+            coverage/mobile-accessibility-qa.json
+            coverage/mobile-ci-run-redacted.json
+            test-results/mobile-testing-execution
+          if-no-files-found: warn
+      - name: Run Phase 14 DB integration runtime contracts
+        run: pnpm --filter @inkroute/db test && pnpm vitest run packages/db/tests/db-integration-runtime-static.test.ts
+
+      - name: Upload Phase 14 DB integration runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-integration-runtime-artifacts
+          path: |
+            coverage/db-integration-runtime.json
+            coverage/db-postgres-provisioning-redacted.json
+            coverage/db-prisma-validate.log
+            coverage/db-prisma-generate.log
+            coverage/db-prisma-migrate.log
+            coverage/db-seed-execution.log
+            coverage/db-seed-verification.json
+            coverage/db-tenant-isolation-results.json
+            coverage/db-workflow-persistence-results.json
+            coverage/db-audit-log-integration-results.json
+            coverage/db-destructive-reset-guard.json
+            coverage/db-migration-rollback.md
+            coverage/db-command-transcript-redacted.log
+            coverage/db-ci-run-redacted.json
+            test-results/db-integration-runtime
+          if-no-files-found: warn
+      - name: Run Phase 14 app E2E runtime contracts
+        run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/app-e2e-runtime-static.test.ts
+
+      - name: Upload Phase 14 app E2E runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-e2e-runtime-artifacts
+          path: |
+            coverage/app-e2e-runtime.json
+            coverage/app-e2e-web-build.log
+            coverage/app-e2e-dashboard-build.log
+            coverage/app-e2e-web-runtime.log
+            coverage/app-e2e-dashboard-runtime.log
+            coverage/app-e2e-playwright-install.log
+            coverage/app-e2e-public-booking-results.json
+            coverage/app-e2e-public-security-results.json
+            coverage/app-e2e-public-seo-results.json
+            coverage/app-e2e-dashboard-smoke-results.json
+            coverage/app-e2e-dashboard-security-results.json
+            coverage/app-e2e-dashboard-operator-results.json
+            coverage/app-e2e-manifest-check.json
+            coverage/playwright-report
+            coverage/playwright-results.json
+            coverage/playwright-junit.xml
+            test-results/app-e2e-runtime
+          if-no-files-found: warn
+      - name: Run Phase 14 runner execution contracts
+        run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/phase14-runner-execution-static.test.ts
+
+      - name: Upload Phase 14 runner execution artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase14-runner-execution-artifacts
+          path: |
+            coverage/phase14-runner-execution.json
+            coverage/phase14-frozen-install.log
+            coverage/phase14-static-check.json
+            coverage/phase14-manifest-check.json
+            coverage/phase14-typecheck.log
+            coverage/phase14-unit-results.json
+            coverage/phase14-playwright-install.log
+            coverage/phase14-e2e-results.json
+            coverage/phase14-ci-run-redacted.json
+            coverage/phase14-runner-failure-triage.md
+            coverage/phase14-scaffold-coverage-diff.json
+            coverage/phase14-flaky-policy.md
+            test-results/phase14-runner
+          if-no-files-found: warn
+      - name: Run Phase 2 validator launch adoption runtime contracts
+        run: pnpm --filter @inkroute/validators test && pnpm vitest run apps/web/tests/validator-launch-adoption-runtime-static.test.ts
+
+      - name: Upload Phase 2 validator launch adoption runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validator-launch-adoption-runtime-artifacts
+          path: |
+            coverage/validator-launch-adoption-runtime.json
+            coverage/validator-package-typecheck.txt
+            coverage/validator-package-test.txt
+            coverage/validator-booking-travel-portfolio-payment.json
+            coverage/validator-people-consent-forms-seo.json
+            coverage/validator-messaging-observability-release.json
+            coverage/validator-tenancy-auth-edge-cases.json
+            coverage/validator-dynamic-form-edge-cases.json
+            coverage/validator-public-route-adoption.json
+            coverage/validator-dashboard-route-adoption.json
+            coverage/validator-webhook-route-adoption.json
+            coverage/validator-provider-payload-adoption.json
+            coverage/validator-malformed-payload-routes.json
+            coverage/validator-tenant-scope-routes.json
+            coverage/validator-sensitive-field-policy.json
+            coverage/validator-redaction-encryption-contracts.json
+            coverage/validator-ci-evidence.json
+            coverage/validator-secret-safe-artifacts.json
+            test-results/validator-launch-adoption-runtime
+          if-no-files-found: warn
+      - name: Run Phase 9 mobile push runtime contracts
+        run: pnpm --filter @inkroute/notifications test && pnpm vitest run apps/mobile/tests/mobile-push-runtime-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
+
+      - name: Upload Phase 9 mobile push runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-push-runtime-artifacts
+          path: |
+            coverage/mobile-push-runtime.json
+            coverage/mobile-push-notifications-typecheck.txt
+            coverage/mobile-push-notifications-test.txt
+            coverage/mobile-push-app-typecheck.txt
+            coverage/mobile-push-expo-project-redacted.json
+            coverage/mobile-push-native-credentials-redacted.json
+            coverage/mobile-push-token-persistence.json
+            coverage/mobile-push-opt-out-persistence.json
+            coverage/mobile-push-delivery-worker.json
+            coverage/mobile-push-delivery-log-persistence.json
+            coverage/mobile-push-provider-event-persistence.json
+            coverage/mobile-push-notification-interaction.json
+            coverage/mobile-push-audit-log.json
+            coverage/mobile-push-receipt-worker.json
+            coverage/mobile-push-invalid-token-suppression.json
+            coverage/mobile-push-tap-routing.json
+            coverage/mobile-push-ios-device-qa-redacted.json
+            coverage/mobile-push-android-device-qa-redacted.json
+            coverage/mobile-push-secret-safe-artifacts.json
+            test-results/mobile-push-runtime
+          if-no-files-found: warn
+
+      - name: Run Phase 9 app runtime/build runtime contracts
+        run: pnpm --filter @inkroute/testing test && pnpm vitest run apps/web/tests/phase9-app-runtime-build-runtime-static.test.ts apps/web/tests/phase9-app-runtime-build-static.test.ts
+
+      - name: Upload Phase 9 app runtime/build runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase9-app-runtime-build-runtime-artifacts
+          path: |
+            coverage/phase9-app-runtime-build-runtime.json
+            coverage/phase9-testing-package-typecheck.txt
+            coverage/phase9-testing-package-test.txt
+            coverage/phase9-web-build.log
+            coverage/phase9-dashboard-build.log
+            coverage/phase9-mobile-typecheck.txt
+            coverage/phase9-static-contract.json
+            coverage/phase9-notification-routes.json
+            coverage/phase9-provider-webhook-routes.json
+            coverage/phase9-booking-route-runtime-smoke.json
+            coverage/phase9-deposit-route-runtime-smoke.json
+            coverage/phase9-dashboard-template-smoke-redacted.json
+            coverage/phase9-dashboard-message-smoke-redacted.json
+            coverage/phase9-dashboard-provider-disabled.json
+            coverage/phase9-mobile-notification-screen.json
+            coverage/phase9-expo-simulator-notification-smoke.json
+            coverage/phase9-expo-device-notification-smoke-redacted.json
+            coverage/phase9-booking-to-notification-runtime-redacted.json
+            coverage/phase9-provider-disabled-runtime-proof.json
+            coverage/phase9-app-runtime-build-ci-evidence.json
+            coverage/phase9-app-runtime-build-secret-safe-artifacts.json
+            test-results/phase9-app-runtime-build
+          if-no-files-found: warn
+
+      - name: Run Phase 9 app runtime and build gate
+        run: pnpm --filter @inkroute/testing test && pnpm --filter @inkroute/testing typecheck && pnpm --filter @inkroute/web build && pnpm --filter @inkroute/dashboard build && pnpm --filter @inkroute/mobile typecheck && pnpm vitest run apps/web/tests/phase9-app-runtime-build-static.test.ts apps/web/tests/notification-messaging-routes.test.ts apps/web/tests/provider-webhook-routes.test.ts apps/web/tests/provider-webhook-contracts.test.ts apps/web/tests/booking-requests-contract.test.ts apps/web/tests/payment-routes.test.ts apps/dashboard/tests/template-read-route-static.test.ts apps/dashboard/tests/message-read-route-static.test.ts apps/dashboard/tests/messaging-privacy-static.test.ts apps/mobile/tests/mobile-push-static.test.ts
+      - name: Upload notification messaging lifecycle artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notification-messaging-lifecycle-artifacts
+          path: |
+            coverage/notification-*.json
+            coverage/provider-sandbox-*-redacted.json
+            coverage/preference-opt-out-persistence.json
+            coverage/sms-stop-persistence.json
+            coverage/retention-export-delete.json
+            coverage/dashboard-*-smoke.json
+            coverage/mobile-notification-smoke.json
+            coverage/expo-push-device-qa-redacted.json
+            coverage/playwright-notification-e2e-results.json
+            test-results/notifications
+            test-results/messaging
+          if-no-files-found: warn
+      - name: Upload Phase 9 app runtime/build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase9-app-runtime-build-artifacts
+          path: |
+            coverage/phase9-*.json
+            coverage/phase9-*-redacted.json
+            test-results/phase9-notifications
+            test-results/phase9-dashboard
+            test-results/phase9-mobile
+          if-no-files-found: warn
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
       - name: Run Playwright smoke tests
         run: pnpm test:e2e
+      - name: Upload Playwright report artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            coverage/playwright-report
+            coverage/playwright-results.json
+            coverage/playwright-junit.xml
+            test-results
+          if-no-files-found: warn

@@ -1,10 +1,22 @@
-import { buildPublicErrorReportPreview } from "../../../../../lib/errorReporting";
+﻿import { buildPublicErrorReportPreview } from "../../../../../lib/errorReporting";
+import {
+  buildAbuseMonitoringDecision,
+  buildProviderForwardingDecision,
+  buildRequestCorrelation,
+  enforceErrorReportBotProtection,
+  errorReportIngestHardeningContract,
+} from "../../../../../lib/errorReportIngestHardening";
 import { errorReportInputSchema } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
 import { NextResponse, type NextRequest } from "next/server";
 import { checkRateLimit, getClientIp, persistErrorReport, resolveTenant } from "../../../../../lib/localRuntimeState";
 
 type TenantResolution = { tenantId: string; source: "database" | "local-fallback" };
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+function toJsonValue(value: unknown) {
+  return JSON.parse(JSON.stringify(value));
+}
 
 function isDatabaseUnavailable(error: unknown): boolean {
   if (!process.env.DATABASE_URL) {
@@ -22,7 +34,12 @@ function isDatabaseUnavailable(error: unknown): boolean {
 async function resolveTenantScope(tenantSlug: string): Promise<TenantResolution | null> {
   const normalizedSlug = decodeURIComponent(tenantSlug).toLowerCase().trim();
   try {
-    const tenant = await prisma.tenant.findUnique({
+    const prismaRuntime = prisma as unknown as {
+      tenant: {
+        findUnique: (options: { where: { slug: string }; select: { id: true } }) => Promise<{ id: string } | null>;
+      };
+    };
+    const tenant = await prismaRuntime.tenant.findUnique({
       where: { slug: normalizedSlug },
       select: { id: true },
     });
@@ -40,19 +57,28 @@ async function resolveTenantScope(tenantSlug: string): Promise<TenantResolution 
 
 export async function POST(request: NextRequest, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;
+  const correlation = buildRequestCorrelation(request.headers);
+  const botProtection = enforceErrorReportBotProtection(request.headers);
+  if (!botProtection.allowed) {
+    return NextResponse.json(
+      { ok: false, error: { code: "BOT_PROTECTION_FAILED", message: botProtection.reason }, requestId: correlation.requestId, traceparent: correlation.traceparent },
+      { status: 403, headers: { ...noStoreHeaders, "x-request-id": correlation.requestId, "traceparent": correlation.traceparent } },
+    );
+  }
+
   let body: unknown;
 
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Error report body must be valid JSON." } }, { status: 400 });
+    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Error report body must be valid JSON." } }, { status: 400, headers: noStoreHeaders });
   }
 
   const parsed = errorReportInputSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: { code: "VALIDATION_FAILED", message: "Error report payload is not valid.", issues: parsed.error.flatten() } },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -60,7 +86,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   if (!resolvedTenant) {
     return NextResponse.json(
       { ok: false, error: { code: "TENANT_NOT_FOUND", message: "Error reports are available for known tenant slugs only." } },
-      { status: 404 },
+      { status: 404, headers: noStoreHeaders },
     );
   }
 
@@ -79,7 +105,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           },
         },
       },
-      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+      { status: 429, headers: { ...noStoreHeaders, "Retry-After": String(rateLimit.retryAfterSeconds) } },
     );
   }
 
@@ -91,15 +117,16 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     message: parsed.data.message,
     route: typeof parsed.data.route === "string" ? parsed.data.route : `/api/public/${tenantSlug}/error-reports`,
     release: typeof parsed.data.release === "string" ? parsed.data.release : "phase11-demo",
-    stack: parsed.data.stack,
-    userAgent: parsed.data.userAgent ?? request.headers.get("user-agent") ?? undefined,
-    statusCode: parsed.data.statusCode,
+    ...(parsed.data.stack ? { stack: parsed.data.stack } : {}),
+    ...(parsed.data.userAgent ? { userAgent: parsed.data.userAgent } : request.headers.get("user-agent") ? { userAgent: request.headers.get("user-agent") as string } : {}),
+    ...(parsed.data.statusCode ? { statusCode: parsed.data.statusCode } : {}),
     handled: parsed.data.handled ?? true,
-    metadata: parsed.data.metadata,
-    tags: parsed.data.tags,
+    ...(parsed.data.metadata ? { metadata: parsed.data.metadata } : {}),
+    ...(parsed.data.tags ? { tags: parsed.data.tags } : {}),
   };
 
   const preview = buildPublicErrorReportPreview(reportInput);
+  const providerForwarding = buildProviderForwardingDecision({ report: preview.report, requestId: correlation.requestId });
   const localPayload = {
     message: parsed.data.message,
     route: reportInput.route,
@@ -110,7 +137,28 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   };
 
   if (resolvedTenant.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: {
+            code: "PROVIDER_OBSERVABILITY_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production error-report ingest requires database-backed tenant resolution and persistence; local runtime fallback is disabled.",
+            gapIds: ["GAP-006", "GAP-011", "GAP-081", "GAP-095", "GAP-101"],
+          },
+          productionBoundary: { localObservabilityRuntimeFallbackDisabled: true },
+        },
+        { status: 503, headers: { ...noStoreHeaders, "x-request-id": correlation.requestId, "traceparent": correlation.traceparent } },
+      );
+    }
+
     const persisted = persistErrorReport(tenantSlug, localPayload);
+    const abuseMonitoring = buildAbuseMonitoringDecision({
+      tenantId: resolvedTenant.tenantId,
+      requestId: correlation.requestId,
+      rateLimitRemaining: rateLimit.remaining,
+      botStatus: botProtection.status,
+    });
     return NextResponse.json(
       {
         ok: true,
@@ -129,15 +177,28 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           localBoundary: {
             tenantId: resolvedTenant.tenantId,
             rateLimitRule: "fallback-error-report",
+            requestId: correlation.requestId,
+            traceparent: correlation.traceparent,
+            botProtection,
+            abuseMonitoring,
+            providerForwarding,
+            hardening: errorReportIngestHardeningContract,
           },
         },
       },
-      { status: 201 },
+      { status: 201, headers: { ...noStoreHeaders, "x-request-id": correlation.requestId, "traceparent": correlation.traceparent } },
     );
   }
 
   try {
     const report = preview.report;
+    const abuseMonitoring = buildAbuseMonitoringDecision({
+      tenantId: resolvedTenant.tenantId,
+      requestId: correlation.requestId,
+      rateLimitRemaining: rateLimit.remaining,
+      botStatus: botProtection.status,
+    });
+
     const persisted = await prisma.$transaction(async (tx) => {
       const persistedReport = await tx.errorReport.create({
         data: {
@@ -147,11 +208,40 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           source: report.source,
           message: report.redactedMessage,
           stackHash: report.stackHash,
-          release: report.release,
-          route: report.route,
-          userAgent: report.userAgent,
-          metadata: report.redactedMetadata,
+          release: report.release ?? null,
+          route: report.route ?? null,
+          userAgent: report.userAgent ?? null,
+          metadata: toJsonValue(report.redactedMetadata),
         },
+      });
+      const abuseEvent = await tx.abuseEvent.create({
+        data: {
+          tenantId: resolvedTenant.tenantId,
+          routeFamily: "observability",
+          routePattern: "/api/public/[tenantSlug]/error-reports",
+          abuseKeyHash: `error-report:${resolvedTenant.tenantId}:${correlation.requestId}`,
+          ipHash: clientIp ? `ip-length:${clientIp.length}` : null,
+          userAgentHash: report.userAgent ? `ua-length:${report.userAgent.length}` : null,
+          action: "observability:error_report.ingest",
+          reason: abuseMonitoring.status,
+          limiterProvider: "local-runtime-fallback",
+          limiterDecision: rateLimit.allowed ? "allowed" : "blocked",
+          observedRequests: null,
+          windowSeconds: null,
+          botChallengeRequired: botProtection.status !== "verified",
+          providerSignatureValid: providerForwarding.credentialsConfigured,
+          failClosed: false,
+          redactedMetadata: toJsonValue({
+            requestId: correlation.requestId,
+            traceparent: correlation.traceparent,
+            botProtectionStatus: botProtection.status,
+            rateLimitRemaining: rateLimit.remaining,
+            rateLimitRule: "fallback-error-report",
+            providerForwardingStatus: providerForwarding.status,
+            rawPayloadStored: false,
+          }),
+        },
+        select: { id: true },
       });
       const audit = await tx.auditLog.create({
         data: {
@@ -159,16 +249,21 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           action: "observability:error_report.persist",
           entityType: "ErrorReport",
           entityId: persistedReport.id,
-          metadata: {
+          metadata: toJsonValue({
+            requestId: correlation.requestId,
+            traceparent: correlation.traceparent,
+            botProtectionStatus: botProtection.status,
+            abuseEventId: abuseEvent.id,
+            providerForwarding,
             source: report.source,
             severity: report.severity,
             route: report.route ?? "unknown",
             release: report.release ?? "unknown",
             gapIds: ["GAP-011", "GAP-081", "GAP-095", "GAP-101"],
-          },
+          }),
         },
       });
-      return { persistedReport, audit };
+      return { persistedReport, audit, abuseEvent };
     });
 
     return NextResponse.json(
@@ -192,6 +287,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             redactionLevel: preview.report.redactionLevel,
             alertRoute: preview.alertRoute,
             auditId: persisted.audit.id,
+            abuseEventId: persisted.abuseEvent.id,
+            requestId: correlation.requestId,
+            traceparent: correlation.traceparent,
+            botProtection,
+            abuseMonitoring,
+            providerForwarding,
+            hardening: errorReportIngestHardeningContract,
           },
           requiredNextWork: [
             "Forward sanitized events to Sentry only after provider DSNs, source maps, sampling, and sampling-restart policy are configured.",
@@ -200,10 +302,24 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           ],
         },
       },
-      { status: 201 },
+      { status: 201, headers: { ...noStoreHeaders, "x-request-id": correlation.requestId, "traceparent": correlation.traceparent } },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: {
+              code: "PROVIDER_OBSERVABILITY_PERSISTENCE_NOT_CONFIGURED",
+              message: "Production error-report ingest requires database-backed persistence; local runtime fallback is disabled.",
+              gapIds: ["GAP-006", "GAP-011", "GAP-081", "GAP-095", "GAP-101"],
+            },
+          },
+          { status: 503, headers: { ...noStoreHeaders, "x-request-id": correlation.requestId, "traceparent": correlation.traceparent } },
+        );
+      }
+
       const persisted = persistErrorReport(tenantSlug, localPayload);
       return NextResponse.json(
         {
@@ -221,13 +337,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             },
           },
         },
-        { status: 201 },
+        { status: 201, headers: { ...noStoreHeaders, "x-request-id": correlation.requestId, "traceparent": correlation.traceparent } },
       );
     }
 
     return NextResponse.json(
       { ok: false, error: { code: "ERROR_REPORT_PERSISTENCE_FAILED", message: "Error report could not be persisted after validation." } },
-      { status: 500 },
+      { status: 500, headers: noStoreHeaders },
     );
   }
 }
+

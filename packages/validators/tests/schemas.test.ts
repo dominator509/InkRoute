@@ -10,8 +10,21 @@ import {
   paymentRecordInputSchema,
   clientInputSchema,
   clientProfileInputSchema,
+  consentFormInputSchema,
+  consentSignatureInputSchema,
+  medicalSafetyAcknowledgmentInputSchema,
   seoCityPageInputSchema,
   seoStylePageInputSchema,
+  releaseCreateInputSchema,
+  featureFlagPatchInputSchema,
+  deploymentReadinessMutationSchema,
+  buildValidatorLaunchAdoptionEvidencePlan,
+  buildValidatorRuntimeReadinessPlan,
+  validatorLaunchAdoptionRequiredCommands,
+  validatorLaunchAdoptionRequiredControls,
+  validatorLaunchAdoptionRequiredEvidence,
+  validatorRuntimeReadinessRequiredCommands,
+  validatorRuntimeReadinessRequiredEvidence,
 } from "../src/index";
 
 describe("validator happy/error paths", () => {
@@ -150,6 +163,31 @@ describe("validator happy/error paths", () => {
     expect(clientInputSchema.safeParse({ email: "not-an-email", preferredName: "" }).success).toBe(false);
   });
 
+  it("validates consent-related form payloads", () => {
+    expect(
+      consentFormInputSchema.safeParse({
+        key: "tattoo-consent",
+        title: "Tattoo Consent",
+        body: "I understand the risks and care instructions associated with this tattoo.",
+      }).success,
+    ).toBe(true);
+    expect(
+      consentSignatureInputSchema.safeParse({
+        consentFormId: "cform_1",
+        clientId: "client_1",
+        signerName: "Ari Test",
+        signerEmail: "ari@example.com",
+      }).success,
+    ).toBe(true);
+    expect(
+      medicalSafetyAcknowledgmentInputSchema.safeParse({
+        clientId: "client_1",
+        acknowledgments: { hasSkinCondition: false },
+        flaggedReasons: ["no known conditions"],
+      }).success,
+    ).toBe(true);
+  });
+
   it("validates SEO pages and fails malformed paths", () => {
     const city = seoCityPageInputSchema.safeParse({
       slug: "seattle-wa",
@@ -172,5 +210,122 @@ describe("validator happy/error paths", () => {
 
     expect(city.success).toBe(true);
     expect(malformed.success).toBe(false);
+  });
+
+  it("validates release and rollout payloads", () => {
+    expect(
+      releaseCreateInputSchema.safeParse({
+        version: "v1.2.3",
+        channel: "mobile_preview",
+        commitSha: "abc1234",
+        notes: "Release for dashboard update.",
+      }).success,
+    ).toBe(true);
+
+    expect(
+      featureFlagPatchInputSchema.safeParse({
+        key: "beta-feature",
+        enabled: true,
+      }).success,
+    ).toBe(true);
+
+    expect(
+      deploymentReadinessMutationSchema.safeParse({
+        operation: "request-production-approval",
+        targetEnvironment: "production",
+        reason: "Release readiness checks passed.",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("summarizes validator runtime readiness across package execution, schema domains, route usage, and sensitive fields", () => {
+    const plan = buildValidatorRuntimeReadinessPlan({
+      packageScripts: ["test"],
+      packageTypecheckPassed: false,
+      packageTestsPassed: true,
+      bookingSchemasCovered: true,
+      travelSchemasCovered: true,
+      portfolioSchemasCovered: true,
+      paymentSchemasCovered: true,
+      peopleSchemasCovered: true,
+      seoSchemasCovered: true,
+      consentSchemasCovered: true,
+      releaseSchemasCovered: true,
+      messagingSchemasCovered: false,
+      observabilitySchemasCovered: false,
+      tenantAuthEdgeCasesCovered: false,
+      formEdgeCasesCovered: false,
+      apiRoutesUseSharedValidators: false,
+      sensitiveFieldPoliciesAligned: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredCommands).toBe(validatorRuntimeReadinessRequiredCommands);
+    expect(plan.requiredEvidence).toBe(validatorRuntimeReadinessRequiredEvidence);
+    expect(plan.blockers).toContain("Message, notification, consent, preview, and provider webhook schemas need happy/error coverage.");
+    expect(plan.blockers).toContain("Public, dashboard, webhook, release, privacy, upload, payment, notification, and observability routes must use shared validator schemas.");
+  });
+
+  it("summarizes validator launch adoption evidence across schema domains, route adoption, tenant scope, sensitive fields, CI, and safe artifacts", () => {
+    const plan = buildValidatorLaunchAdoptionEvidencePlan({
+      packageScripts: ["typecheck", "test"],
+      validatorsTypecheckPassed: true,
+      validatorsTestsPassed: true,
+      bookingTravelPortfolioPaymentCovered: true,
+      peopleConsentFormsSeoCovered: true,
+      messagingObservabilityReleaseCovered: true,
+      tenancyAuthEdgeCasesCovered: true,
+      dynamicFormEdgeCasesCovered: true,
+      publicRoutesUseSharedSchemas: true,
+      dashboardRoutesUseSharedSchemas: true,
+      webhookRoutesUseSharedSchemas: true,
+      providerPayloadRoutesUseSharedSchemas: true,
+      malformedPayloadRouteTestsPassed: true,
+      tenantScopeRouteTestsPassed: true,
+      sensitiveFieldsSecurityAligned: true,
+      redactionEncryptionPolicyTestsPassed: true,
+      ciEvidenceCaptured: true,
+      secretSafeArtifactsCaptured: true,
+    });
+
+    expect(plan).toMatchObject({
+      status: "ready",
+      missingScripts: [],
+      requiredEvidence: [],
+      blockers: [],
+    });
+    expect(plan.requiredCommands).toBe(validatorLaunchAdoptionRequiredCommands);
+    expect(plan.requiredControls).toBe(validatorLaunchAdoptionRequiredControls);
+  });
+
+  it("blocks validator launch adoption evidence until route-wide schema use, edge coverage, sensitive-field policy, CI, and artifact proof exist", () => {
+    const plan = buildValidatorLaunchAdoptionEvidencePlan({
+      packageScripts: ["test"],
+      validatorsTypecheckPassed: false,
+      validatorsTestsPassed: true,
+      bookingTravelPortfolioPaymentCovered: true,
+      peopleConsentFormsSeoCovered: false,
+      messagingObservabilityReleaseCovered: false,
+      tenancyAuthEdgeCasesCovered: false,
+      dynamicFormEdgeCasesCovered: false,
+      publicRoutesUseSharedSchemas: false,
+      dashboardRoutesUseSharedSchemas: false,
+      webhookRoutesUseSharedSchemas: false,
+      providerPayloadRoutesUseSharedSchemas: false,
+      malformedPayloadRouteTestsPassed: false,
+      tenantScopeRouteTestsPassed: false,
+      sensitiveFieldsSecurityAligned: false,
+      redactionEncryptionPolicyTestsPassed: false,
+      ciEvidenceCaptured: false,
+      secretSafeArtifactsCaptured: false,
+    });
+
+    expect(plan.status).toBe("blocked");
+    expect(plan.missingScripts).toEqual(["typecheck"]);
+    expect(plan.requiredEvidence).toBe(validatorLaunchAdoptionRequiredEvidence);
+    expect(plan.blockers).toContain("Public API routes must use shared validator schemas.");
+    expect(plan.blockers).toContain("Webhook routes must use shared validator schemas before side effects.");
+    expect(plan.blockers).toContain("Security contract tests must prove accepted sensitive fields are redacted or encryption-gated before persistence.");
   });
 });

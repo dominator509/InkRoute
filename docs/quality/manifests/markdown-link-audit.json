@@ -1,10 +1,4326 @@
 {
-  "generatedAt": "2026-06-06T16:06:53.398Z",
+  "generatedAt": "2026-06-22T00:13:08.872Z",
   "source": "Phase 17 quality gate hardening",
   "status": "pass",
-  "markdownFilesChecked": 63,
+  "markdownFilesChecked": 161,
   "totalLinks": 0,
   "relativeLinksChecked": 0,
+  "referencedPathsChecked": 1078,
   "findings": [],
-  "linkRecords": []
+  "semanticFindings": [],
+  "linkRecords": [],
+  "referencedPathRecords": [
+    {
+      "sourcePath": ".github/ISSUE_TEMPLATE/gap_closure.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": ".github/PULL_REQUEST_TEMPLATE.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": ".github/PULL_REQUEST_TEMPLATE.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": ".obsidian/InkRoute/Projects/InkRoute/Workflow-Optimizer.md",
+      "reference": "scripts/workflow/route-serena-obsidian.mjs"
+    },
+    {
+      "sourcePath": ".obsidian/InkRoute/Projects/InkRoute/Workflow-Optimizer.md",
+      "reference": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md"
+    },
+    {
+      "sourcePath": ".obsidian/InkRoute/Projects/InkRoute/Workflow-Optimizer.md",
+      "reference": "scripts/bootstrap-obsidian-vault.ps1"
+    },
+    {
+      "sourcePath": "AGENTS.md",
+      "reference": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md"
+    },
+    {
+      "sourcePath": "AGENTS.md",
+      "reference": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md"
+    },
+    {
+      "sourcePath": "AGENTS.md",
+      "reference": "package.json"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "reference": "apps/dashboard/lib/demo.ts"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/dashboard/lib/demo.ts"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "packages/mobile"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "packages/notifications"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/web/lib/seoEngine.ts"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/dashboard/lib/seoDemo.ts"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "packages/observability"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "packages/releases"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/dashboard/app/releases/page.tsx"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/dashboard/lib/releaseDemo.ts"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": ".github/workflows/release-governance.yml"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "packages/security/src/index.ts"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/dashboard/lib/securityDemo.ts"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "packages/testing/src/index.ts"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "deployment/scripts"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "packages/observability/src/index.ts"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/web/app/global-error.tsx"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/dashboard/app/global-error.tsx"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/dashboard/app/api/error-reports/route.ts"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/web/app/api/webhooks/sentry/route.ts"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/dashboard/lib/errorDemo.ts"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/dashboard/app/errors/page.tsx"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/mobile/src/screens/SystemStatusScreen.tsx"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "CLAUDE.md",
+      "reference": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md"
+    },
+    {
+      "sourcePath": "CLAUDE.md",
+      "reference": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "packages/db/prisma/tenant-isolation-contract.json"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "packages/db/prisma/seed.ts"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "packages/db/prisma/seed-readiness.json"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "deployment/manifests/database-operations-evidence.json"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "packages/releases/src/index.ts"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": ".github/workflows/release-governance.yml"
+    },
+    {
+      "sourcePath": "deployment/CI_CD_RUNBOOK.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "deployment/CI_CD_RUNBOOK.md",
+      "reference": ".github/workflows/release-governance.yml"
+    },
+    {
+      "sourcePath": "deployment/CI_CD_RUNBOOK.md",
+      "reference": "ENVIRONMENT_VARIABLES.md"
+    },
+    {
+      "sourcePath": "deployment/CI_CD_RUNBOOK.md",
+      "reference": "deployment/manifests/environment-contract.json"
+    },
+    {
+      "sourcePath": "deployment/DATABASE_MIGRATION_GUIDE.md",
+      "reference": "deployment/manifests/database-operations-evidence.json"
+    },
+    {
+      "sourcePath": "deployment/LOCAL_SETUP.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "deployment/MOBILE_BUILD_GUIDE.md",
+      "reference": "apps/mobile/eas.json"
+    },
+    {
+      "sourcePath": "deployment/MOBILE_BUILD_GUIDE.md",
+      "reference": "deployment/manifests/mobile-deployment-evidence.json"
+    },
+    {
+      "sourcePath": "deployment/PRODUCTION_LAUNCH_CHECKLIST.md",
+      "reference": "deployment/manifests/production-launch-evidence.json"
+    },
+    {
+      "sourcePath": "deployment/PRODUCTION_LAUNCH_CHECKLIST.md",
+      "reference": "deployment/manifests/launch-operations-evidence.json"
+    },
+    {
+      "sourcePath": "deployment/PRODUCTION_LAUNCH_CHECKLIST.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "deployment/PROVIDER_OPTIONS.md",
+      "reference": "deployment/manifests/provider-environment-evidence.json"
+    },
+    {
+      "sourcePath": "deployment/README.md",
+      "reference": "deployment/LOCAL_SETUP.md"
+    },
+    {
+      "sourcePath": "deployment/README.md",
+      "reference": "deployment/PROVIDER_OPTIONS.md"
+    },
+    {
+      "sourcePath": "deployment/README.md",
+      "reference": "deployment/CI_CD_RUNBOOK.md"
+    },
+    {
+      "sourcePath": "deployment/README.md",
+      "reference": "deployment/MOBILE_BUILD_GUIDE.md"
+    },
+    {
+      "sourcePath": "deployment/README.md",
+      "reference": "deployment/DATABASE_MIGRATION_GUIDE.md"
+    },
+    {
+      "sourcePath": "deployment/README.md",
+      "reference": "deployment/PRODUCTION_LAUNCH_CHECKLIST.md"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "apps/mobile/eas.json"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": ".github/workflows/release-governance.yml"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/manifests"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/scripts"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/manifests/provider-environment-evidence.json"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/manifests/secret-management-audit.json"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/manifests/mobile-deployment-evidence.json"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/manifests/database-operations-evidence.json"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/manifests/production-launch-evidence.json"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/manifests/launch-operations-evidence.json"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/LOCAL_SETUP.md"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/PROVIDER_OPTIONS.md"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/CI_CD_RUNBOOK.md"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/MOBILE_BUILD_GUIDE.md"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/DATABASE_MIGRATION_GUIDE.md"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "deployment/PRODUCTION_LAUNCH_CHECKLIST.md"
+    },
+    {
+      "sourcePath": "docs/ai/API_CONTRACTS.md",
+      "reference": "docs/ai/API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/ai/API_CONTRACTS.md",
+      "reference": "apps/dashboard/app/api/dashboardAuth.ts"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "apps/web/app/api/webhooks"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "apps/dashboard/app/api"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "packages/validators/src"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "packages/auth/src"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "docs/ai/API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "docs/ai/API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "packages/auth/src/index.ts"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "apps/dashboard/app/api/dashboardAuth.ts"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/ai/HANDOFF_LOG.md",
+      "reference": "docs/ai/repomix-summary.xml"
+    },
+    {
+      "sourcePath": "docs/ai/HANDOFF_LOG.md",
+      "reference": "docs/ai/REPO_BRIEF.md"
+    },
+    {
+      "sourcePath": "docs/ai/HANDOFF_LOG.md",
+      "reference": "docs/ai/ARCHITECTURE_MAP.md"
+    },
+    {
+      "sourcePath": "docs/ai/HANDOFF_LOG.md",
+      "reference": "docs/ai/API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/ai/HANDOFF_LOG.md",
+      "reference": "docs/ai/HANDOFF_LOG.md"
+    },
+    {
+      "sourcePath": "docs/ai/HANDOFF_LOG.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/ai/HANDOFF_LOG.md",
+      "reference": "docs/ai/API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/ai/REPO_BRIEF.md",
+      "reference": "docs/ai/repomix-summary.xml"
+    },
+    {
+      "sourcePath": "docs/ai/REPO_BRIEF.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/ai/REPO_BRIEF.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/ai/REPO_BRIEF.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "docs/ai/REPO_BRIEF.md",
+      "reference": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md"
+    },
+    {
+      "sourcePath": "docs/ai/REPO_BRIEF.md",
+      "reference": "AGENTS.md"
+    },
+    {
+      "sourcePath": "docs/ai/REPO_BRIEF.md",
+      "reference": "CLAUDE.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "scripts/bootstrap-obsidian-vault.ps1"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "scripts/workflow/route-serena-obsidian.mjs"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "scripts/bootstrap-obsidian-vault.ps1"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "package.json"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "scripts/workflow/route-serena-obsidian.mjs"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "scripts/bootstrap-obsidian-vault.ps1"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "scripts/bootstrap-obsidian-vault.ps1"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "docs/ai/Command-Center.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "docs/ai/Exact-Seam-Protocol.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "docs/ai/Tool-Admission.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "docs/ai/Current-Work.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "docs/ai/Workflow-Routing.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "docs/ai/One-Shot-Protocol.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "docs/ai/CI-Fix-Intake.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "docs/ai/Agent-Handoff-Intake.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "docs/ai/Decisions.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "docs/ai/Codex-Reviews.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "docs/ai/DeepSeek-Handoffs.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "docs/ai/Gap-Closure-Dashboard.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/db/SEED_READINESS.md",
+      "reference": "packages/db/prisma/seed-readiness.json"
+    },
+    {
+      "sourcePath": "docs/handoff/AGENT_EXECUTION_QUEUE.md",
+      "reference": "docs/handoff/manifests/agent-execution-queue.json"
+    },
+    {
+      "sourcePath": "docs/handoff/AGENT_EXECUTION_QUEUE.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/handoff/AGENT_EXECUTION_QUEUE.md",
+      "reference": "docs/handoff/manifests/agent-execution-ledger.json"
+    },
+    {
+      "sourcePath": "docs/handoff/AGENT_EXECUTION_QUEUE.md",
+      "reference": "docs/handoff/manifests/agent-task-tracking-sync.json"
+    },
+    {
+      "sourcePath": "docs/handoff/AGENT_EXECUTION_QUEUE.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/handoff/CODEX_FIRST_RUN_PROMPT.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/handoff/GAP_CLOSURE_PROTOCOL.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/handoff/GAP_CLOSURE_PROTOCOL.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/handoff/README.md",
+      "reference": "docs/handoff/AGENT_EXECUTION_QUEUE.md"
+    },
+    {
+      "sourcePath": "docs/handoff/README.md",
+      "reference": "docs/handoff/GAP_CLOSURE_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "docs/handoff/README.md",
+      "reference": "docs/handoff/CODEX_FIRST_RUN_PROMPT.md"
+    },
+    {
+      "sourcePath": "docs/handoff/README.md",
+      "reference": "docs/handoff/JULES_INFRA_PROMPT.md"
+    },
+    {
+      "sourcePath": "docs/handoff/README.md",
+      "reference": "docs/handoff/CLAUDE_PROVIDER_PROMPT.md"
+    },
+    {
+      "sourcePath": "docs/handoff/README.md",
+      "reference": "scripts/handoff/audit-gap-tracker.mjs"
+    },
+    {
+      "sourcePath": "docs/handoff/README.md",
+      "reference": "scripts/handoff/verify-phase-docs.mjs"
+    },
+    {
+      "sourcePath": "docs/handoff/README.md",
+      "reference": "docs/handoff/manifests/handoff-tooling-readiness.json"
+    },
+    {
+      "sourcePath": "docs/handoff/README.md",
+      "reference": "docs/handoff/manifests/agent-task-tracking-sync.json"
+    },
+    {
+      "sourcePath": "docs/handoff/README.md",
+      "reference": "docs/quality"
+    },
+    {
+      "sourcePath": "docs/handoff/README.md",
+      "reference": "scripts/quality"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "SECURITY.md"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "PRODUCT_REQUIREMENTS.md"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web/app/privacy/page.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web/app/terms/page.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web/app/consent-disclaimer/page.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web/app/aftercare/page.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web/app/booking/BookingFlowClient.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web/app/booking/deposit-preview/page.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/dashboard/app/forms/page.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/dashboard/app/payments/page.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/dashboard/app/templates/page.tsx"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "packages/db/prisma/seed.ts"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "docs/legal/manifests/legal-review-evidence.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_0_PRODUCT_DEFINITION.md",
+      "reference": "PRODUCT_REQUIREMENTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_0_PRODUCT_DEFINITION.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_0_PRODUCT_DEFINITION.md",
+      "reference": "SEO_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_0_PRODUCT_DEFINITION.md",
+      "reference": "SECURITY.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "SEO_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "packages/seo/src/index.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "apps/web/lib/seoEngine.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "apps/web/app/sitemap.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "apps/dashboard/lib/seoDemo.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "apps/dashboard/app/seo/page.tsx"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "SEO_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "FILE_TREE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "BUG_CRASH_REPORTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "packages/observability/src/index.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/web/app/global-error.tsx"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/web/lib/errorReporting.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/web/app/api/webhooks/sentry/route.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/dashboard/app/global-error.tsx"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/dashboard/app/api/error-reports/route.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/dashboard/lib/errorDemo.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/dashboard/app/errors/page.tsx"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/dashboard/app/globals.css"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/mobile/src/lib/mobileDemo.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/mobile/src/screens/SystemStatusScreen.tsx"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "BUG_CRASH_REPORTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "ENVIRONMENT_VARIABLES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "SECURITY.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "DEPLOYMENT.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "PRODUCT_REQUIREMENTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "HANDOFF_TO_CODEX.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "HANDOFF_TO_JULES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "HANDOFF_TO_CLAUDE_CODE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "FILE_TREE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "reference": "RELEASE_AND_AUTO_UPDATE_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "reference": "DEPLOYMENT.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "reference": "HANDOFF_TO_CODEX.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "reference": "HANDOFF_TO_JULES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "reference": "HANDOFF_TO_CLAUDE_CODE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "reference": "ENVIRONMENT_VARIABLES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "reference": "packages/releases"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "reference": "apps/dashboard/lib/releaseDemo.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "reference": ".github/workflows/release-governance.yml"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_13_SECURITY_PRIVACY_TRUST.md",
+      "reference": "apps/dashboard/lib/securityDemo.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_13_SECURITY_PRIVACY_TRUST.md",
+      "reference": "ENVIRONMENT_VARIABLES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_13_SECURITY_PRIVACY_TRUST.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_13_SECURITY_PRIVACY_TRUST.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_13_SECURITY_PRIVACY_TRUST.md",
+      "reference": "SECURITY.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_13_SECURITY_PRIVACY_TRUST.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_13_SECURITY_PRIVACY_TRUST.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_13_SECURITY_PRIVACY_TRUST.md",
+      "reference": "FILE_TREE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_13_SECURITY_PRIVACY_TRUST.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "SECURITY.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/booking/tests/booking-readiness.test.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/payments/tests/deposit-policy.test.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/calendar/tests/availability-conflicts.test.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/notifications/tests/delivery-plan.test.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/seo/tests/seo-engine.test.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/observability/tests/redaction-report.test.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/releases/tests/feature-flags.test.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/security/tests/upload-policy.test.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/testing/tests/testing-manifest.test.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "apps/web/tests/e2e/public-booking.spec.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "apps/dashboard/tests/e2e/dashboard-smoke.spec.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "apps/mobile/tests/mobile-static.test.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "testing/manifests/e2e-test-manifest.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "testing/manifests/accessibility-checklist.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "testing/manifests/security-checklist.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "testing/manifests/mobile-device-qa-checklist.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "testing/manifests/provider-test-plan.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "testing/manifests/manual-qa-checklist.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "testing/scripts/verify-test-manifest.mjs"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "testing/scripts/phase14-static-check.mjs"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "testing/scripts/print-qa-checklists.mjs"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "package.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "DEPLOYMENT.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "deployment/LOCAL_SETUP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "deployment/PROVIDER_OPTIONS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "deployment/CI_CD_RUNBOOK.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "deployment/MOBILE_BUILD_GUIDE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "deployment/DATABASE_MIGRATION_GUIDE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "deployment/PRODUCTION_LAUNCH_CHECKLIST.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "deployment/manifests/environment-contract.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "deployment/manifests/provider-matrix.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "deployment/manifests/production-launch-checklist.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "deployment/manifests/handoff-tasks.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "deployment/scripts/check-env.mjs"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "deployment/scripts/print-launch-checklist.mjs"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "deployment/scripts/final-gap-summary.mjs"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "apps/dashboard/app/deployment/page.tsx"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "apps/dashboard/lib/deploymentDemo.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "DEPLOYMENT.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "ENVIRONMENT_VARIABLES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "FILE_TREE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "RELEASE_AND_AUTO_UPDATE_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "HANDOFF_TO_CODEX.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "HANDOFF_TO_JULES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "HANDOFF_TO_CLAUDE_CODE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "DEPLOYMENT.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "SECURITY.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "ENVIRONMENT_VARIABLES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "HANDOFF_TO_CODEX.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "HANDOFF_TO_JULES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "HANDOFF_TO_CLAUDE_CODE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "docs/phases"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "scripts/handoff/verify-phase-docs.mjs"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "scripts/handoff/audit-gap-tracker.mjs"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "scripts/handoff/print-next-agent-tasks.mjs"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "docs/handoff/AGENT_EXECUTION_QUEUE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "docs/handoff/GAP_CLOSURE_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "docs/handoff/CODEX_FIRST_RUN_PROMPT.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "docs/handoff/JULES_INFRA_PROMPT.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "docs/handoff/CLAUDE_PROVIDER_PROMPT.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "docs/handoff/manifests/agent-execution-queue.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "docs/handoff/manifests/gap-audit-report.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "docs/handoff/manifests/phase-documentation-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": ".github/PULL_REQUEST_TEMPLATE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": ".github/ISSUE_TEMPLATE/gap_closure.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "package.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "FILE_TREE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "AGENTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "DEPLOYMENT.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "HANDOFF_TO_CODEX.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "HANDOFF_TO_JULES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "HANDOFF_TO_CLAUDE_CODE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md",
+      "reference": "docs/handoff/manifests/gap-audit-report.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "packages/quality"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "docs/quality/README.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "docs/quality/QUALITY_GATE_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "docs/quality/CODEX_QUALITY_GATE_PROMPT.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "docs/quality/manifests/markdown-link-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "docs/quality/manifests/gap-evidence-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "docs/quality/manifests/quality-gates.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "FILE_TREE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "HANDOFF_TO_CODEX.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "HANDOFF_TO_JULES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "HANDOFF_TO_CLAUDE_CODE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "docs/handoff/AGENT_EXECUTION_QUEUE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "docs/handoff/CODEX_FIRST_RUN_PROMPT.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "docs/handoff/GAP_CLOSURE_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "docs/handoff/manifests/agent-execution-queue.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "scripts/workspace/audit-workspace-imports.mjs"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "scripts/workspace/audit-package-scripts.mjs"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "scripts/workspace/print-runtime-readiness.mjs"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/workspace-import-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/package-script-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/runtime-readiness.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/README.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/WORKSPACE_AUDIT_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/CODEX_WORKSPACE_PROMPT.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/workspace-import-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/package-script-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/runtime-readiness.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/runtime-readiness.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/workspace-import-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/package-script-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/runtime-readiness.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "apps/dashboard/lib/demo.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/CODEX_WORKSPACE_PROMPT.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/workspace-prompt-run-2026-06-06-4.log"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/workspace-import-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/package-script-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/runtime-readiness.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/workspace-prompt-run-2026-06-06-plan.log"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/workspace-import-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/package-script-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/runtime-readiness.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/quality/manifests/markdown-link-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/quality/manifests/gap-evidence-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/quality/manifests/quality-gates.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/handoff/manifests/phase-documentation-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/handoff/manifests/gap-audit-report.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-34-26Z.log"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/workspace-import-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/package-script-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/runtime-readiness.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/handoff/manifests/phase-documentation-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/handoff/manifests/gap-audit-report.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/quality/manifests/markdown-link-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/quality/manifests/gap-evidence-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/quality/manifests/quality-gates.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/runtime-readiness.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/CODEX_WORKSPACE_PROMPT.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-43-37.log"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/workspace-import-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/package-script-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/runtime-readiness.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/handoff/manifests/phase-documentation-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/handoff/manifests/gap-audit-report.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/quality/manifests/markdown-link-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/quality/manifests/gap-evidence-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/quality/manifests/quality-gates.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-58-20.log"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/workspace-import-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/package-script-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/workspace/manifests/runtime-readiness.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/handoff/manifests/phase-documentation-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/handoff/manifests/gap-audit-report.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/quality/manifests/markdown-link-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/quality/manifests/gap-evidence-audit.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "docs/quality/manifests/quality-gates.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_CLOSEOUT.md",
+      "reference": "docs/phases/PHASE_1_VERIFICATION_NOTES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_MONOREPO_ARCHITECTURE.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "packages/auth"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "packages/seo"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "packages/analytics"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "packages/calendar"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "packages/payments"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "packages/notifications"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/db/prisma/seed.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/types/src/index.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/validators"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "apps/web/lib/format.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "apps/web/app/sitemap.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "apps/web/app/robots.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "packages/config/src/index.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "packages/seo/src/index.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "packages/seo"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "PRODUCT_REQUIREMENTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "DATABASE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "SEO_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "docs/phases"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "apps/web/package.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "apps/web/app/globals.css"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "packages/booking"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "packages/validators"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "PRODUCT_REQUIREMENTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "DATABASE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "SEO_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "SECURITY.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "docs/phases"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "apps/dashboard/lib/demo.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "packages/config/src/index.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "apps/dashboard/package.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "apps/dashboard/next.config.mjs"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "apps/dashboard/app/globals.css"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "packages/booking"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "packages/payments"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "packages/calendar"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "packages/notifications"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "PRODUCT_REQUIREMENTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "DATABASE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "RELEASE_AND_AUTO_UPDATE_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "BUG_CRASH_REPORTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "SECURITY.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "docs/phases"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "apps/mobile/src/lib/mobileDemo.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "apps/mobile/eas.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "apps/mobile/app.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "packages/mobile"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "packages/booking"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "packages/payments"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "packages/calendar"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "packages/notifications"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "packages/mobile"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "PRODUCT_REQUIREMENTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "DATABASE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "ENVIRONMENT_VARIABLES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "SECURITY.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "docs/phases"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "packages/validators/src/payments.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/web/package.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "packages/payments/src/index.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "packages/validators/src/payments.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/web/package.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/web/app/api/webhooks/stripe/route.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/web/app/booking/deposit-preview/page.tsx"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/web/app/sitemap.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/web/app/globals.css"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/dashboard/lib/demo.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/dashboard/app/payments/page.tsx"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "ENVIRONMENT_VARIABLES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "SECURITY.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "DEPLOYMENT.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "HANDOFF_TO_CODEX.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "HANDOFF_TO_JULES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "HANDOFF_TO_CLAUDE_CODE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "FILE_TREE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "packages/calendar/src/index.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/dashboard/lib/demo.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "packages/calendar/src/index.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/dashboard/lib/demo.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/dashboard/app/calendar/page.tsx"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/dashboard/app/travel/page.tsx"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/dashboard/app/globals.css"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/web/app/travel/page.tsx"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/web/app/globals.css"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/web/package.json"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "ENVIRONMENT_VARIABLES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "DEPLOYMENT.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "HANDOFF_TO_CODEX.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "HANDOFF_TO_JULES.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "HANDOFF_TO_CLAUDE_CODE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "FILE_TREE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_9_NOTIFICATIONS_MESSAGING.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_9_NOTIFICATIONS_MESSAGING.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_9_NOTIFICATIONS_MESSAGING.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_9_NOTIFICATIONS_MESSAGING.md",
+      "reference": "packages/notifications/src/index.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_9_NOTIFICATIONS_MESSAGING.md",
+      "reference": "packages/validators/src/messaging.ts"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_9_NOTIFICATIONS_MESSAGING.md",
+      "reference": "apps/dashboard/lib/demo.ts"
+    },
+    {
+      "sourcePath": "docs/quality/CODEX_QUALITY_GATE_PROMPT.md",
+      "reference": "docs/quality/README.md"
+    },
+    {
+      "sourcePath": "docs/quality/CODEX_QUALITY_GATE_PROMPT.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/quality/CODEX_QUALITY_GATE_PROMPT.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/quality/CODEX_QUALITY_GATE_PROMPT.md",
+      "reference": "docs/handoff/GAP_CLOSURE_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "docs/quality/CODEX_QUALITY_GATE_PROMPT.md",
+      "reference": "docs/quality/QUALITY_GATE_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "docs/quality/CODEX_QUALITY_GATE_PROMPT.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/quality/CODEX_QUALITY_GATE_PROMPT.md",
+      "reference": "docs/phases/PHASE_17_QUALITY_GATES.md"
+    },
+    {
+      "sourcePath": "docs/quality/README.md",
+      "reference": "docs/quality/manifests/markdown-link-audit.json"
+    },
+    {
+      "sourcePath": "docs/quality/README.md",
+      "reference": "docs/quality/manifests/documentation-consistency-audit.json"
+    },
+    {
+      "sourcePath": "docs/quality/README.md",
+      "reference": "docs/quality/manifests/documentation-inventory-audit.json"
+    },
+    {
+      "sourcePath": "docs/quality/README.md",
+      "reference": "docs/quality/manifests/gap-evidence-audit.json"
+    },
+    {
+      "sourcePath": "docs/quality/README.md",
+      "reference": "docs/quality/manifests/repository-governance-audit.json"
+    },
+    {
+      "sourcePath": "docs/quality/README.md",
+      "reference": "docs/quality/manifests/required-checks-audit.json"
+    },
+    {
+      "sourcePath": "docs/quality/README.md",
+      "reference": "docs/quality/manifests/quality-gates.json"
+    },
+    {
+      "sourcePath": "docs/workspace/CODEX_WORKSPACE_PROMPT.md",
+      "reference": "docs/workspace/README.md"
+    },
+    {
+      "sourcePath": "docs/workspace/CODEX_WORKSPACE_PROMPT.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "docs/workspace/CODEX_WORKSPACE_PROMPT.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/workspace/CODEX_WORKSPACE_PROMPT.md",
+      "reference": "docs/workspace/WORKSPACE_AUDIT_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "docs/workspace/CODEX_WORKSPACE_PROMPT.md",
+      "reference": "docs/handoff/GAP_CLOSURE_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "docs/workspace/CODEX_WORKSPACE_PROMPT.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "docs/workspace/CODEX_WORKSPACE_PROMPT.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "docs/workspace/CODEX_WORKSPACE_PROMPT.md",
+      "reference": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md"
+    },
+    {
+      "sourcePath": "docs/workspace/README.md",
+      "reference": "docs/workspace/manifests"
+    },
+    {
+      "sourcePath": "docs/workspace/README.md",
+      "reference": "docs/workspace/manifests/workspace-import-audit.json"
+    },
+    {
+      "sourcePath": "docs/workspace/README.md",
+      "reference": "docs/workspace/manifests/package-script-audit.json"
+    },
+    {
+      "sourcePath": "docs/workspace/README.md",
+      "reference": "docs/workspace/manifests/runtime-evidence-audit.json"
+    },
+    {
+      "sourcePath": "docs/workspace/README.md",
+      "reference": "docs/workspace/manifests/runtime-readiness.json"
+    },
+    {
+      "sourcePath": "docs/workspace/README.md",
+      "reference": "docs/workspace/manifests/workspace-required-checks-audit.json"
+    },
+    {
+      "sourcePath": "docs/workspace/README.md",
+      "reference": "docs/workspace/manifests/workspace-toolchain-readiness-audit.json"
+    },
+    {
+      "sourcePath": "ENVIRONMENT_VARIABLES.md",
+      "reference": "apps/mobile/app.json"
+    },
+    {
+      "sourcePath": "ENVIRONMENT_VARIABLES.md",
+      "reference": "deployment/manifests/environment-contract.json"
+    },
+    {
+      "sourcePath": "ENVIRONMENT_VARIABLES.md",
+      "reference": "deployment/manifests/secret-management-audit.json"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "packages/deployment"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "deployment/LOCAL_SETUP.md"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "deployment/PROVIDER_OPTIONS.md"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "deployment/CI_CD_RUNBOOK.md"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "deployment/MOBILE_BUILD_GUIDE.md"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "deployment/DATABASE_MIGRATION_GUIDE.md"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "deployment/PRODUCTION_LAUNCH_CHECKLIST.md"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "deployment/manifests/environment-contract.json"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "deployment/manifests/provider-matrix.json"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "deployment/manifests/production-launch-checklist.json"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "deployment/manifests/handoff-tasks.json"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "deployment/scripts/check-env.mjs"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "deployment/scripts/print-launch-checklist.mjs"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "deployment/scripts/final-gap-summary.mjs"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "apps/dashboard/app/deployment/page.tsx"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "apps/dashboard/lib/deploymentDemo.ts"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "apps/dashboard/app/api/deployment/readiness/route.ts"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "packages/handoff"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "scripts/handoff/verify-phase-docs.mjs"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "scripts/handoff/audit-gap-tracker.mjs"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "scripts/handoff/print-next-agent-tasks.mjs"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "docs/handoff/AGENT_EXECUTION_QUEUE.md"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "docs/handoff/GAP_CLOSURE_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "docs/handoff/CODEX_FIRST_RUN_PROMPT.md"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "docs/handoff/JULES_INFRA_PROMPT.md"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "docs/handoff/CLAUDE_PROVIDER_PROMPT.md"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "docs/handoff/manifests/agent-execution-queue.json"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "docs/handoff/manifests/gap-audit-report.json"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "docs/handoff/manifests/phase-documentation-audit.json"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": ".github/PULL_REQUEST_TEMPLATE.md"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": ".github/ISSUE_TEMPLATE/gap_closure.md"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "packages/workspace"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "scripts/workspace"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "docs/workspace"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
+      "reference": "DEPLOYMENT.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
+      "reference": "ENVIRONMENT_VARIABLES.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
+      "reference": "deployment/CI_CD_RUNBOOK.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
+      "reference": "deployment/PRODUCTION_LAUNCH_CHECKLIST.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
+      "reference": "docs/handoff/AGENT_EXECUTION_QUEUE.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
+      "reference": "docs/handoff/GAP_CLOSURE_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
+      "reference": "docs/handoff/CLAUDE_PROVIDER_PROMPT.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
+      "reference": "docs/workspace/WORKSPACE_AUDIT_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
+      "reference": "docs/workspace/CODEX_WORKSPACE_PROMPT.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "PRODUCT_REQUIREMENTS.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "DEPLOYMENT.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "deployment/LOCAL_SETUP.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "deployment/PRODUCTION_LAUNCH_CHECKLIST.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "ENVIRONMENT_VARIABLES.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "docs/handoff/AGENT_EXECUTION_QUEUE.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "docs/handoff/GAP_CLOSURE_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "docs/handoff/CODEX_FIRST_RUN_PROMPT.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "TESTING_PLAN.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "docs/phases/PHASE_16_AGENT_EXECUTION_READINESS.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_CODEX.md",
+      "reference": "docs/workspace/manifests"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "DATABASE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "SECURITY.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "DEPLOYMENT.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "ENVIRONMENT_VARIABLES.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "deployment/DATABASE_MIGRATION_GUIDE.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "deployment/PROVIDER_OPTIONS.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "docs/handoff/AGENT_EXECUTION_QUEUE.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "docs/handoff/GAP_CLOSURE_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "docs/handoff/JULES_INFRA_PROMPT.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "packages/db/prisma/schema.prisma"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "packages/db/prisma/seed.ts"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "packages/auth/src/index.ts"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "packages/security/src/index.ts"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "DEPLOYMENT.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "deployment/DATABASE_MIGRATION_GUIDE.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": "apps/mobile/eas.json"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": "apps/mobile/app.json"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": "packages/releases"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": ".github/workflows/release-governance.yml"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": "deployment/manifests/mobile-deployment-evidence.json"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": "apps/mobile/app.json"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": ".github/workflows/release-governance.yml"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": "deployment/CI_CD_RUNBOOK.md"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": "deployment/PRODUCTION_LAUNCH_CHECKLIST.md"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": "deployment/MOBILE_BUILD_GUIDE.md"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "packages/db/prisma/seed.ts"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "apps/web/components"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "apps/mobile/eas.json"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": ".github/workflows/release-governance.yml"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "docs/handoff/manifests/agent-execution-queue.json"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "docs/handoff"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "docs/handoff/CODEX_FIRST_RUN_PROMPT.md"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "docs/quality/manifests"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "docs/quality"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "docs/workspace/manifests"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "docs/workspace"
+    },
+    {
+      "sourcePath": "security/README.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "SECURITY.md",
+      "reference": "packages/auth/src/index.ts"
+    },
+    {
+      "sourcePath": "SECURITY.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "SECURITY.md",
+      "reference": "docs/legal/manifests/legal-review-evidence.json"
+    },
+    {
+      "sourcePath": "SECURITY.md",
+      "reference": "deployment/manifests/launch-operations-evidence.json"
+    },
+    {
+      "sourcePath": "SEO_PLAN.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "spec/HANDOFF_QUEUE.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "spec/PROJECT_STATE.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "spec/PROJECT_STATE.md",
+      "reference": "docs/ai/REPO_BRIEF.md"
+    },
+    {
+      "sourcePath": "spec/PROJECT_STATE.md",
+      "reference": "docs/ai/ARCHITECTURE_MAP.md"
+    },
+    {
+      "sourcePath": "spec/PROJECT_STATE.md",
+      "reference": "docs/ai/API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "README.md"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "ARCHITECTURE.md"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "ROADMAP.md"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "API_CONTRACTS.md"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/analytics"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/auth"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/booking"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/calendar"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/deployment"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/handoff"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/mobile"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/notifications"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/observability"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/payments"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/quality"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/releases"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/security"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/seo"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/testing"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/ui"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/validators"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/workspace"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": ".github/workflows/release-governance.yml"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "package.json"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "turbo.json"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "package.json"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/quality/tests/quality-gates.test.ts"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "docs/spec"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/DRIFT_CONTROL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/FLOW_CONTROL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/GAP_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/MANIFEST.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/PROVISIONING.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/RUNBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/AGENT_HARNESS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/PROJECT_STATE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/Architecture.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/Roadmap.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "scripts/verify_markers.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ADOPTION_LADDER.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/BUNDLE_MANIFEST.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_INSTRUCTIONS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/BUNDLE_MANIFEST.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_INSTRUCTIONS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/BUNDLE_MANIFEST.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_INSTRUCTIONS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_INSTRUCTIONS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/BUNDLE_MANIFEST.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_AUDIT.md",
+      "reference": "spec/retrofit/CODEX_INSTRUCTIONS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/CODEX_INSTRUCTIONS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/CODEX_INSTRUCTIONS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/regenerate_state.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/congruence_audit.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/verify_markers.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/gap_lint.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/ledger_lint.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/quarantine_import_lint.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/BUNDLE_MANIFEST.md",
+      "reference": "scripts/escalation_monitor.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/PROJECT_STATE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/PROJECT_STATE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "scripts/doctor.sh"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/PROJECT_STATE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "scripts/congruence_audit.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_HANDOFF.md",
+      "reference": "spec/retrofit/HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/CODEX_INSTRUCTIONS.md",
+      "reference": "AGENTS.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "spec/retrofit/Architecture.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "spec/retrofit/Architecture.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "spec/retrofit/Architecture.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "spec/retrofit/PROJECT_STATE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "spec/retrofit/PROJECT_STATE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "spec/retrofit/HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": "spec/retrofit/HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/kit/PROVISIONING.md",
+      "reference": "scripts/doctor.sh"
+    },
+    {
+      "sourcePath": "spec/retrofit/LEGACY_GAP_SCHEMA.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/LEGACY_GAP_SCHEMA.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/REPO_DISCOVERY.md",
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "docs/spec"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "docs/spec"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/MASTER_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/REPO_DISCOVERY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/ADOPTION_LADDER.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/DRIFT_REMEDIATION_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/ROLLBACK_PROTOCOL.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/LEGACY_GAP_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/CODEX_HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/GAP_CLOSURE_PLAYBOOK.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE_SCHEMA.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/REPO_INVENTORY.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/RETROFIT_BOOTSTRAP.md",
+      "reference": "spec/retrofit/HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ROLLBACK_PROTOCOL.md",
+      "reference": "spec/retrofit/RETROFIT_BOOTSTRAP.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/ROLLBACK_PROTOCOL.md",
+      "reference": "spec/retrofit/HANDOFF_QUEUE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
+      "reference": "scripts/congruence_audit.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
+      "reference": "spec/retrofit/trinity/accepted_deltas.yaml"
+    },
+    {
+      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
+      "reference": "spec/retrofit/trinity/HANDOFF.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
+      "reference": "spec/retrofit/trinity/PROJECT_STATE.md"
+    },
+    {
+      "sourcePath": "spec/retrofit/trinity/DRIFT_CONTROL.md",
+      "reference": "scripts/verify_markers.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/trinity/FLOW_CONTROL.md",
+      "reference": "scripts/quarantine_import_lint.py"
+    },
+    {
+      "sourcePath": "spec/retrofit/trinity/GAP_PROTOCOL.md",
+      "reference": "scripts/gap_lint.py"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/CODEX_WORKSPACE_PROMPT.md"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/manifests/workspace-import-audit.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/manifests/package-script-audit.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/manifests/runtime-readiness.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/ui/src/button.tsx"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/ui/src/card.tsx"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/booking/tests/booking-readiness.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/releases/tests/feature-flags.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/payments/tests/deposit-policy.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/observability/tests/redaction-report.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "apps/dashboard/lib/demo.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/CODEX_WORKSPACE_PROMPT.md"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/ui/src/button.tsx"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/ui/src/card.tsx"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/booking/tests/booking-readiness.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/releases/tests/feature-flags.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/payments/tests/deposit-policy.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/observability/tests/redaction-report.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "apps/dashboard/lib/demo.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "testing/scripts/phase14-static-check.mjs"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "testing/scripts/verify-test-manifest.mjs"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "testing/scripts/print-qa-checklists.mjs"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/booking/tests/booking-readiness.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/payments/tests/deposit-policy.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/calendar/tests/availability-conflicts.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/notifications/tests/delivery-plan.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/seo/tests/seo-engine.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/observability/tests/redaction-report.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/releases/tests/feature-flags.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/security/tests/upload-policy.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/testing/tests/testing-manifest.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "apps/web/tests/e2e/public-booking.spec.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "apps/dashboard/tests/e2e/dashboard-smoke.spec.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "apps/mobile/tests/mobile-static.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "testing/manifests/unit-test-manifest.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "testing/manifests/e2e-test-manifest.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "testing/manifests/accessibility-checklist.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "testing/manifests/security-checklist.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "testing/manifests/mobile-device-qa-checklist.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "testing/manifests/provider-test-plan.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "testing/manifests/manual-qa-checklist.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "testing/manifests/accessibility-checklist.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "testing/manifests/security-checklist.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "testing/manifests/provider-test-plan.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": ".github/workflows/ci.yml"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "deployment/scripts/check-env.mjs"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "deployment/scripts/print-launch-checklist.mjs"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "deployment/scripts/final-gap-summary.mjs"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/deployment/src/index.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/deployment/tests/deployment-readiness.test.ts"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/CODEX_WORKSPACE_PROMPT.md"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/manifests/workspace-prompt-run-2026-06-06-4.log"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/CODEX_WORKSPACE_PROMPT.md"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/manifests/workspace-prompt-run-2026-06-06-plan.log"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/CODEX_WORKSPACE_PROMPT.md"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-34-26Z.log"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/CODEX_WORKSPACE_PROMPT.md"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/manifests/workspace-import-audit.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/manifests/package-script-audit.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/manifests/runtime-readiness.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/handoff/manifests/phase-documentation-audit.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/handoff/manifests/gap-audit-report.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/quality/manifests/markdown-link-audit.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/quality/manifests/gap-evidence-audit.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/quality/manifests/quality-gates.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "GAP_TRACKER.md"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/CODEX_WORKSPACE_PROMPT.md"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/manifests/workspace-import-audit.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/manifests/package-script-audit.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/manifests/runtime-readiness.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/handoff/manifests/phase-documentation-audit.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/handoff/manifests/gap-audit-report.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/quality/manifests/markdown-link-audit.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/quality/manifests/gap-evidence-audit.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/quality/manifests/quality-gates.json"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-58-20.log"
+    }
+  ]
 }

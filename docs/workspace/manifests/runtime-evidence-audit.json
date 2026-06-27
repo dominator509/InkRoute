@@ -1,0 +1,52 @@
+{
+  "generatedAt": "2026-06-21T13:10:35.135Z",
+  "source": "GAP-132 runtime readiness evidence",
+  "status": "fail",
+  "requirementsChecked": 8,
+  "missingRequiredEvidence": [
+    "workspace-all",
+    "handoff-all",
+    "quality-all",
+    "typecheck",
+    "unit-tests",
+    "web-build",
+    "dashboard-build"
+  ],
+  "findings": [
+    {
+      "status": "fail",
+      "id": "workspace-all",
+      "message": "Runtime evidence for pnpm workspace:all is failed."
+    },
+    {
+      "status": "fail",
+      "id": "handoff-all",
+      "message": "Runtime evidence for pnpm handoff:all is failed."
+    },
+    {
+      "status": "fail",
+      "id": "quality-all",
+      "message": "Runtime evidence for pnpm quality:all is failed."
+    },
+    {
+      "status": "fail",
+      "id": "typecheck",
+      "message": "Runtime evidence for pnpm typecheck is failed."
+    },
+    {
+      "status": "fail",
+      "id": "unit-tests",
+      "message": "Runtime evidence for pnpm test:unit is failed."
+    },
+    {
+      "status": "fail",
+      "id": "web-build",
+      "message": "Runtime evidence for pnpm --filter @inkroute/web build is failed."
+    },
+    {
+      "status": "fail",
+      "id": "dashboard-build",
+      "message": "Runtime evidence for pnpm --filter @inkroute/dashboard build is failed."
+    }
+  ]
+}

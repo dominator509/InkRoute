@@ -10,10 +10,11 @@ export default defineConfig({
     timeout: 5_000
   },
   retries: process.env.CI ? 2 : 0,
-  reporter: [["list"], ["html", { outputFolder: "coverage/playwright-report", open: "never" }]],
+  reporter: [["list"], ["html", { outputFolder: "coverage/playwright-report", open: "never" }], ["json", { outputFile: "coverage/playwright-results.json" }], ["junit", { outputFile: "coverage/playwright-junit.xml" }]],
   use: {
     trace: "retain-on-failure",
-    screenshot: "only-on-failure"
+    screenshot: "only-on-failure",
+    video: "retain-on-failure"
   },
   projects: [
     {

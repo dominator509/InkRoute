@@ -80,7 +80,7 @@ export const demoPortfolioItems: PortfolioItem[] = [
     placement: "forearm",
     freshness: "healed",
     city: "Portland",
-    imageUrl: "/demo/portfolio/orbital-serpent.jpg",
+    imageUrl: "/demo/portfolio/orbital-serpent.svg",
     altText: "Healed blackwork serpent tattoo on forearm with geometric orbit lines",
     isFeatured: true,
     isPublic: true,
@@ -97,7 +97,7 @@ export const demoPortfolioItems: PortfolioItem[] = [
     placement: "upper_arm",
     freshness: "fresh",
     city: "Oakland",
-    imageUrl: "/demo/portfolio/ritual-floral.jpg",
+    imageUrl: "/demo/portfolio/ritual-floral.svg",
     altText: "Fresh fine-line floral upper arm tattoo with ornamental framing",
     isFeatured: true,
     isPublic: true,
@@ -114,7 +114,7 @@ export const demoPortfolioItems: PortfolioItem[] = [
     placement: "leg",
     freshness: "fresh",
     city: "Los Angeles",
-    imageUrl: "/demo/portfolio/black-sun.jpg",
+    imageUrl: "/demo/portfolio/black-sun.svg",
     altText: "Blackwork sun flash tattoo on leg",
     isFeatured: true,
     isPublic: true,
@@ -131,7 +131,7 @@ export const demoPortfolioItems: PortfolioItem[] = [
     placement: "back",
     freshness: "in_progress",
     city: "Seattle",
-    imageUrl: "/demo/portfolio/silent-gate.jpg",
+    imageUrl: "/demo/portfolio/silent-gate.svg",
     altText: "In-progress ornamental blackwork back tattoo with architectural symmetry",
     isFeatured: false,
     isPublic: true,
@@ -148,7 +148,7 @@ export const demoPortfolioItems: PortfolioItem[] = [
     placement: "ribs",
     freshness: "healed",
     city: "San Diego",
-    imageUrl: "/demo/portfolio/moon-thread.jpg",
+    imageUrl: "/demo/portfolio/moon-thread.svg",
     altText: "Healed fine-line lunar tattoo on ribs",
     isFeatured: false,
     isPublic: true,
@@ -165,7 +165,7 @@ export const demoPortfolioItems: PortfolioItem[] = [
     placement: "shoulder",
     freshness: "fresh",
     city: "Oakland",
-    imageUrl: "/demo/portfolio/bone-orchid.jpg",
+    imageUrl: "/demo/portfolio/bone-orchid.svg",
     altText: "Fresh custom floral blackwork shoulder tattoo",
     isFeatured: false,
     isPublic: true,
@@ -368,7 +368,7 @@ export const aftercareSteps = [
 
 export const dashboardMetrics: DashboardMetric[] = [
   { label: "Open requests", value: "18", detail: "+6 this week" },
-  { label: "Deposits pending", value: "$2.4k", detail: "Stripe not connected" },
+  { label: "Deposits pending", value: "$2.4k", detail: "Stripe provider proof gated" },
   { label: "Next city", value: "Seattle", detail: "July 10-15" },
   { label: "Readiness avg", value: "82%", detail: "Demo score" },
 ];
@@ -456,7 +456,7 @@ export const bookingPolicyAcknowledgements = [
   },
   {
     id: "privacyAcknowledged",
-    label: "I understand sensitive notes and reference files must be stored privately once persistence is implemented.",
+    label: "I understand sensitive notes and reference files are handled through private storage/encryption contracts, with provider execution still evidence-gated.",
   },
   {
     id: "depositBoundaryAcknowledged",
@@ -467,22 +467,775 @@ export const bookingPolicyAcknowledgements = [
 export const bookingIntegrationBoundaries = [
   {
     label: "Reference uploads",
-    status: "Scaffolded only",
-    detail: "The Phase 4 form captures local file metadata only. Signed uploads, storage ACLs, malware scanning, and private/public derivative handling remain external work.",
+    status: "Local contract wired",
+    detail: "The Phase 4 form captures local file metadata and the booking API emits signed-upload handoff evidence; provider signed URLs, storage ACLs, malware scanning, and private/public derivative proof remain external work.",
   },
   {
     label: "Deposit step",
     status: "Credential-gated",
-    detail: "Stripe Checkout/Payment Intents, webhooks, refunds, no-show policy enforcement, and receipt delivery are not wired in this environment.",
+    detail: "Stripe Checkout/Payment Intent writes, refunds, no-show policy enforcement, and receipt delivery remain credential-gated; local webhook interpretation and signature-verification boundaries are wired.",
   },
   {
     label: "Notifications",
     status: "Provider-gated",
-    detail: "Email, SMS, and push notifications require provider credentials, compliance language, delivery logging, and opt-out handling.",
+    detail: "Local notification handoff, preference, suppression, and delivery-log contracts are wired; email, SMS, push, List-Unsubscribe, STOP/HELP, and live delivery proof still require provider credentials and compliance review.",
   },
   {
     label: "Calendar sync",
     status: "Externally dependent",
-    detail: "Google Calendar OAuth, conflict checks, ICS exports, buffer rules, and timezone verification remain planned integrations.",
+    detail: "Local availability/travel calendar previews and hold contracts are wired; Google Calendar OAuth, provider conflict checks, event sync, push channels, buffer rules, and timezone verification remain externally gated.",
   },
 ] as const;
+
+export interface PublicTenantProfile {
+  slug: string;
+  name: string;
+  publicSiteName: string;
+  defaultTimezone?: string;
+}
+
+export interface PublicArtistProfile {
+  slug: string;
+  displayName: string;
+  bio: string;
+  shortBio?: string;
+  homeBaseCity?: string;
+  specialties: TattooStyle[];
+  instagramUrl?: string;
+  bookingEnabled?: boolean;
+}
+
+export interface PublicPortfolioItem {
+  slug: string;
+  title: string;
+  caption: string;
+  styles: TattooStyle[];
+  placement: PortfolioItem["placement"];
+  freshness: PortfolioItem["freshness"];
+  city?: string;
+  imageUrl: string;
+  altText: string;
+  isFeatured: boolean;
+  image: PublicPortfolioImageDerivative;
+}
+
+export interface PublicPortfolioImageDerivative {
+  src: string;
+  width: number;
+  height: number;
+  aspectRatio: `${number}:${number}`;
+  altText: string;
+  blurDataUrl: string;
+  storageVisibility: "public_derivative";
+  privateOriginalAvailable: false;
+  sizes: string;
+  cacheControl: string;
+}
+
+export interface PublicTravelStop {
+  city: string;
+  region: string;
+  country: string;
+  timezone: string;
+  startsAt: string;
+  endsAt: string;
+  studioName?: string;
+  bookingStatus: TravelStop["bookingStatus"];
+  publicNotes?: string;
+}
+
+export interface PublicContentBundle {
+  source: "demo-static";
+  tenant: PublicTenantProfile;
+  artist: PublicArtistProfile;
+  portfolioItems: PublicPortfolioItem[];
+  travelStops: PublicTravelStop[];
+  cityPages: SeoCityLandingPage[];
+  stylePages: SeoStyleLandingPage[];
+  faqs: PublicFaqItem[];
+  testimonials: PublicTestimonial[];
+  redactedFields: string[];
+  cachePolicy: {
+    strategy: "static-demo" | "tenant-revalidated";
+    revalidateSeconds: number;
+  };
+}
+
+const publicContentRedactedFields = [
+  "tenant.id",
+  "tenant.plan",
+  "tenant.status",
+  "artist.id",
+  "artist.tenantId",
+  "portfolio.id",
+  "portfolio.tenantId",
+  "portfolio.artistId",
+  "portfolio.attributionKey",
+  "portfolio.isPublic",
+  "travel.id",
+  "travel.tenantId",
+  "travel.artistId",
+];
+
+const portfolioImageDerivatives: Record<string, Omit<PublicPortfolioImageDerivative, "altText" | "blurDataUrl">> = {
+  "orbital-serpent": {
+    src: "/demo/portfolio/orbital-serpent.svg",
+    width: 1200,
+    height: 1500,
+    aspectRatio: "4:5",
+    storageVisibility: "public_derivative",
+    privateOriginalAvailable: false,
+    sizes: "(min-width: 960px) 33vw, (min-width: 640px) 50vw, 100vw",
+    cacheControl: "public, max-age=300, stale-while-revalidate=86400",
+  },
+  "ritual-floral": {
+    src: "/demo/portfolio/ritual-floral.svg",
+    width: 1200,
+    height: 1500,
+    aspectRatio: "4:5",
+    storageVisibility: "public_derivative",
+    privateOriginalAvailable: false,
+    sizes: "(min-width: 960px) 33vw, (min-width: 640px) 50vw, 100vw",
+    cacheControl: "public, max-age=300, stale-while-revalidate=86400",
+  },
+  "black-sun-flash": {
+    src: "/demo/portfolio/black-sun.svg",
+    width: 1200,
+    height: 1500,
+    aspectRatio: "4:5",
+    storageVisibility: "public_derivative",
+    privateOriginalAvailable: false,
+    sizes: "(min-width: 960px) 33vw, (min-width: 640px) 50vw, 100vw",
+    cacheControl: "public, max-age=300, stale-while-revalidate=86400",
+  },
+  "silent-gate": {
+    src: "/demo/portfolio/silent-gate.svg",
+    width: 1200,
+    height: 1500,
+    aspectRatio: "4:5",
+    storageVisibility: "public_derivative",
+    privateOriginalAvailable: false,
+    sizes: "(min-width: 960px) 33vw, (min-width: 640px) 50vw, 100vw",
+    cacheControl: "public, max-age=300, stale-while-revalidate=86400",
+  },
+  "moon-thread": {
+    src: "/demo/portfolio/moon-thread.svg",
+    width: 1200,
+    height: 1500,
+    aspectRatio: "4:5",
+    storageVisibility: "public_derivative",
+    privateOriginalAvailable: false,
+    sizes: "(min-width: 960px) 33vw, (min-width: 640px) 50vw, 100vw",
+    cacheControl: "public, max-age=300, stale-while-revalidate=86400",
+  },
+  "bone-orchid": {
+    src: "/demo/portfolio/bone-orchid.svg",
+    width: 1200,
+    height: 1500,
+    aspectRatio: "4:5",
+    storageVisibility: "public_derivative",
+    privateOriginalAvailable: false,
+    sizes: "(min-width: 960px) 33vw, (min-width: 640px) 50vw, 100vw",
+    cacheControl: "public, max-age=300, stale-while-revalidate=86400",
+  },
+};
+
+function buildPortfolioDerivativeBlurDataUrl(title: string): string {
+  const safeTitle = title.replace(/[<&>"]/g, "").slice(0, 42);
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='32' height='40' viewBox='0 0 32 40'><rect width='32' height='40' fill='#17120f'/><path d='M4 31 C13 24 11 15 23 8' stroke='#b07c55' stroke-width='3' fill='none' stroke-linecap='round'/><text x='4' y='36' fill='#f7efe6' font-size='3' font-family='serif'>${safeTitle}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+export function normalizeTenantSlug(slug: string): string {
+  return decodeURIComponent(slug).trim().toLowerCase();
+}
+
+export function getPortfolioImageDerivative(item: Pick<PortfolioItem, "slug" | "title" | "imageUrl" | "altText">): PublicPortfolioImageDerivative {
+  const derivative = portfolioImageDerivatives[item.slug] ?? {
+    src: item.imageUrl,
+    width: 1200,
+    height: 1500,
+    aspectRatio: "4:5" as const,
+    storageVisibility: "public_derivative" as const,
+    privateOriginalAvailable: false as const,
+    sizes: "(min-width: 960px) 33vw, (min-width: 640px) 50vw, 100vw",
+    cacheControl: "public, max-age=300, stale-while-revalidate=86400",
+  };
+
+  return {
+    ...derivative,
+    altText: item.altText,
+    blurDataUrl: buildPortfolioDerivativeBlurDataUrl(item.title),
+  };
+}
+
+export function buildPublicContentBundle(tenantSlug: string): PublicContentBundle | null {
+  if (normalizeTenantSlug(tenantSlug) !== inkrouteDemoTenant.slug) {
+    return null;
+  }
+
+  return {
+    source: "demo-static",
+    tenant: {
+      slug: inkrouteDemoTenant.slug,
+      name: inkrouteDemoTenant.name,
+      publicSiteName: inkrouteDemoTenant.publicSiteName ?? inkrouteDemoTenant.name,
+      ...(inkrouteDemoTenant.defaultTimezone ? { defaultTimezone: inkrouteDemoTenant.defaultTimezone } : {}),
+    },
+    artist: {
+      slug: inkrouteDemoArtist.slug,
+      displayName: inkrouteDemoArtist.displayName,
+      bio: inkrouteDemoArtist.bio,
+      specialties: [...inkrouteDemoArtist.specialties],
+      ...(inkrouteDemoArtist.shortBio ? { shortBio: inkrouteDemoArtist.shortBio } : {}),
+      ...(inkrouteDemoArtist.homeBaseCity ? { homeBaseCity: inkrouteDemoArtist.homeBaseCity } : {}),
+      ...(inkrouteDemoArtist.instagramUrl ? { instagramUrl: inkrouteDemoArtist.instagramUrl } : {}),
+      ...(typeof inkrouteDemoArtist.bookingEnabled === "boolean" ? { bookingEnabled: inkrouteDemoArtist.bookingEnabled } : {}),
+    },
+    portfolioItems: demoPortfolioItems
+      .filter((item) => item.tenantId === inkrouteDemoTenant.id && item.artistId === inkrouteDemoArtist.id && item.isPublic !== false)
+      .map((item) => ({
+        slug: item.slug,
+        title: item.title,
+        caption: item.caption,
+        styles: [...item.styles],
+        placement: item.placement,
+        freshness: item.freshness,
+        imageUrl: item.imageUrl,
+        altText: item.altText,
+        isFeatured: item.isFeatured,
+        image: getPortfolioImageDerivative(item),
+        ...(item.city ? { city: item.city } : {}),
+      })),
+    travelStops: demoTravelStops
+      .filter((stop) => stop.tenantId === inkrouteDemoTenant.id && stop.artistId === inkrouteDemoArtist.id)
+      .map((stop) => ({
+        city: stop.city,
+        region: stop.region,
+        country: stop.country,
+        timezone: stop.timezone,
+        startsAt: stop.startsAt,
+        endsAt: stop.endsAt,
+        bookingStatus: stop.bookingStatus,
+        ...(stop.studioName ? { studioName: stop.studioName } : {}),
+        ...(stop.publicNotes ? { publicNotes: stop.publicNotes } : {}),
+      })),
+    cityPages: demoSeoCityPages.map((page) => ({ ...page, bestFor: [...page.bestFor] })),
+    stylePages: demoSeoStylePages.map((page) => ({ ...page, sessionFit: [...page.sessionFit] })),
+    faqs: publicFaqs.map((faq) => ({ ...faq })),
+    testimonials: demoTestimonials.map((testimonial) => ({ ...testimonial })),
+    redactedFields: publicContentRedactedFields,
+    cachePolicy: {
+      strategy: "static-demo",
+      revalidateSeconds: 300,
+    },
+  };
+}
+
+export interface PublicContentRuntimeEvidenceInput {
+  packageScripts: Readonly<Record<string, string>>;
+  configTestsPassed: boolean;
+  configTypecheckPassed: boolean;
+  webTypecheckPassed: boolean;
+  webBuildPassed: boolean;
+  tenantDomainResolverBackedByPersistence: boolean;
+  publicRepositoryReadsConfigured: boolean;
+  publicRoutesUseRepositoryBundle: boolean;
+  cmsOrDatabaseSeedVerified: boolean;
+  apiJsonRedactionVerified: boolean;
+  renderedHtmlRedactionVerified: boolean;
+  privatePortfolioExcluded: boolean;
+  cacheRevalidationConfigured: boolean;
+  browserSmokePassed: boolean;
+  ciEvidenceCaptured: boolean;
+}
+
+export interface PublicContentRuntimeEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: typeof publicContentRuntimeRequiredCommands;
+  requiredEvidence: readonly PublicContentRuntimeRequiredEvidence[];
+  blockers: readonly string[];
+}
+
+export interface PortfolioImagePerformanceEvidenceInput {
+  packageScripts: Readonly<Record<string, string>>;
+  configTestsPassed: boolean;
+  configTypecheckPassed: boolean;
+  webTypecheckPassed: boolean;
+  webBuildPassed: boolean;
+  realPublicDerivativeAssetsAvailable: boolean;
+  storageBackedDerivativeFixturesAvailable: boolean;
+  nextImageMigrationCompleted: boolean;
+  derivativeDimensionsVerified: boolean;
+  blurPlaceholdersGenerated: boolean;
+  exifStrippingVerified: boolean;
+  privateOriginalsSeparated: boolean;
+  privateOriginalAccessDenied: boolean;
+  browserRenderingVerified: boolean;
+  lighthouseImageAuditPassed: boolean;
+  ciArtifactsCaptured: boolean;
+}
+
+export interface PortfolioImagePerformanceEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  requiredCommands: typeof portfolioImagePerformanceRequiredCommands;
+  requiredControls: typeof portfolioImagePerformanceRequiredControls;
+  requiredEvidence: readonly PortfolioImagePerformanceRequiredEvidence[];
+  blockers: readonly string[];
+}
+
+export const portfolioImagePerformanceRequiredCommands = [
+  "pnpm --filter @inkroute/config typecheck",
+  "pnpm --filter @inkroute/config test",
+  "pnpm --filter @inkroute/web typecheck",
+  "pnpm --filter @inkroute/web build",
+  "portfolio image browser rendering smoke",
+  "private original/reference access-denial tests",
+  "Lighthouse image/performance audit",
+] as const;
+
+export const portfolioImagePerformanceRequiredControls = [
+  "Serve only public derivative objects from public portfolio cards.",
+  "Keep private originals and booking reference files unavailable to anonymous public routes.",
+  "Preserve width, height, aspect ratio, alt text, responsive sizes, and cache policy for every rendered portfolio image.",
+  "Strip EXIF/private metadata before derivative publication.",
+  "Capture browser and Lighthouse evidence before marking image performance launch-ready.",
+] as const;
+
+export const publicContentRuntimeRequiredCommands = [
+  "pnpm --filter @inkroute/config typecheck",
+  "pnpm --filter @inkroute/config test",
+  "pnpm --filter @inkroute/web typecheck",
+  "pnpm --filter @inkroute/web build",
+  "public content seeded DB/API redaction tests",
+  "public content browser HTML redaction smoke",
+  "public content cache revalidation smoke",
+] as const;
+
+export const publicContentRuntimeRequiredEvidence = [
+  "persistent tenant/domain resolver plus public repository route wiring map",
+  "seeded DB or CMS public content read transcript",
+  "public API JSON and rendered HTML private-field redaction proof",
+  "public content cache revalidation configuration and invalidation smoke output",
+  "web typecheck/build, browser smoke, and CI artifact evidence",
+] as const;
+
+export type PublicContentRuntimeRequiredEvidence = (typeof publicContentRuntimeRequiredEvidence)[number];
+
+export const portfolioImagePerformanceRequiredEvidence = [
+  "real public derivative assets or storage-backed fixture manifest",
+  "optimized image component, derivative metadata, blur placeholder, and EXIF-stripping proof",
+  "private original/reference separation and public-access denial transcript",
+  "web typecheck/build, browser rendering, Lighthouse, and CI artifact evidence",
+] as const;
+
+export type PortfolioImagePerformanceRequiredEvidence = (typeof portfolioImagePerformanceRequiredEvidence)[number];
+
+export function buildPublicContentRuntimeEvidencePlan(
+  input: PublicContentRuntimeEvidenceInput,
+): PublicContentRuntimeEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: PublicContentRuntimeRequiredEvidence[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/config package script is missing ${script}.`);
+  if (!input.configTestsPassed) blockers.push("@inkroute/config public content tests must pass.");
+  if (!input.configTypecheckPassed) blockers.push("@inkroute/config typecheck must pass in an installed workspace.");
+  if (!input.webTypecheckPassed) blockers.push("@inkroute/web typecheck must pass with public content imports and route wiring.");
+  if (!input.webBuildPassed) blockers.push("@inkroute/web build must pass with public content pages, APIs, metadata, and sitemap output.");
+  if (!input.tenantDomainResolverBackedByPersistence) blockers.push("Tenant/domain resolver must graduate from the local demo resolver contract to persisted tenant records.");
+  if (!input.publicRepositoryReadsConfigured) blockers.push("Public content repository reads must cover tenant, artist, portfolio, travel, FAQ, testimonial, city, and style data.");
+  if (!input.publicRoutesUseRepositoryBundle) blockers.push("Public routes and APIs must consume the repository-backed public content bundle.");
+  if (!input.cmsOrDatabaseSeedVerified) blockers.push("Seeded database or CMS fixtures must prove public content reads can run outside static demo arrays.");
+  if (!input.apiJsonRedactionVerified) blockers.push("Public API JSON must be proven free of tenant IDs, artist IDs, attribution keys, private object keys, plan/status fields, and non-public portfolio records.");
+  if (!input.renderedHtmlRedactionVerified) blockers.push("Rendered public HTML must be proven free of private identifiers, private object keys, and non-public portfolio records.");
+  if (!input.privatePortfolioExcluded) blockers.push("Public content projection must exclude private portfolio/reference records from route, API, and rendered output.");
+  if (!input.cacheRevalidationConfigured) blockers.push("Public content cache revalidation strategy must be configured for repository-backed content updates.");
+  if (!input.browserSmokePassed) blockers.push("Browser smoke evidence must cover portfolio, travel, FAQ, testimonials, city, and style pages.");
+  if (!input.ciEvidenceCaptured) blockers.push("CI evidence must capture public content route/API redaction and cache-revalidation checks.");
+
+  if (!input.tenantDomainResolverBackedByPersistence || !input.publicRepositoryReadsConfigured || !input.publicRoutesUseRepositoryBundle) {
+    requiredEvidence.push(publicContentRuntimeRequiredEvidence[0]);
+  }
+  if (!input.cmsOrDatabaseSeedVerified) {
+    requiredEvidence.push(publicContentRuntimeRequiredEvidence[1]);
+  }
+  if (!input.apiJsonRedactionVerified || !input.renderedHtmlRedactionVerified || !input.privatePortfolioExcluded) {
+    requiredEvidence.push(publicContentRuntimeRequiredEvidence[2]);
+  }
+  if (!input.cacheRevalidationConfigured) {
+    requiredEvidence.push(publicContentRuntimeRequiredEvidence[3]);
+  }
+  if (!input.webTypecheckPassed || !input.webBuildPassed || !input.browserSmokePassed || !input.ciEvidenceCaptured) {
+    requiredEvidence.push(publicContentRuntimeRequiredEvidence[4]);
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: publicContentRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === publicContentRuntimeRequiredEvidence.length
+        ? publicContentRuntimeRequiredEvidence
+        : requiredEvidence,
+    blockers,
+  };
+}
+
+export function buildPortfolioImagePerformanceEvidencePlan(
+  input: PortfolioImagePerformanceEvidenceInput,
+): PortfolioImagePerformanceEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const blockers: string[] = [];
+  const requiredEvidence: PortfolioImagePerformanceRequiredEvidence[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/config package script is missing ${script}.`);
+  if (!input.configTestsPassed) blockers.push("@inkroute/config public content and image metadata tests must pass.");
+  if (!input.configTypecheckPassed) blockers.push("@inkroute/config typecheck must pass with portfolio image evidence exports.");
+  if (!input.webTypecheckPassed) blockers.push("@inkroute/web typecheck must pass with portfolio card image wiring.");
+  if (!input.webBuildPassed) blockers.push("@inkroute/web build must pass with portfolio images under Next.");
+  if (!input.realPublicDerivativeAssetsAvailable) blockers.push("Real public derivative image assets or checked-in safe fixtures must be available.");
+  if (!input.storageBackedDerivativeFixturesAvailable) blockers.push("Storage-backed derivative fixtures must prove public derivatives resolve independently from private originals.");
+  if (!input.nextImageMigrationCompleted) blockers.push("Portfolio rendering must migrate to next/image or document an approved equivalent optimization path.");
+  if (!input.derivativeDimensionsVerified) blockers.push("Derivative dimensions, aspect ratio, alt text, sizes, and cache policy must be verified for every public portfolio item.");
+  if (!input.blurPlaceholdersGenerated) blockers.push("Blur placeholders must be present in shared public derivative metadata before rendered portfolio image proof can close.");
+  if (!input.exifStrippingVerified) blockers.push("Derivative generation must prove EXIF and private metadata stripping.");
+  if (!input.privateOriginalsSeparated) blockers.push("Private original/reference files must be stored separately from public derivatives.");
+  if (!input.privateOriginalAccessDenied) blockers.push("Private original/reference access-denial tests must pass.");
+  if (!input.browserRenderingVerified) blockers.push("Browser smoke evidence must prove portfolio images render with stable dimensions and accessible alt text.");
+  if (!input.lighthouseImageAuditPassed) blockers.push("Lighthouse image/performance audit must pass or document accepted image-specific exceptions.");
+  if (!input.ciArtifactsCaptured) blockers.push("CI artifacts must capture image rendering, private-denial, and performance evidence.");
+
+  if (!input.realPublicDerivativeAssetsAvailable || !input.storageBackedDerivativeFixturesAvailable) {
+    requiredEvidence.push(portfolioImagePerformanceRequiredEvidence[0]);
+  }
+  if (!input.nextImageMigrationCompleted || !input.derivativeDimensionsVerified || !input.blurPlaceholdersGenerated || !input.exifStrippingVerified) {
+    requiredEvidence.push(portfolioImagePerformanceRequiredEvidence[1]);
+  }
+  if (!input.privateOriginalsSeparated || !input.privateOriginalAccessDenied) {
+    requiredEvidence.push(portfolioImagePerformanceRequiredEvidence[2]);
+  }
+  if (!input.webTypecheckPassed || !input.webBuildPassed || !input.browserRenderingVerified || !input.lighthouseImageAuditPassed || !input.ciArtifactsCaptured) {
+    requiredEvidence.push(portfolioImagePerformanceRequiredEvidence[3]);
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    requiredCommands: portfolioImagePerformanceRequiredCommands,
+    requiredControls: portfolioImagePerformanceRequiredControls,
+    requiredEvidence:
+      requiredEvidence.length === portfolioImagePerformanceRequiredEvidence.length
+        ? portfolioImagePerformanceRequiredEvidence
+        : requiredEvidence,
+    blockers,
+  };
+}
+
+export const dashboardDataCollections = [
+  "bookings",
+  "clients",
+  "appointments",
+  "payments",
+  "portfolio",
+  "travel",
+  "seo",
+  "templates",
+  "errors",
+  "releases",
+  "settings",
+] as const;
+
+export type DashboardDataCollection = (typeof dashboardDataCollections)[number];
+
+export type DashboardDataSource = "demo-static" | "repository";
+
+export interface DashboardScopedRecord {
+  id: string;
+  tenantId: string;
+  [key: string]: unknown;
+}
+
+export interface TenantDashboardView {
+  collection: DashboardDataCollection;
+  tenantId: string;
+  source: DashboardDataSource;
+  records: Record<string, unknown>[];
+  redactedFields: string[];
+  rejectedRecordCount: number;
+  cachePolicy: {
+    strategy: "no-store";
+  };
+}
+
+export interface TenantDashboardViewInput<TRecord extends DashboardScopedRecord> {
+  collection: DashboardDataCollection;
+  tenantId: string;
+  records: readonly TRecord[];
+  source?: DashboardDataSource;
+  redactedFields?: readonly string[];
+}
+
+const dashboardDefaultRedactedFields = [
+  "clientEmail",
+  "clientPhone",
+  "medicalNotes",
+  "privateNotes",
+  "internalNotes",
+  "stripePaymentIntentId",
+  "providerSessionId",
+  "objectKey",
+] as const;
+
+export function findMissingDashboardCollections(collections: readonly DashboardDataCollection[]): DashboardDataCollection[] {
+  return dashboardDataCollections.filter((collection) => !collections.includes(collection));
+}
+
+export function buildTenantDashboardView<TRecord extends DashboardScopedRecord>(
+  input: TenantDashboardViewInput<TRecord>,
+): TenantDashboardView {
+  const redactedFields = [...new Set([...(input.redactedFields ?? dashboardDefaultRedactedFields)])];
+  const redactedFieldSet = new Set(redactedFields);
+  const scopedRecords = input.records.filter((record) => record.tenantId === input.tenantId);
+
+  return {
+    collection: input.collection,
+    tenantId: input.tenantId,
+    source: input.source ?? "repository",
+    records: scopedRecords.map((record) =>
+      Object.fromEntries(
+        Object.entries(record).map(([key, value]) => [
+          key,
+          redactedFieldSet.has(key) ? "[redacted-dashboard-field]" : value,
+        ]),
+      ),
+    ),
+    redactedFields,
+    rejectedRecordCount: input.records.length - scopedRecords.length,
+    cachePolicy: {
+      strategy: "no-store",
+    },
+  };
+}
+
+export interface DashboardDataRuntimeReadinessInput {
+  packageScripts: Readonly<Record<string, string>>;
+  configTestsPassed: boolean;
+  configTypecheckPassed: boolean;
+  dashboardTypecheckPassed: boolean;
+  dashboardBuildPassed: boolean;
+  repositoryLoadersConfigured: readonly DashboardDataCollection[];
+  dashboardRoutesUsingRepositories: readonly DashboardDataCollection[];
+  seededDatabaseVerified: boolean;
+  tenantIsolationTestsPassed: boolean;
+  redactionTestsPassed: boolean;
+  rbacGuardsConfigured: boolean;
+  noStoreCachingVerified: boolean;
+  auditLogsConfiguredForSensitiveReads: boolean;
+  demoStaticImportsRemoved: boolean;
+}
+
+export interface DashboardDataRuntimeReadinessPlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  missingRepositoryLoaders: readonly DashboardDataCollection[];
+  missingRouteWiring: readonly DashboardDataCollection[];
+  requiredCommands: typeof dashboardDataRuntimeRequiredCommands;
+  requiredEvidence: readonly DashboardDataRuntimeRequiredEvidence[];
+  blockers: readonly string[];
+}
+
+export const dashboardDataRuntimeRequiredCommands = [
+  "pnpm --filter @inkroute/config typecheck",
+  "pnpm --filter @inkroute/config test",
+  "pnpm --filter @inkroute/dashboard typecheck",
+  "pnpm --filter @inkroute/dashboard build",
+  "pnpm --filter @inkroute/dashboard test -- dashboard-data",
+] as const;
+
+export const dashboardDataRuntimeRequiredEvidence = [
+  "repository-loader coverage map for bookings, clients, appointments, payments, portfolio, travel, SEO, templates, errors, releases, and settings",
+  "seeded database dashboard route smoke output",
+  "tenant isolation and redaction test output for dashboard repositories/APIs",
+  "dashboard typecheck and build logs",
+] as const;
+
+export type DashboardDataRuntimeRequiredEvidence = (typeof dashboardDataRuntimeRequiredEvidence)[number];
+
+export function buildDashboardDataRuntimeReadinessPlan(
+  input: DashboardDataRuntimeReadinessInput,
+): DashboardDataRuntimeReadinessPlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const missingRepositoryLoaders = findMissingDashboardCollections(input.repositoryLoadersConfigured);
+  const missingRouteWiring = findMissingDashboardCollections(input.dashboardRoutesUsingRepositories);
+  const blockers: string[] = [];
+  const requiredEvidence: DashboardDataRuntimeRequiredEvidence[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/config package script is missing ${script}.`);
+  if (!input.configTestsPassed) blockers.push("@inkroute/config dashboard data tests must pass.");
+  if (!input.configTypecheckPassed) blockers.push("@inkroute/config typecheck must pass in an installed workspace.");
+  if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass with repository loaders.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with repository-backed routes.");
+  if (missingRepositoryLoaders.length > 0) blockers.push(`Dashboard repository loaders are missing for: ${missingRepositoryLoaders.join(", ")}.`);
+  if (missingRouteWiring.length > 0) blockers.push(`Dashboard routes still need repository wiring for: ${missingRouteWiring.join(", ")}.`);
+  if (!input.seededDatabaseVerified) blockers.push("Seeded database smoke evidence must prove dashboard routes can read tenant data.");
+  if (!input.tenantIsolationTestsPassed) blockers.push("Dashboard repository tests must reject cross-tenant reads.");
+  if (!input.redactionTestsPassed) blockers.push("Dashboard repository/API tests must prove private field redaction.");
+  if (!input.rbacGuardsConfigured) blockers.push("Dashboard loaders must be called behind tenant RBAC guards.");
+  if (!input.noStoreCachingVerified) blockers.push("Dashboard route responses must preserve no-store caching for private tenant data.");
+  if (!input.auditLogsConfiguredForSensitiveReads) blockers.push("Sensitive dashboard reads must have audit logging policy coverage.");
+  if (!input.demoStaticImportsRemoved) blockers.push("Dashboard route data dependencies must no longer read static demo arrays for production surfaces.");
+
+  if (missingRepositoryLoaders.length > 0 || missingRouteWiring.length > 0) {
+    requiredEvidence.push(dashboardDataRuntimeRequiredEvidence[0]);
+  }
+  if (!input.seededDatabaseVerified) requiredEvidence.push(dashboardDataRuntimeRequiredEvidence[1]);
+  if (!input.tenantIsolationTestsPassed || !input.redactionTestsPassed) {
+    requiredEvidence.push(dashboardDataRuntimeRequiredEvidence[2]);
+  }
+  if (!input.dashboardTypecheckPassed || !input.dashboardBuildPassed) {
+    requiredEvidence.push(dashboardDataRuntimeRequiredEvidence[3]);
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    missingRepositoryLoaders,
+    missingRouteWiring,
+    requiredCommands: dashboardDataRuntimeRequiredCommands,
+    requiredEvidence:
+      requiredEvidence.length === dashboardDataRuntimeRequiredEvidence.length
+        ? dashboardDataRuntimeRequiredEvidence
+        : requiredEvidence,
+    blockers,
+  };
+}
+
+export interface DashboardRepositoryRouteEvidenceInput {
+  packageScripts: Readonly<Record<string, string>>;
+  configTestsPassed: boolean;
+  configTypecheckPassed: boolean;
+  dashboardTypecheckPassed: boolean;
+  dashboardBuildPassed: boolean;
+  prismaLoadersImplemented: readonly DashboardDataCollection[];
+  dashboardRoutesWired: readonly DashboardDataCollection[];
+  staticDemoImportsRemoved: readonly DashboardDataCollection[];
+  seededDatabaseSmokePassed: boolean;
+  repositoryApiTestsPassed: boolean;
+  tenantIsolationTestsPassed: boolean;
+  rbacGuardTestsPassed: boolean;
+  redactionTestsPassed: boolean;
+  noStoreCacheVerified: boolean;
+  sensitiveReadAuditLogsPersisted: boolean;
+  ciEvidenceCaptured: boolean;
+  secretSafeArtifactsCaptured: boolean;
+}
+
+export interface DashboardRepositoryRouteEvidencePlan {
+  status: "ready" | "blocked";
+  missingScripts: readonly string[];
+  missingPrismaLoaders: readonly DashboardDataCollection[];
+  missingRouteWiring: readonly DashboardDataCollection[];
+  remainingStaticDemoImports: readonly DashboardDataCollection[];
+  requiredCommands: typeof dashboardRepositoryRouteRequiredCommands;
+  requiredControls: typeof dashboardRepositoryRouteRequiredControls;
+  requiredEvidence: readonly DashboardRepositoryRouteRequiredEvidence[];
+  blockers: readonly string[];
+}
+
+export const dashboardRepositoryRouteRequiredCommands = [
+  "pnpm --filter @inkroute/config typecheck",
+  "pnpm --filter @inkroute/config test",
+  "pnpm --filter @inkroute/dashboard typecheck",
+  "pnpm --filter @inkroute/dashboard build",
+  "seeded database dashboard route smoke",
+  "dashboard repository/API tenant-isolation tests",
+  "dashboard repository/API RBAC and redaction tests",
+  "dashboard sensitive-read AuditLog persistence tests",
+  "GitHub Actions dashboard data repository evidence job",
+] as const;
+
+export const dashboardRepositoryRouteRequiredControls = [
+  "Load dashboard data through tenant-scoped Prisma repositories before projection.",
+  "Apply RBAC guards before repository reads and dashboard serialization.",
+  "Redact client, medical, payment, provider, object-key, and private-note fields before returning dashboard data.",
+  "Use no-store caching for protected dashboard data responses.",
+  "Remove production dashboard dependencies on static demo arrays for repository-backed collections.",
+  "Redact secrets, raw PII, medical notes, payment data, provider tokens, and private object keys from evidence artifacts.",
+] as const;
+
+export const dashboardRepositoryRouteRequiredEvidence = [
+  "Prisma loader, route wiring, and static-demo import removal matrix for all dashboard collections",
+  "seeded database dashboard route smoke plus repository/API test output",
+  "tenant isolation, RBAC guard, and redaction test output",
+  "no-store cache and sensitive-read AuditLog evidence",
+  "dashboard typecheck/build, CI, and secret-safe artifact evidence",
+] as const;
+
+export type DashboardRepositoryRouteRequiredEvidence = (typeof dashboardRepositoryRouteRequiredEvidence)[number];
+
+export function buildDashboardRepositoryRouteEvidencePlan(
+  input: DashboardRepositoryRouteEvidenceInput,
+): DashboardRepositoryRouteEvidencePlan {
+  const requiredScripts = ["test", "typecheck"];
+  const missingScripts = requiredScripts.filter((script) => !input.packageScripts[script]);
+  const missingPrismaLoaders = findMissingDashboardCollections(input.prismaLoadersImplemented);
+  const missingRouteWiring = findMissingDashboardCollections(input.dashboardRoutesWired);
+  const remainingStaticDemoImports = findMissingDashboardCollections(input.staticDemoImportsRemoved);
+  const blockers: string[] = [];
+  const requiredEvidence: DashboardRepositoryRouteRequiredEvidence[] = [];
+
+  for (const script of missingScripts) blockers.push(`@inkroute/config package script is missing ${script}.`);
+  if (!input.configTestsPassed) blockers.push("@inkroute/config dashboard data tests must pass before repository route evidence can close.");
+  if (!input.configTypecheckPassed) blockers.push("@inkroute/config typecheck must pass before repository route evidence can close.");
+  if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass with Prisma dashboard loaders.");
+  if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with repository-backed dashboard routes.");
+  if (missingPrismaLoaders.length > 0) blockers.push(`Prisma dashboard loaders are missing for: ${missingPrismaLoaders.join(", ")}.`);
+  if (missingRouteWiring.length > 0) blockers.push(`Repository-backed dashboard route wiring is required for: ${missingRouteWiring.join(", ")}.`);
+  if (remainingStaticDemoImports.length > 0) blockers.push(`Production dashboard static-demo imports remain for: ${remainingStaticDemoImports.join(", ")}.`);
+  if (!input.seededDatabaseSmokePassed) blockers.push("Seeded database dashboard route smoke must pass.");
+  if (!input.repositoryApiTestsPassed) blockers.push("Repository/API tests must pass for dashboard data loaders.");
+  if (!input.tenantIsolationTestsPassed) blockers.push("Tenant-isolation tests must reject cross-tenant dashboard data reads.");
+  if (!input.rbacGuardTestsPassed) blockers.push("RBAC guard tests must run before dashboard repository data is loaded.");
+  if (!input.redactionTestsPassed) blockers.push("Dashboard repository/API tests must prove private field redaction.");
+  if (!input.noStoreCacheVerified) blockers.push("Dashboard repository-backed route responses must use no-store caching.");
+  if (!input.sensitiveReadAuditLogsPersisted) blockers.push("Sensitive dashboard reads must persist redacted AuditLog rows or have an approved audit policy.");
+  if (!input.ciEvidenceCaptured) blockers.push("CI evidence for dashboard repository route data must be captured.");
+  if (!input.secretSafeArtifactsCaptured) blockers.push("Dashboard data artifacts must be redacted and free of secrets, raw PII, medical notes, payment data, provider tokens, and private object keys.");
+
+  if (missingPrismaLoaders.length > 0 || missingRouteWiring.length > 0 || remainingStaticDemoImports.length > 0) {
+    requiredEvidence.push(dashboardRepositoryRouteRequiredEvidence[0]);
+  }
+  if (!input.seededDatabaseSmokePassed || !input.repositoryApiTestsPassed) {
+    requiredEvidence.push(dashboardRepositoryRouteRequiredEvidence[1]);
+  }
+  if (!input.tenantIsolationTestsPassed || !input.rbacGuardTestsPassed || !input.redactionTestsPassed) {
+    requiredEvidence.push(dashboardRepositoryRouteRequiredEvidence[2]);
+  }
+  if (!input.noStoreCacheVerified || !input.sensitiveReadAuditLogsPersisted) {
+    requiredEvidence.push(dashboardRepositoryRouteRequiredEvidence[3]);
+  }
+  if (!input.dashboardTypecheckPassed || !input.dashboardBuildPassed || !input.ciEvidenceCaptured || !input.secretSafeArtifactsCaptured) {
+    requiredEvidence.push(dashboardRepositoryRouteRequiredEvidence[4]);
+  }
+
+  return {
+    status: blockers.length === 0 ? "ready" : "blocked",
+    missingScripts,
+    missingPrismaLoaders,
+    missingRouteWiring,
+    remainingStaticDemoImports,
+    requiredCommands: dashboardRepositoryRouteRequiredCommands,
+    requiredControls: dashboardRepositoryRouteRequiredControls,
+    requiredEvidence:
+      requiredEvidence.length === dashboardRepositoryRouteRequiredEvidence.length
+        ? dashboardRepositoryRouteRequiredEvidence
+        : requiredEvidence,
+    blockers,
+  };
+}

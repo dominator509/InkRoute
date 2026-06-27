@@ -1,7 +1,7 @@
 import { DashboardPageHeader } from "../../components/DashboardPageHeader";
-import { DisabledActionPanel } from "../../components/DisabledActionPanel";
 import { IntegrationBoundaryCard } from "../../components/IntegrationBoundaryCard";
 import { MetricCard } from "../../components/MetricCard";
+import { SeoPublicationActionPanel } from "../../components/SeoPublicationActionPanel";
 import { StatusPill } from "../../components/StatusPill";
 import { dashboardSeoEnginePreview, dashboardSeoRouteRecords } from "../../lib/seoDemo";
 
@@ -14,13 +14,13 @@ export default function SeoManagerPage() {
       <DashboardPageHeader
         eyebrow="SEO engine"
         title="City, style, schema, sitemap, and attribution control center"
-        description="Preview the Phase 10 SEO engine for local city pages, tattoo style pages, canonical metadata, structured data, internal links, sitemap entries, image SEO, Search Console setup, and publish revalidation boundaries."
+        description="Preview the Phase 10 SEO engine for city pages, tattoo style pages, canonical metadata, structured data, internal links, sitemap entries, image SEO, Search Console setup, and publish revalidation boundaries. Tenant-scoped SEO read APIs now exist; publishing/provider actions remain gated."
       />
 
       <section className="metric-grid">
         <MetricCard label="Tracked public routes" value={String(dashboardSeoRouteRecords.length)} detail="Static demo route inventory" />
         <MetricCard label="Sitemap entries" value={String(sitemap.indexableCount)} detail={`${sitemap.noindexCount} omitted/noindex`} />
-        <MetricCard label="Audit issues" value={String(warningCount)} detail="Static heuristic checks only" />
+        <MetricCard label="Audit issues" value={String(warningCount)} detail="Static heuristic checks plus routed publication evidence gates" />
         <MetricCard label="Internal links" value={String(internalLinks.length)} detail="City/style conversion paths" />
       </section>
 
@@ -50,7 +50,7 @@ export default function SeoManagerPage() {
               <div className="list-row" key={brief.slug}>
                 <div>
                   <strong>{brief.h1}</strong>
-                  <span>{brief.primaryKeyword} · {brief.schemaTypes.join(", ")}</span>
+                  <span>{brief.primaryKeyword} Â· {brief.schemaTypes.join(", ")}</span>
                 </div>
                 <StatusPill label={`${brief.recommendedSections.length} sections`} tone="info" />
               </div>
@@ -64,7 +64,7 @@ export default function SeoManagerPage() {
               <div className="list-row" key={brief.slug}>
                 <div>
                   <strong>{brief.h1}</strong>
-                  <span>{brief.secondaryKeywords.slice(0, 2).join(" · ")}</span>
+                  <span>{brief.secondaryKeywords.slice(0, 2).join(" Â· ")}</span>
                 </div>
                 <StatusPill label={`${brief.analyticsEvents.length} events`} tone="success" />
               </div>
@@ -81,7 +81,7 @@ export default function SeoManagerPage() {
               <div className="list-row" key={`${link.fromPath}-${link.toPath}-${link.anchorText}`}>
                 <div>
                   <strong>{link.anchorText}</strong>
-                  <span>{link.fromPath} → {link.toPath}</span>
+                  <span>{link.fromPath} â†’ {link.toPath}</span>
                 </div>
                 <StatusPill label={link.priority} tone={link.priority === "high" ? "success" : "info"} />
               </div>
@@ -134,12 +134,8 @@ export default function SeoManagerPage() {
           gapIds={["GAP-071", "GAP-072", "GAP-073", "GAP-074", "GAP-076"]}
         />
       </section>
-
-      <DisabledActionPanel
-        title="SEO publishing actions"
-        description="Actions remain disabled until auth, Prisma data loaders, content mutations, Search Console credentials, sitemap submission, and build/runtime verification are complete."
-        actions={["Create city page", "Create style page", "Preview JSON-LD", "Publish and revalidate", "Submit sitemap"]}
-      />
+      <SeoPublicationActionPanel />
     </main>
   );
 }
+

@@ -2,6 +2,7 @@ import { Text, View } from "react-native";
 import { MobileCard } from "../components/MobileCard";
 import { MobilePill } from "../components/MobilePill";
 import { MobileScreen } from "../components/MobileScreen";
+import { offlineSyncPreview } from "../lib/offlineSync";
 import { offlineQueueItems, offlineQueueSummary } from "../lib/mobileDemo";
 
 export function OfflineNotesScreen() {
@@ -9,7 +10,7 @@ export function OfflineNotesScreen() {
     <MobileScreen
       eyebrow="Offline-first strategy"
       title="Weak-signal travel queue"
-      summary="Static queue model for notes, travel updates, and portfolio metadata created while traveling. Durable encrypted local storage and sync are not implemented yet."
+      summary="Offline queue contract for notes, travel updates, and portfolio metadata created while traveling. The app-side adapter, offline-to-online reconnect scheduler, sync worker, idempotent replay, retry state, and redacted audit events are wired; encrypted device storage and reconnect smoke evidence remain runtime-gated."
     >
       <MobileCard title="Queue summary" detail={offlineQueueSummary.warning}>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -18,6 +19,16 @@ export function OfflineNotesScreen() {
           <MobilePill label={`${offlineQueueSummary.failed} failed`} tone={offlineQueueSummary.failed > 0 ? "danger" : "good"} />
           <MobilePill label={`${offlineQueueSummary.sensitive} sensitive`} tone="danger" />
         </View>
+      </MobileCard>
+      <MobileCard title="Sync worker contract" eyebrow="GAP-045" detail={offlineSyncPreview.boundary}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <MobilePill label={offlineSyncPreview.adapter} tone="warn" />
+          <MobilePill label={offlineSyncPreview.reconnectWorker} tone="good" />
+          <MobilePill label="idempotent replay wired" tone="good" />
+          <MobilePill label="encrypted device storage gated" tone="danger" />
+          <MobilePill label="reconnect smoke pending" tone="warn" />
+        </View>
+        <Text style={{ color: "#a8a29e", marginTop: 8 }}>Example key: {offlineSyncPreview.idempotencyExample}</Text>
       </MobileCard>
       {offlineQueueItems.map((item) => (
         <MobileCard key={item.id} title={item.label} eyebrow={item.kind}>

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "source": "GAP-022 tenant isolation tests",
+  "description": "Dependency-light tenant isolation contract for future Prisma repositories and integration tests.",
+  "requiredHelpers": [
+    "withTenantWhere",
+    "withTenantData",
+    "assertTenantScopedWhere",
+    "assertTenantScopedData",
+    "tenantOwnedModelNames"
+  ],
+  "tenantOwnedModels": [
+    "TenantMember",
+    "Studio",
+    "Artist",
+    "Client",
+    "ClientProfile",
+    "BookingRequest",
+    "BookingStateEvent",
+    "Appointment",
+    "AvailabilityWindow",
+    "Deposit",
+    "Payment",
+    "Refund",
+    "PaymentAuditLog",
+    "FileAsset",
+    "ConsentForm",
+    "ConsentSignature",
+    "MedicalSafetyAcknowledgment",
+    "MessageThread",
+    "Message",
+    "Notification",
+    "NotificationDelivery",
+    "SeoCityPage",
+    "SeoStylePage",
+    "Review",
+    "ReleaseRecord",
+    "FeatureFlag",
+    "AuditLog"
+  ],
+  "requiredIntegrationEvidence": [
+    "cross-tenant reads return no rows",
+    "cross-tenant writes are denied",
+    "repository helpers require tenantId",
+    "audit rows include tenantId and actor metadata",
+    "seeded multi-tenant fixtures exist"
+  ]
+}

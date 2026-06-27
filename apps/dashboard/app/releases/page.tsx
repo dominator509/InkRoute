@@ -1,5 +1,5 @@
 import { DashboardPageHeader } from "../../components/DashboardPageHeader";
-import { DisabledActionPanel } from "../../components/DisabledActionPanel";
+import { ReleaseActionPanel } from "../../components/ReleaseActionPanel";
 import { StatusPill } from "../../components/StatusPill";
 import {
   featureFlagDefinitions,
@@ -27,7 +27,7 @@ export default function ReleasesPage() {
       <DashboardPageHeader
         eyebrow="Release operations"
         title="Releases, flags, rollback, and mobile updates"
-        description="Phase 12 turns release planning into a coded control-plane scaffold: release candidates, feature-flag decisions, migration gates, rollback drafts, CI/CD guardrails, and EAS Update boundaries. Actions stay disabled until persistence, CI secrets, and production environments exist."
+        description="Phase 12 turns release planning into a coded control-plane contract: release candidates, feature-flag decisions, migration gates, rollback drafts, CI/CD guardrails, EAS Update boundaries, and no-store tenant-scoped release/feature-flag APIs. Actions stay disabled until CI secrets and production environments exist."
       />
 
       <section className="grid three">
@@ -174,7 +174,7 @@ export default function ReleasesPage() {
         {releaseBoundaryCards.map((boundary) => (
           <article className="card" key={boundary.title}>
             <h2>{boundary.title}</h2>
-            <StatusPill label={boundary.status} tone={boundary.status === "scaffolded" ? "warning" : "neutral"} />
+            <StatusPill label={boundary.status} tone={boundary.status === "control-plane" ? "info" : "neutral"} />
             <p className="muted">{boundary.detail}</p>
           </article>
         ))}
@@ -196,11 +196,7 @@ export default function ReleasesPage() {
         </div>
       </section>
 
-      <DisabledActionPanel
-        title="Release actions"
-        description="Creating release records, toggling feature flags, running migrations, deploying Vercel builds, publishing EAS updates, uploading Sentry artifacts, and rolling back all require authenticated runtime services and audit persistence."
-        actions={["Create release", "Approve production", "Toggle flag", "Publish mobile OTA", "Rollback"]}
-      />
+      <ReleaseActionPanel />
     </main>
   );
 }

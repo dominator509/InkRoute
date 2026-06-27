@@ -39,9 +39,9 @@ Added:
 - `apps/web/app/api/public/[tenantSlug]/error-reports/route.ts`
 - `apps/web/app/api/webhooks/sentry/route.ts`
 
-The public fallback route validates JSON and builds a redacted report draft, then intentionally returns `501 ERROR_REPORT_PERSISTENCE_NOT_IMPLEMENTED` because rate limiting, tenant resolver, persistence, alerts, and provider forwarding are not wired.
+The public fallback route validates JSON, redacts payloads, adds request correlation metadata, applies local bot/rate-limit decisions, persists `ErrorReport`/`AbuseEvent`/`AuditLog` rows when the DB path is available, and fails closed for production local fallback. Distributed rate-limit, provider forwarding, live Postgres tenant-isolation, CI, and no-PII proof remain gated.
 
-The Sentry webhook route checks for a signature-like header and builds a redacted report draft, then intentionally returns `501 SENTRY_WEBHOOK_NOT_IMPLEMENTED` because provider signature verification, issue sync, idempotency, and persistence are not wired.
+The Sentry webhook route requires a provider signature, verifies `SENTRY_WEBHOOK_SECRET` when configured, records provider delivery/idempotency and audit reconciliation when tenant ownership is available, and fails closed in production without durable persistence. Live Sentry replay, no-PII, and provider proof remain gated.
 
 ### Dashboard
 

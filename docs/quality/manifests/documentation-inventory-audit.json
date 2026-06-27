@@ -1,0 +1,12 @@
+{
+  "generatedAt": null,
+  "source": "GAP-128 semantic documentation audit",
+  "status": "not-run",
+  "findings": [],
+  "contractApps": [],
+  "actualApps": [],
+  "contractPackages": [],
+  "actualPackages": [],
+  "documentedWorkspaceRootsChecked": [],
+  "note": "Placeholder manifest committed so documentation inventory references are concrete; scripts/quality/verify-documentation-inventory.mjs overwrites this file during pnpm quality:docs."
+}

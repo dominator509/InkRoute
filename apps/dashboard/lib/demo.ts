@@ -12,6 +12,7 @@ import {
   type CalendarTimeBlock,
 } from "@inkroute/calendar";
 import {
+  buildTenantDashboardView,
   demoPortfolioItems,
   demoSeoCityPages,
   demoSeoStylePages,
@@ -19,6 +20,7 @@ import {
   demoTravelStops,
   inkrouteDemoArtist,
   inkrouteDemoTenant,
+  type DashboardDataCollection,
 } from "@inkroute/config";
 import {
   buildDeliveryLogDraft,
@@ -45,6 +47,7 @@ import {
   type RefundDecision,
   type NoShowDecision,
 } from "@inkroute/payments";
+import { redactRecord } from "@inkroute/security";
 import type {
   AppointmentStatus,
   AvailabilityWindow,
@@ -116,7 +119,7 @@ const minaFloralDraft: BookingDraft = {
   clientName: "Mina L.",
   clientEmail: "mina@example.test",
   clientPhone: "+15550102020",
-  medicalNotes: "No live medical storage in this dashboard scaffold.",
+  medicalNotes: "Medical notes are redacted in dashboard projections and require provider-backed persistence evidence before production use.",
   marketingOptIn: false,
   smsOptIn: false,
   policyAccepted: true,
@@ -478,9 +481,9 @@ export interface DashboardErrorRow {
 }
 
 export const dashboardErrors: DashboardErrorRow[] = [
-  { id: "err_001", severity: "high", status: "open", surface: "web", title: "Booking API returns 501 after validation", affectedRoute: "/api/public/inkroute-demo/booking-requests", release: "phase4-demo", firstSeenAt: "2026-06-01T20:00:00-07:00", redactionStatus: "No PII logged in demo" },
+  { id: "err_001", severity: "high", status: "open", surface: "web", title: "Booking API fallback/provider follow-up evidence gated after validation", affectedRoute: "/api/public/inkroute-demo/booking-requests", release: "phase4-demo", firstSeenAt: "2026-06-01T20:00:00-07:00", redactionStatus: "No PII logged in demo" },
   { id: "err_002", severity: "medium", status: "triaged", surface: "dashboard", title: "Dashboard build not verified due missing dependencies", affectedRoute: "/dashboard/*", release: "phase5-demo", firstSeenAt: "2026-06-02T09:10:00-07:00", redactionStatus: "System-only gap" },
-  { id: "err_003", severity: "medium", status: "open", surface: "mobile", title: "Expo app not connected to API client", affectedRoute: "apps/mobile", release: "phase1-mobile", firstSeenAt: "2026-05-30T10:00:00-07:00", redactionStatus: "No device context captured" },
+  { id: "err_003", severity: "medium", status: "open", surface: "mobile", title: "Expo app API client local contract awaits seeded smoke evidence", affectedRoute: "apps/mobile", release: "phase6-mobile-api", firstSeenAt: "2026-05-30T10:00:00-07:00", redactionStatus: "No device context captured; provider auth and device smoke remain gated" },
 ];
 
 export interface DashboardTemplateRow {
@@ -494,10 +497,10 @@ export interface DashboardTemplateRow {
 const notificationContext = { artistName: inkrouteDemoArtist.displayName, clientName: "Ari", city: "Seattle", appointmentDate: "July 11, 2026", aftercareUrl: "/aftercare" };
 
 export const dashboardTemplates: DashboardTemplateRow[] = [
-  { key: "booking_request_received", channel: "email", status: "draft", preview: renderTemplateText("booking_request_received", notificationContext), complianceNote: "Provider and unsubscribe footer not wired" },
+  { key: "booking_request_received", channel: "email", status: "draft", preview: renderTemplateText("booking_request_received", notificationContext), complianceNote: "Provider delivery and unsubscribe footer proof remain evidence-gated" },
   { key: "deposit_request", channel: "sms", status: "draft", preview: renderTemplateText("deposit_request", notificationContext), complianceNote: "SMS consent, STOP handling, and provider logs required" },
   { key: "appointment_prep_72h", channel: "email", status: "draft", preview: renderTemplateText("appointment_prep_72h", notificationContext), complianceNote: "Artist-specific prep language must be reviewed" },
-  { key: "aftercare_day_0", channel: "push", status: "draft", preview: renderTemplateText("aftercare_day_0", notificationContext), complianceNote: "Mobile push tokens and aftercare review are not implemented" },
+  { key: "aftercare_day_0", channel: "push", status: "draft", preview: renderTemplateText("aftercare_day_0", notificationContext), complianceNote: "Mobile push tokens and aftercare review remain runtime-evidence gated" },
   { key: "healed_photo_request_30d", channel: "email", status: "draft", preview: renderTemplateText("healed_photo_request_30d", notificationContext), complianceNote: "Private upload link required before production" },
 ];
 
@@ -517,9 +520,9 @@ export interface DashboardReleaseRow {
 }
 
 export const dashboardReleases: DashboardReleaseRow[] = [
-  { version: "0.5.0-phase5", channel: "development", status: "scaffolded", notes: "Static dashboard surfaces added", compatibility: "Requires dependency install and Next.js build verification" },
-  { version: "0.4.0-phase4", channel: "development", status: "scaffolded", notes: "Booking flow preview and validation-only route", compatibility: "No production API persistence" },
-  { version: "0.3.0-phase3", channel: "development", status: "scaffolded", notes: "Static public website routes", compatibility: "No CMS/database content source" },
+  { version: "0.5.0-phase5", channel: "development", status: "control-plane", notes: "Dashboard read and mutation contracts added", compatibility: "Requires dependency install and Next.js build verification" },
+  { version: "0.4.0-phase4", channel: "development", status: "runtime-gated", notes: "Booking flow and tenant-scoped API contract wired", compatibility: "Provider/database persistence proof remains gated" },
+  { version: "0.3.0-phase3", channel: "development", status: "runtime-gated", notes: "Public website route contracts added", compatibility: "Provider-backed CMS/database content proof remains gated" },
 ];
 
 export interface DashboardTimelineEvent {
@@ -533,7 +536,7 @@ export const clientTimeline: DashboardTimelineEvent[] = [
   { at: "2026-05-28", title: "Portfolio image viewed", detail: "Orbital Serpent attribution captured", actor: "system" },
   { at: "2026-05-29", title: "Booking request submitted", detail: "Structured intake captured with readiness score", actor: "client" },
   { at: "2026-05-30", title: "Artist note drafted", detail: "Needs placement confirmation before deposit", actor: "artist" },
-  { at: "2026-06-01", title: "Deposit estimate calculated", detail: "Stripe session not created in scaffold", actor: "system" },
+  { at: "2026-06-01", title: "Deposit estimate calculated", detail: "Stripe Checkout readiness contract remains provider-evidence gated", actor: "system" },
 ];
 
 export const dashboardSeoPages = [
@@ -567,7 +570,7 @@ export const bookingStatusActionSummary = bookingLifecycleTransitions.map((trans
 export const dashboardShellContext = {
   tenant: inkrouteDemoTenant,
   artist: inkrouteDemoArtist,
-  authStatus: "Mocked owner session for layout preview only; no real auth/session provider is wired.",
+  authStatus: "Mocked owner session for local layout preview; real auth/session provider proof remains evidence-gated.",
 };
 
 
@@ -645,3 +648,72 @@ export const dashboardMessageThreadDrafts = [
     status: "draft",
   }),
 ];
+
+function redactDashboardRecord<TRecord extends object>(record: TRecord, overrides?: Partial<Record<keyof TRecord, unknown>>): TRecord {
+  return {
+    ...redactRecord(record as Record<string, unknown>),
+    ...overrides,
+  } as TRecord;
+}
+
+function projectDashboardDemoRows<TRecord extends { id: string }>(
+  collection: DashboardDataCollection,
+  records: readonly TRecord[],
+  redactedFields?: readonly string[],
+): TRecord[] {
+  return buildTenantDashboardView({
+    collection,
+    tenantId: inkrouteDemoTenant.id,
+    source: "demo-static",
+    records: records.map((record) => ({ ...record, tenantId: inkrouteDemoTenant.id })),
+    ...(redactedFields ? { redactedFields } : {}),
+  }).records as TRecord[];
+}
+
+export const dashboardProjectedBookingRows = projectDashboardDemoRows("bookings", dashboardBookingRows, [
+  "clientEmail",
+  "clientPhone",
+  "medicalNotes",
+]);
+
+export const dashboardProjectedClients = projectDashboardDemoRows("clients", dashboardClients, [
+  "email",
+  "phone",
+  "medicalNotes",
+  "privateNotes",
+]);
+
+export const dashboardProjectedPayments = projectDashboardDemoRows("payments", dashboardPayments, [
+  "checkoutClientReferenceId",
+  "checkoutIdempotencyKey",
+  "stripePaymentIntentId",
+  "providerSessionId",
+]);
+
+export const dashboardProjectedPortfolio = projectDashboardDemoRows("portfolio", dashboardPortfolio, [
+  "attributionKey",
+  "objectKey",
+]);
+
+export const dashboardRedactedProviderSendDrafts = dashboardProviderSendDrafts.map((draft) =>
+  redactDashboardRecord(draft, {
+    credentialEnvVar: "[redacted-provider-credential]",
+  } as Partial<Record<keyof typeof draft, unknown>>),
+);
+
+export const dashboardRedactedDeliveryLogDrafts = dashboardDeliveryLogDrafts.map((log, index) =>
+  redactDashboardRecord(log, {
+    idempotencyKey: `delivery-log-preview-${index + 1}`,
+  } as Partial<Record<keyof typeof log, unknown>>),
+);
+
+export const dashboardRedactedProviderWebhookPreviews = dashboardProviderWebhookPreviews.map((event) =>
+  redactDashboardRecord(event),
+);
+
+export const dashboardRedactedMessageThreadDrafts = dashboardMessageThreadDrafts.map((thread) =>
+  redactDashboardRecord(thread, {
+    bodyPreview: "[redacted-message-body]",
+    piiRedactionNote: "Message body redacted before dashboard rendering; use persisted tenant-scoped thread APIs for live reads.",
+  } as Partial<Record<keyof typeof thread, unknown>>),
+);

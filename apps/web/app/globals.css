@@ -231,6 +231,7 @@ main { min-height: 100vh; overflow: hidden; }
 }
 .portfolio-card.featured { grid-row: span 2; }
 .portfolio-art {
+  position: relative;
   min-height: 320px;
   display: grid;
   place-items: end start;
@@ -244,6 +245,25 @@ main { min-height: 100vh; overflow: hidden; }
   font-weight: 900;
   font-size: clamp(1.7rem, 4vw, 3.2rem);
   letter-spacing: -0.07em;
+}
+.portfolio-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(8, 6, 5, 0.08), rgba(8, 6, 5, 0.68));
+  pointer-events: none;
+}
+.portfolio-art img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.portfolio-art span {
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1rem 2.5rem rgba(8, 6, 5, 0.72);
 }
 .featured .portfolio-art { min-height: 520px; }
 .portfolio-card-body { padding: 1.25rem; }

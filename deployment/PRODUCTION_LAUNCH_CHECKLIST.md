@@ -2,7 +2,7 @@
 
 ## Status
 
-Scaffolded only. The current repo is not production-ready.
+Local source, schema, route, runtime-evidence, and launch checklist contracts are wired, but the current repo is not production-ready because live provider credentials, CI runs, deployment approvals, legal review, database/storage proofs, browser/device evidence, and redacted launch artifacts are still missing.
 
 ## Blocking launch items
 
@@ -11,7 +11,7 @@ Scaffolded only. The current repo is not production-ready.
 - Database provisioned, migrations generated, seed/dev data verified, backups configured.
 - Auth/session/RBAC/tenant isolation implemented and tested.
 - Private storage, signed uploads, malware scanning, EXIF/GPS stripping, and ACLs verified.
-- Booking persistence, reference uploads, Stripe deposits, notifications, calendar holds, and confirmation flows implemented.
+- Booking/contact persistence and local handoff contracts wired; reference upload provider URLs, Stripe deposits, notification delivery, calendar holds, confirmation runtime proof, and provider-backed workflows verified.
 - Web/dashboard/mobile provider sandboxes verified.
 - Legal review complete for privacy, terms, consent, medical, SMS, aftercare, deposit, no-show, refund, and tax language.
 - Sentry/OpenTelemetry/error redaction/alerting wired.
@@ -23,9 +23,35 @@ Scaffolded only. The current repo is not production-ready.
 
 ```bash
 pnpm deploy:check-env
+pnpm deploy:verify-provider-envs
+pnpm deploy:verify-secrets
+pnpm deploy:verify-mobile
+pnpm deploy:verify-database-ops
+pnpm deploy:verify-launch-evidence
+pnpm deploy:verify-ops
 pnpm deploy:checklist
 pnpm deploy:gaps
 ```
+
+## Launch evidence bundle
+
+Production launch evidence is tracked in `deployment/manifests/production-launch-evidence.json` and verified with:
+
+```bash
+pnpm deploy:verify-launch-evidence
+```
+
+This bundle is a redacted index of required proof across CI/build/test, database operations, providers/secrets, security/privacy, accessibility/SEO/performance, mobile release, legal approval, and rollback drills. It must not contain provider secrets, database URLs, private console links, client PII, medical notes, or payment payloads.
+
+## Launch operations evidence
+
+Incident response, support, privacy, monitoring, on-call, communications, and rollback operations are tracked in `deployment/manifests/launch-operations-evidence.json` and verified with:
+
+```bash
+pnpm deploy:verify-ops
+```
+
+The manifest must use role/team labels and redacted artifact labels only. Do not commit private phone numbers, personal emails, alert webhook URLs, raw support transcripts, client PII, medical notes, or payment payloads.
 
 ## Approval rule
 

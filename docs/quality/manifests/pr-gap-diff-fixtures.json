@@ -1,0 +1,28 @@
+{
+  "generatedAt": "2026-06-12T00:00:00.000Z",
+  "status": "pass",
+  "fixtureCount": 2,
+  "results": [
+    {
+      "file": "invalid-missing-evidence.diff",
+      "expectedOk": false,
+      "actualOk": false,
+      "status": "pass",
+      "addedGapRows": 1,
+      "gapIds": [
+        "GAP-999"
+      ]
+    },
+    {
+      "file": "valid-with-evidence.diff",
+      "expectedOk": true,
+      "actualOk": true,
+      "status": "pass",
+      "addedGapRows": 1,
+      "gapIds": [
+        "GAP-999"
+      ]
+    }
+  ],
+  "failures": []
+}

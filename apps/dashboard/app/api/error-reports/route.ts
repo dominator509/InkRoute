@@ -1,15 +1,21 @@
-import { buildAlertRoute, buildObservabilityReportDraft } from "@inkroute/observability";
-import { errorReportFilterSchema, errorReportInputSchema } from "@inkroute/validators";
+import {
+  buildAlertRoute,
+  buildObservabilityReportDraft,
+  type ErrorSurface,
+  type ObservabilityEventInput,
+} from "@inkroute/observability";
+import { errorReportFilterSchema, errorReportInputSchema, type ErrorReportInput } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
+import type { ErrorReportStatus, ErrorSeverity } from "@inkroute/types";
 import { NextResponse, type NextRequest } from "next/server";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 
 type LocalErrorReport = {
   id: string;
   tenantId: string;
-  severity: string;
-  status: "open" | "triaged" | "in_progress" | "resolved" | "ignored";
-  source: string;
+  severity: ErrorSeverity;
+  status: ErrorReportStatus;
+  source: ErrorSurface;
   message: string;
   redactionLevel: string;
   stackHash: string;
@@ -24,6 +30,21 @@ type LocalErrorReport = {
 
 const localErrorReports = new Map<string, LocalErrorReport[]>();
 const LOCAL_REPORT_LIMIT = 150;
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+type ErrorReportMetadataInput = Record<string, unknown>;
+type ErrorReportCreateData = {
+  tenantId: string;
+  severity: ErrorSeverity;
+  status: ErrorReportStatus;
+  source: ErrorSurface;
+  message: string;
+  stackHash: string;
+  release?: string | null;
+  route?: string | null;
+  userAgent?: string | null;
+  metadata: ErrorReportMetadataInput | null;
+};
 
 function nextLocalErrorId(tenantId: string): string {
   const random = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2);
@@ -52,7 +73,7 @@ function storeLocalErrorReport(input: Omit<LocalErrorReport, "id" | "createdAt" 
   return report;
 }
 
-function buildDashboardReportInput(parsed: { data: { message: string } & Record<string, unknown> }, tenantId: string, request: NextRequest) {
+function buildDashboardReportInput(parsed: { data: ErrorReportInput }, tenantId: string, request: NextRequest): ObservabilityEventInput {
   const inputData = parsed.data;
   const userAgent = typeof inputData.userAgent === "string" ? inputData.userAgent : request.headers.get("user-agent") ?? undefined;
   return {
@@ -61,15 +82,27 @@ function buildDashboardReportInput(parsed: { data: { message: string } & Record<
     runtime: typeof inputData.runtime === "string" ? inputData.runtime : "browser",
     environment: typeof inputData.environment === "string" ? inputData.environment : "production",
     message: inputData.message,
-    stack: typeof inputData.stack === "string" ? inputData.stack : undefined,
+    ...(typeof inputData.stack === "string" ? { stack: inputData.stack } : {}),
     route: typeof inputData.route === "string" ? inputData.route : "/dashboard",
     release: typeof inputData.release === "string" ? inputData.release : "phase11-dashboard-demo",
-    userAgent,
-    statusCode: typeof inputData.statusCode === "number" ? inputData.statusCode : undefined,
+    ...(typeof userAgent === "string" ? { userAgent } : {}),
+    ...(typeof inputData.statusCode === "number" ? { statusCode: inputData.statusCode } : {}),
     handled: typeof inputData.handled === "boolean" ? inputData.handled : true,
-    metadata: typeof inputData.metadata === "object" && inputData.metadata !== null ? (inputData.metadata as Record<string, unknown>) : undefined,
-    tags: typeof inputData.tags === "object" && inputData.tags !== null ? (inputData.tags as Record<string, string>) : undefined,
+    ...(typeof inputData.metadata === "object" && inputData.metadata !== null ? { metadata: inputData.metadata as Record<string, unknown> } : {}),
+    ...(typeof inputData.tags === "object" && inputData.tags !== null ? { tags: inputData.tags as Record<string, string> } : {}),
   };
+}
+
+function redactMetadata(value: unknown): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, metadataValue]) => [
+      key,
+      /email|phone|token|secret|cookie|authorization|password|ip|useragent|body|stack|payload|client|card/i.test(key)
+        ? "[redacted-dashboard-field]"
+        : metadataValue,
+    ]),
+  );
 }
 
 export async function GET(request: NextRequest) {
@@ -77,108 +110,183 @@ export async function GET(request: NextRequest) {
   try {
     assertPermission(actor, "error:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read error reports." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read error reports." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const parsed = parseErrorFilters(request, actor.tenantId);
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: { code: "VALIDATION_FAILED", message: "Error-report query parameters are invalid.", issues: parsed.error.flatten() } },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
   const filters = parsed.data;
   const tenantId = filters.tenantId ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a different tenant's error reports." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query a different tenant's error reports." } }, { status: 403, headers: noStoreHeaders });
   }
 
   if (actor.source === "local-fallback") {
-    const localData = localErrorReports.get(actor.tenantId) ?? [];
-    const filtered = localData.filter((candidate) => (!filters.status || candidate.status === filters.status) && (!filters.source || candidate.source === filters.source)).slice(0, filters.limit);
-    return NextResponse.json({
-      ok: true,
-      source: actor.source,
-      tenantId: actor.tenantId,
-      actorRole: actor.role,
-      persistence: "local-fallback",
-      count: filtered.length,
-      status: "local-read-fallback",
-      reports: filtered,
-      gapIds: ["GAP-079", "GAP-081", "GAP-095"],
-      boundary: "Local fallback mode active; errors are retained in-memory only.",
-    });
-  }
-
-  try {
-    const rows = await prisma.errorReport.findMany({
-      where: {
-        tenantId,
-        ...(filters.source ? { source: filters.source } : {}),
-        ...(filters.status ? { status: filters.status } : {}),
-      },
-      orderBy: { createdAt: "desc" },
-      take: filters.limit,
-      select: {
-        id: true,
-        tenantId: true,
-        severity: true,
-        status: true,
-        source: true,
-        message: true,
-        stackHash: true,
-        release: true,
-        route: true,
-        createdAt: true,
-        metadata: true,
-      },
-    });
-
-    return NextResponse.json({
-      ok: true,
-      source: actor.source,
-      tenantId,
-      actorRole: actor.role,
-      persistence: "database",
-      count: rows.length,
-      status: "authenticated-read",
-      reports: rows.map((entry) => ({
-        id: entry.id,
-        tenantId: entry.tenantId,
-        severity: entry.severity,
-        status: entry.status,
-        source: entry.source,
-        message: entry.message,
-        stackHash: entry.stackHash,
-        release: entry.release ?? undefined,
-        route: entry.route ?? undefined,
-        metadata: entry.metadata ?? {},
-        createdAt: entry.createdAt.toISOString(),
-      })),
-      gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
-      boundary: "Error reports now include tenant-scoped persistence, RBAC, and metadata redaction in DB-backed mode.",
-    });
-  } catch (error) {
-    if (!isDatabaseUnavailable(error)) {
-      throw error;
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId: actor.tenantId,
+          error: {
+            code: "PROVIDER_ERROR_REPORT_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production dashboard error-report reads require DB-backed actor resolution and tenant-scoped persisted reports; local fallback reports are disabled.",
+            gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
+          },
+          productionBoundary: { localErrorReportFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
     }
 
     const localData = localErrorReports.get(actor.tenantId) ?? [];
     const filtered = localData.filter((candidate) => (!filters.status || candidate.status === filters.status) && (!filters.source || candidate.source === filters.source)).slice(0, filters.limit);
-    return NextResponse.json({
-      ok: true,
-      source: actor.source,
-      tenantId: actor.tenantId,
-      actorRole: actor.role,
-      persistence: "local-fallback",
-      count: filtered.length,
-      status: "database-unavailable",
-      reports: filtered,
-      warning: "Database is currently unavailable; returning local fallback data.",
-      gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
-      boundary: "DB outage fallback only; data persistence is temporary and request-scoped.",
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId: actor.tenantId,
+        actorRole: actor.role,
+        persistence: "local-fallback",
+        count: filtered.length,
+        status: "local-read-fallback",
+        reports: filtered,
+        gapIds: ["GAP-079", "GAP-081", "GAP-095"],
+        boundary: "Local fallback mode active; errors are retained in-memory only.",
+      },
+      { headers: noStoreHeaders },
+    );
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const rows = await tx.errorReport.findMany({
+        where: {
+          tenantId,
+          ...(filters.source ? { source: filters.source } : {}),
+          ...(filters.status ? { status: filters.status } : {}),
+        },
+        orderBy: { createdAt: "desc" },
+        take: filters.limit ?? 50,
+        select: {
+          id: true,
+          tenantId: true,
+          severity: true,
+          status: true,
+          source: true,
+          message: true,
+          stackHash: true,
+          release: true,
+          route: true,
+          createdAt: true,
+          metadata: true,
+        },
+      });
+
+      const audit = await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorUserId: actor.actorUserId,
+          action: "error_report:read:list",
+          entityType: "ErrorReport",
+          metadata: {
+            source: "dashboard-api",
+            count: rows.length,
+            filters: { status: filters.status ?? null, source: filters.source ?? null, limit: filters.limit ?? 50 },
+            redactedFields: ["metadata", "userAgent", "stack", "payload", "client", "token", "secret"],
+          },
+        },
+        select: { id: true },
+      });
+
+      return { rows, audit };
     });
+
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId,
+        actorRole: actor.role,
+        persistence: "database",
+        count: result.rows.length,
+        status: "authenticated-read",
+        reports: result.rows.map((entry: {
+          id: string;
+          tenantId: string;
+          severity: ErrorSeverity;
+          status: ErrorReportStatus;
+          source: ErrorSurface;
+          message: string;
+          stackHash: string;
+          release: string | null;
+          route: string | null;
+          metadata: unknown;
+          createdAt: Date;
+        }) => ({
+          id: entry.id,
+          tenantId: entry.tenantId,
+          severity: entry.severity,
+          status: entry.status,
+          source: entry.source,
+          message: entry.message,
+          stackHash: entry.stackHash,
+          release: entry.release ?? undefined,
+          route: entry.route ?? undefined,
+          metadata: redactMetadata(entry.metadata),
+          createdAt: entry.createdAt.toISOString(),
+        })),
+        auditId: result.audit.id,
+        gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
+        boundary: "Error report reads are tenant-scoped, RBAC-gated, no-store, audit-logged, and metadata-redacted in DB-backed mode.",
+      },
+      { headers: noStoreHeaders },
+    );
+  } catch (error) {
+    if (!isDatabaseUnavailable(error)) {
+      throw error;
+    }
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId: actor.tenantId,
+          error: {
+            code: "PROVIDER_ERROR_REPORT_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production dashboard error-report reads require the dashboard database connection; local fallback reports are disabled.",
+            gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
+          },
+          productionBoundary: { localErrorReportFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
+    const localData = localErrorReports.get(actor.tenantId) ?? [];
+    const filtered = localData.filter((candidate) => (!filters.status || candidate.status === filters.status) && (!filters.source || candidate.source === filters.source)).slice(0, filters.limit);
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId: actor.tenantId,
+        actorRole: actor.role,
+        persistence: "local-fallback",
+        count: filtered.length,
+        status: "database-unavailable",
+        reports: filtered,
+        warning: "Database is currently unavailable; returning local fallback data.",
+        gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
+        boundary: "DB outage fallback only; data persistence is temporary and request-scoped.",
+      },
+      { headers: noStoreHeaders },
+    );
   }
 }
 
@@ -187,21 +295,21 @@ export async function POST(request: NextRequest) {
   try {
     assertPermission(actor, "error:write");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to create error reports." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to create error reports." } }, { status: 403, headers: noStoreHeaders });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Error report body must be valid JSON." } }, { status: 400 });
+    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Error report body must be valid JSON." } }, { status: 400, headers: noStoreHeaders });
   }
 
   const parsed = errorReportInputSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: { code: "VALIDATION_FAILED", message: "Error report payload failed validation.", issues: parsed.error.flatten() } },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
@@ -209,7 +317,7 @@ export async function POST(request: NextRequest) {
   if (tenantId !== actor.tenantId) {
     return NextResponse.json(
       { ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot create an error report for a different tenant." } },
-      { status: 403 },
+      { status: 403, headers: noStoreHeaders },
     );
   }
 
@@ -218,7 +326,6 @@ export async function POST(request: NextRequest) {
   const auditRoute = buildAlertRoute(report);
 
   const localPayload = {
-    id: nextLocalErrorId(tenantId),
     tenantId,
     severity: report.severity,
     status: report.status,
@@ -226,18 +333,28 @@ export async function POST(request: NextRequest) {
     message: report.redactedMessage,
     redactionLevel: report.redactionLevel,
     stackHash: report.stackHash,
-    release: report.release,
-    route: report.route,
-    createdAt: new Date().toISOString(),
+    ...(report.release ? { release: report.release } : {}),
+    ...(report.route ? { route: report.route } : {}),
     auditRoute,
   };
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json({
+        ok: false,
+        source: actor.source,
+        tenantId,
+        error: {
+          code: "PROVIDER_ERROR_REPORT_PERSISTENCE_NOT_CONFIGURED",
+          message: "Production dashboard error-report writes require DB-backed actor resolution and tenant-scoped persisted reports; local fallback reports are disabled.",
+          gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
+        },
+        productionBoundary: { localErrorReportFallbackDisabled: true },
+      }, { status: 503, headers: noStoreHeaders });
+    }
+
     const persisted = storeLocalErrorReport({
       ...localPayload,
-      id: localPayload.id,
-      auditRoute,
-      createdAt: new Date().toISOString(),
     });
     return NextResponse.json({
       ok: true,
@@ -260,7 +377,7 @@ export async function POST(request: NextRequest) {
       },
       gapIds: ["GAP-079", "GAP-081", "GAP-095"],
       boundary: "Local fallback mode active; report persisted in-memory for runtime continuity only.",
-    }, { status: 201 });
+    }, { status: 201, headers: noStoreHeaders });
   }
 
   try {
@@ -273,10 +390,10 @@ export async function POST(request: NextRequest) {
           source: report.source,
           message: report.redactedMessage,
           stackHash: report.stackHash,
-          release: report.release,
-          route: report.route,
-          userAgent: report.userAgent,
-          metadata: report.redactedMetadata,
+          release: report.release ?? null,
+          route: report.route ?? null,
+          userAgent: report.userAgent ?? null,
+          metadata: report.redactedMetadata as ErrorReportMetadataInput,
         },
       });
       const audit = await tx.auditLog.create({
@@ -317,7 +434,7 @@ export async function POST(request: NextRequest) {
           release: persisted.created.release ?? undefined,
           metadata: persisted.created.metadata as Record<string, unknown> | null ?? {},
           createdAt: persisted.created.createdAt.toISOString(),
-          alertRoute,
+          alertRoute: auditRoute,
           auditId: persisted.audit.id,
         },
         requiredNextWork: [
@@ -327,15 +444,26 @@ export async function POST(request: NextRequest) {
         gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
         boundary: "Dashboard error ingest is now authenticated and persisted in tenant scope; alert routing remains dashboard-level only until provider credentials exist.",
       },
-      { status: 201 },
+      { status: 201, headers: noStoreHeaders },
     );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json({
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_ERROR_REPORT_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production dashboard error-report writes require the dashboard database connection; local fallback reports are disabled.",
+            gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
+          },
+          productionBoundary: { localErrorReportFallbackDisabled: true },
+        }, { status: 503, headers: noStoreHeaders });
+      }
+
       const persisted = storeLocalErrorReport({
         ...localPayload,
-        id: localPayload.id,
-        auditRoute,
-        createdAt: new Date().toISOString(),
       });
       return NextResponse.json({
         ok: true,
@@ -358,7 +486,7 @@ export async function POST(request: NextRequest) {
         },
         warning: "Database was temporarily unavailable; report persisted in local fallback store.",
         gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
-      }, { status: 201 });
+      }, { status: 201, headers: noStoreHeaders });
     }
 
     return NextResponse.json(
@@ -366,7 +494,7 @@ export async function POST(request: NextRequest) {
         ok: false,
         error: { code: "ERROR_REPORT_PERSISTENCE_FAILED", message: "Error report could not be persisted after validation." },
       },
-      { status: 500 },
+      { status: 500, headers: noStoreHeaders },
     );
   }
 }

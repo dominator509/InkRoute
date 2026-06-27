@@ -1,4 +1,4 @@
-name: Release Governance Scaffold
+﻿name: Release Governance Scaffold
 
 on:
   workflow_dispatch:
@@ -27,6 +27,7 @@ permissions:
   contents: read
   actions: read
   deployments: read
+  id-token: write
 
 jobs:
   release-dry-run:
@@ -44,6 +45,26 @@ jobs:
       - name: Print deployment gates
         run: |
           echo "Production deployment remains gated until dependencies, app builds, DB migrations, EAS project, Vercel project, and provider credentials are verified."
+      - name: Prisma migration compatibility dry run
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          test -f packages/db/prisma/schema.prisma
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "::error::DATABASE_URL is required for Prisma migration compatibility dry run."
+            exit 1
+          fi
+          pnpm --filter @inkroute/db prisma validate --schema packages/db/prisma/schema.prisma
+          pnpm --filter @inkroute/db prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel packages/db/prisma/schema.prisma --script > /tmp/inkroute-migration.sql
+          if grep -Eiq 'DROP TABLE|DROP COLUMN|ALTER TABLE .* DROP|TRUNCATE' /tmp/inkroute-migration.sql; then
+            echo "::error::Destructive Prisma migration detected. Attach backup evidence, expand/contract plan, and explicit production approval before deploy."
+            exit 1
+          fi
+          echo "Prisma migration compatibility dry run completed without destructive SQL."
+      - name: ReleaseRecord CI result write contract
+        run: |
+          echo "ReleaseRecord CI result write is gated behind dashboard deployment readiness API and DATABASE_URL."
+          echo "Store ciWorkflowRunId, ciWorkflowRunUrl, ciStatus, ciCompletedAt, release_version, release_channel, commit_sha, and redacted artifact paths after live dispatch."
 
   deployment-gated-preview:
     name: Deployment-gated preview release
@@ -54,6 +75,15 @@ jobs:
     steps:
       - run: echo "Wire Vercel preview, Prisma migration dry run, Sentry release artifacts, and EAS preview update in a real CI environment."
 
+  deployment-gated-staging:
+    name: Deployment-gated staging release
+    needs: release-dry-run
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - run: echo "Wire Vercel staging deploy, Prisma migrate deploy dry-run, Sentry artifacts, Search Console submission, and ReleaseRecord CI result write."
+
   deployment-gated-production:
     name: Deployment-gated production release
     needs: release-dry-run
@@ -61,4 +91,5 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - run: echo "Wire protected production deploy, audited ReleaseRecord mutation, rollback proof, and incident channel notification in a real CI environment."
+      - run: echo "Wire protected production deploy, audited ReleaseRecord CI result write, rollback proof, Sentry release artifacts, Search Console submission, and incident channel notification in a real CI environment."
+

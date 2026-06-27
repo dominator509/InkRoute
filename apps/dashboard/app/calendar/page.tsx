@@ -1,5 +1,6 @@
 import { DashboardPageHeader } from "../../components/DashboardPageHeader";
 import { IntegrationBoundaryCard } from "../../components/IntegrationBoundaryCard";
+import { SignedIcsFeedRevocationPanel } from "../../components/SignedIcsFeedRevocationPanel";
 import { StatusPill } from "../../components/StatusPill";
 import {
   dashboardAppointments,
@@ -23,7 +24,7 @@ export default function CalendarPage() {
       <DashboardPageHeader
         eyebrow="Calendar and availability"
         title="Appointment calendar"
-        description="Phase 8 adds static availability slots, buffer math, conflict previews, ICS feed metadata, and Google Calendar draft payloads. OAuth sync and persistence remain externally dependent."
+        description="Phase 8 adds availability slots, buffer math, conflict previews, ICS feed metadata, and Google Calendar draft payloads. Tenant-scoped calendar read API now exists; OAuth sync and provider mutations remain externally dependent."
       />
 
       <section className="grid three">
@@ -61,7 +62,7 @@ export default function CalendarPage() {
       <section className="grid two spacious">
         <article className="card">
           <h2>Generated availability slots</h2>
-          <p>Slots are computed from demo availability windows, appointment blocks, and buffers. Production needs database writes and timezone QA.</p>
+          <p>Slots are computed from demo availability windows, appointment blocks, and buffers. Calendar reads now have a redacted dashboard API; production writes still need mutation routes and timezone QA.</p>
           <div className="stack compact-list">
             {dashboardAvailabilitySlots.map((slot) => (
               <div className="mini-row" key={slot.id}>
@@ -96,21 +97,22 @@ export default function CalendarPage() {
       <section className="grid two spacious">
         <article className="card">
           <h2>ICS feed preview</h2>
-          <p>Public demo feed output prefix plus a signed-feed draft path. Real signed token storage is not implemented.</p>
+          <p>Public demo feed output prefix plus a signed-feed draft path. Durable signed-token storage, revocation, and access-log proof remain evidence-gated.</p>
           <pre className="code-preview">{dashboardTravelIcsPreview.join("\n")}</pre>
           <div className="boundary-note">
             <strong>Signed feed draft</strong>
             <span>{dashboardSignedIcsFeedDraft.path}</span>
           </div>
         </article>
+        <SignedIcsFeedRevocationPanel />
         <article className="card">
           <h2>Google Calendar drafts</h2>
-          <p>These payload shapes mirror the planned provider boundary. They are not sent to Google in this scaffold.</p>
+          <p>These payload shapes mirror the provider execution contract. Live Google dispatch remains evidence-gated until OAuth, encrypted tokens, sync workers, and provider smokes are captured.</p>
           <pre className="code-preview">{JSON.stringify({ event: dashboardGoogleEventDraft, freeBusy: dashboardGoogleFreeBusyDraft }, null, 2)}</pre>
         </article>
       </section>
 
-      <IntegrationBoundaryCard title="Calendar sync" status="Externally dependent" description="Google OAuth, encrypted token storage, incremental sync tokens, push channels, recurring-event reconciliation, and provider retry handling remain planned work." gapIds={["GAP-009", "GAP-055", "GAP-056", "GAP-057", "GAP-058"]} />
+      <IntegrationBoundaryCard title="Calendar sync" status="Read APIs wired" description="Calendar reads now enforce calendar RBAC, tenant scope, no-store responses, provider payload redaction, and AuditLog rows. Google OAuth, encrypted token storage, incremental sync tokens, push channels, recurring-event reconciliation, and provider retry handling remain evidence-gated runtime contracts." gapIds={["GAP-009", "GAP-055", "GAP-056", "GAP-057", "GAP-058"]} />
     </main>
   );
 }

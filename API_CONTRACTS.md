@@ -2,7 +2,7 @@
 
 ## Current status
 
-API contracts are documented and multiple public boundaries now run local-runtime behavior, but production persistence and provider wiring are not implemented. Phase 2 expanded the Prisma domain model and validators that future API handlers should use. Phase 3 public pages still read static demo config. All future API endpoints must validate inputs with `@inkroute/validators`, enforce auth where required, scope tenant-owned data, and return a predictable response envelope.
+API contracts are documented and multiple public/dashboard boundaries now have tenant-scoped DB persistence, audit metadata, fail-closed production guards, or local-runtime fallback behavior. Provider execution, live replay proof, full integration tests, and some production workflows remain evidence-gated. Phase 2 expanded the Prisma domain model and validators that future API handlers should use. Phase 3 public pages still read static demo config. All future API endpoints must validate inputs with `@inkroute/validators`, enforce auth where required, scope tenant-owned data, and return a predictable response envelope.
 
 ## Response envelope
 
@@ -46,48 +46,61 @@ All route handlers must:
 
 | Method | Route | Purpose | Validator | Auth | Status |
 | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/public/:tenantSlug/portfolio` | Public portfolio items | Query validator pending | No | Planned |
-| `GET` | `/api/public/:tenantSlug/travel` | Public travel schedule/city availability | Query validator pending | No | Planned |
-| `POST` | `/api/public/:tenantSlug/booking-requests` | Create booking request | `bookingRequestInputSchema` | No, must be rate-limited before production | Tenant-scoped validation, local + DB persistence path, and fallback behavior if database is unavailable |
-| `POST` | `/api/public/:tenantSlug/waitlists` | City waitlist signup | Planned | No, rate-limited | Planned |
-| `GET` | `/api/public/:tenantSlug/seo/cities/:citySlug` | City SEO page data | `seoCityPageInputSchema` for admin writes | No | Planned |
-| `GET` | `/api/public/:tenantSlug/seo/styles/:styleSlug` | Style SEO page data | `seoStylePageInputSchema` for admin writes | No | Planned |
-| `GET` | `/api/public/:tenantSlug/reviews` | Approved public testimonials | Query validator pending | No | Planned |
+| `GET` | `api/public/:tenantSlug/portfolio` | Public portfolio items | `publicReadQuerySchema` bounded `limit` | No | DB-oriented tenant-scoped read with validated bounded query limit and non-production demo fallback; production disables local fallback. |
+| `GET` | `api/public/:tenantSlug/travel` | Public travel schedule/city availability | `publicReadQuerySchema` bounded `limit` | No | DB-oriented tenant-scoped read with validated bounded query limit and non-production demo fallback; production disables local fallback. |
+| `POST` | `/api/public/:tenantSlug/booking-requests` | Create booking request | `bookingRequestInputSchema` | No, DB path requires bot proof + queue handoff readiness | Tenant-scoped validation, local + DB persistence path, anti-bot proof enforcement for DB writes, encryption-policy/rotation metadata, and signed reference-upload handoff contract in response. |
+| `POST` | `api/public/:tenantSlug/waitlists` | City waitlist signup | `waitlistSignupInputSchema` | No, rate-limited | DB-oriented Client/MessageThread/Message/Notification/NotificationDelivery/NotificationProviderHandoff/IdempotencyKey/AuditLog intent persistence with hashed destination metadata and non-production local redacted-message fallback; production disables local fallback and live provider sends remain gated. |
+| `GET` | `api/public/:tenantSlug/seo/cities/:citySlug` | City SEO page data | `seoCityPageInputSchema` for admin writes | No | DB-oriented published city-page read with non-production demo fallback; production disables local fallback. |
+| `GET` | `api/public/:tenantSlug/seo/styles/:styleSlug` | Style SEO page data | `seoStylePageInputSchema` for admin writes | No | DB-oriented published style-page read with non-production demo fallback; production disables local fallback. |
+| `GET` | `api/public/:tenantSlug/reviews` | Approved public testimonials | `publicReadQuerySchema` bounded `limit` | No | DB-oriented tenant-scoped approved-review read with validated bounded query limit and non-production demo fallback; production disables local fallback. |
+| `GET` | `api/public/:tenantSlug/faq` | Public FAQ content bundle | `publicReadQuerySchema` bounded `limit` | No | Tenant-safe public bundle route with validated bounded query limit; durable FAQ CMS persistence remains under SEO/public-content gaps. |
 | `GET` | `/api/public/:tenantSlug/notification-previews` | Static notification/template delivery-plan previews | Static Phase 9 helper output | No | Scaffolded preview route; no send/queue |
-| `POST` | `/api/public/:tenantSlug/messages` | Public client message/contact thread draft | Manual minimal shape in Phase 9; future `messageInputSchema` | No, must be rate-limited before production | Local runtime draft persistence and routing draft returned |
-| `POST` | `/api/public/:tenantSlug/error-reports` | Public fallback client error-report draft | Manual minimal Phase 11 shape; future observability validator | No, must be rate-limited/bot-protected before production | Local runtime redacted draft persistence and preview response |
+| `POST` | `/api/public/:tenantSlug/messages` | Public client message/contact thread draft | `publicMessageInputSchema` | No, DB path requires existing booking/client context | DB-first public message persistence for tenant-scoped booking replies; validates public subject/body/booking context, writes MessageThread/Message/Notification/Delivery/Handoff/IdempotencyKey/AuditLog rows when booking context exists, otherwise local fallback stays non-production only. Provider worker execution remains evidence-gated. |
+| `POST` | `/api/public/:tenantSlug/contact` | Public contact form intake | `publicContactInputSchema` | No, rate-limited | DB-first contact intake: validates public name/email/subject/message, resolves tenant scope, upserts Client by email, writes MessageThread/Message/Notification/Delivery/Handoff/IdempotencyKey/AuditLog rows with hashed destination metadata, and keeps local runtime fallback non-production only. Provider delivery, seeded DB isolation, browser/API E2E, and CI evidence remain gated. |
+| `POST` | `/api/public/:tenantSlug/analytics` | Public SEO analytics attribution event | `AnalyticsEventName` allowlist | No, tenant-scoped and redacted | DB-first public analytics ingestion: resolves tenant scope, normalizes/redacts UTM/portfolio/booking attribution, persists AnalyticsEvent/Campaign rows with idempotency key, and disables production local preview fallback. SearchConsoleImportedRow/SearchConsoleOperationRun schema and migration coverage are present for import durability, while credentialed Search Console jobs, click-through proof, booking attribution integration, and CI evidence remain gated. |
+| `POST` | `/api/public/:tenantSlug/preferences` | Public notification preference mutation | Preference center contract | No, signed-token proof required before launch | DB-first preference mutation: resolves tenant scope, persists hash-only NotificationChannelPreference/NotificationSuppression/IdempotencyKey/AuditLog rows, and keeps local contract fallback non-production only. Token crypto, legal copy, List-Unsubscribe provider proof, integration tests, and CI evidence remain gated. |
+| `POST` | `/api/public/:tenantSlug/unsubscribe` | One-click email unsubscribe | Preference center contract | No, token hash required for production proof | DB-first one-click unsubscribe: persists hash-only email opt-out, suppression, idempotency, and audit rows when DB tenant scope is available, never stores raw tokens, and keeps local contract fallback non-production only. Provider List-Unsubscribe proof remains gated. |
+| `POST` | `/api/public/:tenantSlug/error-reports` | Public fallback client error-report draft | `errorReportInputSchema` | No, rate-limited and bot-protected | DB-backed redacted ErrorReport + AbuseEvent + AuditLog ingest with production local fallback disabled; provider forwarding remains evidence-gated. |
 
 ## Dashboard endpoints planned
 
 | Method | Route | Purpose | Permission | Validator | Status |
 | --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/dashboard/metrics` | Tenant overview metrics | `analytics:read` | Query validator pending | Planned |
-| `GET` | `/api/dashboard/bookings` | Booking inbox | `booking:read` | Query validator pending | Planned |
-| `GET` | `/api/dashboard/bookings/:id` | Booking detail with timeline | `booking:read` | Params validator pending | Planned |
-| `PATCH` | `/api/dashboard/bookings/:id/status` | Accept/decline/reschedule state changes | `booking:write` | `bookingStatusUpdateSchema` | Planned |
-| `POST` | `/api/dashboard/appointments` | Create appointment from booking | `booking:write` | `appointmentInputSchema` | Planned |
-| `GET` | `/api/dashboard/clients/:id` | Client profile/timeline | `client:read` | Params validator pending | Planned |
-| `POST` | `/api/dashboard/clients` | Create client profile | `client:write` | `clientInputSchema` | Planned |
-| `POST` | `/api/dashboard/portfolio` | Create portfolio item | `portfolio:write` | `portfolioItemInputSchema` | Planned |
-| `POST` | `/api/dashboard/portfolio/:id/images` | Attach portfolio image metadata | `portfolio:write` | `portfolioImageInputSchema` | Planned |
-| `POST` | `/api/dashboard/files/signed-upload` | Create signed upload request | Permission varies by file kind | `fileAssetInputSchema` boundary | Planned |
-| `POST` | `/api/dashboard/travel/cities` | Create managed travel city | `travel:write` | `travelCityInputSchema` | Planned |
-| `POST` | `/api/dashboard/travel/schedules` | Create travel schedule/guest spot | `travel:write` | `travelScheduleInputSchema` | Planned |
-| `POST` | `/api/dashboard/availability` | Create availability window | `travel:write` | `availabilityWindowInputSchema` | Planned |
-| `POST` | `/api/dashboard/payments/deposit-session` | Create Stripe deposit session | `payment:write` | `depositInputSchema` | Planned |
-| `POST` | `/api/dashboard/refunds` | Create/refund payment record | `payment:write` | `refundInputSchema` | Planned |
-| `POST` | `/api/dashboard/intake/forms` | Create intake form | `settings:write` | `intakeFormInputSchema` | Planned |
-| `POST` | `/api/dashboard/consent/forms` | Create consent form | `settings:write` | `consentFormInputSchema` | Planned |
-| `GET` | `/api/dashboard/errors` | Error/crash reports | `error:read` | Query validator pending | Planned |
-| `GET` | `/api/error-reports` | Tenant-scoped error report API boundary | `error:read` | Query validator pending | Scaffolded route returns `501`; auth/Prisma missing |
-| `POST` | `/api/error-reports` | Authenticated dashboard error-report ingest boundary | `error:write` | Phase 11 draft shape; future validator | Scaffolded route returns `501`; auth/Prisma missing |
-| `POST` | `/api/dashboard/releases` | Create release note | `release:write` | Release validator pending | Planned |
-| `PATCH` | `/api/dashboard/feature-flags/:key` | Toggle tenant feature flag | `settings:write` | Feature flag validator pending | Planned |
-| `GET` | `/api/dashboard/messages` | Tenant message threads and delivery logs | `client:read` | Query validator pending | Planned |
-| `POST` | `/api/dashboard/messages/:threadId/replies` | Reply to client thread | `client:write` | `messageInputSchema` | Planned |
-| `POST` | `/api/dashboard/notifications/preview` | Preview template delivery plan | `settings:write` | `notificationPreviewInputSchema` | Planned |
-| `POST` | `/api/dashboard/notifications/queue` | Queue consent-aware notification | `settings:write` or domain permission | `notificationInputSchema` plus delivery plan | Planned |
-| `PATCH` | `/api/dashboard/notification-preferences/:clientId` | Update preferences/suppression state | `client:write` | `notificationConsentInputSchema` | Planned |
+| `GET` | `api/metrics` | Tenant overview metrics | `analytics:read` | `dashboardMetricsQuerySchema` optional `tenantId`; unknown query keys rejected | DB-backed aggregate route with dashboard auth/RBAC, tenant-scope enforcement, no-store responses, AuditLog write, and non-production demo fallback; production fallback disabled. |
+| `GET` | `/api/bookings` | Booking inbox | `booking:read` | `dashboardListQuerySchema` optional `tenantId`, bounded `limit` | DB-backed route exists: tenant-scoped BookingRequest list read, redacted dashboard projection, no-store response, AuditLog write, production local fallback fail-closed. Seeded DB/RBAC/redaction tests remain evidence-gated. |
+| `GET` | `/api/bookings/:bookingId` | Booking detail with timeline | `booking:read` | Path `bookingId`; `dashboardTenantQuerySchema` optional `tenantId` | DB-backed route exists: tenant-scoped BookingRequest detail read with latest state events, redacted dashboard projection, no-store response, AuditLog write, production local fallback fail-closed. Seeded DB/RBAC/redaction tests remain evidence-gated. |
+| `PATCH` | `/api/bookings/:bookingId/state` | Accept/decline/reschedule state changes | `booking:write` | `bookingStatusUpdateSchema` plus action/idempotency metadata | DB-backed route exists: validates supported lifecycle action, enforces tenant scope, replays completed IdempotencyKey results without duplicate writes, persists BookingRequest status + IdempotencyKey + BookingStateEvent + AuditLog in one transaction, emits dashboard mutation plan evidence, and disables production local fallback. Provider rollback and seeded integration tests remain evidence-gated. |
+| `POST` | `api/appointments` | Create appointment from booking | `booking:write` | `appointmentInputSchema` | DB-backed route added: validates booking/artist/client/travel/studio tenant scope, claims/replays IdempotencyKey results, persists Appointment + BookingStateEvent + AuditLog + optional local Deposit draft/PaymentAuditLog + local NotificationJob handoff intent in one transaction, advances scheduling state through the booking transition plan, and returns deferred Stripe checkout/calendar/provider-notification lifecycle intents. Production local fallback fails closed; provider execution and tenant-isolated integration tests remain evidence-gated. |
+| `POST/PATCH` | `api/seo` | Create/update/publish/archive SEO city/style pages and redirects | `seo:write` | `buildSeoPublicationMutationPlan` plus idempotency/revalidation/association metadata | DB-backed route exists: enforces tenant/RBAC scope, runs the package publication planner before commits, upserts SeoCityPage/SeoStylePage/SeoRedirect records, persists IdempotencyKey + AuditLog + SeoPublicationRevalidationJob + SeoPublicationAssociation rows in one transaction, returns no-store response-level idempotency/revalidation proof, and keeps local fallback dry-run only. Prisma migration/client generation, seeded tenant-isolated integration tests, dashboard browser flows, CI evidence, and secret-safe artifacts remain gated under `GAP-071`. |
+| `GET` | `/api/clients/:clientId` | Client profile/timeline | `client:read` | Path `clientId`; `dashboardTenantQuerySchema` optional `tenantId` | DB-backed route exists: tenant-scoped Client detail read with recent bookings/payment summary, redacted dashboard projection, no-store response, AuditLog write, and production local fallback fail-closed. Seeded DB/RBAC/redaction tests remain evidence-gated. |
+| `POST` | `/api/clients` | Create client profile | `client:write` | `clientInputSchema` | DB-backed route added: validates client payload, normalizes tenant-scoped email uniqueness, claims/replays IdempotencyKey results, persists Client + AuditLog in one transaction, returns no-store response with idempotency proof metadata, and disables production local fallback. Tenant-isolated mutation/RBAC/redaction tests remain evidence-gated. |
+| `PATCH` | `/api/clients/:clientId` | Update private client note metadata | `client:write` | `clientPrivateNoteInputSchema` plus `dashboardTenantQuerySchema` optional `tenantId` | DB-backed private-note route exists: validates tenant/RBAC scope, claims/replays IdempotencyKey results with a hash-only note fingerprint and request-hash conflict denial, persists ClientProfile + AuditLog in one transaction, returns idempotency proof metadata, never echoes the raw note, and disables production local fallback. Export/delete/retention/legal workflow tests remain evidence-gated under privacy gaps. |
+| `POST` | `/api/portfolio` | Create portfolio item | `portfolio:write` | `portfolioItemInputSchema` | DB-backed metadata route added: validates artist/style tenant scope, enforces tenant slug uniqueness, claims/replays IdempotencyKey results, persists PortfolioItem + style links + primary PortfolioImage URL metadata + AuditLog in one transaction, and disables production local fallback. Signed upload/object-storage/image-processing handoff and tenant-isolated mutation tests remain evidence-gated. |
+| `POST` | `api/portfolio/:id/images` | Attach portfolio image metadata | `portfolio:write` | `portfolioImageInputSchema` | DB-backed metadata route added at `/api/portfolio/[portfolioId]/images`: validates path/body match, verifies PortfolioItem/FileAsset tenant scope, claims/replays IdempotencyKey results, persists PortfolioImage + AuditLog, and disables production local fallback. Signed upload, malware scan, derivatives, EXIF stripping, CDN proof, and performance evidence remain gated. |
+| `POST` | `api/files/signed-upload` | Create signed upload request | Permission varies by file kind | `fileAssetInputSchema` boundary | DB-backed signed-upload intent route added: validates file metadata, maps permission by file kind, claims/replays IdempotencyKey results, persists FileAsset + SignedUrlGrant + AuditLog rows, returns no-store response with `providerUrlMinted: false`, and disables production local fallback. Provider signed URL minting, malware scan, metadata stripping, bucket ACL proof, and cross-tenant provider denial remain gated. |
+| `POST` | `api/travel/cities` | Create managed travel city | `travel:write` | `travelCityInputSchema` | DB-backed route added: validates city payload, enforces tenant slug uniqueness, claims/replays IdempotencyKey results, persists TravelCity + AuditLog in one transaction, and disables production local fallback. Public SEO/cache revalidation and tenant-isolated mutation tests remain evidence-gated. |
+| `POST` | `api/travel/schedules` | Create travel schedule/guest spot | `travel:write` | `travelScheduleInputSchema` | DB-backed route added: validates schedule payload, verifies artist/city/studio tenant scope, claims/replays IdempotencyKey results, persists TravelSchedule + AuditLog in one transaction, and disables production local fallback. Public cache/SEO/notification fanout and tenant-isolated mutation tests remain evidence-gated. |
+| `POST` | `api/travel/publish` | Publish/update/unpublish travel stop | `travel:write` | Travel publish mutation plan | DB-first route added: validates publish/update/unpublish/rollback plans, verifies artist tenant scope, upserts TravelCity, persists/updates TravelSchedule, records AuditLog and IdempotencyKey result metadata with request-hash conflict denial and response-level idempotency proof, and keeps repository-required fallback non-production only. Cache revalidation, notification provider queues, sync transports, rollback provider tests, and dashboard-to-public E2E proof remain evidence-gated under `GAP-060`. |
+| `POST` | `api/availability` | Create availability window | `travel:write` | `availabilityWindowInputSchema` | DB-backed route added: validates availability payload, verifies artist/city/schedule tenant scope, claims/replays IdempotencyKey results, persists AvailabilityWindow + AuditLog in one transaction, and disables production local fallback. Persisted conflict checks, concurrent hold protection, and seeded integration tests remain evidence-gated under `GAP-056`. |
+| `POST` | `api/calendar/holds` | Create dashboard slot hold | `calendar:write` | Availability hold plan | DB-first route added: validates hold plan, verifies artist tenant scope, claims/replays IdempotencyKey results with request-hash conflict denial before conflict checks, rejects overlapping open/waitlist/full windows for new holds, persists `AvailabilityWindow` admin holds with `AuditLog`, returns idempotency proof metadata, and disables production local fallback. Seeded race-condition, cross-tenant, and repository integration proof remain evidence-gated under `GAP-056`. |
+| `POST` | `api/payments/deposit-session` | Create Stripe deposit session | `payment:write` | `depositInputSchema` | DB-backed deposit draft route added: validates booking/appointment tenant scope, claims/replays IdempotencyKey results, persists Deposit + PaymentAuditLog, returns no-store response with `stripeCheckoutCreated: false`, and disables production local fallback. Stripe checkout creation, webhook reconciliation, rollback, and sandbox proof remain provider-gated. |
+| `POST` | `api/refunds` | Create/refund payment record | `payment:write` | `refundInputSchema` | DB-backed local refund-record route added: validates tenant-scoped Payment match, amount/currency/scope constraints, claims/replays IdempotencyKey results, persists Refund + PaymentAuditLog, and disables production local fallback. Stripe refund execution, webhook reconciliation, rollback, and settlement proof remain provider-gated. |
+| `POST` | `api/intake/forms` | Create intake form | `settings:write` | `intakeFormInputSchema` | DB-backed route added: validates form shell, enforces tenant key/version uniqueness, claims/replays IdempotencyKey results, persists IntakeForm + AuditLog in one transaction, and disables production local fallback. Question authoring, response persistence, privacy review, and integration tests remain evidence-gated. |
+| `POST` | `api/consent/forms` | Create consent form | `settings:write` | `consentFormInputSchema` | DB-backed route added: validates consent form shell/body, enforces tenant key/version uniqueness, claims/replays IdempotencyKey results, persists ConsentForm + AuditLog in one transaction, and disables production local fallback. Legal approval, signature/file workflows, medical acknowledgments, and integration tests remain evidence-gated. |
+| `PATCH` | `api/forms/:formId` | Archive form metadata | `form:write` | `archive_form_version` action contract | DB-backed metadata-only archive route: validates tenant/RBAC scope, updates IntakeForm or ConsentForm status to archived, persists IdempotencyKey + AuditLog result metadata, returns no-store response, and disables production local fallback. Legal copy changes, signature requests, raw answers, medical payloads, private upload retention, and integration tests remain evidence-gated. |
+| `GET` | `/api/error-reports` | Error/crash reports | `error:read` | `errorReportFilterSchema` optional `tenantId`/`status`/`source`, bounded `limit` | DB-backed route exists: tenant-scoped, RBAC-gated, no-store, audit-logged, metadata-redacted error report reads; production local fallback fails closed. Alert routing/provider escalation remains evidence-gated. |
+| `POST` | `/api/error-reports` | Authenticated dashboard error-report ingest boundary | `error:write` | `errorReportInputSchema` | DB-backed route exists: authenticated tenant-scoped error ingest, no-store response, local fallback disabled in production, persisted ErrorReport + AuditLog on DB paths, and provider alert routing remains evidence-gated. |
+| `POST` | `/api/observability/release-incidents` | Link release regressions to incident plans | `release:write` | Release incident linkage plan | DB-backed route exists: reads tenant-scoped ErrorReport/ReleaseRecord evidence, builds sanitized linkage plans, persists ReleaseIncidentLink/AuditLog/ErrorReport metadata on allowed DB paths, and returns no-store responses. Production provider-evidence failures now fail closed before AuditLog/ReleaseIncidentLink writes; live Sentry/source-map, provider incident, dashboard smoke, tenant isolation, and CI proof remain evidence-gated under `GAP-093`. |
+| `POST` | `/api/releases` | Create release note | `release:write` | `releaseCreateInputSchema`; GET uses `releaseTenantQuerySchema` | DB-backed route exists: tenant/membership-gated release creation with idempotency-backed persistence and audit metadata; deployment automation remains external/evidence-gated. |
+| `PATCH` | `/api/releases` | Request rollback intent | `release:write` | `releaseRollbackInputSchema` | DB-backed route exists: tenant/membership-gated rollback intent creation with idempotency-backed AuditLog metadata, no-store responses, and response-level proof that provider rollback/deployment execution did not run; protected-environment rollback remains external/evidence-gated. |
+| `PATCH` | `/api/feature-flags` | Toggle tenant feature flag | `settings:write` | `featureFlagPatchInputSchema`; GET uses `featureFlagReadQuerySchema` | Implemented as route-backed feature flag writes via `POST /api/feature-flags`: tenant/membership-gated, idempotency-backed DB override persistence with request-hash conflict denial and completed replay proof, no-store response, audit metadata, and provider-credential gates for live provider flags. Contract path should be normalized in consumers; CI/RBAC evidence remains gated. |
+| `PATCH` | `/api/settings` | Update safe tenant settings metadata | `settings:write` | `tenantSettingsMutationSchema` plus `dashboardTenantQuerySchema` for GET | DB-backed settings write exists: validates tenant/RBAC scope, allows only public site name/locale/timezone metadata, persists Tenant update + IdempotencyKey request-hash conflict denial + completed replay result + AuditLog result metadata, returns no-store response with idempotency proof, and disables production local fallback. Provider secrets, credentials, legal policy copy, member invites, custom roles, and integration proof remain gated. |
+| `GET` | `/api/messages` | Tenant message threads and delivery logs | `message:read` | `dashboardListQuerySchema` optional `tenantId`, bounded `limit` | DB-backed route exists: tenant-scoped message thread list reads with body/provider redaction, no-store response, and AuditLog write; production local fallback fails closed. Provider delivery evidence remains gated. |
+| `POST` | `/api/messages/:threadId` | Reply to client thread | `client:write` | `messageInputSchema` plus message route metadata | Implemented through dashboard message write route: claims IdempotencyKey, creates tenant-scoped MessageThread/Message/Notification/Delivery/ReadState/Handoff/AuditLog transactionally, and keeps provider dispatch evidence-gated. |
+| `POST` | `api/notifications/preview` | Preview template delivery plan | `settings:write` | `notificationPreviewInputSchema` | Implemented as no-persistence delivery-plan preview: validates template context/consent, returns consent-aware candidates, no-store response, and keeps provider dispatch/sandbox evidence gated. |
+| `POST` | `api/notifications/queue` | Queue consent-aware notification | `settings:write` or domain permission | `notificationInputSchema` plus delivery plan | DB-backed route added: validates notification input, enriches consent from tenant-scoped client records, claims/replays IdempotencyKey results with request-hash conflict denial, persists Notification + NotificationDelivery + NotificationProviderHandoff + AuditLog rows, and disables production local fallback. Provider workers/sends, retries, dead letters, and sandbox/device evidence remain gated. |
+| `POST` | `api/notifications/scheduler` | Persist notification schedule-sequence jobs | `message:write` | Scheduler action plan | DB-backed `schedule_sequence` route added: validates scheduler plan, verifies related booking/appointment tenant scope, claims/replays IdempotencyKey results with request-hash conflict denial, persists Notification + NotificationDelivery + NotificationProviderHandoff + AuditLog rows with provider dispatch disabled, and disables production local fallback. Process/retry/dead-letter worker execution, queue concurrency, provider dispatch, and integration evidence remain gated under `GAP-065`/`GAP-066`. |
+| `PATCH` | `api/notification-preferences/:clientId` | Update preferences/suppression state | `client:write` | `notificationConsentInputSchema` | DB-backed route added: validates client path/body match, claims/replays IdempotencyKey results, updates Client opt-in flags, upserts NotificationChannelPreference and NotificationSuppression rows with hashed destinations, writes AuditLog, and disables production local fallback. Provider webhook replay, live STOP enforcement, and integration evidence remain gated. |
 
 ## Mobile API use
 
@@ -97,11 +110,11 @@ The mobile app should consume tenant-scoped dashboard APIs. A thin mobile BFF ca
 
 | Method | Route | Purpose | Auth | Status |
 | --- | --- | --- | --- | --- |
-| `POST` | `/api/webhooks/stripe` | Stripe payment/deposit status | Stripe signature | Planned |
-| `POST` | `/api/webhooks/sentry` | Optional issue sync and provider issue reconciliation | Sentry signature/secret header | Scaffolded boundary returns `501`; signature verification/persistence missing |
-| `POST` | `/api/webhooks/calendar` | Google calendar updates | Provider verification | Planned |
-| `POST` | `/api/webhooks/email` | Email delivery status | Provider signature | Scaffolded boundary persists interpreted local webhook state in-memory; production signature verification/persistence still required |
-| `POST` | `/api/webhooks/sms` | SMS delivery/inbound messages and STOP preview | Provider signature | Scaffolded boundary persists interpreted local webhook state in-memory; production signature verification/persistence still required |
+| `POST` | `/api/webhooks/stripe` | Stripe payment/deposit status | Stripe signature | DB-first reconciliation boundary exists: requires Stripe signature header, requires `STRIPE_WEBHOOK_SECRET` before production processing, verifies HMAC when configured, resolves tenant metadata, persists redacted `ProviderWebhookDelivery` replay rows and `PaymentAuditLog`, and updates matching Payment/Deposit status only when tenant-scoped metadata/provider IDs and money checks allow it. Local runtime fallback remains non-production only; Stripe CLI/provider proof remains evidence-gated. |
+| `POST` | `/api/webhooks/sentry` | Optional issue sync and provider issue reconciliation | Sentry signature/secret header | DB-backed reconciliation boundary exists: requires Sentry signature header, verifies HMAC when `SENTRY_WEBHOOK_SECRET` is configured, records provider delivery/idempotency, reconciles matching `ErrorReport` status, writes `AuditLog`, and fails closed in production when durable tenant ownership/persistence is unavailable. Live Sentry replay/no-PII/provider proof remains evidence-gated. |
+| `POST` | `/api/webhooks/calendar` | Google calendar updates | Provider verification | Local boundary route added: validates Google push headers, builds an incremental-sync plan with provider execution blocked, returns no-store local receipt outside production, and fails closed in production until OAuth credentials, encrypted token persistence, verified channel tokens, sync worker execution, idempotency persistence, and CalendarAuditLog proof exist. |
+| `POST` | `/api/webhooks/email` | Email delivery status | Provider signature | Local boundary requires signature-like header, validates JSON, computes readiness/reconciliation plans, attempts redacted `ProviderEvent` + `IdempotencyKey` + `AuditLog` persistence on DB-available non-production paths, upserts `NotificationSuppression` for bounce/complaint/unsubscribe payloads that include a destination, and persists interpreted local runtime state. Production fails closed before durable writes until cryptographic provider signature verification, live replay, suppression reconciliation, and integration evidence exist. |
+| `POST` | `/api/webhooks/sms` | SMS delivery/inbound messages and STOP preview | Provider signature | Local boundary requires Twilio signature-like header, supports JSON/form payloads, computes readiness/reconciliation plans, attempts redacted `ProviderEvent` + `IdempotencyKey` + `AuditLog` persistence on DB-available non-production paths, upserts `NotificationSuppression` for STOP payloads with a sender, and returns an explicit inbound-thread boundary when no tenant client can be resolved. Production fails closed before durable writes until Twilio signature verification, live replay, STOP/inbound reconciliation, and integration evidence exist. |
 
 ## State transition rules
 
@@ -111,37 +124,40 @@ Examples:
 
 - `submitted -> accepted` requires `booking:write`.
 - `accepted -> deposit_pending` requires a deposit record.
-- `deposit_pending -> deposit_paid` should be driven by verified Stripe webhook in production.
+- `deposit_pending -> deposit_paid` should be driven by verified Stripe webhook in production (gated/proof pending).
 - `deposit_paid -> scheduled` requires an appointment record.
 - `scheduled -> completed` should trigger aftercare notification scheduling.
 - `scheduled -> no_show` should preserve no-show audit metadata.
 
 ## Phase 2 implementation note
 
-The schema and validators are expanded, but the API handlers themselves are still not implemented. This remains tracked under `GAP-017`.
+The schema and validators are expanded, and booking request handling is now production-oriented with DB persistence, anti-bot controls, encryption gates, and workflow handoff contracts. Other public handlers are mixed: several are DB-first with production local-fallback guards, while provider-backed execution and tenant-isolated integration evidence remain tracked under their owning GAP rows.
 
 
 ## Phase 3 implementation note
 
-The public website now has static demo city/style routes and disabled booking/contact form previews. No public API handlers were added. Future handlers should source portfolio, travel, reviews, FAQ, city pages, and style pages from tenant-scoped database records and preserve the same public/private data separation.
+The public website now has static demo city/style routes plus DB-oriented public content API handlers for portfolio, travel, approved reviews, published city SEO pages, and published style SEO pages. A public FAQ bundle route is also wired for tenant-safe public content, while durable FAQ CMS persistence remains tracked under SEO/public-content gaps. These handlers resolve tenant scope, expose only public/redacted fields, and use non-production demo fallback only when DB content is unavailable. Capture API JSON/rendered HTML redaction, cache, route smoke, browser, and CI evidence before production closure.
 
 
 ## Phase 4 implementation note
-
 `apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts` now includes production-oriented persistence behavior in the DB path:
 
 - Parses JSON.
 - Validates against `bookingRequestInputSchema`.
-- Resolves tenant by slug and applies local rate limiting.
+- Resolves tenant by slug, then applies fallback behavior when DB is unavailable.
+- Applies local rate limit and enforces anti-bot proof (`x-inkroute-bot-proof`) for DB-backed writes; DB persistence is denied with `BOT_PROTECTION_REQUIRED` when proof is absent/invalid.
 - Persists `BookingRequest`, `BookingStateEvent`, and `AuditLog` rows to Postgres when DB is available.
-- Falls back to local runtime draft persistence when DB is unavailable.
+- Enforces key-policy checks for sensitive persistence and emits encryption readiness, rotation-state/action, round-trip proof, key-cache refresh evidence, and provider-token readiness in response metadata + audit payloads.
+- Produces scope-aware post-persist workflow contracts (`notification`, `deposit`, `calendar`, `reference-upload`) with signed reference-upload handoff contract fields for downstream queue/worker handoff and persists redacted provider-handoff audit metadata on DB-backed booking writes.
+- Captures provider-token-intake detection metadata and blocks DB persistence when encryption readiness is invalid for token-bearing payloads.
+- Falls back to local runtime draft persistence when DB is unavailable, with matching DB/local workflow plan shapes.
 
-Do not expose this as a complete production booking endpoint until `GAP-019`, `GAP-020`, `GAP-021`, `GAP-031`, `GAP-032`, `GAP-033`, and `GAP-034` are fully validated.
+Do not expose this as a complete production booking endpoint until `GAP-031`, `GAP-032`, `GAP-033`, `GAP-034`, `GAP-061`, and tenant-isolated integration tests are completed; `GAP-021` key-policy/encryption controls are locally closed, while provider-token operational hardening remains tracked under the provider handoff gaps.
 
 
 ## Phase 5 implementation note
 
-`apps/dashboard` now contains static demo routes for the planned dashboard surface area, but no private dashboard API handlers were implemented in Phase 5. The planned endpoints listed above are still the production target. When implementing them, replace static demo data from `apps/dashboard/lib/demo.ts` with authenticated, tenant-scoped API/server loaders and mutation handlers. Every dashboard mutation must validate input, enforce RBAC, write audit logs for sensitive state changes, and preserve redaction rules for client PII, medical/safety notes, consent signatures, files, and payment metadata.
+`apps/dashboard` now contains tenant-scoped API handlers for the core dashboard read/mutation surface listed above, with shared validators, RBAC guards, no-store responses, redaction, idempotency, and audit metadata where implemented. Remaining production work is evidence-gated around provider-backed auth/session proof, seeded tenant-isolation/RBAC tests, provider execution, dashboard build/typecheck, CI artifacts, and secret-safe evidence capture. Future dashboard endpoints must continue replacing static demo data from `apps/dashboard/lib/demo.ts` with authenticated, tenant-scoped API/server loaders and mutation handlers.
 
 Do not treat the Phase 5 dashboard UI as production-ready until `GAP-036`, `GAP-037`, `GAP-038`, `GAP-039`, `GAP-040`, and `GAP-041` are resolved.
 
@@ -155,30 +171,30 @@ Mobile production endpoints must enforce the same handler pipeline documented ab
 
 ### `POST /api/public/[tenantSlug]/deposit-sessions`
 
-Status: **Local-runtime draft implemented; production SDK flow remains credential-gated**.
+Status: **DB-first deposit/payment draft implemented; production SDK flow remains credential-gated**.
 
 Purpose:
 - Calculate a deposit policy preview for an accepted booking or signed deposit handoff.
 - Return a Stripe Checkout session draft with reconciliation metadata.
-- Avoid live payment collection until auth/signed-token, Stripe credentials, persistence, and webhooks are wired.
+Avoid live payment collection until auth/signed-token, Stripe credentials, provider checkout creation, and webhook proof are wired (gated/proof pending).
 
 Current implementation:
 - Parses JSON manually in `apps/web/app/api/public/[tenantSlug]/deposit-sessions/route.ts`.
 - Requires `bookingRequestId`, `successUrl`, and `cancelUrl`.
-- Calls `calculateDepositPolicy` and `buildStripeCheckoutSessionDraft` from `@inkroute/payments`.
-- Returns local-session payloads and local records with `GAP-004`, `GAP-049`, and `GAP-050` listed as production blockers.
+- Resolves the tenant/booking from the database first, rate-limits by tenant/client IP, verifies client email when supplied, and persists `Deposit`, pending `Payment`, `PaymentAuditLog`, `BookingStateEvent`, and `IdempotencyKey` in one transaction before returning a provider-disabled checkout draft.
+- Falls back to local runtime preview only outside production when database persistence is unavailable, with `GAP-004`, `GAP-049`, and `GAP-050` listed as provider/evidence blockers.
 
 Production requirements:
 1. Require authenticated dashboard action or a signed short-lived deposit token generated only after artist acceptance.
-2. Resolve tenant and booking from database.
+2. Keep tenant and booking resolution database-backed; production local fallback is disabled.
 3. Verify amount/currency against persisted `Deposit.policySnapshot`.
-4. Create Stripe Checkout Session or PaymentIntent using test/live credentials.
-5. Persist provider session ID, idempotency key, and payment audit log before returning redirect URL.
+4. Create Stripe Checkout Session or PaymentIntent using test/live credentials (staged environment only, evidence pending).
+5. Persist provider session ID and provider idempotency result before returning redirect URL.
 6. Rate-limit and monitor abuse.
 
 ### `POST /api/webhooks/stripe`
 
-Status: **Local runtime parses and stores interpreted Stripe webhook events; production signature verification/reconciliation is still pending**.
+Status: **DB-first replay/audit reconciliation boundary with non-production local fallback; live Stripe proof remains evidence-gated**.
 
 Purpose:
 - Reserve the webhook endpoint boundary.
@@ -211,7 +227,7 @@ Implemented as a static demo route. It returns `text/calendar` for the demo arti
 
 ### `GET /api/public/[tenantSlug]/availability-preview`
 
-Implemented as a static JSON preview route. It returns a demo availability window, generated slots, and conflict preview data. It does not persist holds, reserve appointments, enforce concurrency, or read tenant data from Postgres. Production must add authenticated/authorized dashboard mutations, public-safe availability views, transactional conflict checks, audit logs, and tenant isolation tests. Tracked in `GAP-056` and `GAP-059`.
+Implemented as a DB-first read-only JSON preview route with non-production static demo fallback. It resolves tenant scope from Postgres when available, reads open/waitlist `AvailabilityWindow` rows, returns public-safe generated slots, and explicitly reports that holds, conflict writes, provider sync, and reservations are not executed. Production static fallback remains disabled. Transactional hold persistence, overlapping/race rejection, audit logs, tenant isolation tests, Google provider sync, and CI evidence remain tracked in `GAP-056` and `GAP-059`.
 
 ### Future Google Calendar provider routes
 
@@ -236,18 +252,21 @@ Production requirements:
 
 ### `POST /api/public/[tenantSlug]/messages`
 
-Status: **Local runtime returns message-thread draft persistence and queue hint; production persistence is still required.**
+Status: **DB-first booking-context persistence with non-production local fallback; provider execution remains evidence-gated.**
 
 Purpose:
-- Reserve a future public-safe client message/contact boundary.
+- Accept public-safe client message/contact submissions.
 - Validate minimal subject/body shape and return a redacted draft preview.
+- Persist `MessageThread`, inbound `Message`, `Notification`, `NotificationDelivery`, `NotificationProviderHandoff`, `IdempotencyKey`, and `AuditLog` rows when a tenant-scoped `bookingRequestId` resolves to an existing client.
+- Keep anonymous/contact-only local runtime fallback outside production until authenticated client reply tokens or another tenant-safe identity boundary exists.
 
 Production requirements:
 1. Resolve tenant safely by domain or slug.
 2. Rate-limit, spam-protect, and optionally CAPTCHA public submissions.
-3. Persist `MessageThread` and `Message` rows tenant-scoped.
+3. Require an existing booking/client context, authenticated client identity, or short-lived reply token before DB persistence.
 4. Route notifications to the artist/team through consent-aware queueing.
-5. Redact medical/payment/private URL content from logs and error responses.
+5. Execute provider workers and webhook replay/suppression proof only after credentials and provider sandboxes are available.
+6. Redact medical/payment/private URL content from logs and error responses.
 
 ### `POST /api/webhooks/email` and `POST /api/webhooks/sms`
 
@@ -284,7 +303,7 @@ Returns static sitemap-plan JSON for inspection. Production sitemap generation m
 
 ## Phase 11 observability contract notes
 
-Observability endpoints are partially production-oriented. They build sanitized drafts through `@inkroute/observability`, apply rate limiting and tenant resolution, persist redacted `ErrorReport` rows on DB-available paths, and fall back to local runtime when DB is unavailable. Provider signature verification, dashboard query APIs, and alert provider configuration remain pending.
+Observability endpoints are partially production-oriented. They build sanitized drafts through `@inkroute/observability`, apply rate limiting and tenant resolution, persist redacted `ErrorReport` rows on DB-available paths, and fall back to local runtime only where explicitly allowed outside production. Dashboard error-report read/write APIs are present with tenant/RBAC guards, redaction, no-store responses, and AuditLog writes; provider signature verification, alert/escalation provider configuration, live incident integrations, and CI evidence remain pending.
 
 Error-report responses must never include raw stack traces, client PII, medical notes, consent signatures, payment data, cookies, authorization headers, or provider tokens. Future persistent records should store redacted metadata only, plus `stackHash`, `fingerprint`, severity, source, route, release, runtime, and environment.
 
@@ -307,7 +326,7 @@ Required production pipeline:
 
 ### `POST /api/releases`
 
-Current status: validates request schema, persists `ReleaseRecord` with audit metadata on DB-available paths, and falls back to local response without durable writes when DB is unavailable.
+Current status: validates request schema, persists idempotency-backed `ReleaseRecord` and `AuditLog` metadata on DB-available paths, and falls back to local response without durable writes when DB is unavailable outside production.
 
 Future production behavior:
 
@@ -317,6 +336,12 @@ Future production behavior:
 - write audit log
 - optionally trigger preview CI/CD workflow
 - never deploy production without protected-environment approval
+
+### `PATCH /api/releases`
+
+Current status: validates rollback intent schema, enforces `release:write` tenant membership, records idempotency-backed `AuditLog` metadata on DB-available paths, and returns a rollback plan with `providerRollbackExecuted=false`, `deploymentJobTriggered=false`, and `protectedEnvironmentTouched=false`.
+
+Future production behavior: execute protected-environment provider rollback only after CI/deployment credentials, approval evidence, rollback job transcripts, and post-rollback release-health proof are attached.
 
 ### `GET /api/feature-flags`
 
@@ -363,27 +388,27 @@ Returns tenant slug, upload policy drafts, public rate-limit drafts, security he
 
 ### `POST /api/public/[tenantSlug]/secure-upload-intents`
 
-Status: **Local runtime validation + mock intent persistence implemented**.
+Status: **DB-first booking-context upload intent persistence with non-production local fallback; provider URL minting remains gated**.
 
-Expected JSON fields: `kind`, `filename`, `mimeType`, `sizeBytes`, and optional `declaredByAuthenticatedUser`. The route validates metadata with `@inkroute/security`, applies local rate limiting, and persists mock intent data in local runtime state. Production must resolve tenant by trusted domain/slug, require an authenticated user or short-lived booking upload token, generate server-side object keys, create signed private uploads, verify magic bytes, strip metadata, scan/quarantine files, persist `FileAsset`, and write audit logs.
+Expected JSON fields: `kind`, `filename`, `mimeType`, `sizeBytes`, optional `bookingRequestId`, and optional `declaredByAuthenticatedUser`. The route validates metadata with `@inkroute/security`, applies local rate limiting, resolves tenant scope from the database when available, and persists `FileAsset`, `SignedUrlGrant`, optional `ReferenceImage`, and redacted `AuditLog` rows when a tenant-scoped booking/client plus issuer context exists. Runtime readiness now credits only those DB-scoped metadata rows; local runtime mock intent fallback remains available only outside production when DB context is unavailable. Production still must require an authenticated user or short-lived booking upload token for anonymous uploads, mint provider-signed URLs, verify magic bytes, strip metadata, scan/quarantine files, prove private bucket ACLs and cross-tenant denial, run integration tests, and capture CI/provider evidence.
 
 ### `POST /api/public/[tenantSlug]/privacy-requests`
 
-Status: **Local draft intake now persists redacted privacy request payloads in local runtime**.
+Status: **DB-first public privacy intake with local fallback outside production**.
 
-Expected JSON fields: `type` and `email`. The route returns a redacted submission and privacy request draft. Production requires identity verification, persistence, attorney-reviewed deadlines and language, export/delete/rectification workers, legal retention holds, and audit logs.
+Expected JSON fields: `type`, `email`, optional `requesterName`, and optional `details`. The route rate-limits by tenant/client, resolves tenant scope from the database when available, persists `IdempotencyKey`, `PrivacyRequest`, and redacted `AuditLog` rows on DB-backed paths, stores only redacted requester metadata/result evidence, returns a redacted submission and privacy request draft, and uses local runtime fallback only outside production when the DB is unavailable. Production still requires identity verification, attorney-reviewed deadlines and language, export/delete/rectification workers, legal retention holds, notifications, integration tests, and CI evidence before GAP-098 can close.
 
 ### `GET /api/security/trust-status`
 
-Status: **Dashboard read-only scaffold**.
+Status: **Dashboard shared-auth read-only trust boundary with production provider-session fail-close**.
 
-Returns security posture summary, controls, tenant isolation fixtures, upload policies, rate-limit rules, CSRF plans, and header drafts. Production requires dashboard auth, RBAC, tenant visibility rules, and no public exposure of internal security details.
+Returns security posture summary, controls, tenant isolation fixtures, upload policies, rate-limit rules, CSRF plans, and header drafts through the shared dashboard actor/RBAC guard plus a trust-specific operator-role allowlist. Production still fails closed until provider-backed session, persisted tenant membership, audit-ready route evidence, and current security runtime artifacts exist.
 
 ### `POST /api/security/privacy-requests`
 
-Status: **Dashboard scaffold, intentionally returns 501**.
+Status: **DB-backed dashboard intake route added for authenticated tenant actors**.
 
-Builds a privacy request draft for internal review only. Production requires owner/studio manager RBAC, tenant-scoped persistence, worker execution, retention/legal hold logic, and audit logs.
+Validates dashboard privacy request intake, enforces tenant write permission, rate-limits by tenant/actor/IP, verifies optional client scope, persists `PrivacyRequest` plus redacted `AuditLog`, returns no-store workflow evidence, and disables local in-memory fallback for production. Export/delete/rectification workers, private file deletion, retention tombstone execution, sanitized log/error capture, attorney/product approval, dashboard build/typecheck, route tests, and CI evidence remain required before GAP-040 can close.
 
 ## Phase 15 deployment/readiness routes
 

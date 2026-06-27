@@ -52,14 +52,14 @@ Added static/demo public and webhook routes:
 - `POST /api/public/[tenantSlug]/messages`
   - Validates minimal subject/body shape.
   - Builds a message-thread draft.
-  - Intentionally returns `501 MESSAGE_PERSISTENCE_NOT_IMPLEMENTED`.
+  - Persists tenant-scoped `MessageThread`, `Message`, `Notification`, `NotificationDelivery`, `NotificationProviderHandoff`, `IdempotencyKey`, and `AuditLog` rows when a valid booking/client context exists; local fallback remains non-production only.
 - `POST /api/webhooks/email`
   - Requires an email provider signature-like header.
-  - Inspects event type and intentionally returns `501 EMAIL_WEBHOOK_NOT_IMPLEMENTED`.
+  - Interprets delivery/suppression events, attempts redacted `ProviderEvent`/`IdempotencyKey`/`AuditLog` persistence on DB-available non-production paths, and keeps cryptographic provider verification/live replay gated.
 - `POST /api/webhooks/sms`
   - Requires `x-twilio-signature`.
   - Handles JSON or form-encoded callback shapes.
-  - Detects inbound STOP preview and intentionally returns `501 SMS_WEBHOOK_NOT_IMPLEMENTED`.
+  - Handles STOP/suppression previews, attempts redacted `ProviderEvent`/`IdempotencyKey`/`AuditLog` persistence on DB-available non-production paths, and keeps Twilio signature/live replay/inbound-thread proof gated.
 
 ### Dashboard
 

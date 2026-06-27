@@ -1,0 +1,98 @@
+{
+  "phase": "15",
+  "status": "operations_not_staffed",
+  "command": "pnpm deploy:verify-ops",
+  "approvalStatus": "blocked",
+  "redactionPolicy": {
+    "forbiddenInGit": [
+      "private phone numbers",
+      "personal email addresses",
+      "provider alert webhook URLs",
+      "client PII",
+      "medical notes",
+      "support transcripts with raw customer data"
+    ],
+    "allowedInGit": [
+      "role label",
+      "team alias",
+      "redacted drill artifact label",
+      "SLA target",
+      "runbook path",
+      "status"
+    ]
+  },
+  "ownerModel": {
+    "incidentCommander": "unassigned",
+    "privacyOwner": "unassigned",
+    "supportOwner": "unassigned",
+    "releaseOwner": "unassigned",
+    "securityOwner": "unassigned",
+    "requiresNamedPrimaryAndBackup": true
+  },
+  "operationChecks": [
+    {
+      "id": "on-call-coverage",
+      "area": "incident",
+      "status": "not_configured",
+      "requiredBeforeProduction": true,
+      "sla": "critical incidents acknowledged within 15 minutes",
+      "requiredEvidence": ["primary owner label", "backup owner label", "coverage schedule artifact"]
+    },
+    {
+      "id": "alert-routing",
+      "area": "monitoring",
+      "status": "not_configured",
+      "requiredBeforeProduction": true,
+      "sla": "critical alerts route to on-call owner within 15 minutes",
+      "requiredEvidence": ["Sentry alert test label", "sanitized escalation payload", "quiet-hours policy"]
+    },
+    {
+      "id": "support-escalation",
+      "area": "support",
+      "status": "not_configured",
+      "requiredBeforeProduction": true,
+      "sla": "support acknowledgement within 1 business day",
+      "requiredEvidence": ["support inbox label", "escalation template", "redacted test transcript"]
+    },
+    {
+      "id": "privacy-request-drill",
+      "area": "privacy",
+      "status": "not_run",
+      "requiredBeforeProduction": true,
+      "sla": "privacy requests triaged within 7 days or stricter legal requirement",
+      "requiredEvidence": ["identity verification drill", "export/delete workflow label", "audit log label"]
+    },
+    {
+      "id": "incident-drill",
+      "area": "incident",
+      "status": "not_run",
+      "requiredBeforeProduction": true,
+      "sla": "severity classification and communications drafted within 30 minutes",
+      "requiredEvidence": ["synthetic incident report", "tenant-safe communication draft", "postmortem template"]
+    },
+    {
+      "id": "rollback-drill",
+      "area": "release",
+      "status": "not_run",
+      "requiredBeforeProduction": true,
+      "sla": "rollback decision recorded within incident command window",
+      "requiredEvidence": ["web/dashboard rollback label", "mobile OTA rollback label", "database restore/forward-fix label"]
+    },
+    {
+      "id": "production-monitoring",
+      "area": "monitoring",
+      "status": "not_configured",
+      "requiredBeforeProduction": true,
+      "sla": "health dashboards reviewed before launch and after deploy",
+      "requiredEvidence": ["Sentry dashboard label", "uptime check label", "release health label"]
+    },
+    {
+      "id": "communications-templates",
+      "area": "communications",
+      "status": "not_configured",
+      "requiredBeforeProduction": true,
+      "sla": "privacy-safe tenant communication templates approved before use",
+      "requiredEvidence": ["incident update template", "maintenance notice template", "privacy response template"]
+    }
+  ]
+}

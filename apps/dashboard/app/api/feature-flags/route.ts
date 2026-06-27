@@ -1,14 +1,21 @@
-import { Prisma } from "@prisma/client";
+import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { defaultFeatureFlags, evaluateFeatureFlags, type FeatureFlagDefinition } from "@inkroute/releases";
-import { featureFlagPatchInputSchema } from "@inkroute/validators";
+import { featureFlagPatchInputSchema, featureFlagReadQuerySchema } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
-import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
+import { assertPermissionWithTenantMembership } from "../dashboardAuthMembership";
+import { isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
+import {
+  buildOptimisticConcurrencyMetadata,
+  buildTenantMembershipLookupMetadata,
+  releasePersistenceRbacArtifactPaths,
+} from "../../../lib/releaseControlPlane";
 
 type FeatureFlagChannel = "development" | "preview" | "staging" | "production" | "mobile-preview" | "mobile-production";
 type DbFeatureScope = "global" | "tenant" | "user";
 
 const allowedChannels = new Set<FeatureFlagChannel>(["development", "preview", "staging", "production", "mobile-preview", "mobile-production"]);
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 const providerGatedFeature: Partial<Record<string, string>> = {
   "sms_notifications.enabled": "SMS provider credentials must be configured before enabling this flag.",
   "mobile.ota_updates.enabled": "EAS project/token context must be configured before enabling this flag.",
@@ -20,6 +27,54 @@ type FlagDecisionContext = {
   environment: FeatureFlagChannel;
   stableIdentifier: string;
 };
+
+type FeatureFlagFindManyFilter = {
+  where: { OR: Array<{ tenantId: string } | { tenantId: null }> };
+  orderBy: { updatedAt: "desc" };
+  select: {
+    key: true;
+    scope: true;
+    enabled: true;
+    description: true;
+    rules: true;
+  };
+};
+
+type FeatureFlagRow = {
+  key: string;
+  scope: DbFeatureScope;
+  enabled: boolean;
+  description: string | null;
+  rules: unknown;
+};
+
+type FeatureFlagRepository = {
+  featureFlag: {
+    findMany(filter: FeatureFlagFindManyFilter): Promise<FeatureFlagRow[]>;
+  };
+};
+
+function toJsonValue(value: unknown) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function hashFeatureFlagSubject(value: unknown): string {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+function resultRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+function resultString(value: unknown, key: string): string | null {
+  const result = resultRecord(value);
+  return typeof result?.[key] === "string" ? result[key] : null;
+}
+
+function resultBoolean(value: unknown, key: string): boolean | null {
+  const result = resultRecord(value);
+  return typeof result?.[key] === "boolean" ? result[key] : null;
+}
 
 function normalizeEnvironment(value: string | null): FeatureFlagChannel {
   const normalized = value?.toLowerCase().trim();
@@ -66,25 +121,32 @@ function mergeDefinitionWithRecord(
     scope: DbFeatureScope;
     enabled: boolean;
     description: string | null;
-    rules: Prisma.JsonValue | null;
+    rules: unknown;
   },
 ): FeatureFlagDefinition {
   const rules = asRecord(record.rules);
+  const tenantAllowlist = normalizeStringArray(rules.tenantAllowlist);
+  const roleAllowlist = normalizeStringArray(rules.roleAllowlist);
+  const rolloutPercentage = normalizeNumber(rules.rolloutPercentage);
   return {
-    ...base,
     key: record.key,
     description: typeof rules.description === "string" && rules.description.trim() ? rules.description : record.description ?? base.description,
     scope: normalizeScope(record.scope),
     defaultEnabled: typeof record.enabled === "boolean" ? record.enabled : base.defaultEnabled,
     environments: normalizeEnvironments(rules.environments),
-    tenantAllowlist: normalizeStringArray(rules.tenantAllowlist) ?? base.tenantAllowlist,
-    roleAllowlist: normalizeStringArray(rules.roleAllowlist) ?? base.roleAllowlist,
-    rolloutPercentage: normalizeNumber(rules.rolloutPercentage) ?? base.rolloutPercentage,
-    killSwitch: typeof rules.killSwitch === "boolean" ? rules.killSwitch : base.killSwitch,
-    expiresAt: typeof rules.expiresAt === "string" ? rules.expiresAt : base.expiresAt,
+    ...(base.owner ? { owner: base.owner } : {}),
+    ...(tenantAllowlist ? { tenantAllowlist } : base.tenantAllowlist ? { tenantAllowlist: base.tenantAllowlist } : {}),
+    ...(roleAllowlist ? { roleAllowlist } : base.roleAllowlist ? { roleAllowlist: base.roleAllowlist } : {}),
+    ...(typeof rules.killSwitch === "boolean" ? { killSwitch: rules.killSwitch } : {}),
+    ...(typeof rules.expiresAt === "string" ? { expiresAt: rules.expiresAt } : {}),
+    ...(typeof rolloutPercentage === "number" ? { rolloutPercentage } : {}),
+    ...(typeof rolloutPercentage !== "number" && typeof base.rolloutPercentage === "number" ? { rolloutPercentage: base.rolloutPercentage } : {}),
     auditNote: typeof rules.auditNote === "string" && rules.auditNote.trim() ? rules.auditNote : base.auditNote,
+    owner: base.owner,
   };
 }
+
+type FeatureFlagRulesInput = Record<string, unknown>;
 
 function buildDefinitionFallback(key: string): FeatureFlagDefinition {
   return {
@@ -117,14 +179,14 @@ function normalizeRulesInput(inputRules: unknown): Record<string, unknown> {
   return normalized;
 }
 
-function buildDefinitionsForTenant(tenantId: string) {
+function buildDefinitionsForTenant(tenantId: string, client: FeatureFlagRepository = prisma as unknown as FeatureFlagRepository) {
   const baseDefinitions = new Map<string, FeatureFlagDefinition>();
   defaultFeatureFlags.forEach((definition) => {
     baseDefinitions.set(definition.key, definition);
   });
 
   return async () => {
-    const rows = await prisma.featureFlag.findMany({
+    const rows = await client.featureFlag.findMany({
       where: { OR: [{ tenantId }, { tenantId: null }] },
       orderBy: { updatedAt: "desc" },
       select: { key: true, scope: true, enabled: true, description: true, rules: true },
@@ -172,130 +234,243 @@ function buildDecisionContext(actorRole: string, tenantId: string, environment: 
   };
 }
 
+function buildFeatureFlagRuntimeInvalidationMetadata(input: { tenantId: string; key: string; environment?: FeatureFlagChannel }) {
+  return {
+    invalidated: true,
+    invalidationTag: `feature-flags:${input.tenantId}`,
+    cacheKeyPrefix: `feature-flags:${input.tenantId}:`,
+    affectedFlagKey: input.key,
+    revalidationTargets: [
+      `/api/public/${encodeURIComponent(input.tenantId)}/release-health`,
+      "/api/feature-flags",
+      "apps/web/lib/featureFlagRuntime.ts",
+    ],
+    environment: input.environment ?? "preview",
+    artifact: "coverage/feature-flag-cache-invalidation.json",
+    smoke: "feature-flag invalidation/revalidation smoke",
+  };
+}
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
+  let membershipLookup;
   try {
-    assertPermission(actor, "release:read");
+    membershipLookup = await assertPermissionWithTenantMembership(actor, "release:read");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read feature flags." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to read feature flags." } }, { status: 403, headers: noStoreHeaders });
   }
 
-  const params = new URL(request.url).searchParams;
-  const environment = normalizeEnvironment(params.get("environment"));
-  const role = params.get("role");
-  const context = buildDecisionContext(actor.role, actor.tenantId, environment, role);
+  const query = featureFlagReadQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
+  if (!query.success) {
+    return NextResponse.json(
+      { ok: false, error: { code: "VALIDATION_FAILED", message: "Feature flag query failed validation.", issues: query.error.flatten() } },
+      { status: 400, headers: noStoreHeaders },
+    );
+  }
 
-  const loadDefinitions = buildDefinitionsForTenant(actor.tenantId);
+  const tenantId = query.data.tenantId ?? actor.tenantId;
+  if (tenantId !== actor.tenantId) {
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot query feature flags for another tenant." } }, { status: 403, headers: noStoreHeaders });
+  }
+
+  const environment = query.data.environment;
+  const role = query.data.role;
+  const context = buildDecisionContext(membershipLookup.actorRole, tenantId, environment, role);
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_FEATURE_FLAG_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production feature-flag reads require DB-backed actor resolution and persisted tenant-scoped flag definitions; local fallback defaults are disabled.",
+            gapIds: ["GAP-088", "GAP-090", "GAP-093"],
+          },
+          productionBoundary: { localFeatureFlagFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     const decisions = evaluateFeatureFlags(defaultFeatureFlags, context);
-    return NextResponse.json({
-      ok: true,
-      source: actor.source,
-      tenantId: actor.tenantId,
-      actorRole: actor.role,
-      persistence: "local-fallback",
-      environment,
-      definitions: buildSafeResponseDefinitions([...defaultFeatureFlags]),
-      decisions,
-      cache: {
-        generatedAt: new Date().toISOString(),
-        ttlSeconds: 15,
-        cacheKey: `feature-flags:${actor.tenantId}:${environment}:fallback`,
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId,
+        actorRole: membershipLookup.actorRole,
+        membershipLookup,
+        persistence: "local-fallback",
+        environment,
+        definitions: buildSafeResponseDefinitions([...defaultFeatureFlags]),
+        decisions,
+        cache: {
+          generatedAt: new Date().toISOString(),
+          ttlSeconds: 15,
+          cacheKey: `feature-flags:${tenantId}:${environment}:fallback`,
+        },
+        boundary: "Local fallback mode: flag overrides are not persisted and use package defaults.",
+        gapIds: ["GAP-088", "GAP-090", "GAP-093"],
       },
-      boundary: "Local fallback mode: flag overrides are not persisted and use package defaults.",
-      gapIds: ["GAP-088", "GAP-090", "GAP-093"],
-    });
+      { headers: noStoreHeaders },
+    );
   }
 
   try {
-    const definitions = await loadDefinitions();
-    const decisions = evaluateFeatureFlags(definitions, context);
-    return NextResponse.json({
-      ok: true,
-      source: actor.source,
-      tenantId: actor.tenantId,
-      actorRole: actor.role,
-      persistence: "database",
-      environment,
-      definitions: buildSafeResponseDefinitions(definitions),
-      decisions,
-      cache: {
-        generatedAt: new Date().toISOString(),
-        ttlSeconds: 60,
-        cacheKey: `feature-flags:${actor.tenantId}:${environment}:v1`,
-      },
-      gapIds: ["GAP-088", "GAP-090", "GAP-093"],
-      boundary: "Feature flags now include DB overrides (tenant/global) and release-aware decision output.",
+    const result = await prisma.$transaction(async (tx) => {
+      const definitions = await buildDefinitionsForTenant(tenantId, tx as FeatureFlagRepository)();
+      const audit = await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorUserId: actor.actorUserId,
+          action: "feature_flag:read:list",
+          entityType: "FeatureFlag",
+          metadata: {
+            source: "dashboard-api",
+            environment,
+            role: role ?? membershipLookup.actorRole,
+            definitionCount: definitions.length,
+            redactedFields: ["rules.secret", "rules.token", "rules.providerKey", "rules.privateRolloutNotes"],
+          },
+        },
+        select: { id: true },
+      });
+      return { definitions, audit };
     });
+    const definitions = result.definitions;
+    const decisions = evaluateFeatureFlags(definitions, context);
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId,
+        actorRole: actor.role,
+        persistence: "database",
+        environment,
+        definitions: buildSafeResponseDefinitions(definitions),
+        decisions,
+        auditId: result.audit.id,
+        cache: {
+          generatedAt: new Date().toISOString(),
+          ttlSeconds: 60,
+          cacheKey: `feature-flags:${tenantId}:${environment}:v1`,
+        },
+        gapIds: ["GAP-088", "GAP-090", "GAP-093"],
+        boundary: "Feature flag reads are tenant-scoped, no-store, audit-logged, and include DB overrides plus release-aware decision output.",
+      },
+      { headers: noStoreHeaders },
+    );
   } catch (error) {
     if (!isDatabaseUnavailable(error)) {
       throw error;
     }
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_FEATURE_FLAG_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production feature-flag reads require the dashboard database connection; default fallback decisions are disabled.",
+            gapIds: ["GAP-088", "GAP-090", "GAP-093"],
+          },
+          productionBoundary: { localFeatureFlagFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
     const definitions = [...defaultFeatureFlags];
-    const fallbackContext = buildDecisionContext(actor.role, actor.tenantId, environment, role);
+    const fallbackContext = buildDecisionContext(membershipLookup.actorRole, tenantId, environment, role);
     const decisions = evaluateFeatureFlags(definitions, fallbackContext);
-    return NextResponse.json({
-      ok: true,
-      source: actor.source,
-      tenantId: actor.tenantId,
-      actorRole: actor.role,
-      persistence: "local-fallback",
-      environment,
-      definitions: buildSafeResponseDefinitions(definitions),
-      decisions,
-      cache: {
-        generatedAt: new Date().toISOString(),
-        ttlSeconds: 15,
-        cacheKey: `feature-flags:${actor.tenantId}:${environment}:fallback`,
+    return NextResponse.json(
+      {
+        ok: true,
+        source: actor.source,
+        tenantId,
+        actorRole: membershipLookup.actorRole,
+        membershipLookup,
+        persistence: "local-fallback",
+        environment,
+        definitions: buildSafeResponseDefinitions(definitions),
+        decisions,
+        cache: {
+          generatedAt: new Date().toISOString(),
+          ttlSeconds: 15,
+          cacheKey: `feature-flags:${tenantId}:${environment}:fallback`,
+        },
+        warning: "Database unavailable; default feature definitions returned as fallback.",
+        gapIds: ["GAP-088", "GAP-090", "GAP-093"],
+        boundary: "Database fallback used; DB overrides unavailable in this response.",
       },
-      warning: "Database unavailable; default feature definitions returned as fallback.",
-      gapIds: ["GAP-088", "GAP-090", "GAP-093"],
-      boundary: "Database fallback used; DB overrides unavailable in this response.",
-    });
+      { headers: noStoreHeaders },
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
   const actor = resolveDashboardActor(request);
+  let membershipLookup;
   try {
-    assertPermission(actor, "settings:write");
+    membershipLookup = await assertPermissionWithTenantMembership(actor, "settings:write");
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to modify feature flags." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", message: "Actor is not allowed to modify feature flags." } }, { status: 403, headers: noStoreHeaders });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Feature flag body must be valid JSON." } }, { status: 400 });
+    return NextResponse.json({ ok: false, error: { code: "INVALID_JSON", message: "Feature flag body must be valid JSON." } }, { status: 400, headers: noStoreHeaders });
   }
 
   const parsed = featureFlagPatchInputSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: { code: "VALIDATION_FAILED", message: "Feature flag payload did not pass schema.", issues: parsed.error.flatten() } },
-      { status: 400 },
+      { status: 400, headers: noStoreHeaders },
     );
   }
 
   const input = parsed.data;
+  const expectedVersionHeader = request.headers.get("x-feature-flag-expected-version");
   const tenantId = input.tenantId ?? actor.tenantId;
   if (tenantId !== actor.tenantId) {
-    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot update feature flags for a different tenant." } }, { status: 403 });
+    return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot update feature flags for a different tenant." } }, { status: 403, headers: noStoreHeaders });
   }
 
   const providerBlocking = isAllowedToEnableFlag(input.key);
   if (input.enabled && providerBlocking && actor.source !== "local-fallback") {
     const hasCredentials = Boolean(process.env.SENDGRID_API_KEY || process.env.SMS_PROVIDER_ENABLED || process.env.EAS_TOKEN);
     if (!hasCredentials) {
-      return NextResponse.json({ ok: false, error: { code: "PROVIDER_CREDENTIALS_REQUIRED", message: providerBlocking } }, { status: 409 });
+      return NextResponse.json({ ok: false, error: { code: "PROVIDER_CREDENTIALS_REQUIRED", message: providerBlocking } }, { status: 409, headers: noStoreHeaders });
     }
   }
 
   const rules = normalizeRulesInput(input.rules);
+  const persistedRules = rules as FeatureFlagRulesInput;
 
   if (actor.source === "local-fallback") {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_FEATURE_FLAG_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production feature-flag writes require DB-backed actor resolution and persisted tenant-scoped feature flags; local fallback mutations are disabled.",
+            gapIds: ["GAP-088", "GAP-090", "GAP-093"],
+          },
+          productionBoundary: { localFeatureFlagFallbackDisabled: true },
+        },
+        { status: 503, headers: noStoreHeaders },
+      );
+    }
+
     return NextResponse.json(
       {
         ok: true,
@@ -307,28 +482,106 @@ export async function POST(request: NextRequest) {
           scope: input.scope,
           enabled: input.enabled,
           description: input.description,
-          rules,
+          rules: persistedRules,
         },
+        concurrency: buildOptimisticConcurrencyMetadata({ expectedVersion: expectedVersionHeader, currentVersion: input.key }),
+        membershipLookup: buildTenantMembershipLookupMetadata({ ...membershipLookup, actorSource: membershipLookup.source }),
+        invalidation: buildFeatureFlagRuntimeInvalidationMetadata({ tenantId, key: input.key }),
+        artifactPaths: releasePersistenceRbacArtifactPaths,
         warning: "Local fallback mode: flag mutation is not persisted in database mode.",
         gapIds: ["GAP-088", "GAP-090", "GAP-093"],
       },
-      { status: 201 },
+      { status: 201, headers: noStoreHeaders },
     );
   }
 
   try {
+    const requestHash = hashFeatureFlagSubject({
+      tenantId,
+      key: input.key,
+      enabled: input.enabled,
+      scope: input.scope,
+      description: input.description ?? null,
+      rules: persistedRules,
+    });
+    const idempotencyKey =
+      request.headers.get("idempotency-key") ??
+      (typeof (body as Record<string, unknown>).idempotencyKey === "string" && (body as Record<string, unknown>).idempotencyKey.trim()
+        ? (body as Record<string, unknown>).idempotencyKey.trim()
+        : null) ??
+      `feature-flag-update:${tenantId}:${input.key}:${requestHash}`;
     const persisted = await prisma.$transaction(async (tx) => {
+      const membershipMetadata = buildTenantMembershipLookupMetadata({ ...membershipLookup, actorSource: membershipLookup.source });
+      const idempotency = await tx.idempotencyKey.upsert({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-feature-flag-update", key: idempotencyKey } },
+        create: {
+          tenantId,
+          scope: "dashboard-feature-flag-update",
+          key: idempotencyKey,
+          requestHash,
+          status: "claimed",
+          metadata: toJsonValue({
+            route: "/api/feature-flags",
+            action: "feature_flag:update",
+            key: input.key,
+            enabled: input.enabled,
+            scope: input.scope,
+            membershipLookup: membershipMetadata,
+            rawProviderPayloadStored: false,
+          }),
+        },
+        update: {
+          metadata: toJsonValue({
+            route: "/api/feature-flags",
+            action: "feature_flag:update",
+            key: input.key,
+            enabled: input.enabled,
+            scope: input.scope,
+            membershipLookup: membershipMetadata,
+            replayObserved: true,
+            rawProviderPayloadStored: false,
+          }),
+        },
+        select: { id: true, key: true, requestHash: true, status: true, result: true },
+      });
+      if (idempotency.requestHash !== requestHash) {
+        return { status: "idempotency_conflict" as const, idempotency };
+      }
+      if (idempotency.status === "completed") {
+        const previousEnabled = resultBoolean(idempotency.result, "previousEnabled");
+        const previousScope = resultString(idempotency.result, "previousScope");
+        return {
+          status: "replayed" as const,
+          featureFlag: {
+            id: resultString(idempotency.result, "featureFlagId") ?? input.key,
+            key: input.key,
+            enabled: resultBoolean(idempotency.result, "enabled") ?? input.enabled,
+            scope: (resultString(idempotency.result, "scope") as DbFeatureScope | null) ?? input.scope,
+            description: input.description ?? "Tenant-defined feature flag.",
+            rules: persistedRules,
+          },
+          audit: { id: resultString(idempotency.result, "auditId") },
+          existing: previousScope || previousEnabled !== null ? { enabled: previousEnabled, scope: previousScope } : null,
+          concurrency: buildOptimisticConcurrencyMetadata({ expectedVersion: expectedVersionHeader, currentVersion: resultString(idempotency.result, "featureFlagId"), recordId: resultString(idempotency.result, "featureFlagId") }),
+          membershipLookup: membershipMetadata,
+          idempotency,
+        };
+      }
       const existing = await tx.featureFlag.findUnique({
         where: { tenantId_key: { tenantId, key: input.key } },
         select: { id: true, scope: true, enabled: true, description: true },
       });
+      const concurrency = buildOptimisticConcurrencyMetadata({ expectedVersion: expectedVersionHeader, currentVersion: existing?.id ?? null, recordId: existing?.id ?? null });
+      if (concurrency.conflict) {
+        throw Object.assign(new Error("FEATURE_FLAG_CONCURRENCY_CONFLICT"), { code: "FEATURE_FLAG_CONCURRENCY_CONFLICT", concurrency });
+      }
       const featureFlag = await tx.featureFlag.upsert({
         where: { tenantId_key: { tenantId, key: input.key } },
         update: {
           enabled: input.enabled,
           scope: input.scope,
           description: input.description ?? existing?.description ?? "Tenant-defined feature flag.",
-          rules,
+          rules: persistedRules,
         },
         create: {
           tenantId,
@@ -336,7 +589,7 @@ export async function POST(request: NextRequest) {
           scope: input.scope,
           enabled: input.enabled,
           description: input.description ?? "Tenant-defined feature flag.",
-          rules,
+          rules: persistedRules,
         },
       });
       const audit = await tx.auditLog.create({
@@ -353,11 +606,50 @@ export async function POST(request: NextRequest) {
             source: "dashboard-api",
             previousEnabled: existing?.enabled ?? null,
             previousScope: existing?.scope ?? null,
+            concurrency,
+            membershipLookup: membershipMetadata,
+            idempotencyKey,
+            idempotencyKeyId: idempotency.id,
+            approvalState: "settings-write-approved",
+            orchestrationHook: "feature-flag-runtime-invalidation-applied",
+            invalidation: buildFeatureFlagRuntimeInvalidationMetadata({ tenantId, key: input.key }),
+            artifactPaths: releasePersistenceRbacArtifactPaths,
           },
         },
       });
-      return { featureFlag, audit, existing };
+      await tx.idempotencyKey.update({
+        where: { tenantId_scope_key: { tenantId, scope: "dashboard-feature-flag-update", key: idempotencyKey } },
+        data: {
+          status: "completed",
+          result: toJsonValue({
+            featureFlagId: featureFlag.id,
+            auditId: audit.id,
+            key: input.key,
+            enabled: featureFlag.enabled,
+            scope: featureFlag.scope,
+            previousEnabled: existing?.enabled ?? null,
+            previousScope: existing?.scope ?? null,
+            rawProviderPayloadStored: false,
+          }),
+        },
+        select: { id: true },
+      });
+      return { status: "persisted" as const, featureFlag, audit, existing, concurrency, membershipLookup: membershipMetadata, idempotency };
     });
+
+    if (persisted.status === "idempotency_conflict") {
+      return NextResponse.json(
+        {
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: { code: "IDEMPOTENCY_CONFLICT", message: "Idempotency key was already used for a different feature-flag payload." },
+          idempotencyKeyId: persisted.idempotency.id,
+          gapIds: ["GAP-088", "GAP-090", "GAP-093"],
+        },
+        { status: 409, headers: noStoreHeaders },
+      );
+    }
 
     return NextResponse.json({
       ok: true,
@@ -372,6 +664,14 @@ export async function POST(request: NextRequest) {
         rules: persisted.featureFlag.rules ?? rules,
       },
       auditId: persisted.audit.id,
+      idempotencyKeyId: persisted.idempotency.id,
+      idempotencyReplay: persisted.status === "replayed",
+      concurrency: persisted.concurrency,
+      membershipLookup: persisted.membershipLookup,
+      approval: { state: "settings-write-approved" },
+      invalidation: buildFeatureFlagRuntimeInvalidationMetadata({ tenantId, key: input.key }),
+      orchestration: { hook: "feature-flag-runtime-invalidation-applied", dispatchEnabled: process.env.RELEASE_GOVERNANCE_DISPATCH_ENABLED === "true" },
+      artifactPaths: releasePersistenceRbacArtifactPaths,
       previous: persisted.existing
         ? {
             key: input.key,
@@ -380,10 +680,31 @@ export async function POST(request: NextRequest) {
           }
         : null,
       gapIds: ["GAP-088", "GAP-090", "GAP-093"],
-      boundary: "Feature-flag writes now persist with RBAC and audit metadata.",
-    }, { status: 201 });
+      boundary: "Feature-flag writes now persist with RBAC, idempotency, and audit metadata.",
+    }, { status: 201, headers: noStoreHeaders });
   } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "FEATURE_FLAG_CONCURRENCY_CONFLICT") {
+      return NextResponse.json(
+        { ok: false, error: { code: "FEATURE_FLAG_CONCURRENCY_CONFLICT", message: "Feature flag changed before approval/orchestration." }, concurrency: (error as { concurrency?: unknown }).concurrency },
+        { status: 409, headers: noStoreHeaders },
+      );
+    }
+
     if (isDatabaseUnavailable(error)) {
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json({
+          ok: false,
+          source: actor.source,
+          tenantId,
+          error: {
+            code: "PROVIDER_FEATURE_FLAG_PERSISTENCE_NOT_CONFIGURED",
+            message: "Production feature-flag writes require the dashboard database connection; local fallback mutations are disabled.",
+            gapIds: ["GAP-088", "GAP-090", "GAP-093"],
+          },
+          productionBoundary: { localFeatureFlagFallbackDisabled: true },
+        }, { status: 503, headers: noStoreHeaders });
+      }
+
       return NextResponse.json({
         ok: true,
         source: actor.source,
@@ -397,10 +718,12 @@ export async function POST(request: NextRequest) {
           rules,
         },
         warning: "Database unavailable; mutation not persisted.",
+        invalidation: buildFeatureFlagRuntimeInvalidationMetadata({ tenantId, key: input.key }),
         gapIds: ["GAP-088", "GAP-090", "GAP-093"],
-      }, { status: 201 });
+      }, { status: 201, headers: noStoreHeaders });
     }
 
-    return NextResponse.json({ ok: false, error: { code: "FEATURE_FLAG_MUTATION_FAILED", message: "Feature flag could not be persisted." } }, { status: 500 });
+    return NextResponse.json({ ok: false, error: { code: "FEATURE_FLAG_MUTATION_FAILED", message: "Feature flag could not be persisted." } }, { status: 500, headers: noStoreHeaders });
   }
 }
+

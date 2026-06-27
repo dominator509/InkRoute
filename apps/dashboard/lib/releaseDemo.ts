@@ -8,6 +8,7 @@ import {
   demoReleaseHealthChecks,
   demoReleaseNotesMarkdown,
   demoRollbackPlan,
+  buildProviderRuntimeGates,
   evaluateFeatureFlags,
 } from "@inkroute/releases";
 import { inkrouteDemoTenant } from "@inkroute/config";
@@ -22,6 +23,7 @@ export const productionFlagPreview = evaluateFeatureFlags(defaultFeatureFlags, {
   environment: "production",
   stableIdentifier: `${inkrouteDemoTenant.id}:owner`,
 });
+export const providerRuntimeGatePreview = buildProviderRuntimeGates(productionFlagPreview);
 export const mobileOtaPlanPreview = demoMobileUpdatePlan;
 export const rollbackPlanPreview = demoRollbackPlan;
 export const releaseWorkflowPlan = demoGithubWorkflowPlan;
@@ -58,8 +60,8 @@ export const releaseAuditDrafts = [
 export const releaseBoundaryCards = [
   {
     title: "Release persistence",
-    status: "scaffolded",
-    detail: "ReleaseRecord and FeatureFlag models exist, and Phase 12 helpers produce candidates, gates, audits, and rollbacks. Dashboard actions still return 501 until Prisma repositories and RBAC are wired.",
+    status: "control-plane",
+    detail: "ReleaseRecord and FeatureFlag models exist, Phase 12 helpers produce candidates, gates, audits, and rollbacks, and dashboard actions expose gated route contracts. Provider-backed persistence, protected environments, and CI/CD execution remain evidence-gated.",
   },
   {
     title: "CI/CD automation",

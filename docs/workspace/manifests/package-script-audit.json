@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-06T16:06:49.101Z",
+  "generatedAt": "2026-06-08T14:55:01.449Z",
   "source": "Phase 18 workspace runtime readiness",
   "status": "pass",
   "projectsChecked": 25,
@@ -54,6 +54,7 @@
         "handoff:all": "pnpm handoff:verify-docs && pnpm handoff:audit && pnpm handoff:next && pnpm workspace:all && pnpm quality:all",
         "quality:docs": "node scripts/quality/audit-doc-links.mjs",
         "quality:gaps": "node scripts/quality/audit-gap-evidence.mjs",
+        "quality:pr-gaps": "node scripts/quality/audit-gap-tracker-diff.mjs",
         "quality:gates": "node scripts/quality/print-quality-gates.mjs",
         "quality:all": "pnpm quality:docs && pnpm quality:gaps && pnpm quality:gates",
         "workspace:imports": "node scripts/workspace/audit-workspace-imports.mjs",
@@ -185,6 +186,7 @@
         "typecheck": "tsc --noEmit",
         "lint": "tsc --noEmit",
         "test": "vitest run --passWithNoTests",
+        "db:validate": "prisma validate --schema prisma/schema.prisma",
         "db:generate": "prisma generate --schema prisma/schema.prisma",
         "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
         "db:studio": "prisma studio --schema prisma/schema.prisma",

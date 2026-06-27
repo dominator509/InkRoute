@@ -3,6 +3,7 @@ import { dashboardMetrics, inkrouteDemoArtist } from "@inkroute/config";
 import { MobileCard } from "../components/MobileCard";
 import { MobilePill } from "../components/MobilePill";
 import { MobileScreen } from "../components/MobileScreen";
+import { mobileApiSyncPreview } from "../lib/mobileApiClient";
 import { mobileReadinessPreview, mobileTravelStops } from "../lib/mobileDemo";
 
 export function HomeScreen() {
@@ -25,6 +26,18 @@ export function HomeScreen() {
       <MobileCard title="Tattoo Readiness Score" eyebrow="Style Match Intake" detail="Shared booking package scoring is available on mobile for quick triage, but production data must come from tenant-scoped APIs.">
         <Text style={{ color: "#fafaf9", fontSize: 42, fontWeight: "900" }}>{mobileReadinessPreview.percentage}%</Text>
         <MobilePill label={mobileReadinessPreview.label} tone="good" />
+      </MobileCard>
+      <MobileCard
+        title="API sync contract"
+        eyebrow="GAP-043"
+        detail={mobileApiSyncPreview.boundary}
+      >
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <MobilePill label={`${mobileApiSyncPreview.domains.length} domains mapped`} tone="good" />
+          <MobilePill label={`${mobileApiSyncPreview.requiredEndpointCount} endpoints`} />
+          <MobilePill label={mobileApiSyncPreview.authRequired ? "auth headers required" : "auth missing"} tone="warn" />
+          <MobilePill label={mobileApiSyncPreview.tenantScopeRequired ? "tenant scope required" : "tenant scope missing"} tone="warn" />
+        </View>
       </MobileCard>
       <MobileCard title="Next travel stops" eyebrow="Nomad Mode">
         {mobileTravelStops.slice(0, 2).map((stop) => (

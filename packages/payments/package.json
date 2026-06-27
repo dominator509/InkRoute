@@ -16,6 +16,7 @@
   },
   "name": "@inkroute/payments",
   "dependencies": {
-    "@inkroute/types": "workspace:*"
+    "@inkroute/types": "workspace:*",
+    "stripe": "^22.2.1"
   }
 }

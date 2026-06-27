@@ -1,12 +1,13 @@
 import { DashboardPageHeader } from "../../components/DashboardPageHeader";
-import { DisabledActionPanel } from "../../components/DisabledActionPanel";
 import { IntegrationBoundaryCard } from "../../components/IntegrationBoundaryCard";
+import { NotificationSchedulerActionPanel } from "../../components/NotificationSchedulerActionPanel";
 import { StatusPill } from "../../components/StatusPill";
+import { dashboardNotificationSchedulerContract } from "../../lib/notificationScheduler";
 import {
   dashboardNotificationAutomationSequence,
   dashboardNotificationPlans,
   dashboardProviderBoundaryMatrix,
-  dashboardProviderSendDrafts,
+  dashboardRedactedProviderSendDrafts,
   dashboardTemplates,
 } from "../../lib/demo";
 
@@ -23,7 +24,7 @@ export default function TemplatesPage() {
       <DashboardPageHeader
         eyebrow="Notifications"
         title="Template, consent, and delivery command center"
-        description="Email, SMS, push, and in-app notification templates with consent-aware delivery plans, automation sequences, and provider boundaries. No provider sends are enabled."
+        description="Email, SMS, push, and in-app notification templates with consent-aware delivery plans, automation sequences, provider boundaries, and a tenant-scoped redacted template API. No provider sends are enabled."
       />
 
       <section className="grid two">
@@ -66,7 +67,7 @@ export default function TemplatesPage() {
             {dashboardNotificationAutomationSequence.slice(0, 10).map((step) => (
               <div className="stacked-item" key={step.id}>
                 <strong>{step.templateKey.replace(/_/g, " ")}</strong>
-                <span>{step.trigger} · offset {step.scheduledOffsetMinutes} min · {step.recommendedChannels.join(", ")}</span>
+                <span>{step.trigger} Â· offset {step.scheduledOffsetMinutes} min Â· {step.recommendedChannels.join(", ")}</span>
                 <StatusPill label={step.status} tone={toneForStatus(step.status)} />
                 <small>{step.reason}</small>
               </div>
@@ -80,10 +81,10 @@ export default function TemplatesPage() {
           <p className="eyebrow">Provider send drafts</p>
           <h2>Disabled send payload previews</h2>
           <div className="stacked-list">
-            {dashboardProviderSendDrafts.map((draft) => (
+            {dashboardRedactedProviderSendDrafts.map((draft) => (
               <div className="stacked-item" key={`${draft.provider}-${draft.channel}`}>
-                <strong>{draft.provider} · {draft.channel}</strong>
-                <span>{draft.toMasked} · env: {draft.credentialEnvVar}</span>
+                <strong>{draft.provider} Â· {draft.channel}</strong>
+                <span>{draft.toMasked} Â· env: {draft.credentialEnvVar}</span>
                 <small>{draft.disabledReason}</small>
               </div>
             ))}
@@ -95,7 +96,7 @@ export default function TemplatesPage() {
           <div className="stacked-list">
             {dashboardProviderBoundaryMatrix.map((boundary) => (
               <div className="stacked-item" key={`${boundary.provider}-${boundary.channel}`}>
-                <strong>{boundary.provider} · {boundary.channel}</strong>
+                <strong>{boundary.provider} Â· {boundary.channel}</strong>
                 <span>{boundary.credentialEnvVars.join(", ")}</span>
                 <small>{boundary.productionRequirement}</small>
                 <code>{boundary.gapId}</code>
@@ -105,18 +106,50 @@ export default function TemplatesPage() {
         </div>
       </section>
 
+      <section className="dashboard-grid two">
+        <div className="card">
+          <p className="eyebrow">Queue scheduler contract</p>
+          <h2>Database-backed worker plans</h2>
+          <div className="stacked-list">
+            <div className="stacked-item">
+              <strong>Schedule sequence</strong>
+              <span>{dashboardNotificationSchedulerContract.schedulePlan.scheduledJobs.length} jobs planned through NotificationJob writes</span>
+              <StatusPill label={dashboardNotificationSchedulerContract.schedulePlan.status} tone={toneForStatus(dashboardNotificationSchedulerContract.schedulePlan.status)} />
+            </div>
+            <div className="stacked-item">
+              <strong>Process due job</strong>
+              <span>{dashboardNotificationSchedulerContract.processPlan.writes.map((write) => write.model).join(", ")}</span>
+              <StatusPill label={dashboardNotificationSchedulerContract.processPlan.status} tone={toneForStatus(dashboardNotificationSchedulerContract.processPlan.status)} />
+            </div>
+            <div className="stacked-item">
+              <strong>Retry and dead letter</strong>
+              <span>{dashboardNotificationSchedulerContract.retryPlan.retryDelaySeconds ?? 0}s retry delay; dead-letter writes require durable repository</span>
+              <StatusPill label={dashboardNotificationSchedulerContract.deadLetterPlan.status} tone={toneForStatus(dashboardNotificationSchedulerContract.deadLetterPlan.status)} />
+            </div>
+          </div>
+        </div>
+        <div className="card">
+          <p className="eyebrow">Scheduler readiness gates</p>
+          <h2>Worker promotion blockers</h2>
+          <div className="stacked-list">
+            {dashboardNotificationSchedulerContract.runtimeReadiness.blockers.slice(0, 6).map((blocker) => (
+              <div className="stacked-item" key={blocker}>
+                <strong>{blocker}</strong>
+                <small>GAP-065</small>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <IntegrationBoundaryCard
         title="Notification provider boundary"
         status="Credential-gated"
-        description="Phase 9 renders templates and delivery plans only. Production still needs provider SDKs, verified webhooks, queue workers, suppression lists, delivery logs, token registration, audit logging, and SMS/legal review."
+        description="Phase 9 exposes the tenant-scoped redacted template API, queue/delivery summaries, and local scheduler action contract. Production still needs provider SDKs, verified webhooks, durable queue workers, suppression lists, delivery logs, token registration, audit logging, and SMS/legal review evidence."
         gapIds={["GAP-061", "GAP-062", "GAP-063", "GAP-064", "GAP-065", "GAP-066"]}
       />
-
-      <DisabledActionPanel
-        title="Notification actions"
-        description="Template saving, test sends, scheduled delivery, queue retries, suppression changes, and provider delivery reconciliation require authenticated APIs and provider credentials."
-        actions={["Save template", "Send test email", "Send SMS preview", "Queue aftercare sequence", "Register push token", "Sync provider status"]}
-      />
+      <NotificationSchedulerActionPanel />
     </main>
   );
 }
+

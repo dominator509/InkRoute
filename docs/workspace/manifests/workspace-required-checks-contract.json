@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "source": "GAP-133 required workspace checks",
+  "description": "Source-controlled contract for workspace checks that must run in CI and later be required by GitHub branch protection.",
+  "requiredRootScripts": [
+    "workspace:imports",
+    "workspace:scripts",
+    "workspace:readiness",
+    "workspace:runtime-evidence",
+    "workspace:required-checks",
+    "workspace:toolchain",
+    "workspace:all",
+    "quality:pr-gaps",
+    "quality:required-checks"
+  ],
+  "requiredWorkspaceAllChain": [
+    "workspace:imports",
+    "workspace:scripts",
+    "workspace:runtime-evidence",
+    "workspace:readiness",
+    "workspace:required-checks",
+    "workspace:toolchain"
+  ],
+  "requiredCiTerms": [
+    "pnpm workspace:imports",
+    "pnpm workspace:scripts",
+    "pnpm workspace:runtime-evidence",
+    "pnpm workspace:readiness",
+    "pnpm workspace:toolchain",
+    "Verify Phase 18 workspace runtime readiness"
+  ],
+  "requiredPrEnforcementTerms": [
+    "pnpm quality:pr-gaps",
+    "pnpm quality:required-checks"
+  ],
+  "requiredBranchProtectionChecks": [
+    "CI / quality",
+    "Verify Phase 18 workspace runtime readiness",
+    "Verify PR GAP tracker diff evidence",
+    "Verify Phase 17 quality gates"
+  ],
+  "externalSettingsStillRequired": [
+    "main branch protection",
+    "required status checks",
+    "required workspace audit status",
+    "required PR gap-diff evidence check",
+    "failing workspace-audit PR merge-block proof"
+  ]
+}

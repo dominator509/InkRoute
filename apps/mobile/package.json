@@ -11,7 +11,10 @@
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "build": "tsc --noEmit",
-    "test": "vitest run apps/mobile/tests/**/*.test.ts"
+    "test": "vitest run apps/mobile/tests/**/*.test.ts",
+    "expo:push-device-qa": "vitest run apps/mobile/tests/mobile-push-static.test.ts apps/mobile/tests/mobile-push-runtime-static.test.ts",
+    "expo:notification-simulator-smoke": "vitest run apps/mobile/tests/mobile-static.test.ts apps/mobile/tests/mobile-qa-static.test.ts",
+    "expo:notification-device-smoke": "vitest run apps/mobile/tests/mobile-push-static.test.ts apps/mobile/tests/mobile-qa-runtime-static.test.ts"
   },
   "dependencies": {
     "@inkroute/config": "workspace:*",

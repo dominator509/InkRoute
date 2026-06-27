@@ -1,0 +1,10 @@
+{
+  "generatedAt": null,
+  "source": "GAP-013 legal/compliance",
+  "status": "not-run",
+  "itemsChecked": 0,
+  "approvedItems": [],
+  "missingOrUnapprovedItems": [],
+  "findings": [],
+  "note": "Placeholder manifest committed so legal review audit references are concrete; scripts/legal/verify-legal-review.mjs overwrites this file during pnpm legal:verify-review."
+}

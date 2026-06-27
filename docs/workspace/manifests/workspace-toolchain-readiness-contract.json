@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "source": "GAP-130 workspace runtime readiness",
+  "description": "Source-controlled contract proving the workspace audit toolchain is present, scriptable, documented, and visible to CI without claiming runtime build readiness.",
+  "requiredFiles": [
+    "packages/workspace/src/index.ts",
+    "packages/workspace/tests/workspace-audit.test.ts",
+    "packages/workspace/package.json",
+    "scripts/workspace/audit-workspace-imports.mjs",
+    "scripts/workspace/audit-package-scripts.mjs",
+    "scripts/workspace/print-runtime-readiness.mjs",
+    "scripts/workspace/verify-runtime-evidence.mjs",
+    "scripts/workspace/verify-workspace-required-checks.mjs",
+    "scripts/workspace/verify-workspace-toolchain.mjs",
+    "docs/workspace/README.md",
+    "docs/workspace/WORKSPACE_AUDIT_PROTOCOL.md"
+  ],
+  "requiredRootScripts": [
+    "workspace:imports",
+    "workspace:scripts",
+    "workspace:readiness",
+    "workspace:runtime-evidence",
+    "workspace:required-checks",
+    "workspace:toolchain",
+    "workspace:all"
+  ],
+  "requiredWorkspaceAllChain": [
+    "workspace:imports",
+    "workspace:scripts",
+    "workspace:runtime-evidence",
+    "workspace:readiness",
+    "workspace:required-checks",
+    "workspace:toolchain"
+  ],
+  "requiredWorkspacePackageScripts": [
+    "typecheck",
+    "build",
+    "lint",
+    "test"
+  ],
+  "requiredCiTerms": [
+    "pnpm workspace:imports",
+    "pnpm workspace:scripts",
+    "pnpm workspace:runtime-evidence",
+    "pnpm workspace:readiness",
+    "pnpm workspace:required-checks",
+    "pnpm workspace:toolchain"
+  ],
+  "requiredGeneratedReports": [
+    "docs/workspace/manifests/workspace-import-audit.json",
+    "docs/workspace/manifests/package-script-audit.json",
+    "docs/workspace/manifests/runtime-evidence-audit.json",
+    "docs/workspace/manifests/runtime-readiness.json",
+    "docs/workspace/manifests/workspace-required-checks-audit.json",
+    "docs/workspace/manifests/workspace-toolchain-readiness-audit.json"
+  ]
+}

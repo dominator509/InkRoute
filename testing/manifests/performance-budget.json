@@ -1,0 +1,134 @@
+{
+  "phase": "14",
+  "status": "scaffolded_not_executed",
+  "command": "pnpm test:performance:budgets",
+  "budgets": {
+    "coreWebVitals": {
+      "largestContentfulPaintMs": 2500,
+      "cumulativeLayoutShift": 0.1,
+      "interactionToNextPaintMs": 200,
+      "totalBlockingTimeMs": 200,
+      "firstContentfulPaintMs": 1800
+    },
+    "routeBudgets": [
+      {
+        "id": "public-home",
+        "url": "/",
+        "surface": "web",
+        "lighthousePerformanceMin": 85,
+        "maxDocumentKb": 120,
+        "maxJsKb": 300,
+        "maxImageKb": 450
+      },
+      {
+        "id": "public-booking",
+        "url": "/booking",
+        "surface": "web",
+        "lighthousePerformanceMin": 85,
+        "maxDocumentKb": 140,
+        "maxJsKb": 340,
+        "maxImageKb": 350
+      },
+      {
+        "id": "public-city-seo",
+        "url": "/cities/seattle-wa",
+        "surface": "web",
+        "lighthousePerformanceMin": 85,
+        "maxDocumentKb": 140,
+        "maxJsKb": 320,
+        "maxImageKb": 500
+      },
+      {
+        "id": "dashboard-overview",
+        "url": "/",
+        "surface": "dashboard",
+        "lighthousePerformanceMin": 80,
+        "maxDocumentKb": 160,
+        "maxJsKb": 450,
+        "maxImageKb": 250
+      },
+      {
+        "id": "dashboard-bookings",
+        "url": "/bookings/demo-booking-001",
+        "surface": "dashboard",
+        "lighthousePerformanceMin": 80,
+        "maxDocumentKb": 180,
+        "maxJsKb": 500,
+        "maxImageKb": 250
+      }
+    ],
+    "apiLoadTargets": [
+      {
+        "id": "booking-request-abuse",
+        "method": "POST",
+        "path": "/api/public/demo-studio-alpha/booking-requests",
+        "requestsPerSecond": 25,
+        "durationSeconds": 60,
+        "p95Ms": 450,
+        "maxErrorRate": 0.02,
+        "requires": ["tenant anti-bot proof", "rate-limit store", "safe validation errors"]
+      },
+      {
+        "id": "stripe-webhook-burst",
+        "method": "POST",
+        "path": "/api/webhooks/stripe",
+        "requestsPerSecond": 20,
+        "durationSeconds": 60,
+        "p95Ms": 300,
+        "maxErrorRate": 0.01,
+        "requires": ["signed webhook fixture", "idempotency store", "payment audit persistence"]
+      },
+      {
+        "id": "secure-upload-intent-burst",
+        "method": "POST",
+        "path": "/api/public/demo-studio-alpha/secure-upload-intents",
+        "requestsPerSecond": 15,
+        "durationSeconds": 60,
+        "p95Ms": 350,
+        "maxErrorRate": 0.01,
+        "requires": ["signed upload provider", "private object ACL", "upload-intent rate limit"]
+      }
+    ],
+    "databaseQueryTargets": [
+      {
+        "id": "tenant-booking-dashboard",
+        "models": ["Booking", "BookingRequest", "Appointment", "Client"],
+        "maxRowsScanned": 500,
+        "p95Ms": 120,
+        "requires": ["tenantId index usage", "EXPLAIN ANALYZE output", "seeded tenant volume"]
+      },
+      {
+        "id": "public-seo-city-style",
+        "models": ["SeoCityPage", "SeoStylePage", "PortfolioImage"],
+        "maxRowsScanned": 1000,
+        "p95Ms": 150,
+        "requires": ["published/status filters", "tenant domain lookup", "sitemap cache plan"]
+      },
+      {
+        "id": "webhook-idempotency-lookup",
+        "models": ["IdempotencyKey", "PaymentAuditLog", "NotificationDelivery"],
+        "maxRowsScanned": 50,
+        "p95Ms": 75,
+        "requires": ["unique provider event key", "tenant-scoped write transaction"]
+      }
+    ],
+    "imageOptimizationTargets": [
+      {
+        "kind": "portfolio_public",
+        "maxOriginalMb": 12,
+        "derivatives": ["640w", "1280w", "1920w"],
+        "formats": ["avif", "webp"],
+        "maxDerivativeKb": 350,
+        "requires": ["private original storage", "alt text", "blur placeholder", "moderation status"]
+      },
+      {
+        "kind": "reference_private",
+        "maxOriginalMb": 10,
+        "derivatives": ["private-preview-512w"],
+        "formats": ["webp"],
+        "maxDerivativeKb": 250,
+        "requires": ["private ACL", "signed preview URL", "virus scan result", "retention policy"]
+      }
+    ]
+  }
+}

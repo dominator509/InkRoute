@@ -65,6 +65,18 @@ web-build/
 ## Editors / local config
 .vscode/
 .idea/
+.obsidian/
+.serena/
+.serena/backups/
+.serena/cache/
+.serena/db/
+.serena/history/
+.serena/index/
+.serena/logs/
+.serena/snapshots/
+.serena/tmp/
+.serena/workspace/
+.serena/project.local.yml
 .history/
 .vscode-test/
 *.swp

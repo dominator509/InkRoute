@@ -11,10 +11,12 @@ import {
 } from "@inkroute/observability";
 import {
   demoFeatureFlagDecisions,
+  demoEasOtaReadinessPlan,
   demoMobileUpdatePlan,
   demoReleaseCandidate,
   demoReleaseHealthChecks,
   demoRollbackPlan,
+  buildProviderRuntimeGates,
 } from "@inkroute/releases";
 
 import {
@@ -25,6 +27,10 @@ import {
   validateUploadDraft,
 } from "@inkroute/security";
 import {
+  buildMobileBookingLifecycleActionContract,
+  buildMobileSecureSessionContract,
+  buildMobileTravelPublishContract,
+  buildMobileUploadIntentContract,
   phase6HealthChecks,
   phase6MobileBoundaries,
   summarizeOfflineQueue,
@@ -38,8 +44,21 @@ export const mobileSessionPreview: MobileSessionPreview = {
   userLabel: "Mara Vale",
   roleLabel: "Owner / artist",
   biometricAvailable: true,
-  sessionBoundary: "Mocked session only. Production requires auth provider tokens, secure refresh, and tenant membership verification.",
+  sessionBoundary: "Secure-session local contract only. Production requires provider login, device SecureStore proof, revocation, and tenant membership verification.",
 };
+
+export const mobileSecureSessionContract = buildMobileSecureSessionContract({
+  tenantId: inkrouteDemoTenant.id,
+  userId: "user_mara_demo",
+  role: "owner",
+  accessTokenPreview: "access_***",
+  refreshTokenStored: true,
+  secureStoreAvailable: true,
+  biometricRequired: true,
+  biometricUnlocked: false,
+  expiresAt: "2026-06-09T23:59:59.000Z",
+  now: "2026-06-09T00:00:00.000Z",
+});
 
 export const mobileAccessPreview = {
   canReadTenant: canAccessTenant({ tenantId: inkrouteDemoTenant.id, userId: "user_mara_demo", role: "owner" }, inkrouteDemoTenant.id),
@@ -98,6 +117,20 @@ export const mobileBookingQueue = [
   },
 ];
 
+export const mobileBookingLifecycleActionContract = buildMobileBookingLifecycleActionContract({
+  tenantId: inkrouteDemoTenant.id,
+  bookingId: mobileBookingQueue[0]?.id ?? "booking_req_demo",
+  requestId: "req_mobile_booking_action_001",
+  idempotencyKey: "idem_mobile_booking_action_001",
+  action: "accept",
+  authenticatedApiReady: true,
+  stateEventContractReady: true,
+  calendarConflictCheckReady: true,
+  notificationHandoffReady: true,
+  auditLogContractReady: true,
+  providerExecutionVerified: false,
+});
+
 export const mobileAppointments = [
   {
     id: "appt_2001",
@@ -138,6 +171,19 @@ export const mobileClients = [
   },
 ];
 
+export const mobilePortfolioUploadContract = buildMobileUploadIntentContract({
+  tenantId: inkrouteDemoTenant.id,
+  requestId: "req_mobile_portfolio_upload_001",
+  idempotencyKey: "idem_mobile_portfolio_upload_001",
+  kind: "portfolio_public",
+  filename: "black-sun-flash.jpg",
+  mimeType: "image/jpeg",
+  sizeBytes: 950000,
+  city: "Oakland",
+  altText: "Blackwork sun flash tattoo concept with bold negative space",
+  styleTags: ["blackwork", "flash"],
+});
+
 export const portfolioUploadDraft = {
   title: "Black Sun Flash",
   styleTags: ["blackwork", "flash"],
@@ -146,7 +192,10 @@ export const portfolioUploadDraft = {
   city: "Oakland",
   caption: "Limited flash concept ready for future travel-week drop.",
   altText: "Blackwork sun flash tattoo concept with bold negative space",
-  storageBoundary: "Metadata preview only. Image bytes, derivatives, moderation, and signed uploads are not wired.",
+  objectKey: mobilePortfolioUploadContract.objectKey,
+  storageBoundary: mobilePortfolioUploadContract.providerStorageRuntimeGated
+    ? "Metadata and upload-intent contracts are wired; signed provider storage, derivatives, moderation, and byte transfer remain runtime-gated."
+    : "Metadata, upload-intent, and provider storage contracts are ready.",
 };
 
 export const notificationPreviews = [
@@ -206,6 +255,26 @@ export const offlineQueueSummary = summarizeOfflineQueue(offlineQueueItems);
 export const mobileBoundaries = phase6MobileBoundaries;
 export const mobileHealthChecks = phase6HealthChecks;
 export const mobileTravelStops = demoTravelStops;
+const mobileTravelPublishStop = demoTravelStops[0];
+const mobileTravelPublishCitySlug = mobileTravelPublishStop
+  ? `${mobileTravelPublishStop.city}-${mobileTravelPublishStop.region}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+  : "oakland-ca";
+export const mobileTravelPublishContract = buildMobileTravelPublishContract({
+  tenantId: inkrouteDemoTenant.id,
+  travelScheduleId: mobileTravelPublishStop?.id ?? "travel_demo",
+  citySlug: mobileTravelPublishCitySlug,
+  requestId: "req_mobile_travel_publish_001",
+  idempotencyKey: "idem_mobile_travel_publish_001",
+  authenticatedApiReady: true,
+  auditLogContractReady: true,
+  publicCacheRevalidationContractReady: true,
+  notificationFanoutContractReady: true,
+  seoRevalidationContractReady: true,
+  providerExecutionVerified: false,
+});
 export const mobilePortfolioItems = demoPortfolioItems;
 export const mobileIcsPreview = buildTravelScheduleIcs(`${inkrouteDemoArtist.displayName} travel`, demoTravelStops).slice(0, 180);
 
@@ -244,7 +313,7 @@ export const mobileCrashReportDraft = buildObservabilityReportDraft({
   source: "mobile",
   runtime: "react-native",
   environment: "development",
-  message: "Expo mobile crash capture is scaffolded but not connected to Sentry",
+  message: "Mobile fallback crash capture is wired; live Sentry Expo capture remains credential-gated",
   route: "apps/mobile/App.tsx",
   release: "phase11-mobile-demo",
   metadata: {
@@ -262,12 +331,17 @@ export const mobileObservabilityBoundaries = observabilityProviderBoundaries.fil
 export const mobileReleaseCandidate = demoReleaseCandidate;
 export const mobileReleaseHealthChecks = demoReleaseHealthChecks;
 export const mobileOtaUpdatePlan = demoMobileUpdatePlan;
+export const mobileEasOtaReadinessPlan = demoEasOtaReadinessPlan;
 export const mobileFeatureFlagDecisions = demoFeatureFlagDecisions;
+export const mobileProviderRuntimeGates = buildProviderRuntimeGates(mobileFeatureFlagDecisions);
 export const mobileRollbackPlan = demoRollbackPlan;
 
 
 export const mobileSecurityControls = buildTrustCenterChecklist();
 export const mobileSecuritySummary = summarizeSecurityPosture(mobileSecurityControls);
+export const mobileSecurityReadiness = {
+  productionReady: mobileSecuritySummary.blockers === 0,
+};
 export const mobileTenantIsolationFixtures = buildTenantIsolationFixtures();
 export const mobilePrivacyDraft = buildPrivacyRequestDraft("export");
 export const mobileUploadValidationPreview = validateUploadDraft({

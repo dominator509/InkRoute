@@ -1,0 +1,101 @@
+{
+  "phase": "16",
+  "status": "sync_contract_not_created",
+  "command": "pnpm handoff:verify-task-sync",
+  "sourceQueue": "docs/handoff/manifests/agent-execution-queue.json",
+  "targetTracker": "GitHub Issues / GitHub Projects",
+  "redactionPolicy": {
+    "forbiddenInGit": [
+      "private project URLs",
+      "provider credentials",
+      "database URLs",
+      "client PII",
+      "medical notes",
+      "payment payloads"
+    ],
+    "allowedInGit": [
+      "task id",
+      "issue title",
+      "gap labels",
+      "assignee role",
+      "acceptance evidence fields",
+      "redacted issue label",
+      "status"
+    ]
+  },
+  "issueDefaults": {
+    "labels": ["agent-task", "gap-tracked", "verification-required"],
+    "projectStatus": "Todo",
+    "requiresGapIds": true,
+    "requiresAcceptanceEvidence": true,
+    "requiresSecretSafetyChecklist": true
+  },
+  "plannedIssues": [
+    {
+      "taskId": "codex-workspace-runtime-readiness-001",
+      "status": "not_created",
+      "issueTitle": "Agent task: Verify workspace audits and produce dependency readiness evidence",
+      "assigneeRole": "Codex",
+      "labels": ["agent-task", "gap-tracked", "verification-required", "target:codex", "priority:critical"],
+      "gapIds": ["GAP-001", "GAP-130", "GAP-131", "GAP-132", "GAP-133"],
+      "issueUrl": "",
+      "projectItemUrl": "",
+      "acceptanceEvidenceFields": ["commands run", "files changed", "test/build output", "gap rows updated", "secret redaction confirmed"]
+    },
+    {
+      "taskId": "codex-runtime-verification-001",
+      "status": "not_created",
+      "issueTitle": "Agent task: Install dependencies and produce first runtime evidence",
+      "assigneeRole": "Codex",
+      "labels": ["agent-task", "gap-tracked", "verification-required", "target:codex", "priority:critical"],
+      "gapIds": ["GAP-001", "GAP-105", "GAP-113", "GAP-121"],
+      "issueUrl": "",
+      "projectItemUrl": "",
+      "acceptanceEvidenceFields": ["commands run", "files changed", "test/build output", "gap rows updated", "secret redaction confirmed"]
+    },
+    {
+      "taskId": "codex-quality-gate-enforcement-001",
+      "status": "not_created",
+      "issueTitle": "Agent task: Verify and enforce Phase 17 quality gates",
+      "assigneeRole": "Codex",
+      "labels": ["agent-task", "gap-tracked", "verification-required", "target:codex", "priority:critical"],
+      "gapIds": ["GAP-122", "GAP-124", "GAP-126", "GAP-127", "GAP-129"],
+      "issueUrl": "",
+      "projectItemUrl": "",
+      "acceptanceEvidenceFields": ["commands run", "files changed", "quality output", "CI evidence", "secret redaction confirmed"]
+    },
+    {
+      "taskId": "jules-database-auth-foundation-001",
+      "status": "not_created",
+      "issueTitle": "Agent task: Provision non-production database/auth/storage foundation",
+      "assigneeRole": "Jules",
+      "labels": ["agent-task", "gap-tracked", "verification-required", "target:jules", "priority:critical"],
+      "gapIds": ["GAP-002", "GAP-003", "GAP-005", "GAP-095", "GAP-117"],
+      "issueUrl": "",
+      "projectItemUrl": "",
+      "acceptanceEvidenceFields": ["commands run", "files changed", "migration/seed output", "tenant isolation proof", "secret redaction confirmed"]
+    },
+    {
+      "taskId": "claude-provider-contract-001",
+      "status": "not_created",
+      "issueTitle": "Agent task: Implement one provider sandbox end to end",
+      "assigneeRole": "Claude Code",
+      "labels": ["agent-task", "gap-tracked", "verification-required", "target:claude-code", "priority:high"],
+      "gapIds": ["GAP-004", "GAP-049", "GAP-050", "GAP-061", "GAP-062", "GAP-063", "GAP-080", "GAP-110"],
+      "issueUrl": "",
+      "projectItemUrl": "",
+      "acceptanceEvidenceFields": ["commands run", "files changed", "provider sandbox proof", "webhook replay proof", "secret redaction confirmed"]
+    },
+    {
+      "taskId": "local-launch-readiness-001",
+      "status": "not_created",
+      "issueTitle": "Agent task: Run launch checklist and collect evidence bundle",
+      "assigneeRole": "Local terminal",
+      "labels": ["agent-task", "gap-tracked", "verification-required", "target:local-terminal", "priority:high"],
+      "gapIds": ["GAP-113", "GAP-118", "GAP-120", "GAP-121", "GAP-122"],
+      "issueUrl": "",
+      "projectItemUrl": "",
+      "acceptanceEvidenceFields": ["commands run", "files changed", "launch evidence labels", "owners assigned", "secret redaction confirmed"]
+    }
+  ]
+}

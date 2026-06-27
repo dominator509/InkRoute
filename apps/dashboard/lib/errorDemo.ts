@@ -4,6 +4,7 @@ import {
   buildAlertRoute,
   buildGithubIssueDraft,
   buildObservabilityReportDraft,
+  buildReleaseIncidentLinkagePlan,
   buildSentrySetupChecklist,
   demoErrorReports,
   observabilityProviderBoundaries,
@@ -18,10 +19,10 @@ export const dashboardObservabilityReports: ObservabilityReportDraft[] = [
       source: "api",
       runtime: "server",
       environment: "development",
-      message: "Payment webhook preview returned 501 before Stripe signature verification",
+      message: "Payment webhook provider evidence is gated before live Stripe reconciliation",
       route: "/api/webhooks/stripe",
       release: "phase7-payments",
-      statusCode: 501,
+      statusCode: 503,
       metadata: { stripeSignature: "demo-signature", clientEmail: "noa@example.test", action: "checkout.session.completed" },
       tags: { phase: "7", provider: "stripe" },
     },
@@ -33,10 +34,10 @@ export const dashboardObservabilityReports: ObservabilityReportDraft[] = [
       source: "webhook",
       runtime: "provider-webhook",
       environment: "development",
-      message: "Email webhook signature verification is not implemented",
+      message: "Email webhook signature verification is provider-evidence gated",
       route: "/api/webhooks/email",
       release: "phase9-notifications",
-      statusCode: 501,
+      statusCode: 503,
       metadata: { email: "client@example.test", providerPayload: "redaction preview" },
       tags: { phase: "9", provider: "email" },
     },
@@ -55,6 +56,17 @@ export const dashboardObservabilitySummaries = {
 export const dashboardAlertRoutes = dashboardObservabilityReports.map((report) => ({ report, route: buildAlertRoute(report) }));
 export const dashboardAgentWorkflowPreview = buildAgenticBugFixWorkflow(dashboardObservabilityReports[0]!);
 export const dashboardIssueDraftPreview = buildGithubIssueDraft(dashboardObservabilityReports[0]!);
+export const dashboardReleaseIncidentLinkagePreview = buildReleaseIncidentLinkagePlan({
+  releaseId: "rel_phase7_payments_preview",
+  releaseVersion: "phase7-payments",
+  environment: "development",
+  tenantId: inkrouteDemoTenant.id,
+  reports: dashboardObservabilityReports,
+  rollbackRequested: true,
+  sentryReleaseConfigured: false,
+  incidentProviderConfigured: false,
+  tenantCommunicationOwner: "release-owner",
+});
 export const dashboardProviderBoundaries = observabilityProviderBoundaries;
 export const dashboardNextSentryChecklist = buildSentrySetupChecklist("nextjs");
 export const dashboardMobileSentryChecklist = buildSentrySetupChecklist("react-native");

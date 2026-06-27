@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { slugSchema } from "./common";
+import { cuidLikeSchema, slugSchema, timezoneSchema } from "./common";
 import { memberStatusSchema, roleSchema, tenantPlanSchema, tenantStatusSchema } from "./enums";
 
 export const tenantInputSchema = z.object({
@@ -26,6 +26,15 @@ export const customRoleInputSchema = z.object({
   description: z.string().max(500).optional(),
 });
 
+export const tenantSettingsMutationSchema = z.object({
+  tenantId: cuidLikeSchema.optional(),
+  publicSiteName: z.string().trim().min(1).max(160).optional(),
+  primaryLocale: z.string().trim().min(2).max(32).optional(),
+  defaultTimezone: timezoneSchema.optional(),
+  idempotencyKey: z.string().trim().min(1).max(180).optional(),
+}).strict();
+
 export type TenantInput = z.infer<typeof tenantInputSchema>;
 export type TenantMemberInput = z.infer<typeof tenantMemberInputSchema>;
 export type CustomRoleInput = z.infer<typeof customRoleInputSchema>;
+export type TenantSettingsMutationInput = z.infer<typeof tenantSettingsMutationSchema>;

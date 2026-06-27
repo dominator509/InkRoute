@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test.describe("dashboard scaffold", () => {
+test.describe("dashboard guarded operator surfaces", () => {
   test("overview links core operator surfaces", async ({ page }: { page: any }) => {
     await page.goto("/");
 

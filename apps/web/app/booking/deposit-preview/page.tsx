@@ -57,7 +57,7 @@ export default function DepositPreviewPage() {
         <p className="eyebrow">Payment boundary</p>
         <h1>Deposit policy preview</h1>
         <p>
-          This page shows the Phase 7 payment engine scaffold. It calculates a demo deposit policy and renders the data that would be sent to Stripe Checkout, but it does not collect money.
+          This page shows the Phase 7 payment policy and Stripe Checkout readiness contract. It calculates a demo deposit policy and renders the provider handoff fields while keeping live money movement disabled until Stripe credentials, webhook proof, persistence evidence, and legal/tax approval are complete.
         </p>
       </section>
 

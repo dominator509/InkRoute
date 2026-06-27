@@ -2,15 +2,62 @@ import { Text, View } from "react-native";
 import { MobileCard } from "../components/MobileCard";
 import { MobilePill } from "../components/MobilePill";
 import { MobileScreen } from "../components/MobileScreen";
-import { mobileBookingQueue } from "../lib/mobileDemo";
+import { mobileApiFetch, mobileApiSyncPreview, type MobileApiResponseEnvelope, type MobileApiSession } from "../lib/mobileApiClient";
+import { mobileBookingLifecycleActionContract, mobileBookingQueue } from "../lib/mobileDemo";
+
+export interface MobileBookingRequestSummary {
+  id: string;
+  client: string;
+  city: string;
+  status: string;
+  score: number;
+}
+
+export function loadMobileBookingRequests(
+  session: MobileApiSession,
+  requestId = `mobile-bookings:${session.tenantId}`,
+): Promise<MobileApiResponseEnvelope<MobileBookingRequestSummary[]>> {
+  return mobileApiFetch<MobileBookingRequestSummary[]>(session, {
+    domain: "bookings",
+    method: "GET",
+    path: "/api/mobile/bookings",
+    requestId,
+  });
+}
+
+export function submitMobileBookingLifecycleAction(
+  session: MobileApiSession,
+  input: { bookingId: string; action: "accept" | "decline" | "request_changes"; idempotencyKey: string; requestId?: string },
+): Promise<MobileApiResponseEnvelope<{ bookingId: string; status: string }>> {
+  return mobileApiFetch<{ bookingId: string; status: string }>(session, {
+    domain: "bookings",
+    method: "PATCH",
+    path: `/api/mobile/bookings/${encodeURIComponent(input.bookingId)}/actions`,
+    requestId: input.requestId ?? `mobile-booking-action:${input.bookingId}`,
+    idempotencyKey: input.idempotencyKey,
+    body: { action: input.action },
+  });
+}
 
 export function BookingRequestsScreen() {
   return (
     <MobileScreen
       eyebrow="Booking requests"
       title="Review queue"
-      summary="Static mobile request cards for accept/decline/reschedule triage. Lifecycle actions remain disabled until authenticated APIs and audit logs exist."
+      summary="Mobile request cards for accept/decline/reschedule triage with a local lifecycle action contract and provider execution gates."
     >
+      <MobileCard
+        title="Typed client ready"
+        eyebrow="Authenticated sync boundary"
+        detail="Booking request screens are mapped to the shared mobile API-client contract; provider auth and seeded API smoke still gate live data replacement."
+      >
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <MobilePill label={mobileApiSyncPreview.domains.includes("bookings") ? "bookings domain mapped" : "bookings domain missing"} tone="good" />
+          <MobilePill label={mobileApiSyncPreview.offlineQueueDomains.includes("bookings") ? "offline queue required" : "online only"} tone="warn" />
+          <MobilePill label={mobileBookingLifecycleActionContract.localContractReady ? "lifecycle contract ready" : "lifecycle contract blocked"} tone={mobileBookingLifecycleActionContract.localContractReady ? "good" : "danger"} />
+          <MobilePill label={mobileBookingLifecycleActionContract.providerExecutionGated ? "provider execution gated" : "provider ready"} tone="warn" />
+        </View>
+      </MobileCard>
       {mobileBookingQueue.map((request) => (
         <MobileCard key={request.id} title={`${request.client} · ${request.city}`} detail={request.summary}>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -19,7 +66,7 @@ export function BookingRequestsScreen() {
             <MobilePill label={request.style} />
             <MobilePill label={request.placement} />
           </View>
-          <Text style={{ color: "#a8a29e", marginTop: 8 }}>Actions disabled: needs authenticated booking lifecycle API, state events, calendar checks, and notification handoff.</Text>
+          <Text style={{ color: "#a8a29e", marginTop: 8 }}>Lifecycle action contract uses {mobileBookingLifecycleActionContract.method} with state events, calendar checks, notification handoff, audit logs, request-id, and idempotency headers; live provider execution remains gated.</Text>
         </MobileCard>
       ))}
     </MobileScreen>

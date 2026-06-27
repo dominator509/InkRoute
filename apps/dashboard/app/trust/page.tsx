@@ -1,7 +1,7 @@
 import { DashboardPageHeader } from "../../components/DashboardPageHeader";
-import { DisabledActionPanel } from "../../components/DisabledActionPanel";
 import { IntegrationBoundaryCard } from "../../components/IntegrationBoundaryCard";
 import { MetricCard } from "../../components/MetricCard";
+import { PrivacyRequestActionPanel } from "../../components/PrivacyRequestActionPanel";
 import { StatusPill } from "../../components/StatusPill";
 import {
   dashboardCsrfPlans,
@@ -30,13 +30,13 @@ export default function TrustPage() {
       <DashboardPageHeader
         eyebrow="Phase 13 · Security and trust"
         title="Trust, privacy, and compliance control plane"
-        description="Static security hardening scaffold for auth, tenant isolation, upload validation, CSRF/rate-limit contracts, privacy workflows, legal placeholders, and production launch blockers. No production control is active yet."
+        description="Security hardening control plane for auth, tenant isolation, upload validation, CSRF/rate-limit contracts, privacy workflows, legal placeholders, no-store trust/privacy API boundaries, and production launch blockers. Guarded API seams are wired, while provider-backed production controls still require runtime evidence."
       />
 
       <section className="grid four">
         <MetricCard label="Security controls" value={`${dashboardSecuritySummary.total}`} detail={`${dashboardSecuritySummary.blockers} block production`} />
         <MetricCard label="Implemented" value={`${dashboardSecuritySummary.implemented}`} detail="No production-ready controls yet" />
-        <MetricCard label="Scaffolded" value={`${dashboardSecuritySummary.scaffolded}`} detail="Dependency-light helper contracts" />
+        <MetricCard label="Local contracts" value={`${dashboardSecuritySummary.localContracts}`} detail="Dependency-light helper contracts" />
         <MetricCard label="Legal review" value={`${dashboardSecuritySummary.legal}`} detail="Attorney review required" />
       </section>
 
@@ -56,7 +56,7 @@ export default function TrustPage() {
         <article className="card spacious">
           <div className="section-heading-row">
             <h2>Sensitive field policies</h2>
-            <StatusPill label="redaction scaffold" tone="warning" />
+            <StatusPill label="redaction contract" tone="warning" />
           </div>
           <div className="stack-list">
             {dashboardSensitiveFieldPolicies.map((policy) => (
@@ -85,7 +85,7 @@ export default function TrustPage() {
       <section className="card spacious">
         <div className="section-heading-row">
           <h2>Secure upload validation preview</h2>
-          <StatusPill label="signed storage not wired" tone="danger" />
+          <StatusPill label="provider storage proof gated" tone="danger" />
         </div>
         <div className="grid three">
           {dashboardUploadChecks.map((check, index) => (
@@ -103,7 +103,7 @@ export default function TrustPage() {
 
       <section className="grid two spacious">
         <article className="card">
-          <div className="section-heading-row"><h2>Tenant isolation fixtures</h2><StatusPill label="test scaffold" tone="warning" /></div>
+          <div className="section-heading-row"><h2>Tenant isolation fixtures</h2><StatusPill label="fixture contract" tone="warning" /></div>
           <div className="stack-list">
             {dashboardTenantIsolationFixtures.map((fixture) => (
               <div className="list-row" key={fixture.id}>
@@ -173,11 +173,7 @@ export default function TrustPage() {
         </div>
       </section>
 
-      <DisabledActionPanel
-        title="Trust center actions disabled"
-        description="Production requires real auth, tenant isolation tests, upload scanning/storage, rate-limit infrastructure, CSRF/session strategy, privacy workflows, and attorney-reviewed legal documents."
-        actions={["Enable auth guard", "Create signed upload", "Run tenant isolation tests", "Publish privacy policy", "Approve legal pack"]}
-      />
+      <PrivacyRequestActionPanel />
     </main>
   );
 }

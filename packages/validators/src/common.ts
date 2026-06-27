@@ -21,3 +21,25 @@ export const utmSchema = z.object({
   utmMedium: z.string().max(120).optional(),
   utmCampaign: z.string().max(160).optional(),
 });
+
+export const publicReadQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(24),
+});
+
+export const dashboardMetricsQuerySchema = z.object({
+  tenantId: cuidLikeSchema.optional(),
+}).strict();
+
+export const dashboardTenantQuerySchema = z.object({
+  tenantId: cuidLikeSchema.optional(),
+}).strict();
+
+export const dashboardListQuerySchema = z.object({
+  tenantId: cuidLikeSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+}).strict();
+
+export type PublicReadQuery = z.infer<typeof publicReadQuerySchema>;
+export type DashboardMetricsQuery = z.infer<typeof dashboardMetricsQuerySchema>;
+export type DashboardTenantQuery = z.infer<typeof dashboardTenantQuerySchema>;
+export type DashboardListQuery = z.infer<typeof dashboardListQuerySchema>;

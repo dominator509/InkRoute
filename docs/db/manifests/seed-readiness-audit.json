@@ -1,0 +1,13 @@
+{
+  "generatedAt": null,
+  "source": "GAP-018 seed/demo data",
+  "status": "not-run",
+  "findings": [],
+  "rootScriptsChecked": 0,
+  "packageScriptsChecked": 0,
+  "seedMarkersChecked": 0,
+  "modelWritesChecked": 0,
+  "forbiddenPatternsChecked": 0,
+  "requiredExecutionEvidence": [],
+  "note": "Placeholder manifest committed so seed readiness references are concrete; scripts/db/verify-seed-readiness.mjs overwrites this file during pnpm db:verify-seed."
+}

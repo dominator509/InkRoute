@@ -9,12 +9,15 @@
     "start": "next start --port 3001",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "playwright test --project=dashboard-chromium"
+    "test": "playwright test --config ../../playwright.config.ts --project=dashboard-chromium"
   },
   "dependencies": {
     "@inkroute/auth": "workspace:*",
     "@inkroute/config": "workspace:*",
+    "@inkroute/db": "workspace:*",
     "@inkroute/types": "workspace:*",
+    "@inkroute/ui": "workspace:*",
+    "@inkroute/validators": "workspace:*",
     "next": "^15.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -26,11 +29,15 @@
     "@inkroute/releases": "workspace:*",
     "@inkroute/security": "workspace:*",
     "@inkroute/deployment": "workspace:*",
-    "@inkroute/seo": "workspace:*"
+    "@inkroute/seo": "workspace:*",
+    "@inkroute/testing": "workspace:*"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.0"
   }
 }
+

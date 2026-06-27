@@ -1,3 +1,5 @@
+import Image from "next/image";
+import { getPortfolioImageDerivative } from "@inkroute/config";
 import type { PortfolioItem } from "@inkroute/types";
 
 const styleLabel: Record<string, string> = {
@@ -40,14 +42,32 @@ interface PortfolioCardProps {
 
 export function PortfolioCard({ item, priority = false }: PortfolioCardProps) {
   const tags = [item.freshness.replace("_", " "), placementLabel[item.placement] ?? item.placement, item.city].filter(Boolean);
+  const image = getPortfolioImageDerivative(item);
 
   return (
     <article className={priority ? "portfolio-card featured" : "portfolio-card"} aria-label={`${item.title} portfolio item`}>
-      <div className="portfolio-art" role="img" aria-label={item.altText}>
+      <div
+        className="portfolio-art"
+        data-storage-visibility={image.storageVisibility}
+        data-private-original-available={String(image.privateOriginalAvailable)}
+        data-cache-control={image.cacheControl}
+      >
+        <Image
+          className="portfolio-image"
+          src={image.src}
+          alt={image.altText}
+          width={image.width}
+          height={image.height}
+          sizes={image.sizes}
+          priority={priority}
+          placeholder="blur"
+          blurDataURL={image.blurDataUrl}
+          unoptimized
+        />
         <span>{item.title}</span>
       </div>
       <div className="portfolio-card-body">
-        <p className="eyebrow">{tags.join(" · ")}</p>
+        <p className="eyebrow">{tags.join(" ? ")}</p>
         <h3>{item.title}</h3>
         <p>{item.caption}</p>
         <div className="tag-row" aria-label="Tattoo style tags">

@@ -52,9 +52,9 @@ Added `apps/dashboard/lib/releaseDemo.ts` to keep the page modular and agent-edi
 Added dashboard route boundaries:
 
 - `GET /api/releases` returns scaffolded release candidate, rollback, and flag data.
-- `POST /api/releases` validates basic JSON and returns `501 RELEASE_PERSISTENCE_NOT_IMPLEMENTED` with an evaluated draft candidate.
+- `POST /api/releases` validates JSON and uses the auth/idempotency-backed release persistence/audit contract where the DB path is available.
 - `GET /api/feature-flags` returns static flag definitions and decisions.
-- `POST /api/feature-flags` returns `501 FEATURE_FLAG_MUTATION_NOT_IMPLEMENTED`.
+- `POST /api/feature-flags` validates updates and uses the auth/idempotency-backed feature-flag persistence/audit contract where the DB path is available.
 
 Added public route boundary:
 

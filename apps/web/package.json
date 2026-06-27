@@ -9,13 +9,23 @@
     "start": "next start --port 3000",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "playwright test --project=web-chromium --project=web-mobile"
+    "test": "playwright test --project=web-chromium --project=web-mobile",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@inkroute/analytics": "workspace:*",
+    "@inkroute/auth": "workspace:*",
     "@inkroute/config": "workspace:*",
+    "@inkroute/db": "workspace:*",
+    "@inkroute/deployment": "workspace:*",
+    "@inkroute/handoff": "workspace:*",
+    "@inkroute/mobile-support": "workspace:*",
+    "@inkroute/quality": "workspace:*",
     "@inkroute/seo": "workspace:*",
+    "@inkroute/testing": "workspace:*",
     "@inkroute/types": "workspace:*",
     "@inkroute/ui": "workspace:*",
+    "@inkroute/workspace": "workspace:*",
     "next": "^15.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -26,11 +36,14 @@
     "@inkroute/notifications": "workspace:*",
     "@inkroute/observability": "workspace:*",
     "@inkroute/releases": "workspace:*",
-    "@inkroute/security": "workspace:*"
+    "@inkroute/security": "workspace:*",
+    "stripe": "^22.2.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.0"
   }
 }

@@ -44,6 +44,9 @@ importers:
       '@inkroute/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@inkroute/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@inkroute/deployment':
         specifier: workspace:*
         version: link:../../packages/deployment
@@ -65,9 +68,18 @@ importers:
       '@inkroute/seo':
         specifier: workspace:*
         version: link:../../packages/seo
+      '@inkroute/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
       '@inkroute/types':
         specifier: workspace:*
         version: link:../../packages/types
+      '@inkroute/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@inkroute/validators':
+        specifier: workspace:*
+        version: link:../../packages/validators
       next:
         specifier: ^15.0.0
         version: 15.5.19(@playwright/test@1.60.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -78,6 +90,9 @@ importers:
         specifier: ^19.2.0
         version: 19.2.7(react@19.2.7)
     devDependencies:
+      '@playwright/test':
+        specifier: ^1.49.0
+        version: 1.60.0
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.17
@@ -87,6 +102,9 @@ importers:
       typescript:
         specifier: ^5.5.0
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
 
   apps/mobile:
     dependencies:
@@ -145,6 +163,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@inkroute/analytics':
+        specifier: workspace:*
+        version: link:../../packages/analytics
+      '@inkroute/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@inkroute/booking':
         specifier: workspace:*
         version: link:../../packages/booking
@@ -154,6 +178,18 @@ importers:
       '@inkroute/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@inkroute/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@inkroute/deployment':
+        specifier: workspace:*
+        version: link:../../packages/deployment
+      '@inkroute/handoff':
+        specifier: workspace:*
+        version: link:../../packages/handoff
+      '@inkroute/mobile-support':
+        specifier: workspace:*
+        version: link:../../packages/mobile
       '@inkroute/notifications':
         specifier: workspace:*
         version: link:../../packages/notifications
@@ -163,6 +199,9 @@ importers:
       '@inkroute/payments':
         specifier: workspace:*
         version: link:../../packages/payments
+      '@inkroute/quality':
+        specifier: workspace:*
+        version: link:../../packages/quality
       '@inkroute/releases':
         specifier: workspace:*
         version: link:../../packages/releases
@@ -172,6 +211,9 @@ importers:
       '@inkroute/seo':
         specifier: workspace:*
         version: link:../../packages/seo
+      '@inkroute/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
       '@inkroute/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -181,6 +223,9 @@ importers:
       '@inkroute/validators':
         specifier: workspace:*
         version: link:../../packages/validators
+      '@inkroute/workspace':
+        specifier: workspace:*
+        version: link:../../packages/workspace
       next:
         specifier: ^15.0.0
         version: 15.5.19(@playwright/test@1.60.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -190,7 +235,13 @@ importers:
       react-dom:
         specifier: ^19.2.0
         version: 19.2.7(react@19.2.7)
+      stripe:
+        specifier: ^22.2.1
+        version: 22.2.1(@types/node@20.19.42)
     devDependencies:
+      '@playwright/test':
+        specifier: ^1.49.0
+        version: 1.60.0
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.17
@@ -200,6 +251,9 @@ importers:
       typescript:
         specifier: ^5.5.0
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
 
   packages/analytics:
     dependencies:
@@ -210,6 +264,9 @@ importers:
       typescript:
         specifier: ^5.5.0
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
 
   packages/auth:
     dependencies:
@@ -220,6 +277,9 @@ importers:
       typescript:
         specifier: ^5.5.0
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
 
   packages/booking:
     dependencies:
@@ -256,6 +316,9 @@ importers:
       typescript:
         specifier: ^5.5.0
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
 
   packages/db:
     dependencies:
@@ -272,6 +335,9 @@ importers:
       typescript:
         specifier: ^5.5.0
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
 
   packages/deployment:
     devDependencies:
@@ -296,6 +362,9 @@ importers:
       typescript:
         specifier: ^5.5.0
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
 
   packages/notifications:
     dependencies:
@@ -328,6 +397,9 @@ importers:
       '@inkroute/types':
         specifier: workspace:*
         version: link:../types
+      stripe:
+        specifier: ^22.2.1
+        version: 22.2.1(@types/node@20.19.42)
     devDependencies:
       typescript:
         specifier: ^5.5.0
@@ -394,6 +466,9 @@ importers:
       typescript:
         specifier: ^5.5.0
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
 
   packages/ui:
     dependencies:
@@ -410,6 +485,9 @@ importers:
       typescript:
         specifier: ^5.5.0
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
 
   packages/validators:
     dependencies:
@@ -423,6 +501,9 @@ importers:
       typescript:
         specifier: ^5.5.0
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@20.19.42)(lightningcss@1.32.0)(terser@5.48.0)
 
   packages/workspace:
     devDependencies:
@@ -3656,6 +3737,15 @@ packages:
   strip-ansi@7.2.0:
     resolution: {integrity: sha512-yDPMNjp4WyfYBkHnjIRLfca1i6KMyGCtsVgoKe/z1+6vukgaENdgGBZt+ZmKPc4gavvEZ5OgHfHdrazhgNyG7w==}
     engines: {node: '>=12'}
+
+  stripe@22.2.1:
+    resolution: {integrity: sha512-ULAtq25USBEx3yeN5zimEkfYVFETVMP5om25Ryr8ol11P62imaCZLBIEW78T7zm7Wg3wnZi+80S72yf3LCpNhw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@types/node': '>=18'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
 
   structured-headers@0.4.1:
     resolution: {integrity: sha512-0MP/Cxx5SzeeZ10p/bZI0S6MpgD+yxAhi1BOQ34jgnMXsCq3j1t6tQnZu+KdlL7dvJTLT3g9xN8tl10TqgFMcg==}
@@ -7594,6 +7684,10 @@ snapshots:
   strip-ansi@7.2.0:
     dependencies:
       ansi-regex: 6.2.2
+
+  stripe@22.2.1(@types/node@20.19.42):
+    optionalDependencies:
+      '@types/node': 20.19.42
 
   structured-headers@0.4.1: {}
 

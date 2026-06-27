@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-06-21T23:28:54.577Z",
+  "source": "GAP-133 required workspace checks",
+  "status": "pass",
+  "findings": [],
+  "rootScriptsChecked": 9,
+  "workspaceAllTermsChecked": 6,
+  "ciTermsChecked": 6,
+  "prEnforcementTermsChecked": 2,
+  "requiredBranchProtectionChecks": [
+    "CI / quality",
+    "Verify Phase 18 workspace runtime readiness",
+    "Verify PR GAP tracker diff evidence",
+    "Verify Phase 17 quality gates"
+  ],
+  "externalSettingsStillRequired": [
+    "main branch protection",
+    "required status checks",
+    "required workspace audit status",
+    "required PR gap-diff evidence check",
+    "failing workspace-audit PR merge-block proof"
+  ]
+}

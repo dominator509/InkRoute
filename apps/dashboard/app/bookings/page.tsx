@@ -1,7 +1,7 @@
 import { getAvailableBookingActions } from "@inkroute/booking";
 import { DashboardPageHeader } from "../../components/DashboardPageHeader";
 import { StatusPill } from "../../components/StatusPill";
-import { dashboardBookingRows } from "../../lib/demo";
+import { dashboardProjectedBookingRows } from "../../lib/demo";
 
 function statusTone(status: string) {
   if (status === "accepted" || status === "deposit_paid" || status === "scheduled") return "success" as const;
@@ -16,7 +16,7 @@ export default function BookingInboxPage() {
       <DashboardPageHeader
         eyebrow="Booking operations"
         title="Booking inbox"
-        description="Review tattoo requests by readiness, travel city, status, portfolio attribution, and next lifecycle actions. Rows are static demo data until dashboard APIs are wired."
+        description="Review tattoo requests by readiness, travel city, status, portfolio attribution, and next lifecycle actions. Display rows remain projected demo data until repository loaders replace them."
       />
 
       <section className="card table-card" aria-label="Booking requests">
@@ -28,7 +28,7 @@ export default function BookingInboxPage() {
           <span>Status</span>
           <span>Next actions</span>
         </div>
-        {dashboardBookingRows.map((booking) => {
+        {dashboardProjectedBookingRows.map((booking) => {
           const actions = getAvailableBookingActions(booking.status).slice(0, 3);
           return (
             <a className="table-row six" href={`/bookings/${booking.id}`} key={booking.id}>
@@ -37,7 +37,7 @@ export default function BookingInboxPage() {
               <span>{booking.style.replace(/_/g, " ")} · {booking.placement.replace(/_/g, " ")}<small>{booking.sizeEstimate}</small></span>
               <span><strong>{booking.readinessScore}%</strong><small>{booking.portfolioAttribution}</small></span>
               <span><StatusPill label={booking.status} tone={statusTone(booking.status)} /></span>
-              <span>{actions.length > 0 ? actions.map((action) => action.action.replace(/_/g, " ")).join(", ") : "No next action"}<small>Disabled in scaffold</small></span>
+              <span>{actions.length > 0 ? actions.map((action) => action.action.replace(/_/g, " ")).join(", ") : "No next action"}<small>API: POST /api/bookings/{booking.id}/state</small></span>
             </a>
           );
         })}
@@ -45,7 +45,7 @@ export default function BookingInboxPage() {
 
       <section className="card spacious">
         <h2>Production action boundary</h2>
-        <p>Accept, decline, request more info, schedule, no-show, and archive actions must call tenant-scoped API routes, create `BookingStateEvent` rows, enforce RBAC, redact sensitive notes from logs, and write audit entries before this can be used with real clients.</p>
+        <p>Accept, decline, request more info, schedule, no-show, and archive actions now have a tenant-scoped dashboard API that enforces RBAC and writes `BookingStateEvent` plus `AuditLog` rows in one transaction. The visible table still needs repository-backed loaders and client-side action forms before live operator use.</p>
       </section>
     </main>
   );

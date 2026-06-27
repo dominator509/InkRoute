@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "source": "GAP-132 runtime readiness evidence",
+  "description": "Command evidence requirements that must be populated with redacted pass/fail labels before runtime readiness can be claimed.",
+  "requirements": [
+    {
+      "id": "dependency-install",
+      "command": "pnpm install",
+      "gapIds": [
+        "GAP-001",
+        "GAP-132"
+      ],
+      "requiredForProduction": true
+    },
+    {
+      "id": "workspace-all",
+      "command": "pnpm workspace:all",
+      "gapIds": [
+        "GAP-130",
+        "GAP-132"
+      ],
+      "requiredForProduction": true
+    },
+    {
+      "id": "handoff-all",
+      "command": "pnpm handoff:all",
+      "gapIds": [
+        "GAP-121",
+        "GAP-132"
+      ],
+      "requiredForProduction": true
+    },
+    {
+      "id": "quality-all",
+      "command": "pnpm quality:all",
+      "gapIds": [
+        "GAP-126",
+        "GAP-132"
+      ],
+      "requiredForProduction": true
+    },
+    {
+      "id": "typecheck",
+      "command": "pnpm typecheck",
+      "gapIds": [
+        "GAP-001",
+        "GAP-132"
+      ],
+      "requiredForProduction": true
+    },
+    {
+      "id": "unit-tests",
+      "command": "pnpm test:unit",
+      "gapIds": [
+        "GAP-012",
+        "GAP-132"
+      ],
+      "requiredForProduction": true
+    },
+    {
+      "id": "web-build",
+      "command": "pnpm --filter @inkroute/web build",
+      "gapIds": [
+        "GAP-006",
+        "GAP-132"
+      ],
+      "requiredForProduction": true
+    },
+    {
+      "id": "dashboard-build",
+      "command": "pnpm --filter @inkroute/dashboard build",
+      "gapIds": [
+        "GAP-007",
+        "GAP-132"
+      ],
+      "requiredForProduction": true
+    }
+  ]
+}

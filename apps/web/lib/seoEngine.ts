@@ -67,7 +67,7 @@ export const staticSeoRoutes: SeoRouteRecord[] = [
     path: "/booking/confirmation",
     kind: "system",
     title: "Booking Request Confirmation Preview | InkRoute Suite",
-    description: "Static confirmation preview for the booking flow scaffold. Not intended for search indexing.",
+    description: "Static confirmation preview for the booking flow contract. Not intended for search indexing.",
     priority: 0,
     indexMode: "noindex",
     lastModified,

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "source": "GAP-128 semantic documentation audit",
+  "description": "Workspace inventory contract used by documentation quality checks to catch stale app/package references without claiming build/runtime readiness.",
+  "workspaceGlobs": [
+    "apps/*",
+    "packages/*"
+  ],
+  "apps": [
+    "apps/dashboard",
+    "apps/mobile",
+    "apps/web"
+  ],
+  "packages": [
+    "packages/analytics",
+    "packages/auth",
+    "packages/booking",
+    "packages/calendar",
+    "packages/config",
+    "packages/db",
+    "packages/deployment",
+    "packages/handoff",
+    "packages/mobile",
+    "packages/notifications",
+    "packages/observability",
+    "packages/payments",
+    "packages/quality",
+    "packages/releases",
+    "packages/security",
+    "packages/seo",
+    "packages/testing",
+    "packages/types",
+    "packages/ui",
+    "packages/validators",
+    "packages/workspace"
+  ],
+  "documentationRules": {
+    "description": "Backticked app/package root references in Markdown must resolve to a declared workspace member.",
+    "checkedPrefixes": [
+      "apps/",
+      "packages/"
+    ],
+    "ignoredExamples": [
+      "apps/*",
+      "packages/*"
+    ]
+  }
+}
