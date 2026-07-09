@@ -1,4 +1,5 @@
 import { getAvailableBookingActions } from "@inkroute/booking";
+import { notFound } from "next/navigation";
 import { BookingLifecycleActionPanel } from "../../../components/BookingLifecycleActionPanel";
 import { DashboardPageHeader } from "../../../components/DashboardPageHeader";
 import { StatusPill } from "../../../components/StatusPill";
@@ -22,7 +23,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
   const booking = dashboardProjectedBookingRows.find((row) => row.id === bookingId);
 
   if (!booking) {
-    throw new Error(`Booking ${bookingId} was not found in the Phase 5 static demo data.`);
+    notFound();
   }
 
   const payment = dashboardProjectedPayments.find((item) => item.bookingId === booking.id);

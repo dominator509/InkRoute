@@ -153,7 +153,8 @@ export const buildCanonicalDomainExecutionPlan = (): CanonicalDomainExecutionPla
   requiredExternalEvidence: canonicalDomainRequiredExternalEvidence,
 });
 
-const sensitiveCanonicalArtifactKeyPattern = /(token|secret|password|authorization|cookie|provider|payload|domainverification|dns|email|phone)/i;
+const sensitiveCanonicalArtifactKeyPattern =
+  /(authorization|canonical|cookie|crawl|deployment|dns|domain|domainverification|email|host|html|noindex|path|phone|provider|payload|redirect|rendered|robots|route|secret|sitemap|tenant|token|url)/i;
 const sensitiveCanonicalArtifactValuePatterns = [
   /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
   /\+?\d[\d\s().-]{7,}\d/g,

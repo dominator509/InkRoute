@@ -421,7 +421,9 @@ export const buildBookingContactExecutionPlan = (): BookingContactExecutionPlan 
 });
 
 const bookingContactSensitiveArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|file|provider|stripe|payment|deposit|medical|note|email|phone|calendar|notification|upload|reference|booking|contact|session|cookie)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|file|provider|stripe|payment|deposit|medical|note|email|phone|calendar|notification|upload|reference|booking|contact|message|thread|destination|hash|idempotency|handoff|audit|session|cookie|csrf|route|request|response|payload|body|local|fallback|browser|playwright|trace|screenshot|video|html|dom|confirmation|transaction|state|event|artifact|path|command|typecheck|build|test|output|stdout|stderr|log|ci|workflow|run|commit|repository|repo|branch|pull|pr|reviewer|codeowner|id|key)/i;
+const bookingContactSensitiveArtifactValuePattern =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|tok|pi|stripe|provider|gh[psuor]|github_pat)_[A-Za-z0-9_-]+|provider-token[^"'\s]*|(?:tenant|client|contact|message|thread|notification|handoff|idempotency|booking|request|workflow|upload|reference|payment|deposit|audit|state|event|session|provider|route|trace|screenshot|transaction|ci|run|commit|repository|repo|branch|pull|pr|reviewer|codeowner|database)[-_:/]?[A-Za-z0-9_.-]{6,}|medical:[^"'\n\r]+|private-file|[A-Za-z0-9_-]{24,})/giu;
 
 export const buildRedactedBookingContactArtifact = (
   artifact: unknown,
@@ -446,6 +448,17 @@ export const buildRedactedBookingContactArtifact = (
           return [key, redact(entry, entryPath)];
         }),
       );
+    }
+
+    if (typeof value === "string") {
+      const redactedValue = value.replace(
+        bookingContactSensitiveArtifactValuePattern,
+        "[REDACTED_BOOKING_CONTACT_PRIVATE_VALUE]",
+      );
+      if (redactedValue !== value) {
+        redactions.push(path || "$");
+      }
+      return redactedValue;
     }
 
     return value;

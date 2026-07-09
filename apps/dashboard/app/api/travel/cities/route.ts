@@ -21,13 +21,54 @@ function hashIdempotencySubject(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function resultTravelCityId(result: unknown): string | null {
-  if (!result || typeof result !== "object" || !("travelCityId" in result)) {
-    return null;
-  }
+function buildTravelCityResponseProjection() {
+  return {
+    travelCityResponseAllowlisted: true,
+    travelCityIdEchoed: false,
+    tenantIdEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
 
-  const value = (result as { travelCityId?: unknown }).travelCityId;
-  return typeof value === "string" && value.length > 0 ? value : null;
+function buildSafeTravelCityResponse(result: {
+  status: "created" | "replayed";
+  travelCity: {
+    slug: string;
+    city: string;
+    region: string;
+    country: string;
+    timezone: string;
+    latitude: unknown;
+    longitude: unknown;
+    publicSummary: string | null;
+    waitlistEnabled: boolean;
+    createdAt: Date;
+  };
+}) {
+  return {
+    responseProjection: buildTravelCityResponseProjection(),
+    travelCity: {
+      slug: result.travelCity.slug,
+      city: result.travelCity.city,
+      region: result.travelCity.region,
+      country: result.travelCity.country,
+      timezone: result.travelCity.timezone,
+      latitude: result.travelCity.latitude === null ? null : Number(result.travelCity.latitude),
+      longitude: result.travelCity.longitude === null ? null : Number(result.travelCity.longitude),
+      publicSummary: result.travelCity.publicSummary,
+      waitlistEnabled: result.travelCity.waitlistEnabled,
+      createdAt: result.travelCity.createdAt.toISOString(),
+    },
+    persistenceReceipt: {
+      travelCityPersisted: true,
+      auditPersisted: result.status === "created",
+      idempotencyPersisted: true,
+      idempotencyReplay: result.status === "replayed",
+    },
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -85,13 +126,14 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
           error: {
             code: "PROVIDER_TRAVEL_CITY_PERSISTENCE_NOT_CONFIGURED",
             message: "Production travel city creation requires DB-backed dashboard auth, tenant-scoped TravelCity persistence, and AuditLog rows; local fallback mutations are disabled.",
             gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-046"],
           },
           productionBoundary: { localTravelCityMutationFallbackDisabled: true },
+          responseProjection: buildTravelCityResponseProjection(),
         },
         { status: 503, headers: noStoreHeaders },
       );
@@ -101,11 +143,12 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         error: {
           code: "DATABASE_REQUIRED",
           message: "Travel city creation requires database-backed dashboard auth so TravelCity and AuditLog rows can be persisted.",
         },
+        responseProjection: buildTravelCityResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-046"],
       },
       { status: 409, headers: noStoreHeaders },
@@ -142,10 +185,9 @@ export async function POST(request: NextRequest) {
         },
         select: { id: true, status: true, result: true },
       });
-      const replayTravelCityId = idempotency.status === "completed" ? resultTravelCityId(idempotency.result) : null;
-      if (replayTravelCityId) {
+      if (idempotency.status === "completed") {
         const travelCity = await tx.travelCity.findFirst({
-          where: { id: replayTravelCityId, tenantId },
+          where: { tenantId, slug: input.slug },
           select: {
             id: true,
             tenantId: true,
@@ -215,7 +257,9 @@ export async function POST(request: NextRequest) {
             source: "dashboard-api",
             slug: travelCity.slug,
             waitlistEnabled: travelCity.waitlistEnabled,
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
           },
         },
         select: { id: true, createdAt: true },
@@ -226,11 +270,12 @@ export async function POST(request: NextRequest) {
         data: {
           status: "completed",
           result: toJsonValue({
-            travelCityId: travelCity.id,
-            auditId: audit.id,
+            travelCityPersisted: true,
+            auditLogged: true,
             created: true,
             rawLocationStoredInResult: false,
             publicCacheRevalidated: false,
+            internalPersistenceIdsStored: false,
           }),
         },
       });
@@ -240,7 +285,14 @@ export async function POST(request: NextRequest) {
 
     if (result.status === "slug_exists") {
       return NextResponse.json(
-        { ok: false, error: { code: "TRAVEL_CITY_SLUG_EXISTS", message: "A travel city with this slug already exists for this tenant.", travelCityId: result.travelCityId } },
+        {
+          ok: false,
+          error: { code: "TRAVEL_CITY_SLUG_EXISTS", message: "A travel city with this slug already exists for this tenant." },
+          responseProjection: {
+            ...buildTravelCityResponseProjection(),
+            duplicateTravelCityIdEchoed: false,
+          },
+        },
         { status: 409, headers: noStoreHeaders },
       );
     }
@@ -249,17 +301,9 @@ export async function POST(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         persistence: "database",
-        travelCity: {
-          ...result.travelCity,
-          latitude: result.travelCity.latitude === null ? null : Number(result.travelCity.latitude),
-          longitude: result.travelCity.longitude === null ? null : Number(result.travelCity.longitude),
-          createdAt: result.travelCity.createdAt.toISOString(),
-        },
-        auditId: result.status === "created" ? result.audit.id : null,
-        idempotencyKeyId: result.idempotency.id,
-        idempotencyReplay: result.status === "replayed",
+        ...buildSafeTravelCityResponse(result),
         gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-046"],
         boundary: "Dashboard travel city creation is tenant-scoped, no-store, idempotency-backed, and audited; public SEO/cache revalidation and integration tests remain evidence-gated.",
       },
@@ -271,8 +315,9 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
           error: { code: "DATABASE_UNAVAILABLE", message: "Travel city creation requires the dashboard database connection." },
+          responseProjection: buildTravelCityResponseProjection(),
           gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-046"],
         },
         { status: 503, headers: noStoreHeaders },
@@ -281,7 +326,14 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof Error && /Unique constraint/i.test(error.message)) {
       return NextResponse.json(
-        { ok: false, error: { code: "TRAVEL_CITY_SLUG_EXISTS", message: "A travel city with this slug already exists for this tenant." } },
+        {
+          ok: false,
+          error: { code: "TRAVEL_CITY_SLUG_EXISTS", message: "A travel city with this slug already exists for this tenant." },
+          responseProjection: {
+            ...buildTravelCityResponseProjection(),
+            duplicateTravelCityIdEchoed: false,
+          },
+        },
         { status: 409, headers: noStoreHeaders },
       );
     }

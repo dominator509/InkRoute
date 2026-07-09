@@ -131,6 +131,7 @@ describe("Google Calendar sync runtime contract", () => {
     expect(webhookRoute).toContain("MISSING_GOOGLE_CALENDAR_WEBHOOK_HEADERS");
     expect(webhookRoute).toContain("buildGoogleCalendarProviderSyncPlan");
     expect(webhookRoute).toContain("PROVIDER_GOOGLE_CALENDAR_WEBHOOK_NOT_CONFIGURED");
+    expect(webhookRoute).toContain("rawIdempotencyKeyEchoed: false");
     expect(syncSource).toContain("pushWebhookHandlerImplemented: true");
     expect(calendarRoute).toContain("provider-worker-required");
     expect(readRouteStaticTest).toContain("Read APIs wired");
@@ -305,6 +306,10 @@ describe("Google Calendar sync runtime contract", () => {
         pushChannelUrl: "https://private/channel",
         publicSummary: "Google Calendar sync evidence captured",
       },
+      safeNote:
+        "evidence_google_calendar_sync_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/google-calendar/private-proof.json",
+      safeSyncPath: "test-results/google-calendar-sync-runtime/private-sync.json",
+      safeGoogleRun: "google_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
     };
 
     const redacted = buildRedactedGoogleCalendarSyncArtifact(artifact);
@@ -314,6 +319,9 @@ describe("Google Calendar sync runtime contract", () => {
       "tenantDomain",
       "providerEventPayload",
       "nested.pushChannelUrl",
+      "safeNote",
+      "safeSyncPath",
+      "safeGoogleRun",
     ]);
     expect(redacted.redactedArtifact).toMatchObject({
       googleOAuthRefreshToken: "[REDACTED]",
@@ -324,7 +332,21 @@ describe("Google Calendar sync runtime contract", () => {
         pushChannelUrl: "[REDACTED]",
         publicSummary: "Google Calendar sync evidence captured",
       },
+      safeSyncPath: "[REDACTED]",
+      safeGoogleRun: "[REDACTED]",
     });
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "evidence_google_calendar_sync_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "artifacts/google-calendar/private-proof.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "test-results/google-calendar-sync-runtime/private-sync.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "google_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
 
     const review = buildGoogleCalendarSyncArtifactReview({
       publicSummary: "safe Google Calendar sync evidence",

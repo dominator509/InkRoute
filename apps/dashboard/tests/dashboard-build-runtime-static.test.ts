@@ -148,6 +148,14 @@ describe("dashboard build/runtime verification contract", () => {
         privateBuildLog: "private-tenant stack trace",
         publicSummary: "dashboard build runtime evidence captured",
       },
+      browserSmokeTrace: "test-results/dashboard-build-runtime/trace-tenant_01HZYXZYXZYXZYXZYXZYXZYXZ.zip",
+      renderedRouteHtml: "<main data-tenant='tenant_01HZYXZYXZYXZYXZYXZYXZYXZ'>Dashboard</main>",
+      dashboardApiPayload: "booking_01HZYXZYXZYXZYXZYXZYXZYXZ client_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      ciOutput: "workflow run ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ passed",
+      nextRuntimeStack: "private-tenant stack trace for route_dashboard_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      safeNote:
+        "evidence_dashboard_build_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/dashboard-build/private-proof.json",
+      safeTracePath: "test-results/dashboard-build-runtime/private-trace.zip",
     });
     const directRedaction = buildRedactedDashboardBuildRuntimeArtifact({
       publicSummary: "safe dashboard build evidence",
@@ -204,11 +212,31 @@ describe("dashboard build/runtime verification contract", () => {
       "buildEnv",
       "authorizationHeader",
       "nested.privateBuildLog",
+      "browserSmokeTrace",
+      "renderedRouteHtml",
+      "dashboardApiPayload",
+      "ciOutput",
+      "nextRuntimeStack",
+      "safeNote",
+      "safeTracePath",
     ]);
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant.example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("client@example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("DATABASE_URL");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("provider-token");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("booking_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("route_dashboard_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain(
+      "evidence_dashboard_build_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain(
+      "artifacts/dashboard-build/private-proof.json",
+    );
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain(
+      "test-results/dashboard-build-runtime/private-trace.zip",
+    );
     expect(JSON.stringify(artifactReview.artifact)).toContain("dashboard build runtime evidence captured");
     expect(artifactReview.secretSafe).toBe(true);
     expect(directRedaction.redactions).toEqual(["sourceMapUrl"]);

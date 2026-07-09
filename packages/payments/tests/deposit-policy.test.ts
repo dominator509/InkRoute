@@ -12,6 +12,7 @@ import {
   buildStripeWebhookReconciliationPlan,
   buildStripeWebhookRuntimeReadinessPlan,
   calculateDepositPolicy,
+  createDepositSession,
   evaluateNoShowPolicy,
   evaluateRefundPolicy,
   generateReceiptNumber,
@@ -66,7 +67,40 @@ describe("payment policy engine", () => {
 
     expect(draft.mode).toBe("payment");
     expect(draft.customerEmail).toBe("client@example.com");
+    expect(draft.metadata).toMatchObject({
+      tenantScopePersisted: "true",
+      bookingRequestPersisted: "true",
+      rawTenantIdStored: "false",
+      rawBookingRequestIdStored: "false",
+      internalPersistenceIdsStored: "false",
+    });
+    expect(draft.metadata).not.toHaveProperty("tenantId");
+    expect(draft.metadata).not.toHaveProperty("bookingRequestId");
     expect(draft.idempotencyKey).toContain("tenant_demo:booking_demo:15000:usd");
+  });
+
+  it("builds local mock checkout session identifiers without exposing raw idempotency scope", async () => {
+    const session = await createDepositSession({
+      tenantId: "tenant_demo",
+      bookingRequestId: "booking_demo",
+      amountCents: 15000,
+      currency: "usd",
+      successUrl: "https://example.test/success",
+      cancelUrl: "https://example.test/cancel",
+      clientEmail: "client@example.com",
+      artistDisplayName: "Mara Vale",
+    });
+
+    expect(session.provider).toBe("stripe");
+    expect(session.providerSessionId).toMatch(/^cs_mock_[a-f0-9]{24}$/);
+    expect(session.providerSessionId).not.toContain("tenant_demo");
+    expect(session.providerSessionId).not.toContain("booking_demo");
+    expect(session.providerSessionId).not.toContain("deposit:");
+    expect(session.checkoutUrl).toMatch(/^https:\/\/mock-inkroute\.local\/checkout\/[a-f0-9]{24}$/);
+    expect(session.checkoutUrl).not.toContain("tenant_demo");
+    expect(session.checkoutUrl).not.toContain("booking_demo");
+    expect(session.checkoutUrl).not.toContain("deposit:");
+    expect(session.checkoutUrl).not.toContain("cs_mock_");
   });
 
   it("blocks live Stripe Checkout until SDK, secrets, persistence, token, and redirects are safe", () => {
@@ -341,9 +375,13 @@ describe("payment policy engine", () => {
     expect(plan.writes.every((write) => write.tenantId === "tenant_demo")).toBe(true);
     expect(plan.writes.find((write) => write.model === "PaymentAuditLog")?.payload).toMatchObject({
       action: "checkout_session_created",
-      providerSessionId: "cs_test_001",
+      providerSessionIdHash: expect.any(String),
+      rawProviderSessionIdStored: false,
+      rawProviderPaymentIntentIdStored: false,
+      rawProviderChargeIdStored: false,
       bookingRequestId: "booking_demo",
     });
+    expect(plan.writes.find((write) => write.model === "PaymentAuditLog")?.payload).not.toHaveProperty("providerSessionId");
     expect(plan.requiredControls).toBe(paymentLifecyclePersistenceRequiredControls);
     expect(plan.blockers).toEqual([]);
   });
@@ -476,9 +514,14 @@ describe("payment policy engine", () => {
     expect(plan.writes.find((write) => write.model === "PaymentAuditLog")?.payload).toMatchObject({
       action: "execute_refund",
       providerCall: "stripe.refunds.create",
+      providerChargeIdHash: expect.any(String),
+      rawProviderSessionIdStored: false,
+      rawProviderPaymentIntentIdStored: false,
+      rawProviderChargeIdStored: false,
       refundAmountCents: 12500,
       actorId: "artist_001",
     });
+    expect(plan.writes.find((write) => write.model === "PaymentAuditLog")?.payload).not.toHaveProperty("providerChargeId");
     expect(plan.requiredControls).toBe(paymentOperationsWorkflowRequiredControls);
     expect(plan.blockers).toEqual([]);
   });

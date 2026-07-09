@@ -322,7 +322,23 @@ describe("Prisma lifecycle runtime contract", () => {
       migrationSql: "-- token github_pat_1234567890ABCDEFGHIJKLMNOP",
       commandOutput: "migrated by owner@example.com",
       ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/27171288295",
+      schemaValidateArtifactPath: "test-results/prisma-lifecycle-runtime/schema-validate.log",
+      migrationDriftPayload: {
+        driftOutput: "changed table tenant_runtime_prisma_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      },
+      destructiveResetGuardReport: {
+        productionDatabaseUrl: "postgres://prod:secret@example.neon.tech/inkroute",
+        rollbackTranscript: "reset blocked for production-provider-01HZYXZYXZYXZYXZYXZYXZYXZ",
+      },
+      seedExecutionManifest: {
+        rowId: "row_01HZYXZYXZYXZYXZYXZYXZYXZ",
+        queryOutput: "seeded tenant and workflow rows",
+      },
       safeSummary: "Prisma lifecycle proof captured",
+      neutralMigrationTrace: "migration_sql_01HZYXZYXZYXZYXZYXZYXZYXZ updated table_row_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCiTrace: "workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ checked commit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralArtifactLocation: "test-results/prisma-lifecycle-runtime/private-schema.log",
+      neutralGuardTrace: "production_guard_01HZYXZYXZYXZYXZYXZYXZYXZ blocked reset_plan_01HZYXZYXZYXZYXZYXZYXZYXZ",
     };
 
     const bundle = buildPrismaLifecycleRedactedEvidenceBundle(artifact);
@@ -334,7 +350,22 @@ describe("Prisma lifecycle runtime contract", () => {
     expect(bundle.databaseExecutionAllowed).toBe(false);
     expect(bundle.providerExecutionAllowed).toBe(false);
     expect(bundle.redactions).toEqual(
-      expect.arrayContaining(["database", "direct", "url", "sql", "token", "email", "output", "environment"]),
+      expect.arrayContaining([
+        "database",
+        "direct",
+        "url",
+        "sql",
+        "token",
+        "email",
+        "output",
+        "environment",
+        "artifact",
+        "drift",
+        "destructive",
+        "rollback",
+        "seed",
+        "query",
+      ]),
     );
     expect(bundle.redactedArtifact).toMatchObject({
       databaseUrl: "[REDACTED]",
@@ -342,7 +373,15 @@ describe("Prisma lifecycle runtime contract", () => {
       migrationSql: "[REDACTED]",
       commandOutput: "[REDACTED]",
       ciRunUrl: "[REDACTED]",
+      schemaValidateArtifactPath: "[REDACTED]",
+      migrationDriftPayload: "[REDACTED]",
+      destructiveResetGuardReport: "[REDACTED]",
+      seedExecutionManifest: "[REDACTED]",
       safeSummary: "Prisma lifecycle proof captured",
+      neutralMigrationTrace: "[REDACTED] updated [REDACTED]",
+      neutralCiTrace: "[REDACTED] checked [REDACTED]",
+      neutralArtifactLocation: "[REDACTED]",
+      neutralGuardTrace: "[REDACTED] blocked [REDACTED]",
     });
   });
 });

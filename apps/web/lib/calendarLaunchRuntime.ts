@@ -750,9 +750,9 @@ export function buildCalendarLaunchEvidenceDecision(
 }
 
 const sensitiveCalendarLaunchKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|google|calendar|oauth|refresh|sync|ics|client|provider|repository|branch)$/iu;
+  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|google|calendar|oauth|refresh|sync|ics|client|provider|repository|repo|branch|pullRequest|pr|reviewer|codeowner)$/iu;
 const sensitiveCalendarLaunchValuePattern =
-  /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:ya29\.|1\/\/)[A-Za-z0-9._-]+|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|repo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+|branch:[A-Za-z0-9_./-]+|pr[_:#-]?[A-Za-z0-9_.-]+|reviewer[_:@-]?[A-Za-z0-9_.-]+|CODEOWNER:[A-Za-z0-9_.@/-]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:ya29\.|1\/\/)[A-Za-z0-9._-]+|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
 
 const redactCalendarLaunchString = (value: string): string =>
   value.replace(sensitiveCalendarLaunchValuePattern, "[REDACTED]");

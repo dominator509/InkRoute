@@ -198,6 +198,10 @@ describe("travel publish runtime contract", () => {
         syncTraceUrl: "https://private/sync-trace.zip",
         publicStatus: "published",
       },
+      safeNote:
+        "evidence_travel_publish_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/travel-publish/private-proof.json",
+      safePublishPath: "test-results/travel-publish-runtime/private-e2e-trace.json",
+      safeProviderRun: "travel_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
     });
 
     expect(redacted.secretSafe).toBe(true);
@@ -206,6 +210,9 @@ describe("travel publish runtime contract", () => {
       "tenantDomain",
       "waitlistClientEmail",
       "nested.syncTraceUrl",
+      "safeNote",
+      "safePublishPath",
+      "safeProviderRun",
     ]);
     expect(redacted.artifact).toEqual({
       notificationProviderQueueUrl: "[redacted]",
@@ -216,7 +223,21 @@ describe("travel publish runtime contract", () => {
         syncTraceUrl: "[redacted]",
         publicStatus: "published",
       },
+      safePublishPath: "[redacted]",
+      safeProviderRun: "[redacted]",
     });
+    expect(JSON.stringify(redacted.artifact)).not.toContain(
+      "evidence_travel_publish_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.artifact)).not.toContain(
+      "artifacts/travel-publish/private-proof.json",
+    );
+    expect(JSON.stringify(redacted.artifact)).not.toContain(
+      "test-results/travel-publish-runtime/private-e2e-trace.json",
+    );
+    expect(JSON.stringify(redacted.artifact)).not.toContain(
+      "travel_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
 
     const review = buildTravelPublishArtifactReview({
       publicSummary: "safe travel publish artifact",

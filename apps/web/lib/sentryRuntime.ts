@@ -136,7 +136,7 @@ function redactSentrySdkArtifactValue(value: unknown, key = ""): unknown {
     return value;
   }
 
-  if (/(?:auth|clientsecret|credential|dsn|email|password|phone|private|secret|token)/i.test(key)) {
+  if (/(?:auth|clientsecret|credential|dsn|email|password|phone|private|secret|token|repository|repo|branch|pull|pr|reviewer|codeowner)/i.test(key)) {
     return "[REDACTED]";
   }
 

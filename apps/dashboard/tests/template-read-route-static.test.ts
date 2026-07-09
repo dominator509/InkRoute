@@ -38,19 +38,46 @@ describe("dashboard notification template read route contract", () => {
     expect(routeSource).toContain("tx.notificationDelivery.findMany");
     expect(routeSource).toContain("tx.auditLog.create");
     expect(routeSource).toContain('action: "notification:read:templates"');
+    expect(routeSource).toContain("auditLogged: true");
+    expect(routeSource).toContain("auditIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).toContain("function buildTemplateReadResponseProjection");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("notificationIdsEchoed: false");
+    expect(routeSource).toContain("deliveryIdsEchoed: false");
+    expect(routeSource).toContain("clientIdsEchoed: false");
+    expect(routeSource).toContain("bookingRequestIdsEchoed: false");
+    expect(routeSource).toContain("appointmentIdsEchoed: false");
+    expect(routeSource).toContain("providerErrorEchoed: false");
+    expect(routeSource).toContain("clientLinked: Boolean(notification.clientId)");
+    expect(routeSource).toContain("notificationLinked: Boolean(delivery.notificationId)");
+    expect(routeSource).not.toContain("auditId: result.audit.id");
+    expect(routeSource).not.toContain("id: notification.id");
+    expect(routeSource).not.toContain("clientId: notification.clientId");
+    expect(routeSource).not.toContain("bookingRequestId: notification.bookingRequestId");
+    expect(routeSource).not.toContain("appointmentId: notification.appointmentId");
+    expect(routeSource).not.toContain("id: delivery.id");
+    expect(routeSource).not.toContain("notificationId: delivery.notificationId");
   });
 
   it("redacts notification bodies, destination hashes, provider IDs, and provider errors", () => {
-    expect(routeSource).toContain("redactBodyPreview");
     expect(routeSource).toContain('"notification.body"');
     expect(routeSource).toContain('"destinationHash"');
     expect(routeSource).toContain('"providerMessageId"');
     expect(routeSource).toContain('"errorMessage"');
     expect(routeSource).not.toContain("body: true");
+    expect(routeSource).not.toContain("destinationHash: true");
+    expect(routeSource).not.toContain("providerMessageId: true");
+    expect(routeSource).not.toContain("errorMessage: true");
+    expect(routeSource).toContain('bodyPreview: "[redacted-notification-body]"');
+    expect(routeSource).toContain("bodySelectedFromDatabase: false");
     expect(routeSource).not.toContain("destinationHash: delivery.destinationHash");
-    expect(routeSource).toContain('destinationHash: delivery.destinationHash ? "[redacted-dashboard-field]" : null');
-    expect(routeSource).toContain('providerMessageId: delivery.providerMessageId ? "[redacted-dashboard-field]" : null');
-    expect(routeSource).toContain('errorMessage: delivery.errorMessage ? "[redacted-dashboard-field]" : null');
+    expect(routeSource).toContain('destinationHash: "[redacted-dashboard-field]"');
+    expect(routeSource).toContain("destinationHashSelectedFromDatabase: false");
+    expect(routeSource).toContain('providerMessageId: "[redacted-dashboard-field]"');
+    expect(routeSource).toContain("providerMessageIdSelectedFromDatabase: false");
+    expect(routeSource).toContain('errorMessage: "[redacted-dashboard-field]"');
+    expect(routeSource).toContain("errorMessageSelectedFromDatabase: false");
   });
 
   it("keeps local fallback and database outage states explicit", () => {

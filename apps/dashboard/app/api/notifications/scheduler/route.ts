@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@inkroute/db";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../../dashboardAuth";
 import { buildDashboardSchedulerPlanFromAction, dashboardNotificationSchedulerContract } from "../../../../lib/notificationScheduler";
-import type { NotificationSchedulerAction } from "@inkroute/notifications";
+import type { NotificationSchedulerAction, NotificationSchedulerPlan } from "@inkroute/notifications";
 
 export const runtime = "nodejs";
 
@@ -15,8 +15,19 @@ function parseAction(value: unknown): NotificationSchedulerAction {
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
+function buildNotificationSchedulerResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
 function hashSchedulerSubject(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function idempotencyStorageFingerprint(value: string) {
+  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
 }
 
 function resultNumber(value: unknown, key: string): number | null {
@@ -25,11 +36,64 @@ function resultNumber(value: unknown, key: string): number | null {
   return typeof result[key] === "number" ? result[key] : null;
 }
 
+function resultBoolean(value: unknown, key: string): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return (value as Record<string, unknown>)[key] === true;
+}
+
 function providerForChannel(channel: string): string {
   if (channel === "email") return "resend";
   if (channel === "sms") return "twilio";
   if (channel === "push") return "expo";
   return "in_app";
+}
+
+function buildSafeNotificationSchedulerPlanResponse(plan: NotificationSchedulerPlan) {
+  return {
+    status: plan.status,
+    action: plan.action,
+    queueStrategy: plan.queueStrategy,
+    requiresTransaction: plan.requiresTransaction,
+    scheduledJobCount: plan.scheduledJobs.length,
+    retryDelaySeconds: plan.retryDelaySeconds,
+    writeModels: plan.writes.map((write) => write.model),
+    requiredControls: plan.requiredControls,
+    blockers: plan.blockers,
+    idempotencyKeyPresent: Boolean(plan.idempotencyKey),
+    rawIdempotencyKeyEchoed: false,
+    rawScheduledJobsEchoed: false,
+    rawWritePayloadsEchoed: false,
+    rawJobIdEchoed: false,
+    rawAppointmentIdEchoed: false,
+    rawBookingRequestIdEchoed: false,
+    rawActorIdEchoed: false,
+    rawCancellationReasonEchoed: false,
+    ...buildNotificationSchedulerResponseProjection(),
+  };
+}
+
+function buildSafeNotificationSchedulerContractResponse() {
+  return {
+    runtimeReadiness: dashboardNotificationSchedulerContract.runtimeReadiness,
+    requiredRepositoryMethods: dashboardNotificationSchedulerContract.requiredRepositoryMethods,
+    plans: {
+      schedulePlan: buildSafeNotificationSchedulerPlanResponse(dashboardNotificationSchedulerContract.schedulePlan),
+      processPlan: buildSafeNotificationSchedulerPlanResponse(dashboardNotificationSchedulerContract.processPlan),
+      retryPlan: buildSafeNotificationSchedulerPlanResponse(dashboardNotificationSchedulerContract.retryPlan),
+      cancelPlan: buildSafeNotificationSchedulerPlanResponse(dashboardNotificationSchedulerContract.cancelPlan),
+      deadLetterPlan: buildSafeNotificationSchedulerPlanResponse(dashboardNotificationSchedulerContract.deadLetterPlan),
+    },
+    rawContractPlansEchoed: false,
+    rawScheduledJobsEchoed: false,
+    rawWritePayloadsEchoed: false,
+    rawJobIdEchoed: false,
+    rawAppointmentIdEchoed: false,
+    rawBookingRequestIdEchoed: false,
+    rawActorIdEchoed: false,
+    rawCancellationReasonEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    ...buildNotificationSchedulerResponseProjection(),
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -49,9 +113,9 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(
     {
       ok: true,
-      tenantId,
       source: actor.source,
-      contract: dashboardNotificationSchedulerContract,
+      ...buildNotificationSchedulerResponseProjection(),
+      contract: buildSafeNotificationSchedulerContractResponse(),
       gapIds: ["GAP-065", "GAP-066"],
       boundary: "Scheduler API exposes the local queue/worker contract and action plans; persisted NotificationJob, DeadLetterJob, NotificationWorkerAuditLog, and IdempotencyKey repositories are still required for live execution.",
     },
@@ -105,15 +169,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         ok: false,
-        tenantId,
         source: actor.source,
+        ...buildNotificationSchedulerResponseProjection(),
         error: {
           code: "NOTIFICATION_SCHEDULER_PERSISTENCE_NOT_CONFIGURED",
           message:
             "Production notification scheduler writes require durable NotificationJob, DeadLetterJob, NotificationWorkerAuditLog, IdempotencyKey, queue backend, and worker execution persistence; local-contract fallback responses are disabled.",
           gapIds: ["GAP-065", "GAP-066"],
         },
-        plan,
+        plan: buildSafeNotificationSchedulerPlanResponse(plan),
         requiredRepositoryMethods: dashboardNotificationSchedulerContract.requiredRepositoryMethods,
         productionBoundary: {
           schedulerLocalContractFallbackDisabled: true,
@@ -132,10 +196,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          tenantId,
           source: actor.source,
+          ...buildNotificationSchedulerResponseProjection(),
           error: { code: "NOTIFICATION_SCHEDULER_PLAN_BLOCKED", message: "Scheduler sequence is not safe to persist." },
-          plan,
+          plan: buildSafeNotificationSchedulerPlanResponse(plan),
           requiredRepositoryMethods: dashboardNotificationSchedulerContract.requiredRepositoryMethods,
           gapIds: ["GAP-065", "GAP-066"],
         },
@@ -207,6 +271,9 @@ export async function POST(request: NextRequest) {
             notificationCount: resultNumber(idempotency.result, "notificationCount") ?? 0,
             deliveryCount: resultNumber(idempotency.result, "deliveryCount") ?? 0,
             handoffCount: resultNumber(idempotency.result, "handoffCount") ?? 0,
+            auditLogged: resultBoolean(idempotency.result, "auditLogged"),
+            providerDispatchEnabled: resultBoolean(idempotency.result, "providerDispatchEnabled"),
+            workerExecutionEnabled: resultBoolean(idempotency.result, "workerExecutionEnabled"),
           };
         }
 
@@ -254,7 +321,7 @@ export async function POST(request: NextRequest) {
                 channel,
                 provider,
                 state: "queued",
-                idempotencyKey: `${plan.idempotencyKey}:${index}:${channel}`,
+                idempotencyKey: `${idempotencyStorageFingerprint(plan.idempotencyKey ?? requestedIdempotencyKey)}:${index}:${channel}`,
                 destinationHash,
                 sanitizedPayload: {
                   action,
@@ -263,6 +330,7 @@ export async function POST(request: NextRequest) {
                   scheduledOffsetMinutes: job.scheduledOffsetMinutes,
                   providerDispatchEnabled: false,
                   rawDestinationStored: false,
+                  rawIdempotencyKeyStored: false,
                 },
                 availableAt: new Date(job.scheduledAt),
               },
@@ -277,11 +345,14 @@ export async function POST(request: NextRequest) {
             actorUserId: actor.actorUserId,
             action: "notification.scheduler.schedule_sequence",
             entityType: "NotificationProviderHandoff",
-            entityId: plan.idempotencyKey,
+            entityId: idempotencyStorageFingerprint(plan.idempotencyKey ?? requestedIdempotencyKey),
             metadata: {
               source: "dashboard-notification-scheduler-route",
-              idempotencyKeyId: idempotency.id,
-              requestHash,
+              idempotencyPersisted: true,
+              rawIdempotencyKeyStored: false,
+              requestHashPersisted: true,
+              rawRequestHashStored: false,
+              internalPersistenceIdsStored: false,
               notificationCount,
               deliveryCount,
               handoffCount,
@@ -297,26 +368,34 @@ export async function POST(request: NextRequest) {
           data: {
             status: "completed",
             result: {
-              auditId: audit.id,
+              auditLogged: true,
+              auditIdEchoed: false,
+              idempotencyKeyIdEchoed: false,
+              notificationIdsEchoed: false,
+              deliveryIdsEchoed: false,
+              handoffIdsEchoed: false,
+              internalPersistenceIdsEchoed: false,
+              internalPersistenceIdsStored: false,
               notificationCount,
               deliveryCount,
               handoffCount,
-              requestHash,
+              requestHashPersisted: true,
+              rawRequestHashStored: false,
               providerDispatchEnabled: false,
               workerExecutionEnabled: false,
             },
           },
         });
 
-        return { status: "persisted" as const, idempotency, auditId: audit.id, notificationCount, deliveryCount, handoffCount };
+        return { status: "persisted" as const, idempotency, auditLogged: true, notificationCount, deliveryCount, handoffCount, providerDispatchEnabled: false, workerExecutionEnabled: false };
       });
 
       if (result.status === "related_not_found") {
         return NextResponse.json(
           {
             ok: false,
-            tenantId,
             source: actor.source,
+            ...buildNotificationSchedulerResponseProjection(),
             error: { code: "RELATED_RECORD_NOT_FOUND", message: `Scheduler ${result.relation} must exist for this tenant.` },
             gapIds: ["GAP-065", "GAP-066"],
           },
@@ -328,10 +407,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             ok: false,
-            tenantId,
             source: actor.source,
+            ...buildNotificationSchedulerResponseProjection(),
             error: { code: "IDEMPOTENCY_CONFLICT", message: "Idempotency key was already used for a different scheduler payload." },
-            idempotencyKeyId: result.idempotency.id,
+            idempotencyRecorded: true,
+            idempotencyKeyIdEchoed: false,
             gapIds: ["GAP-065", "GAP-066"],
             boundary: "Notification scheduler idempotency is request-hash guarded and defaults to denial on mismatched replay payloads.",
           },
@@ -342,17 +422,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           ok: true,
-          tenantId,
           source: actor.source,
+          ...buildNotificationSchedulerResponseProjection(),
           persistence: "database",
           status: result.status === "replayed" ? "database-replayed" : "database-persisted",
-          idempotencyKeyId: result.idempotency.id,
+          idempotencyRecorded: true,
+          idempotencyKeyIdEchoed: false,
           idempotencyReplay: result.status === "replayed",
           notificationCount: result.notificationCount,
           deliveryCount: result.deliveryCount,
           handoffCount: result.handoffCount,
-          auditId: result.status === "persisted" ? result.auditId : null,
-          plan,
+          auditLogged: result.auditLogged,
+          auditIdEchoed: false,
+          notificationIdsEchoed: false,
+          deliveryIdsEchoed: false,
+          handoffIdsEchoed: false,
+          internalPersistenceIdsEchoed: false,
+          plan: buildSafeNotificationSchedulerPlanResponse(plan),
           requiredRepositoryMethods: dashboardNotificationSchedulerContract.requiredRepositoryMethods,
           gapIds: ["GAP-065", "GAP-066"],
           boundary: "Scheduler schedule_sequence persists tenant-scoped Notification, NotificationDelivery, NotificationProviderHandoff, IdempotencyKey, and AuditLog rows without provider dispatch; worker execution remains evidence-gated.",
@@ -364,8 +450,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             ok: false,
-            tenantId,
             source: actor.source,
+            ...buildNotificationSchedulerResponseProjection(),
             error: { code: "DATABASE_UNAVAILABLE", message: "Notification scheduler persistence requires the dashboard database connection." },
             gapIds: ["GAP-065", "GAP-066"],
           },
@@ -383,9 +469,9 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(
     {
       ok: plan.status === "ready",
-      tenantId,
       source: actor.source,
-      plan,
+      ...buildNotificationSchedulerResponseProjection(),
+      plan: buildSafeNotificationSchedulerPlanResponse(plan),
       requiredRepositoryMethods: dashboardNotificationSchedulerContract.requiredRepositoryMethods,
       gapIds: ["GAP-065", "GAP-066"],
       boundary: "Scheduler POST returns the local transaction/write contract; live execution waits for queue persistence repositories and worker processes.",

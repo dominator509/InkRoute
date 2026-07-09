@@ -180,7 +180,9 @@ export const timezoneRecurrenceExternalCommands = [
   "GitHub Actions timezone recurrence QA evidence job",
 ] as const;
 
-const sensitiveTimezoneRecurrenceArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|timezone|calendar|google|ics|artist|appointment|travel|recurrence|availability|email|phone|medical|payment|customer)/i;
+const sensitiveTimezoneRecurrenceArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|timezone|calendar|google|ics|artist|appointment|travel|recurrence|availability|email|phone|medical|payment|customer|artifact|path|ci|workflow|run|evidence|id|key)/i;
+const sensitiveTimezoneRecurrenceArtifactValue =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token|google)[A-Za-z0-9_-]*|(?:tenant|client|user|member|session|refresh|timezone|calendar|google|ics|artist|appointment|travel|recurrence|availability|provider|artifact|workflow|ci|run|evidence|dashboard)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactTimezoneRecurrenceArtifactValue = (
   value: unknown,
@@ -204,6 +206,13 @@ const redactTimezoneRecurrenceArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && sensitiveTimezoneRecurrenceArtifactValue.test(value)) {
+    sensitiveTimezoneRecurrenceArtifactValue.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(sensitiveTimezoneRecurrenceArtifactValue, "[REDACTED]");
+  }
+
+  sensitiveTimezoneRecurrenceArtifactValue.lastIndex = 0;
   return value;
 };
 

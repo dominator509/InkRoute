@@ -13,7 +13,7 @@ Source-controlled workflow contracts exist in `.github/workflows/ci.yml` and `.g
 5. Build public web and dashboard.
 6. Run Playwright route smoke tests against preview deployments.
 7. Run Prisma generate/migration dry-run against staging database.
-8. Upload Sentry release/source maps once Sentry is configured.
+8. Upload Sentry release/source maps blocked until Sentry is configured.
 9. Deploy preview web/dashboard.
 10. Require protected approval before production deploy.
 11. Record release evidence and rollback target.
@@ -38,7 +38,7 @@ See `ENVIRONMENT_VARIABLES.md` and `deployment/manifests/environment-contract.js
 ## Rollback gates
 
 - Web/dashboard rollback target captured before production deploy.
-- Database migration marked expand-only or manually approved.
+- Database migration gated: marked expand-only or manually approved.
 - Feature flag kill switches ready for risky features.
 - EAS Update only used when runtime compatibility is safe.
 - Incident channel and owner assigned.

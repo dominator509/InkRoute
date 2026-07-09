@@ -19,6 +19,13 @@ describe("Stripe webhook route static contract", () => {
     expect(webhookSource).toContain("buildStripeWebhookRouteContract");
   });
 
+  it("keeps production fail-closed Stripe webhook responses tenant-scope proof only", () => {
+    expect(routeSource).toContain("tenantResolved: input.tenantSlug !== \"unknown\"");
+    expect(routeSource).toContain("tenantSlugEchoed: false");
+    expect(routeSource).not.toContain(["tenantSlugEchoed", "true"].join(": "));
+    expect(routeSource).not.toContain("tenantSlug: input.tenantSlug");
+  });
+
   it("defines replay and reconciliation adapter seams", () => {
     expect(webhookSource).toContain("StripeWebhookReplayStore");
     expect(webhookSource).toContain("hasProcessed");
@@ -103,6 +110,49 @@ describe("Stripe webhook route static contract", () => {
     expect(routeSource).toContain("txRuntime.paymentAuditLog.create");
     expect(routeSource).toContain("stripe.webhook.received");
     expect(routeSource).toContain("rawPayloadStored: false");
+    expect(routeSource).toContain("eventIdReceived: Boolean(input.eventId)");
+    expect(routeSource).toContain("rawProviderEventIdStored: false");
+    expect(routeSource).toContain("tenantResolved: true");
+    expect(routeSource).toContain("bookingMetadataPresent: Boolean(bookingRequestId)");
+    expect(routeSource).toContain("paymentMatched: Boolean(payment)");
+    expect(routeSource).toContain("depositMatched: Boolean(deposit)");
+    expect(routeSource).toContain("internalPersistenceIdsStored: false");
+    expect(routeSource).toContain("stripeWebhookDeliveryRecorded: true");
+    expect(routeSource).toContain("providerWebhookDeliveryRecorded: true");
+    expect(routeSource).toContain("providerWebhookDeliveryIdEchoed: false");
+    expect(routeSource).toContain("auditLogged: true");
+    expect(routeSource).toContain("auditIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).toContain("tenantScope: { tenantResolved: true, tenantIdEchoed: false }");
+    expect(routeSource).toContain("paymentMutationApplied: Boolean(persisted.paymentMutation)");
+    expect(routeSource).toContain("paymentIdEchoed: false");
+    expect(routeSource).toContain("depositMutationApplied: Boolean(persisted.depositMutation)");
+    expect(routeSource).toContain("depositIdEchoed: false");
+    expect(routeSource).not.toContain("tenantId: tenantResolution.tenantId");
+    expect(routeSource).not.toContain("providerWebhookDeliveryId: persisted.replay.id");
+    expect(routeSource).not.toContain("providerWebhookDeliveryId: persisted.delivery.id");
+    expect(routeSource).not.toContain("auditId: persisted.audit.id");
+    expect(routeSource).not.toContain("stripeWebhookDeliveryId: delivery.id");
+    expect(routeSource).not.toContain("providerWebhookDeliveryId: delivery.id");
+    expect(routeSource).not.toContain("paymentMutation: persisted.paymentMutation");
+    expect(routeSource).not.toContain("depositMutation: persisted.depositMutation");
+    expect(routeSource).not.toContain("tenantId: input.tenantId,\n          bookingRequestId");
+    expect(routeSource).not.toContain("paymentId: payment?.id ?? paymentId");
+    expect(routeSource).not.toContain("depositId: deposit?.id ?? depositId");
     expect(routeSource).toContain("Production Stripe webhooks require STRIPE_WEBHOOK_SECRET");
+    expect(routeSource).toContain("buildSafeStripeWebhookInterpretationResponse");
+    expect(routeSource).toContain("buildSafeStripeWebhookContractResponse");
+    expect(routeSource).toContain("buildSafeLocalStripeWebhookReceipt");
+    expect(routeSource).toContain("eventIdEchoed: false");
+    expect(routeSource).toContain("webhookIdEchoed: false");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("rawProviderEventIdEchoed: false");
+    expect(routeSource).toContain("rawInterpretationEchoed: false");
+    expect(routeSource).toContain("rawWebhookContractEchoed: false");
+    expect(routeSource).toContain("rawProviderPayloadEchoed: false");
+    expect(routeSource).not.toContain("eventId: input.eventId");
+    expect(routeSource).not.toContain("interpretation: input.interpretation");
+    expect(routeSource).not.toContain("eventId: webhookContract.reconciliation.eventId");
+    expect(routeSource).not.toContain("storedWebhook,");
   });
 });

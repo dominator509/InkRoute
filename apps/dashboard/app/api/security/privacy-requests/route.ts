@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@inkroute/db";
+import { createHash } from "node:crypto";
 import {
   buildDashboardPrivacyWorkflowEvidencePlan,
   buildPrivacyRequestDraft,
@@ -20,11 +21,14 @@ type PrivacyRequestInput = {
 };
 
 type DemoPrivacyRequest = {
-  id: string;
-  tenantId: string;
+  idHash: string;
+  rawIdStored: false;
+  tenantIdHash: string;
+  rawTenantIdStored: false;
   requestType: PrivacyRequestType;
-  email: string;
-  details?: Record<string, unknown>;
+  requesterEmailHash: string;
+  rawRequesterEmailStored: false;
+  rawDetailsStored: false;
   redactedSubmission: Record<string, unknown>;
   receivedAt: string;
 };
@@ -54,8 +58,18 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function getClientIp(request: NextRequest): string {
-  return request.headers.get("x-client-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown-ip";
+function getClientIpFromAllowlistedHeaders(request: NextRequest): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    request.headers.get("cf-connecting-ip") ??
+    request.headers.get("forwarded") ??
+    "unknown-ip"
+  );
+}
+
+function hashPrivacyRequestSelector(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 function checkDashboardMutationRateLimit(request: NextRequest, actor: { tenantId: string; actorUserId: string }) {
@@ -64,7 +78,9 @@ function checkDashboardMutationRateLimit(request: NextRequest, actor: { tenantId
     return { allowed: true, remaining: 0, retryAfterSeconds: 0, maxRequests: 0 };
   }
 
-  const key = `${rule.id}:${actor.tenantId}:${actor.actorUserId}:${getClientIp(request)}`;
+  const key = `${rule.id}:${hashPrivacyRequestSelector(
+    JSON.stringify([actor.tenantId, actor.actorUserId, getClientIpFromAllowlistedHeaders(request)]),
+  )}`;
   const now = Date.now();
   const windowMs = rule.windowSeconds * 1000;
   const bucket = rateLimitBuckets.get(key);
@@ -105,6 +121,29 @@ function buildPrivacyWorkflowEvidencePlan(options: { persistedPrivacyRequestStor
     ciEvidenceCaptured: false,
     secretSafeArtifactsCaptured: false,
   });
+}
+
+function buildPrivacyRequestResponseProjection(input: {
+  actor: { tenantId: string; actorUserId: string };
+  privacyRequestId?: string | null;
+  auditId?: string | null;
+  clientId?: string | null;
+}) {
+  return {
+    tenantIdHash: hashPrivacyRequestSelector(input.actor.tenantId),
+    tenantIdEchoed: false,
+    clientIdHash: input.clientId ? hashPrivacyRequestSelector(input.clientId) : null,
+    clientIdEchoed: false,
+    privacyRequestIdHash: input.privacyRequestId ? hashPrivacyRequestSelector(input.privacyRequestId) : null,
+    privacyRequestIdEchoed: false,
+    auditIdHash: input.auditId ? hashPrivacyRequestSelector(input.auditId) : null,
+    auditIdEchoed: false,
+    actorUserIdHash: hashPrivacyRequestSelector(input.actor.actorUserId),
+    actorUserIdEchoed: false,
+    requesterEmailEchoed: false,
+    rawPayloadEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
 }
 
 function addDays(date: Date, days: number): Date {
@@ -203,7 +242,8 @@ export async function POST(request: NextRequest) {
               {
                 status: "intake_received",
                 at: now.toISOString(),
-                actorUserId: actor.actorUserId,
+                actorUserIdHash: hashPrivacyRequestSelector(actor.actorUserId),
+                rawActorUserIdStored: false,
                 source: "dashboard-api",
                 note: "Dashboard privacy intake persisted; fulfillment workers remain gated by GAP-040.",
               },
@@ -222,7 +262,6 @@ export async function POST(request: NextRequest) {
             id: true,
             requestType: true,
             status: true,
-            requesterEmail: true,
             dueAt: true,
             legalHold: true,
             createdAt: true,
@@ -271,24 +310,34 @@ export async function POST(request: NextRequest) {
         {
           ok: true,
           data: {
-            tenantId: actor.tenantId,
+            tenantScope: { actorTenantMatched: true },
             actor: {
-              userId: actor.actorUserId,
               role: actor.role,
+              actorUserIdEchoed: false,
             },
             persistence: "database",
             draft: buildPrivacyRequestDraft(requestInput.type),
             dashboardPrivacyWorkflowEvidencePlan,
+            responseProjection: buildPrivacyRequestResponseProjection({
+              actor,
+              privacyRequestId: result.privacyRequest.id,
+              auditId: result.audit.id,
+              clientId: requestInput.clientId ?? null,
+            }),
             persisted: {
-              id: result.privacyRequest.id,
+              privacyRequestIdEchoed: false,
               requestType: result.privacyRequest.requestType,
               status: result.privacyRequest.status,
-              email: redactRecord({ email: result.privacyRequest.requesterEmail }).email,
+              email: "[redacted]",
+              requesterEmailSelectedFromDatabase: false,
               dueAt: result.privacyRequest.dueAt.toISOString(),
               legalHold: result.privacyRequest.legalHold,
               receivedAt: result.privacyRequest.createdAt.toISOString(),
             },
-            auditId: result.audit.id,
+            auditLogged: true,
+            auditIdEchoed: false,
+            actorUserIdEchoed: false,
+            internalPersistenceIdsEchoed: false,
             nextStep: "Privacy request intake is persisted and audited; export/delete/anonymize workers remain deferred until provider/legal evidence is captured.",
             requiredNextWork: [
               "Implement verified export/delete/rectification workers with legal retention holds.",
@@ -351,13 +400,14 @@ export async function POST(request: NextRequest) {
           gapIds: ["GAP-013", "GAP-095", "GAP-098", "GAP-099", "GAP-100", "GAP-101"],
         },
         data: {
-          tenantId: actor.tenantId,
+          tenantScope: { actorTenantMatched: true },
           actor: {
-            userId: actor.actorUserId,
             role: actor.role,
+            actorUserIdEchoed: false,
           },
           draft: buildPrivacyRequestDraft(requestInput.type),
           dashboardPrivacyWorkflowEvidencePlan,
+          responseProjection: buildPrivacyRequestResponseProjection({ actor, clientId: requestInput.clientId ?? null }),
           redactedSubmission,
           productionBoundary: {
             inMemoryPrivacyRequestPersistenceDisabled: true,
@@ -372,14 +422,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const localPrivacyRequestId = nextRequestId();
   const persisted: DemoPrivacyRequest = {
-    id: nextRequestId(),
-    tenantId: actor.tenantId,
+    idHash: hashPrivacyRequestSelector(localPrivacyRequestId),
+    rawIdStored: false,
+    tenantIdHash: hashPrivacyRequestSelector(actor.tenantId),
+    rawTenantIdStored: false,
     requestType: requestInput.type,
-    email: requestInput.email,
+    requesterEmailHash: hashPrivacyRequestSelector(requestInput.email),
+    rawRequesterEmailStored: false,
+    rawDetailsStored: false,
     redactedSubmission,
     receivedAt: nowIso(),
-    ...(requestInput.details !== undefined ? { details: requestInput.details } : {}),
   };
 
   inMemoryPrivacyRequests.push(persisted);
@@ -388,15 +442,20 @@ export async function POST(request: NextRequest) {
     {
       ok: true,
       data: {
-        tenantId: demoTenantId,
+        tenantScope: { actorTenantMatched: true, localDemoTenantScoped: true },
         actor: {
-          userId: actor.actorUserId,
           role: actor.role,
+          actorUserIdEchoed: false,
         },
         draft: buildPrivacyRequestDraft(requestInput.type),
         dashboardPrivacyWorkflowEvidencePlan,
+        responseProjection: buildPrivacyRequestResponseProjection({
+          actor,
+          privacyRequestId: localPrivacyRequestId,
+          clientId: requestInput.clientId ?? null,
+        }),
         persisted: {
-          id: persisted.id,
+          privacyRequestIdEchoed: false,
           requestType: persisted.requestType,
           email: persisted.redactedSubmission.email,
           redactedSubmission: persisted.redactedSubmission,

@@ -40,26 +40,40 @@ describe("provider webhook reconciliation contract", () => {
     const payload = buildRedactedProviderWebhookPayload({
       source: "email",
       destination: "client@example.test",
+      eventId: "provider_event_internal_selector",
+      idempotencyKey: "provider:idempotency:internal",
       rawBody: "{\"email\":\"client@example.test\"}",
+      rawHeaders: {
+        cookie: "provider-session=secret",
+        signature: "provider-signature-secret",
+      },
       nested: {
         authorization: "Bearer secret",
-        providerPayload: { phone: "+12065550142", messageBody: "private body" },
+        providerPayload: { phone: "+12065550142", messageBody: "private body", providerMessageId: "provider_message_internal" },
       },
     });
 
     expect(payload).toEqual({
       source: "email",
       destination: "[redacted]",
+      eventId: "[redacted]",
+      idempotencyKey: "[redacted]",
       rawBody: "[redacted]",
+      rawHeaders: "[redacted]",
       nested: {
         authorization: "[redacted]",
         providerPayload: "[redacted]",
       },
     });
     expect(JSON.stringify(payload)).not.toContain("client@example.test");
+    expect(JSON.stringify(payload)).not.toContain("provider_event_internal_selector");
+    expect(JSON.stringify(payload)).not.toContain("provider:idempotency:internal");
+    expect(JSON.stringify(payload)).not.toContain("provider-session=secret");
+    expect(JSON.stringify(payload)).not.toContain("provider-signature-secret");
     expect(JSON.stringify(payload)).not.toContain("Bearer secret");
     expect(JSON.stringify(payload)).not.toContain("+12065550142");
     expect(JSON.stringify(payload)).not.toContain("private body");
+    expect(JSON.stringify(payload)).not.toContain("provider_message_internal");
   });
 
   it("executes local provider webhook reconciliation for idempotency, exactly-once delivery, suppression, inbound routing, invalid push token suppression, audit, and failed alerting", async () => {
@@ -117,6 +131,8 @@ describe("provider webhook reconciliation contract", () => {
 
   it("redacts provider payload summaries and enumerates required writes before side effects", () => {
     expect(contractSource).toContain("redactedWebhookPayloadSummary");
+    expect(contractSource).toContain("redactedProviderWebhookReconciliationSummary");
+    expect(contractSource).toContain("reconciliation: redactedProviderWebhookReconciliationSummary(input.reconciliation)");
     expect(contractSource).toContain("omittedFields");
     expect(contractSource).toContain("ProviderEvent");
     expect(contractSource).toContain("NotificationDelivery");

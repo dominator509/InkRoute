@@ -23,11 +23,11 @@ Wire one test-mode provider sandbox while preserving scaffold boundaries.
 
 Candidate provider surfaces:
 
-- Stripe deposits and verified webhooks.
-- Resend/email delivery and webhook handling.
+- Stripe deposits and verified webhooks [sandbox].
+- Resend/email delivery and webhook handling [sandbox].
 - Twilio SMS sandbox and STOP/HELP compliance behavior.
 - Google Calendar OAuth/freebusy/event sync.
-- Expo Push token and test delivery.
+- Expo Push token and test delivery [sandbox].
 - Sentry web/dashboard/mobile setup and release source maps.
 
 ## Guardrails

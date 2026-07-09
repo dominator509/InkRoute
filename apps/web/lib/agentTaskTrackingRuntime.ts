@@ -275,7 +275,7 @@ export const agentTaskTrackingRuntimeExecutionPolicy: AgentTaskTrackingRuntimeEx
 };
 
 const sensitiveAgentTaskTrackingKeyPattern =
-  /(token|secret|password|authorization|cookie|github|issueUrl|projectItemUrl|trackingUrl|artifactUrl|ciRunUrl|assignee|actor|tenantId|userId|runId|email|phone|payload)/i;
+  /(token|secret|password|authorization|cookie|github|issue|issueUrl|project|projectItemUrl|tracking|trackingUrl|artifact|artifactUrl|ciRun|ciRunUrl|workflow|commit|repository|branch|pr|pullrequest|queue|task|handoff|gap|tracker|status|trace|ledger|audit|sync|assignee|actor|reviewer|codeowner|label|metadata|tenantId|userId|runId|email|phone|payload|raw|request|response|log|output|transcript|path|database|dsn|stack|error)/i;
 
 const sensitiveAgentTaskTrackingStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
@@ -283,7 +283,9 @@ const sensitiveAgentTaskTrackingStringPatterns: readonly [RegExp, string][] = [
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
   [/\b(?:ghp|gho|ghu|ghs|sk|pk|rk|whsec)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
-  [/\b(?:tenant|user|project|issue|task|run|tracking)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+  [/postgres(?:ql)?:\/\/[^\s"'<>]+/gi, "[REDACTED_DSN]"],
+  [/\b(?:tenant|user|actor|reviewer|assignee|provider|project|issue|task|run|tracking|queue|handoff|gap|tracker|status|trace|ledger|audit|sync|workflow|ci|commit|repository|branch|pr|pullrequest|codeowner|github)_[A-Za-z0-9_.-]+\b/gi, "[REDACTED_ID]"],
+  [/\b(?:coverage|artifacts|test-results|reports|docs|diffs)\/[A-Za-z0-9_./-]{6,}\b/gi, "[REDACTED_ARTIFACT_PATH]"],
 ];
 
 export function buildAgentTaskTrackingRuntimeExecutionPlan(): AgentTaskTrackingRuntimeExecutionPlan {

@@ -6,6 +6,7 @@ import {
   type OfflineSyncAuditEvent,
   type OfflineSyncPlan,
 } from "@inkroute/mobile-support";
+import { createHash } from "node:crypto";
 import { mobileApiFetch, type MobileApiClientRequest, type MobileApiResponseEnvelope, type MobileApiSession } from "./mobileApiClient";
 import { offlineQueueItems } from "./mobileDemo";
 
@@ -50,9 +51,10 @@ export interface OfflineConnectivityAdapter {
 export interface OfflineSyncRunResult {
   plan: OfflineSyncPlan;
   auditEvents: readonly OfflineSyncAuditEvent[];
-  syncedItemIds: readonly string[];
-  failedItemIds: readonly string[];
-  blockedItemIds: readonly string[];
+  syncedItemIdHashes: readonly string[];
+  failedItemIdHashes: readonly string[];
+  blockedItemIdHashes: readonly string[];
+  rawItemIdsEchoed: false;
 }
 
 export interface OfflineReconnectSyncController {
@@ -120,13 +122,23 @@ export function buildOfflineSyncTransportFailureAuditEvent(
   occurredAt: string,
 ): OfflineSyncAuditEvent {
   return {
-    itemId: item.id,
+    itemIdHash: buildOfflineResultItemHash(item),
+    rawItemIdEchoed: false,
     decision: "transport_failed",
-    idempotencyKey,
+    idempotencyKeyHash: buildOfflineResultIdempotencyHash(idempotencyKey),
+    rawIdempotencyKeyEchoed: false,
     sensitive: item.sensitive,
     occurredAt,
     redactedDetail: "Offline sync transport failed. Payload, response body, and credentials redacted.",
   };
+}
+
+function buildOfflineResultItemHash(item: OfflineQueueItem): string {
+  return `offline-item:${createHash("sha256").update(JSON.stringify([item.tenantId ?? "unknown-tenant", item.kind, item.id])).digest("hex")}`;
+}
+
+function buildOfflineResultIdempotencyHash(idempotencyKey: string): string {
+  return `offline-idempotency:${createHash("sha256").update(idempotencyKey).digest("hex")}`;
 }
 
 export function createOfflineReconnectSyncController(input: {
@@ -200,9 +212,9 @@ export async function runOfflineSyncOnce(input: {
     encryptedStoreAvailable: input.store.encryptedAtRest,
   });
   const auditEvents: OfflineSyncAuditEvent[] = [];
-  const syncedItemIds: string[] = [];
-  const failedItemIds: string[] = [];
-  const blockedItemIds: string[] = [];
+  const syncedItemIdHashes: string[] = [];
+  const failedItemIdHashes: string[] = [];
+  const blockedItemIdHashes: string[] = [];
 
   const nextItems = await Promise.all(items.map(async (item) => {
     const decision = plan.decisions.find((entry) => entry.itemId === item.id);
@@ -213,7 +225,7 @@ export async function runOfflineSyncOnce(input: {
     await input.store.appendAudit(auditEvent);
 
     if (decision.status !== "ready_to_sync") {
-      if (decision.status !== "already_synced") blockedItemIds.push(item.id);
+      if (decision.status !== "already_synced") blockedItemIdHashes.push(buildOfflineResultItemHash(item));
       return item;
     }
 
@@ -236,7 +248,7 @@ export async function runOfflineSyncOnce(input: {
       const failureAuditEvent = buildOfflineSyncTransportFailureAuditEvent(item, decision.idempotencyKey, input.generatedAt);
       auditEvents.push(failureAuditEvent);
       await input.store.appendAudit(failureAuditEvent);
-      failedItemIds.push(item.id);
+      failedItemIdHashes.push(buildOfflineResultItemHash(item));
       return {
         ...item,
         status: "failed" as const,
@@ -245,7 +257,7 @@ export async function runOfflineSyncOnce(input: {
       };
     }
 
-    syncedItemIds.push(item.id);
+    syncedItemIdHashes.push(buildOfflineResultItemHash(item));
     return {
       ...item,
       status: "synced" as const,
@@ -259,9 +271,10 @@ export async function runOfflineSyncOnce(input: {
   return {
     plan,
     auditEvents,
-    syncedItemIds,
-    failedItemIds,
-    blockedItemIds,
+    syncedItemIdHashes,
+    failedItemIdHashes,
+    blockedItemIdHashes,
+    rawItemIdsEchoed: false,
   };
 }
 

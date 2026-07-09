@@ -24,6 +24,72 @@ function toJsonValue(value: unknown) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function buildNotificationPreferenceResponseProjection() {
+  return {
+    clientResponseAllowlisted: true,
+    tenantIdEchoed: false,
+    clientIdEchoed: false,
+    clientContactFieldsEchoed: false,
+    rawDestinationEchoed: false,
+    destinationHashEchoed: false,
+    preferenceRowIdsEchoed: false,
+    suppressionRowIdsEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafeNotificationPreferenceResponse(result: {
+  status: "updated" | "replayed";
+  client: {
+    marketingOptIn: boolean;
+    smsOptIn: boolean;
+    updatedAt: Date;
+  };
+  preferences: Array<{
+    channel: string;
+    optedIn: boolean;
+  }>;
+  suppressions: Array<{
+    channel: string;
+    reason: string;
+    active: boolean;
+  }>;
+}) {
+  const safePreferences = result.preferences.map((preference) => ({
+    channel: preference.channel,
+    optedIn: preference.optedIn,
+  }));
+  const safeSuppressions = result.suppressions.map((suppression) => ({
+    channel: suppression.channel,
+    reason: suppression.reason,
+    active: suppression.active,
+  }));
+
+  return {
+    client: {
+      marketingOptIn: result.client.marketingOptIn,
+      smsOptIn: result.client.smsOptIn,
+      updatedAt: result.client.updatedAt.toISOString(),
+    },
+    preferences: safePreferences,
+    suppressions: safeSuppressions,
+    responseProjection: buildNotificationPreferenceResponseProjection(),
+    persistenceReceipt: {
+      clientUpdated: true,
+      preferenceRowsPersisted: result.preferences.length,
+      suppressionRowsPersisted: result.suppressions.length,
+      auditPersisted: result.status === "updated",
+      idempotencyPersisted: true,
+      idempotencyReplay: result.status === "replayed",
+      providerWebhookReplayed: false,
+      liveStopEnforced: false,
+    },
+  };
+}
+
 export async function PATCH(request: NextRequest, context: NotificationPreferenceRouteContext) {
   let actor;
   try {
@@ -86,8 +152,8 @@ export async function PATCH(request: NextRequest, context: NotificationPreferenc
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          clientId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildNotificationPreferenceResponseProjection(),
           error: {
             code: "PROVIDER_NOTIFICATION_PREFERENCE_PERSISTENCE_NOT_CONFIGURED",
             message: "Production notification preference updates require DB-backed dashboard auth, tenant-scoped preferences/suppressions, and AuditLog rows; local fallback mutations are disabled.",
@@ -103,8 +169,8 @@ export async function PATCH(request: NextRequest, context: NotificationPreferenc
       {
         ok: false,
         source: actor.source,
-        tenantId,
-        clientId,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildNotificationPreferenceResponseProjection(),
         error: {
           code: "DATABASE_REQUIRED",
           message: "Notification preference updates require database-backed dashboard auth so preference, suppression, client, and AuditLog rows can be persisted.",
@@ -224,12 +290,12 @@ export async function PATCH(request: NextRequest, context: NotificationPreferenc
             channel: preference.channel,
             optedIn: preference.optedIn,
             source: "dashboard-api",
-            metadata: { destinationStored: Boolean(preference.destination), actorUserId: actor.actorUserId },
+            metadata: { destinationHashOnly: Boolean(preference.destination), rawDestinationStored: false, actorUserId: actor.actorUserId },
           },
           update: {
             optedIn: preference.optedIn,
             source: "dashboard-api",
-            metadata: { destinationStored: Boolean(preference.destination), actorUserId: actor.actorUserId },
+            metadata: { destinationHashOnly: Boolean(preference.destination), rawDestinationStored: false, actorUserId: actor.actorUserId },
           },
           select: { id: true, channel: true, optedIn: true },
         });
@@ -260,13 +326,13 @@ export async function PATCH(request: NextRequest, context: NotificationPreferenc
             source: "dashboard-api",
             active: true,
             rawPayloadStored: false,
-            metadata: { clientId: client.id, actorUserId: actor.actorUserId },
+            metadata: { clientMatched: true, actorUserId: actor.actorUserId, internalPersistenceIdsStored: false },
           },
           update: {
             active: true,
             source: "dashboard-api",
             rawPayloadStored: false,
-            metadata: { clientId: client.id, actorUserId: actor.actorUserId },
+            metadata: { clientMatched: true, actorUserId: actor.actorUserId, internalPersistenceIdsStored: false },
           },
           select: { id: true, channel: true, reason: true, active: true },
         });
@@ -285,7 +351,10 @@ export async function PATCH(request: NextRequest, context: NotificationPreferenc
             preferenceCount: preferences.length,
             suppressionCount: suppressions.length,
             rawPayloadStored: false,
-            idempotencyKeyId: idempotency.id,
+            rawDestinationStored: false,
+            redactedFields: ["email", "phone", "pushToken"],
+            idempotencyPersisted: true,
+            internalPersistenceIdsStored: false,
             boundary: "Dashboard preference update only; provider webhook STOP/unsubscribe replay proof and live suppression enforcement remain gated.",
           },
         },
@@ -297,11 +366,13 @@ export async function PATCH(request: NextRequest, context: NotificationPreferenc
         data: {
           status: "completed",
           result: toJsonValue({
-            clientId: client.id,
-            auditId: audit.id,
+            preferencesPersisted: true,
+            suppressionsEvaluated: true,
+            auditLogged: true,
             preferenceCount: preferences.length,
             suppressionCount: suppressions.length,
             rawDestinationStoredInResult: false,
+            internalPersistenceIdsStored: false,
             providerWebhookReplayed: false,
             liveStopEnforced: false,
           }),
@@ -312,22 +383,23 @@ export async function PATCH(request: NextRequest, context: NotificationPreferenc
     });
 
     if (result.status === "client_not_found") {
-      return NextResponse.json({ ok: false, error: { code: "CLIENT_NOT_FOUND", message: "Client was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: { code: "CLIENT_NOT_FOUND", message: "Client was not found for this tenant." },
+          responseProjection: buildNotificationPreferenceResponseProjection(),
+        },
+        { status: 404, headers: noStoreHeaders },
+      );
     }
 
     return NextResponse.json(
       {
         ok: true,
         source: actor.source,
-        tenantId,
-        clientId,
+        tenantScope: { actorTenantMatched: true, clientTenantMatched: true },
         persistence: "database",
-        client: { ...result.client, updatedAt: result.client.updatedAt.toISOString() },
-        preferences: result.preferences,
-        suppressions: result.suppressions,
-        auditId: result.status === "updated" ? result.audit.id : null,
-        idempotencyKeyId: result.idempotency.id,
-        idempotencyReplay: result.status === "replayed",
+        ...buildSafeNotificationPreferenceResponse(result),
         gapIds: ["GAP-010", "GAP-038", "GAP-040", "GAP-065", "GAP-069"],
         boundary: "Notification preferences and suppression markers are tenant-scoped, no-store, idempotency-backed, and audited; provider webhook replay, live STOP enforcement, and integration evidence remain gated.",
       },
@@ -339,8 +411,8 @@ export async function PATCH(request: NextRequest, context: NotificationPreferenc
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          clientId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildNotificationPreferenceResponseProjection(),
           error: { code: "DATABASE_UNAVAILABLE", message: "Notification preference updates require the dashboard database connection." },
           gapIds: ["GAP-010", "GAP-038", "GAP-040", "GAP-065", "GAP-069"],
         },

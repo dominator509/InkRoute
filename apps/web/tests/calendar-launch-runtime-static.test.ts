@@ -34,6 +34,7 @@ describe("calendar launch runtime contract", () => {
   const calendarTests = readRepoFile("packages/calendar/tests/availability-conflicts.test.ts");
   const dashboardCalendarRoute = readRepoFile("apps/dashboard/app/api/calendar/route.ts");
   const dashboardCalendarTest = readRepoFile("apps/dashboard/tests/calendar-read-route-static.test.ts");
+  const googleCalendarWebhookRoute = readRepoFile("apps/web/app/api/webhooks/calendar/route.ts");
   const publicTravelIcsRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/calendar/[artistSlug]/travel.ics/route.ts");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
@@ -184,6 +185,18 @@ describe("calendar launch runtime contract", () => {
     expect(publicTravelIcsRoute).toContain("headers: privateNoStoreHeaders");
     expect(publicTravelIcsRoute).toContain("...privateNoStoreHeaders");
     expect(publicTravelIcsRoute).not.toContain('headers: { "Cache-Control": "private, no-store" }');
+  });
+
+  it("keeps Google Calendar push webhook responses free of raw provider identifiers", () => {
+    expect(googleCalendarWebhookRoute).toContain("rawProviderChannelIdEchoed: false");
+    expect(googleCalendarWebhookRoute).toContain("rawProviderResourceIdEchoed: false");
+    expect(googleCalendarWebhookRoute).toContain("rawProviderMessageNumberEchoed: false");
+    expect(googleCalendarWebhookRoute).toContain("rawProviderChannelTokenEchoed: false");
+    expect(googleCalendarWebhookRoute).toContain("rawIdempotencyKeyEchoed: false");
+    expect(googleCalendarWebhookRoute).toContain("tenantIdEchoed: false");
+    expect(googleCalendarWebhookRoute).toContain("internalPersistenceIdsEchoed: false");
+    expect(googleCalendarWebhookRoute).not.toContain("channelId,\n      resourceId");
+    expect(googleCalendarWebhookRoute).not.toContain("messageNumber,\n      tokenPresent");
   });
 
   it("keeps calendar launch blockers explicit until provider/database evidence exists", () => {
@@ -348,6 +361,8 @@ describe("calendar launch runtime contract", () => {
     expect(gapTracker).toContain("CalendarLaunchRun");
     expect(gapTracker).toContain("apps/web/lib/calendarLaunchRuntime.ts");
     expect(gapTracker).toContain("buildCalendarLaunchDecisionRequiredEvidence");
+    expect(gapTracker).toContain("buildRedactedCalendarLaunchArtifact");
+    expect(gapTracker).toContain("buildCalendarLaunchArtifactReview");
     expect(gapTracker).toContain("calendarLaunchRequiredEvidence");
     expect(gapTracker).toContain("persistCalendarLaunchRun upsert seam");
     expect(gapTracker).toContain("live calendar typecheck/tests, Postgres mutation integration, concurrent hold race rejection, tenant isolation, Google OAuth/sync, signed ICS token persistence source contract plus access/import execution, timezone/provider QA, travel publish/cache, smoke tests, CI evidence, provider-backed persistCalendarLaunchRun execution, and secret-safe artifacts remain open");
@@ -441,6 +456,11 @@ describe("calendar launch runtime contract", () => {
       signedIcsUrl: "https://inkroute.example/calendar/feed?token=secret-token",
       clientEmail: "artist@example.com",
       clientPhone: "+1 (555) 867-5309",
+      repository: "repo:dominator509/InkRoute",
+      branch: "branch:production/calendar-launch",
+      pullRequest: "pr_calendar_launch",
+      reviewer: "reviewer_calendar_owner",
+      codeowner: "CODEOWNER:calendar-platform-team",
       persistence: {
         tenantId: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
         databaseUrl: "postgres://inkroute:secret@example.neon.tech/inkroute",
@@ -454,6 +474,11 @@ describe("calendar launch runtime contract", () => {
       signedIcsUrl: "[REDACTED]",
       clientEmail: "[REDACTED]",
       clientPhone: "[REDACTED]",
+      repository: "[REDACTED]",
+      branch: "[REDACTED]",
+      pullRequest: "[REDACTED]",
+      reviewer: "[REDACTED]",
+      codeowner: "[REDACTED]",
       persistence: {
         tenantId: "[REDACTED]",
         databaseUrl: "[REDACTED]",
@@ -471,10 +496,18 @@ describe("calendar launch runtime contract", () => {
         "signedIcsUrl",
         "clientEmail",
         "clientPhone",
+        "repository",
+        "branch",
+        "pullRequest",
+        "reviewer",
+        "codeowner",
         "persistence.tenantId",
         "persistence.databaseUrl",
       ]),
     );
+    expect(JSON.stringify(review.artifact)).not.toContain("repo:dominator509/InkRoute");
+    expect(JSON.stringify(review.artifact)).not.toContain("pr_calendar_launch");
+    expect(JSON.stringify(review.artifact)).not.toContain("CODEOWNER:calendar-platform-team");
   });
 });
 

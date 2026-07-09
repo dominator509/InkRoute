@@ -672,9 +672,9 @@ export async function persistLiveStripePaymentsRun(
 }
 
 const sensitiveLiveStripePaymentsKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|stripe|payment|client|customer|card|intent|checkout|session|webhook)$/iu;
+  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|stripe|payment|client|customer|card|intent|checkout|session|webhook|provider|request|response|payload|body|signature|raw|reconciliation|idempotency|replay|refund|dispute|receipt|audit|artifact|path|command|typecheck|build|test|output|stdout|stderr|log|ci|workflow|run|commit|repository|repo|branch|pullRequest|pr|reviewer|codeowner)$/iu;
 const sensitiveLiveStripePaymentsValuePattern =
-  /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|whsec|pi|cs|ch|evt|cus|acct|pm)_[A-Za-z0-9_]+|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|repo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+|branch:[A-Za-z0-9_./-]+|pr[_:#-]?[A-Za-z0-9_.-]+|reviewer[_:@-]?[A-Za-z0-9_.-]+|CODEOWNER:[A-Za-z0-9_.@/-]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|whsec|pi|cs|ch|evt|cus|acct|pm|tok|seti|src|refund|re|du)_[A-Za-z0-9_]+|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|stripe-signature[:=][^"'\s]+|(?:tenant|client|customer|booking|deposit|payment|refund|dispute|checkout|intent|webhook|audit|idempotency|replay|reconciliation|artifact|workflow|ci|run|commit)[-_:/]?[A-Za-z0-9_.-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactLiveStripePaymentsString = (value: string): string =>
   value.replace(sensitiveLiveStripePaymentsValuePattern, "[REDACTED]");

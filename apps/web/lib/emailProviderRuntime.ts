@@ -175,7 +175,7 @@ export const buildEmailProviderExecutionPlan = (): EmailProviderExecutionPlan =>
 });
 
 const emailProviderPrivateArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|email|resend|svix|signature|webhook|payload|destination|suppression|bounce|complaint|unsubscribe|delivery|event|artifact|customer|phone|medical|payment)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|email|resend|svix|signature|webhook|payload|destination|suppression|bounce|complaint|unsubscribe|delivery|event|artifact|customer|phone|medical|payment|repository|repo|branch|pull|pr|reviewer|codeowner)/i;
 
 const redactEmailProviderArtifactValue = (
   value: unknown,

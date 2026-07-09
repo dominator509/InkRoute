@@ -73,7 +73,7 @@ MVP includes:
 - Gap tracker and handoff docs
 
 MVP excludes until credentialed implementation:
-- Live Stripe charges
+- Live Stripe charges [blocked]
 - Live auth sessions
 - Live file upload/storage
 - Live email/SMS
@@ -128,7 +128,7 @@ Still required before production:
 - Add rate limiting, bot protection, and abuse monitoring.
 - Implement signed private reference uploads.
 - Queue transactional notifications.
-- Hand off to Stripe only when deposit policy is configured.
+- Hand off to Stripe only when deposit policy is configured [gated].
 - Add dashboard/mobile request review surfaces.
 - Replace demo legal/policy copy after attorney review.
 

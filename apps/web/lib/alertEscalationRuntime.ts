@@ -111,10 +111,11 @@ export interface AlertEscalationArtifactReview {
 }
 
 const alertArtifactSensitiveKeyPattern =
-  /(?:authorization|body|clientsecret|credential|email|password|phone|private|raw|secret|slack|stack|token|webhook)/i;
+  /(?:authorization|body|clientsecret|credential|email|password|phone|private|raw|secret|slack|stack|token|webhook|repository|repo|branch|pull|pr|reviewer|codeowner)/i;
 const alertArtifactEmailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const alertArtifactPhonePattern = /\+?\d[\d ().-]{7,}\d/g;
 const alertArtifactTokenPattern = /\b(?:bearer|pagerduty|slack|sk|xox|ya29)[A-Za-z0-9._:/-]{8,}\b/gi;
+const alertArtifactSelectorPattern = /\b(?:repository|repo|branch|pull|pr|reviewer|codeowner)[-_:/]?[A-Za-z0-9_.-]{6,}\b/gi;
 
 function redactAlertArtifactValue(value: unknown, key = ""): unknown {
   if (value === null || value === undefined) {
@@ -129,7 +130,8 @@ function redactAlertArtifactValue(value: unknown, key = ""): unknown {
     return value
       .replace(alertArtifactEmailPattern, "[REDACTED_EMAIL]")
       .replace(alertArtifactPhonePattern, "[REDACTED_PHONE]")
-      .replace(alertArtifactTokenPattern, "[REDACTED_TOKEN]");
+      .replace(alertArtifactTokenPattern, "[REDACTED_TOKEN]")
+      .replace(alertArtifactSelectorPattern, "[REDACTED_SELECTOR]");
   }
 
   if (Array.isArray(value)) {

@@ -538,9 +538,9 @@ const missingFrom = (actual: readonly string[] | undefined, required: readonly s
   required.filter((item) => !(actual ?? []).includes(item));
 
 const sensitiveDomainAuthorizationKeyPattern =
-  /(token|secret|password|authorization|cookie|csrf|session|email|phone|name|address|medical|payment|tenant|member|role|permission|user|actor|client|database|url|uri|dsn|key|id|payload|artifact|audit)/iu;
+  /(token|secret|password|authorization|cookie|csrf|session|email|phone|name|address|medical|payment|tenant|member|role|permission|user|actor|client|database|url|uri|dsn|key|id|payload|artifact|audit|repository|repo|branch|pull|pr|reviewer|codeowner)/iu;
 const sensitiveDomainAuthorizationValuePattern =
-  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|repo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+|branch:[A-Za-z0-9_./-]+|pr[_:#-]?[A-Za-z0-9_.-]+|reviewer[_:@-]?[A-Za-z0-9_.-]+|CODEOWNER:[A-Za-z0-9_.@/-]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
 
 const buildRedactedDomainAuthorizationValue = (value: unknown, path: string, redactions: string[]): unknown => {
   if (Array.isArray(value)) {

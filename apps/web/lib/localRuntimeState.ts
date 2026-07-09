@@ -3,6 +3,7 @@ import { inkrouteDemoTenant } from "@inkroute/config";
 import { redactRecord } from "@inkroute/security";
 import { rateLimitRules } from "@inkroute/security";
 import type { BookingRequestInput } from "@inkroute/validators";
+import { createHash } from "node:crypto";
 import type {
   BookingEventType,
   BookingStatus,
@@ -169,7 +170,11 @@ function nowIsoDate(): string {
 }
 
 function nextId(prefix: string): string {
-  return `${prefix}_${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
+  const random = globalThis.crypto?.randomUUID?.();
+  if (!random) {
+    throw new Error("Secure random UUID generation is unavailable for local runtime persistence.");
+  }
+  return `${prefix}_${random}`;
 }
 
 function safeText(value: unknown, fallback = ""): string {
@@ -376,10 +381,11 @@ export function executeBookingPostPersistWorkflowConsumers(
         channel: "email",
       });
       status = "succeeded";
-      result.messageId = consumedMessage.id;
-      result.status = consumedMessage.status;
-      result.redactedPayload = consumedMessage.redactedPayload;
+      result.messagePersisted = true;
+      result.messageStatus = consumedMessage.status;
+      result.rawPayloadStored = false;
       result.deliveryGapIds = workflow.payload.gapIds ?? [];
+      result.internalPersistenceIdsEchoed = false;
     } else if (workflow.type === "reference-upload") {
       if (scope === "local-fallback") {
         const upload = persistUploadIntent(tenantSlug, {
@@ -390,9 +396,10 @@ export function executeBookingPostPersistWorkflowConsumers(
           visibility: "client_private",
         });
         status = "succeeded";
-        result.uploadIntentId = upload.id;
-        result.signedUploadUrl = upload.signedUploadUrl;
+        result.uploadIntentPersisted = true;
+        result.signedUploadUrlEchoed = false;
         result.uploadVisibility = upload.visibility;
+        result.internalPersistenceIdsEchoed = false;
       } else {
         status = "blocked";
         result.expectedHandoff = workflow.payload;
@@ -436,6 +443,10 @@ export function getBookingRequest(tenantSlug: string, bookingRequestId: string):
   return getTenantState(tenantSlug).bookings.get(bookingRequestId);
 }
 
+function createLocalMockHandle(parts: string[]): string {
+  return createHash("sha256").update(JSON.stringify(parts)).digest("hex").slice(0, 24);
+}
+
 export function persistDepositSession(
   tenantSlug: string,
   bookingRequestId: string,
@@ -446,8 +457,9 @@ export function persistDepositSession(
   const tenantId = resolveTenant(tenantSlug)?.tenantId ?? tenantSlug;
   const now = nowIsoDate();
   const id = nextId("deposit");
-  const providerSessionId = `cs_mock_${id}`;
-  const checkoutUrl = `/api/public/${encodeURIComponent(tenantSlug)}/checkout/${providerSessionId}`;
+  const checkoutHandle = createLocalMockHandle([tenantId, bookingRequestId, id, String(amountCents), currency]);
+  const providerSessionId = `cs_mock_${checkoutHandle}`;
+  const checkoutUrl = `https://mock-inkroute.local/checkout/${checkoutHandle}`;
 
   const record: LocalDepositSessionRecord = {
     id,
@@ -469,9 +481,18 @@ export function getClientIp(source: Record<string, string | null>): string {
   return (
     source["x-forwarded-for"]?.split(",")[0]?.trim() ??
     source["x-real-ip"] ??
-    source["x-client-ip"] ??
     source["cf-connecting-ip"] ??
     source["forwarded"] ??
+    "unknown-ip"
+  );
+}
+
+export function getClientIpFromHeaders(headers: { get(name: string): string | null }): string {
+  return (
+    headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    headers.get("x-real-ip") ??
+    headers.get("cf-connecting-ip") ??
+    headers.get("forwarded") ??
     "unknown-ip"
   );
 }
@@ -493,7 +514,8 @@ export function persistUploadIntent(
   const id = nextId("upload");
   const safeFileName = safeText(input.filename, "upload.bin").replace(/[^a-zA-Z0-9.\-_]/g, "_");
   const objectKey = `${tenantId}/${createdAt}/${safeFileName}`;
-  const signedUploadUrl = `https://mock-inkroute.local/upload/${tenantSlug}/${id}?signature=mock-scaffold`;
+  const uploadHandle = createLocalMockHandle([tenantId, input.kind, id, safeFileName, String(createdAt)]);
+  const signedUploadUrl = `https://mock-inkroute.local/upload/${uploadHandle}?signature=mock-scaffold`;
 
   const record: LocalUploadIntentRecord = {
     id,
@@ -628,6 +650,10 @@ export function persistPrivacyRequest(
   };
 }
 
+function redactWebhookSignatureHeader(value: string): "present" | "missing" {
+  return value.trim().length > 0 ? "present" : "missing";
+}
+
 export function persistWebhookEvent(
   tenantSlug: string,
   input: { source: LocalWebhookEventRecord["source"]; eventType: string; signatureHeader: string; payloadLength: number; interpretation?: string },
@@ -642,7 +668,7 @@ export function persistWebhookEvent(
     tenantId,
     source: input.source,
     eventType: input.eventType,
-    receivedSignatureHeader: input.signatureHeader,
+    receivedSignatureHeader: redactWebhookSignatureHeader(input.signatureHeader),
     payloadLength: input.payloadLength,
     createdAt: now,
     ...(input.interpretation ? { interpretation: input.interpretation } : {}),

@@ -317,6 +317,16 @@ describe("GAP-105 Phase 14 runner execution wiring", () => {
       installLog: "install failed for client@example.com +1 555 717 8181",
       testOutput: "Authorization: Bearer runner-secret-token",
       stack: "Error: runner failed",
+      commandOutput: "pnpm typecheck failed with PRIVATE_ENV=value",
+      manifestVerifierOutput: "manifest includes tenant_private_123",
+      playwrightTracePath: "test-results/private-trace.zip",
+      screenshotPath: "test-results/private-screenshot.png",
+      junitReportBody: "<failure>user_private_123</failure>",
+      rawFailurePayload: { databaseUrl: "postgres://runner:secret@db.example.test/app" },
+      branchProtectionNotes: "required check run_private_123",
+      neutralReportTrace: "junit_report_01HZYXZYXZYXZYXZYXZYXZYXZ stored coverage/phase14/private-junit.xml",
+      neutralCiTrace: "workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ failed commit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralArtifactTrace: "trace artifact test-results/phase14/private-trace.zip",
     };
 
     const redacted = buildRedactedPhase14RunnerArtifact(rawArtifact);
@@ -332,6 +342,17 @@ describe("GAP-105 Phase 14 runner execution wiring", () => {
     expect(serialized).not.toContain("client@example.com");
     expect(serialized).not.toContain("+1 555 717 8181");
     expect(serialized).not.toContain("runner-secret-token");
+    expect(serialized).not.toContain("PRIVATE_ENV=value");
+    expect(serialized).not.toContain("tenant_private_123");
+    expect(serialized).not.toContain("test-results/private-trace.zip");
+    expect(serialized).not.toContain("test-results/private-screenshot.png");
+    expect(serialized).not.toContain("user_private_123");
+    expect(serialized).not.toContain("postgres://runner:secret@db.example.test/app");
+    expect(serialized).not.toContain("run_private_123");
+    expect(serialized).not.toContain("junit_report_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("coverage/phase14/private-junit.xml");
+    expect(serialized).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("test-results/phase14/private-trace.zip");
     expect(serialized).toContain("[REDACTED]");
     expect(review.requiredArtifacts).toBe(phase14RunnerArtifactPaths);
     expect(review.retainedExternalGates).toEqual(expect.arrayContaining([

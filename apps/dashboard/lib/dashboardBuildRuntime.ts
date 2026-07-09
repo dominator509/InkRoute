@@ -337,7 +337,9 @@ export const buildDashboardBuildRuntimeExecutionPlan = (): DashboardBuildRuntime
 });
 
 const dashboardBuildRuntimeSensitiveArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|cookie|email|phone|medical|payment|stripe|build|env|header|authorization|log|trace|sourcemap)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|cookie|csrf|email|phone|medical|payment|stripe|build|env|header|authorization|log|trace|sourcemap|source|map|browser|playwright|screenshot|video|html|dom|route|payload|body|api|booking|portfolio|travel|message|settings|typecheck|test|output|stdout|stderr|ci|workflow|run|commit|artifact|path|next|react|jsx|error|stack|id|key)/i;
+const dashboardBuildRuntimeSensitiveArtifactValuePattern =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token)[A-Za-z0-9_-]*|(?:tenant|client|booking|payment|portfolio|travel|message|dashboard|route|browser|trace|screenshot|artifact|workflow|ci|run|commit|database|session|provider|evidence)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|DATABASE_URL=[^\s"']+|authorization:\s*[^\s"']+|private-tenant|[A-Za-z0-9_-]{24,})/giu;
 
 export const buildRedactedDashboardBuildRuntimeArtifact = (
   artifact: unknown,
@@ -362,6 +364,17 @@ export const buildRedactedDashboardBuildRuntimeArtifact = (
           return [key, redact(entry, entryPath)];
         }),
       );
+    }
+
+    if (typeof value === "string") {
+      const redactedValue = value.replace(
+        dashboardBuildRuntimeSensitiveArtifactValuePattern,
+        "[REDACTED_DASHBOARD_BUILD_PRIVATE_VALUE]",
+      );
+      if (redactedValue !== value) {
+        redactions.push(path || "$");
+      }
+      return redactedValue;
     }
 
     return value;

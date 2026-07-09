@@ -395,6 +395,22 @@ describe("GAP-112 performance and load runtime wiring", () => {
       stripePayload: { id: "evt_test_secret", customer_email: "client@example.com" },
       routeUrl: "https://inkroute.example.com/booking/user_123?tenant=tenant_demo",
       queryPlan: "Seq Scan on Booking where tenant_id='tenant_demo' and phone='+1 (555) 333-1212'",
+      lighthouseTracePath: "artifacts/lighthouse/private-trace.json",
+      coreWebVitalsOutput: "LCP route https://inkroute.example.com/private tenant_demo",
+      commandOutput: "k6 load test emitted PRIVATE_ENV=value",
+      rawRequestBody: { bookingRequestId: "booking_private_123" },
+      dbAnalyzeOutput: "Index scan where tenant_id='tenant_private_123'",
+      imageBenchmarkPath: "artifacts/images/private-image-benchmark.json",
+      regressionTriageNotes: "regression for user_private_123",
+      neutralLoadTrace: "route_load_01HZYXZYXZYXZYXZYXZYXZYXZ hit webhook_burst_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCiTrace: "workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ compared commit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralArtifactTrace: "lighthouse trace reports/performance/private-lighthouse.json",
+      neutralDbTrace: "query query_plan_01HZYXZYXZYXZYXZYXZYXZYXZ used postgresql://tenant_demo:secret@db.example.com/inkroute",
+      screenshotPath: "artifacts/performance/private-screenshot.png",
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_performance_load",
+      reviewerHandle: "reviewer_performance_owner",
+      codeownerSelector: "CODEOWNER:performance-platform-team",
       nested: {
         authorization: "Bearer super-secret-token",
         contact: "artist@example.com +1 555 222 3333",
@@ -415,14 +431,46 @@ describe("GAP-112 performance and load runtime wiring", () => {
     expect(serialized).not.toContain("Bearer super-secret-token");
     expect(serialized).not.toContain("tenant_demo");
     expect(serialized).not.toContain("booking_abc123");
+    expect(serialized).not.toContain("artifacts/lighthouse/private-trace.json");
+    expect(serialized).not.toContain("PRIVATE_ENV=value");
+    expect(serialized).not.toContain("booking_private_123");
+    expect(serialized).not.toContain("tenant_private_123");
+    expect(serialized).not.toContain("artifacts/images/private-image-benchmark.json");
+    expect(serialized).not.toContain("user_private_123");
+    expect(serialized).not.toContain("route_load_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("webhook_burst_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("reports/performance/private-lighthouse.json");
+    expect(serialized).not.toContain("query_plan_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("artifacts/performance/private-screenshot.png");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("pr_performance_load");
+    expect(serialized).not.toContain("reviewer_performance_owner");
+    expect(serialized).not.toContain("CODEOWNER:performance-platform-team");
     expect(review.containsUnredactedSensitiveValues).toBe(false);
     expect(review.redactions).toEqual(
       expect.arrayContaining([
         "authorization",
         "ciRunUrl",
+        "codeownerSelector",
+        "commandOutput",
         "databaseUrl",
+        "dbAnalyzeOutput",
+        "imageBenchmarkPath",
+        "lighthouseTracePath",
+        "neutralArtifactTrace",
+        "neutralCiTrace",
+        "neutralDbTrace",
+        "neutralLoadTrace",
+        "coreWebVitalsOutput",
         "queryPlan",
+        "pullRequestSelector",
+        "rawRequestBody",
+        "regressionTriageNotes",
+        "repositorySelector",
+        "reviewerHandle",
         "routeUrl",
+        "screenshotPath",
         "stripePayload",
       ]),
     );

@@ -17,6 +17,7 @@
 } from "@inkroute/notifications";
 import { buildMobilePushLocalContract } from "@inkroute/mobile-support";
 import { inkrouteDemoTenant } from "@inkroute/config";
+import { createHash } from "node:crypto";
 import { mobileNotificationConsent } from "./mobileDemo";
 
 export interface MobilePushRuntimeContext {
@@ -78,7 +79,7 @@ export interface PrismaExpoPushProviderRepositoryClient {
 export interface InMemoryExpoPushProviderRepositoryState {
   readonly pushTokens: ExpoPushRegistrationPlan[];
   readonly optOuts: { readonly tenantId: string; readonly userId: string; readonly deviceId: string; readonly optedOut: boolean }[];
-  readonly receiptIdempotencyKeys: Map<string, { readonly tenantId: string; readonly requestId: string }>;
+  readonly receiptIdempotencyKeys: Map<string, { readonly tenantId: string; readonly requestIdHash: string }>;
   readonly deliveries: ExpoPushDeliveryPlan[];
   readonly providerEvents: { readonly tenantId: string; readonly reconciliation: ProviderEventReconciliationPlan; readonly redactedPayload: Record<string, unknown> }[];
   readonly invalidTokenSuppressions: { readonly tenantId: string; readonly tokenHash: string; readonly receiptId: string }[];
@@ -95,12 +96,30 @@ export interface ExpoPushProviderContract {
 
 export interface MobilePushContractPreview {
   registration: ExpoPushRegistrationPlan;
+  registrationReceipt: MobilePushRegistrationReceipt;
   delivery: ExpoPushDeliveryPlan;
   receipt: ExpoPushReceiptProcessingPlan;
   tap: ExpoPushTapRoutingPlan;
   localContract: ReturnType<typeof buildMobilePushLocalContract>;
   provider: ExpoPushProviderContract;
   boundary: string;
+}
+
+export interface MobilePushRegistrationReceipt {
+  status: ExpoPushRegistrationPlan["status"];
+  provider: ExpoPushRegistrationPlan["provider"];
+  tokenPersistenceRequired: boolean;
+  tokenMaskedAvailable: boolean;
+  optOutPersistenceRequired: boolean;
+  responseProjection: {
+    rawExpoPushTokenEchoed: false;
+    rawNativeDeviceTokenEchoed: false;
+    rawAccessTokenEchoed: false;
+    tenantIdEchoed: false;
+    userIdEchoed: false;
+    deviceIdEchoed: false;
+    internalPersistenceIdsEchoed: false;
+  };
 }
 
 const expoPushPrivatePayloadKeys = new Set([
@@ -136,16 +155,20 @@ export function buildRedactedExpoPushPayload(payload: Record<string, unknown>): 
 }
 
 function buildReceiptIdempotencyKey(input: { readonly tenantId: string; readonly receiptId: string }): string {
-  return `${input.tenantId}:${input.receiptId}`;
+  return `expo-receipt:${createHash("sha256").update(JSON.stringify([input.tenantId, input.receiptId])).digest("hex")}`;
+}
+
+function buildMobilePushSelectorHash(scope: string, parts: readonly string[]): string {
+  return `${scope}:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
 }
 
 function toJsonValue(value: unknown): unknown {
   return JSON.parse(JSON.stringify(value));
 }
 
-function idempotencyMetadataRequestId(metadata: unknown): string | null {
-  return metadata && typeof metadata === "object" && "requestId" in metadata && typeof metadata.requestId === "string"
-    ? metadata.requestId
+function idempotencyMetadataRequestIdHash(metadata: unknown): string | null {
+  return metadata && typeof metadata === "object" && "requestIdHash" in metadata && typeof metadata.requestIdHash === "string"
+    ? metadata.requestIdHash
     : null;
 }
 
@@ -163,7 +186,7 @@ export function createPrismaExpoPushProviderRepository(
           userId: plan.userId,
           deviceId: plan.deviceId,
           provider: plan.provider,
-          tokenHash: plan.tokenMasked ?? `masked-token:${plan.tenantId}:${plan.deviceId}`,
+          tokenHash: plan.tokenMasked ?? buildMobilePushSelectorHash("masked-token", [plan.tenantId, plan.deviceId]),
           tokenMasked: plan.tokenMasked,
           active: true,
           permissionStatus: "granted",
@@ -178,7 +201,7 @@ export function createPrismaExpoPushProviderRepository(
         },
         update: {
           userId: plan.userId,
-          tokenHash: plan.tokenMasked ?? `masked-token:${plan.tenantId}:${plan.deviceId}`,
+          tokenHash: plan.tokenMasked ?? buildMobilePushSelectorHash("masked-token", [plan.tenantId, plan.deviceId]),
           tokenMasked: plan.tokenMasked,
           active: true,
           permissionStatus: "granted",
@@ -207,7 +230,7 @@ export function createPrismaExpoPushProviderRepository(
           tenantId_channel_destinationHash_reason: {
             tenantId: input.tenantId,
             channel: "push",
-            destinationHash: input.deviceId,
+            destinationHash: buildMobilePushSelectorHash("push-opt-out-device", [input.tenantId, input.deviceId]),
             reason: "mobile_push_opt_out",
           },
         },
@@ -215,27 +238,39 @@ export function createPrismaExpoPushProviderRepository(
           tenantId: input.tenantId,
           channel: "push",
           provider: "expo",
-          destinationHash: input.deviceId,
+          destinationHash: buildMobilePushSelectorHash("push-opt-out-device", [input.tenantId, input.deviceId]),
           reason: "mobile_push_opt_out",
           source: "mobile",
           active: input.optedOut,
           rawPayloadStored: false,
-          metadata: toJsonValue({ userId: input.userId, deviceId: input.deviceId, gapIds: ["GAP-063"] }),
+          metadata: toJsonValue({
+            userIdHash: buildMobilePushSelectorHash("push-opt-out-user", [input.tenantId, input.userId]),
+            deviceIdHash: buildMobilePushSelectorHash("push-opt-out-device", [input.tenantId, input.deviceId]),
+            rawUserIdStored: false,
+            rawDeviceIdStored: false,
+            gapIds: ["GAP-063"],
+          }),
         },
         update: {
           active: input.optedOut,
-          metadata: toJsonValue({ userId: input.userId, deviceId: input.deviceId, gapIds: ["GAP-063"] }),
+          metadata: toJsonValue({
+            userIdHash: buildMobilePushSelectorHash("push-opt-out-user", [input.tenantId, input.userId]),
+            deviceIdHash: buildMobilePushSelectorHash("push-opt-out-device", [input.tenantId, input.deviceId]),
+            rawUserIdStored: false,
+            rawDeviceIdStored: false,
+            gapIds: ["GAP-063"],
+          }),
         },
       });
     },
     async claimReceiptIdempotency(input) {
       const existing = await client.idempotencyKey.findUnique({
-        where: { tenantId_scope_key: { tenantId: input.tenantId, scope: "expo_push_receipt", key: input.receiptId } },
+        where: { tenantId_scope_key: { tenantId: input.tenantId, scope: "expo_push_receipt", key: buildReceiptIdempotencyKey(input) } },
         select: { metadata: true },
       });
 
       if (existing) {
-        if (idempotencyMetadataRequestId(existing.metadata) === input.requestId) return "duplicate";
+        if (idempotencyMetadataRequestIdHash(existing.metadata) === buildMobilePushSelectorHash("expo-receipt-request", [input.requestId])) return "duplicate";
         throw new Error("EXPO_PUSH_RECEIPT_IDEMPOTENCY_KEY_CONFLICT");
       }
 
@@ -243,9 +278,13 @@ export function createPrismaExpoPushProviderRepository(
         data: {
           tenantId: input.tenantId,
           scope: "expo_push_receipt",
-          key: input.receiptId,
+          key: buildReceiptIdempotencyKey(input),
           status: "claimed",
-          metadata: toJsonValue({ requestId: input.requestId, gapIds: ["GAP-063"] }),
+          metadata: toJsonValue({
+            requestIdHash: buildMobilePushSelectorHash("expo-receipt-request", [input.requestId]),
+            rawRequestIdStored: false,
+            gapIds: ["GAP-063"],
+          }),
         },
       });
       return "claimed";
@@ -318,12 +357,20 @@ export function createPrismaExpoPushProviderRepository(
           active: true,
           providerEventId: input.receiptId,
           rawPayloadStored: false,
-          metadata: toJsonValue({ receiptId: input.receiptId, gapIds: ["GAP-063"] }),
+          metadata: toJsonValue({
+            receiptIdHash: buildMobilePushSelectorHash("expo-invalid-token-receipt", [input.receiptId]),
+            rawReceiptIdStored: false,
+            gapIds: ["GAP-063"],
+          }),
         },
         update: {
           active: true,
           providerEventId: input.receiptId,
-          metadata: toJsonValue({ receiptId: input.receiptId, gapIds: ["GAP-063"] }),
+          metadata: toJsonValue({
+            receiptIdHash: buildMobilePushSelectorHash("expo-invalid-token-receipt", [input.receiptId]),
+            rawReceiptIdStored: false,
+            gapIds: ["GAP-063"],
+          }),
         },
       });
     },
@@ -380,11 +427,14 @@ export function createInMemoryExpoPushProviderRepository(
       const existing = state.receiptIdempotencyKeys.get(key);
 
       if (!existing) {
-        state.receiptIdempotencyKeys.set(key, { tenantId: input.tenantId, requestId: input.requestId });
+        state.receiptIdempotencyKeys.set(key, {
+          tenantId: input.tenantId,
+          requestIdHash: buildMobilePushSelectorHash("expo-receipt-request", [input.requestId]),
+        });
         return "claimed";
       }
 
-      if (existing.requestId === input.requestId) {
+      if (existing.requestIdHash === buildMobilePushSelectorHash("expo-receipt-request", [input.requestId])) {
         return "duplicate";
       }
 
@@ -424,6 +474,25 @@ export function buildMobilePushRegistrationPlan(context: MobilePushRuntimeContex
     pushOptIn: context.pushOptIn,
     registeredAt: context.registeredAt,
   });
+}
+
+export function buildMobilePushRegistrationReceipt(plan: ExpoPushRegistrationPlan): MobilePushRegistrationReceipt {
+  return {
+    status: plan.status,
+    provider: plan.provider,
+    tokenPersistenceRequired: plan.shouldPersistToken,
+    tokenMaskedAvailable: Boolean(plan.tokenMasked),
+    optOutPersistenceRequired: plan.shouldPersistOptOut,
+    responseProjection: {
+      rawExpoPushTokenEchoed: false,
+      rawNativeDeviceTokenEchoed: false,
+      rawAccessTokenEchoed: false,
+      tenantIdEchoed: false,
+      userIdEchoed: false,
+      deviceIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+  };
 }
 
 export function buildMobilePushDeliveryContract(input: {
@@ -571,13 +640,29 @@ export async function processExpoPushReceipt(
   await repository.persistAuditLog({
     tenantId: input.tenantId,
     action: "expo_push_receipt_processed",
-    redactedMetadata: { receiptId: input.receipt.receiptId, status: input.receipt.receiptStatus, errorCode: input.receipt.errorCode ?? null },
+    redactedMetadata: {
+      receiptIdHash: buildMobilePushSelectorHash("expo-receipt-audit", [input.receipt.receiptId]),
+      rawReceiptIdStored: false,
+      status: input.receipt.receiptStatus,
+      errorCode: input.receipt.errorCode ?? null,
+    },
   });
 
   return { status: "processed", reconciliation };
 }
 
 export const expoPushProviderContract = buildExpoPushProviderContract();
+
+const mobilePushRegistrationPreview = buildMobilePushRegistrationPlan({
+  tenantId: inkrouteDemoTenant.id,
+  userId: "user_mara_demo",
+  deviceId: "device_mobile_demo",
+  requestId: "push_registration_demo",
+  permissionStatus: "granted",
+  expoPushToken: mobileNotificationConsent.pushToken,
+  pushOptIn: mobileNotificationConsent.pushOptIn,
+  registeredAt: "2026-06-09T00:00:00.000Z",
+});
 
 export const mobilePushContractPreview: MobilePushContractPreview = {
   localContract: buildMobilePushLocalContract({
@@ -591,16 +676,8 @@ export const mobilePushContractPreview: MobilePushContractPreview = {
     expoCredentialsConfigured: false,
     foregroundBackgroundDeviceQaPassed: false,
   }),
-  registration: buildMobilePushRegistrationPlan({
-    tenantId: inkrouteDemoTenant.id,
-    userId: "user_mara_demo",
-    deviceId: "device_mobile_demo",
-    requestId: "push_registration_demo",
-    permissionStatus: "granted",
-    expoPushToken: mobileNotificationConsent.pushToken,
-    pushOptIn: mobileNotificationConsent.pushOptIn,
-    registeredAt: "2026-06-09T00:00:00.000Z",
-  }),
+  registration: mobilePushRegistrationPreview,
+  registrationReceipt: buildMobilePushRegistrationReceipt(mobilePushRegistrationPreview),
   delivery: buildMobilePushDeliveryContract({
     tenantId: inkrouteDemoTenant.id,
     notificationId: "notification_mobile_demo",

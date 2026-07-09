@@ -229,14 +229,14 @@ export interface LaunchOperationsRuntimeArtifactReview {
 }
 
 const sensitiveLaunchOperationsKeyPattern =
-  /(token|secret|password|authorization|cookie|contact|email|phone|owner|onCall|pager|webhook|alertUrl|supportTranscript|customer|incident|rollback|privacy|monitoringUrl|dashboardUrl|approval|ciRunUrl|tenantId|userId|runId)/i;
+  /(token|secret|password|authorization|cookie|contact|email|phone|owner|backup|staff|coverage|onCall|schedule|pager|webhook|alert|alertUrl|routing|support|supportTranscript|escalation|customer|incident|drill|rollback|privacy|request|monitoring|monitoringUrl|dashboard|dashboardUrl|communications|template|approval|operationsApproval|ci|ciRun|ciRunUrl|workflow|run|repository|branch|pr|pullrequest|reviewer|codeowner|tenantId|userId|runId|artifact|path|raw|payload|transcript|log|output|stack|error|provider|database|url|uri|dsn)/i;
 
 const sensitiveLaunchOperationsStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
   [/https?:\/\/[^\s"'<>]+/gi, "[REDACTED_URL]"],
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
-  [/\b(?:tenant|user|owner|incident|rollback|privacy|support|alert|run)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+  [/\b(?:tenant|user|owner|incident|rollback|privacy|support|alert|run|repository|branch|pr|pullrequest|reviewer|codeowner)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
 ];
 
 export function buildLaunchOperationsRuntimeEvidenceDecision(

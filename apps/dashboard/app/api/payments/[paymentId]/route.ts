@@ -8,18 +8,64 @@ interface PaymentDetailRouteContext {
   params: Promise<{ paymentId: string }>;
 }
 
+function redactPaymentMetadataValue(key: string, value: unknown): unknown {
+  if (/secret|token|intent|session|customer|email|phone|receipt|url/i.test(key)) return "[redacted-dashboard-field]";
+  if (Array.isArray(value)) return value.map((entry, index) => redactPaymentMetadataValue(String(index), entry));
+  if (typeof value === "object" && value !== null) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([nestedKey, nestedValue]) => [
+        nestedKey,
+        redactPaymentMetadataValue(nestedKey, nestedValue),
+      ]),
+    );
+  }
+  return value;
+}
+
 function redactPaymentMetadata(metadata: unknown): Record<string, unknown> {
   if (typeof metadata !== "object" || metadata === null || Array.isArray(metadata)) return {};
-  const record = metadata as Record<string, unknown>;
-  return Object.fromEntries(
-    Object.entries(record).map(([key, value]) => [
-      key,
-      /secret|token|intent|session|customer|email|phone|receipt|url/i.test(key) ? "[redacted-dashboard-field]" : value,
-    ]),
-  );
+  return redactPaymentMetadataValue("metadata", metadata) as Record<string, unknown>;
 }
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+function buildPaymentDetailResponseProjection() {
+  return {
+    paymentIdEchoed: false,
+    tenantIdEchoed: false,
+    bookingRequestIdEchoed: false,
+    depositIdEchoed: false,
+    refundIdsEchoed: false,
+    auditIdEchoed: false,
+    paymentAuditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafePaymentDetailRecord(record: Record<string, unknown>) {
+  const {
+    id: _id,
+    tenantId: _tenantId,
+    bookingRequestId,
+    depositId,
+    refunds,
+    ...safeRecord
+  } = record;
+
+  return {
+    ...safeRecord,
+    bookingLinked: Boolean(bookingRequestId ?? safeRecord.bookingLinked),
+    depositLinked: Boolean(depositId ?? safeRecord.depositLinked),
+    refunds: Array.isArray(refunds)
+      ? refunds.map((refund) => {
+          if (typeof refund !== "object" || refund === null) return refund;
+          const { id: _refundId, ...safeRefund } = refund as Record<string, unknown>;
+          return safeRefund;
+        })
+      : refunds,
+    responseProjection: buildPaymentDetailResponseProjection(),
+  };
+}
 
 type PaymentDetailRefundRow = {
   id: string;
@@ -76,13 +122,13 @@ export async function GET(request: NextRequest, context: PaymentDetailRouteConte
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          paymentId,
           error: {
             code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
             message: "Production dashboard payment reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
             gapIds: ["GAP-004", "GAP-007", "GAP-037", "GAP-040"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildPaymentDetailResponseProjection(),
           productionBoundary: { localDashboardReadFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -97,9 +143,10 @@ export async function GET(request: NextRequest, context: PaymentDetailRouteConte
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
-        payment,
+        payment: buildSafePaymentDetailRecord(payment as Record<string, unknown>),
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildPaymentDetailResponseProjection(),
         gapIds: ["GAP-004", "GAP-007", "GAP-037", "GAP-040"],
         boundary: "Local fallback returns a tenant-projected demo payment only; database mode is required for live payment reads.",
       },
@@ -163,7 +210,8 @@ export async function GET(request: NextRequest, context: PaymentDetailRouteConte
           metadata: {
             source: "dashboard-api",
             scope: "detail",
-            auditId: audit.id,
+            auditLogged: true,
+            internalPersistenceIdsStored: false,
             redactedFields: ["providerPaymentId", "providerSessionId", "receiptUrl", "metadata", "refund.reason"],
           },
         },
@@ -183,12 +231,10 @@ export async function GET(request: NextRequest, context: PaymentDetailRouteConte
       source: "repository",
       records: [
         {
-          id: result.row.id,
-          tenantId: result.row.tenantId,
           clientName: result.row.bookingRequest?.clientNameSnapshot ?? "Unassigned client",
-          bookingId: result.row.bookingRequestId,
+          bookingLinked: Boolean(result.row.bookingRequestId),
           bookingStatus: result.row.bookingRequest?.status ?? null,
-          depositId: result.row.depositId,
+          depositLinked: Boolean(result.row.depositId),
           amountCents: result.row.amountCents,
           status: result.row.status,
           provider: result.row.provider,
@@ -197,12 +243,14 @@ export async function GET(request: NextRequest, context: PaymentDetailRouteConte
           paidAt: result.row.paidAt?.toISOString() ?? null,
           failedAt: result.row.failedAt?.toISOString() ?? null,
           createdAt: result.row.createdAt.toISOString(),
-          providerPaymentId: result.row.providerPaymentId,
-          providerSessionId: result.row.providerSessionId,
-          receiptUrl: result.row.receiptUrl,
+          providerPaymentId: result.row.providerPaymentId ? "[redacted-dashboard-field]" : null,
+          providerSessionId: result.row.providerSessionId ? "[redacted-dashboard-field]" : null,
+          receiptUrl: result.row.receiptUrl ? "[redacted-dashboard-field]" : null,
+          hasProviderPaymentId: Boolean(result.row.providerPaymentId),
+          hasProviderSessionId: Boolean(result.row.providerSessionId),
+          hasReceiptUrl: Boolean(result.row.receiptUrl),
           metadata: redactPaymentMetadata(result.row.metadata),
           refunds: result.row.refunds.map((refund: PaymentDetailRefundRow) => ({
-            id: refund.id,
             status: refund.status,
             amountCents: refund.amountCents,
             reason: refund.reason ? "[redacted-dashboard-field]" : null,
@@ -217,11 +265,12 @@ export async function GET(request: NextRequest, context: PaymentDetailRouteConte
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
-        payment: view.records[0],
-        auditId: result.audit.id,
-        paymentAuditId: result.paymentAudit.id,
+        payment: buildSafePaymentDetailRecord(view.records[0] as Record<string, unknown>),
+        auditLogged: true,
+        paymentAuditLogged: true,
+        tenantScope: { actorTenantMatched: true, paymentTenantMatched: true },
+        responseProjection: buildPaymentDetailResponseProjection(),
         gapIds: ["GAP-004", "GAP-007", "GAP-037", "GAP-040"],
         boundary: "Dashboard payment detail reads are tenant-scoped, redacted, no-store, and audited in AuditLog plus PaymentAuditLog.",
       },
@@ -233,9 +282,9 @@ export async function GET(request: NextRequest, context: PaymentDetailRouteConte
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          paymentId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Payment detail reads require the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildPaymentDetailResponseProjection(),
           gapIds: ["GAP-004", "GAP-007", "GAP-037", "GAP-040"],
         },
         { status: 503, headers: noStoreHeaders },

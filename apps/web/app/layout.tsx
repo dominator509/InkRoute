@@ -52,7 +52,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <div>
               <p className="eyebrow">InkRoute Suite Phase 3 Demo</p>
               <h2>{inkrouteDemoArtist.displayName}</h2>
-              <p className="muted">Static public website implementation using safe demo data. Live booking, payments, uploads, auth, and database-backed CMS remain gap-tracked.</p>
+              <p className="muted">Public website routes use DB-first tenant content where available with safe non-production fallbacks. Live payments, provider uploads, auth, browser proof, and launch evidence remain gap-tracked.</p>
             </div>
             <div className="footer-links" aria-label="Footer links">
               <a href="/portfolio">Portfolio</a>

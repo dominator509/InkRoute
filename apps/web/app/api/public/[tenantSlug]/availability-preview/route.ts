@@ -72,6 +72,52 @@ function toPublicWindow(row: {
   };
 }
 
+function buildPublicWindowReceipt(window: AvailabilityWindow) {
+  return {
+    kind: window.kind,
+    status: window.status,
+    startsAt: window.startsAt,
+    endsAt: window.endsAt,
+    timezone: window.timezone,
+    ...(window.maxBookings !== undefined ? { maxBookings: window.maxBookings } : {}),
+    bufferBeforeMinutes: window.bufferBeforeMinutes,
+    bufferAfterMinutes: window.bufferAfterMinutes,
+    responseProjection: {
+      rawAvailabilityWindowEchoed: false,
+      availabilityWindowIdEchoed: false,
+      tenantIdEchoed: false,
+      artistIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+  };
+}
+
+function buildPublicSlotReceipts(slots: ReturnType<typeof buildAvailabilitySlots>) {
+  return slots.map((slot) => ({
+    startsAt: slot.startsAt,
+    endsAt: slot.endsAt,
+    status: slot.status,
+    conflictCount: slot.conflictIds.length,
+    responseProjection: {
+      rawSlotObjectEchoed: false,
+      slotIdEchoed: false,
+      conflictIdsEchoed: false,
+    },
+  }));
+}
+
+function buildPublicConflictReceipts(conflicts: ReturnType<typeof detectCalendarConflicts>) {
+  return conflicts.map((conflict) => ({
+    severity: conflict.severity,
+    reason: conflict.reason,
+    conflictingBlockLinked: true,
+    responseProjection: {
+      rawConflictObjectEchoed: false,
+      conflictingBlockIdEchoed: false,
+    },
+  }));
+}
+
 export async function GET(_request: Request, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;
   const normalizedTenantSlug = decodeURIComponent(tenantSlug).toLowerCase().trim();
@@ -145,11 +191,21 @@ export async function GET(_request: Request, context: { params: Promise<{ tenant
           data: {
             tenantSlug: tenant.slug,
             source: "database",
-            windows,
+            windows: windows.map(buildPublicWindowReceipt),
             slotsByWindow: windows.map((window) => ({
-              windowId: window.id,
-              slots: buildAvailabilitySlots({ window, durationMinutes: 120, stepMinutes: 120, existingBlocks: [] }),
+              availabilityWindowIdEchoed: false,
+              slots: buildPublicSlotReceipts(buildAvailabilitySlots({ window, durationMinutes: 120, stepMinutes: 120, existingBlocks: [] })),
             })),
+            responseProjection: {
+              rawAvailabilityWindowsEchoed: false,
+              rawSlotObjectsEchoed: false,
+              rawConflictObjectsEchoed: false,
+              availabilityWindowIdsEchoed: false,
+              tenantIdEchoed: false,
+              artistIdEchoed: false,
+              conflictIdsEchoed: false,
+              internalPersistenceIdsEchoed: false,
+            },
             boundary: {
               readOnly: true,
               holdsPersisted: false,
@@ -227,9 +283,19 @@ export async function GET(_request: Request, context: { params: Promise<{ tenant
       status: "static_preview_not_persistent",
       gapIds: ["GAP-009", "GAP-056", "GAP-057"],
       data: {
-        window: demoWindow,
-        slots: buildAvailabilitySlots({ window: demoWindow, durationMinutes: 120, stepMinutes: 120, existingBlocks: demoBusyBlocks }),
-        conflicts: detectCalendarConflicts(candidate, demoBusyBlocks),
+        window: buildPublicWindowReceipt(demoWindow),
+        slots: buildPublicSlotReceipts(buildAvailabilitySlots({ window: demoWindow, durationMinutes: 120, stepMinutes: 120, existingBlocks: demoBusyBlocks })),
+        conflicts: buildPublicConflictReceipts(detectCalendarConflicts(candidate, demoBusyBlocks)),
+        responseProjection: {
+          rawAvailabilityWindowsEchoed: false,
+          rawSlotObjectsEchoed: false,
+          rawConflictObjectsEchoed: false,
+          availabilityWindowIdsEchoed: false,
+          tenantIdEchoed: false,
+          artistIdEchoed: false,
+          conflictIdsEchoed: false,
+          internalPersistenceIdsEchoed: false,
+        },
       },
     },
     { headers: noStoreHeaders },

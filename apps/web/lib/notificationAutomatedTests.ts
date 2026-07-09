@@ -177,12 +177,15 @@ const externalSuiteIds = new Set<NotificationAutomatedTestSuiteId>([
   "booking-deposit-aftercare-travel-e2e",
 ]);
 
-const sensitiveArtifactKeyPattern = /(token|secret|password|authorization|cookie|provider|payload|email|phone|expo|twilio|resend|receipt|device|push|sms)/i;
+const sensitiveArtifactKeyPattern =
+  /(token|secret|password|authorization|cookie|provider|payload|email|phone|expo|twilio|resend|receipt|device|push|sms|tenant|client|booking|deposit|aftercare|travel|waitlist|preference|suppression|message|body|thread|template|queue|delivery|webhook|route|url|html|dom|screenshot|trace|log|command|ci|artifactUrl|runId|commitSha|stack|raw)/i;
 const sensitiveArtifactValuePatterns = [
   /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
   /\+?\d[\d\s().-]{7,}\d/g,
   /\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi,
   /\b(?:expo|twilio|resend|push|sms|receipt|device)[\w:./?=&-]*/gi,
+  /https?:\/\/[^\s"'<>]+/gi,
+  /<[^>]+>/g,
 ];
 
 export function buildRedactedNotificationAutomationArtifact(input: unknown): unknown {

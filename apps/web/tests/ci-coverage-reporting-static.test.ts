@@ -366,6 +366,10 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
       screenshotPath: "coverage/playwright-screenshots/private.png",
       headers: ["Authorization: Bearer ci-secret-token"],
       stack: "Error: CI quality failed",
+      commandOutput: "pnpm test failed with PRIVATE_ENV=value",
+      buildLog: "DATABASE_URL=postgres://inkroute:secret@db.example.test:5432/app",
+      environment: { DATABASE_URL: "postgres://inkroute:secret@db.example.test:5432/app" },
+      rawPayload: { failure: "private raw CI payload" },
     };
 
     const redacted = buildRedactedCiCoverageArtifact(rawArtifact);
@@ -381,6 +385,9 @@ describe("GAP-111 CI coverage and reporting wiring", () => {
     expect(serialized).not.toContain("client@example.com");
     expect(serialized).not.toContain("+1 555 909 0000");
     expect(serialized).not.toContain("ci-secret-token");
+    expect(serialized).not.toContain("PRIVATE_ENV=value");
+    expect(serialized).not.toContain("postgres://inkroute:secret@db.example.test:5432/app");
+    expect(serialized).not.toContain("private raw CI payload");
     expect(serialized).toContain("[REDACTED]");
     expect(review.requiredArtifacts).toBe(ciCoverageReportingArtifactPaths);
     expect(review.retainedExternalGates).toEqual(expect.arrayContaining([

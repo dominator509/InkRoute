@@ -568,7 +568,11 @@ function redactDependencyInstallEvidenceArtifact(value: unknown): unknown {
   if (value && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => {
-        if (/(token|secret|password|url|email|actor|log|output|environment|env)/i.test(key)) {
+        if (
+          /(token|secret|password|authorization|cookie|url|uri|dsn|email|phone|actor|tenant|user|account|log|output|stdout|stderr|transcript|environment|env|artifact|path|file|report|manifest|payload|body|command|install|lockfile|lock|package|dependency|workspace|typecheck|lint|unit|ci|workflow|run|commit|branch|cache|blocker|database|key|id)/i.test(
+            key,
+          )
+        ) {
           return [key, "[REDACTED]"];
         }
         return [key, redactDependencyInstallEvidenceArtifact(entry)];
@@ -578,8 +582,15 @@ function redactDependencyInstallEvidenceArtifact(value: unknown): unknown {
   if (typeof value === "string") {
     return value
       .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED]")
+      .replace(/postgres(?:ql)?:\/\/[^\s"'<>]+/gi, "[REDACTED]")
       .replace(/https?:\/\/\S+/gi, "[REDACTED]")
-      .replace(/\b(?:github_pat|ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]+\b/g, "[REDACTED]");
+      .replace(/\b(?:github_pat|ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]+\b/g, "[REDACTED]")
+      .replace(/\b(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}\b/gi, "[REDACTED]")
+      .replace(
+        /\b(?:tenant|user|account|run|commit|workflow|ci|artifact|package|dependency|workspace|install|lock|cache|branch|repo|database|env|typecheck|lint|unit|blocker|production)[-_:/]?[A-Za-z0-9_.-]{6,}\b/gi,
+        "[REDACTED]",
+      )
+      .replace(/\b[A-Za-z0-9_-]{24,}\b/g, "[REDACTED]");
   }
   return value;
 }
@@ -591,7 +602,37 @@ export function buildDependencyInstallRedactedEvidenceBundle(
     status: "redacted-evidence-bundle-ready",
     artifactPath: "coverage/dependency-install-redacted-evidence-bundle.json",
     redactedArtifact: redactDependencyInstallEvidenceArtifact(artifact),
-    redactions: ["token", "secret", "password", "url", "email", "actor", "log", "output", "environment"],
+    redactions: [
+      "token",
+      "secret",
+      "password",
+      "authorization",
+      "url",
+      "email",
+      "actor",
+      "tenant",
+      "log",
+      "output",
+      "environment",
+      "artifact",
+      "path",
+      "manifest",
+      "payload",
+      "command",
+      "install",
+      "lockfile",
+      "package",
+      "dependency",
+      "workspace",
+      "ci",
+      "workflow",
+      "run",
+      "commit",
+      "branch",
+      "cache",
+      "blocker",
+      "database",
+    ],
     requiredArtifacts: dependencyInstallArtifactPaths,
     requiredExternalEvidence: dependencyInstallRequiredExternalEvidence,
     providerExecutionAllowed: false,

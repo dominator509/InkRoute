@@ -35,12 +35,12 @@
     {
       "id": "web-build",
       "status": "failed",
-      "evidence": "pnpm --filter @inkroute/web build failed on Next.js type-check errors in observability route command metadata export."
+      "evidence": "pnpm --filter @inkroute/web build previously failed on observability route command metadata export; route export scan now shows only valid runtime/POST exports and build rerun evidence is still required."
     },
     {
       "id": "dashboard-build",
       "status": "failed",
-      "evidence": "pnpm --filter @inkroute/dashboard build failed on strictOptionalPropertyTypes check for search-console operation plan input."
+      "evidence": "pnpm --filter @inkroute/dashboard build previously failed on strictOptionalPropertyTypes in Search Console operation inputs; optional-field construction is patched and build rerun evidence is still required."
     }
   ],
   "note": "Populate records with redacted pass/fail evidence labels only after commands actually run. Do not paste secrets, tokens, raw database URLs, or private client data."

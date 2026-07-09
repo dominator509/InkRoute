@@ -1,6 +1,6 @@
 # API Contracts
 
-Truth-pass date: 2026-06-08. Stable contracts for frontend/backend agents. The root `API_CONTRACTS.md` remains the fuller ledger.
+Truth-pass date: 2026-07-01. Stable contracts for frontend/backend agents. The root `API_CONTRACTS.md` remains the fuller ledger.
 
 ## Response Envelope
 
@@ -25,13 +25,13 @@ type ApiError = { ok: false; error: { code: string; message: string; requestId?:
 
 | Method | Route | Status | Notes |
 | --- | --- | --- | --- |
-| `POST` | `/api/public/[tenantSlug]/booking-requests` | Partial production path | Zod validation, tenant resolution, local rate limit, DB/local fallback, anti-bot proof for DB writes, medical-note encryption policy, audit/state event, workflow contracts. Queue consumers and integration tests remain open. |
-| `POST` | `/api/public/[tenantSlug]/deposit-sessions` | Local draft | Deposit policy/session draft only. Stripe SDK/webhook reconciliation is not live. |
-| `POST` | `/api/public/[tenantSlug]/secure-upload-intents` | Local runtime | Upload metadata validation and local intent persistence only. Provider signed URLs/storage/scanning remain open. |
-| `POST` | `/api/public/[tenantSlug]/messages` | Local runtime | Minimal validation, local message/thread draft, provider queueing not live. |
-| `POST` | `/api/public/[tenantSlug]/error-reports` | Partial production path | Validates/sanitizes error reports, rate limits, persists redacted DB rows when available, local fallback otherwise. Provider observability remains open. |
-| `POST` | `/api/public/[tenantSlug]/privacy-requests` | Local draft | Redacted local intake. Identity verification, legal workflow, and workers remain open. |
-| `GET` | `/api/public/[tenantSlug]/release-health` | Partial production path | Tenant-scoped release/flag DB reads when available, safe fallback otherwise. |
+| `POST` | `/api/public/[tenantSlug]/booking-requests` | DB-first production boundary | Zod validation, tenant resolution, rate limit, anti-bot proof for DB writes, encrypted medical-note handling, audit/state event, idempotency/no-echo receipt, workflow handoff intents. Provider queue execution and tenant-isolated integration evidence remain gated. |
+| `POST` | `/api/public/[tenantSlug]/deposit-sessions` | DB-first draft, provider-gated | Persists Deposit/Payment/PaymentAuditLog/BookingStateEvent/IdempotencyKey draft rows with no raw key/customer/provider/session/internal-ID echoes. Live Stripe Checkout/webhook/E2E evidence remains gated. |
+| `POST` | `/api/public/[tenantSlug]/secure-upload-intents` | DB-first upload intent, provider-gated | Validates upload metadata and persists FileAsset/SignedUrlGrant/ReferenceImage/AuditLog when tenant-scoped booking/client context exists; local fallback is non-production only. Provider signed URLs/storage/scanning remain open. |
+| `POST` | `/api/public/[tenantSlug]/messages` | DB-first message draft, provider-gated | Validates tenant/booking context, persists MessageThread/Message/Notification/Delivery/Handoff/IdempotencyKey/AuditLog when available, and returns no raw contact/body/destination/idempotency/internal IDs. Provider queue execution remains gated. |
+| `POST` | `/api/public/[tenantSlug]/error-reports` | DB-first redacted ingest | Validates/sanitizes error reports, rate limits, persists redacted DB rows when available, and disables unaudited production fallback. Provider observability remains open. |
+| `POST` | `/api/public/[tenantSlug]/privacy-requests` | DB-first privacy intake | Persists IdempotencyKey/PrivacyRequest/redacted AuditLog on DB-backed paths with safe receipt projection; local fallback remains non-production only. Identity verification, legal workflow, and workers remain open. |
+| `GET` | `/api/public/[tenantSlug]/release-health` | DB-first read with safe fallback | Tenant-scoped release/flag DB reads when available, safe fallback otherwise. |
 | `GET` | `/api/public/[tenantSlug]/calendar/[artistSlug]/travel.ics` | Static demo | Demo ICS feed; production needs signed/revocable feeds. |
 | `GET` | `/api/public/[tenantSlug]/availability-preview` | Static demo | Demo availability preview; no transactional holds. |
 | `GET` | `/api/public/[tenantSlug]/notification-previews` | Static preview | Demo templates/delivery plans only. |
@@ -50,8 +50,8 @@ Dashboard APIs currently use `apps/dashboard/app/api/dashboardAuth.ts` for a hea
 | `PATCH` | `/api/releases` | Validated rollback intent with idempotency/audit metadata; provider rollback execution remains gated |
 | `GET` | `/api/feature-flags` | Auth-shim guarded, persisted global/tenant flag reads with fallback |
 | `POST` | `/api/feature-flags` | Validated persistence and credential-gate checks |
-| `GET` | `/api/deployment/readiness` | Auth-shim guarded readiness preview |
-| `POST` | `/api/deployment/readiness` | Validated/audit-ready persistence; deployment execution out-of-band |
+| `GET` | `/api/deployment/readiness` | Auth-shim guarded readiness preview with DB audit proof |
+| `POST` | `/api/deployment/readiness` | Validated/audit-ready persistence with raw request/workflow IDs not echoed or treated as verified provider evidence; deployment execution out-of-band |
 | `GET` | `/api/error-reports` | Auth-shim guarded DB/local read path for redacted error reports |
 | `POST` | `/api/error-reports` | Auth-shim guarded DB/local ingest path for sanitized error reports |
 | `GET` | `/api/security/trust-status` | Static trust/security posture preview; production auth/RBAC still required |
@@ -61,10 +61,10 @@ Dashboard APIs currently use `apps/dashboard/app/api/dashboardAuth.ts` for a hea
 
 | Method | Route | Status |
 | --- | --- | --- |
-| `POST` | `/api/webhooks/stripe` | Local raw-body parse/interpreter; Stripe signature verification and reconciliation not live |
-| `POST` | `/api/webhooks/email` | Local parse/persist of interpreted events; provider signature verification not live |
-| `POST` | `/api/webhooks/sms` | Local parse/persist and STOP boundary; provider signature verification not live |
-| `POST` | `/api/webhooks/sentry` | Sentry signature-required webhook boundary; verifies `SENTRY_WEBHOOK_SECRET`, persists provider delivery/idempotency + audit reconciliation when tenant ownership is available, and fails closed in production without durable persistence/provider proof |
+| `POST` | `/api/webhooks/stripe` | DB-first reconciliation boundary with raw-body signature check when configured, production secret fail-closed guard, ProviderWebhookDelivery/PaymentAuditLog replay proof, and no raw provider/internal-ID response echoes; live Stripe CLI/provider evidence remains gated |
+| `POST` | `/api/webhooks/email` | Local provider-event/reconciliation persistence boundary with signature-like header requirement and production fail-closed guard until cryptographic provider signature/live replay evidence exists |
+| `POST` | `/api/webhooks/sms` | Local provider-event/reconciliation and STOP boundary with signature-like header requirement and production fail-closed guard until Twilio signature/live replay evidence exists |
+| `POST` | `/api/webhooks/sentry` | Sentry (sandbox) signature-required webhook boundary; verifies `SENTRY_WEBHOOK_SECRET`, persists provider delivery/idempotency + audit reconciliation when tenant ownership is available, and fails closed in production without durable persistence/provider proof |
 
 ## Booking State Rules
 

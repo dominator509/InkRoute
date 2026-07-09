@@ -8,6 +8,7 @@ import {
   type PaymentOperationsWorkflowPlanInput,
   type PaymentOperationsWrite,
 } from "@inkroute/payments";
+import { createHash } from "node:crypto";
 
 export type PaymentOperationProvider = "stripe" | "manual";
 
@@ -52,6 +53,8 @@ export function authorizePaymentOperationTenant(input: {
 export interface PaymentOperationProviderResult {
   providerCall: string | null;
   providerReference: string | null;
+  providerReferenceHash?: string | null;
+  rawProviderReferenceEchoed?: false;
   redactedPayload: Record<string, unknown>;
 }
 
@@ -106,7 +109,8 @@ export function createStripePaymentOperationProvider(
           amount,
           metadata: {
             operation: plan.action,
-            idempotencyKey: plan.idempotencyKey,
+            idempotencyPersisted: "true",
+            rawIdempotencyKeyStored: "false",
           },
         },
         { idempotencyKey: plan.idempotencyKey },
@@ -134,7 +138,8 @@ export function createStripePaymentOperationProvider(
         {
           metadata: {
             operation: plan.action,
-            idempotencyKey: plan.idempotencyKey,
+            idempotencyPersisted: "true",
+            rawIdempotencyKeyStored: "false",
           },
         },
         { idempotencyKey: plan.idempotencyKey },
@@ -166,6 +171,55 @@ const paymentOperationProviderPrivateKeys = [
   "card",
 ] as const;
 
+const paymentOperationProviderIdentifierKeys = [
+  "id",
+  "refundId",
+  "disputeId",
+  "providerReference",
+  "providerRefundId",
+  "providerChargeId",
+  "providerPaymentIntentId",
+] as const;
+
+function providerIdentifierHash(value: unknown): string | null {
+  return typeof value === "string" && value.trim()
+    ? createHash("sha256").update(value).digest("hex")
+    : null;
+}
+
+function buildPaymentOperationSelectorKey(scope: string, parts: readonly string[]): string {
+  return `${scope}:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
+}
+
+function redactPaymentOperationProviderPayloadValue(key: string, value: unknown): unknown {
+  if (paymentOperationProviderPrivateKeys.includes(key as (typeof paymentOperationProviderPrivateKeys)[number])) {
+    return "[redacted]";
+  }
+
+  if (paymentOperationProviderIdentifierKeys.includes(key as (typeof paymentOperationProviderIdentifierKeys)[number])) {
+    return {
+      redacted: "[redacted-provider-identifier]",
+      hash: providerIdentifierHash(value),
+      rawProviderIdentifierEchoed: false,
+    };
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactPaymentOperationProviderPayloadValue(key, entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([nestedKey, nestedValue]) => [
+        nestedKey,
+        redactPaymentOperationProviderPayloadValue(nestedKey, nestedValue),
+      ]),
+    );
+  }
+
+  return value;
+}
+
 export function buildRedactedPaymentOperationProviderResult(input: {
   readonly providerCall: string | null;
   readonly providerReference: string | null;
@@ -174,15 +228,15 @@ export function buildRedactedPaymentOperationProviderResult(input: {
   const redactedPayload = Object.fromEntries(
     Object.entries(input.payload).map(([key, value]) => [
       key,
-      paymentOperationProviderPrivateKeys.includes(key as (typeof paymentOperationProviderPrivateKeys)[number])
-        ? "[redacted]"
-        : value,
+      redactPaymentOperationProviderPayloadValue(key, value),
     ]),
   );
 
   return {
     providerCall: input.providerCall,
-    providerReference: input.providerReference,
+    providerReference: input.providerReference ? "[redacted-provider-reference]" : null,
+    providerReferenceHash: providerIdentifierHash(input.providerReference),
+    rawProviderReferenceEchoed: false,
     redactedPayload,
   };
 }
@@ -400,7 +454,7 @@ function buildSamplePaymentOperationPlans(): PaymentOperationsWorkflowPlan[] {
     buildPaymentOperationsWorkflowPlan({
       ...baseOperationInput,
       action,
-      idempotencyKey: `payment-operation-demo-${action}`,
+      idempotencyKey: buildPaymentOperationSelectorKey("payment-operation-demo", [action]),
     }),
   );
 }

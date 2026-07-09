@@ -268,7 +268,7 @@ export function buildRedactedDbIntegrationRuntimeArtifact(value: unknown): unkno
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /databaseUrl|directUrl|url|token|secret|authorization|credential|password|rawBody|stack|ciRunUrl|commitSha|runId|redactedTranscriptPath|commandTranscript|postgres/i.test(key)
+        /databaseUrl|directUrl|url|token|secret|authorization|credential|password|raw|payload|body|stack|error|ciRunUrl|commitSha|runId|redactedTranscriptPath|commandTranscript|command|output|log|env|postgres|prisma|migration|seed|tenant|audit|workflow|rowId|recordId|reset|rollback|dsn/i.test(key)
           ? "[REDACTED]"
           : buildRedactedDbIntegrationRuntimeArtifact(entry),
       ]),

@@ -39,7 +39,18 @@ describe("dashboard payment persistence static contract", () => {
     expect(persistenceSource).toContain("payment-lifecycle");
     expect(persistenceSource).toContain("tx.paymentAuditLog.create");
     expect(persistenceSource).toContain("tx.bookingStateEvent.create");
+    expect(persistenceSource).toContain("internalPersistenceIdsStored: false");
     expect(persistenceSource).toContain("Persist PaymentAuditLog for every mutation");
+  });
+
+  it("keeps payment lifecycle metadata ID-free and raw-key-free", () => {
+    expect(persistenceSource).toContain("idempotencyPersisted: true");
+    expect(persistenceSource).toContain("rawIdempotencyKeyStored: false");
+    expect(persistenceSource).toContain("rawBookingRequestIdStored: false");
+    expect(persistenceSource).toContain("internalPersistenceIdsStored: false");
+    expect(persistenceSource).not.toContain("metadata: toJsonValue({ lifecycleAction: plan.action, idempotencyKey: plan.idempotencyKey })");
+    expect(persistenceSource).not.toContain("idempotencyKey: plan.idempotencyKey,");
+    expect(persistenceSource).not.toContain("metadata: toJsonValue({ bookingRequestId, action: plan.action");
   });
 
   it("guards invalid lifecycle transitions and idempotent replays before writes", () => {

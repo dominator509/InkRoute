@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createClientRequestKey } from "../lib/clientRequestKeys";
 
 type MessageActionState =
   | { status: "idle" }
@@ -23,7 +24,7 @@ export function MessageActionPanel() {
           clientId: "client_ari",
           subject: "Dashboard follow-up draft",
           body: "Safe dashboard follow-up draft queued from the gated message action panel. Provider delivery remains disabled until credentials and reconciliation evidence exist.",
-          requestId: `dashboard-message-ui-${Date.now()}`,
+          requestId: createClientRequestKey("dashboard-message-ui"),
           notificationType: "dashboard_message",
         }),
       });

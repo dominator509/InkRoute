@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createClientRequestKey } from "../lib/clientRequestKeys";
 
 type ReleaseActionState =
   | { status: "idle"; message: string }
@@ -18,7 +19,7 @@ export function ReleaseActionPanel() {
     setState({ status: "submitting", message: "Submitting release draft through the dashboard release API..." });
 
     try {
-      const version = `0.0.0-dashboard-draft-${Date.now()}`;
+      const version = `0.0.0-dashboard-draft-${createClientRequestKey("release").replace(/:/g, "-")}`;
       const response = await fetch("/api/releases", {
         method: "POST",
         headers: {

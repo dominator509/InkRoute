@@ -18,6 +18,23 @@ export interface ProviderSessionRunPersistenceContract {
   readonly model: "ProviderSessionRun";
   readonly tenantRelation: "providerSessionRuns";
   readonly migration: "20260609032700_add_provider_session_runs";
+  readonly intentionalRawPersistenceKeys: readonly ["tenantId", "runId", "commitSha"];
+  readonly sanitizedPersistenceFields: readonly [
+    "providerConfigurationManifest",
+    "tenantIsolationManifest",
+    "authTypecheckArtifactPath",
+    "authTestArtifactPath",
+    "providerEnvArtifactPath",
+    "loginCallbackArtifactPath",
+    "logoutCallbackArtifactPath",
+    "sessionCallbackArtifactPath",
+    "persistenceArtifactPath",
+    "securityControlsArtifactPath",
+    "auditLogArtifactPath",
+    "tenantIsolationSmokeArtifactPath",
+    "mobileRevocationSmokeArtifactPath",
+    "ciRunUrl",
+  ];
   readonly jsonFields: readonly [
     "commandMatrix",
     "controlManifest",
@@ -65,6 +82,23 @@ export const providerSessionRunPersistenceContract: ProviderSessionRunPersistenc
   model: "ProviderSessionRun",
   tenantRelation: "providerSessionRuns",
   migration: "20260609032700_add_provider_session_runs",
+  intentionalRawPersistenceKeys: ["tenantId", "runId", "commitSha"],
+  sanitizedPersistenceFields: [
+    "providerConfigurationManifest",
+    "tenantIsolationManifest",
+    "authTypecheckArtifactPath",
+    "authTestArtifactPath",
+    "providerEnvArtifactPath",
+    "loginCallbackArtifactPath",
+    "logoutCallbackArtifactPath",
+    "sessionCallbackArtifactPath",
+    "persistenceArtifactPath",
+    "securityControlsArtifactPath",
+    "auditLogArtifactPath",
+    "tenantIsolationSmokeArtifactPath",
+    "mobileRevocationSmokeArtifactPath",
+    "ciRunUrl",
+  ],
   jsonFields: [
     "commandMatrix",
     "controlManifest",
@@ -117,7 +151,7 @@ export const providerSessionRuntimeCommands = [
   "provider-backed session callback and TenantMember lookup test",
   "persist User, TenantMember, CustomRole, session, and revocation lookups",
   "verify secure dashboard cookies and mobile token storage/revocation",
-  "write redacted AuditLog rows for auth lifecycle and denials",
+  "write redacted AuditLog rows for auth lifecycle and denials with hashed provider/user/session/tenant selectors",
   "dashboard/API tenant isolation smoke tests",
   "mobile session storage/revocation smoke tests",
 ] as const;
@@ -260,7 +294,7 @@ export const providerSessionSurfaceContract: readonly ProviderSessionSurfaceCont
   {
     surfaceId: "auth-audit-log",
     requiredControl: "auth-audit-log-writes",
-    requiredCommand: "write redacted AuditLog rows for auth lifecycle and denials",
+    requiredCommand: "write redacted AuditLog rows for auth lifecycle and denials with hashed provider/user/session/tenant selectors",
     requiredArtifact: "coverage/provider-session-audit-log.json",
     sessionBoundary: "audit-log",
     providerBackedEvidenceRequired: true,
@@ -384,6 +418,49 @@ export interface ProviderSessionRunRepository {
   };
 }
 
+function normalizeProviderSessionArtifactPath(value: string | null | undefined): string | null {
+  const normalized = value?.trim().replace(/\\/g, "/");
+  if (!normalized) return null;
+  if (/^[A-Za-z]:\//.test(normalized) || normalized.startsWith("/") || normalized.startsWith("//")) return null;
+  if (normalized.split("/").some((segment) => segment === "..")) return null;
+  if (!/^(coverage|test-results)\/[A-Za-z0-9_./-]+$/.test(normalized)) return null;
+  return normalized;
+}
+
+function normalizeProviderSessionCiRunUrl(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "https:" || url.username || url.password) return null;
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeProviderSessionCommitSha(value: string | null | undefined): string | null {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) return null;
+  return /^[a-f0-9]{7,40}$/.test(normalized) ? normalized : null;
+}
+
+function normalizeProviderSessionRunId(value: string): string {
+  const normalized = value.trim();
+  if (!/^[A-Za-z0-9_.:-]{1,96}$/.test(normalized)) {
+    throw new Error("ProviderSessionRun runId must be a short slug-like identifier before persistence.");
+  }
+  return normalized;
+}
+
+function sanitizeProviderSessionManifest(entries: readonly string[] | undefined, fallback: readonly string[]): readonly string[] {
+  const manifest = entries && entries.length > 0 ? entries : fallback;
+  return manifest.map((entry) => {
+    const redacted = redactProviderSessionEvidenceArtifact(entry);
+    return typeof redacted === "string" ? redacted : "[REDACTED]";
+  });
+}
+
 export interface ProviderSessionEvidenceDecision {
   readonly status: "complete" | "blocked";
   readonly missingControls: readonly ProviderSessionRuntimeControl[];
@@ -437,10 +514,10 @@ export const providerSessionRequiredExternalEvidence = [
   "Redacted provider selection, environment, and callback configuration evidence.",
   "Provider-backed login, logout, session callback, and TenantMember lookup evidence.",
   "Persisted User, TenantMember, CustomRole, session, and revocation lookup evidence.",
-  "Redacted auth AuditLog rows and tenant-isolation smoke evidence.",
+  "Redacted auth AuditLog rows with hashed provider/user/session/tenant selectors and tenant-isolation smoke evidence.",
   "Mobile session storage and revocation smoke evidence.",
   "Provider-backed persistProviderSessionRun execution evidence.",
-  "Redacted provider auth/session evidence bundle captured without raw provider IDs, tokens, cookies, emails, URLs, tenant IDs, session IDs, or actor identifiers.",
+  "Redacted provider auth/session evidence bundle captured without raw provider IDs, subjects, principals, access/refresh tokens, cookies, emails, URLs, tenant IDs, session IDs, user IDs, or actor identifiers.",
 ] as const;
 
 export function buildProviderSessionExecutionPlan(): ProviderSessionExecutionPlan {
@@ -511,7 +588,7 @@ export const providerSessionRuntimeMatrix = [
   },
   {
     id: "auth-audit-log",
-    command: "write redacted AuditLog rows for auth lifecycle and denials",
+    command: "write redacted AuditLog rows for auth lifecycle and denials with hashed provider/user/session/tenant selectors",
     artifact: "coverage/provider-session-audit-log.json",
     status: "persistence-gated",
   },
@@ -649,18 +726,18 @@ export function buildProviderSessionEvidenceDecision(
 export function buildProviderSessionRunData(input: ProviderSessionRunRecordInput): ProviderSessionRunData {
   return {
     tenantId: input.tenantId,
-    runId: input.runId,
-    commitSha: input.commitSha ?? null,
+    runId: normalizeProviderSessionRunId(input.runId),
+    commitSha: normalizeProviderSessionCommitSha(input.commitSha),
     status: input.status,
     commandMatrix: providerSessionRuntimeMatrix,
     controlManifest: input.coveredControls,
     artifactManifest: input.capturedArtifacts,
-    providerConfigurationManifest: input.providerConfigurationManifest ?? [
+    providerConfigurationManifest: sanitizeProviderSessionManifest(input.providerConfigurationManifest, [
       "Provider configuration evidence must stay redacted and command-backed.",
-    ],
-    tenantIsolationManifest: input.tenantIsolationManifest ?? [
+    ]),
+    tenantIsolationManifest: sanitizeProviderSessionManifest(input.tenantIsolationManifest, [
       "Tenant isolation smoke evidence is required before provider session closure.",
-    ],
+    ]),
     authPackageTypecheckPassed: input.authPackageTypecheckPassed,
     authPackageTestsPassed: input.authPackageTestsPassed,
     providerSelected: input.providerSelected,
@@ -679,18 +756,18 @@ export function buildProviderSessionRunData(input: ProviderSessionRunRecordInput
     providerBackedTestsPassed: input.providerBackedTestsPassed,
     crossTenantSmokeTestsPassed: input.crossTenantSmokeTestsPassed,
     commandEvidenceCaptured: input.commandEvidenceCaptured,
-    authTypecheckArtifactPath: input.authTypecheckArtifactPath ?? null,
-    authTestArtifactPath: input.authTestArtifactPath ?? null,
-    providerEnvArtifactPath: input.providerEnvArtifactPath ?? null,
-    loginCallbackArtifactPath: input.loginCallbackArtifactPath ?? null,
-    logoutCallbackArtifactPath: input.logoutCallbackArtifactPath ?? null,
-    sessionCallbackArtifactPath: input.sessionCallbackArtifactPath ?? null,
-    persistenceArtifactPath: input.persistenceArtifactPath ?? null,
-    securityControlsArtifactPath: input.securityControlsArtifactPath ?? null,
-    auditLogArtifactPath: input.auditLogArtifactPath ?? null,
-    tenantIsolationSmokeArtifactPath: input.tenantIsolationSmokeArtifactPath ?? null,
-    mobileRevocationSmokeArtifactPath: input.mobileRevocationSmokeArtifactPath ?? null,
-    ciRunUrl: input.ciRunUrl ?? null,
+    authTypecheckArtifactPath: normalizeProviderSessionArtifactPath(input.authTypecheckArtifactPath),
+    authTestArtifactPath: normalizeProviderSessionArtifactPath(input.authTestArtifactPath),
+    providerEnvArtifactPath: normalizeProviderSessionArtifactPath(input.providerEnvArtifactPath),
+    loginCallbackArtifactPath: normalizeProviderSessionArtifactPath(input.loginCallbackArtifactPath),
+    logoutCallbackArtifactPath: normalizeProviderSessionArtifactPath(input.logoutCallbackArtifactPath),
+    sessionCallbackArtifactPath: normalizeProviderSessionArtifactPath(input.sessionCallbackArtifactPath),
+    persistenceArtifactPath: normalizeProviderSessionArtifactPath(input.persistenceArtifactPath),
+    securityControlsArtifactPath: normalizeProviderSessionArtifactPath(input.securityControlsArtifactPath),
+    auditLogArtifactPath: normalizeProviderSessionArtifactPath(input.auditLogArtifactPath),
+    tenantIsolationSmokeArtifactPath: normalizeProviderSessionArtifactPath(input.tenantIsolationSmokeArtifactPath),
+    mobileRevocationSmokeArtifactPath: normalizeProviderSessionArtifactPath(input.mobileRevocationSmokeArtifactPath),
+    ciRunUrl: normalizeProviderSessionCiRunUrl(input.ciRunUrl),
   };
 }
 
@@ -740,7 +817,7 @@ export async function persistProviderSessionRun(
   };
 
   return repository.providerSessionRun.upsert({
-    where: { tenantId_runId: { tenantId: input.tenantId, runId: input.runId } },
+    where: { tenantId_runId: { tenantId: data.tenantId, runId: data.runId } },
     create: data,
     update,
   });
@@ -754,7 +831,11 @@ function redactProviderSessionEvidenceArtifact(value: unknown): unknown {
   if (value && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => {
-        if (/(provider|token|cookie|session|tenant|user|role|email|actor|url|secret|password|authorization|auth|audit|log|output)/i.test(key)) {
+        if (
+          /(provider|token|cookie|csrf|session|tenant|member|membership|custom|user|role|email|phone|actor|url|uri|dsn|secret|password|authorization|auth|identity|subject|principal|sub|jti|oauth|oidc|saml|access|refresh|bearer|audit|log|output|stdout|stderr|transcript|callback|login|logout|revocation|revoke|store|mobile|device|header|body|payload|artifact|path|file|command|database|persist|row|lookup|ci|workflow|run|commit|branch|isolation|denial|key|id)/i.test(
+            key,
+          )
+        ) {
           return [key, "[REDACTED]"];
         }
         return [key, redactProviderSessionEvidenceArtifact(entry)];
@@ -764,8 +845,15 @@ function redactProviderSessionEvidenceArtifact(value: unknown): unknown {
   if (typeof value === "string") {
     return value
       .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED]")
+      .replace(/postgres(?:ql)?:\/\/[^\s"'<>]+/gi, "[REDACTED]")
       .replace(/https?:\/\/\S+/gi, "[REDACTED]")
-      .replace(/\b(?:github_pat|ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]+\b/g, "[REDACTED]");
+      .replace(/\b(?:github_pat|ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]+\b/g, "[REDACTED]")
+      .replace(/\b(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}\b/gi, "[REDACTED]")
+      .replace(
+        /\b(?:tenant|user|member|role|account|session|provider|callback|revocation|audit|run|commit|workflow|ci|artifact|cookie|csrf|mobile|device|database|branch|auth|identity|subject|principal|sub|jti|oauth|oidc|saml|access|refresh|bearer|denial|isolation|persist|lookup)[-_:/]?[A-Za-z0-9_.-]{6,}\b/gi,
+        "[REDACTED]",
+      )
+      .replace(/\b[A-Za-z0-9_-]{24,}\b/g, "[REDACTED]");
   }
   return value;
 }
@@ -777,7 +865,58 @@ export function buildProviderSessionRedactedEvidenceBundle(
     status: "redacted-evidence-bundle-ready",
     artifactPath: "coverage/provider-session-redacted-evidence-bundle.json",
     redactedArtifact: redactProviderSessionEvidenceArtifact(artifact),
-    redactions: ["provider", "token", "cookie", "session", "tenant", "user", "role", "email", "actor", "url", "secret", "authorization", "audit", "log"],
+    redactions: [
+      "provider",
+      "token",
+      "cookie",
+      "csrf",
+      "session",
+      "tenant",
+      "member",
+      "customRole",
+      "user",
+      "role",
+      "email",
+      "actor",
+      "url",
+      "secret",
+      "authorization",
+      "auth",
+      "identity",
+      "subject",
+      "principal",
+      "sub",
+      "jti",
+      "oauth",
+      "oidc",
+      "saml",
+      "access",
+      "refresh",
+      "bearer",
+      "audit",
+      "log",
+      "output",
+      "callback",
+      "login",
+      "logout",
+      "revocation",
+      "sessionStore",
+      "mobile",
+      "header",
+      "payload",
+      "artifact",
+      "path",
+      "command",
+      "database",
+      "persistedRow",
+      "lookup",
+      "ci",
+      "workflow",
+      "run",
+      "commit",
+      "isolation",
+      "denial",
+    ],
     requiredArtifacts: providerSessionRuntimeArtifactPaths,
     requiredExternalEvidence: providerSessionRequiredExternalEvidence,
     providerExecutionAllowed: false,

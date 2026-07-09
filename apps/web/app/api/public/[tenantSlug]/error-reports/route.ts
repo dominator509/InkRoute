@@ -9,7 +9,7 @@ import {
 import { errorReportInputSchema } from "@inkroute/validators";
 import { prisma } from "@inkroute/db";
 import { NextResponse, type NextRequest } from "next/server";
-import { checkRateLimit, getClientIp, persistErrorReport, resolveTenant } from "../../../../../lib/localRuntimeState";
+import { checkRateLimit, getClientIpFromHeaders, persistErrorReport, resolveTenant } from "../../../../../lib/localRuntimeState";
 
 type TenantResolution = { tenantId: string; source: "database" | "local-fallback" };
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
@@ -55,6 +55,65 @@ async function resolveTenantScope(tenantSlug: string): Promise<TenantResolution 
   return { tenantId: local.tenantId, source: "local-fallback" };
 }
 
+function buildSafeErrorReportDatabaseReceipt(persisted: {
+  persistedReport: { severity: string; status: string; source: string; message: string; stackHash: string; release: string | null; route: string | null; createdAt: Date };
+}) {
+  return {
+    report: {
+      severity: persisted.persistedReport.severity,
+      status: persisted.persistedReport.status,
+      source: persisted.persistedReport.source,
+      redactedMessage: persisted.persistedReport.message,
+      stackHashStored: Boolean(persisted.persistedReport.stackHash),
+      stackHashEchoed: false,
+      release: persisted.persistedReport.release,
+      route: persisted.persistedReport.route,
+      createdAt: persisted.persistedReport.createdAt.toISOString(),
+    },
+    persistenceReceipt: {
+      errorReportPersisted: true,
+      abuseEventPersisted: true,
+      auditPersisted: true,
+    },
+    responseProjection: {
+      errorReportIdEchoed: false,
+      auditIdEchoed: false,
+      abuseEventIdEchoed: false,
+      tenantIdEchoed: false,
+      rawPayloadEchoed: false,
+      rawMessageEchoed: false,
+      rawMetadataEchoed: false,
+      rawStackEchoed: false,
+      stackHashEchoed: false,
+      internalPersistenceIdsEchoed: false,
+      redactedPreviewOnly: true,
+    },
+  };
+}
+
+function buildSafePublicErrorReportPreview(preview: ReturnType<typeof buildPublicErrorReportPreview>) {
+  return {
+    report: {
+      severity: preview.report.severity,
+      status: preview.report.status,
+      source: preview.report.source,
+      redactedMessage: preview.report.redactedMessage,
+      redactionLevel: preview.report.redactionLevel,
+      route: preview.report.route,
+      release: preview.report.release,
+      stackHashStored: Boolean(preview.report.stackHash),
+      stackHashEchoed: false,
+      responseProjection: {
+        rawMessageEchoed: false,
+        rawMetadataEchoed: false,
+        rawStackEchoed: false,
+        stackHashEchoed: false,
+      },
+    },
+    alertRoute: preview.alertRoute,
+  };
+}
+
 export async function POST(request: NextRequest, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;
   const correlation = buildRequestCorrelation(request.headers);
@@ -90,7 +149,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     );
   }
 
-  const clientIp = getClientIp(Object.fromEntries(request.headers.entries()));
+  const clientIp = getClientIpFromHeaders(request.headers);
   const rateLimit = checkRateLimit("fallback-error-report", tenantSlug, `${clientIp}:${resolvedTenant.tenantId}`);
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -163,11 +222,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
       {
         ok: true,
         data: {
-          tenantSlug,
-          tenantId: resolvedTenant.tenantId,
+          tenantScope: { routeTenantSlugReceived: true, tenantSlugEchoed: false },
           persistence: "local-runtime",
-          persisted,
-          preview,
+          persisted: {
+            createdAt: persisted.createdAt,
+            redactedRecord: persisted.redactedRecord,
+          },
+          preview: buildSafePublicErrorReportPreview(preview),
           requiredNextWork: [
             "Resolve tenant by domain/slug and enforce abuse controls before accepting public reports.",
             "Persist redacted ErrorReport rows only after database, rate limiting, and bot protection are wired.",
@@ -175,7 +236,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             "Create issue/alert automation only after repository and alerting credentials are configured.",
           ],
           localBoundary: {
-            tenantId: resolvedTenant.tenantId,
+            tenantIdEchoed: false,
             rateLimitRule: "fallback-error-report",
             requestId: correlation.requestId,
             traceparent: correlation.traceparent,
@@ -183,6 +244,16 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             abuseMonitoring,
             providerForwarding,
             hardening: errorReportIngestHardeningContract,
+          },
+          responseProjection: {
+            errorReportIdEchoed: false,
+            tenantIdEchoed: false,
+            rawPayloadEchoed: false,
+            rawMessageEchoed: false,
+            rawMetadataEchoed: false,
+            rawStackEchoed: false,
+            internalPersistenceIdsEchoed: false,
+            redactedPreviewOnly: true,
           },
         },
       },
@@ -269,25 +340,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     return NextResponse.json(
       {
         ok: true,
-        data: {
-          tenantSlug,
-          tenantId: resolvedTenant.tenantId,
-          persistence: "database",
-          report: {
-            id: persisted.persistedReport.id,
-            tenantId: persisted.persistedReport.tenantId,
-            severity: persisted.persistedReport.severity,
-            status: persisted.persistedReport.status,
-            source: persisted.persistedReport.source,
-            redactedMessage: persisted.persistedReport.message,
-            stackHash: persisted.persistedReport.stackHash,
-            release: persisted.persistedReport.release,
-            route: persisted.persistedReport.route,
-            createdAt: persisted.persistedReport.createdAt.toISOString(),
+          data: {
+            tenantScope: { routeTenantSlugReceived: true, tenantSlugEchoed: false },
+            persistence: "database",
+            ...buildSafeErrorReportDatabaseReceipt(persisted),
+            reportContext: {
             redactionLevel: preview.report.redactionLevel,
             alertRoute: preview.alertRoute,
-            auditId: persisted.audit.id,
-            abuseEventId: persisted.abuseEvent.id,
             requestId: correlation.requestId,
             traceparent: correlation.traceparent,
             botProtection,
@@ -325,15 +384,28 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
         {
           ok: true,
           data: {
-            tenantSlug,
-            tenantId: resolvedTenant.tenantId,
+            tenantScope: { routeTenantSlugReceived: true, tenantSlugEchoed: false },
             persistence: "local-runtime",
-            persisted,
-            preview,
+            persisted: {
+              createdAt: persisted.createdAt,
+              redactedRecord: persisted.redactedRecord,
+            },
+            preview: buildSafePublicErrorReportPreview(preview),
             warning: "Database was temporarily unavailable; request persisted to local runtime.",
             localBoundary: {
-              tenantId: resolvedTenant.tenantId,
+              tenantIdEchoed: false,
               rateLimitRule: "fallback-error-report",
+            },
+            responseProjection: {
+              errorReportIdEchoed: false,
+              tenantIdEchoed: false,
+              rawPayloadEchoed: false,
+              rawMessageEchoed: false,
+              rawMetadataEchoed: false,
+              rawStackEchoed: false,
+              stackHashEchoed: false,
+              internalPersistenceIdsEchoed: false,
+              redactedPreviewOnly: true,
             },
           },
         },

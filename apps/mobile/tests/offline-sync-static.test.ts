@@ -30,7 +30,8 @@ describe("mobile offline sync static contract", () => {
     expect(offlineSource).toContain("planOfflineSync");
     expect(offlineSource).toContain("encryptedStoreAvailable: input.store.encryptedAtRest");
     expect(offlineSource).toContain('decision.status !== "ready_to_sync"');
-    expect(offlineSource).toContain("blockedItemIds.push");
+    expect(offlineSource).toContain("blockedItemIdHashes.push");
+    expect(offlineSource).toContain("rawItemIdsEchoed: false");
   });
 
   it("replays ready items through the mobile API client with idempotency keys", () => {
@@ -48,13 +49,15 @@ describe("mobile offline sync static contract", () => {
   it("records redacted audit events instead of leaking sensitive offline payloads", () => {
     expect(offlineSource).toContain("buildOfflineSyncAuditEvent");
     expect(offlineSource).toContain("buildOfflineSyncTransportFailureAuditEvent");
+    expect(offlineSource).toContain("idempotencyKeyHash");
+    expect(offlineSource).toContain("rawIdempotencyKeyEchoed: false");
     expect(offlineSource).toContain("Sensitive offline payload redacted.");
     expect(offlineSource).toContain("Offline sync transport failed. Payload, response body, and credentials redacted.");
     expect(offlineSource).not.toContain("label: item.label");
   });
 
   it("persists retry state when a replay transport call fails", () => {
-    expect(offlineSource).toContain("failedItemIds");
+    expect(offlineSource).toContain("failedItemIdHashes");
     expect(offlineSource).toContain('decision: "transport_failed"');
     expect(offlineSource).toContain('status: "failed" as const');
     expect(offlineSource).toContain("retryCount: item.retryCount + 1");

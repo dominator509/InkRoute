@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { BookingLifecycleAction } from "@inkroute/booking";
+import { createClientRequestKey } from "../lib/clientRequestKeys";
 
 interface BookingLifecycleActionPanelProps {
   bookingId: string;
@@ -31,7 +32,7 @@ export function BookingLifecycleActionPanel({ bookingId, actions }: BookingLifec
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           action,
-          idempotencyKey: `dashboard-ui-${bookingId}-${action}-${Date.now()}`,
+          idempotencyKey: createClientRequestKey("dashboard-booking-lifecycle"),
         }),
       });
       payload = await response.json().catch(() => null);

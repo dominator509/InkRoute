@@ -16,13 +16,63 @@ function hashIdempotencySubject(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function resultFormId(result: unknown): string | null {
-  if (!result || typeof result !== "object" || !("formId" in result)) {
-    return null;
-  }
+function buildConsentFormResponseProjection() {
+  return {
+    consentFormResponseAllowlisted: true,
+    formIdEchoed: false,
+    tenantIdEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    rawBodyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
 
-  const value = (result as { formId?: unknown }).formId;
-  return typeof value === "string" && value.length > 0 ? value : null;
+function buildConsentFormDuplicateResponseProjection() {
+  return {
+    consentFormDuplicateResponseAllowlisted: true,
+    formIdEchoed: false,
+    tenantIdEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    existingFormIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    rawBodyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafeConsentFormResponse(result: {
+  status: "created" | "replayed";
+  form: {
+    key: string;
+    title: string;
+    status: string;
+    version: number;
+    requiresMedicalAcknowledgment: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+}) {
+  return {
+    responseProjection: buildConsentFormResponseProjection(),
+    consentForm: {
+      key: result.form.key,
+      title: result.form.title,
+      status: result.form.status,
+      version: result.form.version,
+      requiresMedicalAcknowledgment: result.form.requiresMedicalAcknowledgment,
+      createdAt: result.form.createdAt.toISOString(),
+      updatedAt: result.form.updatedAt.toISOString(),
+    },
+    persistenceReceipt: {
+      consentFormPersisted: true,
+      auditPersisted: result.status === "created",
+      idempotencyPersisted: true,
+      idempotencyReplay: result.status === "replayed",
+    },
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -80,13 +130,14 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
           error: {
             code: "PROVIDER_CONSENT_FORM_PERSISTENCE_NOT_CONFIGURED",
             message: "Production consent form creation requires DB-backed dashboard auth, tenant-scoped ConsentForm persistence, and AuditLog rows; local fallback mutations are disabled.",
             gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-040"],
           },
           productionBoundary: { localConsentFormMutationFallbackDisabled: true },
+          responseProjection: buildConsentFormResponseProjection(),
         },
         { status: 503, headers: noStoreHeaders },
       );
@@ -96,11 +147,12 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         error: {
           code: "DATABASE_REQUIRED",
           message: "Consent form creation requires database-backed dashboard auth so ConsentForm and AuditLog rows can be persisted.",
         },
+        responseProjection: buildConsentFormResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-040"],
       },
       { status: 409, headers: noStoreHeaders },
@@ -140,10 +192,9 @@ export async function POST(request: NextRequest) {
         },
         select: { id: true, status: true, result: true },
       });
-      const replayFormId = idempotency.status === "completed" ? resultFormId(idempotency.result) : null;
-      if (replayFormId) {
+      if (idempotency.status === "completed") {
         const form = await tx.consentForm.findFirst({
-          where: { id: replayFormId, tenantId },
+          where: { tenantId, key: input.key, version: input.version },
           select: {
             id: true,
             tenantId: true,
@@ -202,12 +253,15 @@ export async function POST(request: NextRequest) {
           entityId: form.id,
           metadata: {
             source: "dashboard-api",
-            key: form.key,
+            formKeyHash: hashIdempotencySubject(form.key),
+            rawFormKeyStored: false,
             version: form.version,
             status: form.status,
             requiresMedicalAcknowledgment: form.requiresMedicalAcknowledgment,
             bodyStored: true,
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             boundary: "Legal/product approval, signature capture, file assets, and medical acknowledgment flows remain separate evidence gates.",
           },
         },
@@ -219,13 +273,14 @@ export async function POST(request: NextRequest) {
         data: {
           status: "completed",
           result: toJsonValue({
-            formId: form.id,
-            auditId: audit.id,
+            consentFormPersisted: true,
+            auditLogged: true,
             created: true,
             rawBodyStoredInResult: false,
             legalApprovalCompleted: false,
             signatureRequestSent: false,
             medicalAcknowledgmentExecuted: false,
+            internalPersistenceIdsStored: false,
           }),
         },
       });
@@ -235,7 +290,15 @@ export async function POST(request: NextRequest) {
 
     if (result.status === "exists") {
       return NextResponse.json(
-        { ok: false, error: { code: "CONSENT_FORM_EXISTS", message: "A consent form with this key and version already exists for this tenant.", formId: result.formId } },
+        {
+          ok: false,
+          error: { code: "CONSENT_FORM_EXISTS", message: "A consent form with this key and version already exists for this tenant." },
+          responseProjection: buildConsentFormDuplicateResponseProjection(),
+          persistenceReceipt: {
+            duplicateDetected: true,
+            idempotencyPersisted: true,
+          },
+        },
         { status: 409, headers: noStoreHeaders },
       );
     }
@@ -244,16 +307,9 @@ export async function POST(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         persistence: "database",
-        consentForm: {
-          ...result.form,
-          createdAt: result.form.createdAt.toISOString(),
-          updatedAt: result.form.updatedAt.toISOString(),
-        },
-        auditId: result.status === "created" ? result.audit.id : null,
-        idempotencyKeyId: result.idempotency.id,
-        idempotencyReplay: result.status === "replayed",
+        ...buildSafeConsentFormResponse(result),
         gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-040"],
         boundary: "Dashboard consent form creation is tenant-scoped, no-store, idempotency-backed, and audited; legal approval, signature/file workflows, medical acknowledgments, and integration tests remain evidence-gated.",
       },
@@ -265,8 +321,9 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
           error: { code: "DATABASE_UNAVAILABLE", message: "Consent form creation requires the dashboard database connection." },
+          responseProjection: buildConsentFormResponseProjection(),
           gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-040"],
         },
         { status: 503, headers: noStoreHeaders },
@@ -275,7 +332,11 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof Error && /Unique constraint/i.test(error.message)) {
       return NextResponse.json(
-        { ok: false, error: { code: "CONSENT_FORM_EXISTS", message: "A consent form with this key and version already exists for this tenant." } },
+        {
+          ok: false,
+          error: { code: "CONSENT_FORM_EXISTS", message: "A consent form with this key and version already exists for this tenant." },
+          responseProjection: buildConsentFormDuplicateResponseProjection(),
+        },
         { status: 409, headers: noStoreHeaders },
       );
     }

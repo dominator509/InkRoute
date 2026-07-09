@@ -13,6 +13,65 @@ function toNumber(value: unknown): number | null {
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
+function buildSafeTravelReadRecord(record: Record<string, unknown>) {
+  const {
+    id: _id,
+    tenantId: _tenantId,
+    artistId: _artistId,
+    cityId: _cityId,
+    travelCityId: _travelCityId,
+    studioId: _studioId,
+    bookingRequestId: _bookingRequestId,
+    bookingRequestIds: _bookingRequestIds,
+    appointmentId: _appointmentId,
+    appointmentIds: _appointmentIds,
+    availabilityWindowId: _availabilityWindowId,
+    availabilityWindowIds: _availabilityWindowIds,
+    availability,
+    ...safeRecord
+  } = record;
+
+  return {
+    ...safeRecord,
+    artistLinked: Boolean(_artistId),
+    travelCityLinked: Boolean(_cityId ?? _travelCityId),
+    availability: Array.isArray(availability)
+      ? availability.map((window) => {
+          if (typeof window !== "object" || window === null) return window;
+          const { id: _windowId, ...safeWindow } = window as Record<string, unknown>;
+          return {
+            ...safeWindow,
+            responseProjection: { availabilityWindowIdEchoed: false },
+          };
+        })
+      : availability,
+    responseProjection: {
+      travelScheduleIdEchoed: false,
+      tenantIdEchoed: false,
+      artistIdEchoed: false,
+      travelCityIdEchoed: false,
+      availabilityWindowIdsEchoed: false,
+      bookingRequestIdsEchoed: false,
+      appointmentIdsEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+  };
+}
+
+function buildTravelListResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    travelScheduleIdsEchoed: false,
+    artistIdsEchoed: false,
+    travelCityIdsEchoed: false,
+    availabilityWindowIdsEchoed: false,
+    bookingRequestIdsEchoed: false,
+    appointmentIdsEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
@@ -35,12 +94,13 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
             message: "Production dashboard travel reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
             gapIds: ["GAP-007", "GAP-037", "GAP-046", "GAP-047"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildTravelListResponseProjection(),
           productionBoundary: { localDashboardReadFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -51,10 +111,12 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantIdEchoed: false,
         persistence: "local-fallback",
         count: demoTravelStops.length,
-        travel: demoTravelStops.slice(0, limit),
+        travel: demoTravelStops.slice(0, limit).map((stop) => buildSafeTravelReadRecord(stop as Record<string, unknown>)),
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildTravelListResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-046", "GAP-047"],
         boundary: "Local fallback returns demo travel stops only; database mode is required for live travel reads.",
       },
@@ -139,11 +201,7 @@ export async function GET(request: NextRequest) {
       tenantId,
       source: "repository",
       records: result.rows.map((row) => ({
-        id: row.id,
-        tenantId: row.tenantId,
-        artistId: row.artistId,
         title: row.title,
-        cityId: row.travelCity.id,
         city: row.travelCity.city,
         region: row.travelCity.region,
         country: row.travelCity.country,
@@ -164,7 +222,6 @@ export async function GET(request: NextRequest) {
         availabilityCount: row.availability.length,
         openAvailabilityCount: row.availability.filter((window) => window.status === "open").length,
         availability: row.availability.map((window) => ({
-          id: window.id,
           kind: window.kind,
           status: window.status,
           startsAt: window.startsAt.toISOString(),
@@ -174,7 +231,8 @@ export async function GET(request: NextRequest) {
           bufferBeforeMinutes: window.bufferBeforeMinutes,
           bufferAfterMinutes: window.bufferAfterMinutes,
           publicLabel: window.publicLabel,
-          internalNotes: window.internalNotes,
+          internalNotes: window.internalNotes ? "[redacted-dashboard-field]" : null,
+          hasInternalNotes: Boolean(window.internalNotes),
         })),
       })),
       redactedFields: ["internalNotes", "guestSpotUrl"],
@@ -184,11 +242,14 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
         count: view.records.length,
-        travel: view.records,
-        auditId: result.audit.id,
+        travel: view.records.map((record) => buildSafeTravelReadRecord(record as Record<string, unknown>)),
+        auditLogged: true,
+        auditIdEchoed: false,
+        internalPersistenceIdsEchoed: false,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildTravelListResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-046", "GAP-047"],
         boundary: "Dashboard travel list reads are tenant-scoped, internal-note redacted, no-store, and audited.",
       },
@@ -200,8 +261,9 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Travel list reads require the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildTravelListResponseProjection(),
           gapIds: ["GAP-007", "GAP-037", "GAP-046", "GAP-047"],
         },
         { status: 503, headers: noStoreHeaders },

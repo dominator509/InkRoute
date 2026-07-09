@@ -95,8 +95,10 @@ describe("observability route boundaries", () => {
       ok: boolean;
       data: {
         persistence: string;
-        preview: { report: { redactedMessage: string; redactedMetadata: Record<string, unknown>; stackHash: string }; alertRoute: { channel: string } };
+        persisted: { redactedRecord: Record<string, unknown>; message?: string; metadata?: Record<string, unknown> };
+        preview: { report: { redactedMessage: string; redactedMetadata: Record<string, unknown>; stackHashStored: boolean; stackHashEchoed: boolean }; alertRoute: { channel: string } };
         localBoundary: { rateLimitRule: string };
+        responseProjection: { rawPayloadEchoed: boolean; rawMessageEchoed: boolean; rawMetadataEchoed: boolean; rawStackEchoed: boolean; stackHashEchoed: boolean };
       };
     };
 
@@ -105,7 +107,18 @@ describe("observability route boundaries", () => {
     expect(payload.data.persistence).toBe("local-runtime");
     expect(payload.data.preview.report.redactedMessage).not.toContain("avery@example.com");
     expect(JSON.stringify(payload.data.preview.report.redactedMetadata)).not.toContain("avery@example.com");
-    expect(payload.data.preview.report.stackHash).toHaveLength(12);
+    expect(JSON.stringify(payload.data.persisted.redactedRecord)).not.toContain("avery@example.com");
+    expect(payload.data.persisted.message).toBeUndefined();
+    expect(payload.data.persisted.metadata).toBeUndefined();
+    expect(payload.data.responseProjection).toMatchObject({
+      rawPayloadEchoed: false,
+      rawMessageEchoed: false,
+      rawMetadataEchoed: false,
+      rawStackEchoed: false,
+      stackHashEchoed: false,
+    });
+    expect(payload.data.preview.report.stackHashStored).toBe(true);
+    expect(payload.data.preview.report.stackHashEchoed).toBe(false);
     expect(payload.data.localBoundary.rateLimitRule).toBe("fallback-error-report");
   });
 
@@ -156,6 +169,18 @@ describe("observability route boundaries", () => {
     expect(routeSource).toContain("{ status: 404, headers: noStoreHeaders }");
     expect(routeSource).toContain('headers: { ...noStoreHeaders, "Retry-After": String(rateLimit.retryAfterSeconds) }');
     expect(routeSource).toContain("{ status: 500, headers: noStoreHeaders }");
+    expect(routeSource).toContain("buildSafeErrorReportDatabaseReceipt");
+    expect(routeSource).toContain("errorReportIdEchoed: false");
+    expect(routeSource).toContain("auditIdEchoed: false");
+    expect(routeSource).toContain("abuseEventIdEchoed: false");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).not.toContain("tenantId: resolvedTenant.tenantId,\n          persistence");
+    expect(routeSource).not.toContain("id: persisted.id");
+    expect(routeSource).not.toContain("tenantId: persisted.tenantId");
+    expect(routeSource).not.toContain("id: persisted.persistedReport.id");
+    expect(routeSource).not.toContain("auditId: persisted.audit.id");
+    expect(routeSource).not.toContain("abuseEventId: persisted.abuseEvent.id");
   });
 
   it("persists database-backed public error reports as redacted tenant rows with audit metadata", async () => {
@@ -207,14 +232,28 @@ describe("observability route boundaries", () => {
       ok: boolean;
       data: {
         persistence: string;
-        report: { redactedMessage: string; stackHash: string; auditId: string };
+        report: { redactedMessage: string; stackHashStored: boolean; stackHashEchoed: boolean };
+        persistenceReceipt: { errorReportPersisted: boolean; abuseEventPersisted: boolean; auditPersisted: boolean };
+        responseProjection: { errorReportIdEchoed: boolean; auditIdEchoed: boolean; abuseEventIdEchoed: boolean; tenantIdEchoed: boolean; stackHashEchoed: boolean; internalPersistenceIdsEchoed: boolean };
       };
     };
 
     expect(response.status).toBe(201);
     expect(payload.ok).toBe(true);
     expect(payload.data.persistence).toBe("database");
-    expect(payload.data.report.auditId).toBe("audit_db_route_test");
+    expect(payload.data.persistenceReceipt.auditPersisted).toBe(true);
+    expect(payload.data.responseProjection.auditIdEchoed).toBe(false);
+    expect(payload.data.responseProjection.abuseEventIdEchoed).toBe(false);
+    expect(payload.data.responseProjection.errorReportIdEchoed).toBe(false);
+    expect(payload.data.responseProjection.tenantIdEchoed).toBe(false);
+    expect(payload.data.responseProjection.stackHashEchoed).toBe(false);
+    expect(payload.data.responseProjection.internalPersistenceIdsEchoed).toBe(false);
+    expect(payload.data.report.stackHashStored).toBe(true);
+    expect(payload.data.report.stackHashEchoed).toBe(false);
+    expect(payload.data).not.toHaveProperty("tenantId");
+    expect(payload.data).not.toHaveProperty("auditId");
+    expect(payload.data.report).not.toHaveProperty("auditId");
+    expect(payload.data.report).not.toHaveProperty("id");
     expect(payload.data.report.redactedMessage).not.toContain("avery@example.com");
     expect(errorReportCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -315,28 +354,115 @@ describe("observability route boundaries", () => {
     const payload = (await response.json()) as {
       ok: boolean;
       data: {
-        providerDeliveryId: string;
-        idempotencyKey: string;
-        reconciliation: { targetErrorStatus: string; persistence: string; durablePersistence: string };
-        report: { route: string; release: string; redactedMessage: string };
+        providerDeliveryFingerprint: string;
+        responseProjection: {
+          rawIdempotencyKeyEchoed: boolean;
+          rawProviderDeliveryIdEchoed: boolean;
+          rawProviderPayloadEchoed: boolean;
+          providerWebhookDeliveryIdEchoed: boolean;
+          auditLogIdEchoed: boolean;
+          matchedErrorReportIdEchoed: boolean;
+          rawReportEchoed: boolean;
+          rawWorkflowEchoed: boolean;
+          rawIssueDraftEchoed: boolean;
+          internalPersistenceIdsEchoed: boolean;
+        };
+        reconciliation: {
+          targetErrorStatus: string;
+          persistence: string;
+          durablePersistence: string;
+          providerWebhookDeliveryRecorded: boolean;
+          auditLogged: boolean;
+          matchedErrorReportResolved: boolean;
+          sanitizedProviderPayload: {
+            retained: boolean;
+            fieldNames: string[];
+            responseProjection: {
+              rawProviderPayloadEchoed: boolean;
+              rawSanitizedProviderPayloadEchoed: boolean;
+            };
+          };
+        };
+        report: {
+          route: string;
+          release: string;
+          redactedMessage: string;
+          responseProjection: {
+            rawReportEchoed: boolean;
+            rawMessageEchoed: boolean;
+            rawMetadataEchoed: boolean;
+            rawStackEchoed: boolean;
+            fingerprintEchoed: boolean;
+            stackHashEchoed: boolean;
+          };
+        };
+        workflow: { prepared: boolean; stepCount: number; responseProjection: { rawWorkflowEchoed: boolean; rawWorkflowPayloadEchoed: boolean } };
+        issueDraft: { prepared: boolean; responseProjection: { rawIssueDraftEchoed: boolean; rawIssueTitleEchoed: boolean; rawIssueBodyEchoed: boolean; rawIssueLabelsEchoed: boolean } };
         requiredNextWork: string[];
       };
     };
 
     expect(response.status).toBe(202);
     expect(payload.ok).toBe(true);
-    expect(payload.data.providerDeliveryId).toBe("sentry:resolved:issue_123");
-    expect(payload.data.idempotencyKey).toBe("sentry:resolved:issue_123");
+    expect(payload.data.providerDeliveryFingerprint).toMatch(/^sentry:resolved:sha256:[a-f0-9]{24}$/);
+    expect(payload.data.providerDeliveryFingerprint).not.toContain("issue_123");
+    expect(payload.data.responseProjection).toMatchObject({
+      rawIdempotencyKeyEchoed: false,
+      rawProviderDeliveryIdEchoed: false,
+      rawProviderPayloadEchoed: false,
+      providerWebhookDeliveryIdEchoed: false,
+      auditLogIdEchoed: false,
+      matchedErrorReportIdEchoed: false,
+      rawReportEchoed: false,
+      rawWorkflowEchoed: false,
+      rawIssueDraftEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    });
     expect(payload.data.reconciliation).toMatchObject({
       targetErrorStatus: "resolved",
       persistence: "durable-provider-webhook-attempt",
       durablePersistence: "database-write-rejected",
+      providerWebhookDeliveryRecorded: false,
+      auditLogged: false,
+      matchedErrorReportResolved: false,
     });
+    expect(payload.data.reconciliation.sanitizedProviderPayload).toMatchObject({
+      retained: true,
+      responseProjection: {
+        rawProviderPayloadEchoed: false,
+        rawSanitizedProviderPayloadEchoed: false,
+      },
+    });
+    expect(payload.data.reconciliation.sanitizedProviderPayload.fieldNames).toEqual(expect.arrayContaining(["action", "data"]));
     expect(payload.data.report).toMatchObject({
       route: "/booking",
       release: "phase11-route-test",
+      responseProjection: {
+        rawReportEchoed: false,
+        rawMessageEchoed: false,
+        rawMetadataEchoed: false,
+        rawStackEchoed: false,
+        fingerprintEchoed: false,
+        stackHashEchoed: false,
+      },
     });
     expect(payload.data.report.redactedMessage).not.toContain("avery@example.com");
+    expect(payload.data.workflow).toMatchObject({
+      prepared: true,
+      responseProjection: {
+        rawWorkflowEchoed: false,
+        rawWorkflowPayloadEchoed: false,
+      },
+    });
+    expect(payload.data.issueDraft).toMatchObject({
+      prepared: true,
+      responseProjection: {
+        rawIssueDraftEchoed: false,
+        rawIssueTitleEchoed: false,
+        rawIssueBodyEchoed: false,
+        rawIssueLabelsEchoed: false,
+      },
+    });
     expect(payload.data.requiredNextWork.join(" ")).toContain("Run live Sentry webhook replay");
   });
 });

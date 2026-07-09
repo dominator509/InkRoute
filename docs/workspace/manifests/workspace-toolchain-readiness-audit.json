@@ -1,13 +1,12 @@
 {
-  "generatedAt": null,
+  "generatedAt": "2026-07-09T14:34:09.621Z",
   "source": "GAP-130 workspace runtime readiness",
-  "status": "not-run",
+  "status": "pass",
   "findings": [],
-  "filesChecked": 0,
-  "rootScriptsChecked": 0,
-  "workspaceAllTermsChecked": 0,
-  "workspacePackageScriptsChecked": 0,
-  "ciTermsChecked": 0,
-  "generatedReportsChecked": 0,
-  "note": "Placeholder manifest committed so workspace toolchain references are concrete; scripts/workspace/verify-workspace-toolchain.mjs overwrites this file during pnpm workspace:toolchain."
+  "filesChecked": 11,
+  "rootScriptsChecked": 7,
+  "workspaceAllTermsChecked": 6,
+  "workspacePackageScriptsChecked": 4,
+  "ciTermsChecked": 6,
+  "generatedReportsChecked": 6
 }

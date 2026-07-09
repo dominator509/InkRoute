@@ -67,6 +67,39 @@ function normalizeEventInput(body: Record<string, unknown>): ObservabilityEventI
   };
 }
 
+function buildSafeAlertReportResponse(report: ObservabilityReportDraft) {
+  return {
+    prepared: true,
+    source: report.source,
+    runtime: report.runtime,
+    environment: report.environment,
+    severity: report.severity,
+    route: report.route,
+    release: report.release,
+    redactedMessage: report.redactedMessage,
+    responseProjection: {
+      rawReportEchoed: false,
+      reportIdEchoed: false,
+      fingerprintEchoed: false,
+      stackHashEchoed: false,
+      rawMessageEchoed: false,
+      rawMetadataEchoed: false,
+      rawStackEchoed: false,
+    },
+  };
+}
+
+function buildSafeAlertPayloadPreview(payload: unknown) {
+  return {
+    retained: true,
+    fieldNames: payload && typeof payload === "object" ? Object.keys(payload as Record<string, unknown>).sort() : [],
+    responseProjection: {
+      rawPayloadEchoed: false,
+      rawSanitizedPayloadEchoed: false,
+    },
+  };
+}
+
 async function persistAlertDelivery(input: {
   report: ObservabilityReportDraft;
   plan: ReturnType<typeof buildAlertEscalationPlan>;
@@ -75,7 +108,8 @@ async function persistAlertDelivery(input: {
   if (!input.report.tenantId) {
     return {
       persistence: "tenant-unresolved",
-      auditLogId: null,
+      auditLogged: false,
+      auditLogIdEchoed: false,
       deliveryState: "dashboard-only",
       acknowledgementState: "not-created",
       retryPolicy: "not-enqueued-without-tenant",
@@ -117,7 +151,7 @@ async function persistAlertDelivery(input: {
           entityType: "AlertDelivery",
           entityId: alertDelivery.id,
           metadata: {
-            reportId: input.report.id,
+            reportMatched: true,
             fingerprint: input.report.fingerprint,
             severity: input.report.severity,
             provider: input.plan.provider,
@@ -126,7 +160,8 @@ async function persistAlertDelivery(input: {
             acknowledgementState,
             retryPolicy: "exponential-backoff-3-attempts",
             deadLetterState: "configured-dead-letter-after-retry-exhaustion",
-            alertDeliveryId: alertDelivery.id,
+            alertDeliveryRecorded: true,
+            internalPersistenceIdsStored: false,
             sanitizedPayload: input.plan.sanitizedPayload,
             suppressExternalDelivery: input.plan.suppressExternalDelivery,
             blockers: input.plan.blockers,
@@ -138,13 +173,16 @@ async function persistAlertDelivery(input: {
         select: { id: true },
       });
 
-      return { alertDeliveryId: alertDelivery.id, auditLogId: auditLog.id };
+      return { alertDeliveryRecorded: true, auditLogged: true };
     });
 
     return {
       persistence: "alert-delivery-transaction",
-      alertDeliveryId: result.alertDeliveryId,
-      auditLogId: result.auditLogId,
+      alertDeliveryRecorded: result.alertDeliveryRecorded,
+      alertDeliveryIdEchoed: false,
+      auditLogged: result.auditLogged,
+      auditLogIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
       deliveryState,
       acknowledgementState,
       retryPolicy: "exponential-backoff-3-attempts",
@@ -153,8 +191,11 @@ async function persistAlertDelivery(input: {
   } catch {
     return {
       persistence: "database-write-rejected",
-      alertDeliveryId: null,
-      auditLogId: null,
+      alertDeliveryRecorded: false,
+      alertDeliveryIdEchoed: false,
+      auditLogged: false,
+      auditLogIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
       deliveryState: "not-enqueued",
       acknowledgementState: "not-created",
       retryPolicy: "transaction-not-committed",
@@ -208,11 +249,18 @@ export async function POST(request: NextRequest) {
           gapIds: ["GAP-083"],
         },
         data: {
-          reportId: report.id,
-          fingerprint: report.fingerprint,
+          report: buildSafeAlertReportResponse(report),
           provider: plan.provider,
           route: plan.route,
-          sanitizedPayload: plan.sanitizedPayload,
+          sanitizedPayload: buildSafeAlertPayloadPreview(plan.sanitizedPayload),
+          responseProjection: {
+            rawReportEchoed: false,
+            reportIdEchoed: false,
+            fingerprintEchoed: false,
+            rawPayloadEchoed: false,
+            rawSanitizedPayloadEchoed: false,
+            internalPersistenceIdsEchoed: false,
+          },
           suppressExternalDelivery: plan.suppressExternalDelivery,
           blockers: [...plan.blockers, ...readiness.blockers],
           readiness,
@@ -244,11 +292,18 @@ export async function POST(request: NextRequest) {
           gapIds: ["GAP-083"],
         },
         data: {
-          reportId: report.id,
-          fingerprint: report.fingerprint,
+          report: buildSafeAlertReportResponse(report),
           provider: plan.provider,
           route: plan.route,
-          sanitizedPayload: plan.sanitizedPayload,
+          sanitizedPayload: buildSafeAlertPayloadPreview(plan.sanitizedPayload),
+          responseProjection: {
+            rawReportEchoed: false,
+            reportIdEchoed: false,
+            fingerprintEchoed: false,
+            rawPayloadEchoed: false,
+            rawSanitizedPayloadEchoed: false,
+            internalPersistenceIdsEchoed: false,
+          },
           suppressExternalDelivery: plan.suppressExternalDelivery,
           blockers: plan.blockers,
           delivery,
@@ -269,11 +324,18 @@ export async function POST(request: NextRequest) {
     {
       ok: true,
       data: {
-        reportId: report.id,
-        fingerprint: report.fingerprint,
+        report: buildSafeAlertReportResponse(report),
         provider: plan.provider,
         route: plan.route,
-        sanitizedPayload: plan.sanitizedPayload,
+        sanitizedPayload: buildSafeAlertPayloadPreview(plan.sanitizedPayload),
+        responseProjection: {
+          rawReportEchoed: false,
+          reportIdEchoed: false,
+          fingerprintEchoed: false,
+          rawPayloadEchoed: false,
+          rawSanitizedPayloadEchoed: false,
+          internalPersistenceIdsEchoed: false,
+        },
         suppressExternalDelivery: plan.suppressExternalDelivery,
         blockers: plan.blockers,
         escalationRunbook: plan.escalationRunbook,

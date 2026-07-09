@@ -405,9 +405,9 @@ export function buildSemanticDocumentationEvidenceDecision(
 }
 
 const sensitiveSemanticDocumentationKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|provider|legal|client)$/iu;
+  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|provider|legal|client|artifact|path|file|markdown|document|body|content|excerpt|claim|audit|inventory|consistency|quality|ci|workflow|run|commit|branch|repository|repo|pull|pr|report|output|stdout|stderr|transcript|payload|evidence|approval|review|reviewer|codeowner|privileged|counsel)$/iu;
 const sensitiveSemanticDocumentationValuePattern =
-  /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:tenant|user|client|account|run|commit|workflow|ci|artifact|provider|legal|review|reviewer|codeowner|audit|doc|markdown|path|file|branch|repository|repo|pull|pr|ticket|approval)[-_:/]?[A-Za-z0-9_.-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactSemanticDocumentationString = (value: string): string =>
   value.replace(sensitiveSemanticDocumentationValuePattern, "[REDACTED]");

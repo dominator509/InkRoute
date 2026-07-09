@@ -598,9 +598,9 @@ export function buildPublicWebLaunchEvidenceDecision(
 }
 
 const sensitivePublicWebLaunchKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|client|customer|provider|repository|branch)$/iu;
+  /(account|artifact|authorization|branch|canonical|client|cookie|customer|database|derivative|domain|dsn|email|html|id|jsonld|key|legal|media|password|phone|placeholder|provider|repository|repo|pull|pr|reviewer|codeowner|route|screenshot|secret|tenant|token|uri|url|user|request|response|payload|body|raw|local|fallback|static|demo|portfolio|booking|contact|error|sitemap|robots|lighthouse|axe|playwright|trace|video|command|typecheck|build|test|output|stdout|stderr|log|ci|workflow|run|commit)$/iu;
 const sensitivePublicWebLaunchValuePattern =
-  /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:tenant|client|customer|booking|contact|portfolio|media|derivative|placeholder|route|sitemap|canonical|jsonld|lighthouse|playwright|axe|artifact|workflow|ci|run|commit|repository|repo|branch|pull|pr|reviewer|codeowner)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:private|public|static|demo|placeholder)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactPublicWebLaunchString = (value: string): string =>
   value.replace(sensitivePublicWebLaunchValuePattern, "[REDACTED]");

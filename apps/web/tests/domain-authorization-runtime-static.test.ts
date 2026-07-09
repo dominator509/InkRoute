@@ -322,6 +322,11 @@ describe("domain authorization route runtime contract", () => {
       customRoleId: "role_1234567890abcdefghijklmnopqrstuvwxyz",
       actorEmail: "admin@example.com",
       csrfToken: "csrf_1234567890abcdefghijklmnopqrstuvwxyz",
+      repositorySelector: "repo:dominator509/InkRoute",
+      branchSelector: "branch:production/domain-authorization",
+      pullRequestSelector: "pr_domain_authorization",
+      reviewerHandle: "reviewer_domain_owner",
+      codeownerSelector: "CODEOWNER:auth-platform-team",
       nested: {
         databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
         auditLogId: "audit_1234567890abcdefghijklmnopqrstuvwxyz",
@@ -340,12 +345,22 @@ describe("domain authorization route runtime contract", () => {
     expect(serialized).not.toContain("csrf_1234567890abcdefghijklmnopqrstuvwxyz");
     expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
     expect(serialized).not.toContain("audit_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("branch:production/domain-authorization");
+    expect(serialized).not.toContain("pr_domain_authorization");
+    expect(serialized).not.toContain("reviewer_domain_owner");
+    expect(serialized).not.toContain("CODEOWNER:auth-platform-team");
     expect(review.redactions).toEqual([
       "sessionToken",
       "tenantMemberId",
       "customRoleId",
       "actorEmail",
       "csrfToken",
+      "repositorySelector",
+      "branchSelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
       "nested.databaseUrl",
       "nested.auditLogId",
     ]);
@@ -383,6 +398,7 @@ describe("domain authorization route runtime contract", () => {
     expect(gapTracker).toContain("buildRedactedDomainAuthorizationArtifact");
     expect(gapTracker).toContain("buildDomainAuthorizationArtifactReview");
     expect(gapTracker).toContain("buildDomainAuthorizationRedactedEvidenceBundle");
+    expect(gapTracker).toContain("GAP-023 domain authorization artifact hardening now redacts repository/branch/PR/reviewer/CODEOWNER selectors");
   });
 
   it("pins current domain authorization proof files for GAP-023", () => {

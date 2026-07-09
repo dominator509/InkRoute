@@ -32,10 +32,34 @@ describe("dashboard settings read route contract", () => {
     expect(routeSource).toContain("tx.auditLog.create");
     expect(routeSource).toContain('action: "settings:read"');
     expect(routeSource).toContain('entityType: "Tenant"');
+    expect(routeSource).toContain("buildSettingsReadResponseProjection");
+    expect(routeSource).toContain("buildSafeSettingsTenantRecord");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("domainIdsEchoed: false");
+    expect(routeSource).toContain("memberIdsEchoed: false");
+    expect(routeSource).toContain("userIdsEchoed: false");
+    expect(routeSource).toContain("customRoleIdsEchoed: false");
+    expect(routeSource).toContain("studioIdsEchoed: false");
+    expect(routeSource).toContain("featureFlagIdsEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).not.toContain("id: domain.id");
+    expect(routeSource).not.toContain("id: member.id");
+    expect(routeSource).not.toContain("userId: member.user.id");
+    expect(routeSource).not.toContain("id: role.id");
+    expect(routeSource).not.toContain("id: studio.id");
+    expect(routeSource).not.toContain("id: flag.id");
   });
 
   it("redacts member emails and avoids domain verification/provider secret leakage", () => {
     expect(routeSource).toContain("redactEmail");
+    expect(routeSource).toContain('return "[redacted-dashboard-field]"');
+    expect(routeSource).toContain("hasUserEmail: Boolean(member.user.id)");
+    expect(routeSource).toContain("userLinked: Boolean(member.user.id)");
+    expect(routeSource).toContain("hasInvitedEmail: Boolean(member.invitedAt)");
+    expect(routeSource).toContain("userContactFieldsSelectedFromDatabase: false");
+    expect(routeSource).toContain("invitedEmailSelectedFromDatabase: false");
+    expect(routeSource).not.toContain("email: true, name: true");
+    expect(routeSource).not.toContain("invitedEmail: true");
     expect(routeSource).toContain('"verificationTokenHash"');
     expect(routeSource).not.toContain("verificationTokenHash: true");
     expect(routeSource).toContain('"studio.address"');

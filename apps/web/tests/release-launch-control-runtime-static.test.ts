@@ -258,6 +258,17 @@ describe("release launch control runtime contract", () => {
       releaseRecordId: "release_record_1234567890abcdefghijklmnopqrstuvwxyz",
       featureFlagId: "feature_flag_1234567890abcdefghijklmnopqrstuvwxyz",
       deploymentUrl: "https://inkroute-preview.example.com",
+      protectedEnvironmentApproval: "approved by release-admin@example.com for production",
+      workflowRunLog: "gh run view 1234567890 --log with deployment job output",
+      rollbackTranscript: "rollback incident INC-123 linked to release_record_1234567890abcdefghijklmnopqrstuvwxyz",
+      migrationDryRunOutput: "prisma migrate deploy dry-run against postgres://inkroute:secret@db.example.com:5432/inkroute",
+      repositorySelector: "repo:dominator509/InkRoute",
+      branchSelector: "branch:production/release-launch",
+      pullRequestSelector: "pr_release_launch",
+      reviewerHandle: "reviewer_release_owner",
+      codeownerSelector: "CODEOWNER:release-platform-team",
+      easRolloutPayload: { updateUrl: "https://expo.dev/accounts/inkroute/projects/mobile/updates/123" },
+      stackTrace: "Error: release launch control leaked provider payload",
       nested: {
         databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
         tenantId: "tenant_release_1234567890",
@@ -272,6 +283,17 @@ describe("release launch control runtime contract", () => {
     expect(serialized).not.toContain("release_record_1234567890abcdefghijklmnopqrstuvwxyz");
     expect(serialized).not.toContain("feature_flag_1234567890abcdefghijklmnopqrstuvwxyz");
     expect(serialized).not.toContain("https://inkroute-preview.example.com");
+    expect(serialized).not.toContain("release-admin@example.com");
+    expect(serialized).not.toContain("deployment job output");
+    expect(serialized).not.toContain("INC-123");
+    expect(serialized).not.toContain("prisma migrate deploy");
+    expect(serialized).not.toContain("expo.dev/accounts");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("branch:production/release-launch");
+    expect(serialized).not.toContain("pr_release_launch");
+    expect(serialized).not.toContain("reviewer_release_owner");
+    expect(serialized).not.toContain("CODEOWNER:release-platform-team");
+    expect(serialized).not.toContain("provider payload");
     expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
     expect(serialized).not.toContain("tenant_release_1234567890");
     expect(review.redactions).toEqual([
@@ -279,6 +301,17 @@ describe("release launch control runtime contract", () => {
       "releaseRecordId",
       "featureFlagId",
       "deploymentUrl",
+      "protectedEnvironmentApproval",
+      "workflowRunLog",
+      "rollbackTranscript",
+      "migrationDryRunOutput",
+      "repositorySelector",
+      "branchSelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
+      "easRolloutPayload",
+      "stackTrace",
       "nested.databaseUrl",
       "nested.tenantId",
     ]);
@@ -306,6 +339,7 @@ describe("release launch control runtime contract", () => {
     expect(gapTracker).toContain("releaseLaunchControlRequiredExternalEvidence");
     expect(gapTracker).toContain("buildRedactedReleaseLaunchControlArtifact");
     expect(gapTracker).toContain("buildReleaseLaunchControlArtifactReview");
+    expect(gapTracker).toContain("GAP-015 release launch control artifact hardening now redacts repository/branch/PR/reviewer/CODEOWNER selectors");
   });
 
   it("pins current release launch control proof files for GAP-015", () => {

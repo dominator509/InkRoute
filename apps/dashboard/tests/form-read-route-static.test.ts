@@ -42,6 +42,10 @@ describe("dashboard form read route contract", () => {
 
     for (const source of [listRouteSource, detailRouteSource]) {
       expect(source).toContain("tx.auditLog.create");
+      expect(source).toContain("auditLogged: true");
+      expect(source).toContain("auditIdEchoed: false");
+      expect(source).toContain("internalPersistenceIdsEchoed: false");
+      expect(source).not.toContain("auditId: result.audit.id");
       expect(source).toContain('"answers"');
       expect(source).toContain('"signatureFileAssetId"');
       expect(source).toContain('"ipAddressHash"');
@@ -54,6 +58,29 @@ describe("dashboard form read route contract", () => {
       expect(source).not.toContain("userAgent: true");
       expect(source).not.toContain("acknowledgments: true");
     }
+    expect(detailRouteSource).toContain("formIdEchoed: false");
+    expect(detailRouteSource).toContain("function buildFormDetailResponseProjection");
+    expect(detailRouteSource).toContain("questionIdsEchoed: false");
+    expect(detailRouteSource).toContain("tenantIdEchoed: false");
+    expect(detailRouteSource).toContain("tenantScope: { actorTenantMatched: true");
+    expect(detailRouteSource).toContain("formTenantMatched: true");
+    expect(detailRouteSource).not.toContain("id: result.intakeForm.id");
+    expect(detailRouteSource).not.toContain("id: result.consentForm!.id");
+    expect(detailRouteSource).not.toContain("id: question.id");
+    expect(detailRouteSource).not.toContain("tenantId,\n          error:");
+    expect(detailRouteSource).not.toContain("tenantId,\n        persistence");
+    expect(detailRouteSource).not.toContain("formId: params.formId,\n          error");
+    expect(listRouteSource).toContain("function buildFormListResponseProjection");
+    expect(listRouteSource).toContain("formIdsEchoed: false");
+    expect(listRouteSource).toContain("questionIdsEchoed: false");
+    expect(listRouteSource).toContain("medicalAcknowledgmentIdsEchoed: false");
+    expect(listRouteSource).toContain("signatureFileAssetIdsEchoed: false");
+    expect(listRouteSource).toContain("medicalAcknowledgmentPayloadsEchoed: false");
+    expect(listRouteSource).toContain("forms: localForms.slice(0, limit).map((form) => buildSafeLocalFormRecord(form))");
+    expect(listRouteSource).not.toContain("forms: localForms.slice(0, limit)");
+    expect(listRouteSource).not.toContain("id: form.id");
+    expect(listRouteSource).not.toContain("id: question.id");
+    expect(listRouteSource).not.toContain("id: acknowledgment.id");
   });
 
   it("keeps local fallback and database outage states explicit", () => {
@@ -86,7 +113,12 @@ describe("dashboard form read route contract", () => {
     expect(detailRouteSource).toContain("tx.idempotencyKey.update");
     expect(detailRouteSource).toContain("tx.auditLog.create");
     expect(detailRouteSource).toContain('action: "form:write:archive"');
-    expect(detailRouteSource).toContain("idempotencyKeyId");
+    expect(detailRouteSource).toContain("idempotencyRecorded: true");
+    expect(detailRouteSource).toContain("function buildFormArchiveResponseProjection");
+    expect(detailRouteSource).toContain("idempotencyKeyIdEchoed: false");
+    expect(detailRouteSource).toContain("rawIdempotencyKeyEchoed: false");
+    expect(detailRouteSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(detailRouteSource).not.toContain("idempotencyKeyId: result.idempotency.id");
     expect(detailRouteSource).toContain("legalCopyChanged: false");
     expect(detailRouteSource).toContain("signatureRequestSent: false");
     expect(detailRouteSource).toContain("rawAnswersTouched: false");
@@ -112,6 +144,8 @@ describe("dashboard form read route contract", () => {
     expect(intakeCreateRouteSource).toContain("rawQuestionsStoredInResult: false");
     expect(intakeCreateRouteSource).toContain("rawResponsesStoredInResult: false");
     expect(intakeCreateRouteSource).toContain("privacyReviewCompleted: false");
+    expect(intakeCreateRouteSource).toContain("intakeFormResponseAllowlisted: true");
+    expect(intakeCreateRouteSource).not.toContain("...result.form");
     expect(intakeCreateRouteSource).toContain("idempotencyKeyId");
     expect(intakeCreateRouteSource).toContain("idempotencyReplay");
     expect(intakeCreateRouteSource).toContain("idempotency-backed");
@@ -130,6 +164,8 @@ describe("dashboard form read route contract", () => {
     expect(consentCreateRouteSource).toContain("legalApprovalCompleted: false");
     expect(consentCreateRouteSource).toContain("signatureRequestSent: false");
     expect(consentCreateRouteSource).toContain("medicalAcknowledgmentExecuted: false");
+    expect(consentCreateRouteSource).toContain("consentFormResponseAllowlisted: true");
+    expect(consentCreateRouteSource).not.toContain("...result.form");
     expect(consentCreateRouteSource).toContain("idempotencyKeyId");
     expect(consentCreateRouteSource).toContain("idempotencyReplay");
     expect(consentCreateRouteSource).toContain("idempotency-backed");

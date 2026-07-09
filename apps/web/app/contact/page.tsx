@@ -4,7 +4,7 @@ import { CtaBand } from "../../components/CtaBand";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Contact page for a nomadic tattoo artist booking website, with tenant-scoped local persistence and provider-gated notification delivery.",
+  description: "Contact page for a nomadic tattoo artist booking website, with tenant-scoped DB-first persistence and provider-gated notification delivery.",
 };
 
 export default function ContactPage() {
@@ -15,13 +15,13 @@ export default function ContactPage() {
           <div>
             <p className="eyebrow">Contact boundary</p>
             <h1>Keep general questions separate from serious booking requests.</h1>
-            <p>General contact now posts to a tenant-scoped local persistence API with redacted audit metadata. Booking requests still belong in the guided flow, and notification delivery remains provider-gated.</p>
+            <p>General contact now posts to a tenant-scoped contact API with DB-first persistence and redacted audit metadata when available. Booking requests still belong in the guided flow, and notification delivery remains provider-gated.</p>
           </div>
           <aside className="panel-card large">
             <p className="eyebrow">Artist</p>
             <h2>{inkrouteDemoArtist.displayName}</h2>
             <p>{inkrouteDemoArtist.shortBio}</p>
-            <a className="text-link" href={inkrouteDemoArtist.instagramUrl}>Instagram placeholder</a>
+            <a className="text-link" href={inkrouteDemoArtist.instagramUrl}>View Instagram</a>
           </aside>
         </div>
       </section>
@@ -45,7 +45,7 @@ export default function ContactPage() {
               <textarea name="message" placeholder="Keep sensitive medical, payment, or private reference details in the guided booking flow." required minLength={10} />
             </label>
             <button className="button" type="submit">Send contact request</button>
-            <p className="muted">Submissions persist in local tenant runtime with redacted audit metadata. Email/SMS delivery remains provider-gated until sandbox evidence exists.</p>
+            <p className="muted">Submissions use the tenant-scoped contact route with DB-first persistence where available and non-production fallback only when needed. Email/SMS delivery remains provider-gated until sandbox evidence exists.</p>
           </form>
           <div className="stack">
             <div className="mini-row">Booking requests should use the guided request page.</div>

@@ -79,6 +79,9 @@ describe("feature flag runtime integration contract", () => {
     expect(releaseHealthRoute).toContain("{ status: 404, headers: noStoreHeaders }");
     expect(releaseHealthRoute).toContain("{ headers: noStoreHeaders }");
     expect(releaseHealthRoute).toContain("buildFeatureFlagContextFromRequest");
+    expect(releaseHealthRoute).toContain("featureFlagContextHeaderAllowlist");
+    expect(releaseHealthRoute).toContain("buildTenantSafeFeatureFlagHeaders(request.headers)");
+    expect(releaseHealthRoute).not.toContain("headers: request.headers");
     expect(releaseHealthRoute).toContain("authDerived");
     expect(releaseHealthRoute).toContain("resolveCachedFeatureFlagSnapshot");
     expect(releaseHealthRoute).toContain("runtimeFeatureFlags");
@@ -146,6 +149,16 @@ describe("feature flag runtime integration contract", () => {
         stableIdentifier: "tenant_runtime:user:user_1",
         enabled: true,
       },
+      cacheMetadata: {
+        cacheKey: "flag_tenant_runtime_user_1",
+        invalidationTarget: "tenant_runtime:feature-flags",
+      },
+      releaseHealthPayload: {
+        routeUrl: "https://preview.example.com/api/public/inkroute-demo/release-health",
+        rawHeader: "x-inkroute-user-id: user_1",
+      },
+      liveProofLog: "provider worker kill-switch drill completed for tenant_runtime user_1",
+      ciArtifactPath: "coverage/feature-flag-runtime/raw-live-proof.json",
     };
 
     const redacted = buildRedactedFeatureFlagRuntimeArtifact(rawArtifact);
@@ -155,7 +168,12 @@ describe("feature flag runtime integration contract", () => {
     expect(JSON.stringify(redacted)).not.toContain("launchdarkly-live-rollout-token");
     expect(serialized).not.toContain("artist@example.com");
     expect(serialized).not.toContain("+1 555 010 4444");
-    expect(serialized).toContain("tenant_runtime");
+    expect(serialized).not.toContain("tenant_runtime");
+    expect(serialized).not.toContain("user_1");
+    expect(serialized).not.toContain("feature-flags");
+    expect(serialized).not.toContain("preview.example.com");
+    expect(serialized).not.toContain("kill-switch drill");
+    expect(serialized).not.toContain("raw-live-proof.json");
     expect(serialized).toContain("enabled");
     expect(review.safeToPersist).toBe(true);
     expect(review.unsafeFindings).toEqual([]);

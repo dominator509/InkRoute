@@ -360,6 +360,16 @@ describe("GAP-110 provider contract runtime wiring", () => {
       rawBody: "{\"email\":\"client@example.com\",\"phone\":\"+1 555 202 3030\"}",
       sandboxTranscript: "Authorization: Bearer provider-secret-token",
       stack: "Error: provider contract failed",
+      providerRequest: { destinationUrl: "https://provider.example.test/private" },
+      providerResponse: { providerEventId: "provider_event_private_123" },
+      replayLog: "replay used idempotency_private_123",
+      rateLimitStoreOutput: "redis://provider:secret@cache.example.test:6379",
+      storageSignedUrl: "https://storage.example.test/private-object",
+      neutralTranscript: "webhook event_private_123 replayed fixture_private_123 during workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_provider_contract",
+      reviewerHandle: "reviewer_provider_contract_owner",
+      codeownerSelector: "CODEOWNER:provider-platform-team",
     };
 
     const redacted = buildRedactedProviderContractArtifact(rawArtifact);
@@ -377,6 +387,19 @@ describe("GAP-110 provider contract runtime wiring", () => {
     expect(serialized).not.toContain("client@example.com");
     expect(serialized).not.toContain("+1 555 202 3030");
     expect(serialized).not.toContain("provider-secret-token");
+    expect(serialized).not.toContain("provider contract failed");
+    expect(serialized).not.toContain("provider.example.test/private");
+    expect(serialized).not.toContain("provider_event_private_123");
+    expect(serialized).not.toContain("idempotency_private_123");
+    expect(serialized).not.toContain("redis://provider:secret@cache.example.test:6379");
+    expect(serialized).not.toContain("storage.example.test/private-object");
+    expect(serialized).not.toContain("event_private_123");
+    expect(serialized).not.toContain("fixture_private_123");
+    expect(serialized).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("pr_provider_contract");
+    expect(serialized).not.toContain("reviewer_provider_contract_owner");
+    expect(serialized).not.toContain("CODEOWNER:provider-platform-team");
     expect(serialized).toContain("[REDACTED]");
     expect(review.requiredArtifacts).toBe(providerContractRuntimeArtifactPaths);
     expect(review.retainedExternalGates).toEqual(expect.arrayContaining([

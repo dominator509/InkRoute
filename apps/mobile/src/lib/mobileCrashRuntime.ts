@@ -302,7 +302,9 @@ const missingFrom = (actual: readonly string[] | undefined, required: readonly s
   return required.filter((entry) => !actualSet.has(entry));
 };
 
-const sensitiveMobileCrashArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|sentry|dsn|auth|source.?map|debug.?symbol|device|crash|stack|error|report|dashboard|triage|payload|email|phone|medical|payment|tattoo)/i;
+const sensitiveMobileCrashArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|sentry|dsn|auth|source.?map|debug.?symbol|device|crash|stack|error|report|dashboard|triage|payload|email|phone|medical|payment|tattoo|artifact|path|ci|workflow|run|evidence|repository|repo|branch|pull|pr|reviewer|codeowner|id|key)/i;
+const sensitiveMobileCrashArtifactValue =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token|sentry)[A-Za-z0-9_-]*|(?:tenant|client|user|member|session|refresh|sentry|dsn|auth|source.?map|debug.?symbol|device|crash|stack|error|report|dashboard|triage|payload|provider|artifact|workflow|ci|run|evidence|mobile|repository|repo|branch|pull|pr|reviewer|codeowner)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactMobileCrashArtifactValue = (
   value: unknown,
@@ -326,6 +328,13 @@ const redactMobileCrashArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && sensitiveMobileCrashArtifactValue.test(value)) {
+    sensitiveMobileCrashArtifactValue.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(sensitiveMobileCrashArtifactValue, "[REDACTED]");
+  }
+
+  sensitiveMobileCrashArtifactValue.lastIndex = 0;
   return value;
 };
 

@@ -6,6 +6,7 @@
   type SearchConsoleRuntimeReadinessPlan,
 } from "@inkroute/seo";
 import { inkrouteDemoTenant } from "@inkroute/config";
+import { createHash } from "node:crypto";
 
 export const searchConsoleRequiredEnv = [
   "GOOGLE_SEARCH_CONSOLE_CLIENT_EMAIL",
@@ -38,6 +39,10 @@ export const searchConsoleRuntimeCommands = [
   "Search Console background job and idempotency tests",
   "approved Search Console fixture/provider tests",
 ] as const;
+
+function buildSearchConsoleIdempotencyKey(parts: readonly string[]): string {
+  return `search-console:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
+}
 
 export const searchConsoleRequiredExternalEvidence = [
   "verified Google Search Console test-property ownership proof",
@@ -239,7 +244,8 @@ export const searchConsoleExternalCommands = [
   "GitHub Actions Search Console runtime job",
 ] as const;
 
-const sensitiveSearchConsoleArtifactKeyPattern = /(token|secret|password|authorization|cookie|provider|payload|private|client_email|private_key|credential|google|searchconsole)/i;
+const sensitiveSearchConsoleArtifactKeyPattern =
+  /(token|secret|password|authorization|cookie|provider|payload|private|client_email|private_key|credential|google|searchconsole|tenantId|runId|siteUrl|sitemapUrl|idempotencyKey|importedRow|query|page)/i;
 const sensitiveSearchConsoleArtifactValuePatterns = [
   /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
   /\+?\d[\d\s().-]{7,}\d/g,
@@ -369,7 +375,7 @@ export const buildSearchConsoleOperationRunData = (input: SearchConsolePersisten
     rangeEnd: input.rangeEnd.toISOString(),
     rawProviderPayloadStored: false,
   },
-  completedAt: input.status === "imported" || input.status === "failed" || input.status === "blocked" ? new Date() : undefined,
+  ...(input.status === "imported" || input.status === "failed" || input.status === "blocked" ? { completedAt: new Date() } : {}),
 });
 
 export function createInMemorySearchConsolePersistenceRepository(): SearchConsolePersistenceRepository & {
@@ -451,16 +457,16 @@ export const persistSearchConsoleOperation = async (
         page: row.page,
         clicks: row.clicks,
         impressions: row.impressions,
-        ctr: row.ctr,
-        position: row.position,
+        ...(typeof row.ctr === "number" ? { ctr: row.ctr } : {}),
+        ...(typeof row.position === "number" ? { position: row.position } : {}),
         rangeStart: input.rangeStart,
         rangeEnd: input.rangeEnd,
       },
       update: {
         clicks: row.clicks,
         impressions: row.impressions,
-        ctr: row.ctr,
-        position: row.position,
+        ...(typeof row.ctr === "number" ? { ctr: row.ctr } : {}),
+        ...(typeof row.position === "number" ? { position: row.position } : {}),
         importedAt: new Date(),
       },
     });
@@ -477,16 +483,16 @@ export const buildSearchConsoleBackgroundJobPlan = (input: SearchConsoleBackgrou
   const operationPlan = buildTenantSearchConsoleOperation({
     operation: input.operation,
     tenantId: input.tenantId,
-    tenantSlug: input.tenantSlug,
-    siteUrl: input.siteUrl,
-    sitemapUrl: input.sitemapUrl,
+    ...(input.tenantSlug ? { tenantSlug: input.tenantSlug } : {}),
+    ...(input.siteUrl ? { siteUrl: input.siteUrl } : {}),
+    ...(input.sitemapUrl ? { sitemapUrl: input.sitemapUrl } : {}),
     dateRangeDays,
-    propertyOwnerTenantId: input.propertyOwnerTenantId,
-    credentialsConfigured: input.credentialsConfigured,
+    ...(input.propertyOwnerTenantId ? { propertyOwnerTenantId: input.propertyOwnerTenantId } : {}),
+    ...(typeof input.credentialsConfigured === "boolean" ? { credentialsConfigured: input.credentialsConfigured } : {}),
   });
   const siteUrl = input.siteUrl ?? searchConsoleSiteUrl();
   const idempotencyDate = rangeEnd.toISOString().slice(0, 10);
-  const idempotencyKey = `search-console:${input.tenantId}:${input.operation}:${idempotencyDate}`;
+  const idempotencyKey = buildSearchConsoleIdempotencyKey([input.tenantId, input.operation, idempotencyDate]);
 
   return {
     operationPlan,

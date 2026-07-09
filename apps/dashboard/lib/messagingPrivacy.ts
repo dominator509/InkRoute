@@ -6,6 +6,7 @@
   type MessagingPrivacyRuntimeReadinessPlan,
   type MessagingRole,
 } from "@inkroute/notifications";
+import { createHash } from "node:crypto";
 
 export interface MessagingPrivacyRepository {
   claimIdempotencyKey(input: { tenantId: string; key: string; action: MessagingPrivacyAction }): Promise<"claimed" | "duplicate">;
@@ -30,6 +31,10 @@ export interface MessagingPrivacyRepository {
   authorizeAttachment(input: { tenantId: string; threadId: string; role: MessagingRole; attachmentUrl: string }): Promise<"allowed" | "denied">;
   persistModerationDecision(input: { tenantId: string; plan: MessagingPrivacyPlan; spamScore: number }): Promise<void>;
   persistAuditLog(input: { tenantId: string; plan: MessagingPrivacyPlan; redactedMetadata: Record<string, unknown> }): Promise<void>;
+}
+
+function buildMessagingPrivacyDemoIdempotencyKey(parts: readonly string[]): string {
+  return `messaging-privacy-demo:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
 }
 
 export interface MessagingPrivacyPrismaRepositoryClient {
@@ -203,7 +208,7 @@ export function buildMessagingPrivacyContract(): MessagingPrivacyContract {
       bodyRedacted: true,
       attachmentUrl: "https://storage.example.test/private/redacted",
       attachmentPolicyApproved: true,
-      idempotencyKey: "privacy:redact:message_demo",
+      idempotencyKey: buildMessagingPrivacyDemoIdempotencyKey(["redact_message", "message_demo"]),
     }),
     authorizeViewPlan: buildMessagingPrivacyPlan({
       tenantId: "tenant_demo",
@@ -214,7 +219,7 @@ export function buildMessagingPrivacyContract(): MessagingPrivacyContract {
       body: "Redacted message contract view.",
       bodyRedacted: true,
       attachmentPolicyApproved: false,
-      idempotencyKey: "privacy:view:message_demo",
+      idempotencyKey: buildMessagingPrivacyDemoIdempotencyKey(["authorize_message_view", "message_demo"]),
     }),
     exportPlan: buildMessagingPrivacyPlan({
       tenantId: "tenant_demo",
@@ -229,7 +234,7 @@ export function buildMessagingPrivacyContract(): MessagingPrivacyContract {
       exportIncludesPrivateUrls: false,
       attachmentUrl: "https://storage.example.test/private/redacted",
       attachmentPolicyApproved: true,
-      idempotencyKey: "privacy:export:thread_demo",
+      idempotencyKey: buildMessagingPrivacyDemoIdempotencyKey(["export_thread", "thread_demo"]),
     }),
     deletePlan: buildMessagingPrivacyPlan({
       tenantId: "tenant_demo",
@@ -239,7 +244,7 @@ export function buildMessagingPrivacyContract(): MessagingPrivacyContract {
       threadId: "thread_demo",
       retentionDays: 365,
       deleteRequestedAt: "2026-06-09T17:00:00.000Z",
-      idempotencyKey: "privacy:delete:thread_demo",
+      idempotencyKey: buildMessagingPrivacyDemoIdempotencyKey(["delete_thread", "thread_demo"]),
     }),
     retentionPlan: buildMessagingPrivacyPlan({
       tenantId: "tenant_demo",
@@ -248,7 +253,7 @@ export function buildMessagingPrivacyContract(): MessagingPrivacyContract {
       actorId: "retention_worker_demo",
       threadId: "thread_demo",
       retentionDays: 365,
-      idempotencyKey: "privacy:retention:thread_demo",
+      idempotencyKey: buildMessagingPrivacyDemoIdempotencyKey(["apply_retention", "thread_demo"]),
     }),
     moderationPlan: buildMessagingPrivacyPlan({
       tenantId: "tenant_demo",
@@ -260,7 +265,7 @@ export function buildMessagingPrivacyContract(): MessagingPrivacyContract {
       bodyRedacted: true,
       spamScore: 91,
       rateLimitAllowed: false,
-      idempotencyKey: "privacy:moderate:message_spam_demo",
+      idempotencyKey: buildMessagingPrivacyDemoIdempotencyKey(["moderate_message", "message_spam_demo"]),
     }),
     requiredRepositoryMethods: [
       "claimIdempotencyKey",
@@ -308,7 +313,7 @@ export async function executeMessagingPrivacyPlan(
   input: { tenantId: string; messageId?: string; threadId?: string; attachmentUrl?: string; spamScore?: number },
 ): Promise<{ status: "processed" | "blocked" | "duplicate"; plan: MessagingPrivacyPlan }> {
   if (plan.status === "blocked") return { status: "blocked", plan };
-  const idempotencyKey = `${plan.action}:${input.threadId ?? input.messageId ?? "unknown"}`;
+  const idempotencyKey = `messaging-privacy:${createHash("sha256").update(JSON.stringify([plan.action, input.threadId ?? input.messageId ?? "unknown"])).digest("hex")}`;
   const effectiveThreadId = input.threadId ?? plan.threadId;
   const effectiveRetentionDays = plan.retentionDays;
 

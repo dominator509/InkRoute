@@ -88,7 +88,8 @@ describe("mobile offline sync runtime contract", () => {
     expect(offlineSyncSource).toContain("void scheduleSync()");
     expect(offlineSyncSource).toContain("mobileApiFetch");
     expect(offlineSyncSource).toContain("OfflineSyncTransport");
-    expect(offlineSyncSource).toContain("failedItemIds");
+    expect(offlineSyncSource).toContain("failedItemIdHashes");
+    expect(offlineSyncSource).toContain("rawItemIdsEchoed: false");
     expect(offlineSyncSource).toContain("buildOfflineSyncTransportFailureAuditEvent");
     expect(offlineSyncSource).toContain("retryCount: item.retryCount + 1");
     expect(offlineStaticTest).toContain("redacted offline sync audit events");
@@ -173,6 +174,10 @@ describe("mobile offline sync runtime contract", () => {
         idempotencyKey: "idem_private",
         publicSummary: "offline sync evidence captured",
       },
+      safeNote:
+        "evidence_mobile_offline_sync_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/offline-sync/private-proof.json",
+      safeQueuePath: "test-results/offline-sync-runtime/private-queue.json",
+      safeReconnectRun: "offline_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
     };
 
     const redacted = buildRedactedOfflineSyncArtifact(artifact);
@@ -182,6 +187,9 @@ describe("mobile offline sync runtime contract", () => {
       "sqliteDatabasePath",
       "offlineQueuePayload",
       "nested.idempotencyKey",
+      "safeNote",
+      "safeQueuePath",
+      "safeReconnectRun",
     ]);
     expect(redacted.redactedArtifact).toMatchObject({
       tenantId: "[REDACTED]",
@@ -192,7 +200,21 @@ describe("mobile offline sync runtime contract", () => {
         idempotencyKey: "[REDACTED]",
         publicSummary: "offline sync evidence captured",
       },
+      safeQueuePath: "[REDACTED]",
+      safeReconnectRun: "[REDACTED]",
     });
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "evidence_mobile_offline_sync_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "artifacts/offline-sync/private-proof.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "test-results/offline-sync-runtime/private-queue.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "offline_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
 
     const review = buildOfflineSyncArtifactReview({
       publicSummary: "safe offline sync evidence",

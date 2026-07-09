@@ -141,8 +141,8 @@ export default function ErrorReportsPage() {
         <div className="stack-list">
           {dashboardReleaseIncidentLinkagePreview.linkedReports.map((report) => (
             <div className="mini-card" key={report.fingerprint}>
-              <strong>{report.source} Â· {report.severity}</strong>
-              <p>{report.route} Â· {report.redactedMessage}</p>
+              <strong>{report.source} - {report.severity}</strong>
+              <p>{report.route} - {report.redactedMessage}</p>
               <StatusPill label={report.release} tone="info" />
             </div>
           ))}

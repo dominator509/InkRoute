@@ -360,7 +360,7 @@ export const phase10SeoRuntimeSurfaceContract: readonly Phase10SeoRuntimeSurface
 ] as const;
 
 const phase10SensitiveKeyPattern =
-  /(?:authorization|bearer|clientsecret|credential|cookie|email|password|phone|private|rawhtml|refreshtoken|secret|token)/i;
+  /(?:artifacturl|authorization|bearer|buildlog|canonical|ciurl|clientsecret|commandoutput|credential|crawl|cookie|email|pagecontent|password|phone|private|providerpayload|query|rawhtml|refreshtoken|rendered|rows|searchconsole|secret|siteurl|sitemap|tenant|token|url)/i;
 const phase10EmailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const phase10PhonePattern = /\+?\d[\d ().-]{7,}\d/g;
 const phase10TokenPattern = /\b(?:ya29|sk|rk|ghp|gcp|google|bearer)[A-Za-z0-9._:-]{8,}\b/gi;

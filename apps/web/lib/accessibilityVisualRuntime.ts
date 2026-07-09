@@ -339,7 +339,7 @@ export function buildRedactedAccessibilityVisualArtifact(value: unknown): unknow
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /email|phone|token|secret|authorization|credential|password|rawBody|stack|ciRunUrl|commitSha|runId|triageArtifactPath|screenshot|diff|screenReaderNotes|mobileQaTranscript/i.test(key)
+        /axe|baseline|ciRunUrl|commitSha|credential|diff|dom|email|html|lighthouse|mobileQaTranscript|node|password|phone|rawBody|route|screenReaderNotes|screenshot|secret|stack|target|token|trace|triageArtifactPath|url|authorization|runId/i.test(key)
           ? "[REDACTED]"
           : buildRedactedAccessibilityVisualArtifact(entry),
       ]),

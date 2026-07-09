@@ -426,7 +426,9 @@ export const buildDashboardMutationExecutionPlan = (): DashboardMutationExecutio
 });
 
 const dashboardMutationSensitiveArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|stripe|payment|deposit|medical|note|email|phone|calendar|notification|upload|reference|booking|session|cookie|webhook|idempotency|audit|rollback|operator|settings|feature|message|form|portfolio|travel)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|stripe|payment|deposit|medical|note|email|phone|calendar|notification|upload|reference|booking|session|cookie|csrf|webhook|idempotency|audit|rollback|operator|settings|feature|message|form|portfolio|travel|appointment|availability|artist|city|schedule|refund|reason|consent|intake|mutation|route|request|response|payload|body|transaction|prisma|serializable|conflict|duplicate|ui|feedback|artifact|path|command|typecheck|build|test|output|stdout|stderr|log|ci|workflow|run|commit|id|key)/i;
+const dashboardMutationSensitiveArtifactValuePattern =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|tok|pi|stripe|provider|webhook|gh[psuor]|github_pat)[A-Za-z0-9_-]*|provider-token[^"'\s]*|webhook_secret[^"'\s]*|(?:tenant|client|booking|payment|deposit|refund|portfolio|travel|appointment|availability|artist|city|schedule|form|consent|intake|message|notification|audit|idempotency|rollback|operator|mutation|route|transaction|conflict|duplicate|artifact|workflow|ci|run|commit|evidence)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|medical:[^"'\n\r]+|private-file|[A-Za-z0-9_-]{24,})/giu;
 
 export const buildRedactedDashboardMutationArtifact = (
   artifact: unknown,
@@ -451,6 +453,17 @@ export const buildRedactedDashboardMutationArtifact = (
           return [key, redact(entry, entryPath)];
         }),
       );
+    }
+
+    if (typeof value === "string") {
+      const redactedValue = value.replace(
+        dashboardMutationSensitiveArtifactValuePattern,
+        "[REDACTED_DASHBOARD_MUTATION_PRIVATE_VALUE]",
+      );
+      if (redactedValue !== value) {
+        redactions.push(path || "$");
+      }
+      return redactedValue;
     }
 
     return value;

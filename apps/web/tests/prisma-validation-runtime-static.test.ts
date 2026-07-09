@@ -171,6 +171,11 @@ describe("Prisma validation runtime contract", () => {
       databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
       generatedSql: "INSERT INTO \"Tenant\" (\"id\") VALUES ('tenant_1234567890abcdefghijklmnopqrstuvwxyz')",
       tenantId: "tenant_1234567890abcdefghijklmnopqrstuvwxyz",
+      repositorySelector: "repo:dominator509/InkRoute",
+      branchSelector: "branch:production/prisma-validation",
+      pullRequestSelector: "pr_prisma_validation",
+      reviewerHandle: "reviewer_prisma_owner",
+      codeownerSelector: "CODEOWNER:data-platform-team",
       nested: {
         schemaUrl: "https://db.example.com/schema.prisma",
         publicSummary: "Prisma validation evidence captured",
@@ -183,7 +188,22 @@ describe("Prisma validation runtime contract", () => {
     expect(JSON.stringify(redactedOnly)).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
     expect(serialized).not.toContain("tenant_1234567890abcdefghijklmnopqrstuvwxyz");
     expect(serialized).not.toContain("https://db.example.com/schema.prisma");
-    expect(review.redactions).toEqual(["databaseUrl", "generatedSql", "tenantId", "nested.schemaUrl"]);
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("branch:production/prisma-validation");
+    expect(serialized).not.toContain("pr_prisma_validation");
+    expect(serialized).not.toContain("reviewer_prisma_owner");
+    expect(serialized).not.toContain("CODEOWNER:data-platform-team");
+    expect(review.redactions).toEqual([
+      "databaseUrl",
+      "generatedSql",
+      "tenantId",
+      "repositorySelector",
+      "branchSelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
+      "nested.schemaUrl",
+    ]);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(prismaValidationRequiredExternalEvidence);
   });
@@ -202,6 +222,7 @@ describe("Prisma validation runtime contract", () => {
     expect(gapTracker).toContain("prismaValidationRequiredExternalEvidence");
     expect(gapTracker).toContain("buildRedactedPrismaValidationArtifact");
     expect(gapTracker).toContain("buildPrismaValidationArtifactReview");
+    expect(gapTracker).toContain("GAP-019 Prisma validation artifact hardening now redacts repository/branch/PR/reviewer/CODEOWNER selectors");
   });
 
   it("pins current Prisma validation proof files for GAP-019", () => {

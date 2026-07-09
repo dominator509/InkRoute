@@ -184,7 +184,7 @@ export const handoffToolingRuntimeExecutionPolicy: HandoffToolingRuntimeExecutio
 };
 
 const sensitiveHandoffToolingKeyPattern =
-  /(token|secret|password|authorization|cookie|env|installOutput|stdout|stderr|command|artifactUrl|ciRunUrl|provider|tenantId|userId|runId|email|phone|report)/i;
+  /(token|secret|password|authorization|cookie|env|installOutput|stdout|stderr|command|artifact|artifactUrl|ci|ciRun|ciRunUrl|provider|tenantId|userId|runId|email|phone|report|docs|audit|next|ledger|taskSync|tooling|handoffAll|missingScript|script|queue|parity|manifest|raw|log|output|path|url|uri|database|dsn|stack|error|actor|metadata|repository|branch|pr|pullrequest|reviewer|codeowner)/i;
 
 const sensitiveHandoffToolingStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
@@ -192,7 +192,7 @@ const sensitiveHandoffToolingStringPatterns: readonly [RegExp, string][] = [
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
   [/\b(?:sk|pk|rk|ghp|gho|ghu|ghs|whsec)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
-  [/\b(?:tenant|user|project|provider|artifact|run|task|report)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+  [/\b(?:tenant|user|project|provider|artifact|run|task|report|repository|branch|pr|pullrequest|reviewer|codeowner)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
 ];
 
 export function buildHandoffToolingRuntimeEvidenceDecision(

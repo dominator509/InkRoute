@@ -24,6 +24,42 @@ function getPayloadValue(payload: Record<string, unknown>, keys: readonly string
   return fallback;
 }
 
+function omitRawProviderWebhookIdentifiers<T extends Record<string, unknown>>(value: T) {
+  const {
+    tenantId: _tenantId,
+    eventId: _eventId,
+    providerMessageId: _providerMessageId,
+    inboundBody: _inboundBody,
+    ...safeValue
+  } = value as T & { tenantId?: unknown; eventId?: unknown; providerMessageId?: unknown; inboundBody?: unknown };
+  return {
+    ...safeValue,
+    tenantIdEchoed: false,
+    rawProviderEventIdEchoed: false,
+    rawProviderMessageIdEchoed: false,
+    rawInboundBodyEchoed: false,
+  };
+}
+
+function buildSafeLocalProviderWebhookReceipt(storedWebhook: ReturnType<typeof persistWebhookEvent>) {
+  return {
+    source: storedWebhook.source,
+    eventType: storedWebhook.eventType,
+    receivedSignatureHeader: storedWebhook.receivedSignatureHeader,
+    payloadLength: storedWebhook.payloadLength,
+    createdAt: storedWebhook.createdAt,
+    responseProjection: {
+      webhookIdEchoed: false,
+      tenantIdEchoed: false,
+      rawProviderEventIdEchoed: false,
+      rawProviderMessageIdEchoed: false,
+      rawProviderSignatureEchoed: false,
+      rawInboundBodyEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+  };
+}
+
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const signature = request.headers.get("x-twilio-signature");
@@ -128,6 +164,8 @@ export async function POST(request: NextRequest) {
     reconciliation,
   });
   const interpretation = interpretSmsWebhook(eventType, inboundBody);
+  const responseReadiness = omitRawProviderWebhookIdentifiers(readiness as unknown as Record<string, unknown>);
+  const responseReconciliation = omitRawProviderWebhookIdentifiers(reconciliation as unknown as Record<string, unknown>);
 
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json(
@@ -140,18 +178,30 @@ export async function POST(request: NextRequest) {
           gapIds: ["GAP-010", "GAP-062", "GAP-064", "GAP-066"],
         },
         data: {
-          tenantSlug,
-          eventId,
           eventType,
           interpretation,
-          readiness,
-          reconciliation,
+          readiness: responseReadiness,
+          reconciliation: responseReconciliation,
           signatureVerification,
           durablePersistence: "not-attempted-production-signature-gated",
+          rawProviderSignatureEchoed: false,
+          rawProviderSignaturePersisted: false,
+          rawInboundBodyEchoed: false,
+          tenantSlugEchoed: false,
+          rawProviderEventIdEchoed: false,
+          rawProviderMessageIdEchoed: false,
           providerWebhookBoundary,
           crossProviderReadiness: providerWebhookContract.runtimeReadiness,
           inboundBodyProvided: typeof inboundBody === "string",
           rawBodyBytes: rawBody.length,
+          responseProjection: {
+            tenantSlugEchoed: false,
+            tenantIdEchoed: false,
+            rawProviderEventIdEchoed: false,
+            rawProviderMessageIdEchoed: false,
+            rawInboundBodyEchoed: false,
+            internalPersistenceIdsEchoed: false,
+          },
           productionBoundary: {
             localSmsWebhookPersistenceDisabled: true,
             requiresDurableProviderEventPersistence: true,
@@ -199,24 +249,42 @@ export async function POST(request: NextRequest) {
     {
       ok: true,
       data: {
-        tenantSlug,
-        storedWebhook,
+        storedWebhook: buildSafeLocalProviderWebhookReceipt(storedWebhook),
         interpretation,
-        readiness,
-        reconciliation,
+        readiness: responseReadiness,
+        reconciliation: responseReconciliation,
         signatureVerification,
         durablePersistence: persistenceResult.persistence,
-        providerEventId: persistenceResult.providerEventId,
-        auditLogId: persistenceResult.auditLogId,
-        deliveryId: persistenceResult.deliveryId,
-        deliveryStatusTransitionId: persistenceResult.deliveryStatusTransitionId,
+        rawProviderSignatureEchoed: false,
+        rawProviderSignaturePersisted: false,
+        rawInboundBodyEchoed: false,
+        rawIdempotencyKeyEchoed: false,
+        tenantSlugEchoed: false,
+        rawProviderEventIdEchoed: false,
+        rawProviderMessageIdEchoed: false,
+        providerEventPersisted: persistenceResult.providerEventPersisted,
+        auditLogged: persistenceResult.auditLogged,
+        deliveryMatched: persistenceResult.deliveryMatched,
+        deliveryStatusTransitionPersisted: persistenceResult.deliveryStatusTransitionPersisted,
         deliveryStatusMutated: persistenceResult.deliveryStatusMutated,
-        suppressionId: persistenceResult.suppressionId,
+        suppressionPersisted: persistenceResult.suppressionPersisted,
         suppressionWritten: persistenceResult.suppressionWritten,
         inboundThreadCreated: persistenceResult.inboundThreadCreated,
         inboundThreadBoundary: persistenceResult.inboundThreadBoundary,
         replayDetected: persistenceResult.replayDetected,
-        idempotencyKey: persistenceResult.idempotencyKey,
+        responseProjection: {
+          tenantSlugEchoed: false,
+          tenantIdEchoed: false,
+          rawProviderEventIdEchoed: false,
+          rawProviderMessageIdEchoed: false,
+          rawInboundBodyEchoed: false,
+          providerEventIdEchoed: false,
+          auditLogIdEchoed: false,
+          deliveryIdEchoed: false,
+          deliveryStatusTransitionIdEchoed: false,
+          suppressionIdEchoed: false,
+          internalPersistenceIdsEchoed: false,
+        },
         providerWebhookBoundary,
         crossProviderReadiness: providerWebhookContract.runtimeReadiness,
         inboundBodyProvided: typeof inboundBody === "string",

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { demoPortfolioItems, inkrouteDemoTenant } from "@inkroute/config";
 import { prisma } from "@inkroute/db";
+import type { SeoImagePipelinePlan } from "@inkroute/seo";
 import { NextRequest, NextResponse } from "next/server";
 import {
   buildDashboardImageSeoPipelinePlan,
@@ -27,14 +28,62 @@ function hashImageSeoSubject(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function resultString(value: unknown, key: string): string | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const result = value as Record<string, unknown>;
-  return typeof result[key] === "string" ? result[key] : null;
+function resultBoolean(value: unknown, key: string): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return (value as Record<string, unknown>)[key] === true;
 }
 
 function json(payload: Record<string, unknown>, status = 200) {
   return NextResponse.json(payload, { status, headers: noStoreHeaders });
+}
+
+function buildSafeImageSeoPipelinePlanResponse(plan: SeoImagePipelinePlan) {
+  return {
+    tenantSlug: plan.tenantSlug,
+    sourceAcl: plan.sourceAcl,
+    sourceRemainsPrivate: plan.sourceRemainsPrivate,
+    requiresExifStrip: plan.requiresExifStrip,
+    requiresDimensionProbe: plan.requiresDimensionProbe,
+    requiresBlurPlaceholder: plan.requiresBlurPlaceholder,
+    requiresDerivativePersistence: plan.requiresDerivativePersistence,
+    cacheControl: plan.cacheControl,
+    generatedAt: plan.generatedAt,
+    blockers: plan.blockers,
+    derivativeCount: plan.derivatives.length,
+    derivativeSummaries: plan.derivatives.map((derivative) => ({
+      label: derivative.label,
+      width: derivative.width,
+      format: derivative.format,
+      acl: derivative.acl,
+      cacheControl: derivative.cacheControl,
+      objectKeyEchoed: false,
+      publicUrlEchoed: false,
+      blurDataUrlEchoed: false,
+    })),
+    filenameHintEchoed: false,
+    altTextEchoed: false,
+    captionEchoed: false,
+    sourceObjectKeyEchoed: false,
+    rawDerivativeMetadataEchoed: false,
+    rawProviderPayloadEchoed: false,
+    tenantIdEchoed: false,
+    portfolioItemIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildImageSeoPipelineResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    portfolioItemIdEchoed: false,
+    fileAssetIdEchoed: false,
+    portfolioImageIdEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    rawProviderPayloadEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -52,7 +101,8 @@ export async function GET(request: NextRequest) {
 
   return json({
     ok: true,
-    tenantId,
+    tenantScope: { actorTenantMatched: true },
+    responseProjection: buildImageSeoPipelineResponseProjection(),
     runtime: imageSeoPipelineRuntimeContract,
     artifactPaths: imageSeoPipelineArtifactPaths,
     gapIds: ["GAP-077"],
@@ -88,7 +138,7 @@ export async function POST(request: NextRequest) {
   const requestedHeight = numberValue(body.height) ?? Math.round(requestedWidth * 1.25);
 
   if (plan.blockers.length > 0) {
-    return json({ ok: false, plan, blockers: plan.blockers, gapIds: ["GAP-077"] }, 422);
+    return json({ ok: false, tenantScope: { actorTenantMatched: true }, responseProjection: buildImageSeoPipelineResponseProjection(), plan: buildSafeImageSeoPipelinePlanResponse(plan), blockers: plan.blockers, gapIds: ["GAP-077"] }, 422);
   }
 
   if (process.env.NODE_ENV === "production" && actor.source === "local-fallback") {
@@ -96,7 +146,8 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildImageSeoPipelineResponseProjection(),
         error: {
           code: "PROVIDER_IMAGE_SEO_PERSISTENCE_NOT_CONFIGURED",
           message: "Production image SEO processing requires DB-backed actor resolution plus FileAsset, PortfolioImage, and AuditLog persistence; dry-run fallback processing is disabled.",
@@ -108,7 +159,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let persisted: { fileAssetId: string | null; portfolioImageId: string | null; auditId: string | null; idempotencyKeyId: string; idempotencyReplay: boolean } | null = null;
+  let persisted: {
+    fileAssetPersisted: boolean;
+    portfolioImagePersisted: boolean;
+    auditLogged: boolean;
+    fileAssetIdEchoed: false;
+    portfolioImageIdEchoed: false;
+    auditIdEchoed: false;
+    idempotencyKeyIdEchoed: false;
+    internalPersistenceIdsEchoed: false;
+    idempotencyReplay: boolean;
+  } | null = null;
   if (actor.source !== "local-fallback") {
     const objectKey = primaryDerivative?.objectKey ?? plan.derivatives[0]!.objectKey;
     const idempotencyKey = stringValue(body.idempotencyKey) ?? `image-seo:${tenantId}:${plan.portfolioItemId}:${objectKey}:${requestedWidth}x${requestedHeight}`;
@@ -142,7 +203,10 @@ export async function POST(request: NextRequest) {
             requestHash,
             metadata: {
               source: "dashboard-image-seo-pipeline-route",
-              portfolioItemId: plan.portfolioItemId,
+              portfolioItemMatched: true,
+              portfolioItemIdEchoed: false,
+              rawRequestHashStored: false,
+              internalPersistenceIdsStored: false,
               objectKey,
               requestedWidth,
               requestedHeight,
@@ -163,9 +227,9 @@ export async function POST(request: NextRequest) {
           return {
             status: "replayed" as const,
             idempotency,
-            fileAssetId: resultString(idempotency.result, "fileAssetId"),
-            portfolioImageId: resultString(idempotency.result, "portfolioImageId"),
-            auditId: resultString(idempotency.result, "auditId"),
+            fileAssetPersisted: resultBoolean(idempotency.result, "fileAssetPersisted"),
+            portfolioImagePersisted: resultBoolean(idempotency.result, "portfolioImagePersisted"),
+            auditLogged: resultBoolean(idempotency.result, "auditLogged"),
           };
         }
 
@@ -240,12 +304,15 @@ export async function POST(request: NextRequest) {
             entityType: "PortfolioImage",
             entityId: portfolioImage.id,
             metadata: {
-              fileAssetId: fileAsset.id,
-              portfolioItemId: plan.portfolioItemId,
+              fileAssetMatched: true,
+              portfolioItemMatched: true,
               derivativeCount: plan.derivatives.length,
             sourceObjectKey: "[redacted-dashboard-field]",
-              idempotencyKeyId: idempotency.id,
-              requestHash,
+              idempotencyPersisted: true,
+              requestHashPersisted: true,
+              rawIdempotencyKeyStored: false,
+              rawRequestHashStored: false,
+              internalPersistenceIdsStored: false,
               sourceRemainsPrivate: plan.sourceRemainsPrivate,
               cacheControl: plan.cacheControl,
               requiredEvidence: imageSeoPipelineRuntimeContract.requiredEvidence,
@@ -259,10 +326,17 @@ export async function POST(request: NextRequest) {
           data: {
             status: "completed",
             result: {
-              fileAssetId: fileAsset.id,
-              portfolioImageId: portfolioImage.id,
-              auditId: audit.id,
-              requestHash,
+              fileAssetPersisted: true,
+              portfolioImagePersisted: true,
+              auditLogged: true,
+              fileAssetIdEchoed: false,
+              portfolioImageIdEchoed: false,
+              auditIdEchoed: false,
+              idempotencyKeyIdEchoed: false,
+              internalPersistenceIdsEchoed: false,
+              internalPersistenceIdsStored: false,
+              requestHashPersisted: true,
+              rawRequestHashStored: false,
               storageTransformExecuted: false,
               cdnLoadVerified: false,
               lighthouseAuditExecuted: false,
@@ -270,7 +344,7 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        return { status: "persisted" as const, idempotency, fileAssetId: fileAsset.id, portfolioImageId: portfolioImage.id, auditId: audit.id };
+        return { status: "persisted" as const, idempotency, fileAssetPersisted: true, portfolioImagePersisted: true, auditLogged: true };
       });
 
       if (result.status === "portfolio_item_not_found") {
@@ -278,7 +352,8 @@ export async function POST(request: NextRequest) {
           {
             ok: false,
             source: actor.source,
-            tenantId,
+            tenantScope: { actorTenantMatched: true },
+            responseProjection: buildImageSeoPipelineResponseProjection(),
             error: { code: "RELATED_RECORD_NOT_FOUND", message: "Image SEO portfolio item must exist for this tenant." },
             gapIds: ["GAP-005", "GAP-077"],
           },
@@ -291,9 +366,10 @@ export async function POST(request: NextRequest) {
           {
             ok: false,
             source: actor.source,
-            tenantId,
+            tenantScope: { actorTenantMatched: true },
             error: { code: "IDEMPOTENCY_CONFLICT", message: "Idempotency key was already used for a different image SEO payload." },
-            idempotencyKeyId: result.idempotency.id,
+            idempotencyRecorded: true,
+            responseProjection: buildImageSeoPipelineResponseProjection(),
             gapIds: ["GAP-005", "GAP-077"],
             boundary: "Image SEO idempotency is request-hash guarded and defaults to denial on mismatched replay payloads.",
           },
@@ -306,9 +382,10 @@ export async function POST(request: NextRequest) {
           {
             ok: false,
             source: actor.source,
-            tenantId,
+            tenantScope: { actorTenantMatched: true },
             error: { code: "TENANT_ASSET_CONFLICT", message: "Image SEO derivative object key is already owned by another tenant." },
-            idempotencyKeyId: result.idempotency.id,
+            idempotencyRecorded: true,
+            responseProjection: buildImageSeoPipelineResponseProjection(),
             gapIds: ["GAP-005", "GAP-077"],
             boundary: "Image SEO derivative metadata denies cross-tenant FileAsset object-key collisions before writes.",
           },
@@ -317,10 +394,14 @@ export async function POST(request: NextRequest) {
       }
 
       persisted = {
-        fileAssetId: result.fileAssetId,
-        portfolioImageId: result.portfolioImageId,
-        auditId: result.auditId,
-        idempotencyKeyId: result.idempotency.id,
+        fileAssetPersisted: result.fileAssetPersisted,
+        portfolioImagePersisted: result.portfolioImagePersisted,
+        auditLogged: result.auditLogged,
+        fileAssetIdEchoed: false,
+        portfolioImageIdEchoed: false,
+        auditIdEchoed: false,
+        idempotencyKeyIdEchoed: false,
+        internalPersistenceIdsEchoed: false,
         idempotencyReplay: result.status === "replayed",
       };
     } catch (error) {
@@ -329,7 +410,8 @@ export async function POST(request: NextRequest) {
           {
             ok: false,
             source: actor.source,
-            tenantId,
+            tenantScope: { actorTenantMatched: true },
+            responseProjection: buildImageSeoPipelineResponseProjection(),
             error: {
               code: "PROVIDER_IMAGE_SEO_PERSISTENCE_NOT_CONFIGURED",
               message: "Production image SEO processing requires the dashboard database connection; dry-run fallback processing is disabled.",
@@ -347,11 +429,13 @@ export async function POST(request: NextRequest) {
   return json(
     {
       ok: true,
+      tenantScope: { actorTenantMatched: true },
       persistence: persisted ? "database" : "dry-run",
-      idempotencyKeyId: persisted?.idempotencyKeyId ?? null,
+      idempotencyRecorded: Boolean(persisted),
+      responseProjection: buildImageSeoPipelineResponseProjection(),
       idempotencyReplay: persisted?.idempotencyReplay ?? false,
-      plan,
-      derivativeMetadata,
+      plan: buildSafeImageSeoPipelinePlanResponse(plan),
+      derivativeMetadataEchoed: false,
       persisted,
       runtime: imageSeoPipelineRuntimeContract,
       gapIds: ["GAP-077"],

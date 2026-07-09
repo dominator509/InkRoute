@@ -2,6 +2,7 @@
   buildRuntimeEvidenceReadinessPlan,
   runtimeEvidenceReadinessRequiredEvidence as runtimeEvidencePackageReadinessRequiredEvidence,
 } from "@inkroute/workspace";
+import type { RuntimeEvidenceRecord } from "@inkroute/workspace";
 
 export type RuntimeEvidenceMatrixStatus =
   | "required"
@@ -419,6 +420,49 @@ export const runtimeEvidenceMatrix = [
   },
 ] as const satisfies readonly RuntimeEvidenceMatrixEntry[];
 
+export const runtimeEvidenceCurrentRecords = [
+  {
+    id: "dependency-install",
+    status: "passed",
+    evidence: "pnpm install --frozen-lockfile completed successfully (dependency resolution and lockfile sync validated).",
+  },
+  {
+    id: "workspace-all",
+    status: "failed",
+    evidence: "pnpm workspace:all executed through imports/scripts/runtime-evidence; stopped on runtime evidence fail until all required evidence rows are passed.",
+  },
+  {
+    id: "handoff-all",
+    status: "failed",
+    evidence: "pnpm handoff:all failed while evaluating phase docs/ledger/task tooling and blocked at pnpm workspace:all runtime evidence fail.",
+  },
+  {
+    id: "quality-all",
+    status: "failed",
+    evidence: "pnpm quality:all failed in quality:docs/doc-links stage; quality gates remain blocked.",
+  },
+  {
+    id: "typecheck",
+    status: "failed",
+    evidence: "pnpm typecheck exited non-zero (turbo/typecheck wrapper returned exit code 1 after TypeScript command invocation).",
+  },
+  {
+    id: "unit-tests",
+    status: "failed",
+    evidence: "pnpm test:unit failed with 170 failed suites (1961 tests; runtime-contract assertions not yet met).",
+  },
+  {
+    id: "web-build",
+    status: "failed",
+    evidence: "pnpm --filter @inkroute/web build previously failed on observability route command metadata export; route export scan now shows only valid runtime/POST exports and build rerun evidence is still required.",
+  },
+  {
+    id: "dashboard-build",
+    status: "failed",
+    evidence: "pnpm --filter @inkroute/dashboard build previously failed on strictOptionalPropertyTypes in Search Console operation inputs; optional-field construction is patched and build rerun evidence is still required.",
+  },
+] as const satisfies readonly RuntimeEvidenceRecord[];
+
 const runtimeEvidenceRequirements = runtimeEvidenceMatrix
   .filter((entry) => runtimeEvidenceRequirementIds.includes(entry.id as (typeof runtimeEvidenceRequirementIds)[number]))
   .map((entry) => ({
@@ -428,15 +472,21 @@ const runtimeEvidenceRequirements = runtimeEvidenceMatrix
     gapIds: [],
   }));
 
-export const runtimeEvidenceReadiness = buildRuntimeEvidenceReadinessPlan({
+const runtimeEvidenceReadinessPlan = buildRuntimeEvidenceReadinessPlan({
   requirements: runtimeEvidenceRequirements,
-  records: [],
+  records: runtimeEvidenceCurrentRecords,
   auditStatus: "fail",
   runtimeEvidenceCommandPassed: false,
   workspaceAllIncludesRuntimeEvidence: true,
   ciEvidenceCaptured: false,
   productionBlockersVisible: true,
 });
+
+export const runtimeEvidenceReadiness = {
+  ...runtimeEvidenceReadinessPlan,
+  requiredCommands: runtimeEvidenceCommands,
+  requiredEvidence: runtimeEvidenceReadinessRequiredEvidence,
+} as const;
 
 export function buildRuntimeEvidenceDecision(input: RuntimeEvidenceDecisionInput): RuntimeEvidenceDecision {
   const passedRequirementIds = new Set(input.passedRequirementIds);
@@ -516,9 +566,9 @@ export function buildRuntimeEvidenceDecision(input: RuntimeEvidenceDecisionInput
 }
 
 const sensitiveRuntimeEvidenceKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|repository|branch|customer|label)$/iu;
+  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|repository|branch|pr|pullrequest|reviewer|codeowner|customer|label|raw|payload|body|stack|error|log|output|transcript|command|artifact|trace|screenshot|video|ci|commit|run|workspace|handoff|quality|typecheck|unit|build|blocker|production|persistence|evidence)/iu;
 const sensitiveRuntimeEvidenceValuePattern =
-  /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|\b(?:runtime|evidence|workspace|handoff|quality|typecheck|unit|build|blocker|production|persistence|ci|workflow|commit|run|repository|branch|pr|pullrequest|reviewer|codeowner|tenant|user|account|customer|artifact|trace|screenshot|video)_[A-Za-z0-9_.-]+\b|\b(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}\b|[A-Za-z0-9_-]{24,})/giu;
 
 const redactRuntimeEvidenceString = (value: string): string =>
   value.replace(sensitiveRuntimeEvidenceValuePattern, "[REDACTED]");

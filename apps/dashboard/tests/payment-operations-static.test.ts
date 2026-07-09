@@ -166,7 +166,10 @@ describe("dashboard payment operation contract", () => {
     expect(operationSource).toContain("createStripePaymentOperationProvider");
     expect(operationSource).toContain("stripe.refunds.create");
     expect(operationSource).toContain("stripe.disputes.update");
-    expect(operationSource).toContain("idempotencyKey: plan.idempotencyKey");
+    expect(operationSource).toContain("{ idempotencyKey: plan.idempotencyKey }");
+    expect(operationSource).toContain('idempotencyPersisted: "true"');
+    expect(operationSource).toContain('rawIdempotencyKeyStored: "false"');
+    expect(operationSource).not.toContain("metadata: {\n            operation: plan.action,\n            idempotencyKey: plan.idempotencyKey,");
     expect(operationSource).toContain("buildRedactedPaymentOperationProviderResult");
     expect(operationSource).toContain("tenantAuthorization.blockers");
   });
@@ -186,9 +189,15 @@ describe("dashboard payment operation contract", () => {
       }),
     ).toEqual({
       providerCall: "stripe.refunds.create",
-      providerReference: "re_123",
+      providerReference: "[redacted-provider-reference]",
+      providerReferenceHash: expect.any(String),
+      rawProviderReferenceEchoed: false,
       redactedPayload: {
-        id: "re_123",
+        id: {
+          redacted: "[redacted-provider-identifier]",
+          hash: expect.any(String),
+          rawProviderIdentifierEchoed: false,
+        },
         client_secret: "[redacted]",
         apiKey: "[redacted]",
         email: "[redacted]",
@@ -210,9 +219,15 @@ describe("dashboard payment operation contract", () => {
       }),
     ).toEqual({
       providerCall: "stripe.refunds.create",
-      providerReference: "re_123",
+      providerReference: "[redacted-provider-reference]",
+      providerReferenceHash: expect.any(String),
+      rawProviderReferenceEchoed: false,
       redactedPayload: {
-        id: "re_123",
+        id: {
+          redacted: "[redacted-provider-identifier]",
+          hash: expect.any(String),
+          rawProviderIdentifierEchoed: false,
+        },
         secret: "[redacted]",
         clientEmail: "[redacted]",
       },
@@ -333,15 +348,28 @@ describe("dashboard payment operation contract", () => {
 
     expect(result.status).toBe("ready");
     expect(result.providerResult?.redactedPayload).toEqual({
-      id: "re_123",
+      id: {
+        redacted: "[redacted-provider-identifier]",
+        hash: expect.any(String),
+        rawProviderIdentifierEchoed: false,
+      },
       secret: "[redacted]",
       customerEmail: "[redacted]",
     });
+    expect(result.providerResult?.providerReference).toBe("[redacted-provider-reference]");
+    expect(result.providerResult?.providerReferenceHash).toEqual(expect.any(String));
+    expect(result.providerResult?.rawProviderReferenceEchoed).toBe(false);
     expect(persistedProviderResults).toEqual([
       expect.objectContaining({
         result: expect.objectContaining({
+          providerReference: "[redacted-provider-reference]",
+          rawProviderReferenceEchoed: false,
           redactedPayload: {
-            id: "re_123",
+            id: {
+              redacted: "[redacted-provider-identifier]",
+              hash: expect.any(String),
+              rawProviderIdentifierEchoed: false,
+            },
             secret: "[redacted]",
             customerEmail: "[redacted]",
           },

@@ -109,6 +109,32 @@ function seoPublicationAssociations(input: SeoPublicationLocalMutation) {
   ] as const;
 }
 
+function buildSeoPublicationMetadataProof(input: {
+  readonly model?: SeoPublicationLocalModel;
+  readonly action?: SeoPublicationLocalAction;
+  readonly entityId?: string;
+  readonly idempotencyPersisted?: boolean;
+  readonly revalidationTags?: readonly string[];
+  readonly relatedFaqIds?: readonly string[];
+  readonly relatedReviewIds?: readonly string[];
+  readonly relatedImageIds?: readonly string[];
+}) {
+  return {
+    ...(input.model ? { model: input.model } : {}),
+    ...(input.action ? { action: input.action } : {}),
+    ...(input.entityId ? { entityId: input.entityId } : {}),
+    ...(input.idempotencyPersisted !== undefined ? { idempotencyPersisted: input.idempotencyPersisted } : {}),
+    rawIdempotencyKeyStored: false,
+    rawRevalidationTagsStored: false,
+    rawRelatedEntityIdsStored: false,
+    revalidationTagCount: input.revalidationTags?.length ?? 0,
+    relatedFaqCount: input.relatedFaqIds?.length ?? 0,
+    relatedReviewCount: input.relatedReviewIds?.length ?? 0,
+    relatedImageCount: input.relatedImageIds?.length ?? 0,
+    internalPersistenceIdsStored: false,
+  };
+}
+
 export function createPrismaSeoPublicationRepository(client: SeoPublicationPrismaClient): SeoPublicationPrismaRepository {
   const scope = "seo-publication";
 
@@ -126,10 +152,12 @@ export function createPrismaSeoPublicationRepository(client: SeoPublicationPrism
           key: input.idempotencyKey,
           status: "claimed",
           metadata: buildRedactedSeoPublicationArtifact({
-            model: input.model,
-            action: input.action,
-            entityId: input.entityId,
-            revalidationTags: input.revalidationTags,
+            ...buildSeoPublicationMetadataProof({
+              model: input.model,
+              action: input.action,
+              entityId: input.entityId,
+              revalidationTags: input.revalidationTags,
+            }),
           }) as Record<string, unknown>,
         },
       });
@@ -145,8 +173,10 @@ export function createPrismaSeoPublicationRepository(client: SeoPublicationPrism
           tags: input.revalidationTags,
           status: "queued",
           metadata: buildRedactedSeoPublicationArtifact({
-            idempotencyKey: input.idempotencyKey,
-            revalidationTags: input.revalidationTags,
+            ...buildSeoPublicationMetadataProof({
+              idempotencyPersisted: true,
+              revalidationTags: input.revalidationTags,
+            }),
           }) as Record<string, unknown>,
         },
       });
@@ -165,11 +195,13 @@ export function createPrismaSeoPublicationRepository(client: SeoPublicationPrism
           entityType: input.model,
           entityId: input.entityId,
           metadata: buildRedactedSeoPublicationArtifact({
-            idempotencyKey: input.idempotencyKey,
-            revalidationTags: input.revalidationTags,
-            relatedFaqIds: input.relatedFaqIds ?? [],
-            relatedReviewIds: input.relatedReviewIds ?? [],
-            relatedImageIds: input.relatedImageIds ?? [],
+            ...buildSeoPublicationMetadataProof({
+              idempotencyPersisted: true,
+              revalidationTags: input.revalidationTags,
+              relatedFaqIds: input.relatedFaqIds ?? [],
+              relatedReviewIds: input.relatedReviewIds ?? [],
+              relatedImageIds: input.relatedImageIds ?? [],
+            }),
           }) as Record<string, unknown>,
         },
       });
@@ -324,7 +356,8 @@ export const buildSeoPublicationExecutionPlan = (): SeoPublicationExecutionPlan 
   requiredExternalEvidence: seoPublicationRequiredExternalEvidence,
 });
 
-const sensitiveSeoArtifactKeyPattern = /(token|secret|password|authorization|cookie|draft|body|copy|email|phone|searchconsole|provider|payload)/i;
+const sensitiveSeoArtifactKeyPattern =
+  /(token|secret|password|authorization|cookie|draft|body|copy|email|phone|searchconsole|provider|payload|tenantId|actorId|entityId|relatedId|idempotencyKey|revalidationTag)/i;
 const sensitiveSeoArtifactValuePatterns = [
   /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
   /\+?\d[\d\s().-]{7,}\d/g,
@@ -404,11 +437,13 @@ export function createInMemorySeoPublicationRepository(): SeoPublicationLocalRep
         entityId: input.entityId,
         action: `seo:${input.model}:${input.action}`,
         metadata: buildRedactedSeoPublicationArtifact({
-          idempotencyKey: input.idempotencyKey,
-          revalidationTags: input.revalidationTags,
-          relatedFaqIds: input.relatedFaqIds ?? [],
-          relatedReviewIds: input.relatedReviewIds ?? [],
-          relatedImageIds: input.relatedImageIds ?? [],
+          ...buildSeoPublicationMetadataProof({
+            idempotencyPersisted: true,
+            revalidationTags: input.revalidationTags,
+            relatedFaqIds: input.relatedFaqIds ?? [],
+            relatedReviewIds: input.relatedReviewIds ?? [],
+            relatedImageIds: input.relatedImageIds ?? [],
+          }),
         }) as Record<string, unknown>,
       });
     },

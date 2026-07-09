@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   evaluateEncryptionPolicy,
   evaluateProviderTokenEncryptionPolicy,
+  buildRedactedEncryptionKeyEvidenceArtifact,
   encryptTextField,
   invalidateEncryptionCache,
   verifyEncryptionRoundTrip,
@@ -187,6 +188,42 @@ describe("encryption policy and cache-rotation coverage", () => {
     } finally {
       restoreEnv(restore);
     }
+  });
+
+  it("redacts GAP-021 key lifecycle and provider-token evidence artifacts before retention", async () => {
+    const artifact = {
+      operation: "booking-request:create",
+      keyLifecycle: {
+        activeKeyId: "primary-key-private-202606",
+        configuredKeyIds: ["primary-key-private-202606", "secondary-key-private-202606"],
+        cacheVersionLabel: "cache_rotation_run_private_123456789",
+        envVar: "SECURITY_ENCRYPTION_PRIMARY_KEY",
+      },
+      providerTokenReadiness: {
+        providerToken: "provider_token_private_abcdef1234567890",
+        authorization: "Bearer provider-token-private",
+      },
+      evidencePath: "coverage/encryption-private-key-readiness.json",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/private",
+      operatorContact: "artist@example.com +1 555 222 3333",
+      safeStatus: "encryption lifecycle evidence captured",
+    };
+
+    const redacted = buildRedactedEncryptionKeyEvidenceArtifact(artifact);
+    const serialized = JSON.stringify(redacted);
+
+    expect(serialized).not.toContain("primary-key-private-202606");
+    expect(serialized).not.toContain("secondary-key-private-202606");
+    expect(serialized).not.toContain("cache_rotation_run_private_123456789");
+    expect(serialized).not.toContain("SECURITY_ENCRYPTION_PRIMARY_KEY");
+    expect(serialized).not.toContain("provider_token_private_abcdef1234567890");
+    expect(serialized).not.toContain("provider-token-private");
+    expect(serialized).not.toContain("coverage/encryption-private-key-readiness.json");
+    expect(serialized).not.toContain("/actions/runs/private");
+    expect(serialized).not.toContain("artist@example.com");
+    expect(serialized).not.toContain("+1 555 222 3333");
+    expect(serialized).toContain("encryption lifecycle evidence captured");
+    expect(serialized).toContain("[redacted-encryption-evidence]");
   });
 
   it("pins GAP-021 tracker closure evidence in the unit manifest", async () => {

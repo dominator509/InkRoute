@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createClientRequestKey } from "../lib/clientRequestKeys";
 
 type FormActionState =
   | { status: "idle"; message: string }
@@ -22,7 +23,7 @@ export function FormActionPanel() {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "idempotency-key": `dashboard-form-archive-${Date.now()}`,
+          "idempotency-key": createClientRequestKey("dashboard-form-archive"),
         },
         body: JSON.stringify({ action: "archive_form_version" }),
       });

@@ -3,6 +3,7 @@ import { publicReadQuerySchema } from "@inkroute/validators";
 import {
   buildLocalPublicContentResponse,
   buildPublicContentProductionBoundary,
+  buildSafeLocalPublicContentRouteResponse,
   isPublicContentDatabaseUnavailable,
   publicContentNoStoreHeaders,
   readPublicTestimonials,
@@ -51,13 +52,13 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
           ok: true,
           data: {
             tenantSlug,
-            tenantId: tenant.tenantId,
             source: tenant.source,
             persistence: "database",
             collection: "testimonials",
             query: { limit: query.data.limit },
             data: limitedReviews,
             redactedFields: ["clientId", "bookingRequestId", "email", "phone", "privateNotes"],
+            responseProjection: { tenantIdEchoed: false, internalPersistenceIdsEchoed: false, rawPrivateFieldsEchoed: false },
             cachePolicy: { strategy: "tenant-revalidated", revalidateSeconds: 300 },
             boundary: "Public reviews expose approved testimonial fields only and omit client/private booking metadata.",
             gapIds: ["GAP-027", "GAP-028", "GAP-076"],
@@ -68,7 +69,7 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
     }
 
     const local = buildLocalPublicContentResponse(tenantSlug, tenant, "testimonials");
-    return NextResponse.json({ ok: true, data: local ? { ...local, query: { limit: query.data.limit }, testimonials: local.testimonials.slice(0, query.data.limit) } : local }, { headers: publicContentNoStoreHeaders });
+    return NextResponse.json({ ok: true, data: local ? buildSafeLocalPublicContentRouteResponse(local, "testimonials", query.data.limit) : local }, { headers: publicContentNoStoreHeaders });
   } catch (error) {
     if (!isPublicContentDatabaseUnavailable(error)) throw error;
 
@@ -100,6 +101,6 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
         { status: 503, headers: publicContentNoStoreHeaders },
       );
     }
-    return NextResponse.json({ ok: true, data: local ? { ...local, query: { limit: query.data.limit }, testimonials: local.testimonials.slice(0, query.data.limit) } : local }, { headers: publicContentNoStoreHeaders });
+    return NextResponse.json({ ok: true, data: local ? buildSafeLocalPublicContentRouteResponse(local, "testimonials", query.data.limit) : local }, { headers: publicContentNoStoreHeaders });
   }
 }

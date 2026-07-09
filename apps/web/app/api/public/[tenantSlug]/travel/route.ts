@@ -3,6 +3,7 @@ import { publicReadQuerySchema } from "@inkroute/validators";
 import {
   buildLocalPublicContentResponse,
   buildPublicContentProductionBoundary,
+  buildSafeLocalPublicContentRouteResponse,
   isPublicContentDatabaseUnavailable,
   publicContentNoStoreHeaders,
   readPublicTravelStops,
@@ -51,13 +52,13 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
           ok: true,
           data: {
             tenantSlug,
-            tenantId: tenant.tenantId,
             source: tenant.source,
             persistence: "database",
             collection: "travelStops",
             query: { limit: query.data.limit },
             data: limitedStops,
             redactedFields: ["tenantId", "artistId", "internalNotes", "guestSpotUrl"],
+            responseProjection: { tenantIdEchoed: false, internalPersistenceIdsEchoed: false, rawPrivateFieldsEchoed: false },
             cachePolicy: { strategy: "tenant-revalidated", revalidateSeconds: 300 },
             boundary: "Public travel reads use tenant-scoped database schedules and omit internal notes/provider metadata.",
             gapIds: ["GAP-027", "GAP-028", "GAP-055", "GAP-076"],
@@ -68,7 +69,7 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
     }
 
     const local = buildLocalPublicContentResponse(tenantSlug, tenant, "travelStops");
-    return NextResponse.json({ ok: true, data: local ? { ...local, query: { limit: query.data.limit }, travelStops: local.travelStops.slice(0, query.data.limit) } : local }, { headers: publicContentNoStoreHeaders });
+    return NextResponse.json({ ok: true, data: local ? buildSafeLocalPublicContentRouteResponse(local, "travelStops", query.data.limit) : local }, { headers: publicContentNoStoreHeaders });
   } catch (error) {
     if (!isPublicContentDatabaseUnavailable(error)) throw error;
 
@@ -100,6 +101,6 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
         { status: 503, headers: publicContentNoStoreHeaders },
       );
     }
-    return NextResponse.json({ ok: true, data: local ? { ...local, query: { limit: query.data.limit }, travelStops: local.travelStops.slice(0, query.data.limit) } : local }, { headers: publicContentNoStoreHeaders });
+    return NextResponse.json({ ok: true, data: local ? buildSafeLocalPublicContentRouteResponse(local, "travelStops", query.data.limit) : local }, { headers: publicContentNoStoreHeaders });
   }
 }

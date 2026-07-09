@@ -122,6 +122,8 @@ describe("GAP-101 abuse control runtime contract", () => {
     expect(contract.transactionWrites).toEqual(["AbuseEvent", "AuditLog"]);
     expect(contract.hashedFields).toContain("ipHash");
     expect(contract.redactedFields).toContain("providerSignature");
+    expect(contract.redactedFields).toContain("rawHeaders");
+    expect(contract.redactedFields).toContain("cookie");
     expect(contract.failClosedGate).toBe("persist_before_reject_on_limiter_error");
     expect(contract.tenantIsolationKey).toBe("tenantId");
     expect(abuseEventPersistencePreview.modelName).toBe("AbuseEvent");
@@ -132,15 +134,29 @@ describe("GAP-101 abuse control runtime contract", () => {
     const privacyRoute = readWorkspaceFile("apps/web/app/api/public/[tenantSlug]/privacy-requests/route.ts");
     const uploadRoute = readWorkspaceFile("apps/web/app/api/public/[tenantSlug]/secure-upload-intents/route.ts");
     const errorRoute = readWorkspaceFile("apps/web/app/api/public/[tenantSlug]/error-reports/route.ts");
+    const localRuntimeState = readWorkspaceFile("apps/web/lib/localRuntimeState.ts");
     const dashboardPrivacyRoute = readWorkspaceFile("apps/dashboard/app/api/security/privacy-requests/route.ts");
 
     expect(bookingRoute).toContain("checkRateLimit");
     expect(bookingRoute).toContain("x-inkroute-bot-proof");
+    expect(bookingRoute).toContain("getClientIpFromHeaders(request.headers)");
+    expect(bookingRoute).not.toContain("Object.fromEntries(request.headers.entries())");
     expect(privacyRoute).toContain("public-privacy-request");
+    expect(privacyRoute).toContain("getClientIpFromHeaders(request.headers)");
     expect(uploadRoute).toContain("public-upload-intent");
+    expect(uploadRoute).toContain("getClientIpFromHeaders(request.headers)");
     expect(errorRoute).toContain("enforceErrorReportBotProtection");
     expect(errorRoute).toContain("buildAbuseMonitoringDecision");
+    expect(errorRoute).toContain("getClientIpFromHeaders(request.headers)");
+    expect(localRuntimeState).toContain("export function getClientIpFromHeaders(headers: { get(name: string): string | null })");
+    expect(localRuntimeState).toContain('headers.get("x-forwarded-for")');
+    expect(localRuntimeState).not.toContain('headers.get("x-client-ip")');
+    expect(localRuntimeState).toContain("function redactWebhookSignatureHeader");
+    expect(localRuntimeState).toContain("receivedSignatureHeader: redactWebhookSignatureHeader(input.signatureHeader)");
+    expect(localRuntimeState).not.toContain("receivedSignatureHeader: input.signatureHeader");
     expect(dashboardPrivacyRoute).toContain("checkDashboardMutationRateLimit");
+    expect(dashboardPrivacyRoute).toContain("getClientIpFromAllowlistedHeaders");
+    expect(dashboardPrivacyRoute).not.toContain('request.headers.get("x-client-ip")');
     expect(abuseControlRuntimeReadiness.blockers).not.toContain(
       "Web/dashboard edge middleware or route middleware must enforce abuse controls before handlers run.",
     );
@@ -388,6 +404,11 @@ describe("GAP-101 abuse control runtime contract", () => {
       messageBody: "Contact client@example.com at +1 555 101 2020",
       payload: "{\"token\":\"private-token\",\"email\":\"client@example.com\"}",
       headers: ["Authorization: Bearer abuse-secret-token"],
+      rawHeaders: {
+        cookie: "session=secret-session; tracking=private",
+        xForwardedFor: "203.0.113.10, 10.0.0.4",
+        cfConnectingIp: "198.51.100.8",
+      },
       stack: "Error: limiter failed",
     };
 
@@ -402,6 +423,9 @@ describe("GAP-101 abuse control runtime contract", () => {
     expect(serialized).not.toContain("+1 555 101 2020");
     expect(serialized).not.toContain("private-token");
     expect(serialized).not.toContain("abuse-secret-token");
+    expect(serialized).not.toContain("secret-session");
+    expect(serialized).not.toContain("203.0.113.10");
+    expect(serialized).not.toContain("198.51.100.8");
     expect(serialized).toContain("[REDACTED]");
     expect(review.requiredArtifacts).toBe(abuseControlArtifactPaths);
     expect(review.retainedExternalGates).toEqual(expect.arrayContaining([

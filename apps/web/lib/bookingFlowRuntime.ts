@@ -420,7 +420,9 @@ export const buildBookingFlowRuntimeExecutionPlan = (): BookingFlowRuntimeExecut
 });
 
 const bookingFlowRuntimeSensitiveArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|file|provider|stripe|payment|deposit|medical|note|email|phone|calendar|notification|upload|reference|booking|session|cookie|prisma|connection)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|file|provider|stripe|payment|deposit|medical|note|email|phone|calendar|notification|upload|reference|booking|session|cookie|csrf|prisma|connection|route|request|response|payload|body|workflow|consumer|local|browser|playwright|trace|screenshot|video|html|dom|confirmation|anti|bot|turnstile|captcha|transaction|state|event|audit|artifact|path|command|typecheck|build|test|output|stdout|stderr|log|ci|workflow|run|commit|repository|repo|branch|pull|pr|reviewer|codeowner|id|key)/i;
+const bookingFlowRuntimeSensitiveArtifactValuePattern =
+  /(https?:\/\/[^\s"']+|prisma:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat)_[A-Za-z0-9_]+|(?:tenant|client|booking|request|workflow|consumer|upload|reference|payment|deposit|audit|state|event|session|provider|route|trace|screenshot|transaction|ci|run|commit|prisma|database)[-_:/]?[A-Za-z0-9_.-]{6,}|medical:[^"'\n\r]+|private-file|[A-Za-z0-9_-]{24,})/giu;
 
 export const buildRedactedBookingFlowRuntimeArtifact = (
   artifact: unknown,
@@ -445,6 +447,17 @@ export const buildRedactedBookingFlowRuntimeArtifact = (
           return [key, redact(entry, entryPath)];
         }),
       );
+    }
+
+    if (typeof value === "string") {
+      const redactedValue = value.replace(
+        bookingFlowRuntimeSensitiveArtifactValuePattern,
+        "[REDACTED_BOOKING_FLOW_RUNTIME_PRIVATE_VALUE]",
+      );
+      if (redactedValue !== value) {
+        redactions.push(path || "$");
+      }
+      return redactedValue;
     }
 
     return value;

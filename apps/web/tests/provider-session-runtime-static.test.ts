@@ -47,7 +47,7 @@ describe("provider session runtime contract", () => {
       "provider-backed session callback and TenantMember lookup test",
       "persist User, TenantMember, CustomRole, session, and revocation lookups",
       "verify secure dashboard cookies and mobile token storage/revocation",
-      "write redacted AuditLog rows for auth lifecycle and denials",
+      "write redacted AuditLog rows for auth lifecycle and denials with hashed provider/user/session/tenant selectors",
       "dashboard/API tenant isolation smoke tests",
       "mobile session storage/revocation smoke tests",
     ]);
@@ -89,7 +89,7 @@ describe("provider session runtime contract", () => {
     const runData = buildProviderSessionRunData({
       tenantId: "tenant_static",
       runId: "provider_session_static",
-      commitSha: "abc123",
+      commitSha: "ABC1234",
       status: "blocked",
       authPackageTypecheckPassed: true,
       authPackageTestsPassed: true,
@@ -119,11 +119,27 @@ describe("provider session runtime contract", () => {
       completedCommands: ["pnpm --filter @inkroute/auth typecheck", "pnpm --filter @inkroute/auth test"],
       authTypecheckArtifactPath: "coverage/provider-session-auth-typecheck.txt",
       authTestArtifactPath: "coverage/provider-session-auth-test.txt",
+      providerEnvArtifactPath: "C:\\Users\\domin\\secrets\\provider-env.json",
+      loginCallbackArtifactPath: "../private/provider-session-login-callback.json",
+      logoutCallbackArtifactPath: "https://example.invalid/provider-session-logout-callback.json",
+      sessionCallbackArtifactPath: "coverage/provider-session-callback-tenant-lookup.json",
+      tenantIsolationSmokeArtifactPath: "test-results/provider-session-runtime/tenant-isolation-smoke.json",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/123456?token=secret#logs",
+      providerConfigurationManifest: [
+        "provider subject oidc-sub-01HZYXZYXZYXZYXZYXZYXZYXZ loaded from https://example.invalid/callback",
+      ],
+      tenantIsolationManifest: [
+        "denied tenant_01HZYXZYXZYXZYXZYXZYXZYXZ session_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      ],
     });
 
     expect(providerSessionRunPersistenceContract.model).toBe("ProviderSessionRun");
     expect(providerSessionRunPersistenceContract.tenantRelation).toBe("providerSessionRuns");
     expect(providerSessionRunPersistenceContract.migration).toBe("20260609032700_add_provider_session_runs");
+    expect(providerSessionRunPersistenceContract.intentionalRawPersistenceKeys).toEqual(["tenantId", "runId", "commitSha"]);
+    expect(providerSessionRunPersistenceContract.sanitizedPersistenceFields).toContain("providerConfigurationManifest");
+    expect(providerSessionRunPersistenceContract.sanitizedPersistenceFields).toContain("tenantIsolationManifest");
+    expect(providerSessionRunPersistenceContract.sanitizedPersistenceFields).toContain("ciRunUrl");
     expect(providerSessionRunPersistenceContract.jsonFields).toEqual([
       "commandMatrix",
       "controlManifest",
@@ -148,7 +164,7 @@ describe("provider session runtime contract", () => {
     expect(runData).toMatchObject({
       tenantId: "tenant_static",
       runId: "provider_session_static",
-      commitSha: "abc123",
+      commitSha: "abc1234",
       status: "blocked",
       authPackageTypecheckPassed: true,
       authPackageTestsPassed: true,
@@ -156,10 +172,48 @@ describe("provider session runtime contract", () => {
       providerEnvConfigured: false,
       authTypecheckArtifactPath: "coverage/provider-session-auth-typecheck.txt",
       authTestArtifactPath: "coverage/provider-session-auth-test.txt",
+      providerEnvArtifactPath: null,
+      loginCallbackArtifactPath: null,
+      logoutCallbackArtifactPath: null,
+      sessionCallbackArtifactPath: "coverage/provider-session-callback-tenant-lookup.json",
+      tenantIsolationSmokeArtifactPath: "test-results/provider-session-runtime/tenant-isolation-smoke.json",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/123456",
     });
+    expect(runData.providerConfigurationManifest).toEqual(["provider subject [REDACTED] loaded from [REDACTED]"]);
+    expect(runData.tenantIsolationManifest).toEqual(["denied [REDACTED] [REDACTED]"]);
     expect(runData.commandMatrix).toEqual(providerSessionRuntimeMatrix);
     expect(runData.controlManifest).toEqual(["provider-identity-to-user-mapping", "cross-tenant-session-denial"]);
     expect(String(persistProviderSessionRun)).toContain("repository.providerSessionRun.upsert");
+    expect(String(persistProviderSessionRun)).toContain("runId: data.runId");
+    expect(() =>
+      buildProviderSessionRunData({
+        tenantId: "tenant_static",
+        runId: "../private/provider-session-run",
+        status: "blocked",
+        authPackageTypecheckPassed: false,
+        authPackageTestsPassed: false,
+        providerSelected: false,
+        providerEnvConfigured: false,
+        loginCallbackWired: false,
+        logoutCallbackWired: false,
+        sessionCallbackWired: false,
+        userProvisioningConfigured: false,
+        tenantMembershipLookupPersisted: false,
+        customRoleLookupPersisted: false,
+        databaseSessionStoreConfigured: false,
+        sessionRevocationPersisted: false,
+        secureDashboardCookiesConfigured: false,
+        mobileTokenStorageConfigured: false,
+        auditLogWritesConfigured: false,
+        providerBackedTestsPassed: false,
+        crossTenantSmokeTestsPassed: false,
+        commandEvidenceCaptured: false,
+        providerSessionRunPersisted: false,
+        coveredControls: [],
+        capturedArtifacts: [],
+        completedCommands: [],
+      }),
+    ).toThrow("ProviderSessionRun runId must be a short slug-like identifier before persistence.");
   });
 
   it("keeps auth helper, package tests, and dashboard middleware guardrails wired", () => {
@@ -184,12 +238,12 @@ describe("provider session runtime contract", () => {
       "Resolve TenantMember and CustomRole rows server-side for every guarded request.",
       "Persist active sessions and revocations before route authorization.",
       "Use secure dashboard cookies and secure mobile token storage with logout/revocation clearing.",
-      "Write redacted AuditLog rows for auth lifecycle and authorization decisions.",
+      "Write redacted AuditLog rows for auth lifecycle and authorization decisions using hashed provider/user/session/tenant selectors only.",
       "Deny cross-tenant provider sessions in dashboard, API, and mobile surfaces.",
     ]);
     expect(providerSessionRuntimeReadiness.requiredEvidence).toEqual([
-      "provider selection, redacted environment/callback configuration, and login/logout/session callback evidence",
-      "provider identity mapping plus persisted user, TenantMember, CustomRole, and session lookup evidence",
+      "provider selection, redacted environment/callback configuration, and login/logout/session callback evidence with raw provider subject/session selectors suppressed",
+      "provider identity mapping plus persisted user, TenantMember, CustomRole, and session lookup evidence with hashed user/tenant/session selectors",
       "revocation, secure dashboard cookie, and mobile secure-token storage evidence",
       "audit-log, provider-backed auth test, cross-tenant smoke, and command-output evidence",
     ]);
@@ -205,6 +259,10 @@ describe("provider session runtime contract", () => {
     expect(executionPlan.controls).toBe(providerSessionRuntimeControls);
     expect(executionPlan.callbackContract.map((entry) => entry.kind)).toEqual(["login", "logout", "session"]);
     expect(executionPlan.callbackContract.every((entry) => entry.rawProviderTokenLoggingAllowed === false)).toBe(true);
+    expect(executionPlan.callbackContract.every((entry) => entry.rawProviderSubjectLoggingAllowed === false)).toBe(true);
+    expect(executionPlan.callbackContract.every((entry) => entry.rawProviderSessionLoggingAllowed === false)).toBe(true);
+    expect(executionPlan.callbackContract.every((entry) => entry.rawUserSelectorLoggingAllowed === false)).toBe(true);
+    expect(executionPlan.callbackContract.every((entry) => entry.rawTenantSelectorLoggingAllowed === false)).toBe(true);
     expect(executionPlan.surfaceContract).toBe(providerSessionSurfaceContract);
     expect(executionPlan.surfaceContract).toEqual(
       expect.arrayContaining([
@@ -256,7 +314,10 @@ describe("provider session runtime contract", () => {
     });
     expect(executionPlan.requiredExternalEvidence).toBe(providerSessionRequiredExternalEvidence);
     expect(executionPlan.requiredExternalEvidence).toContain(
-      "Redacted provider auth/session evidence bundle captured without raw provider IDs, tokens, cookies, emails, URLs, tenant IDs, session IDs, or actor identifiers.",
+      "Redacted provider auth/session evidence bundle captured without raw provider IDs, subjects, principals, access/refresh tokens, cookies, emails, URLs, tenant IDs, session IDs, user IDs, or actor identifiers.",
+    );
+    expect(executionPlan.requiredExternalEvidence).toContain(
+      "Redacted auth AuditLog rows with hashed provider/user/session/tenant selectors and tenant-isolation smoke evidence.",
     );
     expect(executionPlan.requiredExternalEvidence).toContain(
       "Provider-backed persistProviderSessionRun execution evidence.",
@@ -329,7 +390,7 @@ describe("provider session runtime contract", () => {
       "provider-backed session callback and TenantMember lookup test",
       "persist User, TenantMember, CustomRole, session, and revocation lookups",
       "verify secure dashboard cookies and mobile token storage/revocation",
-      "write redacted AuditLog rows for auth lifecycle and denials",
+      "write redacted AuditLog rows for auth lifecycle and denials with hashed provider/user/session/tenant selectors",
       "dashboard/API tenant isolation smoke tests",
       "mobile session storage/revocation smoke tests",
     ]);
@@ -421,13 +482,37 @@ describe("provider session runtime contract", () => {
   it("builds a redacted provider session evidence bundle for handoff use", () => {
     const artifact = {
       providerUserId: "auth0|user_123",
+      providerSubject: "oidc-sub-01HZYXZYXZYXZYXZYXZYXZYXZ",
+      principalRef: "principal_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      oauthAccessToken: "access_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      refreshToken: "refresh_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      bearerProof: "Bearer bearer_01HZYXZYXZYXZYXZYXZYXZYXZ",
       sessionToken: "github_pat_1234567890ABCDEFGHIJKLMNOP",
       cookieHeader: "session=secret",
       tenantId: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
       actorEmail: "owner@example.com",
       auditLog: "login by owner@example.com",
       callbackUrl: "https://example.invalid/callback",
+      loginCallbackPayload: {
+        rawBody: "provider callback for provider-user-01HZYXZYXZYXZYXZYXZYXZYXZ",
+      },
+      persistedSessionStoreRow: {
+        TenantMemberId: "member_01HZYXZYXZYXZYXZYXZYXZYXZ",
+        CustomRoleId: "role_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      },
+      revocationLookup: {
+        sessionId: "session_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      },
+      mobileTokenEvidence: {
+        deviceId: "device_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      },
+      tenantIsolationSmokeOutput: "denied cross-tenant access for tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      ciArtifactPath: "test-results/provider-session-runtime/provider-session.log",
       safeSummary: "provider session proof captured",
+      neutralProviderTrace: "provider_session_01HZYXZYXZYXZYXZYXZYXZYXZ mapped auth_lookup_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralSubjectTrace: "sub_01HZYXZYXZYXZYXZYXZYXZYXZ mapped principal_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralArtifactLocation: "coverage/provider-session/private-callback.json",
+      neutralDatabaseLocation: "postgresql://tenant_demo:secret@db.example.com/inkroute",
     };
 
     const bundle = buildProviderSessionRedactedEvidenceBundle(artifact);
@@ -439,17 +524,52 @@ describe("provider session runtime contract", () => {
     expect(bundle.providerExecutionAllowed).toBe(false);
     expect(bundle.databaseExecutionAllowed).toBe(false);
     expect(bundle.redactions).toEqual(
-      expect.arrayContaining(["provider", "token", "cookie", "session", "tenant", "email", "audit", "url"]),
+      expect.arrayContaining([
+        "provider",
+        "token",
+        "cookie",
+        "session",
+        "tenant",
+        "email",
+        "audit",
+        "url",
+        "subject",
+        "principal",
+        "oauth",
+        "refresh",
+        "bearer",
+        "callback",
+        "sessionStore",
+        "revocation",
+        "mobile",
+        "isolation",
+        "artifact",
+      ]),
     );
     expect(bundle.redactedArtifact).toMatchObject({
       providerUserId: "[REDACTED]",
+      providerSubject: "[REDACTED]",
+      principalRef: "[REDACTED]",
+      oauthAccessToken: "[REDACTED]",
+      refreshToken: "[REDACTED]",
+      bearerProof: "[REDACTED]",
       sessionToken: "[REDACTED]",
       cookieHeader: "[REDACTED]",
       tenantId: "[REDACTED]",
       actorEmail: "[REDACTED]",
       auditLog: "[REDACTED]",
       callbackUrl: "[REDACTED]",
+      loginCallbackPayload: "[REDACTED]",
+      persistedSessionStoreRow: "[REDACTED]",
+      revocationLookup: "[REDACTED]",
+      mobileTokenEvidence: "[REDACTED]",
+      tenantIsolationSmokeOutput: "[REDACTED]",
+      ciArtifactPath: "[REDACTED]",
       safeSummary: "provider session proof captured",
+      neutralProviderTrace: "[REDACTED] mapped [REDACTED]",
+      neutralSubjectTrace: "[REDACTED] mapped [REDACTED]",
+      neutralArtifactLocation: "[REDACTED]",
+      neutralDatabaseLocation: "[REDACTED]",
     });
   });
 });

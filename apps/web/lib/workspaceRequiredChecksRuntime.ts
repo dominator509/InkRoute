@@ -417,9 +417,9 @@ export function buildWorkspaceRequiredChecksEvidenceDecision(
 }
 
 const sensitiveWorkspaceRequiredChecksKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|repository|branch|settings|owner)$/iu;
+  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|repository|branch|settings|owner|raw|payload|body|stack|error|log|output|transcript|command|ci|commit|run|artifact|github|pull.?request|pr|merge|block|gap|diff|codeowners|codeowner|reviewer|review|protection|quality|check|workspace)/iu;
 const sensitiveWorkspaceRequiredChecksValuePattern =
-  /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:tenant|user|account|repository|branch|settings|github|pull.?request|pr|merge|block|gap|diff|codeowners|codeowner|reviewer|review|protection|quality|check|workspace|audit|workflow|ci|run|commit|artifact)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:artifacts|coverage|test-results|reports|diffs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactWorkspaceRequiredChecksString = (value: string): string =>
   value.replace(sensitiveWorkspaceRequiredChecksValuePattern, "[REDACTED]");

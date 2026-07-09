@@ -32,6 +32,25 @@ export interface MobileApiClientRequest {
   body?: unknown;
 }
 
+export interface MobileApiSafeRequestProof {
+  domain: MobileApiDomain;
+  method: MobileApiMethod;
+  status: MobileApiRequestPlan["status"];
+  authHeaderAttached: boolean;
+  tenantHeaderAttached: boolean;
+  requestIdHeaderAttached: boolean;
+  idempotencyHeaderAttached: boolean;
+  responseProjection: {
+    rawAuthorizationHeaderEchoed: false;
+    rawAccessTokenEchoed: false;
+    rawTenantIdEchoed: false;
+    rawRequestIdEchoed: false;
+    rawIdempotencyKeyEchoed: false;
+    rawUrlEchoed: false;
+    rawBodyEchoed: false;
+  };
+}
+
 export class MobileApiClientError extends Error {
   constructor(
     message: string,
@@ -68,6 +87,27 @@ export function buildMobileApiClientRequestPlan(
     online: session.online,
     idempotencyKey: request.idempotencyKey,
   });
+}
+
+export function buildMobileApiSafeRequestProof(plan: MobileApiRequestPlan): MobileApiSafeRequestProof {
+  return {
+    domain: plan.domain,
+    method: plan.method,
+    status: plan.status,
+    authHeaderAttached: plan.headerProof.authorizationHeaderAttached,
+    tenantHeaderAttached: plan.headerProof.tenantHeaderAttached,
+    requestIdHeaderAttached: plan.headerProof.requestIdHeaderAttached,
+    idempotencyHeaderAttached: plan.headerProof.idempotencyHeaderAttached,
+    responseProjection: {
+      rawAuthorizationHeaderEchoed: false,
+      rawAccessTokenEchoed: false,
+      rawTenantIdEchoed: false,
+      rawRequestIdEchoed: false,
+      rawIdempotencyKeyEchoed: false,
+      rawUrlEchoed: false,
+      rawBodyEchoed: false,
+    },
+  };
 }
 
 export function assertMobileApiEnvelope<T>(value: unknown, requestId: string): MobileApiResponseEnvelope<T> {
@@ -118,5 +158,14 @@ export const mobileApiSyncPreview = {
   authRequired: mobileScreenApiSyncMatrix.every((requirement) => requirement.requiresAuth),
   tenantScopeRequired: mobileScreenApiSyncMatrix.every((requirement) => requirement.requiresTenantScope),
   offlineQueueDomains: mobileScreenApiSyncMatrix.filter((requirement) => requirement.supportsOfflineQueue).map((requirement) => requirement.domain),
+  responseProjection: {
+    rawAuthorizationHeaderEchoed: false,
+    rawAccessTokenEchoed: false,
+    rawTenantIdEchoed: false,
+    rawRequestIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    rawUrlEchoed: false,
+    rawBodyEchoed: false,
+  },
   boundary: "Mobile screens now share a typed API-client contract; provider auth, seeded API smoke, and runtime device sync evidence remain gated.",
 };

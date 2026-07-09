@@ -435,9 +435,9 @@ const missingFrom = (actual: readonly string[] | undefined, required: readonly s
   required.filter((item) => !(actual ?? []).includes(item));
 
 const sensitiveValidatorLaunchAdoptionKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|name|address|medical|payment|card|consent|tenant|user|client|provider|webhook|database|url|uri|dsn|key|id|payload|artifact|metadata)/iu;
+  /(token|secret|password|authorization|cookie|email|phone|name|address|medical|payment|card|consent|tenant|user|client|provider|webhook|database|url|uri|dsn|key|id|payload|artifact|metadata|repository|repo|branch|pull|pr|reviewer|codeowner)/iu;
 const sensitiveValidatorLaunchAdoptionValuePattern =
-  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|repo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+|branch:[A-Za-z0-9_./-]+|pr[_:#-]?[A-Za-z0-9_.-]+|reviewer[_:@-]?[A-Za-z0-9_.-]+|CODEOWNER:[A-Za-z0-9_.@/-]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
 
 const buildRedactedValidatorLaunchAdoptionValue = (value: unknown, path: string, redactions: string[]): unknown => {
   if (Array.isArray(value)) {

@@ -146,6 +146,12 @@ describe("GAP-072 canonical/domain runtime wiring", () => {
       artifacts: [
         {
           path: "coverage/canonical-domain-deployment-domain-proof.json",
+          tenantHost: "tenant.example.com",
+          canonicalUrl: "https://tenant.example.com/cities/seattle",
+          redirectTargetUrl: "https://primary.example.com/cities/seattle",
+          renderedHtml: "<link rel=\"canonical\" href=\"https://tenant.example.com/private\" />",
+          sitemapUrl: "https://tenant.example.com/sitemap.xml",
+          noindexPath: "/private-preview",
           domainVerificationToken: "domainverification-secret-token",
           providerPayload: { authorization: "Bearer provider-token", ownerEmail: "ari@example.test" },
           nested: [{ dnsRecord: "dns-secret-value", phone: "+1 206 555 0142" }],
@@ -154,6 +160,10 @@ describe("GAP-072 canonical/domain runtime wiring", () => {
     });
 
     expect(review.status).toBe("passed");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("tenant.example.com");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("https://primary.example.com/cities/seattle");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("<link rel=");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("/private-preview");
     expect(JSON.stringify(review.redactedArtifacts)).not.toContain("domainverification-secret-token");
     expect(JSON.stringify(review.redactedArtifacts)).not.toContain("provider-token");
     expect(JSON.stringify(review.redactedArtifacts)).not.toContain("ari@example.test");

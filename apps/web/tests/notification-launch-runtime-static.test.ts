@@ -443,6 +443,10 @@ describe("notification launch runtime contract", () => {
         providerEventId: "evt_notification_launch_1234567890",
         publicSummary: "notification launch provider evidence captured",
       },
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_notification_launch",
+      reviewerHandle: "reviewer_notification_owner",
+      codeownerSelector: "CODEOWNER:notifications-platform-team",
     };
     const redactedOnly = buildRedactedNotificationLaunchArtifact(artifact);
     const review = buildNotificationLaunchArtifactReview(artifact);
@@ -454,6 +458,10 @@ describe("notification launch runtime contract", () => {
     expect(serialized).not.toContain("Raw client message body");
     expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
     expect(serialized).not.toContain("evt_notification_launch_1234567890");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("pr_notification_launch");
+    expect(serialized).not.toContain("reviewer_notification_owner");
+    expect(serialized).not.toContain("CODEOWNER:notifications-platform-team");
     expect(review.redactions).toEqual([
       "providerToken",
       "destinationEmail",
@@ -461,6 +469,10 @@ describe("notification launch runtime contract", () => {
       "messageBody",
       "nested.databaseUrl",
       "nested.providerEventId",
+      "repositorySelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
     ]);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(notificationLaunchRequiredExternalEvidence);

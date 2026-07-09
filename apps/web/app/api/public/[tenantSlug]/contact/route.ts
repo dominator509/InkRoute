@@ -2,7 +2,7 @@ import { prisma } from "@inkroute/db";
 import { publicContactInputSchema } from "@inkroute/validators";
 import { NextResponse, type NextRequest } from "next/server";
 import { createHash } from "node:crypto";
-import { checkRateLimit, getClientIp, persistContactSubmission, resolveTenant } from "../../../../../lib/localRuntimeState";
+import { checkRateLimit, getClientIpFromHeaders, persistContactSubmission, resolveTenant } from "../../../../../lib/localRuntimeState";
 
 export const runtime = "nodejs";
 
@@ -59,6 +59,78 @@ function destinationHash(value: string) {
   return createHash("sha256").update(value.toLowerCase().trim()).digest("hex");
 }
 
+function publicContactIdempotencyFingerprint(input: { tenantId: string; email: string; subject: string; message: string }) {
+  return createHash("sha256")
+    .update([input.tenantId, input.email.toLowerCase().trim(), input.subject.trim(), input.message.length, input.message.slice(0, 64)].join(":"))
+    .digest("hex");
+}
+
+function idempotencyStorageFingerprint(value: string) {
+  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
+}
+
+function buildContactResponseProjection() {
+  return {
+    clientEmailSelectedFromDatabase: false,
+    clientNameSelectedFromDatabase: false,
+    rawContactFieldsEchoed: false,
+    rawMessageEchoed: false,
+    redactedSubmissionEchoed: false,
+    destinationHashEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    tenantIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+    internalPersistenceIdsStored: false,
+  };
+}
+
+function buildSafeContactDatabaseResponse(result: {
+  thread: { subject: string };
+  inboundMessage: { status: string };
+  handoff: { state: string };
+  idempotencyReplayed?: boolean;
+  duplicateSideEffectsCreated?: boolean;
+}) {
+  return {
+    contactSubmission: {
+      subject: result.thread.subject,
+      messageStatus: result.inboundMessage.status,
+      idempotencyReplayed: result.idempotencyReplayed === true,
+      duplicateSideEffectsCreated: result.duplicateSideEffectsCreated === true,
+      responseProjection: buildContactResponseProjection(),
+    },
+    workflows: {
+      notification: {
+        status: result.handoff.state,
+        provider: "internal-dashboard",
+        externalSendDeferred: true,
+        responseProjection: {
+          notificationIdEchoed: false,
+          deliveryIdEchoed: false,
+          handoffIdEchoed: false,
+        },
+      },
+    },
+  };
+}
+
+function buildSafeContactLocalResponse(persisted: ReturnType<typeof persistContactSubmission>) {
+  return {
+    contactSubmission: {
+      subject: persisted.subject,
+      createdAt: persisted.createdAt,
+      responseProjection: buildContactResponseProjection(),
+    },
+    workflows: {
+      notification: {
+        status: "provider_gated",
+        boundary: "notification",
+        reason: "Contact notification delivery waits for provider sandbox evidence and redacted delivery logs.",
+      },
+    },
+  };
+}
+
 export async function POST(request: NextRequest, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;
   const normalizedTenantSlug = normalizeTenantSlug(tenantSlug);
@@ -104,7 +176,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   }
   const { name, email, subject = "", message } = parsed.data;
 
-  const clientIp = getClientIp(Object.fromEntries(request.headers.entries()));
+  const clientIp = getClientIpFromHeaders(request.headers);
   const rateLimit = checkRateLimit("public-booking-submit", normalizedTenantSlug, `contact:${clientIp}:${email.toLowerCase()}`);
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -126,9 +198,46 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
       const displaySubject = subjectOrDefault(subject, name);
       const idempotencyKey =
         request.headers.get("idempotency-key") ??
-        `public-contact:${tenant.tenantId}:${normalizedEmail}:${displaySubject}:${message.length}`;
+        `public-contact:${publicContactIdempotencyFingerprint({ tenantId: tenant.tenantId, email: normalizedEmail, subject: displaySubject, message })}`;
 
       const result = await prisma.$transaction(async (tx) => {
+        const idempotency = await tx.idempotencyKey.upsert({
+          where: { tenantId_scope_key: { tenantId: tenant.tenantId, scope: "public-contact", key: idempotencyKey } },
+          create: {
+            tenantId: tenant.tenantId,
+            scope: "public-contact",
+            key: idempotencyKey,
+            status: "claimed",
+            metadata: toJsonValue({
+              route: "/api/public/[tenantSlug]/contact",
+              emailHash: destinationHash(normalizedEmail),
+              generatedKeyUsesHashedFingerprint: !request.headers.get("idempotency-key"),
+              rawPayloadStored: false,
+            }),
+          },
+          update: {
+            metadata: toJsonValue({
+              route: "/api/public/[tenantSlug]/contact",
+              replayObserved: true,
+              emailHash: destinationHash(normalizedEmail),
+              generatedKeyUsesHashedFingerprint: !request.headers.get("idempotency-key"),
+              rawPayloadStored: false,
+            }),
+          },
+          select: { id: true, key: true, status: true },
+        });
+
+        if (idempotency.status === "completed") {
+          return {
+            status: "replayed" as const,
+            thread: { subject: displaySubject },
+            inboundMessage: { status: "queued" },
+            handoff: { state: "queued" },
+            idempotencyReplayed: true,
+            duplicateSideEffectsCreated: false,
+          };
+        }
+
         const client = await tx.client.upsert({
           where: { tenantId_email: { tenantId: tenant.tenantId, email: normalizedEmail } },
           create: {
@@ -141,31 +250,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           update: {
             preferredName: name,
           },
-          select: { id: true, email: true, preferredName: true },
-        });
-
-        const idempotency = await tx.idempotencyKey.upsert({
-          where: { tenantId_scope_key: { tenantId: tenant.tenantId, scope: "public-contact", key: idempotencyKey } },
-          create: {
-            tenantId: tenant.tenantId,
-            scope: "public-contact",
-            key: idempotencyKey,
-            status: "claimed",
-            metadata: toJsonValue({
-              route: "/api/public/[tenantSlug]/contact",
-              emailHash: destinationHash(normalizedEmail),
-              rawPayloadStored: false,
-            }),
-          },
-          update: {
-            metadata: toJsonValue({
-              route: "/api/public/[tenantSlug]/contact",
-              replayObserved: true,
-              emailHash: destinationHash(normalizedEmail),
-              rawPayloadStored: false,
-            }),
-          },
-          select: { id: true, key: true },
+          select: { id: true },
         });
 
         const thread = await tx.messageThread.create({
@@ -225,14 +310,16 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             channel: "in_app",
             provider: "internal-dashboard",
             state: "queued",
-            idempotencyKey: idempotency.key,
+            idempotencyKey: idempotencyStorageFingerprint(idempotency.key),
             destinationHash: destinationHash(normalizedEmail),
             sanitizedPayload: toJsonValue({
               route: "/api/public/[tenantSlug]/contact",
-              clientId: client.id,
               subject: displaySubject,
               bodyPreview: "[redacted-message-body]",
               emailHash: destinationHash(normalizedEmail),
+              clientPersisted: true,
+              internalPersistenceIdsStored: false,
+              rawIdempotencyKeyStored: false,
               providerDispatchDeferred: true,
             }),
           },
@@ -246,13 +333,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             entityType: "MessageThread",
             entityId: thread.id,
             metadata: toJsonValue({
-              route: "/api/public/[tenantSlug]/contact",
-              clientId: client.id,
-              messageId: inboundMessage.id,
-              notificationId: notification.id,
-              deliveryId: delivery.id,
-              handoffId: handoff.id,
-              idempotencyKeyId: idempotency.id,
+            route: "/api/public/[tenantSlug]/contact",
+              clientPersisted: true,
+              messagePersisted: true,
+              notificationPersisted: true,
+              deliveryPersisted: true,
+              providerHandoffPersisted: true,
+              idempotencyPersisted: true,
+              internalPersistenceIdsStored: false,
               redactedFields: ["email", "message"],
               rawPayloadStored: false,
               gapIds: ["GAP-010", "GAP-029", "GAP-031", "GAP-064"],
@@ -261,38 +349,37 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           select: { id: true },
         });
 
-        return { client, thread, inboundMessage, notification, delivery, handoff, audit, idempotency };
+        await tx.idempotencyKey.update({
+          where: { tenantId_scope_key: { tenantId: tenant.tenantId, scope: "public-contact", key: idempotency.key } },
+          data: {
+            status: "completed",
+            result: toJsonValue({
+              clientPersisted: true,
+              messageThreadPersisted: true,
+              messagePersisted: true,
+              notificationPersisted: true,
+              deliveryPersisted: true,
+              providerHandoffPersisted: true,
+              auditPersisted: Boolean(audit.id),
+              internalPersistenceIdsStored: false,
+              providerDispatchDeferred: true,
+              rawPayloadStored: false,
+            }),
+          },
+          select: { id: true },
+        });
+
+        return { status: "persisted" as const, client, thread, inboundMessage, notification, delivery, handoff, audit, idempotency };
       });
 
       return NextResponse.json(
         {
           ok: true,
           data: {
-            tenantId: tenant.tenantId,
+            tenantSlug: normalizedTenantSlug,
+            tenantScope: { tenantResolved: true, tenantIdEchoed: false },
             persistence: "database",
-            contactSubmission: {
-              clientId: result.client.id,
-              threadId: result.thread.id,
-              messageId: result.inboundMessage.id,
-              subject: result.thread.subject,
-              auditId: result.audit.id,
-              redactedSubmission: {
-                name,
-                email: "[redacted-contact-email]",
-                message: "[redacted-message-body]",
-              },
-            },
-            workflows: {
-              notification: {
-                status: result.handoff.state,
-                notificationId: result.notification.id,
-                deliveryId: result.delivery.id,
-                handoffId: result.handoff.id,
-                provider: "internal-dashboard",
-                externalSendDeferred: true,
-              },
-            },
-            idempotencyKeyId: result.idempotency.id,
+            ...buildSafeContactDatabaseResponse(result),
             gapIds: ["GAP-010", "GAP-029", "GAP-031", "GAP-064"],
             requiredNextWork: [
               "Execute external provider notification workers after credentials are configured.",
@@ -356,23 +443,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     {
       ok: true,
       data: {
-        tenantId: tenant.tenantId,
         persistence: "local-runtime",
-        contactSubmission: {
-          id: persisted.id,
-          tenantId: persisted.tenantId,
-          subject: persisted.subject,
-          redactedSubmission: persisted.redactedSubmission,
-          auditMetadata: persisted.auditMetadata,
-          createdAt: persisted.createdAt,
-        },
-        workflows: {
-          notification: {
-            status: "provider_gated",
-            boundary: "notification",
-            reason: "Contact notification delivery waits for provider sandbox evidence and redacted delivery logs.",
-          },
-        },
+        ...buildSafeContactLocalResponse(persisted),
         gapIds: ["GAP-010", "GAP-029", "GAP-031", "GAP-064"],
       },
     },

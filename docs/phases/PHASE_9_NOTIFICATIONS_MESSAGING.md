@@ -23,7 +23,7 @@ Expanded `packages/notifications/src/index.ts` with:
 - Client consent snapshot model.
 - Consent-aware channel evaluation.
 - Delivery plan generation by template and client consent.
-- Provider boundary matrix for Resend, Twilio, Expo Push, and in-app delivery.
+- Provider boundary matrix for Resend, Twilio, Expo Push, and in-app delivery (all provider sends sandbox-gated).
 - Delivery-log draft generation with masked/hashed destinations.
 - Booking, appointment, aftercare, travel, and review automation sequence builders.
 - Disabled provider-send draft previews.

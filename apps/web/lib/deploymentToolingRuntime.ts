@@ -330,7 +330,7 @@ export const deploymentToolingBlockerOwnerContract: readonly DeploymentToolingBl
 ] as const;
 
 const sensitiveDeploymentToolingKeyPattern =
-  /(token|secret|password|authorization|cookie|env|databaseUrl|dbUrl|provider|ciRunUrl|deployUrl|previewUrl|approval|payload|tenantId|userId|runId|email|phone|blockerOwner)/i;
+  /(token|secret|password|authorization|cookie|env|databaseUrl|dbUrl|provider|ciRunUrl|deployUrl|previewUrl|approval|payload|tenantId|userId|runId|email|phone|blockerOwner|repository|repo|branch|pull|pr|reviewer|codeowner)/i;
 
 const sensitiveDeploymentToolingStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
@@ -338,6 +338,11 @@ const sensitiveDeploymentToolingStringPatterns: readonly [RegExp, string][] = [
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
   [/\b(?:sk|pk|rk|whsec)_(?:live|test)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
+  [/\brepo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\b/gi, "[REDACTED_REPOSITORY_SELECTOR]"],
+  [/\bbranch:[A-Za-z0-9_./-]+\b/gi, "[REDACTED_BRANCH_SELECTOR]"],
+  [/\bpr[_:#-]?[A-Za-z0-9_.-]+\b/gi, "[REDACTED_PR_SELECTOR]"],
+  [/\breviewer[_:@-]?[A-Za-z0-9_.-]+\b/gi, "[REDACTED_REVIEWER_SELECTOR]"],
+  [/\bCODEOWNER:[A-Za-z0-9_.@/-]+\b/g, "[REDACTED_CODEOWNER_SELECTOR]"],
   [/\b(?:tenant|user|owner|deployment|run|approval)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
 ];
 

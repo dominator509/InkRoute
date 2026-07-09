@@ -370,7 +370,12 @@ describe("GAP-109 accessibility and visual runtime wiring", () => {
       ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/private",
       triageArtifactPath: "coverage/private-a11y-triage.md",
       screenshotPath: "coverage/visual-diffs/client@example.com.png",
+      visualBaselinePath: "coverage/baselines/private-client-home.png",
       diffPath: "coverage/visual-diffs/private-diff.png",
+      routeUrl: "https://inkroute.example/tenant-demo/booking",
+      domSnapshot: "<button aria-label=\"client@example.com private booking\">Book</button>",
+      axeNodeTarget: "#private-client-booking-form",
+      lighthouseTraceUrl: "https://storage.example/private/lighthouse-trace.json",
       screenReaderNotes: "Reader announced client@example.com +1 555 505 6060",
       mobileQaTranscript: "Authorization: Bearer accessibility-secret-token",
       stack: "Error: visual regression failed",
@@ -384,6 +389,11 @@ describe("GAP-109 accessibility and visual runtime wiring", () => {
     expect(serialized).not.toContain("privatecommitsha");
     expect(serialized).not.toContain("/actions/runs/private");
     expect(serialized).not.toContain("coverage/private-a11y-triage.md");
+    expect(serialized).not.toContain("coverage/baselines/private-client-home.png");
+    expect(serialized).not.toContain("https://inkroute.example/tenant-demo/booking");
+    expect(serialized).not.toContain("private booking");
+    expect(serialized).not.toContain("#private-client-booking-form");
+    expect(serialized).not.toContain("https://storage.example/private/lighthouse-trace.json");
     expect(serialized).not.toContain("client@example.com");
     expect(serialized).not.toContain("+1 555 505 6060");
     expect(serialized).not.toContain("accessibility-secret-token");

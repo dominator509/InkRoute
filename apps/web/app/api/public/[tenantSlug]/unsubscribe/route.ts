@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { prisma } from "@inkroute/db";
-import { buildPreferenceTokenHash } from "@inkroute/notifications";
+import { buildPreferenceTokenHash, type PreferenceMutationPlan } from "@inkroute/notifications";
 import { NextResponse, type NextRequest } from "next/server";
 import { buildPreferencePlanFromRequest, preferenceCenterContract } from "../../../../../lib/preferenceCenter";
 
@@ -12,6 +12,10 @@ function toJsonValue(value: unknown) {
 
 function hashDestination(value: string): string {
   return createHash("sha256").update(value.toLowerCase().trim()).digest("hex");
+}
+
+function unsubscribeIdempotencyKey(parts: readonly string[]): string {
+  return `unsubscribe:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
 }
 
 function tokenValidationResponse(reason: string) {
@@ -28,6 +32,43 @@ function tokenValidationResponse(reason: string) {
     },
     { status: 401, headers: noStoreHeaders },
   );
+}
+
+function buildSafePreferencePlanResponse(plan: PreferenceMutationPlan) {
+  return {
+    status: plan.status,
+    action: plan.action,
+    tokenHashPresent: Boolean(plan.tokenHash),
+    rawTokenEchoed: false,
+    tokenHashEchoed: false,
+    idempotencyKeyRecorded: Boolean(plan.idempotencyKey),
+    idempotencyKeyEchoed: false,
+    writeModels: plan.writes.map((write) => write.model),
+    writePayloadsEchoed: false,
+    blockers: plan.blockers,
+  };
+}
+
+function buildSafeUnsubscribePersistenceResponse(persisted: Awaited<ReturnType<typeof persistUnsubscribe>>) {
+  return {
+    clientMatchedOrCreated: Boolean(persisted.client?.id),
+    clientIdEchoed: false,
+    clientEmailSelectedFromDatabase: false,
+    preferencePersisted: true,
+    preferenceIdEchoed: false,
+    suppressionPersisted: Boolean(persisted.suppression),
+    suppressionIdEchoed: false,
+    idempotencyPersisted: true,
+    idempotencyKeyIdEchoed: false,
+    auditPersisted: true,
+    auditIdEchoed: false,
+    tenantIdEchoed: false,
+    rawTokenStored: false,
+    rawTokenEchoed: false,
+    tokenHashEchoed: false,
+    rawPreferenceWritePayloadsEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
 }
 
 function isDatabaseUnavailable(error: unknown): boolean {
@@ -70,14 +111,17 @@ async function persistUnsubscribe(input: {
   return prisma.$transaction(async (tx) => {
     const txRuntime = tx as unknown as {
       client: {
-        upsert: (options: Record<string, unknown>) => Promise<{ id: string; email: string }>;
-        findFirst: (options: Record<string, unknown>) => Promise<{ id: string; email: string } | null>;
+        upsert: (options: Record<string, unknown>) => Promise<{ id: string }>;
+        findFirst: (options: Record<string, unknown>) => Promise<{ id: string } | null>;
       };
       preferenceToken: {
         findFirst: (options: Record<string, unknown>) => Promise<{ id: string; clientId: string; expiresAt: Date; usedAt: Date | null; revokedAt: Date | null } | null>;
         update: (options: Record<string, unknown>) => Promise<{ id: string }>;
       };
-      idempotencyKey: { upsert: (options: Record<string, unknown>) => Promise<{ id: string; key: string }> };
+      idempotencyKey: {
+        upsert: (options: Record<string, unknown>) => Promise<{ id: string; key: string }>;
+        update: (options: Record<string, unknown>) => Promise<{ id: string }>;
+      };
       notificationChannelPreference: { upsert: (options: Record<string, unknown>) => Promise<{ id: string; optedIn: boolean }> };
       notificationSuppression: { upsert: (options: Record<string, unknown>) => Promise<{ id: string; active: boolean }> };
       auditLog: { create: (options: Record<string, unknown>) => Promise<{ id: string }> };
@@ -98,13 +142,13 @@ async function persistUnsubscribe(input: {
     if (preferenceToken.expiresAt.getTime() <= Date.now()) throw new Error("PREFERENCE_TOKEN_EXPIRED");
 
     const client = input.clientId !== "missing_client"
-      ? await txRuntime.client.findFirst({ where: { id: input.clientId, tenantId: input.tenantId }, select: { id: true, email: true } })
+      ? await txRuntime.client.findFirst({ where: { id: input.clientId, tenantId: input.tenantId }, select: { id: true } })
       : input.email
         ? await txRuntime.client.upsert({
           where: { tenantId_email: { tenantId: input.tenantId, email: input.email.toLowerCase() } },
           create: { tenantId: input.tenantId, email: input.email.toLowerCase(), preferredName: "Unsubscribed client", marketingOptIn: false, smsOptIn: false },
           update: { marketingOptIn: false },
-          select: { id: true, email: true },
+          select: { id: true },
         })
         : null;
 
@@ -182,10 +226,11 @@ async function persistUnsubscribe(input: {
         entityType: "NotificationChannelPreference",
         entityId: preference.id,
         metadata: toJsonValue({
-          clientId: client?.id ?? null,
-          preferenceId: preference.id,
-          suppressionId: suppression?.id ?? null,
-          idempotencyKeyId: idempotency.id,
+          clientMatched: Boolean(client),
+          preferencePersisted: true,
+          suppressionPersisted: Boolean(suppression),
+          idempotencyPersisted: true,
+          internalPersistenceIdsStored: false,
           planStatus: input.planStatus,
           tokenHashPresent: Boolean(input.tokenHash),
           rawTokenStored: false,
@@ -202,6 +247,23 @@ async function persistUnsubscribe(input: {
       select: { id: true },
     });
 
+    await txRuntime.idempotencyKey.update({
+      where: { tenantId_scope_key: { tenantId: input.tenantId, scope: "one-click-unsubscribe", key: idempotency.key } },
+      data: {
+        status: "completed",
+        result: toJsonValue({
+          preferencePersisted: true,
+          suppressionPersisted: Boolean(suppression),
+          auditPersisted: Boolean(audit.id),
+          tokenHashPresent: Boolean(input.tokenHash),
+          preferenceTokenConsumed: true,
+          rawTokenStored: false,
+          internalPersistenceIdsStored: false,
+        }),
+      },
+      select: { id: true },
+    });
+
     return { client, preference, suppression, idempotency, audit };
   });
 }
@@ -213,7 +275,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   const email = request.nextUrl.searchParams.get("email") ?? undefined;
   const tokenExpiresAt = request.nextUrl.searchParams.get("tokenExpiresAt") ?? new Date(Date.now() + 60_000).toISOString();
   const clientId = request.nextUrl.searchParams.get("clientId") ?? "missing_client";
-  const idempotencyKey = `unsubscribe:${tenantSlug}:${tokenHash ?? "missing"}`;
+  const idempotencyKey = unsubscribeIdempotencyKey([tenantSlug, tokenHash ?? "missing"]);
   const plan = buildPreferencePlanFromRequest({
     tenantId: tenantSlug,
     action: "unsubscribe_email",
@@ -246,21 +308,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
       return NextResponse.json(
         {
           ok: plan.status === "ready",
-          tenantSlug: tenant.tenantSlug,
-          tenantId: tenant.tenantId,
+          tenantScope: { routeTenantSlugReceived: true, tenantSlugEchoed: false },
           persistence: "database",
-          plan,
+          plan: buildSafePreferencePlanResponse(plan),
           listUnsubscribeHeaders: preferenceCenterContract.listUnsubscribeHeaders,
-          persisted: {
-            clientId: persisted.client?.id ?? null,
-            preferenceId: persisted.preference.id,
-            suppressionId: persisted.suppression?.id ?? null,
-            idempotencyKeyId: persisted.idempotency.id,
-            auditId: persisted.audit.id,
-            rawTokenStored: false,
-          },
+          persisted: buildSafeUnsubscribePersistenceResponse(persisted),
           gapIds: ["GAP-067"],
-          boundary: "One-click unsubscribe persists hash-only preference/suppression/idempotency/audit rows when DB tenant scope is available and never stores raw preference tokens.",
+          boundary: "One-click unsubscribe persists hash-only preference/suppression/idempotency/audit rows when DB tenant scope is available and returns a safe persistence receipt without client, preference, suppression, idempotency, audit, token, or write-payload internals.",
         },
         { status: plan.status === "ready" ? 202 : 409, headers: noStoreHeaders },
       );
@@ -311,7 +365,23 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     {
       ok: plan.status === "ready",
       tenantSlug,
-      plan,
+      persistence: "local-contract",
+      plan: buildSafePreferencePlanResponse(plan),
+      rawTokenEchoed: false,
+      tokenHashEchoed: false,
+      rawPreferenceWritePayloadsEchoed: false,
+      responseProjection: {
+        tenantIdEchoed: false,
+        clientIdEchoed: false,
+        preferenceIdEchoed: false,
+        suppressionIdEchoed: false,
+        idempotencyKeyIdEchoed: false,
+        auditIdEchoed: false,
+        rawTokenEchoed: false,
+        tokenHashEchoed: false,
+        rawPreferenceWritePayloadsEchoed: false,
+        internalPersistenceIdsEchoed: false,
+      },
       listUnsubscribeHeaders: preferenceCenterContract.listUnsubscribeHeaders,
       gapIds: ["GAP-067"],
       boundary: "One-click unsubscribe route returns the suppression write plan and never stores raw preference tokens in local runtime.",

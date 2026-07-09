@@ -165,6 +165,10 @@ describe("mobile QA runtime contract", () => {
         otaReceiptId: "receipt_private",
         publicSummary: "mobile QA evidence captured",
       },
+      safeNote:
+        "evidence_mobile_qa_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/mobile-qa/private-proof.json",
+      safeQaPath: "test-results/mobile-qa-runtime/private-device-qa.json",
+      safeDeviceRun: "device_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
     };
 
     const redacted = buildRedactedMobileQaArtifact(artifact);
@@ -174,6 +178,9 @@ describe("mobile QA runtime contract", () => {
       "providerTranscriptToken",
       "clientPhone",
       "nested.otaReceiptId",
+      "safeNote",
+      "safeQaPath",
+      "safeDeviceRun",
     ]);
     expect(redacted.redactedArtifact).toMatchObject({
       deviceId: "[REDACTED]",
@@ -184,7 +191,21 @@ describe("mobile QA runtime contract", () => {
         otaReceiptId: "[REDACTED]",
         publicSummary: "mobile QA evidence captured",
       },
+      safeQaPath: "[REDACTED]",
+      safeDeviceRun: "[REDACTED]",
     });
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "evidence_mobile_qa_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "artifacts/mobile-qa/private-proof.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "test-results/mobile-qa-runtime/private-device-qa.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "device_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
 
     const review = buildMobileQaArtifactReview({
       publicSummary: "safe mobile QA evidence",

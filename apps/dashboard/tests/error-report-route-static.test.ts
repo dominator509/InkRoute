@@ -23,10 +23,34 @@ describe("dashboard error report route contract", () => {
     expect(routeSource).toContain("tx.auditLog.create");
     expect(routeSource).toContain('action: "error_report:read:list"');
     expect(routeSource).toContain('entityType: "ErrorReport"');
+    expect(routeSource).toContain("auditLogged: true");
+    expect(routeSource).toContain("auditIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).toContain("function buildErrorReportResponseProjection");
+    expect(routeSource).toContain("function buildSafeErrorReportReceipt");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("errorReportIdEchoed: false");
+    expect(routeSource).toContain("errorReportIdsEchoed: false");
+    expect(routeSource).toContain("rawMetadataEchoed: false");
+    expect(routeSource).toContain("stackHashEchoed: false");
+    expect(routeSource).toContain("stackHashStored: Boolean");
+    expect(routeSource).toContain("reports: filtered.map((entry) => buildSafeErrorReportReceipt");
+    expect(routeSource).toContain("reports: result.rows.map");
+    expect(routeSource).toContain("report: buildSafeErrorReportReceipt");
+    expect(routeSource).not.toContain("auditId: result.audit.id");
+    expect(routeSource).not.toContain("auditId: persisted.audit.id");
+    expect(routeSource).not.toContain("id: entry.id");
+    expect(routeSource).not.toContain("tenantId: entry.tenantId");
+    expect(routeSource).not.toContain("id: persisted.id");
+    expect(routeSource).not.toContain("tenantId: persisted.tenantId");
+    expect(routeSource).not.toContain("id: persisted.created.id");
+    expect(routeSource).not.toContain("tenantId: persisted.created.tenantId");
   });
 
   it("redacts metadata instead of exposing raw request payloads", () => {
     expect(routeSource).toContain("function redactMetadata");
+    expect(routeSource).toContain("function redactMetadataValue");
+    expect(routeSource).toContain("redactMetadataValue(nestedKey, nestedValue)");
     expect(routeSource).toContain("redactedFields");
     expect(routeSource).toContain('"metadata"');
     expect(routeSource).toContain('"userAgent"');

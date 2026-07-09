@@ -33,13 +33,60 @@ function uploadAssetKindForFileAsset(kind: string): UploadAssetKind | null {
   return null;
 }
 
-function resultFileAssetId(result: unknown): string | null {
-  if (!result || typeof result !== "object" || !("fileAssetId" in result)) {
-    return null;
-  }
+function buildSignedUploadResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    rawStorageFieldsEchoed: false,
+    fileAssetIdEchoed: false,
+    signedUrlGrantIdEchoed: false,
+    bucketEchoed: false,
+    objectKeyEchoed: false,
+    uploadUrlEchoed: false,
+    signedUploadUrlEchoed: false,
+    signedUrlHashEchoed: false,
+    rawPlanObjectsEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
 
-  const value = (result as { fileAssetId?: unknown }).fileAssetId;
-  return typeof value === "string" && value.length > 0 ? value : null;
+function buildSafeSignedUploadResponse(result: {
+  status: "created" | "replayed";
+  fileAsset: { kind: string; visibility: string; scanStatus: string; createdAt: Date };
+  grant: { operation: string; scope: string; expiresAt: Date; createdAt: Date };
+}, input: {
+  signedUploadHandoffPlanned: boolean;
+  privateStorageAccessStatus: string;
+}) {
+  return {
+    fileAsset: {
+      kind: result.fileAsset.kind,
+      visibility: result.fileAsset.visibility,
+      scanStatus: result.fileAsset.scanStatus,
+      createdAt: result.fileAsset.createdAt.toISOString(),
+    },
+    signedUrlGrant: {
+      operation: result.grant.operation,
+      scope: result.grant.scope,
+      expiresAt: result.grant.expiresAt.toISOString(),
+      createdAt: result.grant.createdAt.toISOString(),
+    },
+    upload: {
+      providerUrlMinted: false,
+      uploadUrlEchoed: false,
+      signedUploadHandoffPlanned: input.signedUploadHandoffPlanned,
+      privateStorageAccessStatus: input.privateStorageAccessStatus,
+      requiredNextStep: "provider-backed signed upload URL minting",
+    },
+    persistenceReceipt: {
+      fileAssetPersisted: true,
+      signedUrlGrantPersisted: true,
+      auditPersisted: result.status === "created",
+      idempotencyPersisted: true,
+      idempotencyReplay: result.status === "replayed",
+    },
+    responseProjection: buildSignedUploadResponseProjection(),
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -93,7 +140,8 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildSignedUploadResponseProjection(),
           error: {
             code: "PROVIDER_SIGNED_UPLOAD_NOT_CONFIGURED",
             message: "Production signed upload requests require DB-backed dashboard auth, provider storage configuration, FileAsset/SignedUrlGrant persistence, and provider URL minting; local fallback is disabled.",
@@ -109,7 +157,8 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildSignedUploadResponseProjection(),
         error: {
           code: "DATABASE_REQUIRED",
           message: "Signed upload intents require database-backed dashboard auth so FileAsset, SignedUrlGrant, and AuditLog rows can be persisted.",
@@ -182,14 +231,18 @@ export async function POST(request: NextRequest) {
         },
         select: { id: true, status: true, result: true },
       });
-      const replayFileAssetId = idempotency.status === "completed" ? resultFileAssetId(idempotency.result) : null;
-      if (replayFileAssetId) {
+      if (idempotency.status === "completed") {
         const fileAsset = await tx.fileAsset.findFirst({
-          where: { id: replayFileAssetId, tenantId },
-          select: { id: true, bucket: true, objectKey: true, kind: true, visibility: true, scanStatus: true, createdAt: true },
+          where: {
+            tenantId,
+            bucket: input.bucket,
+            objectKey: input.objectKey,
+            kind: input.kind,
+          },
+          select: { id: true, kind: true, visibility: true, scanStatus: true, createdAt: true },
         });
         const grant = await tx.signedUrlGrant.findFirst({
-          where: { tenantId, fileAssetId: replayFileAssetId, operation: "upload" },
+          where: { tenantId, fileAssetId: fileAsset?.id ?? "__missing_file_asset__", operation: "upload" },
           orderBy: { createdAt: "desc" },
           select: { id: true, operation: true, scope: true, expiresAt: true, createdAt: true },
         });
@@ -226,7 +279,7 @@ export async function POST(request: NextRequest) {
             privateStorageAccessPlan,
           },
         },
-        select: { id: true, bucket: true, objectKey: true, kind: true, visibility: true, scanStatus: true, createdAt: true },
+        select: { id: true, kind: true, visibility: true, scanStatus: true, createdAt: true },
       });
 
       const grant = await tx.signedUrlGrant.create({
@@ -259,11 +312,13 @@ export async function POST(request: NextRequest) {
           entityId: fileAsset.id,
           metadata: {
             source: "dashboard-api",
-            grantId: grant.id,
+            signedUrlGrantPersisted: true,
             providerUrlMinted: false,
             signedUploadHandoffPlanned: signedUploadIntentPlan?.accepted ?? false,
             privateStorageAccessStatus: privateStorageAccessPlan?.status ?? "unsupported_file_kind",
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             boundary: "FileAsset and SignedUrlGrant intent only; provider signed URL minting, malware scan, metadata stripping, bucket ACL proof, and cross-tenant provider denial remain gated.",
           },
         },
@@ -275,13 +330,14 @@ export async function POST(request: NextRequest) {
         data: {
           status: "completed",
           result: toJsonValue({
-            fileAssetId: fileAsset.id,
-            signedUrlGrantId: grant.id,
-            auditId: audit.id,
+            fileAssetPersisted: true,
+            signedUrlGrantPersisted: true,
+            auditLogged: true,
             providerUrlMinted: false,
             signedUploadHandoffPlanned: signedUploadIntentPlan?.accepted ?? false,
             malwareScanExecuted: false,
             bucketAclVerified: false,
+            internalPersistenceIdsStored: false,
           }),
         },
       });
@@ -290,29 +346,26 @@ export async function POST(request: NextRequest) {
     });
 
     if (result.status === "client_not_found") {
-      return NextResponse.json({ ok: false, error: { code: "CLIENT_NOT_FOUND", message: "Upload client was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: { code: "CLIENT_NOT_FOUND", message: "Upload client was not found for this tenant." },
+          responseProjection: buildSignedUploadResponseProjection(),
+        },
+        { status: 404, headers: noStoreHeaders },
+      );
     }
 
     return NextResponse.json(
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         persistence: "database",
-        fileAsset: { ...result.fileAsset, createdAt: result.fileAsset.createdAt.toISOString() },
-        signedUrlGrant: { ...result.grant, expiresAt: result.grant.expiresAt.toISOString(), createdAt: result.grant.createdAt.toISOString() },
-        upload: {
-          providerUrlMinted: false,
-          uploadUrl: null,
+        ...buildSafeSignedUploadResponse(result, {
           signedUploadHandoffPlanned: signedUploadIntentPlan?.accepted ?? false,
           privateStorageAccessStatus: privateStorageAccessPlan?.status ?? "unsupported_file_kind",
-          requiredNextStep: "provider-backed signed upload URL minting",
-        },
-        signedUploadIntentPlan,
-        privateStorageAccessPlan,
-        auditId: result.status === "created" ? result.audit.id : null,
-        idempotencyKeyId: result.idempotency.id,
-        idempotencyReplay: result.status === "replayed",
+        }),
         gapIds: ["GAP-005", "GAP-007", "GAP-038"],
         boundary: "Signed-upload intent persistence is tenant-scoped, no-store, idempotency-backed, and audited; provider URL minting and storage/security evidence remain gated.",
       },
@@ -321,12 +374,26 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
       return NextResponse.json(
-        { ok: false, source: actor.source, tenantId, error: { code: "DATABASE_UNAVAILABLE", message: "Signed upload intent requires the dashboard database connection." }, gapIds: ["GAP-005", "GAP-007", "GAP-038"] },
+        {
+          ok: false,
+          source: actor.source,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildSignedUploadResponseProjection(),
+          error: { code: "DATABASE_UNAVAILABLE", message: "Signed upload intent requires the dashboard database connection." },
+          gapIds: ["GAP-005", "GAP-007", "GAP-038"],
+        },
         { status: 503, headers: noStoreHeaders },
       );
     }
     if (error instanceof Error && /Unique constraint/i.test(error.message)) {
-      return NextResponse.json({ ok: false, error: { code: "FILE_ASSET_EXISTS", message: "A file asset with this bucket/object key already exists." } }, { status: 409, headers: noStoreHeaders });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: { code: "FILE_ASSET_EXISTS", message: "A file asset with this bucket/object key already exists." },
+          responseProjection: buildSignedUploadResponseProjection(),
+        },
+        { status: 409, headers: noStoreHeaders },
+      );
     }
     return NextResponse.json({ ok: false, error: { code: "SIGNED_UPLOAD_INTENT_FAILED", message: "Signed upload intent could not be persisted." } }, { status: 500, headers: noStoreHeaders });
   }

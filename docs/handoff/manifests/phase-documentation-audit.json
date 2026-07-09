@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-06T16:06:46.244Z",
+  "generatedAt": "2026-07-09T14:34:14.774Z",
   "status": "warn",
   "docsChecked": 36,
   "missing": [],
@@ -17,7 +17,7 @@
     {
       "path": "ROADMAP.md",
       "status": "pass",
-      "lineCount": 403,
+      "lineCount": 407,
       "hasStatus": true,
       "message": "Present."
     },
@@ -31,14 +31,14 @@
     {
       "path": "AGENTS.md",
       "status": "pass",
-      "lineCount": 133,
+      "lineCount": 279,
       "hasStatus": true,
       "message": "Present."
     },
     {
       "path": "GAP_TRACKER.md",
       "status": "pass",
-      "lineCount": 505,
+      "lineCount": 768,
       "hasStatus": true,
       "message": "Present."
     },
@@ -66,28 +66,28 @@
     {
       "path": "TESTING_PLAN.md",
       "status": "pass",
-      "lineCount": 443,
+      "lineCount": 462,
       "hasStatus": true,
       "message": "Present."
     },
     {
       "path": "ENVIRONMENT_VARIABLES.md",
       "status": "pass",
-      "lineCount": 200,
+      "lineCount": 238,
       "hasStatus": true,
       "message": "Present."
     },
     {
       "path": "SECURITY.md",
       "status": "pass",
-      "lineCount": 213,
+      "lineCount": 217,
       "hasStatus": true,
       "message": "Present."
     },
     {
       "path": "DEPLOYMENT.md",
       "status": "pass",
-      "lineCount": 223,
+      "lineCount": 241,
       "hasStatus": true,
       "message": "Present."
     },
@@ -108,21 +108,21 @@
     {
       "path": "DATABASE_SCHEMA.md",
       "status": "pass",
-      "lineCount": 125,
+      "lineCount": 144,
       "hasStatus": true,
       "message": "Present."
     },
     {
       "path": "API_CONTRACTS.md",
       "status": "pass",
-      "lineCount": 408,
+      "lineCount": 810,
       "hasStatus": true,
       "message": "Present."
     },
     {
       "path": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
       "status": "pass",
-      "lineCount": 174,
+      "lineCount": 176,
       "hasStatus": true,
       "message": "Present."
     },
@@ -164,7 +164,7 @@
     {
       "path": "docs/phases/PHASE_4_BOOKING_FLOW.md",
       "status": "pass",
-      "lineCount": 95,
+      "lineCount": 97,
       "hasStatus": true,
       "message": "Present."
     },

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   buildRedactedNotificationSchedulerMetadata,
+  buildDashboardSchedulerPlanFromAction,
   createInMemoryNotificationSchedulerRepository,
   dashboardNotificationSchedulerContract,
   executeNotificationSchedulerPlan,
@@ -27,6 +28,9 @@ describe("dashboard notification scheduler contract", () => {
     expect(schedulerSource).toContain("buildNotificationSchedulerRuntimeReadinessPlan");
     expect(schedulerSource).toContain("buildFullAutomationSequence");
     expect(schedulerSource).toContain("dashboardNotificationSchedulerContract");
+    expect(schedulerSource).toContain("notificationJobPersisted: Boolean(jobId)");
+    expect(schedulerSource).toContain("internalPersistenceIdsStored: false");
+    expect(schedulerSource).not.toContain("result: { action: input.plan.action, notificationJobId: jobId ?? null }");
   });
 
   it("covers schedule, process, retry, cancel, and dead-letter actions", () => {
@@ -129,6 +133,32 @@ describe("dashboard notification scheduler contract", () => {
     expect(repository.state.workerAuditLogs.length).toBeGreaterThanOrEqual(3);
   });
 
+  it("claims due jobs before local process_due_job delivery persistence", async () => {
+    const repository = createInMemoryNotificationSchedulerRepository();
+    const processPlan = buildDashboardSchedulerPlanFromAction({
+      tenantId: "tenant_demo",
+      action: "process_due_job",
+      now: "2026-06-09T17:03:00.000Z",
+      idempotencyKey: "process:job_demo:local-contract",
+      jobId: "job_demo",
+      providerReady: true,
+      idempotencyStoreAvailable: true,
+      auditLogPersistenceAvailable: true,
+    });
+
+    const processed = await executeNotificationSchedulerPlan(repository, processPlan);
+    const alreadyClaimed = await repository.claimDueNotificationJob({
+      tenantId: "tenant_demo",
+      jobId: "job_demo",
+      now: "2026-06-09T17:04:00.000Z",
+    });
+
+    expect(processed.status).toBe("planned");
+    expect(alreadyClaimed).toBe("already_claimed");
+    expect(repository.state.dueJobClaims.size).toBe(1);
+    expect(repository.state.deliveries).toHaveLength(1);
+  });
+
   it("wires a scheduler API boundary with RBAC, tenant guard, no-store, and action parsing", () => {
     expect(routeSource).toContain("export async function GET");
     expect(routeSource).toContain("export async function POST");
@@ -137,6 +167,8 @@ describe("dashboard notification scheduler contract", () => {
     expect(routeSource).toContain('assertPermission(actor, "message:write")');
     expect(routeSource).toContain('code: "TENANT_MISMATCH"');
     expect(routeSource).toContain("buildDashboardSchedulerPlanFromAction");
+    expect(routeSource).toContain("contract: buildSafeNotificationSchedulerContractResponse()");
+    expect(routeSource).toContain("rawContractPlansEchoed: false");
     expect(routeSource).toContain("idempotencyStoreAvailable: dbBackedActor");
     expect(routeSource).toContain("auditLogPersistenceAvailable: dbBackedActor");
     expect(routeSource).toContain("local queue/worker contract");
@@ -155,7 +187,20 @@ describe("dashboard notification scheduler contract", () => {
     expect(routeSource).toContain("tx.notificationProviderHandoff.create");
     expect(routeSource).toContain("tx.auditLog.create");
     expect(routeSource).toContain("tx.idempotencyKey.update");
-    expect(routeSource).toContain("idempotencyKeyId");
+    expect(routeSource).toContain("auditLogged: true");
+    expect(routeSource).toContain("auditIdEchoed: false");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("idempotencyKeyIdEchoed: false");
+    expect(routeSource).toContain("notificationIdsEchoed: false");
+    expect(routeSource).toContain("deliveryIdsEchoed: false");
+    expect(routeSource).toContain("handoffIdsEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsStored: false");
+    expect(routeSource).not.toContain("ok: true,\n      tenantId,");
+    expect(routeSource).not.toContain("ok: false,\n        tenantId,");
+    expect(routeSource).not.toContain("idempotencyKeyId: result.idempotency.id");
+    expect(routeSource).not.toContain("auditId: result.status");
+    expect(routeSource).not.toContain("auditId: audit.id");
     expect(routeSource).toContain("idempotencyReplay");
     expect(routeSource).toContain('persistence: "database"');
     expect(routeSource).toContain("worker execution remains evidence-gated");

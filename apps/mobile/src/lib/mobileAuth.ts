@@ -7,6 +7,7 @@ import {
   type TenantAccessContext,
 } from "@inkroute/auth";
 import { inkrouteDemoTenant } from "@inkroute/config";
+import { createHash } from "node:crypto";
 
 export interface MobileSecureSession {
   tenantId: string;
@@ -33,8 +34,10 @@ export interface MobileBiometricAdapter {
 
 export interface MobileAuthAuditEvent {
   action: string;
-  tenantId: string;
-  userId?: string;
+  tenantIdHash: string;
+  userIdHash?: string;
+  rawTenantIdEchoed: false;
+  rawUserIdEchoed: false;
   decision: MobileSessionGateDecision["action"];
   status: MobileSessionGateDecision["status"];
   occurredAt: string;
@@ -86,8 +89,10 @@ export function buildMobileAuthAuditEvent(
 ): MobileAuthAuditEvent {
   return {
     action: decision.auditAction,
-    tenantId: decision.tenantId,
-    userId,
+    tenantIdHash: createHash("sha256").update(decision.tenantId).digest("hex"),
+    ...(userId ? { userIdHash: createHash("sha256").update(userId).digest("hex") } : {}),
+    rawTenantIdEchoed: false,
+    rawUserIdEchoed: false,
     decision: decision.action,
     status: decision.status,
     occurredAt,

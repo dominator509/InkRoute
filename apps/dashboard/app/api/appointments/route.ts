@@ -68,13 +68,137 @@ function toJsonValue(value: unknown) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function resultAppointmentId(result: unknown): string | null {
-  if (!result || typeof result !== "object" || !("appointmentId" in result)) {
-    return null;
-  }
+function buildSafeBookingTransitionPlanResponse(plan: ReturnType<typeof createBookingTransitionPlan>) {
+  return {
+    status: plan.status,
+    canCommit: plan.canCommit,
+    reason: plan.reason,
+    transitionPresent: Boolean(plan.transition),
+    requiresAtomicTransaction: plan.requiresAtomicTransaction,
+    writeModelCount: plan.writes.length,
+    writeModels: plan.writes.map((write) => write.model),
+    rawTransitionEchoed: false,
+    rawWritePayloadsEchoed: false,
+    rawTenantIdEchoed: false,
+    rawBookingRequestIdEchoed: false,
+    rawActorIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
 
-  const value = (result as { appointmentId?: unknown }).appointmentId;
-  return typeof value === "string" && value.length > 0 ? value : null;
+function buildSafeDashboardMutationPlanResponse(plan: ReturnType<typeof buildDashboardMutationPlan>) {
+  return {
+    status: plan.status,
+    action: plan.action,
+    providerBoundary: plan.providerBoundary,
+    requiresAudit: plan.requiresAudit,
+    requiresIdempotency: plan.requiresIdempotency,
+    canCommit: plan.canCommit,
+    writeModels: plan.writes,
+    auditAction: plan.auditAction,
+    blockers: plan.blockers,
+    idempotencyKeyPresent: Boolean(plan.idempotencyKey),
+    rawTenantIdEchoed: false,
+    rawActorIdEchoed: false,
+    rawBookingRequestIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    rawDashboardMutationPlanEchoed: false,
+  };
+}
+
+function toIsoString(value: { toISOString: () => string } | null | undefined): string | null {
+  return value ? value.toISOString() : null;
+}
+
+function buildSafeAppointmentReceipt(appointment: {
+  status: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  timezone: string;
+  depositRequiredCents: number | null;
+  createdAt: Date;
+}) {
+  return {
+    appointmentPersisted: true,
+    status: appointment.status,
+    title: appointment.title,
+    startsAt: toIsoString(appointment.startsAt),
+    endsAt: toIsoString(appointment.endsAt),
+    timezone: appointment.timezone,
+    depositRequiredCents: appointment.depositRequiredCents,
+    createdAt: toIsoString(appointment.createdAt),
+    appointmentIdEchoed: false,
+    artistIdEchoed: false,
+    clientIdEchoed: false,
+    bookingRequestIdEchoed: false,
+    travelCityIdEchoed: false,
+    studioIdEchoed: false,
+  };
+}
+
+function buildAppointmentCreateResponseProjection() {
+  return {
+    appointmentCreateResponseAllowlisted: true,
+    tenantIdEchoed: false,
+    appointmentIdEchoed: false,
+    artistIdEchoed: false,
+    clientIdEchoed: false,
+    bookingRequestIdEchoed: false,
+    auditIdEchoed: false,
+    depositAuditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafeAppointmentBookingReceipt(booking: { status: string; updatedAt: Date }) {
+  return {
+    bookingUpdated: true,
+    status: booking.status,
+    updatedAt: toIsoString(booking.updatedAt),
+    bookingRequestIdEchoed: false,
+  };
+}
+
+function buildSafeBookingStateEventReceipt(event: { type: string; createdAt: Date }) {
+  return {
+    bookingStateEventPersisted: true,
+    type: event.type,
+    createdAt: toIsoString(event.createdAt),
+    eventIdEchoed: false,
+  };
+}
+
+function buildSafeDepositDraftReceipt(depositDraft: { amountCents: number; currency: string; status: string; createdAt: Date } | null) {
+  return depositDraft
+    ? {
+        depositDraftPersisted: true,
+        amountCents: depositDraft.amountCents,
+        currency: depositDraft.currency,
+        status: depositDraft.status,
+        createdAt: toIsoString(depositDraft.createdAt),
+        depositDraftIdEchoed: false,
+      }
+    : {
+        depositDraftPersisted: false,
+        depositDraftIdEchoed: false,
+      };
+}
+
+function buildSafeNotificationJobReceipt(notificationJob: { state: string; templateKey: string; channel: string; createdAt: Date }) {
+  return {
+    notificationJobQueued: true,
+    state: notificationJob.state,
+    templateKey: notificationJob.templateKey,
+    channel: notificationJob.channel,
+    createdAt: toIsoString(notificationJob.createdAt),
+    notificationJobIdEchoed: false,
+    sourceEntityIdEchoed: false,
+    actorUserIdEchoed: false,
+    rawNotificationJobPayloadEchoed: false,
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -137,12 +261,13 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_APPOINTMENT_PERSISTENCE_NOT_CONFIGURED",
             message: "Production appointment creation requires DB-backed dashboard auth, Appointment persistence, BookingStateEvent, and AuditLog rows; local fallback mutations are disabled.",
             gapIds: ["GAP-007", "GAP-037", "GAP-038"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildAppointmentCreateResponseProjection(),
           productionBoundary: { localAppointmentMutationFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -153,12 +278,13 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         source: actor.source,
-        tenantId,
         error: {
           code: "DATABASE_REQUIRED",
           message: "Appointment creation requires database-backed dashboard auth so Appointment, BookingStateEvent, and AuditLog rows can be persisted.",
         },
         lifecycleIntents,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildAppointmentCreateResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-038"],
       },
       { status: 409, headers: noStoreHeaders },
@@ -177,7 +303,8 @@ export async function POST(request: NextRequest) {
           metadata: toJsonValue({
             route: "/api/appointments",
             action: "create_appointment",
-            bookingRequestId: input.bookingRequestId,
+            bookingRequestIdHash: hashIdempotencySubject(input.bookingRequestId),
+            rawBookingRequestIdStored: false,
             appointmentHash: hashIdempotencySubject(
               `${input.bookingRequestId}:${input.artistId}:${input.clientId}:${input.startsAt}:${input.endsAt}`,
             ),
@@ -193,7 +320,8 @@ export async function POST(request: NextRequest) {
           metadata: toJsonValue({
             route: "/api/appointments",
             action: "create_appointment",
-            bookingRequestId: input.bookingRequestId,
+            bookingRequestIdHash: hashIdempotencySubject(input.bookingRequestId),
+            rawBookingRequestIdStored: false,
             replayObserved: true,
             appointmentHash: hashIdempotencySubject(
               `${input.bookingRequestId}:${input.artistId}:${input.clientId}:${input.startsAt}:${input.endsAt}`,
@@ -224,10 +352,17 @@ export async function POST(request: NextRequest) {
         return { status: "booking_not_found" as const };
       }
 
-      const replayAppointmentId = idempotency.status === "completed" ? resultAppointmentId(idempotency.result) : null;
-      if (replayAppointmentId) {
+      if (idempotency.status === "completed") {
         const appointment = await tx.appointment.findFirst({
-          where: { id: replayAppointmentId, tenantId, bookingRequestId: booking.id },
+          where: {
+            tenantId,
+            bookingRequestId: booking.id,
+            artistId: input.artistId,
+            clientId: input.clientId,
+            startsAt: new Date(input.startsAt),
+            endsAt: new Date(input.endsAt),
+            timezone: input.timezone,
+          },
           select: {
             id: true,
             status: true,
@@ -386,8 +521,10 @@ export async function POST(request: NextRequest) {
           metadata: {
             source: "dashboard-api",
             action: "create_appointment",
-            appointmentId: appointment.id,
-            idempotencyKeyId: idempotency.id,
+            appointmentPersisted: true,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             lifecycleIntents,
             dashboardMutationPlan,
           },
@@ -404,14 +541,16 @@ export async function POST(request: NextRequest) {
           entityId: appointment.id,
           metadata: {
             source: "dashboard-api",
-            bookingRequestId: booking.id,
+            bookingRequestMatched: true,
             fromStatus: booking.status,
             toStatus: transitionPlan.transition.to,
-            eventId: event.id,
+            bookingStateEventPersisted: true,
             lifecycleIntents,
             dashboardMutationAuditAction: dashboardMutationPlan.auditAction,
             dashboardMutationProviderBoundary: dashboardMutationPlan.providerBoundary,
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
           },
         },
         select: { id: true, createdAt: true },
@@ -432,9 +571,11 @@ export async function POST(request: NextRequest) {
                   action: "appointment.create.deposit_draft",
                   providerCollection: "deferred",
                   stripeCheckoutCreated: false,
-                  appointmentId: appointment.id,
-                  bookingRequestId: booking.id,
-                  idempotencyKeyId: idempotency.id,
+                  appointmentPersisted: true,
+                  bookingRequestMatched: true,
+                  idempotencyPersisted: true,
+                  rawIdempotencyKeyStored: false,
+                  internalPersistenceIdsStored: false,
                   gapIds: ["GAP-038", "GAP-060"],
                 },
               },
@@ -453,13 +594,15 @@ export async function POST(request: NextRequest) {
                 provider: "stripe",
                 metadata: {
                   source: "dashboard-api",
-                  appointmentId: appointment.id,
-                  bookingRequestId: booking.id,
                   amountCents: depositDraft.amountCents,
                   currency: depositDraft.currency,
                   stripeCheckoutCreated: false,
                   providerCollection: "deferred",
-                  idempotencyKeyId: idempotency.id,
+                  appointmentPersisted: true,
+                  bookingRequestMatched: true,
+                  idempotencyPersisted: true,
+                  rawIdempotencyKeyStored: false,
+                  internalPersistenceIdsStored: false,
                   gapIds: ["GAP-038", "GAP-060"],
                 },
               },
@@ -484,10 +627,14 @@ export async function POST(request: NextRequest) {
           payload: {
             source: "dashboard-api",
             providerExecution: "deferred",
-            appointmentId: appointment.id,
-            bookingRequestId: booking.id,
-            clientId: input.clientId,
-            artistId: input.artistId,
+            appointmentIdHash: hashIdempotencySubject(appointment.id),
+            bookingRequestIdHash: hashIdempotencySubject(booking.id),
+            clientIdHash: hashIdempotencySubject(input.clientId),
+            artistIdHash: hashIdempotencySubject(input.artistId),
+            rawAppointmentIdStored: false,
+            rawBookingRequestIdStored: false,
+            rawClientIdStored: false,
+            rawArtistIdStored: false,
             startsAt: input.startsAt,
             endsAt: input.endsAt,
             timezone: input.timezone,
@@ -502,20 +649,18 @@ export async function POST(request: NextRequest) {
         data: {
           status: "completed",
           result: toJsonValue({
-            appointmentId: appointment.id,
-            bookingRequestId: booking.id,
-            eventId: event.id,
-            auditId: audit.id,
+            appointmentPersisted: true,
+            bookingStateEventPersisted: true,
+            auditLogged: true,
             lifecycleIntents,
-            depositDraftId: depositDraft?.id ?? null,
-            depositAuditId: depositAudit?.id ?? null,
             depositDraftPersisted: depositDraft !== null,
+            depositAuditPersisted: depositAudit !== null,
             stripeCheckoutCreated: false,
-            notificationJobId: notificationJob.id,
             notificationJobQueued: true,
             notificationProviderExecution: "deferred",
             calendarProviderInserted: false,
             depositSessionCreated: false,
+            internalPersistenceIdsStored: false,
           }),
         },
       });
@@ -529,7 +674,14 @@ export async function POST(request: NextRequest) {
 
     if (result.status === "appointment_exists") {
       return NextResponse.json(
-        { ok: false, error: { code: "APPOINTMENT_ALREADY_EXISTS", message: "This booking already has an appointment.", appointmentId: result.appointmentId } },
+        {
+          ok: false,
+          error: { code: "APPOINTMENT_ALREADY_EXISTS", message: "This booking already has an appointment." },
+          responseProjection: {
+            duplicateAppointmentIdEchoed: false,
+            internalPersistenceIdsEchoed: false,
+          },
+        },
         { status: 409, headers: noStoreHeaders },
       );
     }
@@ -550,7 +702,7 @@ export async function POST(request: NextRequest) {
 
     if (result.status === "invalid_transition") {
       return NextResponse.json(
-        { ok: false, error: { code: "INVALID_TRANSITION", message: result.transitionPlan.reason }, plan: result.transitionPlan },
+        { ok: false, error: { code: "INVALID_TRANSITION", message: result.transitionPlan.reason }, plan: buildSafeBookingTransitionPlanResponse(result.transitionPlan) },
         { status: 409, headers: noStoreHeaders },
       );
     }
@@ -559,18 +711,23 @@ export async function POST(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
-        appointment: result.appointment,
-        booking: result.booking,
-        event: result.event,
-        auditId: result.status === "persisted" ? result.audit.id : null,
-        depositDraft: result.depositDraft,
-        depositAuditId: result.status === "persisted" ? result.depositAudit?.id ?? null : null,
-        notificationJob: result.notificationJob,
-        idempotencyKeyId: result.idempotency.id,
+        appointment: buildSafeAppointmentReceipt(result.appointment),
+        booking: buildSafeAppointmentBookingReceipt(result.booking),
+        event: buildSafeBookingStateEventReceipt(result.event),
+        auditLogged: result.status === "persisted",
+        auditIdEchoed: false,
+        depositDraft: buildSafeDepositDraftReceipt(result.depositDraft),
+        depositAuditLogged: result.status === "persisted" && Boolean(result.depositAudit),
+        depositAuditIdEchoed: false,
+        notificationJob: buildSafeNotificationJobReceipt(result.notificationJob),
+        idempotencyRecorded: true,
+        idempotencyKeyIdEchoed: false,
+        internalPersistenceIdsEchoed: false,
         idempotencyReplay: result.status === "replayed",
         lifecycleIntents: result.lifecycleIntents,
-        dashboardMutationPlan: result.dashboardMutationPlan,
+        dashboardMutationPlan: buildSafeDashboardMutationPlanResponse(result.dashboardMutationPlan),
+        tenantScope: { actorTenantMatched: true, bookingTenantMatched: true, appointmentRelatedRecordsTenantMatched: true },
+        responseProjection: buildAppointmentCreateResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-038"],
         boundary: "Appointment creation is idempotency-backed and persisted in one tenant-scoped transaction with BookingStateEvent, AuditLog, local Deposit draft, PaymentAuditLog, and local NotificationJob handoff rows when requested; provider calendar, Stripe checkout, and notification execution remain deferred workflow intents.",
       },
@@ -582,8 +739,9 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Appointment creation requires the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildAppointmentCreateResponseProjection(),
           gapIds: ["GAP-007", "GAP-037", "GAP-038"],
         },
         { status: 503, headers: noStoreHeaders },

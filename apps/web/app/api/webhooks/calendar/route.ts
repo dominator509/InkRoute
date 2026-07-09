@@ -14,7 +14,15 @@ export async function POST(request: NextRequest) {
   const resourceState = normalizeHeader(request.headers.get("x-goog-resource-state"));
   const messageNumber = normalizeHeader(request.headers.get("x-goog-message-number"));
   const channelToken = normalizeHeader(request.headers.get("x-goog-channel-token"));
-  const bodyText = await request.text();
+  let bodyText: string;
+  try {
+    bodyText = await request.text();
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: { code: "WEBHOOK_BODY_UNREADABLE", message: "Webhook body could not be read." } },
+      { status: 400, headers: noStoreHeaders },
+    );
+  }
 
   if (!channelId || !resourceId || !resourceState || !messageNumber) {
     return NextResponse.json(
@@ -32,38 +40,62 @@ export async function POST(request: NextRequest) {
 
   const tenantId = normalizeHeader(request.headers.get("x-inkroute-tenant-id"));
   const artistId = normalizeHeader(request.headers.get("x-inkroute-artist-id"));
-  const plan = buildGoogleCalendarProviderSyncPlan({
-    tenantId: tenantId ?? "",
-    artistId: artistId ?? "",
-    calendarId: resourceId,
-    action: "incremental_sync",
-    oauthClientConfigured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
-    requiredScopesGranted: false,
-    encryptedTokenRepositoryConfigured: false,
-    providerWorkerEnabled: false,
-    idempotencyKey: `google-calendar-webhook:${channelId}:${messageNumber}`,
-    pushChannelId: channelId,
-    pushResourceId: resourceId,
-    syncToken: channelToken ?? undefined,
-  });
+
+  let plan;
+  try {
+    plan = buildGoogleCalendarProviderSyncPlan({
+      tenantId: tenantId ?? "",
+      artistId: artistId ?? "",
+      calendarId: resourceId,
+      action: "incremental_sync",
+      oauthClientConfigured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+      requiredScopesGranted: false,
+      encryptedTokenRepositoryConfigured: false,
+      providerWorkerEnabled: false,
+      idempotencyKey: `google-calendar-webhook:${channelId}:${messageNumber}`,
+      pushChannelId: channelId,
+      pushResourceId: resourceId,
+      syncToken: channelToken ?? undefined,
+    });
+  } catch {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "INTERNAL_WEBHOOK_PROCESSING_ERROR",
+          message: "Google Calendar push webhook plan could not be built due to an internal error.",
+        },
+      },
+      { status: 500, headers: noStoreHeaders },
+    );
+  }
 
   const responsePayload = {
     channel: {
-      channelId,
-      resourceId,
+      channelIdPresent: true,
+      resourceIdPresent: true,
       resourceState,
-      messageNumber,
+      messageNumberPresent: true,
       tokenPresent: Boolean(channelToken),
     },
     bodyBytes: bodyText.length,
     plan: {
       action: plan.action,
       providerCall: plan.providerCall,
-      idempotencyKey: plan.idempotencyKey,
+      rawIdempotencyKeyEchoed: false,
       requiresTransaction: plan.requiresTransaction,
       blockers: plan.blockers,
       nextAction: plan.nextAction,
       writeModels: plan.writes.map((write) => write.model),
+    },
+    responseProjection: {
+      rawProviderChannelIdEchoed: false,
+      rawProviderResourceIdEchoed: false,
+      rawProviderMessageNumberEchoed: false,
+      rawProviderChannelTokenEchoed: false,
+      rawIdempotencyKeyEchoed: false,
+      tenantIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
     },
     gapIds: ["GAP-009", "GAP-057", "GAP-058"],
     boundary: "Google Calendar push webhook boundary validates provider headers and builds an incremental-sync plan only; OAuth credentials, encrypted tokens, provider worker execution, idempotency persistence, and CalendarAuditLog proof remain gated.",

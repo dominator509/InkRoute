@@ -67,7 +67,7 @@ export default function TemplatesPage() {
             {dashboardNotificationAutomationSequence.slice(0, 10).map((step) => (
               <div className="stacked-item" key={step.id}>
                 <strong>{step.templateKey.replace(/_/g, " ")}</strong>
-                <span>{step.trigger} Â· offset {step.scheduledOffsetMinutes} min Â· {step.recommendedChannels.join(", ")}</span>
+                <span>{step.trigger} - offset {step.scheduledOffsetMinutes} min - {step.recommendedChannels.join(", ")}</span>
                 <StatusPill label={step.status} tone={toneForStatus(step.status)} />
                 <small>{step.reason}</small>
               </div>
@@ -83,8 +83,8 @@ export default function TemplatesPage() {
           <div className="stacked-list">
             {dashboardRedactedProviderSendDrafts.map((draft) => (
               <div className="stacked-item" key={`${draft.provider}-${draft.channel}`}>
-                <strong>{draft.provider} Â· {draft.channel}</strong>
-                <span>{draft.toMasked} Â· env: {draft.credentialEnvVar}</span>
+                <strong>{draft.provider} - {draft.channel}</strong>
+                <span>{draft.toMasked} - env: {draft.credentialEnvVar}</span>
                 <small>{draft.disabledReason}</small>
               </div>
             ))}
@@ -96,7 +96,7 @@ export default function TemplatesPage() {
           <div className="stacked-list">
             {dashboardProviderBoundaryMatrix.map((boundary) => (
               <div className="stacked-item" key={`${boundary.provider}-${boundary.channel}`}>
-                <strong>{boundary.provider} Â· {boundary.channel}</strong>
+                <strong>{boundary.provider} - {boundary.channel}</strong>
                 <span>{boundary.credentialEnvVars.join(", ")}</span>
                 <small>{boundary.productionRequirement}</small>
                 <code>{boundary.gapId}</code>

@@ -134,6 +134,14 @@ describe("dashboard availability persistence contract", () => {
     expect(routeSource).toContain("buildAvailabilityPersistencePlan");
     expect(routeSource).toContain("calendar:write");
     expect(routeSource).toContain("AVAILABILITY_HOLD_BLOCKED");
+    expect(routeSource).toContain("plan: buildSafeAvailabilityHoldPlanResponse(plan)");
+    expect(routeSource).toContain("writePayloadsEchoed: false");
+    expect(routeSource).toContain("rawIdempotencyKeyEchoed: false");
+    expect(routeSource).toContain("bookingRequestIdEchoed: false");
+    expect(routeSource).toContain("availabilityWindowIdEchoed: false");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).not.toMatch(/^\s+plan,\s*$/m);
     expect(routeSource).toContain("tx.availabilityWindow.findFirst");
     expect(routeSource).toContain("repository-required");
     expect(routeSource).toContain("{ status: 202, headers: noStoreHeaders }");

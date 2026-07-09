@@ -367,9 +367,9 @@ export const releaseLaunchControlExecutionPolicy: ReleaseLaunchControlExecutionP
 };
 
 const sensitiveReleaseLaunchControlKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|name|address|github|vercel|eas|expo|sentry|release|feature|flag|tenant|user|client|database|provider|deployment|provenance|environment|url|uri|dsn|key|id|payload|artifact)/iu;
+  /(token|secret|password|authorization|cookie|email|phone|name|address|github|vercel|eas|expo|sentry|release|feature|flag|tenant|user|client|actor|database|provider|deployment|provenance|environment|protected|approval|workflow|job|run|ci|commit|sha|migration|rollback|incident|rollout|killSwitch|health|route|rbac|concurrency|audit|idempotency|url|uri|dsn|key|id|payload|artifact|path|raw|request|response|log|output|transcript|stack|error|repository|repo|branch|pull|pr|reviewer|codeowner)/iu;
 const sensitiveReleaseLaunchControlValuePattern =
-  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|repo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+|branch:[A-Za-z0-9_./-]+|pr[_:#-]?[A-Za-z0-9_.-]+|reviewer[_:@-]?[A-Za-z0-9_.-]+|CODEOWNER:[A-Za-z0-9_.@/-]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
 
 const buildRedactedReleaseLaunchControlValue = (value: unknown, path: string, redactions: string[]): unknown => {
   if (Array.isArray(value)) {

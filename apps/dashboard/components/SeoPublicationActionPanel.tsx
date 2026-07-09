@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createClientRequestKey } from "../lib/clientRequestKeys";
 
 type SeoPublicationState =
   | { status: "idle"; message: string }
@@ -22,7 +23,7 @@ export function SeoPublicationActionPanel() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "idempotency-key": `dashboard-seo-city-draft-${Date.now()}`,
+          "idempotency-key": createClientRequestKey("dashboard-seo-city-draft"),
         },
         body: JSON.stringify({
           action: "create",

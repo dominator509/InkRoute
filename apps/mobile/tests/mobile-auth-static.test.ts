@@ -35,6 +35,9 @@ describe("mobile auth static contract", () => {
 
   it("records redacted audit decisions without exposing token material", () => {
     expect(authSource).toContain("buildMobileAuthAuditEvent");
+    expect(authSource).toContain("tenantIdHash");
+    expect(authSource).toContain("rawTenantIdEchoed: false");
+    expect(authSource).toContain("rawUserIdEchoed: false");
     expect(authSource).toContain("token material and provider payloads redacted");
     expect(authSource).not.toContain("refreshToken:");
     expect(authSource).not.toContain("accessToken:");

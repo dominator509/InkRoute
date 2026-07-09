@@ -199,6 +199,10 @@ describe("SMS provider runtime contract", () => {
       smsConsentSnapshot: "private consent",
       rawWebhookPayload: "From=%2B15555550100",
       publicSummary: "SMS provider evidence captured",
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_sms_provider",
+      reviewerHandle: "reviewer_sms_owner",
+      codeownerSelector: "CODEOWNER:notifications-platform-team",
       nested: {
         helpInboundThreadUrl: "https://private/thread",
         publicStatus: "help-handled",
@@ -211,6 +215,10 @@ describe("SMS provider runtime contract", () => {
       "destinationPhone",
       "smsConsentSnapshot",
       "rawWebhookPayload",
+      "repositorySelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
       "nested.helpInboundThreadUrl",
     ]);
     expect(redacted.artifact).toEqual({
@@ -219,6 +227,10 @@ describe("SMS provider runtime contract", () => {
       smsConsentSnapshot: "[redacted]",
       rawWebhookPayload: "[redacted]",
       publicSummary: "SMS provider evidence captured",
+      repositorySelector: "[redacted]",
+      pullRequestSelector: "[redacted]",
+      reviewerHandle: "[redacted]",
+      codeownerSelector: "[redacted]",
       nested: {
         helpInboundThreadUrl: "[redacted]",
         publicStatus: "help-handled",

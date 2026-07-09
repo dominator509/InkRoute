@@ -98,26 +98,64 @@ describe("payment API route boundaries", () => {
     const payload = (await response.json()) as {
       ok: boolean;
       data: {
-        sessionDraft: { metadata: Record<string, string>; idempotencyKey: string };
-        storedSession: { bookingRequestId: string; status: string };
+        sessionDraft: { metadata: Record<string, string | boolean | undefined>; idempotencyKey?: string; clientReferenceIdEchoed: boolean; rawIdempotencyKeyEchoed: boolean; customerEmailEchoed: boolean; tenantIdEchoed: boolean; bookingRequestIdEchoed: boolean };
+        session: { checkoutUrlEchoed: boolean; providerSessionIdEchoed: boolean; mockCheckoutUrlEchoed: boolean; rawProviderSessionIdEchoed: boolean };
+        storedSession: { status: string; tenantIdEchoed: boolean; bookingRequestIdEchoed: boolean; localDepositSessionIdEchoed: boolean; mockCheckoutUrlEchoed: boolean; rawProviderSessionIdEchoed: boolean };
+        responseProjection: { rawIdempotencyKeyEchoed: boolean; checkoutUrlEchoed: boolean; providerSessionIdEchoed: boolean; rawProviderSessionIdEchoed: boolean; mockCheckoutUrlEchoed: boolean; customerEmailEchoed: boolean; tenantIdEchoed: boolean; bookingRequestIdEchoed: boolean; localDepositSessionIdEchoed: boolean; internalPersistenceIdsEchoed: boolean };
         productionBoundary: { gapIds: string[] };
-        localRuntime: { bookingFound: boolean; bookingId: string };
+        localRuntime: { bookingFound: boolean; bookingIdEchoed: boolean };
       };
     };
 
     expect(response.status).toBe(201);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(payload.ok).toBe(true);
-    expect(payload.data.sessionDraft.metadata.bookingRequestId).toBe(booking.request.id);
-    expect(payload.data.sessionDraft.idempotencyKey).toContain(booking.request.id);
+    expect(payload.data.sessionDraft.metadata.bookingRequestAttached).toBe(true);
+    expect(payload.data.sessionDraft.metadata.tenantAttached).toBe(true);
+    expect(payload.data.sessionDraft.idempotencyKey).toBeUndefined();
+    expect(payload.data.sessionDraft).not.toHaveProperty("clientReferenceId");
+    expect(payload.data.sessionDraft.clientReferenceIdEchoed).toBe(false);
+    expect(payload.data.sessionDraft.rawIdempotencyKeyEchoed).toBe(false);
+    expect(payload.data.sessionDraft.customerEmailEchoed).toBe(false);
+    expect(payload.data.sessionDraft.tenantIdEchoed).toBe(false);
+    expect(payload.data.sessionDraft.bookingRequestIdEchoed).toBe(false);
+    expect(payload.data.session).toMatchObject({
+      checkoutUrlEchoed: false,
+      providerSessionIdEchoed: false,
+      mockCheckoutUrlEchoed: false,
+      rawProviderSessionIdEchoed: false,
+    });
+    expect(payload.data.session).not.toHaveProperty("checkoutUrl");
+    expect(payload.data.session).not.toHaveProperty("providerSessionId");
+    expect(payload.data.responseProjection).toMatchObject({
+      rawIdempotencyKeyEchoed: false,
+      checkoutUrlEchoed: false,
+      providerSessionIdEchoed: false,
+      rawProviderSessionIdEchoed: false,
+      mockCheckoutUrlEchoed: false,
+      customerEmailEchoed: false,
+      tenantIdEchoed: false,
+      bookingRequestIdEchoed: false,
+      localDepositSessionIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    });
     expect(payload.data.storedSession).toMatchObject({
-      bookingRequestId: booking.request.id,
       status: "created",
+      tenantIdEchoed: false,
+      bookingRequestIdEchoed: false,
+      localDepositSessionIdEchoed: false,
+      mockCheckoutUrlEchoed: false,
+      rawProviderSessionIdEchoed: false,
     });
     expect(payload.data.localRuntime).toMatchObject({
       bookingFound: true,
-      bookingId: booking.request.id,
+      bookingIdEchoed: false,
     });
+    expect(payload.data.storedSession).not.toHaveProperty("id");
+    expect(payload.data.storedSession).not.toHaveProperty("tenantId");
+    expect(payload.data.storedSession).not.toHaveProperty("bookingRequestId");
+    expect(payload.data.storedSession).not.toHaveProperty("checkoutUrl");
+    expect(payload.data.storedSession).not.toHaveProperty("providerSessionId");
     expect(payload.data.productionBoundary.gapIds).toEqual(["GAP-004", "GAP-049", "GAP-050"]);
   });
 

@@ -15,6 +15,43 @@ function formatBudgetRange(min?: number | null, max?: number | null): string {
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
+function buildSafeBookingListRecord(record: Record<string, unknown>) {
+  const {
+    id: _id,
+    tenantId: _tenantId,
+    portfolioAttribution: _portfolioAttribution,
+    portfolioAttributionId: _portfolioAttributionId,
+    assignedToUserId: _assignedToUserId,
+    portfolioAttributed,
+    assignedToUserPresent,
+    ...safeRecord
+  } = record;
+
+  return {
+    ...safeRecord,
+    portfolioAttributed: Boolean(portfolioAttributed ?? (_portfolioAttribution && _portfolioAttribution !== "Unattributed") ?? _portfolioAttributionId),
+    assignedToUserPresent: Boolean(assignedToUserPresent ?? _assignedToUserId),
+    responseProjection: {
+      bookingRequestIdEchoed: false,
+      tenantIdEchoed: false,
+      portfolioAttributionIdEchoed: false,
+      assignedToUserIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+  };
+}
+
+function buildBookingListResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    bookingRequestIdsEchoed: false,
+    portfolioAttributionIdsEchoed: false,
+    assignedToUserIdsEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
@@ -44,12 +81,13 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_DASHBOARD_BOOKINGS_NOT_CONFIGURED",
             message: "Production dashboard booking list reads require DB-backed actor resolution and tenant-scoped BookingRequest reads; local fallback demo rows are disabled.",
             gapIds: ["GAP-007", "GAP-031", "GAP-032", "GAP-037"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildBookingListResponseProjection(),
           productionBoundary: { localDashboardBookingFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -60,10 +98,12 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantIdEchoed: false,
         persistence: "local-fallback",
         count: dashboardProjectedBookingRows.length,
-        bookings: dashboardProjectedBookingRows.slice(0, limit),
+        bookings: dashboardProjectedBookingRows.slice(0, limit).map((row) => buildSafeBookingListRecord(row as Record<string, unknown>)),
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildBookingListResponseProjection(),
         gapIds: ["GAP-007", "GAP-037"],
         boundary: "Local fallback returns tenant-projected demo bookings only; database mode is required for live dashboard reads.",
       },
@@ -123,8 +163,6 @@ export async function GET(request: NextRequest) {
       tenantId,
       source: "repository",
       records: result.rows.map((row: { id: string; tenantId: string; clientNameSnapshot: string; clientEmailSnapshot: string | null; clientPhoneSnapshot: string | null; preferredCity: string | null; preferredDate: Date | null; style: string | null; placement: string | null; sizeEstimate: string | null; budgetMinCents: number | null; budgetMaxCents: number | null; ideaSummary: string | null; status: string; readinessScore: number | null; createdAt: Date; portfolioAttributionId: string | null; assignedToUserId: string | null }) => ({
-        id: row.id,
-        tenantId: row.tenantId,
         clientName: row.clientNameSnapshot,
         clientEmail: row.clientEmailSnapshot,
         clientPhone: row.clientPhoneSnapshot,
@@ -138,8 +176,8 @@ export async function GET(request: NextRequest) {
         status: row.status,
         readinessScore: row.readinessScore,
         createdAt: row.createdAt.toISOString(),
-        portfolioAttribution: row.portfolioAttributionId ?? "Unattributed",
-        assignedToUserId: row.assignedToUserId,
+        portfolioAttributed: Boolean(row.portfolioAttributionId),
+        assignedToUserPresent: Boolean(row.assignedToUserId),
       })),
       redactedFields: ["clientEmail", "clientPhone", "medicalNotes", "privateNotes", "internalNotes"],
     });
@@ -148,11 +186,14 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
         count: view.records.length,
-        bookings: view.records,
-        auditId: result.audit.id,
+        bookings: view.records.map((record) => buildSafeBookingListRecord(record as Record<string, unknown>)),
+        auditLogged: true,
+        auditIdEchoed: false,
+        internalPersistenceIdsEchoed: false,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildBookingListResponseProjection(),
         gapIds: ["GAP-007", "GAP-037"],
         boundary: "Dashboard booking list reads are tenant-scoped, redacted, no-store, and audited.",
       },
@@ -164,8 +205,9 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Booking list reads require the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildBookingListResponseProjection(),
           gapIds: ["GAP-007", "GAP-037"],
         },
         { status: 503, headers: noStoreHeaders },

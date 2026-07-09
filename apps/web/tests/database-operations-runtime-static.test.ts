@@ -389,6 +389,10 @@ describe("GAP-117 database operations runtime wiring", () => {
         authorization: "Bearer database-operations-token",
         phone: "+1 555 333 9090",
       },
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_117_database_operations",
+      reviewerHandle: "reviewer_database_owner",
+      codeownerSelector: "CODEOWNER:database-platform-team",
     };
     const redacted = buildRedactedDatabaseOperationsArtifact(rawArtifact);
     const review = buildDatabaseOperationsRuntimeArtifactReview("coverage/database-migration-dry-run-redacted.json", rawArtifact);
@@ -404,17 +408,25 @@ describe("GAP-117 database operations runtime wiring", () => {
     expect(serialized).not.toContain("client@example.com");
     expect(serialized).not.toContain("+1 555 333 9090");
     expect(serialized).not.toContain("Bearer database-operations-token");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("pr_117_database_operations");
+    expect(serialized).not.toContain("reviewer_database_owner");
+    expect(serialized).not.toContain("CODEOWNER:database-platform-team");
     expect(review.containsUnredactedSensitiveValues).toBe(false);
     expect(review.redactions).toEqual(
       expect.arrayContaining([
         "authorization",
+        "codeownerSelector",
         "ciRunUrl",
         "databaseUrl",
         "destructiveSqlScan",
         "directUrl",
         "generatedSql",
         "providerBranch",
+        "pullRequestSelector",
+        "repositorySelector",
         "restoreId",
+        "reviewerHandle",
         "snapshotId",
       ]),
     );

@@ -377,6 +377,36 @@ export function createBookingTransitionPlan(input: BookingTransitionPlanInput): 
   };
 }
 
+const bookingLifecycleEvidenceSensitiveKeyPattern =
+  /(tenant|booking|request|client|artist|actor|user|audit|event|idempotency|payment|deposit|provider|medical|private|file|url|uri|database|dsn|token|secret|authorization|cookie|payload|raw|body|log|output|artifact|path|ci|workflow|run|commit|key|id)$/i;
+const bookingLifecycleEvidenceSensitiveValuePattern =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider|token)_[A-Za-z0-9_./:-]+|(?:tenant|booking|request|actor|audit|event|payment|deposit|provider|workflow|commit|run|artifact)[-_:/]?[A-Za-z0-9_.-]{6,}|medical:[^"'\n\r]+|private-file|[A-Za-z0-9_-]{24,})/giu;
+
+export function buildRedactedBookingLifecycleEvidenceArtifact(artifact: unknown): unknown {
+  const redact = (value: unknown): unknown => {
+    if (Array.isArray(value)) {
+      return value.map((entry) => redact(entry));
+    }
+
+    if (value && typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+          key,
+          bookingLifecycleEvidenceSensitiveKeyPattern.test(key) ? "[REDACTED_BOOKING_LIFECYCLE_PRIVATE_VALUE]" : redact(entry),
+        ]),
+      );
+    }
+
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    return value.replace(bookingLifecycleEvidenceSensitiveValuePattern, "[REDACTED_BOOKING_LIFECYCLE_PRIVATE_VALUE]");
+  };
+
+  return redact(artifact);
+}
+
 export type BookingPostSubmitWorkflowType = "reference-upload" | "deposit-handoff" | "notification-bootstrap" | "calendar-hold";
 export type BookingPostSubmitWorkflowStatus = "ready" | "blocked_missing_data" | "provider_gated";
 

@@ -6,6 +6,7 @@
   type NotificationProviderHandoffWorkerPlan,
   type NotificationPersistenceRuntimeReadinessPlan,
 } from "@inkroute/notifications";
+import { createHash } from "node:crypto";
 
 export type DashboardMessageWriteAction = "create_thread_message" | "append_message" | "mark_thread_read" | "record_delivery_status";
 
@@ -52,6 +53,10 @@ function compactText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function buildDashboardMessageIdempotencyKey(parts: readonly string[]): string {
+  return `message-persistence:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
+}
+
 export function redactedDashboardMessagePreview(value: string): string {
   const compact = compactText(value);
   if (!compact) return "[redacted-empty-message]";
@@ -59,17 +64,14 @@ export function redactedDashboardMessagePreview(value: string): string {
 }
 
 export function stableDashboardDestinationHash(value: string): string {
-  let hash = 17;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) % 1_000_000_007;
-  }
-  return `dest_${hash.toString(36)}`;
+  return `dest_${createHash("sha256").update(value).digest("hex")}`;
 }
 
 export const dashboardMessagePersistenceRequiredControls = [
       "Require message:write before creating message or notification persistence rows.",
       "Write MessageThread, Message, Notification, NotificationDelivery, and AuditLog rows in one tenant-scoped transaction when models are present.",
       "Hash destinations and return redacted message previews rather than raw body/provider destination fields.",
+      "Hash related booking and appointment selectors in reusable message drafts instead of echoing raw IDs.",
       "Claim request idempotency keys before side effects and store redacted committed result ids.",
       "Record NotificationReadState rows for dashboard read/write state without storing raw message bodies.",
       "Persist NotificationDeliveryStatusTransition rows for delivery state changes.",
@@ -110,7 +112,7 @@ export function buildDashboardMessagePersistencePlan(
     action,
     tenantId: input.tenantId,
     threadId,
-    idempotencyKey: `message-persistence:${input.tenantId}:${action}:${input.requestId}`,
+    idempotencyKey: buildDashboardMessageIdempotencyKey([input.tenantId, action, input.requestId]),
     threadDraft,
     redactedBodyPreview: redactedDashboardMessagePreview(input.body),
     destinationHash: stableDashboardDestinationHash(`${input.tenantId}:${input.clientId}:${input.deliveryChannel ?? input.channel ?? "in_app"}`),

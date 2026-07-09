@@ -326,6 +326,15 @@ describe("GAP-107 DB integration runtime wiring", () => {
       commandTranscript: "DATABASE_URL=postgresql://secret run migrate",
       headers: ["Authorization: Bearer db-secret-token"],
       stack: "Error: db integration failed",
+      migrationOutput: "Migration applied against tenant_private_123",
+      seedLog: "Seeded audit_log_private_123",
+      prismaError: "Prisma error with workflow_private_123",
+      environment: { DATABASE_URL: "postgresql://env:password@example.com:5432/inkroute" },
+      rollbackNotes: "rollback touched record_private_123",
+      destructiveResetProof: "reset blocked for database_private_123",
+      tenantId: "tenant_private_123",
+      auditLogId: "audit_log_private_123",
+      workflowRunId: "workflow_private_123",
     };
 
     const redacted = buildRedactedDbIntegrationRuntimeArtifact(rawArtifact);
@@ -339,6 +348,12 @@ describe("GAP-107 DB integration runtime wiring", () => {
     expect(serialized).not.toContain("coverage/private-db-transcript.log");
     expect(serialized).not.toContain("/actions/runs/private");
     expect(serialized).not.toContain("db-secret-token");
+    expect(serialized).not.toContain("tenant_private_123");
+    expect(serialized).not.toContain("audit_log_private_123");
+    expect(serialized).not.toContain("workflow_private_123");
+    expect(serialized).not.toContain("postgresql://env:password@example.com");
+    expect(serialized).not.toContain("record_private_123");
+    expect(serialized).not.toContain("database_private_123");
     expect(serialized).toContain("[REDACTED]");
     expect(review.requiredArtifacts).toBe(dbIntegrationRuntimeArtifactPaths);
     expect(review.retainedExternalGates).toEqual(expect.arrayContaining([

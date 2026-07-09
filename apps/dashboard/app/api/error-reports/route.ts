@@ -47,8 +47,11 @@ type ErrorReportCreateData = {
 };
 
 function nextLocalErrorId(tenantId: string): string {
-  const random = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2);
-  return `err_${tenantId}_${Date.now()}_${random}`;
+  const random = globalThis.crypto?.randomUUID?.();
+  if (!random) {
+    throw new Error("Secure random UUID generation is unavailable for local error report persistence.");
+  }
+  return `err_${random}`;
 }
 
 function parseErrorFilters(request: NextRequest, tenantId: string) {
@@ -73,6 +76,29 @@ function storeLocalErrorReport(input: Omit<LocalErrorReport, "id" | "createdAt" 
   return report;
 }
 
+function buildErrorReportResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    errorReportIdEchoed: false,
+    errorReportIdsEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+    rawMetadataEchoed: false,
+    stackHashEchoed: false,
+  };
+}
+
+function buildSafeErrorReportReceipt(report: Record<string, unknown>) {
+  const { id: _id, tenantId: _tenantId, stackHash: _stackHash, metadata, ...safeReport } = report;
+  return {
+    ...safeReport,
+    ...(metadata !== undefined ? { metadata: redactMetadata(metadata) } : {}),
+    stackHashStored: Boolean(_stackHash),
+    stackHashEchoed: false,
+    responseProjection: buildErrorReportResponseProjection(),
+  };
+}
+
 function buildDashboardReportInput(parsed: { data: ErrorReportInput }, tenantId: string, request: NextRequest): ObservabilityEventInput {
   const inputData = parsed.data;
   const userAgent = typeof inputData.userAgent === "string" ? inputData.userAgent : request.headers.get("user-agent") ?? undefined;
@@ -93,14 +119,30 @@ function buildDashboardReportInput(parsed: { data: ErrorReportInput }, tenantId:
   };
 }
 
+function redactMetadataValue(key: string, value: unknown): unknown {
+  if (/email|phone|token|secret|cookie|authorization|password|ip|useragent|body|stack|payload|client|card/i.test(key)) {
+    return "[redacted-dashboard-field]";
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => redactMetadataValue(key, item));
+  }
+  if (typeof value === "object" && value !== null) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([nestedKey, nestedValue]) => [
+        nestedKey,
+        redactMetadataValue(nestedKey, nestedValue),
+      ]),
+    );
+  }
+  return value;
+}
+
 function redactMetadata(value: unknown): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>).map(([key, metadataValue]) => [
       key,
-      /email|phone|token|secret|cookie|authorization|password|ip|useragent|body|stack|payload|client|card/i.test(key)
-        ? "[redacted-dashboard-field]"
-        : metadataValue,
+      redactMetadataValue(key, metadataValue),
     ]),
   );
 }
@@ -133,12 +175,12 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId: actor.tenantId,
           error: {
             code: "PROVIDER_ERROR_REPORT_PERSISTENCE_NOT_CONFIGURED",
             message: "Production dashboard error-report reads require DB-backed actor resolution and tenant-scoped persisted reports; local fallback reports are disabled.",
             gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
           },
+          responseProjection: buildErrorReportResponseProjection(),
           productionBoundary: { localErrorReportFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -151,12 +193,12 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId: actor.tenantId,
         actorRole: actor.role,
         persistence: "local-fallback",
         count: filtered.length,
         status: "local-read-fallback",
-        reports: filtered,
+        reports: filtered.map((entry) => buildSafeErrorReportReceipt(entry as unknown as Record<string, unknown>)),
+        responseProjection: buildErrorReportResponseProjection(),
         gapIds: ["GAP-079", "GAP-081", "GAP-095"],
         boundary: "Local fallback mode active; errors are retained in-memory only.",
       },
@@ -212,7 +254,6 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         actorRole: actor.role,
         persistence: "database",
         count: result.rows.length,
@@ -229,9 +270,7 @@ export async function GET(request: NextRequest) {
           route: string | null;
           metadata: unknown;
           createdAt: Date;
-        }) => ({
-          id: entry.id,
-          tenantId: entry.tenantId,
+        }) => buildSafeErrorReportReceipt({
           severity: entry.severity,
           status: entry.status,
           source: entry.source,
@@ -242,7 +281,8 @@ export async function GET(request: NextRequest) {
           metadata: redactMetadata(entry.metadata),
           createdAt: entry.createdAt.toISOString(),
         })),
-        auditId: result.audit.id,
+        auditLogged: true,
+        responseProjection: buildErrorReportResponseProjection(),
         gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
         boundary: "Error report reads are tenant-scoped, RBAC-gated, no-store, audit-logged, and metadata-redacted in DB-backed mode.",
       },
@@ -257,12 +297,12 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId: actor.tenantId,
           error: {
             code: "PROVIDER_ERROR_REPORT_PERSISTENCE_NOT_CONFIGURED",
             message: "Production dashboard error-report reads require the dashboard database connection; local fallback reports are disabled.",
             gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
           },
+          responseProjection: buildErrorReportResponseProjection(),
           productionBoundary: { localErrorReportFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -275,12 +315,12 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId: actor.tenantId,
         actorRole: actor.role,
         persistence: "local-fallback",
         count: filtered.length,
         status: "database-unavailable",
-        reports: filtered,
+        reports: filtered.map((entry) => buildSafeErrorReportReceipt(entry as unknown as Record<string, unknown>)),
+        responseProjection: buildErrorReportResponseProjection(),
         warning: "Database is currently unavailable; returning local fallback data.",
         gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
         boundary: "DB outage fallback only; data persistence is temporary and request-scoped.",
@@ -343,12 +383,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         ok: false,
         source: actor.source,
-        tenantId,
         error: {
           code: "PROVIDER_ERROR_REPORT_PERSISTENCE_NOT_CONFIGURED",
           message: "Production dashboard error-report writes require DB-backed actor resolution and tenant-scoped persisted reports; local fallback reports are disabled.",
           gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
         },
+        responseProjection: buildErrorReportResponseProjection(),
         productionBoundary: { localErrorReportFallbackDisabled: true },
       }, { status: 503, headers: noStoreHeaders });
     }
@@ -359,11 +399,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       source: actor.source,
-      tenantId,
       persistence: "local-fallback",
-      report: {
-        id: persisted.id,
-        tenantId: persisted.tenantId,
+      report: buildSafeErrorReportReceipt({
         severity: persisted.severity,
         status: persisted.status,
         source: persisted.source,
@@ -374,7 +411,8 @@ export async function POST(request: NextRequest) {
         release: persisted.release,
         createdAt: persisted.createdAt,
         alertRoute: persisted.auditRoute,
-      },
+      }),
+      responseProjection: buildErrorReportResponseProjection(),
       gapIds: ["GAP-079", "GAP-081", "GAP-095"],
       boundary: "Local fallback mode active; report persisted in-memory for runtime continuity only.",
     }, { status: 201, headers: noStoreHeaders });
@@ -419,11 +457,8 @@ export async function POST(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
-        report: {
-          id: persisted.created.id,
-          tenantId: persisted.created.tenantId,
+        report: buildSafeErrorReportReceipt({
           severity: persisted.created.severity,
           status: persisted.created.status,
           source: persisted.created.source,
@@ -435,8 +470,11 @@ export async function POST(request: NextRequest) {
           metadata: persisted.created.metadata as Record<string, unknown> | null ?? {},
           createdAt: persisted.created.createdAt.toISOString(),
           alertRoute: auditRoute,
-          auditId: persisted.audit.id,
-        },
+          auditLogged: true,
+          auditIdEchoed: false,
+          internalPersistenceIdsEchoed: false,
+        }),
+        responseProjection: buildErrorReportResponseProjection(),
         requiredNextWork: [
           "Forward dashboard-only route through Sentry/OpenTelemetry after provider DSNs, sampling policy, and provider allowlist are configured.",
           "Add provider webhook reconciliation so issue/alert state updates can close persisted reports.",
@@ -452,12 +490,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_ERROR_REPORT_PERSISTENCE_NOT_CONFIGURED",
             message: "Production dashboard error-report writes require the dashboard database connection; local fallback reports are disabled.",
             gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
           },
+          responseProjection: buildErrorReportResponseProjection(),
           productionBoundary: { localErrorReportFallbackDisabled: true },
         }, { status: 503, headers: noStoreHeaders });
       }
@@ -468,11 +506,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
-        report: {
-          id: persisted.id,
-          tenantId: persisted.tenantId,
+        report: buildSafeErrorReportReceipt({
           severity: persisted.severity,
           status: persisted.status,
           source: persisted.source,
@@ -483,7 +518,8 @@ export async function POST(request: NextRequest) {
           release: persisted.release,
           createdAt: persisted.createdAt,
           alertRoute: persisted.auditRoute,
-        },
+        }),
+        responseProjection: buildErrorReportResponseProjection(),
         warning: "Database was temporarily unavailable; report persisted in local fallback store.",
         gapIds: ["GAP-079", "GAP-081", "GAP-095", "GAP-101"],
       }, { status: 201, headers: noStoreHeaders });

@@ -304,7 +304,7 @@ export function buildRedactedRetentionEnforcementArtifact(value: unknown): unkno
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /email|phone|name|address|token|secret|authorization|credential|password|rawBody|stack|storageObjectKey|exportArtifact|dryRunFingerprint|workerRunId|rollbackNote|auditLogIds/i.test(key)
+        /email|phone|name|address|token|secret|authorization|credential|password|rawBody|stack|storageObjectKey|exportArtifact|dryRunFingerprint|workerRunId|recordId|sourceRecordId|rollbackNote|auditLogIds/i.test(key)
           ? "[REDACTED]"
           : buildRedactedRetentionEnforcementArtifact(entry),
       ]),

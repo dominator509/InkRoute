@@ -1,11 +1,16 @@
 import { prisma } from "@inkroute/db";
 import { buildStripeCheckoutSessionDraft, calculateDepositPolicy } from "@inkroute/payments";
 import { createDepositSession } from "@inkroute/payments";
+import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
-import { checkRateLimit, getBookingRequest, getClientIp, persistDepositSession, resolveTenant } from "../../../../../lib/localRuntimeState";
+import { checkRateLimit, getBookingRequest, getClientIpFromHeaders, persistDepositSession, resolveTenant } from "../../../../../lib/localRuntimeState";
 import { buildStripeCheckoutRouteContract } from "../../../../../lib/stripeCheckout";
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+function selectorHash(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
 
 interface DepositSessionPreviewBody {
   bookingRequestId?: unknown;
@@ -37,6 +42,82 @@ function asNumber(value: unknown, fallback: number): number {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function buildSafeSessionDraftResponse(draft: ReturnType<typeof buildStripeCheckoutSessionDraft>) {
+  return {
+    mode: draft.mode,
+    clientReferenceIdEchoed: false,
+    lineItem: draft.lineItem,
+    successUrl: draft.successUrl,
+    cancelUrl: draft.cancelUrl,
+    metadata: {
+      tenantAttached: Boolean(draft.metadata.tenantId),
+      bookingRequestAttached: Boolean(draft.metadata.bookingRequestId),
+      policyVersion: draft.metadata.policyVersion,
+    },
+    tenantIdEchoed: false,
+    bookingRequestIdEchoed: false,
+    customerEmailEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+  };
+}
+
+function buildSafeLocalSessionResponse(session: Awaited<ReturnType<typeof createDepositSession>>) {
+  return {
+    provider: session.provider,
+    checkoutUrlEchoed: false,
+    providerSessionIdEchoed: false,
+    mockCheckoutUrlEchoed: false,
+    rawProviderSessionIdEchoed: false,
+  };
+}
+
+function buildSafeLocalStoredSessionResponse(storedSession: ReturnType<typeof persistDepositSession>) {
+  return {
+    status: storedSession.status,
+    amountCents: storedSession.amountCents,
+    currency: storedSession.currency,
+    createdAt: storedSession.createdAt,
+    tenantIdEchoed: false,
+    bookingRequestIdEchoed: false,
+    localDepositSessionIdEchoed: false,
+    mockCheckoutUrlEchoed: false,
+    rawProviderSessionIdEchoed: false,
+  };
+}
+
+function buildSafeDepositDraftDatabaseResponse(result: {
+  status: "created" | "replayed";
+  deposit: { amountCents: number; currency: string; status: string; createdAt?: Date | null };
+  payment: { status: string };
+}) {
+  return {
+    idempotency: { keyEchoed: false, replayed: result.status === "replayed" },
+    responseProjection: {
+      rawIdempotencyResultEchoed: false,
+      rawIdempotencyKeyEchoed: false,
+      customerEmailEchoed: false,
+      depositResponseAllowlisted: true,
+      tenantIdEchoed: false,
+      bookingRequestIdEchoed: false,
+      depositIdEchoed: false,
+      paymentIdEchoed: false,
+      auditIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+    deposit: {
+      persisted: true,
+      amountCents: result.deposit.amountCents,
+      currency: result.deposit.currency,
+      status: result.deposit.status,
+      createdAt: result.deposit.createdAt instanceof Date ? result.deposit.createdAt.toISOString() : null,
+    },
+    payment: {
+      persisted: true,
+      status: result.payment.status,
+    },
+  };
 }
 
 function isDatabaseUnavailable(error: unknown): boolean {
@@ -157,7 +238,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     ...(clientEmail ? { clientEmail } : {}),
     ...(clientName ? { clientName } : {}),
   });
-  const createClient = getClientIp(Object.fromEntries(request.headers.entries()));
+  const createClient = getClientIpFromHeaders(request.headers);
   const rateLimit = checkRateLimit("public-deposit-session", tenantSlug, `${createClient}:${tenantId}`);
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -212,7 +293,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             key: sessionDraft.idempotencyKey,
             status: "claimed",
             metadata: {
-              bookingRequestId,
+              bookingRequestIdHash: selectorHash(bookingRequestId),
+              rawBookingRequestIdStored: false,
               amountCents: policy.depositAmountCents,
               currency: policy.currency,
               providerCheckoutCreated: false,
@@ -220,7 +302,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           },
           update: {
             metadata: {
-              bookingRequestId,
+              bookingRequestIdHash: selectorHash(bookingRequestId),
+              rawBookingRequestIdStored: false,
               amountCents: policy.depositAmountCents,
               currency: policy.currency,
               providerCheckoutCreated: false,
@@ -230,14 +313,43 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           select: { id: true, result: true },
         });
 
-        if (isRecord(idempotency.result) && typeof idempotency.result.depositId === "string" && typeof idempotency.result.paymentId === "string") {
-          return {
-            status: "replayed" as const,
-            booking,
-            deposit: { id: idempotency.result.depositId, amountCents: policy.depositAmountCents, currency: policy.currency, status: "pending" },
-            payment: { id: idempotency.result.paymentId, status: "pending" },
-            audit: { id: typeof idempotency.result.auditId === "string" ? idempotency.result.auditId : null },
-          };
+        if (isRecord(idempotency.result)) {
+          const replayDeposit = await tx.deposit.findFirst({
+            where: {
+              tenantId,
+              bookingRequestId: booking.id,
+              amountCents: policy.depositAmountCents,
+              currency: policy.currency,
+              status: "pending",
+            },
+            orderBy: { createdAt: "desc" },
+            select: { id: true, amountCents: true, currency: true, status: true, createdAt: true },
+          });
+          const replayPayment = replayDeposit
+            ? await tx.payment.findFirst({
+                where: {
+                  tenantId,
+                  bookingRequestId: booking.id,
+                  depositId: replayDeposit.id,
+                  provider: "stripe",
+                  status: "pending",
+                  amountCents: policy.depositAmountCents,
+                  currency: policy.currency,
+                },
+                orderBy: { createdAt: "desc" },
+                select: { id: true, status: true },
+              })
+            : null;
+
+          if (replayDeposit && replayPayment) {
+            return {
+              status: "replayed" as const,
+              booking,
+              deposit: replayDeposit,
+              payment: replayPayment,
+              audit: { id: null },
+            };
+          }
         }
 
         const deposit = await tx.deposit.create({
@@ -251,8 +363,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             policySnapshot: {
               ...policy,
               source: "public-deposit-session",
-              idempotencyKey: sessionDraft.idempotencyKey,
+              idempotencyPersisted: true,
               providerCheckoutCreated: false,
+              internalPersistenceIdsStored: false,
             },
           },
           select: { id: true, bookingRequestId: true, appointmentId: true, amountCents: true, currency: true, status: true, createdAt: true },
@@ -271,10 +384,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             description: `Deposit draft for ${booking.style} tattoo request`,
             metadata: {
               source: "public-deposit-session",
-              idempotencyKey: sessionDraft.idempotencyKey,
+              idempotencyPersisted: true,
               stripeCheckoutCreated: false,
-              successUrl,
-              cancelUrl,
+              checkoutUrlsPersisted: false,
+              internalPersistenceIdsStored: false,
             },
           },
           select: { id: true, status: true },
@@ -289,9 +402,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             provider: "stripe",
             metadata: {
               source: "public-api",
-              bookingRequestId: booking.id,
-              idempotencyKey: sessionDraft.idempotencyKey,
+              bookingRequestMatched: true,
+              idempotencyPersisted: true,
               stripeCheckoutCreated: false,
+              internalPersistenceIdsStored: false,
               boundary: "DB deposit/payment draft persisted; Stripe checkout session creation remains provider-gated.",
             },
           },
@@ -307,9 +421,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             toStatus: booking.status,
             metadata: {
               source: "public-deposit-session",
-              depositId: deposit.id,
-              paymentId: payment.id,
+              depositPersisted: true,
+              paymentPersisted: true,
               providerCheckoutCreated: false,
+              internalPersistenceIdsStored: false,
             },
           },
         });
@@ -319,11 +434,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           data: {
             status: "completed",
             result: {
-              depositId: deposit.id,
-              paymentId: payment.id,
-              auditId: audit.id,
-              bookingRequestId: booking.id,
+              depositPersisted: true,
+              paymentPersisted: true,
+              paymentAuditPersisted: true,
+              bookingStateEventPersisted: true,
               providerCheckoutCreated: false,
+              stripeCheckoutCreated: false,
+              internalPersistenceIdsStored: false,
             },
           },
         });
@@ -349,16 +466,16 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           ok: true,
           data: {
             policy,
-            sessionDraft,
+            sessionDraft: buildSafeSessionDraftResponse(sessionDraft),
             persistence: "database",
-            idempotency: { key: sessionDraft.idempotencyKey, replayed: result.status === "replayed" },
-            deposit: {
-              ...result.deposit,
-              createdAt: "createdAt" in result.deposit && result.deposit.createdAt instanceof Date ? result.deposit.createdAt.toISOString() : null,
+            ...buildSafeDepositDraftDatabaseResponse(result),
+            checkout: {
+              provider: "stripe",
+              created: false,
+              checkoutUrlEchoed: false,
+              providerSessionIdEchoed: false,
+              requiredNextStep: "Stripe checkout session creation with provider credentials",
             },
-            payment: result.payment,
-            checkout: { provider: "stripe", created: false, url: null, requiredNextStep: "Stripe checkout session creation with provider credentials" },
-            auditId: result.audit.id,
             productionBoundary: {
               gapIds: ["GAP-004", "GAP-049", "GAP-050"],
               dbDraftPersisted: true,
@@ -472,8 +589,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
       ok: true,
       data: {
         policy,
-        sessionDraft,
-        session,
+        sessionDraft: buildSafeSessionDraftResponse(sessionDraft),
+        session: buildSafeLocalSessionResponse(session),
         checkoutContract: {
           status: checkoutContract.readiness.status,
           canCallStripe: checkoutContract.readiness.canCallStripe,
@@ -486,7 +603,19 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           },
           boundary: checkoutContract.boundary,
         },
-        storedSession,
+        storedSession: buildSafeLocalStoredSessionResponse(storedSession),
+        responseProjection: {
+      rawIdempotencyKeyEchoed: false,
+      checkoutUrlEchoed: false,
+      providerSessionIdEchoed: false,
+      rawProviderSessionIdEchoed: false,
+      mockCheckoutUrlEchoed: false,
+      customerEmailEchoed: false,
+          tenantIdEchoed: false,
+          bookingRequestIdEchoed: false,
+          localDepositSessionIdEchoed: false,
+          internalPersistenceIdsEchoed: false,
+        },
         productionBoundary: {
           gapIds: ["GAP-004", "GAP-049", "GAP-050"],
           requiredBeforeEnablement: [
@@ -500,7 +629,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
         localRuntime: {
           status: "local-demo",
           bookingFound: true,
-          bookingId: existingBooking.request.id,
+          bookingIdEchoed: false,
           readinessScore: existingBooking.readinessScore,
         },
       },

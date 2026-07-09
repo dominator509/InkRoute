@@ -650,9 +650,9 @@ export function buildMobileLaunchEvidenceDecision(input: MobileLaunchEvidenceInp
 }
 
 const sensitiveMobileLaunchKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|device|expo|eas|push|session|biometric|client|customer|provider)$/iu;
+  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|device|expo|eas|push|session|biometric|client|customer|provider|raw|payload|body|stack|error|log|output|env|simulator|emulator|ota|update|rollback|crash|api|offline|auth|route|deep.?link|screenshot|video|trace|artifact|accessibility|secure.?store|native|repository|repo|branch|pull|pr|reviewer|codeowner)/iu;
 const sensitiveMobileLaunchValuePattern =
-  /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:ExpoPushToken\[[^\]]+\]|ExponentPushToken\[[^\]]+\])|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|repo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+|branch:[A-Za-z0-9_./-]+|pr[_:#-]?[A-Za-z0-9_.-]+|reviewer[_:@-]?[A-Za-z0-9_.-]+|CODEOWNER:[A-Za-z0-9_.@/-]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:ExpoPushToken\[[^\]]+\]|ExponentPushToken\[[^\]]+\])|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:tenant|client|customer|user|device|session|expo|eas|ota|update|rollback|push|offline|crash|route|api|artifact|workflow|ci|run|commit)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:artifacts|screenshots|videos|traces|private)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactMobileLaunchString = (value: string): string =>
   value.replace(sensitiveMobileLaunchValuePattern, "[REDACTED]");

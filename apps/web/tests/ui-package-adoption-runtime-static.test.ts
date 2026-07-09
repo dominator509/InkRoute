@@ -267,6 +267,11 @@ describe("UI package adoption runtime contract", () => {
       screenshotUrl: "https://artifacts.example.com/ui/client@example.com.png",
       clientEmail: "client@example.com",
       clientPhone: "+1 555 222 1212",
+      repositorySelector: "repo:dominator509/InkRoute",
+      branchSelector: "branch:production/ui-adoption",
+      pullRequestSelector: "pr_ui_adoption",
+      reviewerHandle: "reviewer_ui_owner",
+      codeownerSelector: "CODEOWNER:design-system-team",
       nested: {
         databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
         publicSummary: "UI package adoption visual evidence captured",
@@ -280,12 +285,22 @@ describe("UI package adoption runtime contract", () => {
     expect(serialized).not.toContain("ui_visual_artifact_1234567890abcdefghijklmnopqrstuvwxyz");
     expect(serialized).not.toContain("https://artifacts.example.com/ui/client@example.com.png");
     expect(serialized).not.toContain("+1 555 222 1212");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("branch:production/ui-adoption");
+    expect(serialized).not.toContain("pr_ui_adoption");
+    expect(serialized).not.toContain("reviewer_ui_owner");
+    expect(serialized).not.toContain("CODEOWNER:design-system-team");
     expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
     expect(review.redactions).toEqual([
       "visualArtifactId",
       "screenshotUrl",
       "clientEmail",
       "clientPhone",
+      "repositorySelector",
+      "branchSelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
       "nested.databaseUrl",
     ]);
     expect(review.safeForTracker).toBe(true);
@@ -312,6 +327,7 @@ describe("UI package adoption runtime contract", () => {
     expect(gapTracker).toContain("uiPackageAdoptionRequiredExternalEvidence");
     expect(gapTracker).toContain("buildRedactedUiPackageAdoptionArtifact");
     expect(gapTracker).toContain("buildUiPackageAdoptionArtifactReview");
+    expect(gapTracker).toContain("GAP-016 UI package adoption artifact hardening now redacts repository/branch/PR/reviewer/CODEOWNER selectors");
   });
 
   it("pins current UI package adoption proof files for GAP-016", () => {

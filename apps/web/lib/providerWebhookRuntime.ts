@@ -139,7 +139,7 @@ export const buildProviderWebhookExecutionPlan = (): ProviderWebhookExecutionPla
 });
 
 const providerWebhookPrivateArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|webhook|signature|payload|message|destination|body|delivery|suppression|inbound|push|receipt|alert|event|artifact|email|phone|medical|payment|customer)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|webhook|signature|payload|message|destination|body|delivery|suppression|inbound|push|receipt|alert|event|idempotency|headers|cookie|artifact|email|phone|medical|payment|customer|repository|repo|branch|pull|pr|reviewer|codeowner)/i;
 
 const redactProviderWebhookArtifactValue = (
   value: unknown,

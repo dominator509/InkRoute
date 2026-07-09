@@ -144,6 +144,15 @@ describe("reference upload provider runtime contract", () => {
         privateObjectKey: "tenant/private-object/reference.png",
         publicSummary: "reference upload provider evidence captured",
       },
+      byteVerificationTranscript: "verified object object_private_01HZYXZYXZYXZYXZYXZYXZYXZ for tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      malwareScanPayload: "scanner provider-token-private returned clean for file_asset_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      privateAclDenialProof: "anonymous fetch denied for signed_grant_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      transactionalPersistenceProof: "ReferenceImage reference_image_01HZYXZYXZYXZYXZYXZYXZYXZ AuditLog audit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      ciArtifactPath: "test-results/reference-upload-provider-runtime/provider-upload.log",
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_reference_upload",
+      reviewerHandle: "reviewer_reference_upload_owner",
+      codeownerSelector: "CODEOWNER:storage-platform-team",
     });
     const directRedaction = buildRedactedReferenceUploadProviderArtifact({
       publicSummary: "safe reference upload evidence",
@@ -179,11 +188,28 @@ describe("reference upload provider runtime contract", () => {
       "clientEmail",
       "malwareScanProviderToken",
       "nested.privateObjectKey",
+      "byteVerificationTranscript",
+      "malwareScanPayload",
+      "privateAclDenialProof",
+      "transactionalPersistenceProof",
+      "ciArtifactPath",
+      "repositorySelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
     ]);
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant.example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("storage.example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("client@example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("provider-token");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("object_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("file_asset_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("signed_grant_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("reference_image_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("repo:dominator509/InkRoute");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("pr_reference_upload");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("reviewer_reference_upload_owner");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("CODEOWNER:storage-platform-team");
     expect(JSON.stringify(artifactReview.artifact)).toContain("reference upload provider evidence captured");
     expect(artifactReview.secretSafe).toBe(true);
     expect(directRedaction.redactions).toEqual(["checksumSignature"]);

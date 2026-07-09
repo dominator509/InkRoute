@@ -1,12 +1,155 @@
 {
-  "generatedAt": null,
+  "generatedAt": "2026-07-09T14:40:03.336Z",
   "source": "GAP-125 branch protection and PR enforcement",
-  "status": "not-run",
+  "status": "pass",
   "findings": [],
-  "requiredFilesChecked": [],
-  "codeownersPatternsChecked": [],
-  "templateTermsChecked": [],
-  "ciTermsChecked": [],
+  "requiredFilesChecked": [
+    {
+      "path": ".github/CODEOWNERS",
+      "present": true
+    },
+    {
+      "path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "present": true
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/gap_closure.md",
+      "present": true
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "present": true
+    },
+    {
+      "path": ".github/workflows/release-governance.yml",
+      "present": true
+    }
+  ],
+  "codeownersPatternsChecked": [
+    {
+      "pattern": "*",
+      "present": true
+    },
+    {
+      "pattern": "/.github/",
+      "present": true
+    },
+    {
+      "pattern": "/GAP_TRACKER.md",
+      "present": true
+    },
+    {
+      "pattern": "/docs/quality/",
+      "present": true
+    },
+    {
+      "pattern": "/docs/handoff/",
+      "present": true
+    },
+    {
+      "pattern": "/deployment/",
+      "present": true
+    },
+    {
+      "pattern": "/apps/web/app/api/",
+      "present": true
+    },
+    {
+      "pattern": "/apps/dashboard/app/api/",
+      "present": true
+    },
+    {
+      "pattern": "/packages/security/",
+      "present": true
+    },
+    {
+      "pattern": "/packages/db/",
+      "present": true
+    },
+    {
+      "pattern": "/packages/validators/",
+      "present": true
+    }
+  ],
+  "templateTermsChecked": [
+    {
+      "file": ".github/PULL_REQUEST_TEMPLATE.md",
+      "term": "pnpm quality:docs",
+      "present": true
+    },
+    {
+      "file": ".github/PULL_REQUEST_TEMPLATE.md",
+      "term": "pnpm quality:gaps",
+      "present": true
+    },
+    {
+      "file": ".github/PULL_REQUEST_TEMPLATE.md",
+      "term": "No secrets",
+      "present": true
+    },
+    {
+      "file": ".github/PULL_REQUEST_TEMPLATE.md",
+      "term": "Gap tracker impact",
+      "present": true
+    },
+    {
+      "file": ".github/PULL_REQUEST_TEMPLATE.md",
+      "term": "Security/privacy checklist",
+      "present": true
+    },
+    {
+      "file": ".github/ISSUE_TEMPLATE/gap_closure.md",
+      "term": "Evidence required",
+      "present": true
+    },
+    {
+      "file": ".github/ISSUE_TEMPLATE/gap_closure.md",
+      "term": "No secrets",
+      "present": true
+    },
+    {
+      "file": ".github/ISSUE_TEMPLATE/gap_closure.md",
+      "term": "gap-closure",
+      "present": true
+    },
+    {
+      "file": ".github/ISSUE_TEMPLATE/gap_closure.md",
+      "term": "verification-required",
+      "present": true
+    }
+  ],
+  "ciTermsChecked": [
+    {
+      "file": ".github/workflows/ci.yml",
+      "term": "fetch-depth: 0",
+      "present": true
+    },
+    {
+      "file": ".github/workflows/ci.yml",
+      "term": "pnpm quality:all",
+      "present": true
+    },
+    {
+      "file": ".github/workflows/ci.yml",
+      "term": "pnpm quality:pr-gaps",
+      "present": true
+    },
+    {
+      "file": ".github/workflows/ci.yml",
+      "term": "pnpm handoff:verify-docs",
+      "present": true
+    },
+    {
+      "file": ".github/workflows/ci.yml",
+      "term": "pnpm deploy:verify-secrets",
+      "present": true
+    },
+    {
+      "file": ".github/workflows/ci.yml",
+      "term": "pnpm workspace:imports",
+      "present": true
+    }
+  ],
   "externalSettingsStillRequired": [
     "main branch protection",
     "required status checks",
@@ -14,6 +157,5 @@
     "secret scanning",
     "Dependabot or security alerts",
     "merge queue or required linear history policy"
-  ],
-  "note": "Placeholder manifest committed so repository governance references are concrete; scripts/quality/verify-repository-governance.mjs overwrites this file during pnpm quality:governance."
+  ]
 }

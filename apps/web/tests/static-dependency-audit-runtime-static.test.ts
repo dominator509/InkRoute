@@ -346,19 +346,36 @@ describe("static dependency audit runtime contract", () => {
         tenantId: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
         databaseUrl: "postgres://inkroute:secret@example.neon.tech/inkroute",
       },
+      dependencyTreeOutput: "workspace app resolved package @inkroute/db from ../packages/db",
+      pnpmLockfileExcerpt: "registry.npmjs.org/@stripe/stripe-js/-/stripe-js-4.1.0.tgz",
+      ciWorkspaceResolutionPayload: {
+        workflowRunUrl: "https://github.com/example/inkroute/actions/runs/123456789",
+        commandStdout: "pnpm install resolved workspace dependencies",
+      },
+      runtimeResolutionProof: {
+        webBuildArtifactPath: "test-results/static-dependency-audit-runtime/web-build.log",
+        dashboardBuildOutput: "dashboard imported package-runtime-01HZYXZYXZYXZYXZYXZYXZYXZ",
+      },
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr-3131",
+      reviewerHandle: "reviewer_dependency_owner",
+      codeownerSelector: "CODEOWNER:workspace-platform-team",
     };
 
     expect(buildRedactedStaticDependencyAuditArtifact(artifact)).toEqual({
       runId: "[REDACTED]",
       registryUrl: "[REDACTED]",
-      installOutput: "resolved by [REDACTED] with token [REDACTED]",
-      peerReview: {
-        packageId: "[REDACTED]",
-      },
-      persistence: {
-        tenantId: "[REDACTED]",
-        databaseUrl: "[REDACTED]",
-      },
+      installOutput: "[REDACTED]",
+      peerReview: "[REDACTED]",
+      persistence: "[REDACTED]",
+      dependencyTreeOutput: "[REDACTED]",
+      pnpmLockfileExcerpt: "[REDACTED]",
+      ciWorkspaceResolutionPayload: "[REDACTED]",
+      runtimeResolutionProof: "[REDACTED]",
+      repositorySelector: "[REDACTED]",
+      pullRequestSelector: "[REDACTED]",
+      reviewerHandle: "[REDACTED]",
+      codeownerSelector: "[REDACTED]",
     });
 
     const review = buildStaticDependencyAuditArtifactReview(artifact);
@@ -370,9 +387,16 @@ describe("static dependency audit runtime contract", () => {
         "runId",
         "registryUrl",
         "installOutput",
-        "peerReview.packageId",
-        "persistence.tenantId",
-        "persistence.databaseUrl",
+        "peerReview",
+        "persistence",
+        "dependencyTreeOutput",
+        "pnpmLockfileExcerpt",
+        "ciWorkspaceResolutionPayload",
+        "runtimeResolutionProof",
+        "repositorySelector",
+        "pullRequestSelector",
+        "reviewerHandle",
+        "codeownerSelector",
       ]),
     );
     expect(bundle.status).toBe("redacted-evidence-bundle-ready");

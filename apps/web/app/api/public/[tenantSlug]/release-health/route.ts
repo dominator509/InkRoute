@@ -7,6 +7,16 @@ import { buildFeatureFlagContextFromRequest, resolveCachedFeatureFlagSnapshot } 
 type TenantResolution = { tenantId: string; source: "database" | "local-fallback" };
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+const featureFlagContextHeaderAllowlist = ["x-inkroute-tenant-id", "x-inkroute-user-id", "x-inkroute-role"] as const;
+
+function buildTenantSafeFeatureFlagHeaders(headers: Headers): Headers {
+  const safeHeaders = new Headers();
+  for (const header of featureFlagContextHeaderAllowlist) {
+    const value = headers.get(header);
+    if (value) safeHeaders.set(header, value);
+  }
+  return safeHeaders;
+}
 
 function isDatabaseUnavailable(error: unknown): boolean {
   if (!process.env.DATABASE_URL) {
@@ -55,6 +65,17 @@ function mapDbReleaseToCandidate(release: {
     createdBy: "dashboard-operator",
     createdAt: release.createdAt.toISOString(),
   });
+}
+
+function buildSafePublicReleaseCandidate(release: typeof demoReleaseCandidate) {
+  const { id: _id, commitSha: _commitSha, ...safeRelease } = release;
+  return {
+    ...safeRelease,
+    responseProjection: {
+      releaseCandidateIdEchoed: false,
+      commitShaEchoed: false,
+    },
+  };
 }
 
 function isTenantScopeValue(value: string): value is "global" | "tenant" | "role" {
@@ -189,15 +210,16 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
     }
 
     const definitions = Array.from(byKey.values());
+    const featureFlagHeaders = buildTenantSafeFeatureFlagHeaders(request.headers);
     const previewDecisionContext = buildFeatureFlagContextFromRequest({
       tenantId: tenantResolution.tenantId,
-      headers: request.headers,
+      headers: featureFlagHeaders,
       environment: "preview",
       defaultRole: "public",
     });
     const productionDecisionContext = buildFeatureFlagContextFromRequest({
       tenantId: tenantResolution.tenantId,
-      headers: request.headers,
+      headers: featureFlagHeaders,
       environment: "production",
       defaultRole: "public",
     });
@@ -209,10 +231,9 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
     return NextResponse.json(
       {
         tenantSlug,
-        tenantId: tenantResolution.tenantId,
         source: tenantResolution.source,
         status: "authenticated-readiness-boundary",
-        release,
+        release: buildSafePublicReleaseCandidate(release),
         rollback,
         healthChecks,
         publicFeatureSnapshot: evaluateFeatureFlags(definitions, previewDecisionContext).filter((flag) =>
@@ -225,7 +246,7 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
           cache: runtimeFeatureFlags.cache,
           rollout: runtimeFeatureFlags.rollout,
           context: {
-            tenantId: productionDecisionContext.tenantId,
+            tenantIdEchoed: false,
             role: productionDecisionContext.role,
             environment: productionDecisionContext.environment,
             stableIdentifier: productionDecisionContext.stableIdentifier,
@@ -235,12 +256,21 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
           artifactPaths: runtimeFeatureFlags.artifactPaths,
         },
         releaseRecords: releaseRecords.map((entry) => ({
-          id: entry.id,
           version: entry.version,
           channel: normalizeDbReleaseChannel(entry.channel),
-          commitSha: entry.commitSha ?? null,
           createdAt: entry.createdAt.toISOString(),
+          responseProjection: {
+            releaseRecordIdEchoed: false,
+            commitShaEchoed: false,
+          },
         })),
+        responseProjection: {
+          tenantIdEchoed: false,
+          releaseRecordIdEchoed: false,
+          commitShaEchoed: false,
+          runtimeContextTenantIdEchoed: false,
+          internalPersistenceIdsEchoed: false,
+        },
         boundary: "Public release health now reads tenant-scoped ReleaseRecord and FeatureFlag rows when available and redacts sensitive deploy metadata.",
         tenantScope: tenantResolution.source,
       },
@@ -277,10 +307,9 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
     return NextResponse.json(
       {
         tenantSlug,
-        tenantId: tenantResolution.tenantId,
         source: tenantResolution.source,
         status: "local-preview",
-        release: demoReleaseCandidate,
+        release: buildSafePublicReleaseCandidate(demoReleaseCandidate),
         healthChecks: buildReleaseHealthChecks(demoReleaseCandidate),
         publicFeatureSnapshot: defaultFeatureFlags
           .filter((flag) => ["nomad_mode.enabled", "booking.deposit_required"].includes(flag.key))
@@ -291,6 +320,13 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
             scope: flag.scope,
             auditNote: flag.auditNote,
           })),
+        responseProjection: {
+          tenantIdEchoed: false,
+          releaseRecordIdEchoed: false,
+          commitShaEchoed: false,
+          runtimeContextTenantIdEchoed: false,
+          internalPersistenceIdsEchoed: false,
+        },
         boundary: "Public release health demo uses scoped fallback only until database availability is restored.",
       },
       { headers: noStoreHeaders },

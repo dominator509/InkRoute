@@ -316,7 +316,9 @@ export const googleCalendarSyncExternalCommands = [
   "GitHub Actions Google Calendar sync evidence job",
 ] as const;
 
-const sensitiveGoogleCalendarSyncArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|google|oauth|calendar|freebusy|event|sync|push|channel|webhook|artist|email|phone|medical|payment|customer)/i;
+const sensitiveGoogleCalendarSyncArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|google|oauth|calendar|freebusy|event|sync|push|channel|webhook|artist|email|phone|medical|payment|customer|artifact|path|ci|workflow|run|evidence|id|key)/i;
+const sensitiveGoogleCalendarSyncArtifactValue =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token|ya29|google)[A-Za-z0-9_-]*|(?:tenant|client|user|member|session|refresh|google|oauth|calendar|freebusy|event|sync|push|channel|webhook|artist|provider|artifact|workflow|ci|run|evidence|dashboard)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactGoogleCalendarSyncArtifactValue = (
   value: unknown,
@@ -340,6 +342,13 @@ const redactGoogleCalendarSyncArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && sensitiveGoogleCalendarSyncArtifactValue.test(value)) {
+    sensitiveGoogleCalendarSyncArtifactValue.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(sensitiveGoogleCalendarSyncArtifactValue, "[REDACTED]");
+  }
+
+  sensitiveGoogleCalendarSyncArtifactValue.lastIndex = 0;
   return value;
 };
 

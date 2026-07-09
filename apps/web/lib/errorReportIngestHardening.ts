@@ -103,7 +103,7 @@ export interface ErrorReportIngestArtifactReview {
 }
 
 const errorReportSensitiveKeyPattern =
-  /(?:authorization|body|clientsecret|cookie|credential|email|ip|password|phone|private|raw|secret|stack|token|userid)/i;
+  /(?:authorization|body|clientsecret|cookie|credential|email|errorreportid|eventid|fingerprint|headers|idempotency|ip|password|phone|private|raw|requestid|secret|sessionid|stack|tenantid|token|traceparent|userid)/i;
 const errorReportEmailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const errorReportPhonePattern = /\+?\d[\d ().-]{7,}\d/g;
 const errorReportTokenPattern = /\b(?:bearer|ghp|sentry|sk|xox|ya29)[A-Za-z0-9._:/-]{8,}\b/gi;
@@ -304,6 +304,14 @@ export function enforceErrorReportBotProtection(headers: Headers, env: NodeJS.Pr
 
   const expectedToken = env.ERROR_REPORT_BOT_PROTECTION_TOKEN?.trim();
   if (!expectedToken) {
+    if (env.NODE_ENV === "production") {
+      return {
+        allowed: false,
+        status: "blocked_missing_token" as const,
+        reason: "Production bot protection token is not configured; public error-report ingest is fail-closed.",
+      };
+    }
+
     return { allowed: true, status: "monitor_only" as const, reason: "Bot protection token is not configured; local fallback rate limiting still applies." };
   }
 

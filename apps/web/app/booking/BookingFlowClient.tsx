@@ -226,7 +226,7 @@ export function BookingFlowClient() {
             <select value={draft.portfolioAttributionId ?? ""} onChange={(event) => setField("portfolioAttributionId", event.target.value || undefined)}>
               <option value="">No specific portfolio piece</option>
               {demoPortfolioItems.map((item) => (
-                <option value={item.attributionKey ?? item.id} key={item.id}>{item.title} · {item.city}</option>
+                <option value={item.attributionKey ?? item.id} key={item.id}>{item.title} - {item.city}</option>
               ))}
             </select>
           </label>
@@ -240,7 +240,7 @@ export function BookingFlowClient() {
           {draft.referenceImages.length > 0 ? (
             <ul className="booking-file-list" aria-label="Selected local reference image metadata">
               {draft.referenceImages.map((file) => (
-                <li key={file.localId}>{file.filename} · {file.mimeType} · {formatBytes(file.sizeBytes)} · local only</li>
+                <li key={file.localId}>{file.filename} - {file.mimeType} - {formatBytes(file.sizeBytes)} - handoff metadata only</li>
               ))}
             </ul>
           ) : null}

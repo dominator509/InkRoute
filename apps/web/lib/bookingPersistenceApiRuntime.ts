@@ -399,7 +399,9 @@ export const buildBookingPersistenceApiExecutionPlan = (): BookingPersistenceApi
 });
 
 const bookingPersistenceApiSensitiveArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|file|provider|stripe|payment|deposit|medical|note|email|phone|calendar|notification|upload|reference|booking|session|cookie|prisma|connection|audit|bot)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|file|provider|stripe|payment|deposit|medical|note|email|phone|calendar|notification|upload|reference|booking|session|cookie|csrf|prisma|connection|audit|bot|turnstile|captcha|route|request|response|payload|body|local|fallback|workflow|consumer|state|event|transaction|smoke|runtime|next|typecheck|build|test|command|output|stdout|stderr|log|ci|run|commit|repository|repo|branch|pull|pr|reviewer|codeowner|artifact|path|id|key)/i;
+const bookingPersistenceApiSensitiveArtifactValuePattern =
+  /(https?:\/\/[^\s"']+|prisma:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat)_[A-Za-z0-9_]+|(?:tenant|client|booking|request|workflow|consumer|upload|reference|payment|deposit|audit|state|event|session|provider|route|turnstile|captcha|transaction|runtime|ci|run|commit|prisma|database)[-_:/]?[A-Za-z0-9_.-]{6,}|medical:[^"'\n\r]+|private-file|[A-Za-z0-9_-]{24,})/giu;
 
 export const buildRedactedBookingPersistenceApiArtifact = (
   artifact: unknown,
@@ -424,6 +426,17 @@ export const buildRedactedBookingPersistenceApiArtifact = (
           return [key, redact(entry, entryPath)];
         }),
       );
+    }
+
+    if (typeof value === "string") {
+      const redactedValue = value.replace(
+        bookingPersistenceApiSensitiveArtifactValuePattern,
+        "[REDACTED_BOOKING_PERSISTENCE_API_PRIVATE_VALUE]",
+      );
+      if (redactedValue !== value) {
+        redactions.push(path || "$");
+      }
+      return redactedValue;
     }
 
     return value;

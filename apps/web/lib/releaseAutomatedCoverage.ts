@@ -138,6 +138,8 @@ const releaseAutomatedCoverageSecretPatterns = [
   /(eas[_-]?token['":=\s]+)[^"',\s}]+/gi,
   /(secret['":=\s]+)[^"',\s}]+/gi,
   /(authorization:\s*bearer\s+)[A-Za-z0-9._-]+/gi,
+  /https?:\/\/[^\s"'<>]+/gi,
+  /\b(?:release|feature|tenant|workflow|run|artifact|device|expo|eas|playwright|trace|route)_[A-Za-z0-9_-]+\b/gi,
   /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
   /\+?\d[\d\s().-]{7,}\d/g,
 ] as const;
@@ -158,7 +160,7 @@ export function buildRedactedReleaseAutomatedCoverageArtifact(value: unknown): u
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /token|secret|authorization|credential|password|private|providerPayload|rawBody|stack|deviceId/i.test(key)
+        /token|secret|authorization|credential|password|private|providerPayload|rawBody|stack|deviceId|url|uri|path|artifact|trace|screenshot|video|playwright|expo|eas|device|route|payload|workflow|run|ci|commit|tenant|release|feature|error|log|output/i.test(key)
           ? "[REDACTED]"
           : buildRedactedReleaseAutomatedCoverageArtifact(entry),
       ]),

@@ -180,9 +180,19 @@ describe("Phase 9 app runtime/build runtime contract", () => {
     const redacted = buildRedactedPhase9RuntimeArtifact({
       providerPayload: "ari@example.test",
       expoPushToken: "expo_push_token_private",
+      routeUrl: "https://tenant.example.test/api/public/tenant-a/booking-requests",
+      renderedHtml: "<main>private notification body</main>",
+      commandOutput: "pnpm build failed with private env context",
+      ciArtifactUrl: "https://github.example.test/actions/runs/123/artifacts/456",
+      bookingRequestId: "booking_private_123",
+      depositSessionId: "deposit_private_123",
+      tenantId: "tenant_private_123",
+      clientId: "client_private_123",
+      messageBody: "private booking-to-notification content",
       publicSummary: "Phase 9 runtime evidence captured",
       nested: {
         devicePhone: "+1 206 555 0100",
+        stackTrace: "Error: private stack",
         publicStatus: "provider-disabled",
       },
     });
@@ -190,9 +200,19 @@ describe("Phase 9 app runtime/build runtime contract", () => {
     expect(redacted).toEqual({
       providerPayload: "[redacted]",
       expoPushToken: "[redacted]",
+      routeUrl: "[redacted]",
+      renderedHtml: "[redacted]",
+      commandOutput: "[redacted]",
+      ciArtifactUrl: "[redacted]",
+      bookingRequestId: "[redacted]",
+      depositSessionId: "[redacted]",
+      tenantId: "[redacted]",
+      clientId: "[redacted]",
+      messageBody: "[redacted]",
       publicSummary: "Phase 9 runtime evidence captured",
       nested: {
         devicePhone: "[redacted]",
+        stackTrace: "[redacted]",
         publicStatus: "provider-disabled",
       },
     });

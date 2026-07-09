@@ -506,7 +506,13 @@ describe("calendar availability", () => {
       action: "upsert_event",
       appointmentId: "appointment_demo",
       providerCall: "google.events.insertOrUpdate",
+      providerEventIdHash: expect.any(String),
+      rawProviderEventIdStored: false,
+      rawSyncTokenStored: false,
+      rawPushChannelIdStored: false,
+      rawPushResourceIdStored: false,
     });
+    expect(upsert.writes.find((write) => write.model === "CalendarAuditLog")?.payload).not.toHaveProperty("providerEventId");
   });
 
   it("plans incremental sync recovery and push channel renewal controls", () => {
@@ -543,9 +549,23 @@ describe("calendar availability", () => {
     expect(invalidIncremental.status).toBe("blocked");
     expect(invalidIncremental.blockers).toContain("Google returned an invalid sync token; run full_resync before incremental sync.");
     expect(invalidIncremental.nextAction).toContain("Run full_resync");
+    expect(invalidIncremental.writes.find((write) => write.model === "CalendarAuditLog")?.payload).toMatchObject({
+      syncTokenHash: expect.any(String),
+      rawSyncTokenStored: false,
+      rawProviderEventIdStored: false,
+    });
+    expect(invalidIncremental.writes.find((write) => write.model === "CalendarAuditLog")?.payload).not.toHaveProperty("syncToken");
     expect(renewal.status).toBe("ready");
     expect(renewal.providerCall).toBe("google.channels.watch");
     expect(renewal.writes.map((write) => write.model)).toEqual(["CalendarPushChannel", "CalendarSyncState", "CalendarAuditLog", "IdempotencyKey"]);
+    expect(renewal.writes.find((write) => write.model === "CalendarAuditLog")?.payload).toMatchObject({
+      pushChannelIdHash: expect.any(String),
+      pushResourceIdHash: expect.any(String),
+      rawPushChannelIdStored: false,
+      rawPushResourceIdStored: false,
+    });
+    expect(renewal.writes.find((write) => write.model === "CalendarAuditLog")?.payload).not.toHaveProperty("pushChannelId");
+    expect(renewal.writes.find((write) => write.model === "CalendarAuditLog")?.payload).not.toHaveProperty("pushResourceId");
     expect(renewal.requiredControls).toBe(googleCalendarProviderSyncRequiredControls);
   });
 

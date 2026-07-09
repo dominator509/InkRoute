@@ -290,6 +290,10 @@ describe("observability launch runtime contract", () => {
         issueId: "issue_observability_launch_1234567890",
         publicSummary: "observability launch evidence captured",
       },
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_observability_launch",
+      reviewerHandle: "reviewer_observability_owner",
+      codeownerSelector: "CODEOWNER:observability-platform-team",
     };
     const redactedOnly = buildRedactedObservabilityLaunchArtifact(artifact);
     const review = buildObservabilityLaunchArtifactReview(artifact);
@@ -301,6 +305,10 @@ describe("observability launch runtime contract", () => {
     expect(serialized).not.toContain("Error: private route failed");
     expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
     expect(serialized).not.toContain("issue_observability_launch_1234567890");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("pr_observability_launch");
+    expect(serialized).not.toContain("reviewer_observability_owner");
+    expect(serialized).not.toContain("CODEOWNER:observability-platform-team");
     expect(review.redactions).toEqual([
       "sentryDsn",
       "userEmail",
@@ -308,6 +316,10 @@ describe("observability launch runtime contract", () => {
       "stackTrace",
       "nested.databaseUrl",
       "nested.issueId",
+      "repositorySelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
     ]);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(observabilityLaunchRequiredExternalEvidence);

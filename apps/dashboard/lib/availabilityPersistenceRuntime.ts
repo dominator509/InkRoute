@@ -166,7 +166,9 @@ export const availabilityPersistenceDecisionRequiredEvidence = [
   "secret-safe review of retained availability persistence artifacts",
 ] as const;
 
-const sensitiveAvailabilityPersistenceArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|availability|calendar|artist|appointment|hold|booking|idempotency|audit|postgres|prisma|email|phone|medical|payment|customer)/i;
+const sensitiveAvailabilityPersistenceArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|availability|calendar|artist|appointment|hold|booking|idempotency|audit|postgres|prisma|email|phone|medical|payment|customer|artifact|path|ci|workflow|run|evidence|id|key)/i;
+const sensitiveAvailabilityPersistenceArtifactValue =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token)[A-Za-z0-9_-]*|(?:tenant|client|user|member|session|refresh|availability|calendar|artist|appointment|hold|booking|idempotency|audit|postgres|prisma|provider|artifact|workflow|ci|run|evidence|dashboard)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactAvailabilityPersistenceArtifactValue = (
   value: unknown,
@@ -190,6 +192,13 @@ const redactAvailabilityPersistenceArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && sensitiveAvailabilityPersistenceArtifactValue.test(value)) {
+    sensitiveAvailabilityPersistenceArtifactValue.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(sensitiveAvailabilityPersistenceArtifactValue, "[REDACTED]");
+  }
+
+  sensitiveAvailabilityPersistenceArtifactValue.lastIndex = 0;
   return value;
 };
 

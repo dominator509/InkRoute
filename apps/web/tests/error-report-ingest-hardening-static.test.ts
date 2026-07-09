@@ -44,6 +44,15 @@ describe("GAP-081 error-report ingest hardening", () => {
     expect(enforceErrorReportBotProtection(new Headers({ [errorReportBotHeaders.honeypot]: "bot" })).allowed).toBe(false);
     expect(enforceErrorReportBotProtection(new Headers(), { ERROR_REPORT_BOT_PROTECTION_TOKEN: "secret" } as NodeJS.ProcessEnv).allowed).toBe(false);
     expect(enforceErrorReportBotProtection(new Headers({ [errorReportBotHeaders.token]: "secret" }), { ERROR_REPORT_BOT_PROTECTION_TOKEN: "secret" } as NodeJS.ProcessEnv).allowed).toBe(true);
+    expect(enforceErrorReportBotProtection(new Headers(), { NODE_ENV: "production" } as NodeJS.ProcessEnv)).toMatchObject({
+      allowed: false,
+      status: "blocked_missing_token",
+    });
+    expect(enforceErrorReportBotProtection(new Headers(), { NODE_ENV: "development" } as NodeJS.ProcessEnv)).toMatchObject({
+      allowed: true,
+      status: "monitor_only",
+    });
+    expect(routeSource).toContain("blocked_missing_token");
     expect(buildAbuseMonitoringDecision({ tenantId: "tenant_1", requestId: "req_1", rateLimitRemaining: 0, botStatus: "verified" }).status).toBe("watch_spike");
     expect(routeSource).toContain("BOT_PROTECTION_FAILED");
     expect(routeSource).toContain("buildAbuseMonitoringDecision");
@@ -60,6 +69,9 @@ describe("GAP-081 error-report ingest hardening", () => {
     expect(routeSource).toContain('limiterProvider: "local-runtime-fallback"');
     expect(routeSource).toContain('limiterDecision: rateLimit.allowed ? "allowed" : "blocked"');
     expect(routeSource).toContain("botChallengeRequired: botProtection.status !== \"verified\"");
+    expect(routeSource).toContain("buildSafePublicErrorReportPreview");
+    expect(routeSource).toContain("stackHashStored: Boolean");
+    expect(routeSource).toContain("stackHashEchoed: false");
     expect(routeSource).toContain("abuseEventId");
   });
 
@@ -159,11 +171,18 @@ describe("GAP-081 error-report ingest hardening", () => {
       traceparent: "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
       provider: {
         authorization: "Bearer sentry-forwarding-token",
+        headers: { cookie: "inkroute_session=private", "x-forwarded-for": "10.1.2.3" },
+        idempotencyKey: "idem_error_report_private",
+        providerEventId: "evt_error_report_private",
         replayBody: "client tester@example.com phone +1 555 010 6666 ip 10.1.2.3",
       },
       persistence: {
+        errorReportId: "error_report_private",
+        fingerprint: "fingerprint_private",
         rawBody: "stack trace with private booking note",
+        sessionId: "session_private",
         tenantId: "tenant_1",
+        userId: "user_private",
       },
       decision: "blocked_missing_credentials",
     };
@@ -173,10 +192,20 @@ describe("GAP-081 error-report ingest hardening", () => {
     const serialized = JSON.stringify(review.redactedArtifact);
 
     expect(JSON.stringify(redacted)).not.toContain("sentry-forwarding-token");
+    expect(serialized).not.toContain("req_123");
+    expect(serialized).not.toContain("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(serialized).not.toContain("inkroute_session");
+    expect(serialized).not.toContain("idem_error_report_private");
+    expect(serialized).not.toContain("evt_error_report_private");
     expect(serialized).not.toContain("tester@example.com");
     expect(serialized).not.toContain("+1 555 010 6666");
     expect(serialized).not.toContain("10.1.2.3");
+    expect(serialized).not.toContain("error_report_private");
+    expect(serialized).not.toContain("fingerprint_private");
     expect(serialized).not.toContain("private booking note");
+    expect(serialized).not.toContain("session_private");
+    expect(serialized).not.toContain("tenant_1");
+    expect(serialized).not.toContain("user_private");
     expect(serialized).toContain("blocked_missing_credentials");
     expect(review.safeToPersist).toBe(true);
     expect(review.unsafeFindings).toEqual([]);

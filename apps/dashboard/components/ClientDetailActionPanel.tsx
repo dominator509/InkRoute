@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createClientRequestKey } from "../lib/clientRequestKeys";
 
 type ClientDetailActionPanelProps = {
   readonly clientId: string;
@@ -26,7 +27,7 @@ export function ClientDetailActionPanel({ clientId }: ClientDetailActionPanelPro
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "idempotency-key": `dashboard-client-note-${clientId}-${Date.now()}`,
+          "idempotency-key": createClientRequestKey("dashboard-client-note"),
         },
         body: JSON.stringify({
           action: "append_private_note",

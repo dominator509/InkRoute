@@ -363,7 +363,9 @@ export const buildReferenceUploadProviderExecutionPlan = (): ReferenceUploadProv
 });
 
 const referenceUploadProviderSensitiveArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|file|provider|storage|bucket|object|key|signed|signature|checksum|medical|payment|email|phone|upload|reference|booking|audit|acl|malware|scan|quarantine)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|file|provider|storage|bucket|object|key|signed|signature|checksum|hash|medical|payment|email|phone|upload|reference|booking|audit|acl|malware|scan|scanner|quarantine|magic|mime|byte|metadata|derivative|grant|asset|image|payload|body|request|response|artifact|path|command|output|stdout|stderr|log|ci|workflow|run|commit|repository|repo|branch|pull|pr|reviewer|codeowner|fetch|denial|cross|anonymous|id)/i;
+const referenceUploadProviderSensitiveArtifactValuePattern =
+  /(https?:\/\/[^\s"']+|s3:\/\/[^\s"']+|supabase:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token)[A-Za-z0-9_-]*|(?:tenant|client|booking|reference|upload|file|asset|signed|grant|audit|bucket|object|private|storage|malware|scan|quarantine|derivative|provider|anonymous|cross|ci|run|commit)[-_:/]?[A-Za-z0-9_.-]{6,}|private-object|medical:[^"'\n\r]+|[A-Za-z0-9_-]{24,})/giu;
 
 export const buildRedactedReferenceUploadProviderArtifact = (
   artifact: unknown,
@@ -388,6 +390,17 @@ export const buildRedactedReferenceUploadProviderArtifact = (
           return [key, redact(entry, entryPath)];
         }),
       );
+    }
+
+    if (typeof value === "string") {
+      const redactedValue = value.replace(
+        referenceUploadProviderSensitiveArtifactValuePattern,
+        "[REDACTED_REFERENCE_UPLOAD_PRIVATE_VALUE]",
+      );
+      if (redactedValue !== value) {
+        redactions.push(path || "$");
+      }
+      return redactedValue;
     }
 
     return value;

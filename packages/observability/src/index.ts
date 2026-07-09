@@ -1,4 +1,5 @@
 import type { ErrorReportStatus, ErrorSeverity } from "@inkroute/types";
+import { createHash } from "node:crypto";
 
 export type ErrorSurface = "web" | "dashboard" | "mobile" | "api" | "worker" | "webhook";
 export type RuntimeEnvironment = "development" | "preview" | "production" | "test";
@@ -23,7 +24,8 @@ export interface ObservabilityEventInput {
 
 export interface ObservabilityReportDraft {
   id: string;
-  tenantId?: string;
+  tenantIdHash?: string;
+  rawTenantIdEchoed?: false;
   severity: ErrorSeverity;
   status: ErrorReportStatus;
   source: ErrorSurface;
@@ -492,17 +494,7 @@ const cardPattern = /\b(?:\d[ -]*?){13,19}\b/g;
 const highRiskKeyPattern = /(password|secret|token|authorization|cookie|signature|card|medical|diagnosis|allergy|ssn|dob|birth|stripe|private|consent|phone|email)/i;
 
 function stableHash(value: string): string {
-  let hash = 2166136261;
-  let secondary = 16777619;
-  for (let index = 0; index < value.length; index += 1) {
-    const charCode = value.charCodeAt(index);
-    hash ^= charCode;
-    secondary = Math.imul(secondary ^ charCode, 1099511628211 % 4294967296);
-    hash = Math.imul(hash, 16777619 + index);
-  }
-  const primary = (hash >>> 0).toString(16).padStart(8, "0");
-  const tail = (secondary >>> 0).toString(16).padStart(4, "0");
-  return `${primary}${tail}`.slice(0, 12);
+  return createHash("sha256").update(value).digest("hex").slice(0, 12);
 }
 
 export function redactSensitiveText(value: string): { text: string; redactionLevel: RedactionLevel } {
@@ -620,11 +612,11 @@ export function buildObservabilityReportDraft(input: ObservabilityEventInput, no
     fingerprint,
     alertRecommended: severity === "critical" || severity === "high",
     createdAt: now,
-  } satisfies Omit<ObservabilityReportDraft, "tenantId" | "route" | "userAgent" | "release">;
+  } satisfies Omit<ObservabilityReportDraft, "tenantIdHash" | "rawTenantIdEchoed" | "route" | "userAgent" | "release">;
 
   return {
     ...base,
-    ...(input.tenantId ? { tenantId: input.tenantId } : {}),
+    ...(input.tenantId ? { tenantIdHash: stableHash(input.tenantId), rawTenantIdEchoed: false } : {}),
     ...(input.route ? { route: input.route } : {}),
     ...(input.userAgent ? { userAgent: redactSensitiveText(input.userAgent).text } : {}),
     ...(input.release ? { release: input.release } : {}),
@@ -1095,7 +1087,7 @@ export function buildReleaseIncidentLinkagePlan(input: ReleaseIncidentLinkageInp
   const matchingReports = input.reports.filter((report) => {
     const releaseMatches = report.release === input.releaseVersion;
     const environmentMatches = report.environment === input.environment;
-    const tenantMatches = !input.tenantId || report.tenantId === input.tenantId;
+    const tenantMatches = !input.tenantId || report.tenantIdHash === stableHash(input.tenantId);
     return releaseMatches && environmentMatches && tenantMatches;
   });
   const severities = [...new Set(matchingReports.map((report) => report.severity))];
@@ -1142,12 +1134,12 @@ export function buildReleaseIncidentLinkagePlan(input: ReleaseIncidentLinkageInp
       release: input.releaseVersion,
       releaseId: input.releaseId,
       environment: input.environment,
-      ...(input.tenantId ? { tenantId: input.tenantId } : {}),
+      ...(input.tenantId ? { tenantIdHash: stableHash(input.tenantId), rawTenantIdEchoed: false } : {}),
     },
     dashboardFilters: {
       release: input.releaseVersion,
       environment: input.environment,
-      ...(input.tenantId ? { tenantId: input.tenantId } : {}),
+      ...(input.tenantId ? { tenantIdHash: stableHash(input.tenantId), rawTenantIdEchoed: false } : {}),
       severities,
     },
     linkedReports,
@@ -1156,7 +1148,7 @@ export function buildReleaseIncidentLinkagePlan(input: ReleaseIncidentLinkageInp
     ...(tenantCommunicationDraft ? { tenantCommunicationDraft } : {}),
     blockers,
     handoffRecords: [
-      `Filter dashboard errors by release=${input.releaseVersion}, environment=${input.environment}${input.tenantId ? `, tenant=${input.tenantId}` : ""}.`,
+      `Filter dashboard errors by release=${input.releaseVersion}, environment=${input.environment}${input.tenantId ? ", tenantHash=" + stableHash(input.tenantId) : ""}.`,
       "Attach linked error fingerprints, alert route, rollback decision, and sanitized tenant communication draft to the release record.",
       "Create provider incident only after owner, Sentry release tags, and tenant-safe messaging are configured.",
     ],
@@ -1501,7 +1493,7 @@ export function buildTelemetryPipelinePlan(input: TelemetryPipelineInput): Telem
       traceId,
       spanId,
       route: input.route ?? "unknown",
-      ...(input.tenantId ? { tenantId: input.tenantId } : {}),
+      ...(input.tenantId ? { tenantIdHash: stableHash(input.tenantId), rawTenantIdEchoed: false } : {}),
       ...(input.errorReport?.fingerprint ? { errorFingerprint: input.errorReport.fingerprint } : {}),
       ...(input.errorReport?.stackHash ? { stackHash: input.errorReport.stackHash } : {}),
       ...(input.errorReport?.severity ? { severity: input.errorReport.severity } : {}),
@@ -1514,7 +1506,7 @@ export function buildTelemetryPipelinePlan(input: TelemetryPipelineInput): Telem
     privacyGuards: [
       "redactMetadata removes sensitive attributes before log export.",
       "Do not export blocked_high_risk_payload events to external OTLP sinks.",
-      "Log records may include tenant IDs and fingerprints, but not raw PII, medical notes, consent data, tokens, cookies, or payment payloads.",
+      "Log records may include tenant hashes and fingerprints, but not raw tenant IDs, PII, medical notes, consent data, tokens, cookies, or payment payloads.",
     ],
   };
 }

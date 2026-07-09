@@ -106,6 +106,10 @@ describe("booking persistence API runtime contract", () => {
     expect(contractTest).toContain("requires anti-bot proof only for database-scoped persistence");
     expect(contractTest).toContain("produces tenant-consistent reference-upload contracts for DB vs local workflows");
     expect(contractTest).toContain("executes post-persist workflow consumers with tenant-isolated records");
+    expect(route).toContain("select: { id: true, type: true, actorUserId: true, toStatus: true, note: true, createdAt: true }");
+    expect(route).toContain("stateEventMetadataSelectedFromDatabase: false");
+    expect(route).toContain("rawStateEventMetadataEchoed: false");
+    expect(route).not.toContain("createdAt: true, metadata: true");
   });
 
   it("keeps remaining runtime evidence explicit without reopening the implemented route scaffold", () => {
@@ -237,6 +241,16 @@ describe("booking persistence API runtime contract", () => {
         auditLogPayload: "raw private audit payload",
         publicSummary: "booking persistence API evidence captured",
       },
+      routeRuntimeSmoke: "POST /api/public/tenant_01HZYXZYXZYXZYXZYXZYXZYXZ/booking-requests returned booking_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      antiBotProofTranscript: "turnstile token turnstile_01HZYXZYXZYXZYXZYXZYXZYXZ accepted",
+      devDbTransactionSmoke: "inserted BookingRequest booking_request_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      localFallbackPayload: "local consumer local_consumer_01HZYXZYXZYXZYXZYXZYXZYXZ persisted",
+      nextRuntimeArtifactPath: "test-results/booking-persistence-api-runtime/next-route.log",
+      ciOutput: "workflow run ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ passed",
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_booking_persistence",
+      reviewerHandle: "reviewer_booking_persistence_owner",
+      codeownerSelector: "CODEOWNER:booking-platform-team",
     });
     const directRedaction = buildRedactedBookingPersistenceApiArtifact({
       publicSummary: "safe booking persistence evidence",
@@ -273,11 +287,29 @@ describe("booking persistence API runtime contract", () => {
       "clientEmail",
       "medicalNotes",
       "nested.auditLogPayload",
+      "routeRuntimeSmoke",
+      "antiBotProofTranscript",
+      "devDbTransactionSmoke",
+      "localFallbackPayload",
+      "nextRuntimeArtifactPath",
+      "ciOutput",
+      "repositorySelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
     ]);
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant.example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("prisma://");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("client@example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("medical:");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("turnstile_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("booking_request_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("local_consumer_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("repo:dominator509/InkRoute");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("pr_booking_persistence");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("reviewer_booking_persistence_owner");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("CODEOWNER:booking-platform-team");
     expect(JSON.stringify(artifactReview.artifact)).toContain("booking persistence API evidence captured");
     expect(artifactReview.secretSafe).toBe(true);
     expect(directRedaction.redactions).toEqual(["botProofToken"]);

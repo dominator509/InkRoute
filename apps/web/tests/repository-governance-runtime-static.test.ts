@@ -328,6 +328,14 @@ describe("repository governance runtime contract", () => {
       enforcementPrUrl: "https://github.com/dominator509/InkRoute/pull/123",
       securitySettings: { secretScanningActor: "security@example.com", phone: "+1 555 123 7777" },
       mergeRulesPayload: { bypassActor: "user_admin_123" },
+      repositorySettingsResponse: { reviewerLogin: "dominator509", checkRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/123/checks" },
+      commandOutput: "gh api repos/dominator509/InkRoute/branches/main/protection",
+      stackTrace: "Error: branch protection audit failed for repo InkRoute",
+      artifactPath: "coverage/repository-governance/raw-settings.json",
+      neutralGovernanceTrace: "codeowners_review_01HZYXZYXZYXZYXZYXZYXZYXZ approved branch_rule_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralSecurityTrace: "security_alert_01HZYXZYXZYXZYXZYXZYXZYXZ linked dependabot_alert_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCiTrace: "workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ checked commit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralArtifactTrace: "raw settings stored reports/repository-governance/private-settings.json",
       nested: {
         authorization: "Bearer repository-governance-token",
         runId: "run_repo_123",
@@ -344,6 +352,15 @@ describe("repository governance runtime contract", () => {
     expect(serialized).not.toContain("security@example.com");
     expect(serialized).not.toContain("+1 555 123 7777");
     expect(serialized).not.toContain("user_admin_123");
+    expect(serialized).not.toContain("dominator509");
+    expect(serialized).not.toContain("branches/main/protection");
+    expect(serialized).not.toContain("branch protection audit failed");
+    expect(serialized).not.toContain("raw-settings.json");
+    expect(serialized).not.toContain("codeowners_review_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("branch_rule_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("security_alert_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("reports/repository-governance/private-settings.json");
     expect(serialized).not.toContain("Bearer repository-governance-token");
     expect(serialized).not.toContain("run_repo_123");
     expect(review.containsUnredactedSensitiveValues).toBe(false);
@@ -353,9 +370,17 @@ describe("repository governance runtime contract", () => {
         "branchProtectionPayload",
         "enforcementPrUrl",
         "mergeRulesPayload",
+        "repositorySettingsResponse",
         "requiredChecksUrl",
         "runId",
         "securitySettings",
+        "commandOutput",
+        "stackTrace",
+        "artifactPath",
+        "neutralArtifactTrace",
+        "neutralCiTrace",
+        "neutralGovernanceTrace",
+        "neutralSecurityTrace",
       ]),
     );
     expect(review.externalEvidenceRequired).toBe(repositoryGovernanceRuntimeRequiredExternalEvidence);

@@ -287,7 +287,7 @@ export function buildRedactedCiCoverageArtifact(value: unknown): unknown {
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /email|phone|token|secret|authorization|credential|password|rawBody|stack|ciRunUrl|commitSha|runId|branchProtectionArtifactPath|artifactUrl|debugArtifact|trace|video|screenshot/i.test(key)
+        /email|phone|token|secret|authorization|credential|password|raw|payload|body|stack|error|command|output|log|env|database|dsn|url|ciRunUrl|commitSha|runId|branchProtectionArtifactPath|artifactUrl|debugArtifact|trace|video|screenshot/i.test(key)
           ? "[REDACTED]"
           : buildRedactedCiCoverageArtifact(entry),
       ]),

@@ -36,6 +36,8 @@ Paste the current `GAP_TRACKER.md` row or link to it.
 - [ ] Keep open with new evidence
 - [ ] Create follow-up gaps
 
-## Notes
+## No secrets
 
 Do not paste secrets, raw database URLs, webhook secrets, OAuth tokens, Stripe keys, Sentry tokens, or client PII.
+
+## Notes

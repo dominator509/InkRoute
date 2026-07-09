@@ -63,7 +63,7 @@ Before production migrations:
 - Web: rollback to previous deploy.
 - Feature: disable via flag.
 - Mobile: publish previous compatible EAS update when possible.
-- DB: restore only if migration is catastrophic and data loss plan is approved.
+- DB: restore only if migration is catastrophic and data loss plan is approved (pending legal review).
 
 
 ## Phase 2 note
@@ -142,7 +142,7 @@ Production release must be blocked until these checks are attached to the releas
 - Prisma migration dry-run passed against staging data
 - destructive migration review completed when relevant
 - Sentry release artifacts uploaded when source maps are available
-- rollback plan generated and approved
+- rollback plan generated and approved (pending legal review)
 - production environment approval completed
 
 ## EAS Update policy from Phase 12

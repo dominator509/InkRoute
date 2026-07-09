@@ -6,6 +6,7 @@
   type PreferenceMutationAction,
   type PreferenceMutationPlan,
 } from "@inkroute/notifications";
+import { createHash } from "node:crypto";
 
 export interface PreferenceRepository {
   issuePreferenceToken(input: { tenantId: string; clientId: string; tokenHash: string; expiresAt: string }): Promise<void>;
@@ -14,6 +15,10 @@ export interface PreferenceRepository {
   persistSuppression(input: { tenantId: string; plan: PreferenceMutationPlan; reason: string }): Promise<void>;
   persistTenantChannelSettings(input: { tenantId: string; plan: PreferenceMutationPlan }): Promise<void>;
   persistPreferenceAudit(input: { tenantId: string; plan: PreferenceMutationPlan; redactedMetadata: Record<string, unknown> }): Promise<void>;
+}
+
+function buildPreferenceSuppressionDestinationHash(input: { tenantId: string; reason: string }): string {
+  return `preference_suppression:${createHash("sha256").update(JSON.stringify([input.tenantId, input.reason])).digest("hex")}`;
 }
 
 export interface PreferencePrismaClient {
@@ -82,7 +87,13 @@ const preferencePrivateMetadataKeys = new Set([
   "phone",
   "rawToken",
   "token",
+  "tokenHash",
+  "idempotencyKey",
+  "destinationHash",
   "destination",
+  "listUnsubscribe",
+  "headers",
+  "cookie",
   "messageBody",
   "clientName",
   "providerSecret",
@@ -110,7 +121,11 @@ export function buildRedactedPreferenceMetadata(metadata: Record<string, unknown
 }
 
 function buildPreferenceIdempotencyKey(input: { readonly tenantId: string; readonly key: string }): string {
-  return `${input.tenantId}:${input.key}`;
+  return `preference-idempotency:${createHash("sha256").update(JSON.stringify([input.tenantId, input.key])).digest("hex")}`;
+}
+
+function buildPreferenceDemoIdempotencyKey(parts: readonly string[]): string {
+  return `preference-demo:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
 }
 
 function metadataAction(metadata: unknown): PreferenceMutationAction | null {
@@ -181,7 +196,7 @@ export function createPrismaPreferenceRepository(client: PreferencePrismaClient)
     },
     async persistSuppression(input) {
       const channel = preferenceChannelForAction(input.plan.action);
-      const destinationHash = input.plan.tokenHash ?? `${input.tenantId}:${input.reason}`;
+      const destinationHash = input.plan.tokenHash ?? buildPreferenceSuppressionDestinationHash({ tenantId: input.tenantId, reason: input.reason });
       await client.notificationSuppression.upsert({
         where: { tenantId_channel_destinationHash_reason: { tenantId: input.tenantId, channel, destinationHash, reason: input.reason } },
         create: { tenantId: input.tenantId, channel, destinationHash, reason: input.reason, source: "preference_center", active: true },
@@ -282,7 +297,7 @@ function baseMutation(action: PreferenceMutationAction): {
     tokenHash: demoTokenHash,
     tokenExpiresAt,
     now,
-    idempotencyKey: `preference:${action}:demo`,
+    idempotencyKey: buildPreferenceDemoIdempotencyKey([action]),
   };
 }
 
@@ -321,7 +336,7 @@ export function buildPreferenceCenterContract(): PreferenceCenterContract {
       token: demoToken,
       tokenExpiresAt,
       now,
-      idempotencyKey: "preference:issue:demo",
+      idempotencyKey: buildPreferenceDemoIdempotencyKey(["issue_preference_token"]),
     }),
     updateEmailPlan: buildPreferenceMutationPlan({
       ...baseMutation("update_email_preferences"),
@@ -351,7 +366,7 @@ export function buildPreferenceCenterContract(): PreferenceCenterContract {
       action: "update_tenant_channel_settings",
       actorId: "user_mara_demo",
       now,
-      idempotencyKey: "preference:tenant-settings:demo",
+      idempotencyKey: buildPreferenceDemoIdempotencyKey(["update_tenant_channel_settings"]),
       tenantChannelSettingsConfigured: true,
       legalCopyApproved: false,
     }),

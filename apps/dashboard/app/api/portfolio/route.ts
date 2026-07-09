@@ -28,13 +28,76 @@ function hashIdempotencySubject(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function resultPortfolioItemId(result: unknown): string | null {
-  if (!result || typeof result !== "object" || !("portfolioItemId" in result)) {
-    return null;
-  }
+function buildPortfolioReadResponseProjection() {
+  return {
+    portfolioReadResponseAllowlisted: true,
+    portfolioItemIdEchoed: false,
+    portfolioItemIdsEchoed: false,
+    tenantIdEchoed: false,
+    attributedBookingIdsEchoed: false,
+    portfolioImageIdsEchoed: false,
+    fileAssetIdsEchoed: false,
+    auditIdEchoed: false,
+    storageObjectKeysEchoed: false,
+    signedUrlsEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
 
-  const value = (result as { portfolioItemId?: unknown }).portfolioItemId;
-  return typeof value === "string" && value.length > 0 ? value : null;
+function buildSafePortfolioListRecord(record: Record<string, unknown>) {
+  const {
+    id: _id,
+    portfolioItemId: _portfolioItemId,
+    tenantId: _tenantId,
+    attributedBookingId: _attributedBookingId,
+    attributedBookingIds: _attributedBookingIds,
+    images,
+    ...safeRecord
+  } = record;
+
+  return {
+    ...safeRecord,
+    attributedBookingLinked: Boolean(_attributedBookingId ?? (Array.isArray(_attributedBookingIds) && _attributedBookingIds.length > 0) ?? safeRecord.attributionCount),
+    images: Array.isArray(images)
+      ? images.map((image) => {
+          if (typeof image !== "object" || image === null) return image;
+          const { id: _imageId, fileAssetId: _fileAssetId, ...safeImage } = image as Record<string, unknown>;
+          return {
+            ...safeImage,
+            fileAssetLinked: Boolean(_fileAssetId),
+            responseProjection: {
+              portfolioImageIdEchoed: false,
+              fileAssetIdEchoed: false,
+            },
+          };
+        })
+      : images,
+    responseProjection: {
+      portfolioItemIdEchoed: false,
+      tenantIdEchoed: false,
+      attributedBookingIdsEchoed: false,
+      portfolioImageIdsEchoed: false,
+      fileAssetIdsEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+  };
+}
+
+function buildPortfolioCreateResponseProjection() {
+  return {
+    portfolioItemResponseAllowlisted: true,
+    portfolioItemIdEchoed: false,
+    tenantIdEchoed: false,
+    artistIdEchoed: false,
+    rawPortfolioImagesEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    duplicatePortfolioItemIdEchoed: false,
+    storageObjectKeysEchoed: false,
+    signedUrlsEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
 }
 
 type PortfolioStyleRow = {
@@ -127,7 +190,8 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildPortfolioReadResponseProjection(),
           error: {
             code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
             message: "Production dashboard portfolio reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
@@ -143,10 +207,12 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantIdEchoed: false,
         persistence: "local-fallback",
         count: dashboardProjectedPortfolio.length,
-        portfolio: dashboardProjectedPortfolio.slice(0, limit),
+        portfolio: dashboardProjectedPortfolio.slice(0, limit).map((item) => buildSafePortfolioListRecord(item as Record<string, unknown>)),
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildPortfolioReadResponseProjection(),
         gapIds: ["GAP-005", "GAP-007", "GAP-037", "GAP-040"],
         boundary: "Local fallback returns tenant-projected demo portfolio rows only; database mode is required for live portfolio reads.",
       },
@@ -191,11 +257,7 @@ export async function GET(request: NextRequest) {
                   id: true,
                   kind: true,
                   visibility: true,
-                  bucket: true,
-                  objectKey: true,
-                  checksumSha256: true,
                   publicUrl: true,
-                  signedUrlExpiresAt: true,
                   metadata: true,
                 },
               },
@@ -229,8 +291,6 @@ export async function GET(request: NextRequest) {
       tenantId,
       source: "repository",
       records: result.rows.map((row: PortfolioListRow) => ({
-        id: row.id,
-        tenantId: row.tenantId,
         title: row.title,
         slug: row.slug,
         caption: row.caption,
@@ -245,18 +305,21 @@ export async function GET(request: NextRequest) {
         styles: row.styles.map((style: PortfolioStyleRow) => style.slug || style.label),
         needsAltTextReview: row.images.some((image: PortfolioImageRow) => image.altText.trim().length < 24),
         images: row.images.map((image: PortfolioImageRow) => ({
-          id: image.id,
           imageUrl: image.fileAsset?.visibility === "public" ? image.imageUrl : "[redacted-dashboard-field]",
           altText: image.altText,
           width: image.width,
           height: image.height,
           isPrimary: image.isPrimary,
-          fileAssetId: image.fileAsset?.id ?? null,
+          fileAssetLinked: Boolean(image.fileAsset?.id),
           visibility: image.fileAsset?.visibility ?? null,
-          objectKey: image.fileAsset?.objectKey ?? null,
-          bucket: image.fileAsset?.bucket ?? null,
-          checksumSha256: image.fileAsset?.checksumSha256 ?? null,
-          signedUrlExpiresAt: image.fileAsset?.signedUrlExpiresAt?.toISOString() ?? null,
+          objectKey: "[redacted-dashboard-field]",
+          bucket: "[redacted-dashboard-field]",
+          checksumSha256: "[redacted-dashboard-field]",
+          signedUrlExpiresAt: "[redacted-dashboard-field]",
+          objectKeySelectedFromDatabase: false,
+          bucketSelectedFromDatabase: false,
+          checksumSelectedFromDatabase: false,
+          signedUrlExpirySelectedFromDatabase: false,
           metadata: redactAssetMetadata(image.fileAsset?.metadata),
         })),
       })),
@@ -267,11 +330,11 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
         count: view.records.length,
-        portfolio: view.records,
-        auditId: result.audit.id,
+        portfolio: view.records.map((record) => buildSafePortfolioListRecord(record as Record<string, unknown>)),
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildPortfolioReadResponseProjection(),
         gapIds: ["GAP-005", "GAP-007", "GAP-037", "GAP-040"],
         boundary: "Dashboard portfolio list reads are tenant-scoped, file-key redacted, no-store, and audited.",
       },
@@ -283,8 +346,9 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Portfolio list reads require the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildPortfolioReadResponseProjection(),
           gapIds: ["GAP-005", "GAP-007", "GAP-037", "GAP-040"],
         },
         { status: 503, headers: noStoreHeaders },
@@ -350,7 +414,8 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildPortfolioCreateResponseProjection(),
           error: {
             code: "PROVIDER_PORTFOLIO_PERSISTENCE_NOT_CONFIGURED",
             message: "Production portfolio mutations require DB-backed dashboard auth, tenant-scoped PortfolioItem persistence, and AuditLog rows; local fallback mutations are disabled.",
@@ -366,7 +431,8 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildPortfolioCreateResponseProjection(),
         error: {
           code: "DATABASE_REQUIRED",
           message: "Portfolio item creation requires database-backed dashboard auth so PortfolioItem, PortfolioImage, and AuditLog rows can be persisted.",
@@ -407,10 +473,9 @@ export async function POST(request: NextRequest) {
         },
         select: { id: true, status: true, result: true },
       });
-      const replayPortfolioItemId = idempotency.status === "completed" ? resultPortfolioItemId(idempotency.result) : null;
-      if (replayPortfolioItemId) {
+      if (idempotency.status === "completed") {
         const item = await portfolioItemModel.findFirst({
-          where: { id: replayPortfolioItemId, tenantId },
+          where: { tenantId, slug: input.slug },
           select: {
             id: true,
             tenantId: true,
@@ -502,10 +567,12 @@ export async function POST(request: NextRequest) {
           entityId: item.id,
           metadata: {
             source: "dashboard-api",
-            artistId: item.artistId,
+            artistMatched: true,
             slug: item.slug,
             isPublic: item.isPublic,
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             imageBoundary: "Primary image URL metadata persisted; signed upload/object storage handoff is not executed by this route.",
             redaction: "storage object keys and signed URLs are not accepted or returned by this mutation",
           },
@@ -518,11 +585,12 @@ export async function POST(request: NextRequest) {
         data: {
           status: "completed",
           result: toJsonValue({
-            portfolioItemId: item.id,
-            auditId: audit.id,
+            portfolioItemPersisted: true,
+            auditLogged: true,
             created: true,
             imageUrlStoredInResult: false,
             providerUrlMinted: false,
+            internalPersistenceIdsStored: false,
           }),
         },
       });
@@ -531,19 +599,34 @@ export async function POST(request: NextRequest) {
     });
 
     if (result.status === "artist_not_found") {
-      return NextResponse.json({ ok: false, error: { code: "ARTIST_NOT_FOUND", message: "Portfolio artist was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: { code: "ARTIST_NOT_FOUND", message: "Portfolio artist was not found for this tenant." },
+          responseProjection: buildPortfolioCreateResponseProjection(),
+        },
+        { status: 404, headers: noStoreHeaders },
+      );
     }
 
     if (result.status === "slug_exists") {
       return NextResponse.json(
-        { ok: false, error: { code: "PORTFOLIO_SLUG_EXISTS", message: "A portfolio item with this slug already exists for this tenant.", portfolioItemId: result.portfolioItemId } },
+        {
+          ok: false,
+          error: { code: "PORTFOLIO_SLUG_EXISTS", message: "A portfolio item with this slug already exists for this tenant." },
+          responseProjection: buildPortfolioCreateResponseProjection(),
+        },
         { status: 409, headers: noStoreHeaders },
       );
     }
 
     if (result.status === "style_not_found") {
       return NextResponse.json(
-        { ok: false, error: { code: "STYLE_NOT_FOUND", message: "Every portfolio style must exist for this tenant before creating the item." } },
+        {
+          ok: false,
+          error: { code: "STYLE_NOT_FOUND", message: "Every portfolio style must exist for this tenant before creating the item." },
+          responseProjection: buildPortfolioCreateResponseProjection(),
+        },
         { status: 404, headers: noStoreHeaders },
       );
     }
@@ -552,18 +635,21 @@ export async function POST(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         persistence: "database",
+        responseProjection: buildPortfolioCreateResponseProjection(),
         portfolioItem: {
-          ...result.item,
+          title: result.item.title,
+          slug: result.item.slug,
+          isPublic: result.item.isPublic,
+          isFeatured: result.item.isFeatured,
           createdAt: result.item.createdAt.toISOString(),
           publishedAt: result.item.publishedAt?.toISOString() ?? null,
+          imageCount: result.item.images.length,
         },
-        auditId: result.status === "created" ? result.audit.id : null,
-        idempotencyKeyId: result.idempotency.id,
         idempotencyReplay: result.status === "replayed",
         gapIds: ["GAP-005", "GAP-007", "GAP-037", "GAP-038", "GAP-040"],
-        boundary: "Portfolio metadata creation is idempotency-backed and persists PortfolioItem, style links, primary PortfolioImage URL metadata, and AuditLog rows; signed upload/object-storage processing remains a separate provider-gated handoff.",
+        boundary: "Portfolio metadata creation is idempotency-backed and persists PortfolioItem, style links, primary PortfolioImage URL metadata, and AuditLog rows; response receipts do not echo audit IDs, idempotency-key IDs, raw idempotency keys, duplicate portfolio IDs, storage object keys, or signed URLs, while signed upload/object-storage processing remains a separate provider-gated handoff.",
       },
       { status: result.status === "created" ? 201 : 200, headers: noStoreHeaders },
     );
@@ -573,7 +659,8 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildPortfolioCreateResponseProjection(),
           error: { code: "DATABASE_UNAVAILABLE", message: "Portfolio item creation requires the dashboard database connection." },
           gapIds: ["GAP-005", "GAP-007", "GAP-037", "GAP-038", "GAP-040"],
         },
@@ -583,7 +670,11 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof Error && /Unique constraint/i.test(error.message)) {
       return NextResponse.json(
-        { ok: false, error: { code: "PORTFOLIO_SLUG_EXISTS", message: "A portfolio item with this slug or attribution key already exists." } },
+        {
+          ok: false,
+          error: { code: "PORTFOLIO_SLUG_EXISTS", message: "A portfolio item with this slug or attribution key already exists." },
+          responseProjection: buildPortfolioCreateResponseProjection(),
+        },
         { status: 409, headers: noStoreHeaders },
       );
     }

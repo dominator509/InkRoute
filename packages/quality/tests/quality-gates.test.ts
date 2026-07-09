@@ -526,6 +526,17 @@ describe("quality gates", () => {
       branchProtectionPayload: { requiredBypassActorEmail: "owner@example.com", token: "ghp_secret" },
       checkRunLog: "Blocked tenant_demo with Authorization: Bearer pr-gap-token",
       artifactUrl: "https://provider.example.com/artifacts/artifact_123",
+      fixtureDiff: "diff --git a/GAP_TRACKER.md b/GAP_TRACKER.md with tenant_demo",
+      gapAuditOutput: "audit-gap-evidence output mentions pr_gap_123",
+      qualityAllOutput: "quality:all failed with provider_project_123",
+      mergeBlockProofBody: "failing PR https://github.com/dominator509/InkRoute/pull/123 blocked by owner@example.com",
+      passingPrEvidence: "passing PR pr_456 with artifact_789",
+      secretSafeReviewNotes: "reviewed .env.local and found ghp_secret",
+      neutralMergeTrace: "merge_block_01HZYXZYXZYXZYXZYXZYXZYXZ checked branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCiTrace: "workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ reviewed commit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralReviewerTrace: "reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ approved codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralArtifactTrace: "proof stored reports/pr-gap/private-merge-block.json",
+      neutralDatabaseTrace: "persist preview postgresql://tenant_demo:secret@db.example.com/inkroute",
       nested: {
         phone: "+1 555 111 3434",
         projectId: "project_pr_gap_123",
@@ -544,6 +555,19 @@ describe("quality gates", () => {
     expect(serialized).not.toContain("provider.example.com");
     expect(serialized).not.toContain("+1 555 111 3434");
     expect(serialized).not.toContain("project_pr_gap_123");
+    expect(serialized).not.toContain("GAP_TRACKER.md");
+    expect(serialized).not.toContain("pr_gap_123");
+    expect(serialized).not.toContain("quality:all failed");
+    expect(serialized).not.toContain("/pull/123");
+    expect(serialized).not.toContain("pr_456");
+    expect(serialized).not.toContain("merge_block_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("reports/pr-gap/private-merge-block.json");
+    expect(serialized).not.toContain("postgresql://tenant_demo:secret@db.example.com/inkroute");
+    expect(serialized).not.toContain(".env.local");
     expect(review.containsUnredactedSensitiveValues).toBe(false);
     expect(review.redactions).toEqual(
       expect.arrayContaining([
@@ -551,9 +575,20 @@ describe("quality gates", () => {
         "branchProtectionPayload",
         "checkRunLog",
         "ciRunUrl",
+        "fixtureDiff",
+        "gapAuditOutput",
+        "mergeBlockProofBody",
         "phone",
         "projectId",
         "pullRequestUrl",
+        "passingPrEvidence",
+        "qualityAllOutput",
+        "secretSafeReviewNotes",
+        "neutralArtifactTrace",
+        "neutralCiTrace",
+        "neutralDatabaseTrace",
+        "neutralMergeTrace",
+        "neutralReviewerTrace",
       ]),
     );
     expect(review.externalEvidenceRequired).toBe(prGapEvidenceEnforcementRequiredExternalEvidence);
@@ -1069,6 +1104,17 @@ describe("quality gates", () => {
       repositoryUrl: "https://github.com/dominator509/InkRoute/pull/127",
       branchName: "feature/customer-jane-doe@example.com",
       logOutput: "token github_pat_1234567890ABCDEFGHIJKLMNOP for +1 (555) 867-5309",
+      fixtureDiffBody: "diff --git a/GAP_TRACKER.md b/GAP_TRACKER.md with tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      gapAuditOutput: "audit-gap-tracker-diff reported prdiff_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      pullRequestCiPayload: { workflowRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/127" },
+      mergeBaseFallbackLog: "missing merge-base fallback for branch feature/customer-jane-doe@example.com",
+      positiveFixtureArtifactPath: "scripts/quality/fixtures/pr-gap-diff/valid-with-evidence.diff",
+      negativeFixtureArtifactPath: "scripts/quality/fixtures/pr-gap-diff/invalid-missing-evidence.diff",
+      secretSafeReviewNotes: "reviewed .env.local and found github_pat_1234567890ABCDEFGHIJKLMNOP",
+      neutralDiffTrace: "pr_diff_01HZYXZYXZYXZYXZYXZYXZYXZ compared branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralFallbackTrace: "merge_base_fallback_01HZYXZYXZYXZYXZYXZYXZYXZ wrote reports/pr-diff/private-fallback.log",
+      neutralCiTrace: "workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ checked commit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralReviewerTrace: "reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ approved codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
       persistence: {
         tenantId: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
         databaseUrl: "postgres://inkroute:secret@example.neon.tech/inkroute",
@@ -1080,6 +1126,17 @@ describe("quality gates", () => {
       repositoryUrl: "[REDACTED]",
       branchName: "[REDACTED]",
       logOutput: "token [REDACTED] for [REDACTED]",
+      fixtureDiffBody: "[REDACTED]",
+      gapAuditOutput: "[REDACTED]",
+      pullRequestCiPayload: "[REDACTED]",
+      mergeBaseFallbackLog: "[REDACTED]",
+      positiveFixtureArtifactPath: "[REDACTED]",
+      negativeFixtureArtifactPath: "[REDACTED]",
+      secretSafeReviewNotes: "[REDACTED]",
+      neutralDiffTrace: "[REDACTED] compared [REDACTED]",
+      neutralFallbackTrace: "[REDACTED] wrote [REDACTED]",
+      neutralCiTrace: "workflow [REDACTED] checked [REDACTED]",
+      neutralReviewerTrace: "[REDACTED] approved [REDACTED]",
       persistence: {
         tenantId: "[REDACTED]",
         databaseUrl: "[REDACTED]",
@@ -1096,10 +1153,27 @@ describe("quality gates", () => {
         "repositoryUrl",
         "branchName",
         "logOutput",
+        "fixtureDiffBody",
+        "gapAuditOutput",
+        "pullRequestCiPayload",
+        "mergeBaseFallbackLog",
+        "positiveFixtureArtifactPath",
+        "negativeFixtureArtifactPath",
+        "secretSafeReviewNotes",
+        "neutralDiffTrace",
+        "neutralFallbackTrace",
+        "neutralCiTrace",
+        "neutralReviewerTrace",
         "persistence.tenantId",
         "persistence.databaseUrl",
       ]),
     );
+    expect(JSON.stringify(review.artifact)).not.toContain("pr_diff_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("reports/pr-diff/private-fallback.log");
+    expect(JSON.stringify(review.artifact)).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
     expect(review.requiredExternalEvidence).toBe(prDiffEvidenceRuntimeRequiredExternalEvidence);
     expect(bundle.status).toBe("redacted-evidence-bundle-ready");
     expect(bundle.artifactPath).toBe("redacted PR diff evidence bundle");

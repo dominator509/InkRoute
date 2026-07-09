@@ -113,7 +113,7 @@ Release governance now treats database changes as production-blocking until Pris
 - Destructive SQL scan for `DROP TABLE`, `DROP COLUMN`, `ALTER TABLE ... DROP`, and `TRUNCATE`.
 - Backup snapshot evidence and explicit approval for destructive changes.
 - Expand/contract sequencing for non-backward-compatible changes.
-- Forward-fix-first recovery policy attached to the release record, with restore reserved for approved incident scenarios.
+- Pending: Forward-fix-first recovery policy attached to the release record, with restore reserved for approved incident scenarios.
 
 The scaffolded `.github/workflows/release-governance.yml` includes a `Prisma migration compatibility dry run` step wired to `DATABASE_URL`. It intentionally fails without a real database URL rather than silently approving migrations.
 

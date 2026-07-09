@@ -3,6 +3,7 @@ import { publicReadQuerySchema } from "@inkroute/validators";
 import {
   buildLocalPublicContentResponse,
   buildPublicContentProductionBoundary,
+  buildSafeLocalPublicContentRouteResponse,
   isPublicContentDatabaseUnavailable,
   publicContentNoStoreHeaders,
   readPublicPortfolioItems,
@@ -51,13 +52,13 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
           ok: true,
           data: {
             tenantSlug,
-            tenantId: tenant.tenantId,
             source: tenant.source,
             persistence: "database",
             collection: "portfolioItems",
             query: { limit: query.data.limit },
             data: limitedItems,
             redactedFields: ["tenantId", "artistId", "attributionKey", "fileAsset.objectKey", "privateOriginal"],
+            responseProjection: { tenantIdEchoed: false, internalPersistenceIdsEchoed: false, rawPrivateFieldsEchoed: false },
             cachePolicy: { strategy: "tenant-revalidated", revalidateSeconds: 300 },
             boundary: "Public portfolio reads use tenant-scoped database rows and expose only public derivative image metadata.",
             gapIds: ["GAP-027", "GAP-028", "GAP-029", "GAP-076"],
@@ -68,7 +69,7 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
     }
 
     const local = buildLocalPublicContentResponse(tenantSlug, tenant, "portfolioItems");
-    return NextResponse.json({ ok: true, data: local ? { ...local, query: { limit: query.data.limit }, portfolioItems: local.portfolioItems.slice(0, query.data.limit) } : local }, { headers: publicContentNoStoreHeaders });
+    return NextResponse.json({ ok: true, data: local ? buildSafeLocalPublicContentRouteResponse(local, "portfolioItems", query.data.limit) : local }, { headers: publicContentNoStoreHeaders });
   } catch (error) {
     if (!isPublicContentDatabaseUnavailable(error)) throw error;
 
@@ -100,6 +101,6 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
         { status: 503, headers: publicContentNoStoreHeaders },
       );
     }
-    return NextResponse.json({ ok: true, data: local ? { ...local, query: { limit: query.data.limit }, portfolioItems: local.portfolioItems.slice(0, query.data.limit) } : local }, { headers: publicContentNoStoreHeaders });
+    return NextResponse.json({ ok: true, data: local ? buildSafeLocalPublicContentRouteResponse(local, "portfolioItems", query.data.limit) : local }, { headers: publicContentNoStoreHeaders });
   }
 }

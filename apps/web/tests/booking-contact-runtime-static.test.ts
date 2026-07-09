@@ -114,6 +114,10 @@ describe("booking/contact runtime evidence contract", () => {
     expect(contactRoute).toContain("tx.auditLog.create");
     expect(contactRoute).toContain("contact.public_intake");
     expect(contactRoute).toContain("persistContactSubmission");
+    expect(contactRoute).toContain("publicContactIdempotencyFingerprint");
+    expect(contactRoute).toContain("generatedKeyUsesHashedFingerprint");
+    expect(contactRoute).toContain("buildSafeContactDatabaseResponse");
+    expect(contactRoute).toContain("buildSafeContactLocalResponse");
     expect(contactRoute).toContain("PROVIDER_CONTACT_PERSISTENCE_NOT_CONFIGURED");
     expect(contactRoute).toContain("Contact submission could not be persisted to tenant-scoped database rows after validation.");
     expect(contactRoute).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
@@ -121,6 +125,44 @@ describe("booking/contact runtime evidence contract", () => {
     expect(contactRoute).not.toContain('headers: { "Cache-Control": "no-store" }');
     expect(contactRoute).toContain("function rateLimitHeaders");
     expect(contactRoute).toContain("headers: rateLimitHeaders(rateLimit.retryAfterSeconds)");
+    expect(contactRoute).toContain("clientEmailSelectedFromDatabase: false");
+    expect(contactRoute).toContain("clientNameSelectedFromDatabase: false");
+    expect(contactRoute).toContain("rawContactFieldsEchoed: false");
+    expect(contactRoute).toContain("rawMessageEchoed: false");
+    expect(contactRoute).toContain("redactedSubmissionEchoed: false");
+    expect(contactRoute).toContain("destinationHashEchoed: false");
+    expect(contactRoute).toContain("rawIdempotencyKeyEchoed: false");
+    expect(contactRoute).toContain("tenantIdEchoed: false");
+    expect(contactRoute).toContain("tenantScope: { tenantResolved: true, tenantIdEchoed: false }");
+    expect(contactRoute).toContain("tenantSlug: normalizedTenantSlug");
+    expect(contactRoute).toContain("internalPersistenceIdsEchoed: false");
+    expect(contactRoute).toContain("internalPersistenceIdsStored: false");
+    expect(contactRoute).toContain("clientPersisted: true");
+    expect(contactRoute).toContain("messagePersisted: true");
+    expect(contactRoute).toContain("notificationPersisted: true");
+    expect(contactRoute).toContain("deliveryPersisted: true");
+    expect(contactRoute).toContain("providerHandoffPersisted: true");
+    expect(contactRoute).toContain("idempotencyPersisted: true");
+    expect(contactRoute).toContain("tx.idempotencyKey.update");
+    expect(contactRoute).toContain('idempotency.status === "completed"');
+    expect(contactRoute).toContain("idempotencyReplayed: true");
+    expect(contactRoute).toContain("duplicateSideEffectsCreated: false");
+    expect(contactRoute).not.toContain("select: { id: true, email: true, preferredName: true }");
+    expect(contactRoute).not.toContain("clientId: result.client.id");
+    expect(contactRoute).not.toContain(
+      'sanitizedPayload: toJsonValue({\n              route: "/api/public/[tenantSlug]/contact",\n              clientId: client.id',
+    );
+    expect(contactRoute).not.toContain(
+      'metadata: toJsonValue({\n              route: "/api/public/[tenantSlug]/contact",\n              clientId: client.id',
+    );
+    expect(contactRoute).not.toContain("idempotencyKeyId: idempotency.id");
+    expect(contactRoute).not.toContain("threadId: result.thread.id");
+    expect(contactRoute).not.toContain("messageId: result.inboundMessage.id");
+    expect(contactRoute).not.toContain("auditId: result.audit.id");
+    expect(contactRoute).not.toContain("idempotencyKeyId: result.idempotency.id");
+    expect(contactRoute).not.toContain("tenantId: tenant.tenantId,\n        persistence");
+    expect(contactRoute).not.toContain("data: {\n            tenantId:");
+    expect(contactRoute).not.toContain("redactedSubmission: persisted.redactedSubmission");
     expect(contactRoute).toContain("provider_gated");
     expect(contactPage).toContain("/api/public/${inkrouteDemoTenant.slug}/contact");
     expect(localRuntime).toContain("LocalContactSubmissionRecord");
@@ -257,6 +299,16 @@ describe("booking/contact runtime evidence contract", () => {
         privateFileUrl: "https://files.example.com/private-file/reference.png",
         publicSummary: "booking contact evidence captured",
       },
+      contactRouteTranscript: "POST /api/public/tenant_01HZYXZYXZYXZYXZYXZYXZYXZ/contact stored client_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      idempotencyReplayProof: "idempotency_01HZYXZYXZYXZYXZYXZYXZYXZ replayed message_thread_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      providerHandoffPayload: "notification handoff provider_01HZYXZYXZYXZYXZYXZYXZYXZ destination +1 555 111 2222",
+      localFallbackAuditMetadata: "audit_01HZYXZYXZYXZYXZYXZYXZYXZ stored raw contact fallback",
+      browserE2eTracePath: "test-results/booking-contact-runtime/trace-tenant_01HZYXZYXZYXZYXZYXZYXZYXZ.zip",
+      ciOutput: "workflow run ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ passed",
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_booking_contact",
+      reviewerHandle: "reviewer_booking_contact_owner",
+      codeownerSelector: "CODEOWNER:booking-platform-team",
     });
     const directRedaction = buildRedactedBookingContactArtifact({
       publicSummary: "safe booking contact evidence",
@@ -295,12 +347,30 @@ describe("booking/contact runtime evidence contract", () => {
       "stripePaymentIntent",
       "providerToken",
       "nested.privateFileUrl",
+      "contactRouteTranscript",
+      "idempotencyReplayProof",
+      "providerHandoffPayload",
+      "localFallbackAuditMetadata",
+      "browserE2eTracePath",
+      "ciOutput",
+      "repositorySelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
     ]);
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant.example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("client@example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("medical:");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("stripe_pi_private");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("provider-token");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("idempotency_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("message_thread_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("provider_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("repo:dominator509/InkRoute");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("pr_booking_contact");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("reviewer_booking_contact_owner");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("CODEOWNER:booking-platform-team");
     expect(JSON.stringify(artifactReview.artifact)).toContain("booking contact evidence captured");
     expect(artifactReview.secretSafe).toBe(true);
     expect(directRedaction.redactions).toEqual(["contactPhone"]);

@@ -203,6 +203,14 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
       preview: {
         phone: "+1 (555) 867-5309",
         privateDraftHtml: "<h1>Private campaign draft</h1>",
+        renderedCrawlUrl: "https://inkroute.example/tenant-demo/styles/fine-line",
+        canonicalUrl: "https://inkroute.example/tenant-demo/styles/fine-line",
+        sitemapUrl: "https://inkroute.example/sitemap.xml",
+      },
+      build: {
+        buildLog: "tenant-demo route rendered with private metadata",
+        commandOutput: "dashboard SEO publish smoke failed for private route",
+        ciUrl: "https://github.com/owner/private-repo/actions/runs/phase10",
       },
     };
 
@@ -212,8 +220,15 @@ describe("GAP-076 Phase 10 SEO app runtime/build gate", () => {
 
     expect(JSON.stringify(redacted)).not.toContain("artist@example.com");
     expect(serialized).not.toContain("ya29.search-console-provider-token");
+    expect(serialized).not.toContain("https://tenant.example.com");
+    expect(serialized).not.toContain("fine line tattoo");
     expect(serialized).not.toContain("+1 (555) 867-5309");
     expect(serialized).not.toContain("Private campaign draft");
+    expect(serialized).not.toContain("https://inkroute.example/tenant-demo/styles/fine-line");
+    expect(serialized).not.toContain("https://inkroute.example/sitemap.xml");
+    expect(serialized).not.toContain("tenant-demo route rendered with private metadata");
+    expect(serialized).not.toContain("dashboard SEO publish smoke failed for private route");
+    expect(serialized).not.toContain("https://github.com/owner/private-repo/actions/runs/phase10");
     expect(review.safeToPersist).toBe(true);
     expect(review.unsafeFindings).toEqual([]);
     expect(review.requiredArtifactPath).toBe("coverage/phase10-seo-runtime-secret-safe-artifacts.json");

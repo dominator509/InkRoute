@@ -188,10 +188,24 @@ describe("CI/CD deployment automation contract", () => {
     const rawArtifact = {
       github: {
         token: "ghp_liveWorkflowDispatchToken",
+        repository: "owner/private-release-repo",
+        workflowRunId: "workflow_run_cicd_private",
+        workflowRunUrl: "https://github.com/owner/private-release-repo/actions/runs/private",
+        workflowDispatchId: "workflow_dispatch_private",
+        commitSha: "abcdef0123456789abcdef0123456789abcdef01",
         actorEmail: "release@example.com",
       },
       vercel: {
         authorization: "Bearer vercel_deploy_secret",
+        deploymentId: "vercel_deployment_private",
+        deploymentUrl: "https://deployment-private.vercel.app",
+      },
+      release: {
+        tenantId: "tenant_cicd_private",
+        releaseRecordId: "release_record_cicd_private",
+        releaseCandidateId: "release_candidate_cicd_private",
+        auditId: "audit_cicd_private",
+        idempotencyKey: "idem_cicd_private",
       },
       searchConsole: {
         clientEmail: "search-console@example.iam.gserviceaccount.com",
@@ -205,6 +219,18 @@ describe("CI/CD deployment automation contract", () => {
     const serialized = JSON.stringify(review.redactedArtifact);
 
     expect(JSON.stringify(redacted)).not.toContain("ghp_liveWorkflowDispatchToken");
+    expect(serialized).not.toContain("owner/private-release-repo");
+    expect(serialized).not.toContain("workflow_run_cicd_private");
+    expect(serialized).not.toContain("https://github.com/owner/private-release-repo/actions/runs/private");
+    expect(serialized).not.toContain("workflow_dispatch_private");
+    expect(serialized).not.toContain("abcdef0123456789abcdef0123456789abcdef01");
+    expect(serialized).not.toContain("vercel_deployment_private");
+    expect(serialized).not.toContain("https://deployment-private.vercel.app");
+    expect(serialized).not.toContain("tenant_cicd_private");
+    expect(serialized).not.toContain("release_record_cicd_private");
+    expect(serialized).not.toContain("release_candidate_cicd_private");
+    expect(serialized).not.toContain("audit_cicd_private");
+    expect(serialized).not.toContain("idem_cicd_private");
     expect(serialized).not.toContain("release@example.com");
     expect(serialized).not.toContain("vercel_deploy_secret");
     expect(serialized).not.toContain("search-console@example.iam.gserviceaccount.com");

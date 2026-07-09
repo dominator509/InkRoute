@@ -217,15 +217,22 @@ export const secretManagementRuntimeExternalCommands = [
 ] as const satisfies readonly SecretManagementRuntimeCommand[];
 
 const sensitiveSecretManagementKeyPattern =
-  /(token|secret|password|authorization|cookie|env|databaseUrl|dbUrl|directUrl|provider|projectId|resourceId|ciRunUrl|auditLog|secretStore|maskedLog|tenantId|userId|runId|email|phone|value)/i;
+  /(token|secret|password|authorization|cookie|env|databaseUrl|dbUrl|directUrl|provider|projectId|resourceId|ciRunUrl|auditLog|secretStore|maskedLog|tenantId|userId|runId|email|phone|value|raw|payload|body|stack|error|log|output|transcript|database|dsn|strict|verifier|scan|rotation|tabletop|incident|dualControl|cadence|artifact|label|destination|reference|commit|diff|finding|repository|repo|branch|pull|pr|reviewer|codeowner)/i;
 
 const sensitiveSecretManagementStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
   [/https?:\/\/[^\s"'<>]+/gi, "[REDACTED_URL]"],
+  [/postgres(?:ql)?:\/\/[^\s"'<>]+/gi, "[REDACTED_DSN]"],
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
   [/\b(?:sk|pk|rk|whsec)_(?:live|test)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
-  [/\b(?:tenant|user|project|provider|run|secret|audit|env)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+  [/\brepo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\b/gi, "[REDACTED_REPOSITORY_SELECTOR]"],
+  [/\bbranch:[A-Za-z0-9_./-]+\b/gi, "[REDACTED_BRANCH_SELECTOR]"],
+  [/\bpr[_:#-]?[A-Za-z0-9_.-]+\b/gi, "[REDACTED_PR_SELECTOR]"],
+  [/\breviewer[_:@-]?[A-Za-z0-9_.-]+\b/gi, "[REDACTED_REVIEWER_SELECTOR]"],
+  [/\bCODEOWNER:[A-Za-z0-9_.@/-]+\b/g, "[REDACTED_CODEOWNER_SELECTOR]"],
+  [/\b(?:tenant|user|project|provider|run|secret|audit|env|destination|rotation|tabletop|incident|workflow|ci|commit|diff|finding|label|reference)_[A-Za-z0-9_.-]+\b/gi, "[REDACTED_ID]"],
+  [/\b(?:coverage|test-results|artifacts|reports)\/[A-Za-z0-9_./-]{6,}\b/gi, "[REDACTED_ARTIFACT_PATH]"],
 ];
 
 export type SecretManagementRunRecordInput = SecretManagementRuntimeEvidenceInput & {

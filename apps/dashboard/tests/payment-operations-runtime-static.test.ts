@@ -213,6 +213,10 @@ describe("payment operations runtime contract", () => {
         disputeProviderPayload: "provider_private",
         publicSummary: "payment operations evidence captured",
       },
+      safeNote:
+        "evidence_payment_operations_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/payment-operations/private-proof.json",
+      safeRefundPath: "test-results/payment-operations-runtime/private-refund.json",
+      safeStripeRun: "stripe_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
     };
 
     const redacted = buildRedactedPaymentOperationsArtifact(artifact);
@@ -222,6 +226,9 @@ describe("payment operations runtime contract", () => {
       "accountingExportUrl",
       "taxAdvisorToken",
       "nested.disputeProviderPayload",
+      "safeNote",
+      "safeRefundPath",
+      "safeStripeRun",
     ]);
     expect(redacted.redactedArtifact).toMatchObject({
       stripeRefundId: "[REDACTED]",
@@ -232,7 +239,21 @@ describe("payment operations runtime contract", () => {
         disputeProviderPayload: "[REDACTED]",
         publicSummary: "payment operations evidence captured",
       },
+      safeRefundPath: "[REDACTED]",
+      safeStripeRun: "[REDACTED]",
     });
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "evidence_payment_operations_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "artifacts/payment-operations/private-proof.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "test-results/payment-operations-runtime/private-refund.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "stripe_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
 
     const review = buildPaymentOperationsArtifactReview({
       publicSummary: "safe payment operations evidence",

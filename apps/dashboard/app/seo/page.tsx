@@ -50,7 +50,7 @@ export default function SeoManagerPage() {
               <div className="list-row" key={brief.slug}>
                 <div>
                   <strong>{brief.h1}</strong>
-                  <span>{brief.primaryKeyword} Â· {brief.schemaTypes.join(", ")}</span>
+                  <span>{brief.primaryKeyword} - {brief.schemaTypes.join(", ")}</span>
                 </div>
                 <StatusPill label={`${brief.recommendedSections.length} sections`} tone="info" />
               </div>
@@ -64,7 +64,7 @@ export default function SeoManagerPage() {
               <div className="list-row" key={brief.slug}>
                 <div>
                   <strong>{brief.h1}</strong>
-                  <span>{brief.secondaryKeywords.slice(0, 2).join(" Â· ")}</span>
+                  <span>{brief.secondaryKeywords.slice(0, 2).join(" - ")}</span>
                 </div>
                 <StatusPill label={`${brief.analyticsEvents.length} events`} tone="success" />
               </div>
@@ -81,7 +81,7 @@ export default function SeoManagerPage() {
               <div className="list-row" key={`${link.fromPath}-${link.toPath}-${link.anchorText}`}>
                 <div>
                   <strong>{link.anchorText}</strong>
-                  <span>{link.fromPath} â†’ {link.toPath}</span>
+                  <span>{link.fromPath} -&gt; {link.toPath}</span>
                 </div>
                 <StatusPill label={link.priority} tone={link.priority === "high" ? "success" : "info"} />
               </div>

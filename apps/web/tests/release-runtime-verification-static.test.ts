@@ -54,6 +54,15 @@ describe("release runtime verification contract", () => {
     expect(releaseHealthRoute).toContain("featureFlags");
     expect(releaseHealthRoute).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(releaseHealthRoute).toContain("{ headers: noStoreHeaders }");
+    expect(releaseHealthRoute).toContain("tenantIdEchoed: false");
+    expect(releaseHealthRoute).toContain("releaseRecordIdEchoed: false");
+    expect(releaseHealthRoute).toContain("releaseCandidateIdEchoed: false");
+    expect(releaseHealthRoute).toContain("commitShaEchoed: false");
+    expect(releaseHealthRoute).toContain("runtimeContextTenantIdEchoed: false");
+    expect(releaseHealthRoute).toContain("internalPersistenceIdsEchoed: false");
+    expect(releaseHealthRoute).not.toContain("tenantId: tenantResolution.tenantId,\n        source");
+    expect(releaseHealthRoute).not.toContain("tenantId: productionDecisionContext.tenantId");
+    expect(releaseHealthRoute).not.toContain("id: entry.id,\n          version");
     expect(dashboardReleaseRoute).toContain("Cache-Control");
     expect(dashboardReleaseRoute).toContain("release:read");
     expect(dashboardFlagRoute).toContain("feature_flag:read:list");
@@ -157,6 +166,11 @@ describe("release runtime verification contract", () => {
         command: "release-governance workflow dry run",
       },
       buildLog: "Build failed with token sk_live_secret and phone +1 555 010 2222",
+      routeSmokeUrl: "https://preview.example.com/api/public/demo/release-health?run=workflow_run_123",
+      rawRoutePayload: { tenantId: "tenant_release_123", releaseRecordId: "release_record_123" },
+      ciArtifactPath: "coverage/release-runtime/raw-workflow-log.json",
+      commitSha: "commit_abcdef123456",
+      stackTrace: "Error: release runtime verification leaked workflow_run_123",
     };
 
     const redacted = buildRedactedReleaseRuntimeVerificationArtifact(rawArtifact);
@@ -167,7 +181,13 @@ describe("release runtime verification contract", () => {
     expect(serialized).not.toContain("ghp_releaseWorkflowToken");
     expect(serialized).not.toContain("sk_live_secret");
     expect(serialized).not.toContain("+1 555 010 2222");
-    expect(serialized).toContain("release-governance workflow dry run");
+    expect(serialized).not.toContain("preview.example.com");
+    expect(serialized).not.toContain("workflow_run_123");
+    expect(serialized).not.toContain("tenant_release_123");
+    expect(serialized).not.toContain("release_record_123");
+    expect(serialized).not.toContain("raw-workflow-log.json");
+    expect(serialized).not.toContain("commit_abcdef123456");
+    expect(serialized).not.toContain("release runtime verification leaked");
     expect(review.safeToPersist).toBe(true);
     expect(review.unsafeFindings).toEqual([]);
     expect(review.requiredArtifactPath).toBe("coverage/release-governance-workflow-dry-run-redacted.json");

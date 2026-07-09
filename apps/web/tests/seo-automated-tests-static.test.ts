@@ -120,6 +120,15 @@ describe("GAP-078 SEO automated test gate", () => {
         workflowToken: "ghp_seoAutomatedGateToken",
         searchConsoleToken: "ya29.search-console-token",
       },
+      linkedGap073Crawl: {
+        artifactUrl: "https://ci.example.invalid/artifacts/structured-data-crawl.json",
+        routeUrl: "https://inkroute.example/tenant-demo/cities/seattle",
+        renderedHtml: "<script>private structured data</script>",
+      },
+      linkedGap076RuntimeBuild: {
+        ciUrl: "https://github.com/owner/private-repo/actions/runs/seo",
+        commandOutput: "tenant-demo rendered sitemap route failed",
+      },
       failure: {
         email: "tester@example.com",
         phone: "+1 555 010 3333",
@@ -137,7 +146,12 @@ describe("GAP-078 SEO automated test gate", () => {
     expect(serialized).not.toContain("tester@example.com");
     expect(serialized).not.toContain("+1 555 010 3333");
     expect(serialized).not.toContain("private stack trace");
-    expect(serialized).toContain("SEO package test failed on sitemap route");
+    expect(serialized).not.toContain("https://ci.example.invalid/artifacts/structured-data-crawl.json");
+    expect(serialized).not.toContain("https://inkroute.example/tenant-demo/cities/seattle");
+    expect(serialized).not.toContain("private structured data");
+    expect(serialized).not.toContain("https://github.com/owner/private-repo/actions/runs/seo");
+    expect(serialized).not.toContain("tenant-demo rendered sitemap route failed");
+    expect(serialized).not.toContain("SEO package test failed on sitemap route");
     expect(review.safeToPersist).toBe(true);
     expect(review.unsafeFindings).toEqual([]);
     expect(review.requiredArtifactPath).toBe("coverage/seo-automated-secret-safe-artifacts.json");

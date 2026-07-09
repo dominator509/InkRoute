@@ -351,6 +351,14 @@ describe("handoff tooling runtime contract", () => {
       stdout: "report_artifact_123 emitted for owner@example.com",
       stderr: "Bearer handoff-tooling-token",
       ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/123456",
+      docsVerificationReport: "docs verification exposed report_task_123 for owner@example.com",
+      ledgerAuditOutput: "ledger task task_123 mismatched run_123",
+      taskSyncReportPath: "coverage/handoff/raw-task-sync-report.json",
+      missingRootScripts: ["handoff:missing-secret-script"],
+      handoffAllLog: "handoff:all output includes tenant_demo and provider_report_123",
+      neutralRepositoryTrace:
+        "repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      stackTrace: "Error: handoff tooling leaked raw report metadata",
       nested: {
         providerReportUrl: "https://provider.example.com/reports/report_abc",
         phone: "+1 555 909 1212",
@@ -369,16 +377,34 @@ describe("handoff tooling runtime contract", () => {
     expect(serialized).not.toContain("github.com/dominator509");
     expect(serialized).not.toContain("provider.example.com");
     expect(serialized).not.toContain("+1 555 909 1212");
+    expect(serialized).not.toContain("report_task_123");
+    expect(serialized).not.toContain("task_123");
+    expect(serialized).not.toContain("raw-task-sync-report.json");
+    expect(serialized).not.toContain("handoff:missing-secret-script");
+    expect(serialized).not.toContain("provider_report_123");
+    expect(serialized).not.toContain("repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("raw report metadata");
     expect(review.containsUnredactedSensitiveValues).toBe(false);
     expect(review.redactions).toEqual(
       expect.arrayContaining([
         "ciRunUrl",
         "command",
+        "docsVerificationReport",
+        "handoffAllLog",
         "installOutput",
+        "ledgerAuditOutput",
+        "missingRootScripts",
+        "neutralRepositoryTrace",
         "phone",
         "providerReportUrl",
         "stderr",
         "stdout",
+        "stackTrace",
+        "taskSyncReportPath",
       ]),
     );
     expect(review.externalEvidenceRequired).toBe(handoffToolingRuntimeRequiredExternalEvidence);

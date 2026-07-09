@@ -299,7 +299,7 @@ export function buildRedactedMobileTestingArtifact(value: unknown): unknown {
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /email|phone|token|secret|authorization|credential|password|rawBody|stack|ciRunUrl|commitSha|runId|deviceId|pushToken|expo|eas|crashPayload|apiTranscript/i.test(key)
+        /email|phone|token|secret|authorization|credential|password|raw|payload|body|stack|error|log|output|env|database|dsn|url|uri|ciRunUrl|commitSha|runId|device|simulator|emulator|pushToken|expo|eas|ota|update|rollback|crash|api|offline|auth|session|tenant|client|route|deepLink|screenshot|video|trace|artifact|accessibility|biometric|secureStore|native/i.test(key)
           ? "[REDACTED]"
           : buildRedactedMobileTestingArtifact(entry),
       ]),

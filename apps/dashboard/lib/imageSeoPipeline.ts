@@ -117,10 +117,12 @@ export interface ImageSeoPipelineArtifactReview {
 }
 
 const imageSeoSensitiveKeyPattern =
-  /(?:authorization|bucket|clientsecret|credential|cookie|email|original|password|phone|private|secret|signedurl|sourceobjectkey|token)/i;
+  /(?:auditid|authorization|blurdataurl|bucket|clientsecret|credential|cookie|derivative|derivativemetadata|fileassetid|idempotencykey|imageurl|objectkey|original|password|phone|portfolioimageid|portfolioitemid|private|providerpayload|publicurl|raw|secret|signedurl|sourceobjectkey|tenantid|token)/i;
 const imageSeoEmailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const imageSeoPhonePattern = /\+?\d[\d ().-]{7,}\d/g;
 const imageSeoTokenPattern = /\b(?:aws|bearer|cdn|gcp|s3|sk|supabase)[A-Za-z0-9._:/-]{8,}\b/gi;
+const imageSeoArtifactValuePattern =
+  /(?:https?:\/\/[^\s"']+|(?:tenant|portfolio|file|asset|image|audit|idempotency|bucket|source|derivative|object|storage|cdn|lighthouse|artifact|workflow|ci|run|evidence|image-seo)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|data:image\/[A-Za-z0-9.+-]+;base64,[A-Za-z0-9+/=._-]+|[A-Za-z0-9_-]{24,})/giu;
 
 function redactImageSeoPipelineValue(value: unknown, key = ""): unknown {
   if (value === null || value === undefined) {
@@ -135,7 +137,8 @@ function redactImageSeoPipelineValue(value: unknown, key = ""): unknown {
     return value
       .replace(imageSeoEmailPattern, "[REDACTED_EMAIL]")
       .replace(imageSeoPhonePattern, "[REDACTED_PHONE]")
-      .replace(imageSeoTokenPattern, "[REDACTED_TOKEN]");
+      .replace(imageSeoTokenPattern, "[REDACTED_TOKEN]")
+      .replace(imageSeoArtifactValuePattern, "[REDACTED_ARTIFACT_VALUE]");
   }
 
   if (Array.isArray(value)) {

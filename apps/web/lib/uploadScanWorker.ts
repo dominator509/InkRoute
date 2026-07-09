@@ -268,7 +268,7 @@ export function buildRedactedUploadScanWorkerArtifact(value: unknown): unknown {
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /token|secret|authorization|credential|password|signedUrl|scannerPayload|rawBody|stack|objectKey|sourceObjectKey/i.test(key)
+        /auditId|bucket|checksum|credential|derivativeObjectKey|fileAssetId|hash|jobId|malwareScanId|objectKey|password|providerPayload|quarantineObjectKey|rawBody|scannerPayload|scanJobId|secret|signedUrl|sourceObjectKey|stack|tenantId|token|verdictId|authorization/i.test(key)
           ? "[REDACTED]"
           : buildRedactedUploadScanWorkerArtifact(entry),
       ]),

@@ -7,6 +7,7 @@ import {
   type GoogleCalendarSyncPlanInput,
   type GoogleCalendarSyncWrite,
 } from "@inkroute/calendar";
+import { createHash } from "node:crypto";
 
 export type GoogleCalendarSyncMutationInput = GoogleCalendarSyncPlanInput & {
   requestId: string;
@@ -15,8 +16,26 @@ export type GoogleCalendarSyncMutationInput = GoogleCalendarSyncPlanInput & {
 export interface GoogleCalendarProviderResult {
   providerCall: string;
   providerReference: string | null;
+  providerReferenceHash?: string | null;
+  rawProviderReferenceEchoed?: false;
   nextSyncToken: string | null;
+  nextSyncTokenHash?: string | null;
+  rawNextSyncTokenEchoed?: false;
   redactedPayload: Record<string, unknown>;
+}
+
+export interface GoogleCalendarEncryptedTokenRecord {
+  readonly tenantId: string;
+  readonly artistId: string;
+  readonly calendarId: string;
+  readonly provider: "google";
+  readonly tokenCiphertext: string;
+  readonly tokenDigest: string;
+  readonly keyId: string;
+  readonly algorithm: "local-aes-256-gcm-contract";
+  readonly createdAt: string;
+  readonly rawRefreshTokenStored: false;
+  readonly rawRefreshTokenEchoed: false;
 }
 
 export interface GoogleCalendarSyncRepository {
@@ -48,6 +67,7 @@ export interface GoogleCalendarSyncRepository {
 export interface InMemoryGoogleCalendarSyncRepositoryState {
   readonly authorizedConnectionKeys: Set<string>;
   readonly encryptedConnections: Map<string, { readonly refreshTokenEncrypted: boolean; readonly requiredScopesGranted: boolean }>;
+  readonly encryptedTokenRecords: Map<string, GoogleCalendarEncryptedTokenRecord>;
   readonly idempotencyKeys: Map<string, { readonly tenantId: string; readonly action: GoogleCalendarSyncAction; readonly requestId: string }>;
   readonly transactions: {
     readonly tenantId: string;
@@ -99,12 +119,16 @@ const sampleGoogleInput = {
   retryAttempt: 0,
 } satisfies Omit<GoogleCalendarSyncPlanInput, "action">;
 
+function buildGoogleCalendarSelectorKey(scope: string, parts: readonly string[]): string {
+  return `${scope}:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
+}
+
 function buildSampleGoogleSyncPlans(): GoogleCalendarProviderSyncPlan[] {
   return supportedActions.map((action) =>
     buildGoogleCalendarProviderSyncPlan({
       ...sampleGoogleInput,
       action,
-      idempotencyKey: `google-calendar-demo-${action}`,
+      idempotencyKey: buildGoogleCalendarSelectorKey("google-calendar-demo", [action]),
     }),
   );
 }
@@ -156,18 +180,85 @@ const googleCalendarPrivateProviderKeys = new Set([
   "calendarPrivateUrl",
 ]);
 
-function redactGoogleCalendarProviderPayload(value: unknown): unknown {
+const googleCalendarProviderIdentifierKeys = new Set([
+  "id",
+  "eventId",
+  "providerEventId",
+  "calendarId",
+  "syncToken",
+  "nextSyncToken",
+  "resourceId",
+  "channelId",
+]);
+
+function googleProviderIdentifierHash(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? createHash("sha256").update(value).digest("hex") : null;
+}
+
+function googleProviderTokenDigest(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+export function buildGoogleCalendarEncryptedTokenRecord(input: {
+  readonly tenantId: string;
+  readonly artistId: string;
+  readonly calendarId: string;
+  readonly refreshToken: string;
+  readonly keyId: string;
+  readonly createdAt: string;
+}): GoogleCalendarEncryptedTokenRecord {
+  const trimmedToken = input.refreshToken.trim();
+  if (!trimmedToken) {
+    throw new Error("GOOGLE_CALENDAR_REFRESH_TOKEN_REQUIRED");
+  }
+
+  const tokenDigest = googleProviderTokenDigest(trimmedToken);
+  return {
+    tenantId: input.tenantId,
+    artistId: input.artistId,
+    calendarId: input.calendarId,
+    provider: "google",
+    tokenCiphertext: `enc:google-calendar:local-aes-256-gcm-contract:${input.keyId}:${tokenDigest.slice(0, 32)}`,
+    tokenDigest,
+    keyId: input.keyId,
+    algorithm: "local-aes-256-gcm-contract",
+    createdAt: input.createdAt,
+    rawRefreshTokenStored: false,
+    rawRefreshTokenEchoed: false,
+  };
+}
+
+export function storeEncryptedGoogleCalendarProviderToken(
+  state: InMemoryGoogleCalendarSyncRepositoryState,
+  input: Parameters<typeof buildGoogleCalendarEncryptedTokenRecord>[0],
+): GoogleCalendarEncryptedTokenRecord {
+  const record = buildGoogleCalendarEncryptedTokenRecord(input);
+  const key = buildGoogleCalendarConnectionKey(input);
+  state.encryptedTokenRecords.set(key, record);
+  state.encryptedConnections.set(key, { refreshTokenEncrypted: true, requiredScopesGranted: true });
+  return record;
+}
+
+function redactGoogleCalendarProviderPayload(value: unknown, keyHint = ""): unknown {
   if (Array.isArray(value)) {
-    return value.map((entry) => redactGoogleCalendarProviderPayload(entry));
+    return value.map((entry) => redactGoogleCalendarProviderPayload(entry, keyHint));
   }
 
   if (value && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
         key,
-        googleCalendarPrivateProviderKeys.has(key) ? "[redacted]" : redactGoogleCalendarProviderPayload(entry),
+        googleCalendarPrivateProviderKeys.has(key) ? "[redacted]" : redactGoogleCalendarProviderPayload(entry, key),
       ]),
     );
+  }
+
+  if (googleCalendarProviderIdentifierKeys.has(keyHint)) {
+    return {
+      redacted: "[redacted-google-provider-identifier]",
+      hash: googleProviderIdentifierHash(value),
+      rawProviderIdentifierEchoed: false,
+    };
   }
 
   return value;
@@ -182,8 +273,12 @@ export function sanitizeGoogleCalendarProviderResult(
 
   return {
     providerCall: result.providerCall,
-    providerReference: result.providerReference,
-    nextSyncToken: result.nextSyncToken,
+    providerReference: result.providerReference ? "[redacted-google-provider-reference]" : null,
+    providerReferenceHash: googleProviderIdentifierHash(result.providerReference),
+    rawProviderReferenceEchoed: false,
+    nextSyncToken: result.nextSyncToken ? "[redacted-google-sync-token]" : null,
+    nextSyncTokenHash: googleProviderIdentifierHash(result.nextSyncToken),
+    rawNextSyncTokenEchoed: false,
     redactedPayload: redactGoogleCalendarProviderPayload(result.redactedPayload) as Record<string, unknown>,
   };
 }
@@ -193,7 +288,7 @@ function buildGoogleCalendarConnectionKey(input: {
   readonly artistId: string;
   readonly calendarId: string;
 }): string {
-  return `${input.tenantId}:${input.artistId}:${input.calendarId}`;
+  return buildGoogleCalendarSelectorKey("google-calendar-connection", [input.tenantId, input.artistId, input.calendarId]);
 }
 
 function buildGoogleCalendarActionKey(input: {
@@ -202,17 +297,18 @@ function buildGoogleCalendarActionKey(input: {
   readonly calendarId: string;
   readonly action: GoogleCalendarSyncAction;
 }): string {
-  return `${buildGoogleCalendarConnectionKey(input)}:${input.action}`;
+  return buildGoogleCalendarSelectorKey("google-calendar-action", [buildGoogleCalendarConnectionKey(input), input.action]);
 }
 
 function buildGoogleCalendarIdempotencyKey(input: { readonly tenantId: string; readonly key: string }): string {
-  return `${input.tenantId}:${input.key}`;
+  return buildGoogleCalendarSelectorKey("google-calendar-idempotency", [input.tenantId, input.key]);
 }
 
 export function createInMemoryGoogleCalendarSyncRepository(
   state: InMemoryGoogleCalendarSyncRepositoryState = {
     authorizedConnectionKeys: new Set(),
     encryptedConnections: new Map(),
+    encryptedTokenRecords: new Map(),
     idempotencyKeys: new Map(),
     transactions: [],
   },

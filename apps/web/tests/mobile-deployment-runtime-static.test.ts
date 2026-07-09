@@ -421,10 +421,26 @@ describe("GAP-116 mobile deployment runtime wiring", () => {
       pushToken: "ExponentPushToken[secret]",
       nativeCredential: "ios_distribution_certificate_secret",
       storeReadiness: { appStoreEmail: "owner@example.com", phone: "+1 555 777 1212" },
+      buildLog: "EAS build emitted PRIVATE_ENV=value",
+      runtimeChannel: "production-private-channel",
+      rollbackTranscript: "rollback touched private_update_123",
+      storeSubmissionTranscript: "appstore_submission_01HZYXZYXZYXZYXZYXZYXZYXZ approved com.inkroute.mobile",
+      nativeSigningTranscript: "provisioning_profile_01HZYXZYXZYXZYXZYXZYXZYXZ used keystore_release_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      otaTranscript: "ota_update_01HZYXZYXZYXZYXZYXZYXZYXZ published to channel_production_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      ciTranscript: "workflow run ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ for commit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      screenshotPath: "artifacts/mobile-deployment/private-screen.png",
+      videoPath: "artifacts/mobile-deployment/private-video.mp4",
+      crashPayload: { nativeStack: "private native crash" },
+      qaNotes: "device QA captured private client name",
+      environment: { DATABASE_URL: "postgresql://mobile:secret@db.example.test:5432/app" },
       nested: {
         authorization: "Bearer mobile-deployment-token",
         tenantId: "tenant_demo",
       },
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_mobile_deployment",
+      reviewerHandle: "reviewer_mobile_owner",
+      codeownerSelector: "CODEOWNER:mobile-platform-team",
     };
     const redacted = buildRedactedMobileDeploymentArtifact(rawArtifact);
     const review = buildMobileDeploymentRuntimeArtifactReview("coverage/mobile-deployment-ci-run-redacted.json", rawArtifact);
@@ -441,19 +457,51 @@ describe("GAP-116 mobile deployment runtime wiring", () => {
     expect(serialized).not.toContain("+1 555 777 1212");
     expect(serialized).not.toContain("Bearer mobile-deployment-token");
     expect(serialized).not.toContain("tenant_demo");
+    expect(serialized).not.toContain("PRIVATE_ENV=value");
+    expect(serialized).not.toContain("production-private-channel");
+    expect(serialized).not.toContain("private_update_123");
+    expect(serialized).not.toContain("appstore_submission_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("com.inkroute.mobile");
+    expect(serialized).not.toContain("provisioning_profile_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("ota_update_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("artifacts/mobile-deployment/private-screen.png");
+    expect(serialized).not.toContain("artifacts/mobile-deployment/private-video.mp4");
+    expect(serialized).not.toContain("private native crash");
+    expect(serialized).not.toContain("private client name");
+    expect(serialized).not.toContain("postgresql://mobile:secret@db.example.test:5432/app");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("pr_mobile_deployment");
+    expect(serialized).not.toContain("reviewer_mobile_owner");
+    expect(serialized).not.toContain("CODEOWNER:mobile-platform-team");
     expect(review.containsUnredactedSensitiveValues).toBe(false);
     expect(review.redactions).toEqual(
       expect.arrayContaining([
         "authorization",
+        "buildLog",
         "buildUrl",
+        "codeownerSelector",
+        "crashPayload",
         "deviceUdid",
         "easProjectId",
+        "environment",
         "installUrl",
         "nativeCredential",
+        "nativeSigningTranscript",
+        "otaTranscript",
         "otaUrl",
+        "pullRequestSelector",
         "pushToken",
+        "qaNotes",
+        "repositorySelector",
+        "reviewerHandle",
+        "rollbackTranscript",
+        "runtimeChannel",
+        "screenshotPath",
         "sentryDsn",
+        "storeSubmissionTranscript",
         "storeReadiness",
+        "videoPath",
       ]),
     );
     expect(review.externalEvidenceRequired).toBe(mobileDeploymentRuntimeRequiredExternalEvidence);

@@ -260,7 +260,7 @@ describe("auth authorization helpers", () => {
       action: "allow",
       allowed: true,
       cachePolicy: "no-store",
-      auditAction: "dashboard:booking:write:/bookings/booking_001",
+      auditAction: expect.stringMatching(/^dashboard:booking:write:[a-f0-9]{64}$/),
     });
   });
 
@@ -283,7 +283,7 @@ describe("auth authorization helpers", () => {
       requiresSecureStore: true,
       requiresTenantMembership: true,
       requiresBiometricUnlock: true,
-      auditAction: "mobile:booking:read:tenant_001",
+      auditAction: expect.stringMatching(/^mobile:booking:read:[a-f0-9]{64}$/),
     });
   });
 
@@ -454,7 +454,11 @@ describe("auth authorization helpers", () => {
       action: "reject_419",
       allowed: false,
       statusCode: 419,
-      responseHeaders: { "cache-control": "no-store" },
+      responseHeaders: {
+        "cache-control": "no-store",
+        "x-authz-audit-action-hash": expect.stringMatching(/^[a-f0-9]{64}$/),
+        "x-authz-audit-action-echoed": "false",
+      },
     });
 
     expect(
@@ -506,6 +510,10 @@ describe("auth authorization helpers", () => {
       allowed: true,
       statusCode: 200,
       auditAction: "api:POST:release:write:/api/releases",
+      responseHeaders: {
+        "x-authz-audit-action-hash": expect.stringMatching(/^[a-f0-9]{64}$/),
+        "x-authz-audit-action-echoed": "false",
+      },
     });
   });
 
@@ -928,6 +936,10 @@ describe("auth authorization helpers", () => {
       "auth.provider.session",
     ]);
     expect(providerSessionCallbackContract.every((entry) => entry.rawProviderTokenLoggingAllowed === false)).toBe(true);
+    expect(providerSessionCallbackContract.every((entry) => entry.rawProviderSubjectLoggingAllowed === false)).toBe(true);
+    expect(providerSessionCallbackContract.every((entry) => entry.rawProviderSessionLoggingAllowed === false)).toBe(true);
+    expect(providerSessionCallbackContract.every((entry) => entry.rawUserSelectorLoggingAllowed === false)).toBe(true);
+    expect(providerSessionCallbackContract.every((entry) => entry.rawTenantSelectorLoggingAllowed === false)).toBe(true);
 
     const plan = buildProviderSessionStoreReadinessPlan({
       packageScripts: { test: "vitest run" },
@@ -954,6 +966,15 @@ describe("auth authorization helpers", () => {
     expect(plan.requiredCommands).toBe(providerSessionStoreRequiredCommands);
     expect(plan.requiredEvidence).toBe(providerSessionStoreRequiredEvidence);
     expect(plan.requiredControls).toBe(providerSessionStoreRequiredControls);
+    expect(providerSessionStoreRequiredControls).toContain(
+      "Write redacted AuditLog rows for auth lifecycle and authorization decisions using hashed provider/user/session/tenant selectors only.",
+    );
+    expect(providerSessionStoreRequiredEvidence).toContain(
+      "provider selection, redacted environment/callback configuration, and login/logout/session callback evidence with raw provider subject/session selectors suppressed",
+    );
+    expect(providerSessionStoreRequiredEvidence).toContain(
+      "provider identity mapping plus persisted user, TenantMember, CustomRole, and session lookup evidence with hashed user/tenant/session selectors",
+    );
     expect(plan.blockers).toContain("Auth provider must be selected before provider-backed sessions can be claimed.");
     expect(plan.blockers).toContain("TenantMember lookup must come from the database or provider-backed server store.");
     expect(plan.blockers).toContain("Tenant isolation smoke tests must deny cross-tenant provider sessions.");

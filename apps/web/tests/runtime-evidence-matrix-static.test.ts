@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   runtimeEvidenceArtifactPaths,
   runtimeEvidenceCommands,
+  runtimeEvidenceCurrentRecords,
   runtimeEvidenceExternalArtifacts,
   runtimeEvidenceExternalCommands,
   runtimeEvidenceExecutionPolicy,
@@ -125,11 +126,30 @@ describe("runtime evidence matrix contract", () => {
 
   it("keeps missing runtime proof explicit until redacted command evidence exists", () => {
     expect(runtimeEvidenceReadiness.status).toBe("blocked");
-    expect(runtimeEvidenceReadiness.missingEvidenceIds).toEqual([...runtimeEvidenceRequirementIds]);
-    expect(runtimeEvidenceReadiness.nonPassingEvidenceIds).toEqual([]);
+    expect(runtimeEvidenceCurrentRecords.map((record) => record.id)).toEqual([
+      "dependency-install",
+      "workspace-all",
+      "handoff-all",
+      "quality-all",
+      "typecheck",
+      "unit-tests",
+      "web-build",
+      "dashboard-build",
+    ]);
+    expect(runtimeEvidenceReadiness.missingEvidenceIds).toEqual(["workspace-runtime-evidence"]);
+    expect(runtimeEvidenceReadiness.nonPassingEvidenceIds).toEqual([
+      "workspace-all",
+      "handoff-all",
+      "quality-all",
+      "typecheck",
+      "unit-tests",
+      "web-build",
+      "dashboard-build",
+    ]);
     expect(runtimeEvidenceReadiness.requiredCommands).toBe(runtimeEvidenceCommands);
     expect(runtimeEvidenceReadiness.requiredEvidence).toBe(runtimeEvidenceReadinessRequiredEvidence);
-    expect(runtimeEvidenceReadiness.blockers).toContain("Runtime evidence is missing for pnpm install.");
+    expect(runtimeEvidenceReadiness.blockers).toContain("Runtime evidence is missing for pnpm workspace:runtime-evidence.");
+    expect(runtimeEvidenceReadiness.blockers).toContain("Runtime evidence for pnpm workspace:all must be passed with a redacted evidence label.");
     expect(runtimeEvidenceReadiness.blockers).toContain("Runtime evidence audit must pass before runtime readiness can be claimed.");
   });
 
@@ -254,6 +274,7 @@ describe("runtime evidence matrix contract", () => {
     expect(gapTracker).toContain("buildRuntimeEvidenceDecisionRequiredEvidence");
     expect(gapTracker).toContain("runtimeEvidenceRequiredEvidence");
     expect(gapTracker).toContain("runtimeEvidenceRequiredExternalEvidence");
+    expect(gapTracker).toContain("runtimeEvidenceCurrentRecords");
     expect(gapTracker).toContain("buildRuntimeEvidenceArtifactReview");
     expect(gapTracker).toContain("buildRuntimeEvidenceRedactedEvidenceBundle");
   });
@@ -336,7 +357,20 @@ describe("runtime evidence matrix contract", () => {
         tenantId: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
         databaseUrl: "postgres://inkroute:secret@example.neon.tech/inkroute",
       },
+      commandOutput: "workspace:all failed with PRIVATE_ENV=value",
+      rawLog: "dashboard build stack tenant_private_123",
+      artifactPath: "coverage/private-runtime-artifact.json",
+      productionBlockerNotes: "operator user_private_123 must rerun quality gate",
       contactPhone: "+1 (555) 867-5309",
+      neutralRuntimeLabel: "runtime_evidence_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralRepositoryLabel: "repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralBranchLabel: "branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralPrLabel: "pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralReviewerLabel: "reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCodeownerLabel: "codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCiLabel: "ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralArtifactLocation: "coverage/runtime-evidence/private-output.json",
+      neutralDatabaseLocation: "postgresql://tenant_demo:secret@db.example.com/inkroute",
     };
 
     expect(buildRedactedRuntimeEvidenceArtifact(artifact)).toEqual({
@@ -347,7 +381,20 @@ describe("runtime evidence matrix contract", () => {
         tenantId: "[REDACTED]",
         databaseUrl: "[REDACTED]",
       },
+      commandOutput: "[REDACTED]",
+      rawLog: "[REDACTED]",
+      artifactPath: "[REDACTED]",
+      productionBlockerNotes: "[REDACTED]",
       contactPhone: "[REDACTED]",
+      neutralRuntimeLabel: "[REDACTED]",
+      neutralRepositoryLabel: "[REDACTED]",
+      neutralBranchLabel: "[REDACTED]",
+      neutralPrLabel: "[REDACTED]",
+      neutralReviewerLabel: "[REDACTED]",
+      neutralCodeownerLabel: "[REDACTED]",
+      neutralCiLabel: "[REDACTED]",
+      neutralArtifactLocation: "[REDACTED]",
+      neutralDatabaseLocation: "[REDACTED]",
     });
 
     const review = buildRuntimeEvidenceArtifactReview(artifact);
@@ -361,7 +408,20 @@ describe("runtime evidence matrix contract", () => {
         "evidenceLabel",
         "persistence.tenantId",
         "persistence.databaseUrl",
+        "commandOutput",
+        "rawLog",
+        "artifactPath",
+        "productionBlockerNotes",
         "contactPhone",
+        "neutralRuntimeLabel",
+        "neutralRepositoryLabel",
+        "neutralBranchLabel",
+        "neutralPrLabel",
+        "neutralReviewerLabel",
+        "neutralCodeownerLabel",
+        "neutralCiLabel",
+        "neutralArtifactLocation",
+        "neutralDatabaseLocation",
       ]),
     );
     expect(review.requiredExternalEvidence).toContain("Production blockers remain visible in runtime evidence until resolved.");

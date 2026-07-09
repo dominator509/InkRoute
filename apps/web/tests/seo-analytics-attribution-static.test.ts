@@ -106,9 +106,24 @@ describe("GAP-074 SEO analytics attribution wiring", () => {
     const redacted = buildRedactedSeoAnalyticsArtifact({
       searchConsoleCredential: "searchconsole-token",
       clientEmail: "ari@example.test",
+      tenantId: "tenant_private_123",
+      bookingRequestId: "booking_private_123",
+      portfolioItemId: "portfolio_private_123",
+      campaignId: "campaign_private_123",
+      analyticsEventId: "event_private_123",
+      importedRowId: "search_console_row_private_123",
+      query: "private tattoo query",
+      pageUrl: "https://tenant.example.test/styles/private-style",
+      referrerUrl: "https://search.example.test?q=private",
+      utmCampaign: "private-campaign",
+      dashboardReport: { topPage: "/private-page" },
+      renderedHtml: "<main>private analytics dashboard</main>",
+      ciArtifactUrl: "https://github.example.test/actions/runs/123/artifacts/456",
+      commandOutput: "seo analytics import failed with private row",
       publicSummary: "SEO analytics evidence captured",
       nested: {
         providerPayload: { token: "provider-secret" },
+        stackTrace: "Error: private analytics stack",
         publicStatus: "fixture",
       },
     });
@@ -116,9 +131,24 @@ describe("GAP-074 SEO analytics attribution wiring", () => {
     expect(redacted).toEqual({
       searchConsoleCredential: "[redacted]",
       clientEmail: "[redacted]",
+      tenantId: "[redacted]",
+      bookingRequestId: "[redacted]",
+      portfolioItemId: "[redacted]",
+      campaignId: "[redacted]",
+      analyticsEventId: "[redacted]",
+      importedRowId: "[redacted]",
+      query: "[redacted]",
+      pageUrl: "[redacted]",
+      referrerUrl: "[redacted]",
+      utmCampaign: "[redacted]",
+      dashboardReport: "[redacted]",
+      renderedHtml: "[redacted]",
+      ciArtifactUrl: "[redacted]",
+      commandOutput: "[redacted]",
       publicSummary: "SEO analytics evidence captured",
       nested: {
         providerPayload: "[redacted]",
+        stackTrace: "[redacted]",
         publicStatus: "fixture",
       },
     });
@@ -192,10 +222,17 @@ describe("GAP-074 SEO analytics attribution wiring", () => {
     expect(analyticsRouteSource).not.toContain('}, { status: 400 });');
     expect(analyticsRouteSource).not.toContain('}, { status: 404 });');
     expect(analyticsRouteSource).toContain("persistSeoAnalyticsAttribution(prisma");
+    expect(analyticsRouteSource).toContain("buildSafePublicAnalyticsEventResponse");
+    expect(analyticsRouteSource).toContain("tenantIdEchoed: false");
+    expect(analyticsRouteSource).toContain("bookingRequestIdEchoed: false");
+    expect(analyticsRouteSource).toContain("portfolioItemIdEchoed: false");
+    expect(analyticsRouteSource).toContain("rawAttributionIdsEchoed: false");
+    expect(analyticsRouteSource).toContain("rawIdempotencyKeyEchoed: false");
     expect(analyticsRouteSource).toContain("database_persisted");
     expect(analyticsRouteSource).toContain("accepted_without_provider_persistence");
     expect(analyticsRouteSource).toContain("DATABASE_UNAVAILABLE");
     expect(analyticsRouteSource).toContain("previewAnalyticsAcceptanceDisabled");
+    expect(analyticsRouteSource).not.toContain("event: { name: event.name, payload: redactAnalyticsPayload(event.payload) }");
   });
 
   it("keeps BookingRequest attribution persistence wired through existing fields", () => {

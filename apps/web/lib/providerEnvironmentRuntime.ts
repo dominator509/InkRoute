@@ -238,15 +238,22 @@ export interface ProviderEnvironmentRuntimeRedactedHandoffPacket {
 }
 
 const sensitiveProviderEnvironmentKeyPattern =
-  /(token|secret|password|authorization|cookie|env|databaseUrl|dbUrl|provider|projectId|resourceId|ciRunUrl|deployUrl|previewUrl|stagingUrl|productionUrl|sentry|eas|github|bucket|secretStore|tenantId|userId|runId|email|phone)/i;
+  /(token|secret|password|authorization|cookie|env|databaseUrl|dbUrl|provider|projectId|resourceId|ciRunUrl|deployUrl|previewUrl|stagingUrl|productionUrl|sentry|eas|github|bucket|secretStore|tenantId|userId|runId|email|phone|raw|payload|body|stack|error|log|output|transcript|database|dsn|migration|storage|acl|source.?map|protection|handoff|artifact|label|smoke|strict|verifier|url|uri|repository|repo|branch|pull|pr|reviewer|codeowner)/i;
 
 const sensitiveProviderEnvironmentStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
   [/https?:\/\/[^\s"'<>]+/gi, "[REDACTED_URL]"],
+  [/postgres(?:ql)?:\/\/[^\s"'<>]+/gi, "[REDACTED_DSN]"],
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
   [/\b(?:sk|pk|rk|whsec)_(?:live|test)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
-  [/\b(?:tenant|user|project|provider|bucket|run|env|eas|sentry|gh)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+  [/\brepo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\b/gi, "[REDACTED_REPOSITORY_SELECTOR]"],
+  [/\bbranch:[A-Za-z0-9_./-]+\b/gi, "[REDACTED_BRANCH_SELECTOR]"],
+  [/\bpr[_:#-]?[A-Za-z0-9_.-]+\b/gi, "[REDACTED_PR_SELECTOR]"],
+  [/\breviewer[_:@-]?[A-Za-z0-9_.-]+\b/gi, "[REDACTED_REVIEWER_SELECTOR]"],
+  [/\bCODEOWNER:[A-Za-z0-9_.@/-]+\b/g, "[REDACTED_CODEOWNER_SELECTOR]"],
+  [/\b(?:tenant|user|project|provider|bucket|run|env|eas|sentry|gh|github|vercel|neon|supabase|render|resource|secret|workflow|ci|commit|deployment|preview|staging|production|source.?map|release)_[A-Za-z0-9_.-]+\b/gi, "[REDACTED_ID]"],
+  [/\b(?:coverage|test-results|artifacts|reports)\/[A-Za-z0-9_./-]{6,}\b/gi, "[REDACTED_ARTIFACT_PATH]"],
 ];
 
 export type ProviderEnvironmentRunRecordInput = ProviderEnvironmentRuntimeEvidenceInput & {

@@ -234,10 +234,31 @@ describe("seed runtime execution contract", () => {
       clientEmail: "client@example.com",
       clientPhone: "+1 555 222 1212",
       commandTranscript: "DATABASE_URL=postgres://inkroute:secret@db.example.com:5432/inkroute pnpm db:seed",
+      repositorySelector: "repo:dominator509/InkRoute",
+      branchSelector: "branch:production/seed-runtime",
+      pullRequestSelector: "pr_seed_runtime",
+      reviewerHandle: "reviewer_seed_owner",
+      codeownerSelector: "CODEOWNER:data-seed-team",
       nested: {
         providerToken: "github_pat_abcdefghijklmnopqrstuvwxyz123456",
         publicSummary: "seed runtime evidence captured",
       },
+      seededDomainRows: {
+        bookingWorkflowId: "workflow_seed_1234567890abcdefghijklmnopqrstuvwxyz",
+        paymentId: "payment_seed_1234567890abcdefghijklmnopqrstuvwxyz",
+        fileAssetId: "file_seed_1234567890abcdefghijklmnopqrstuvwxyz",
+        messageId: "message_seed_1234567890abcdefghijklmnopqrstuvwxyz",
+        seoPageId: "seo_seed_1234567890abcdefghijklmnopqrstuvwxyz",
+        releaseId: "release_seed_1234567890abcdefghijklmnopqrstuvwxyz",
+        featureFlagId: "flag_seed_1234567890abcdefghijklmnopqrstuvwxyz",
+        auditLogId: "audit_seed_1234567890abcdefghijklmnopqrstuvwxyz",
+      },
+      fakeDemoDataReport: "demo client seed_demo_1234567890abcdefghijklmnopqrstuvwxyz only",
+      legalPlaceholderProof: "placeholder consent copy for client_seed_1234567890abcdefghijklmnopqrstuvwxyz",
+      productionProviderBanOutput: "blocked production provider provider_seed_1234567890abcdefghijklmnopqrstuvwxyz",
+      webApiSeededDataSmoke: "GET /api/public/tenant_seed_1234567890abcdefghijklmnopqrstuvwxyz returned seeded rows",
+      dashboardSeededDataSmoke: "dashboard smoke loaded client_seed_1234567890abcdefghijklmnopqrstuvwxyz",
+      ciArtifactPath: "test-results/seed-runtime-execution/seed.log",
     };
     const redactedOnly = buildRedactedSeedRuntimeExecutionArtifact(artifact);
     const review = buildSeedRuntimeExecutionArtifactReview(artifact);
@@ -248,13 +269,33 @@ describe("seed runtime execution contract", () => {
     expect(serialized).not.toContain("client@example.com");
     expect(serialized).not.toContain("+1 555 222 1212");
     expect(serialized).not.toContain("github_pat_abcdefghijklmnopqrstuvwxyz123456");
+    expect(serialized).not.toContain("workflow_seed_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(serialized).not.toContain("seed_demo_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(serialized).not.toContain("provider_seed_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("branch:production/seed-runtime");
+    expect(serialized).not.toContain("pr_seed_runtime");
+    expect(serialized).not.toContain("reviewer_seed_owner");
+    expect(serialized).not.toContain("CODEOWNER:data-seed-team");
     expect(review.redactions).toEqual([
       "databaseUrl",
       "seededTenantId",
       "clientEmail",
       "clientPhone",
       "commandTranscript",
+      "repositorySelector",
+      "branchSelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
       "nested.providerToken",
+      "seededDomainRows",
+      "fakeDemoDataReport",
+      "legalPlaceholderProof",
+      "productionProviderBanOutput",
+      "webApiSeededDataSmoke",
+      "dashboardSeededDataSmoke",
+      "ciArtifactPath",
     ]);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(seedRuntimeExecutionRequiredExternalEvidence);
@@ -278,6 +319,7 @@ describe("seed runtime execution contract", () => {
     expect(gapTracker).toContain("seedRuntimeExecutionRequiredExternalEvidence");
     expect(gapTracker).toContain("buildRedactedSeedRuntimeExecutionArtifact");
     expect(gapTracker).toContain("buildSeedRuntimeExecutionArtifactReview");
+    expect(gapTracker).toContain("repository/branch/PR/reviewer/CODEOWNER selectors");
   });
 
   it("pins current seed runtime execution proof files for GAP-018", () => {

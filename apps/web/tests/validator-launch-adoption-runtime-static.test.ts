@@ -93,6 +93,9 @@ describe("validator launch adoption runtime contract", () => {
     }
     expect(validatorsReadiness).toContain("buildValidatorLaunchAdoptionEvidencePlan");
     expect(validatorsTests).toContain("buildValidatorLaunchAdoptionEvidencePlan");
+    expect(validatorsTests).toContain("covers messaging, notification, and provider webhook malformed payload edges");
+    expect(validatorsTests).toContain("covers observability report and filter edge cases");
+    expect(validatorsTests).toContain("covers tenancy/auth and dynamic form edge cases with sensitive-field denial");
     expect(bookingRoute).toContain("bookingRequestInputSchema");
     expect(stripeWebhookRoute).toContain("webhook");
     expect(dashboardReleaseRoute).toContain("releaseCreateInputSchema");
@@ -286,6 +289,11 @@ describe("validator launch adoption runtime contract", () => {
       clientEmail: "client@example.com",
       clientPhone: "+1 555 222 1212",
       medicalConsent: "raw consent text",
+      repositorySelector: "repo:dominator509/InkRoute",
+      branchSelector: "branch:production/validator-launch",
+      pullRequestSelector: "pr_validator_launch",
+      reviewerHandle: "reviewer_validator_owner",
+      codeownerSelector: "CODEOWNER:validator-platform-team",
       nested: {
         databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
         providerToken: "github_pat_abcdefghijklmnopqrstuvwxyz123456",
@@ -300,6 +308,11 @@ describe("validator launch adoption runtime contract", () => {
     expect(serialized).not.toContain("payload_1234567890abcdefghijklmnopqrstuvwxyz");
     expect(serialized).not.toContain("+1 555 222 1212");
     expect(serialized).not.toContain("raw consent text");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("branch:production/validator-launch");
+    expect(serialized).not.toContain("pr_validator_launch");
+    expect(serialized).not.toContain("reviewer_validator_owner");
+    expect(serialized).not.toContain("CODEOWNER:validator-platform-team");
     expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
     expect(serialized).not.toContain("github_pat_abcdefghijklmnopqrstuvwxyz123456");
     expect(review.redactions).toEqual([
@@ -307,6 +320,11 @@ describe("validator launch adoption runtime contract", () => {
       "clientEmail",
       "clientPhone",
       "medicalConsent",
+      "repositorySelector",
+      "branchSelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
       "nested.databaseUrl",
       "nested.providerToken",
     ]);
@@ -333,6 +351,7 @@ describe("validator launch adoption runtime contract", () => {
     expect(gapTracker).toContain("validatorLaunchAdoptionRequiredExternalEvidence");
     expect(gapTracker).toContain("buildRedactedValidatorLaunchAdoptionArtifact");
     expect(gapTracker).toContain("buildValidatorLaunchAdoptionArtifactReview");
+    expect(gapTracker).toContain("GAP-020 validator launch adoption artifact hardening now redacts repository/branch/PR/reviewer/CODEOWNER selectors");
   });
 
   it("pins current validator launch adoption proof files for GAP-020", () => {

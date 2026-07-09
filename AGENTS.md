@@ -161,7 +161,7 @@ Allowed:
 - record architecture decisions
 - retrieve prior decisions
 
-Forbidden unless explicitly approved:
+Forbidden unless explicitly approved (evidence-gated):
 
 - reading the entire vault
 - reading unrelated personal notes

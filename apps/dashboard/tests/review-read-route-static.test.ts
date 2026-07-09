@@ -32,15 +32,28 @@ describe("dashboard review read route contract", () => {
     expect(routeSource).toContain("tx.auditLog.create");
     expect(routeSource).toContain('action: "review:read:list"');
     expect(routeSource).toContain('entityType: "Review"');
-    expect(routeSource).toContain("auditId: result.audit.id");
+    expect(routeSource).toContain("auditLogged: true");
+    expect(routeSource).toContain("auditIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).toContain("function buildReviewReadResponseProjection");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("reviewIdsEchoed: false");
+    expect(routeSource).toContain("artistIdsEchoed: false");
+    expect(routeSource).toContain("privateClientReferencesEchoed: false");
+    expect(routeSource).toContain("artistLinked: Boolean(review.artistId)");
+    expect(routeSource).not.toContain("auditId: result.audit.id");
+    expect(routeSource).not.toContain("id: review.id");
+    expect(routeSource).not.toContain("tenantId: review.tenantId");
+    expect(routeSource).not.toContain("artistId: review.artistId");
   });
 
   it("redacts review bodies and private client/booking references", () => {
-    expect(routeSource).toContain("redactReviewBody");
     expect(routeSource).toContain('"body"');
     expect(routeSource).toContain('"clientId"');
     expect(routeSource).toContain('"bookingRequestId"');
-    expect(routeSource).toContain("bodyPreview: redactReviewBody(review.body)");
+    expect(routeSource).not.toContain("body: true");
+    expect(routeSource).toContain('bodyPreview: "[redacted-review-body]"');
+    expect(routeSource).toContain("bodySelectedFromDatabase: false");
     expect(routeSource).not.toContain("clientId: true");
     expect(routeSource).not.toContain("bookingRequestId: true");
   });

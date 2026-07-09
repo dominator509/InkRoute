@@ -34,6 +34,7 @@ describe("domain event and audit transaction runtime contract", () => {
   const bookingTests = readRepoFile("packages/booking/tests/booking-readiness.test.ts");
   const paymentsSource = readRepoFile("packages/payments/src/index.ts");
   const paymentsTests = readRepoFile("packages/payments/tests/deposit-policy.test.ts");
+  const domainEventAuditSource = readRepoFile("apps/web/lib/domainEventAuditRuntime.ts");
   const schema = readRepoFile("packages/db/prisma/schema.prisma");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
@@ -298,8 +299,32 @@ describe("domain event and audit transaction runtime contract", () => {
       idempotencyKey: "domain-event:booking:accepted",
     });
 
-    expect(committed).toMatchObject({ status: "committed", kind: "booking", subjectId: "booking_static" });
-    expect(replayed).toMatchObject({ status: "replayed", kind: "booking", subjectId: "booking_static" });
+    expect(committed).toMatchObject({
+      status: "committed",
+      kind: "booking",
+      nextStatus: "accepted",
+      stateMutationPersisted: true,
+      bookingStateEventPersisted: true,
+      paymentAuditPersisted: false,
+      auditLogged: true,
+      internalPersistenceIdsStored: false,
+    });
+    expect(replayed).toMatchObject({
+      status: "replayed",
+      kind: "booking",
+      nextStatus: "accepted",
+      stateMutationPersisted: true,
+      bookingStateEventPersisted: true,
+      paymentAuditPersisted: false,
+      auditLogged: true,
+      internalPersistenceIdsStored: false,
+    });
+    expect(committed).not.toHaveProperty("subjectId");
+    expect(committed).not.toHaveProperty("tenantId");
+    expect(committed).not.toHaveProperty("idempotencyKey");
+    expect(replayed).not.toHaveProperty("subjectId");
+    expect(replayed).not.toHaveProperty("tenantId");
+    expect(replayed).not.toHaveProperty("idempotencyKey");
     expect(calls).toEqual([
       "idempotencyKey.findUnique",
       "idempotencyKey.create",
@@ -309,6 +334,14 @@ describe("domain event and audit transaction runtime contract", () => {
       "idempotencyKey.update",
       "idempotencyKey.findUnique",
     ]);
+  });
+
+  it("stores domain event audit metadata without raw idempotency keys", () => {
+    expect(domainEventAuditSource).toContain("idempotencyPersisted: true");
+    expect(domainEventAuditSource).toContain("rawIdempotencyKeyStored: false");
+    expect(domainEventAuditSource).toContain("internalPersistenceIdsStored: false");
+    expect(domainEventAuditSource).not.toContain("metadata: { idempotencyKey: input.idempotencyKey");
+    expect(domainEventAuditSource).not.toContain("idempotencyKey: input.idempotencyKey,");
   });
 
   it("keeps domain event/audit execution classified, redacted, and transaction-gated", () => {
@@ -343,6 +376,11 @@ describe("domain event and audit transaction runtime contract", () => {
       paymentId: "payment_1234567890abcdefghijklmnopqrstuvwxyz",
       providerPayload: "stripe_secret_payload",
       clientEmail: "client@example.com",
+      repositorySelector: "repo:dominator509/InkRoute",
+      branchSelector: "branch:production/domain-event-audit",
+      pullRequestSelector: "pr_domain_event_audit",
+      reviewerHandle: "reviewer_domain_event_owner",
+      codeownerSelector: "CODEOWNER:event-audit-team",
       nested: {
         databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
         auditLogId: "audit_1234567890abcdefghijklmnopqrstuvwxyz",
@@ -359,11 +397,21 @@ describe("domain event and audit transaction runtime contract", () => {
     expect(serialized).not.toContain("client@example.com");
     expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
     expect(serialized).not.toContain("audit_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("branch:production/domain-event-audit");
+    expect(serialized).not.toContain("pr_domain_event_audit");
+    expect(serialized).not.toContain("reviewer_domain_event_owner");
+    expect(serialized).not.toContain("CODEOWNER:event-audit-team");
     expect(review.redactions).toEqual([
       "bookingRequestId",
       "paymentId",
       "providerPayload",
       "clientEmail",
+      "repositorySelector",
+      "branchSelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
       "nested.databaseUrl",
       "nested.auditLogId",
     ]);
@@ -388,6 +436,7 @@ describe("domain event and audit transaction runtime contract", () => {
     expect(gapTracker).toContain("domainEventAuditRequiredExternalEvidence");
     expect(gapTracker).toContain("buildRedactedDomainEventAuditArtifact");
     expect(gapTracker).toContain("buildDomainEventAuditArtifactReview");
+    expect(gapTracker).toContain("GAP-024 domain event audit artifact hardening now redacts repository/branch/PR/reviewer/CODEOWNER selectors");
   });
 
   it("pins current domain event audit proof files for GAP-024", () => {

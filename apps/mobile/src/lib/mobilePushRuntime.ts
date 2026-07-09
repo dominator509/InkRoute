@@ -198,7 +198,9 @@ export const mobilePushExternalCommands = [
   "GitHub Actions mobile push evidence job",
 ] as const;
 
-const sensitiveMobilePushArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|expo|apns|fcm|credential|device|push|notification|receipt|delivery|audit|interaction|deep.?link|route|email|phone|medical|payment)/i;
+const sensitiveMobilePushArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|expo|apns|fcm|credential|device|push|notification|receipt|delivery|audit|interaction|deep.?link|route|email|phone|medical|payment|artifact|path|ci|workflow|run|evidence|id|key)/i;
+const sensitiveMobilePushArtifactValue =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token|expo|apns|fcm)[A-Za-z0-9_-]*|(?:tenant|client|user|member|session|refresh|expo|apns|fcm|credential|device|push|notification|receipt|delivery|audit|interaction|route|provider|artifact|workflow|ci|run|evidence|mobile)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactMobilePushArtifactValue = (
   value: unknown,
@@ -222,6 +224,13 @@ const redactMobilePushArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && sensitiveMobilePushArtifactValue.test(value)) {
+    sensitiveMobilePushArtifactValue.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(sensitiveMobilePushArtifactValue, "[REDACTED]");
+  }
+
+  sensitiveMobilePushArtifactValue.lastIndex = 0;
   return value;
 };
 

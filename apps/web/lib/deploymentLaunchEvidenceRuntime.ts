@@ -416,9 +416,9 @@ export const deploymentLaunchEvidenceSurfaceContract: readonly DeploymentLaunchE
 ] as const;
 
 const sensitiveDeploymentLaunchEvidenceKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|name|address|vercel|github|eas|expo|sentry|supabase|neon|postgres|database|storage|provider|tenant|user|client|project|team|org|environment|deployment|url|uri|dsn|key|id|payload|artifact)/iu;
+  /(token|secret|password|authorization|cookie|email|phone|name|address|vercel|github|eas|expo|sentry|supabase|neon|postgres|database|storage|provider|tenant|user|client|project|team|org|environment|deployment|preview|production|approval|protected|workflow|run|ci|commit|repository|branch|pr|pullrequest|reviewer|codeowner|migration|backup|restore|strict|env|native|credential|ota|rollback|launch|evidence|packet|smoke|source.?map|release|upload|url|uri|dsn|key|id|payload|artifact|path|raw|request|response|log|output|transcript|stack|error)/iu;
 const sensitiveDeploymentLaunchEvidenceValuePattern =
-  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:repository|branch|pr|pullrequest|reviewer|codeowner|workflow|ci|commit|run|deployment|approval|provider|project|artifact)[-_:/]?[A-Za-z0-9_.-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 export const deploymentLaunchEvidenceExecutionPolicy = {
   codexMayClassifyStaticDeploymentLaunchReadiness: true,

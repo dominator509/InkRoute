@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { inkrouteDemoTenant } from "@inkroute/config";
+import { createHash } from "node:crypto";
 import {
   buildSecurityHeaderPlan,
   buildTenantIsolationFixtures,
@@ -13,6 +14,20 @@ import { assertPermission, dashboardApiGuardFailureResponse, resolveDashboardAct
 
 const allowedReadRoles = new Set(["owner", "studio_manager", "admin", "artist"]);
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+function hashTrustStatusSelector(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function buildTrustStatusResponseProjection(actor: { tenantId: string; actorUserId: string }) {
+  return {
+    tenantIdHash: hashTrustStatusSelector(actor.tenantId),
+    tenantIdEchoed: false,
+    actorUserIdHash: hashTrustStatusSelector(actor.actorUserId),
+    actorUserIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
 
 export async function GET(request: NextRequest) {
   let actor;
@@ -51,11 +66,10 @@ export async function GET(request: NextRequest) {
             "Production dashboard trust status requires provider-backed session, persisted tenant membership, audit-ready route evidence, and current security runtime artifacts; header-only trust previews are disabled until provider-backed session evidence is captured.",
           gapIds: ["GAP-040", "GAP-095", "GAP-103", "GAP-104"],
         },
-        tenantId: actor.tenantId,
         actor: {
-          userId: actor.actorUserId,
           role: actor.role,
         },
+        ...buildTrustStatusResponseProjection(actor),
         summary: summarizeSecurityPosture(controls),
         productionBoundary: {
           headerOnlyTrustPreviewDisabled: true,
@@ -73,11 +87,10 @@ export async function GET(request: NextRequest) {
     {
       ok: true,
       status: "local-preview",
-      tenantId: actor.tenantId,
       actor: {
-        userId: actor.actorUserId,
         role: actor.role,
       },
+      ...buildTrustStatusResponseProjection(actor),
       summary: summarizeSecurityPosture(controls),
       controls,
       tenantIsolationFixtures: buildTenantIsolationFixtures(),

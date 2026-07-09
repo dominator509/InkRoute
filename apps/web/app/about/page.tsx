@@ -22,8 +22,8 @@ export default function AboutPage() {
               {inkrouteDemoArtist.bio} This public profile is demo content, but the structure reflects how a working artist can present trust, style fit, city availability, and safety boundaries without sending clients into a generic booking tool.
             </p>
           </div>
-          <div className="editorial-panel" aria-label="Artist studio mood image placeholder">
-            <span>Artist profile image placeholder</span>
+          <div className="editorial-panel" aria-label="Artist studio mood board">
+            <span>Blackwork studies, healed-line references, travel notes, and private studio cues.</span>
           </div>
         </div>
       </section>

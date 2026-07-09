@@ -8,6 +8,7 @@ import {
   buildProviderWebhookReconciliationEvidenceDecision,
   buildProviderWebhookReconciliationExecutionPlan,
   buildProviderWebhookReconciliationContract,
+  buildRedactedProviderWebhookReconciliationArtifact,
   buildSentryReconciliationPlan,
   mapSentryActionToErrorStatus,
   providerWebhookReconciliationArtifactPaths,
@@ -44,21 +45,56 @@ const event = {
 };
 
 describe("provider webhook reconciliation contract", () => {
+  it("keeps Sentry webhook reconciliation responses free of internal persistence IDs", () => {
+    expect(routeSource).toContain("providerWebhookDeliveryIdEchoed: false");
+    expect(routeSource).toContain("auditLogIdEchoed: false");
+    expect(routeSource).toContain("matchedErrorReportIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).toContain("providerWebhookDeliveryRecorded: persistenceResult.providerWebhookDeliveryRecorded");
+    expect(routeSource).toContain("auditLogged: persistenceResult.auditLogged");
+    expect(routeSource).toContain("matchedErrorReportResolved: persistenceResult.matchedErrorReportResolved");
+    expect(routeSource).toContain("providerWebhookDeliveryRecorded: true");
+    expect(routeSource).toContain("auditLogged: true");
+    expect(routeSource).toContain("matchedErrorReportResolved: Boolean(updatedErrorReport)");
+    expect(routeSource).toContain("matchedErrorReportResolved: Boolean(updatedErrorReport)");
+    expect(routeSource).toContain("providerWebhookDeliveryRecorded: true");
+    expect(routeSource).toContain("idempotencyPersisted: true");
+    expect(routeSource).toContain("rawProviderDeliveryIdStored: false");
+    expect(routeSource).toContain("rawProviderDeliveryIdEchoed: false");
+    expect(routeSource).toContain("rawIdempotencyKeyStored: false");
+    expect(routeSource).toContain("internalPersistenceIdsStored: false");
+    expect(routeSource).not.toContain("providerWebhookDeliveryId: persistenceResult.providerWebhookDeliveryId");
+    expect(routeSource).not.toContain("auditLogId: persistenceResult.auditLogId");
+    expect(routeSource).not.toContain("matchedErrorReportId: persistenceResult.matchedErrorReportId");
+    expect(routeSource).not.toContain("providerWebhookDeliveryId: null");
+    expect(routeSource).not.toContain("auditLogId: null");
+    expect(routeSource).not.toContain("matchedErrorReportId: null");
+    expect(routeSource).not.toContain(
+      "metadata: {\n            provider: \"sentry\",\n            providerDeliveryId: input.providerDeliveryId,\n            idempotencyKey: input.idempotencyKey,\n            providerFingerprint: input.providerFingerprint,\n            targetErrorStatus: input.targetErrorStatus,\n            previousErrorStatus: existingErrorReport?.status ?? null,\n            matchedErrorReportId: updatedErrorReport?.id ?? null",
+    );
+    expect(routeSource).not.toContain(
+      "sanitizedProviderPayload: input.sanitizedPayload,\n            providerWebhookDeliveryId: providerWebhookDelivery.id",
+    );
+    expect(routeSource).not.toContain("idempotencyKey: input.idempotencyKey,\n            providerFingerprint: input.providerFingerprint");
+  });
+
   it("builds deterministic delivery and idempotency keys", () => {
-    expect(buildProviderDeliveryId(event, event.data)).toBe("sentry:resolved:issue_123");
+    expect(buildProviderDeliveryId(event, event.data)).toMatch(/^sentry:resolved:sha256:[a-f0-9]{24}$/);
+    expect(buildProviderDeliveryId(event, event.data)).not.toContain("issue_123");
 
     const plan = buildSentryReconciliationPlan({ event, data: event.data });
 
     expect(plan).toMatchObject({
       provider: "sentry",
       action: "resolved",
-      providerDeliveryId: "sentry:resolved:issue_123",
-      idempotencyKey: "sentry:resolved:issue_123",
       targetErrorStatus: "resolved",
       providerFingerprint: "stack_hash_123",
       rawPayloadStored: false,
       ownership: { tenantId: "tenant_123", source: "provider-payload" },
     });
+    expect(plan.providerDeliveryId).toMatch(/^sentry:resolved:sha256:[a-f0-9]{24}$/);
+    expect(plan.idempotencyKey).toBe(plan.providerDeliveryId);
+    expect(plan.providerDeliveryId).not.toContain("issue_123");
   });
 
   it("maps provider issue actions to ErrorReport statuses", () => {
@@ -233,13 +269,31 @@ describe("provider webhook reconciliation contract", () => {
       rawBody: "{\"email\":\"artist@example.com\",\"token\":\"sentry-live-webhook-token\"}",
       signature: "sentry-signature-secret",
       statusMutation: "resolved",
+      safeTraceLabel: "provider_event_private_trace_20260613000300",
+      safeArtifactPath: "coverage/provider-webhook-live-private-proof.json",
+      safeWorkflowUrl: "https://github.com/dominator509/InkRoute/actions/runs/private",
+      safeCommitSelector: "commit_abcdef1234567890abcdef1234567890",
+    });
+    const redactedOnly = buildRedactedProviderWebhookReconciliationArtifact({
+      publicSummary: "provider webhook reconciliation artifact captured",
+      safeTraceLabel: "provider_event_private_trace_20260613000300",
+      safeArtifactPath: "coverage/provider-webhook-live-private-proof.json",
+      safeWorkflowUrl: "https://github.com/dominator509/InkRoute/actions/runs/private",
+      neutralTokenLabel: "sentry_private_artifact_token",
     });
     const serialized = JSON.stringify(review.redactedArtifact);
+    const directSerialized = JSON.stringify(redactedOnly);
 
     expect(serialized).not.toContain("artist@example.com");
     expect(serialized).not.toContain("sentry-live-webhook-token");
     expect(serialized).not.toContain("super-secret-token");
     expect(serialized).not.toContain("sentry-signature-secret");
+    expect(serialized).not.toContain("provider_event_private_trace_20260613000300");
+    expect(serialized).not.toContain("coverage/provider-webhook-live-private-proof.json");
+    expect(serialized).not.toContain("/actions/runs/private");
+    expect(serialized).not.toContain("commit_abcdef1234567890abcdef1234567890");
+    expect(directSerialized).not.toContain("sentry_private_artifact_token");
+    expect(directSerialized).toContain("provider webhook reconciliation artifact captured");
     expect(serialized).toContain("resolved");
     expect(review.safeToPersist).toBe(true);
     expect(review.unsafeFindings).toEqual([]);
@@ -331,5 +385,6 @@ describe("provider webhook reconciliation contract", () => {
     expect(unitManifest).toContain("providerWebhookReconciliationMatrix");
     expect(gapTracker).toContain("Provider webhook reconciliation evidence classifier wired and runtime-matrix gated");
     expect(gapTracker).toContain("providerWebhookReconciliationDecisionRequiredEvidence");
+    expect(gapTracker).toContain("buildRedactedProviderWebhookReconciliationArtifact");
   });
 });

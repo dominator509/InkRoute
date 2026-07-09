@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { demoTravelStops } from "@inkroute/config";
+import { createClientRequestKey } from "../lib/clientRequestKeys";
 
 type TravelPublishState =
   | { status: "idle" }
@@ -25,7 +26,7 @@ export function TravelPublishActionPanel() {
           action: "publish",
           artistId: stop.artistId,
           stop,
-          idempotencyKey: `dashboard-travel-publish-${stop.id}-${Date.now()}`,
+          idempotencyKey: createClientRequestKey("dashboard-travel-publish"),
         }),
       });
       payload = await response.json().catch(() => null);

@@ -326,7 +326,7 @@ export function buildRedactedPrivateStorageSignedUrlArtifact(value: unknown): un
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /token|secret|authorization|credential|password|signedUrl|signedUrlHash|providerPayload|rawBody|stack|objectKey|bucket/i.test(key)
+        /auditId|bucket|credential|expiresAt|fileAssetId|grantId|hash|password|providerPayload|rawBody|referenceImageId|revocationId|revokedByUserId|secret|signedUrl|signedUrlGrantId|signedUrlHash|sourceObjectKey|stack|tenantId|token|objectKey|authorization/i.test(key)
           ? "[REDACTED]"
           : buildRedactedPrivateStorageSignedUrlArtifact(entry),
       ]),

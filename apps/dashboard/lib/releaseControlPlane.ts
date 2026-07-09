@@ -91,7 +91,7 @@ export interface ReleasePersistenceRbacArtifactReview {
 }
 
 const releasePersistenceSensitiveKeyPattern =
-  /(?:authorization|clientsecret|cookie|credential|email|password|phone|private|secret|token)/i;
+  /(?:actoruserid|auditid|authorization|clientsecret|commitsha|cookie|credential|customroleid|email|featureflagid|idempotencykey|membershipid|password|phone|private|recordid|releasecandidateid|releaserecordid|secret|sourceReleaseRecordId|tenantid|token|workflowrunid|workflowrunurl)/i;
 const releasePersistenceEmailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const releasePersistencePhonePattern = /\+?\d[\d ().-]{7,}\d/g;
 const releasePersistenceTokenPattern = /\b(?:bearer|ghp|github_pat|sk|xox|ya29)[A-Za-z0-9._:/-]{8,}\b/gi;
@@ -261,7 +261,8 @@ export function buildOptimisticConcurrencyMetadata(input: {
   return {
     expectedVersion,
     currentVersion,
-    recordId: input.recordId ?? null,
+    recordMatched: Boolean(input.recordId),
+    recordIdEchoed: false,
     conflict: Boolean(expectedVersion && currentVersion && expectedVersion !== currentVersion),
     strategy: "client-supplied expected version compared before orchestration" as const,
   };
@@ -278,13 +279,15 @@ export function buildTenantMembershipLookupMetadata(input: {
 }) {
   const databaseVerified = input.actorSource === "database-tenant-member";
   return {
-    tenantId: input.tenantId,
-    actorUserId: input.actorUserId ?? null,
+    tenantIdEchoed: false,
+    actorUserIdEchoed: false,
     actorRole: input.actorRole,
     source: databaseVerified ? "database-tenant-member" : "local-fallback",
     status: input.status ?? (databaseVerified ? "active" : "local-fallback"),
-    membershipId: input.membershipId ?? null,
-    customRoleId: input.customRoleId ?? null,
+    membershipVerified: Boolean(input.membershipId),
+    customRoleLinked: Boolean(input.customRoleId),
+    membershipIdEchoed: false,
+    customRoleIdEchoed: false,
     requiredNextStep: null,
   };
 }
@@ -294,7 +297,8 @@ export function buildReleaseWorkflowOrchestrationMetadata(input: { approvalState
   return {
     state: eligible ? "ready_for_release_governance" : "not_queued",
     hook: ".github/workflows/release-governance.yml",
-    recordId: input.recordId ?? null,
+    recordMatched: Boolean(input.recordId),
+    recordIdEchoed: false,
     requiresProtectedEnvironment: eligible,
     dispatchEnabled: process.env.RELEASE_GOVERNANCE_DISPATCH_ENABLED === "true",
   };

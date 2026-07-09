@@ -1,8 +1,13 @@
 import { prisma } from "@inkroute/db";
+import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../../dashboardAuth";
 
 export const runtime = "nodejs";
+
+function selectorHash(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
 
 function redactQuestionOptions(value: unknown): Record<string, unknown> | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
@@ -30,6 +35,27 @@ interface DashboardFormRouteContext {
   params: Promise<{ formId: string }>;
 }
 
+function buildFormDetailResponseProjection() {
+  return {
+    formIdEchoed: false,
+    tenantIdEchoed: false,
+    questionIdsEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildFormArchiveResponseProjection() {
+  return {
+    formIdEchoed: false,
+    tenantIdEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
 export async function GET(request: NextRequest, context: DashboardFormRouteContext) {
   const params = await context.params;
   const actor = resolveDashboardActor(request);
@@ -51,12 +77,13 @@ export async function GET(request: NextRequest, context: DashboardFormRouteConte
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
             message: "Production dashboard form reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
             gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildFormDetailResponseProjection(),
           productionBoundary: { localDashboardReadFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -67,14 +94,14 @@ export async function GET(request: NextRequest, context: DashboardFormRouteConte
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
         form: {
-          id: params.formId,
           type: "intake-or-consent",
           title: "Demo form metadata",
           sensitiveBoundary: "Local fallback never returns raw answers, signature files, signer contacts, IP hashes, user agents, or medical payloads.",
         },
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildFormDetailResponseProjection(),
         gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
         boundary: "Local fallback returns redacted demo form metadata only; database mode is required for live form detail reads.",
       },
@@ -138,12 +165,20 @@ export async function GET(request: NextRequest, context: DashboardFormRouteConte
     });
 
     if (!result.intakeForm && !result.consentForm) {
-      return NextResponse.json({ ok: false, error: { code: "FORM_NOT_FOUND", message: "Form was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: { code: "FORM_NOT_FOUND", message: "Form was not found for this tenant." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildFormDetailResponseProjection(),
+          gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
+        },
+        { status: 404, headers: noStoreHeaders },
+      );
     }
 
     const form = result.intakeForm
       ? {
-          id: result.intakeForm.id,
           key: result.intakeForm.key,
           type: "intake",
           title: result.intakeForm.title,
@@ -162,7 +197,6 @@ export async function GET(request: NextRequest, context: DashboardFormRouteConte
             sortOrder: number;
             options: unknown;
           }) => ({
-            id: question.id,
             key: question.key,
             label: question.label,
             helpText: question.helpText,
@@ -173,7 +207,6 @@ export async function GET(request: NextRequest, context: DashboardFormRouteConte
           })),
         }
       : {
-          id: result.consentForm!.id,
           key: result.consentForm!.key,
           type: "consent",
           title: result.consentForm!.title,
@@ -189,10 +222,11 @@ export async function GET(request: NextRequest, context: DashboardFormRouteConte
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
         form,
-        auditId: result.audit.id,
+        auditLogged: true,
+        tenantScope: { actorTenantMatched: true, formTenantMatched: true },
+        responseProjection: buildFormDetailResponseProjection(),
         gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
         boundary: "Dashboard form detail reads are tenant-scoped, no-store, audited, and redact raw answers, consent body text, signatures, signer contact data, IP hashes, user agents, file asset ids, and medical acknowledgment payloads.",
       },
@@ -204,8 +238,9 @@ export async function GET(request: NextRequest, context: DashboardFormRouteConte
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Form detail reads require the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildFormDetailResponseProjection(),
           gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
         },
         { status: 503, headers: noStoreHeaders },
@@ -248,14 +283,14 @@ export async function PATCH(request: NextRequest, context: DashboardFormRouteCon
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          formId: params.formId,
           action,
           error: {
             code: "PROVIDER_FORM_WRITE_PERSISTENCE_NOT_CONFIGURED",
             message: "Production form writes require DB-backed actor resolution, tenant-scoped persistence, audit logs, and reviewed legal-copy workflows; local fallback writes are disabled.",
             gapIds: ["GAP-007", "GAP-013", "GAP-038", "GAP-040"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildFormArchiveResponseProjection(),
           productionBoundary: { localFormWriteFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -266,10 +301,10 @@ export async function PATCH(request: NextRequest, context: DashboardFormRouteCon
       {
         ok: true,
         source: actor.source,
-        tenantId,
-        formId: params.formId,
         action,
         persistence: "local-contract",
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildFormArchiveResponseProjection(),
         gapIds: ["GAP-007", "GAP-013", "GAP-038", "GAP-040"],
         boundary: "Local fallback validates the archive-form metadata contract; database mode is required for durable form writes.",
       },
@@ -302,7 +337,8 @@ export async function PATCH(request: NextRequest, context: DashboardFormRouteCon
           metadata: toJsonValue({
             route: "/api/forms/[formId]",
             action,
-            formId: params.formId,
+            formIdHash: selectorHash(params.formId),
+            rawFormIdStored: false,
             entityType: intakeForm ? "IntakeForm" : "ConsentForm",
             rawAnswersTouched: false,
             legalCopyChanged: false,
@@ -313,7 +349,8 @@ export async function PATCH(request: NextRequest, context: DashboardFormRouteCon
           metadata: toJsonValue({
             route: "/api/forms/[formId]",
             action,
-            formId: params.formId,
+            formIdHash: selectorHash(params.formId),
+            rawFormIdStored: false,
             entityType: intakeForm ? "IntakeForm" : "ConsentForm",
             replayObserved: true,
             rawAnswersTouched: false,
@@ -346,8 +383,9 @@ export async function PATCH(request: NextRequest, context: DashboardFormRouteCon
           metadata: {
             source: "dashboard-api",
             dashboardMutationAction: "archive_form_version",
-            idempotencyKey,
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             fromStatus: intakeForm?.status ?? consentForm!.status,
             toStatus: "archived",
             legalCopyChanged: false,
@@ -363,14 +401,15 @@ export async function PATCH(request: NextRequest, context: DashboardFormRouteCon
         data: {
           status: "completed",
           result: toJsonValue({
-            formId: params.formId,
             action,
-            auditId: audit.id,
+            formArchived: true,
+            auditLogged: true,
             entityType: intakeForm ? "IntakeForm" : "ConsentForm",
             toStatus: "archived",
             rawAnswersTouched: false,
             legalCopyChanged: false,
             signatureRequestSent: false,
+            internalPersistenceIdsStored: false,
           }),
         },
         select: { id: true },
@@ -380,19 +419,28 @@ export async function PATCH(request: NextRequest, context: DashboardFormRouteCon
     });
 
     if (result.status === "not_found") {
-      return NextResponse.json({ ok: false, error: { code: "FORM_NOT_FOUND", message: "Form was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: { code: "FORM_NOT_FOUND", message: "Form was not found for this tenant." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildFormArchiveResponseProjection(),
+          gapIds: ["GAP-007", "GAP-013", "GAP-038", "GAP-040"],
+        },
+        { status: 404, headers: noStoreHeaders },
+      );
     }
 
     return NextResponse.json(
       {
         ok: true,
         source: actor.source,
-        tenantId,
-        formId: params.formId,
         action,
         persistence: "database",
-        auditId: result.audit.id,
-        idempotencyKeyId: result.idempotency.id,
+        auditLogged: true,
+        idempotencyRecorded: true,
+        tenantScope: { actorTenantMatched: true, formTenantMatched: true },
+        responseProjection: buildFormArchiveResponseProjection(),
         gapIds: ["GAP-007", "GAP-013", "GAP-038", "GAP-040"],
         boundary: "Form archive writes are tenant-scoped, RBAC-gated, idempotency-backed, audited, no-store, and do not modify legal copy, signatures, raw answers, or medical payloads.",
       },
@@ -404,9 +452,9 @@ export async function PATCH(request: NextRequest, context: DashboardFormRouteCon
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          formId: params.formId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Form writes require the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildFormArchiveResponseProjection(),
           gapIds: ["GAP-007", "GAP-013", "GAP-038", "GAP-040"],
         },
         { status: 503, headers: noStoreHeaders },

@@ -5,11 +5,9 @@ import { NextRequest } from "next/server";
 import {
   buildPrivateStorageAccessPlan,
   buildReferenceUploadProviderEvidencePlan,
-  buildSignedUploadIntentRequiredControls,
   privateStorageAccessRequiredControls,
   rateLimitRules,
   referenceUploadProviderEvidenceRequiredControls,
-  referenceUploadProviderEvidenceRequiredEvidence,
 } from "@inkroute/security";
 import { POST } from "../app/api/public/[tenantSlug]/secure-upload-intents/route";
 
@@ -45,6 +43,35 @@ describe("public secure upload intent route", () => {
     expect(routeSource).toContain("tx.signedUrlGrant.create");
     expect(routeSource).toContain("tx.referenceImage.create");
     expect(routeSource).toContain("tx.auditLog.create");
+    expect(routeSource).toContain("buildSafeUploadDatabaseResponse");
+    expect(routeSource).toContain("buildSafeUploadLocalResponse");
+    expect(routeSource).toContain("rawStorageFieldsEchoed: false");
+    expect(routeSource).toContain("bucketEchoed: false");
+    expect(routeSource).toContain("objectKeyEchoed: false");
+    expect(routeSource).toContain("signedUploadUrlEchoed: false");
+    expect(routeSource).toContain("signedUrlHashEchoed: false");
+    expect(routeSource).toContain("rawPlanObjectsEchoed: false");
+    expect(routeSource).toContain("localDraftEchoed: false");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("fileAssetIdEchoed: false");
+    expect(routeSource).toContain("signedUrlGrantIdEchoed: false");
+    expect(routeSource).toContain("referenceImageIdEchoed: false");
+    expect(routeSource).toContain("auditIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).not.toContain("...result.fileAsset");
+    expect(routeSource).not.toContain("...result.grant");
+    expect(routeSource).not.toContain("signedIntentPlan,");
+    expect(routeSource).not.toContain("privateStoragePlan,");
+    expect(routeSource).not.toContain("fileAssetPersistencePlan,");
+    expect(routeSource).not.toContain("referenceImageId: result.referenceImage");
+    expect(routeSource).toContain("referenceImagePersisted: result.referenceImagePersisted");
+    expect(routeSource).toContain("auditPersisted: result.auditLogged");
+    expect(routeSource).toContain("referenceImagePersisted: Boolean(referenceImage?.id)");
+    expect(routeSource).toContain("auditLogged: Boolean(audit.id)");
+    expect(routeSource).not.toContain('return { status: "created" as const, fileAsset, grant, referenceImage, audit }');
+    expect(routeSource).not.toContain("auditId: result.audit.id");
+    expect(routeSource).not.toContain("tenantId: resolvedTenant.tenantId,\n                persistence");
+    expect(routeSource).not.toContain("tenantId: resolvedTenant.tenantId,\n        validation");
     expect(routeSource).toContain("PUBLIC_UPLOAD_BOOKING_CONTEXT_REQUIRED");
     expect(routeSource).toContain("file.public_signed_upload.intent");
     expect(routeSource).toContain("declaredByAuthenticatedUser");
@@ -167,58 +194,41 @@ describe("public secure upload intent route", () => {
       accepted: true,
       storageVisibility: "tenant_private",
     });
-    expect(body.data.draft.tenantId).toBe(body.data.tenantId);
-    expect(body.data.draft.objectKey).toMatch(new RegExp(`^${body.data.tenantId}/\\d+/placement-reference\\.jpg$`));
-    expect(body.data.draft.signedUploadUrl).toContain("/upload/inkroute-demo/");
-    expect(body.data.signedIntentPlan).toMatchObject({
-      accepted: true,
-      status: "provider_gated",
-      tenantId: body.data.tenantId,
-      subjectId: body.data.draft.id,
-      signedUploadUrlRequired: true,
-      publicReadAllowed: false,
+    expect(body.data.uploadIntent).toMatchObject({
+      kind: "reference_private",
+      visibility: "tenant_private",
+      providerUrlMinted: false,
+      uploadUrlEchoed: false,
     });
-    expect(body.data.signedIntentPlan.objectKey).toMatch(new RegExp(`^private/${body.data.tenantId}/reference_private/unassigned/${body.data.draft.id}\\.jpg$`));
-    expect(body.data.signedIntentPlan.requiredControls).toEqual(
-      buildSignedUploadIntentRequiredControls(body.data.validation),
-    );
-    expect(body.data.privateStoragePlan).toMatchObject({
-      status: "provider_gated",
-      operation: "upload",
-      bucketAcl: "private",
-      signedUrlRequired: true,
-      publicReadAllowed: false,
-      objectKey: body.data.signedIntentPlan.objectKey,
+    expect(body.data.uploadIntent).not.toHaveProperty("uploadUrl");
+    expect(body.data.evidenceReceipt).toMatchObject({
+      signedIntentStatus: "provider_gated",
+      privateStorageStatus: "provider_gated",
+      fileAssetPersistenceStatus: "blocked",
+      referenceUploadProviderStatus: "blocked",
     });
-    expect(body.data.privateStoragePlan.requiredControls).toEqual(privateStorageAccessRequiredControls);
-    expect(body.data.privateStoragePlan.reasons).toContain("Storage provider is not configured.");
-    expect(body.data.fileAssetPersistencePlan).toMatchObject({
-      status: "blocked",
-      tenantId: body.data.tenantId,
-      subjectId: body.data.draft.id,
-      objectKey: body.data.signedIntentPlan.objectKey,
-      accessLevel: "tenant_member",
-      publicReadAllowed: false,
-      requiredWrites: ["FileAsset", "AuditLog", "BookingReferenceImage"],
+    expect(body.data.responseProjection).toMatchObject({
+      rawStorageFieldsEchoed: false,
+      bucketEchoed: false,
+      objectKeyEchoed: false,
+      uploadUrlEchoed: false,
+      signedUploadUrlEchoed: false,
+      signedUrlHashEchoed: false,
+      rawPlanObjectsEchoed: false,
+      localDraftEchoed: false,
+      tenantIdEchoed: false,
+      fileAssetIdEchoed: false,
+      signedUrlGrantIdEchoed: false,
+      referenceImageIdEchoed: false,
+      auditIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
     });
-    expect(body.data.fileAssetPersistencePlan.blockers).toEqual(expect.arrayContaining([
-      "Object storage provider must be configured before FileAsset persistence is production-ready.",
-      "Tenant-scoped FileAsset store must be configured before upload metadata can persist.",
-      "FileAsset cannot be exposed or finalized before upload scan approval.",
-    ]));
-    expect(body.data.referenceUploadProviderEvidencePlan).toMatchObject({
-      status: "blocked",
-      missingScripts: [],
-    });
-    expect(body.data.referenceUploadProviderEvidencePlan.requiredControls).toEqual(
-      referenceUploadProviderEvidenceRequiredControls,
-    );
-    expect(body.data.referenceUploadProviderEvidencePlan.requiredEvidence).toBe(referenceUploadProviderEvidenceRequiredEvidence);
-    expect(body.data.referenceUploadProviderEvidencePlan.blockers).toEqual(expect.arrayContaining([
-      "Byte upload verification must prove the uploaded object matches declared size and upload intent.",
-      "Magic-byte validation must verify uploaded file content before scan approval.",
-      "Cross-tenant reference fetch-denial tests must pass.",
-    ]));
+    expect(body.data).not.toHaveProperty("tenantId");
+    expect(body.data).not.toHaveProperty("draft");
+    expect(body.data).not.toHaveProperty("signedIntentPlan");
+    expect(body.data).not.toHaveProperty("privateStoragePlan");
+    expect(body.data).not.toHaveProperty("fileAssetPersistencePlan");
+    expect(body.data).not.toHaveProperty("referenceUploadProviderEvidencePlan");
     expect(body.data.localRuntime.gapIds).toEqual(expect.arrayContaining(["GAP-096", "GAP-097"]));
     expect(body.data.nextWork).toEqual(expect.arrayContaining([
       "Scan and strip metadata from media before status transitions.",

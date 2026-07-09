@@ -452,9 +452,9 @@ export interface NotificationLaunchArtifactReview {
 }
 
 const sensitiveNotificationLaunchKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|destination|body|payload|provider|tenant|user|client|thread|message|delivery|event|account|database|url|uri|dsn|key|id)/iu;
+  /(token|secret|password|authorization|cookie|email|phone|destination|body|payload|provider|tenant|user|client|thread|message|delivery|event|account|database|url|uri|dsn|repository|repo|branch|pull|pr|reviewer|codeowner|key|id)/iu;
 const sensitiveNotificationLaunchValuePattern =
-  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:repository|repo|branch|pull|pr|reviewer|codeowner)[-_:/]?[A-Za-z0-9_.-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 export const notificationLaunchExecutionPolicy = {
   codexMayClassifyStaticNotificationLaunchReadiness: true,

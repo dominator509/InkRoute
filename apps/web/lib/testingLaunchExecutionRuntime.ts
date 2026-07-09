@@ -499,9 +499,9 @@ export const testingLaunchExecutionSurfaceContract: readonly TestingLaunchExecut
 ] as const;
 
 const sensitiveTestingLaunchExecutionKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|name|address|medical|payment|card|provider|tenant|user|client|patient|database|url|uri|dsn|key|id|trace|screenshot|video|payload|artifact)/iu;
+  /(token|secret|password|authorization|cookie|email|phone|name|address|medical|payment|card|provider|tenant|user|client|patient|database|url|uri|dsn|key|id|trace|screenshot|video|payload|artifact|raw|body|stack|error|log|output|transcript|command|junit|json|report|coverage|failure|debug|branch|protection|flaky|policy|mobile|expo|device|ci|commit|run|repository|repo|pull|pr|reviewer|codeowner)/iu;
 const sensitiveTestingLaunchExecutionValuePattern =
-  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|repo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+|branch:[A-Za-z0-9_./-]+|pr[_:#-]?[A-Za-z0-9_.-]+|reviewer[_:@-]?[A-Za-z0-9_.-]+|CODEOWNER:[A-Za-z0-9_.@/-]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:tenant|user|client|patient|payment|provider|device|mobile|artifact|junit|report|coverage|trace|screenshot|video|failure|debug|branch|check|flaky|workflow|ci|run|commit|command|test|build|typecheck)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|test-results|playwright-report|artifacts|reports)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 export const testingLaunchExecutionPolicy = {
   codexMayClassifyStaticTestingLaunchReadiness: true,

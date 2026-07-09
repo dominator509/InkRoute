@@ -21,6 +21,10 @@ const providerGatedFeature: Partial<Record<string, string>> = {
   "mobile.ota_updates.enabled": "EAS project/token context must be configured before enabling this flag.",
 };
 
+function buildFeatureFlagIdempotencyKey(parts: readonly string[]): string {
+  return `feature-flag-update:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
+}
+
 type FlagDecisionContext = {
   tenantId: string;
   role: string;
@@ -237,17 +241,54 @@ function buildDecisionContext(actorRole: string, tenantId: string, environment: 
 function buildFeatureFlagRuntimeInvalidationMetadata(input: { tenantId: string; key: string; environment?: FeatureFlagChannel }) {
   return {
     invalidated: true,
-    invalidationTag: `feature-flags:${input.tenantId}`,
-    cacheKeyPrefix: `feature-flags:${input.tenantId}:`,
+    invalidationTag: "feature-flags:tenant-scoped",
+    cacheKeyPrefix: "feature-flags:tenant-scoped:",
+    tenantIdEchoed: false,
     affectedFlagKey: input.key,
     revalidationTargets: [
-      `/api/public/${encodeURIComponent(input.tenantId)}/release-health`,
+      "/api/public/[tenantSlug]/release-health",
       "/api/feature-flags",
       "apps/web/lib/featureFlagRuntime.ts",
     ],
     environment: input.environment ?? "preview",
     artifact: "coverage/feature-flag-cache-invalidation.json",
     smoke: "feature-flag invalidation/revalidation smoke",
+  };
+}
+
+function buildFeatureFlagReadResponseProjection() {
+  return {
+    featureFlagReadResponseAllowlisted: true,
+    auditLogged: true,
+    tenantIdEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildFeatureFlagMutationResponseProjection() {
+  return {
+    featureFlagMutationResponseAllowlisted: true,
+    tenantIdEchoed: false,
+    featureFlagIdEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+    rawProviderPayloadEchoed: false,
+  };
+}
+
+function buildSafeFeatureFlagConcurrencyResponse(concurrency: unknown) {
+  if (!concurrency || typeof concurrency !== "object" || Array.isArray(concurrency)) {
+    return concurrency;
+  }
+  const source = concurrency as Record<string, unknown>;
+  return {
+    expectedVersion: typeof source.expectedVersion === "string" ? source.expectedVersion : null,
+    conflict: Boolean(source.conflict),
+    currentVersionPresent: typeof source.currentVersion === "string" && source.currentVersion.length > 0,
+    recordIdEchoed: false,
   };
 }
 
@@ -283,7 +324,8 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildFeatureFlagReadResponseProjection(),
           error: {
             code: "PROVIDER_FEATURE_FLAG_PERSISTENCE_NOT_CONFIGURED",
             message: "Production feature-flag reads require DB-backed actor resolution and persisted tenant-scoped flag definitions; local fallback defaults are disabled.",
@@ -300,17 +342,19 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         actorRole: membershipLookup.actorRole,
         membershipLookup,
         persistence: "local-fallback",
         environment,
         definitions: buildSafeResponseDefinitions([...defaultFeatureFlags]),
         decisions,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildFeatureFlagReadResponseProjection(),
         cache: {
           generatedAt: new Date().toISOString(),
           ttlSeconds: 15,
-          cacheKey: `feature-flags:${tenantId}:${environment}:fallback`,
+          cacheKeyScope: "tenant-scoped",
+          tenantIdEchoed: false,
         },
         boundary: "Local fallback mode: flag overrides are not persisted and use package defaults.",
         gapIds: ["GAP-088", "GAP-090", "GAP-093"],
@@ -346,17 +390,18 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         actorRole: actor.role,
         persistence: "database",
         environment,
         definitions: buildSafeResponseDefinitions(definitions),
         decisions,
-        auditId: result.audit.id,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildFeatureFlagReadResponseProjection(),
         cache: {
           generatedAt: new Date().toISOString(),
           ttlSeconds: 60,
-          cacheKey: `feature-flags:${tenantId}:${environment}:v1`,
+          cacheKeyScope: "tenant-scoped",
+          tenantIdEchoed: false,
         },
         gapIds: ["GAP-088", "GAP-090", "GAP-093"],
         boundary: "Feature flag reads are tenant-scoped, no-store, audit-logged, and include DB overrides plus release-aware decision output.",
@@ -372,7 +417,8 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildFeatureFlagReadResponseProjection(),
           error: {
             code: "PROVIDER_FEATURE_FLAG_PERSISTENCE_NOT_CONFIGURED",
             message: "Production feature-flag reads require the dashboard database connection; default fallback decisions are disabled.",
@@ -390,17 +436,19 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         actorRole: membershipLookup.actorRole,
         membershipLookup,
         persistence: "local-fallback",
         environment,
         definitions: buildSafeResponseDefinitions(definitions),
         decisions,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildFeatureFlagReadResponseProjection(),
         cache: {
           generatedAt: new Date().toISOString(),
           ttlSeconds: 15,
-          cacheKey: `feature-flags:${tenantId}:${environment}:fallback`,
+          cacheKeyScope: "tenant-scoped",
+          tenantIdEchoed: false,
         },
         warning: "Database unavailable; default feature definitions returned as fallback.",
         gapIds: ["GAP-088", "GAP-090", "GAP-093"],
@@ -459,7 +507,8 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildFeatureFlagMutationResponseProjection(),
           error: {
             code: "PROVIDER_FEATURE_FLAG_PERSISTENCE_NOT_CONFIGURED",
             message: "Production feature-flag writes require DB-backed actor resolution and persisted tenant-scoped feature flags; local fallback mutations are disabled.",
@@ -475,7 +524,6 @@ export async function POST(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
         featureFlag: {
           key: input.key,
@@ -484,6 +532,8 @@ export async function POST(request: NextRequest) {
           description: input.description,
           rules: persistedRules,
         },
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildFeatureFlagMutationResponseProjection(),
         concurrency: buildOptimisticConcurrencyMetadata({ expectedVersion: expectedVersionHeader, currentVersion: input.key }),
         membershipLookup: buildTenantMembershipLookupMetadata({ ...membershipLookup, actorSource: membershipLookup.source }),
         invalidation: buildFeatureFlagRuntimeInvalidationMetadata({ tenantId, key: input.key }),
@@ -509,7 +559,7 @@ export async function POST(request: NextRequest) {
       (typeof (body as Record<string, unknown>).idempotencyKey === "string" && (body as Record<string, unknown>).idempotencyKey.trim()
         ? (body as Record<string, unknown>).idempotencyKey.trim()
         : null) ??
-      `feature-flag-update:${tenantId}:${input.key}:${requestHash}`;
+      buildFeatureFlagIdempotencyKey([tenantId, input.key, requestHash]);
     const persisted = await prisma.$transaction(async (tx) => {
       const membershipMetadata = buildTenantMembershipLookupMetadata({ ...membershipLookup, actorSource: membershipLookup.source });
       const idempotency = await tx.idempotencyKey.upsert({
@@ -550,19 +600,23 @@ export async function POST(request: NextRequest) {
       if (idempotency.status === "completed") {
         const previousEnabled = resultBoolean(idempotency.result, "previousEnabled");
         const previousScope = resultString(idempotency.result, "previousScope");
+        const replayFeatureFlag = await tx.featureFlag.findUnique({
+          where: { tenantId_key: { tenantId, key: input.key } },
+          select: { id: true, key: true, enabled: true, scope: true, description: true, rules: true },
+        });
         return {
           status: "replayed" as const,
           featureFlag: {
-            id: resultString(idempotency.result, "featureFlagId") ?? input.key,
-            key: input.key,
-            enabled: resultBoolean(idempotency.result, "enabled") ?? input.enabled,
-            scope: (resultString(idempotency.result, "scope") as DbFeatureScope | null) ?? input.scope,
-            description: input.description ?? "Tenant-defined feature flag.",
-            rules: persistedRules,
+            id: replayFeatureFlag?.id ?? input.key,
+            key: replayFeatureFlag?.key ?? input.key,
+            enabled: replayFeatureFlag?.enabled ?? resultBoolean(idempotency.result, "enabled") ?? input.enabled,
+            scope: replayFeatureFlag?.scope ?? (resultString(idempotency.result, "scope") as DbFeatureScope | null) ?? input.scope,
+            description: replayFeatureFlag?.description ?? input.description ?? "Tenant-defined feature flag.",
+            rules: replayFeatureFlag?.rules ?? persistedRules,
           },
-          audit: { id: resultString(idempotency.result, "auditId") },
+          audit: { id: null },
           existing: previousScope || previousEnabled !== null ? { enabled: previousEnabled, scope: previousScope } : null,
-          concurrency: buildOptimisticConcurrencyMetadata({ expectedVersion: expectedVersionHeader, currentVersion: resultString(idempotency.result, "featureFlagId"), recordId: resultString(idempotency.result, "featureFlagId") }),
+          concurrency: buildOptimisticConcurrencyMetadata({ expectedVersion: expectedVersionHeader, currentVersion: replayFeatureFlag ? "existing-feature-flag" : null, recordId: replayFeatureFlag?.id ?? null }),
           membershipLookup: membershipMetadata,
           idempotency,
         };
@@ -571,7 +625,7 @@ export async function POST(request: NextRequest) {
         where: { tenantId_key: { tenantId, key: input.key } },
         select: { id: true, scope: true, enabled: true, description: true },
       });
-      const concurrency = buildOptimisticConcurrencyMetadata({ expectedVersion: expectedVersionHeader, currentVersion: existing?.id ?? null, recordId: existing?.id ?? null });
+      const concurrency = buildOptimisticConcurrencyMetadata({ expectedVersion: expectedVersionHeader, currentVersion: existing ? "existing-feature-flag" : null, recordId: existing?.id ?? null });
       if (concurrency.conflict) {
         throw Object.assign(new Error("FEATURE_FLAG_CONCURRENCY_CONFLICT"), { code: "FEATURE_FLAG_CONCURRENCY_CONFLICT", concurrency });
       }
@@ -608,8 +662,9 @@ export async function POST(request: NextRequest) {
             previousScope: existing?.scope ?? null,
             concurrency,
             membershipLookup: membershipMetadata,
-            idempotencyKey,
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             approvalState: "settings-write-approved",
             orchestrationHook: "feature-flag-runtime-invalidation-applied",
             invalidation: buildFeatureFlagRuntimeInvalidationMetadata({ tenantId, key: input.key }),
@@ -622,14 +677,15 @@ export async function POST(request: NextRequest) {
         data: {
           status: "completed",
           result: toJsonValue({
-            featureFlagId: featureFlag.id,
-            auditId: audit.id,
+            featureFlagPersisted: true,
+            auditLogged: true,
             key: input.key,
             enabled: featureFlag.enabled,
             scope: featureFlag.scope,
             previousEnabled: existing?.enabled ?? null,
             previousScope: existing?.scope ?? null,
             rawProviderPayloadStored: false,
+            internalPersistenceIdsStored: false,
           }),
         },
         select: { id: true },
@@ -642,9 +698,15 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
           error: { code: "IDEMPOTENCY_CONFLICT", message: "Idempotency key was already used for a different feature-flag payload." },
-          idempotencyKeyId: persisted.idempotency.id,
+          responseProjection: {
+            featureFlagIdempotencyConflictResponseAllowlisted: true,
+            tenantIdEchoed: false,
+            idempotencyKeyIdEchoed: false,
+            rawIdempotencyKeyEchoed: false,
+            internalPersistenceIdsEchoed: false,
+          },
           gapIds: ["GAP-088", "GAP-090", "GAP-093"],
         },
         { status: 409, headers: noStoreHeaders },
@@ -654,7 +716,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       source: actor.source,
-      tenantId,
       persistence: "database",
       featureFlag: {
         key: persisted.featureFlag.key,
@@ -663,10 +724,10 @@ export async function POST(request: NextRequest) {
         description: persisted.featureFlag.description,
         rules: persisted.featureFlag.rules ?? rules,
       },
-      auditId: persisted.audit.id,
-      idempotencyKeyId: persisted.idempotency.id,
       idempotencyReplay: persisted.status === "replayed",
-      concurrency: persisted.concurrency,
+      tenantScope: { actorTenantMatched: true },
+      responseProjection: buildFeatureFlagMutationResponseProjection(),
+      concurrency: buildSafeFeatureFlagConcurrencyResponse(persisted.concurrency),
       membershipLookup: persisted.membershipLookup,
       approval: { state: "settings-write-approved" },
       invalidation: buildFeatureFlagRuntimeInvalidationMetadata({ tenantId, key: input.key }),
@@ -685,7 +746,15 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "FEATURE_FLAG_CONCURRENCY_CONFLICT") {
       return NextResponse.json(
-        { ok: false, error: { code: "FEATURE_FLAG_CONCURRENCY_CONFLICT", message: "Feature flag changed before approval/orchestration." }, concurrency: (error as { concurrency?: unknown }).concurrency },
+        {
+          ok: false,
+          error: { code: "FEATURE_FLAG_CONCURRENCY_CONFLICT", message: "Feature flag changed before approval/orchestration." },
+          concurrency: buildSafeFeatureFlagConcurrencyResponse((error as { concurrency?: unknown }).concurrency),
+          responseProjection: {
+            featureFlagConcurrencyConflictResponseAllowlisted: true,
+            internalPersistenceIdsEchoed: false,
+          },
+        },
         { status: 409, headers: noStoreHeaders },
       );
     }
@@ -695,7 +764,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildFeatureFlagMutationResponseProjection(),
           error: {
             code: "PROVIDER_FEATURE_FLAG_PERSISTENCE_NOT_CONFIGURED",
             message: "Production feature-flag writes require the dashboard database connection; local fallback mutations are disabled.",
@@ -708,7 +778,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
         featureFlag: {
           key: input.key,
@@ -717,6 +786,8 @@ export async function POST(request: NextRequest) {
           description: input.description,
           rules,
         },
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildFeatureFlagMutationResponseProjection(),
         warning: "Database unavailable; mutation not persisted.",
         invalidation: buildFeatureFlagRuntimeInvalidationMetadata({ tenantId, key: input.key }),
         gapIds: ["GAP-088", "GAP-090", "GAP-093"],

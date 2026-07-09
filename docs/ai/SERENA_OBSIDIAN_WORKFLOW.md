@@ -5,7 +5,7 @@ Use Serena and Obsidian to reduce context drag, not to add a research phase. Rep
 ## Global defaults
 
 - RTK wraps repo shell commands; use `rtk proxy powershell -NoProfile -Command "<scoped command>"` for PowerShell builtins, pipelines, and exact raw shell behavior.
-- Serena is a read-only semantic jump tool, not a repo summarizer or edit surface.
+- Serena is a semantic jump and memory tool, not a repo summarizer or source-edit surface.
 - Obsidian is project memory, not evidence.
 - If a target file, route, gap row, test, or static assertion is already known, skip both tools and patch directly from repo evidence.
 - If a tool blocks, asks for credentials, returns noisy results, or remains ambiguous after one follow-up, state the fallback once and use scoped RTK search.
@@ -13,7 +13,7 @@ Use Serena and Obsidian to reduce context drag, not to add a research phase. Rep
 
 ## Routing contract
 
-Classification priority is strict: bare live Serena activation first, Serena semantic lookup second when activation/use is paired with symbol, owner, reference, call-site, or route/service-boundary discovery, explicit workflow/tooling optimization third, exact repo seams fourth, repeated gap-batch signals fifth, then owner/reference/memory-read/memory-append lookups. Treat `workflow` as a tooling signal only when it is paired with Serena, Obsidian, RTK, routing, router, tool admission, vault, bootstrap, or one-shot language. A bare mention of Serena or Obsidian is not enough to enter tooling mode; route by the concrete intent unless the request is about configuring, optimizing, routing, bootstrapping, or maintaining the tool workflow itself. Plain `activate`, `activation`, or `Serena activation` wording is not maintenance by itself; only `fix`, `diagnose`, `configure`, `optimize`, `index`, `LSP`, `.serena`, or `project.yml` wording converts Serena activation into maintenance. If the user says to activate or use Serena and then asks to find symbols, owners, references, call sites, or a route/service boundary, classify it as Serena semantic lookup instead of Serena-maintenance. Do not let generic words such as `script`, `.md`, or bare `workflow` trigger a semantic lookup when the task already identifies a CI workflow, package workflow, owning workflow surface, or exact repo seam.
+Classification priority is strict: bare live Serena activation first, Serena semantic lookup second when activation/use is paired with symbol, owner, reference, call-site, or route/service-boundary discovery, explicit workflow/tooling optimization third, exact repo seams fourth, repeated gap-batch signals fifth, then owner/reference/memory-read/memory-append lookups. Treat `workflow` as a tooling signal only when it is paired with Serena, Obsidian, RTK, routing, router, tool admission, vault, bootstrap, or one-shot language. A bare mention of Serena or Obsidian is not enough to enter tooling mode; route by the concrete intent unless the request is about configuring, optimizing, routing, bootstrapping, or maintaining the tool workflow itself. Plain `activate`, `activation`, or `Serena activation` wording is not maintenance by itself; only `fix`, `diagnose`, `configure`, `optimize`, `index`, `LSP`, `.serena`, or `.serena/project.yml` wording converts Serena activation into maintenance. If the user says to activate or use Serena and then asks to find symbols, owners, references, call sites, or a route/service boundary, classify it as Serena semantic lookup instead of Serena-maintenance. Do not let generic words such as `script`, `.md`, or bare `workflow` trigger a semantic lookup when the task already identifies a CI workflow, package workflow, owning workflow surface, or exact repo seam.
 
 | Task shape | Serena | Obsidian | Action |
 | --- | --- | --- | --- |
@@ -22,7 +22,7 @@ Classification priority is strict: bare live Serena activation first, Serena sem
 | Failing check names the exact missing dependency, file, row, or assertion | Skip | Skip | Patch the named seam and update the local source/test/tracker contract. |
 | Owner route, service, model, or symbol is unknown | One owner lookup | Skip | Inspect the located file slice before editing. |
 | Exported/shared contract changes | One references lookup | Skip unless a prior API decision matters | Patch compatible source/tests and direct call sites only. |
-| Serena activation/use plus symbol, owner, reference, call-site, or route/service-boundary discovery | One semantic lookup after activation if needed | Skip | Read only `activation.md`, run one focused owner/reference lookup, then inspect located repo slices. |
+| Serena activation/use plus symbol, owner, reference, call-site, or route/service-boundary discovery | One semantic lookup after activation if needed | Skip | Read only `.serena/memories/inkroute/activation.md`, run one focused owner/reference lookup, then inspect located repo slices. |
 | Prior accepted architecture/API decision changes the edit | Optional one lookup if code impact is unclear | Read one specific InkRoute note | Decide from repo evidence, not memory. |
 | DeepSeek-Claude handoff or Codex review | Lookup changed exported symbols only if impact is unclear | Append one concise note only after review if durable; do not browse the vault first | Codex owns final acceptance. |
 | Tooling workflow | Usually skip because files are known | Skip; bootstrap owns local notes | Patch `.serena/project.yml`, `.serena/memories/inkroute/*`, this doc, or `scripts/bootstrap-obsidian-vault.ps1`. Use `.serena/memories/inkroute/serena-health.md` for activation/health fallback rules. |
@@ -78,7 +78,7 @@ When the task is to fix or optimize Serena, Obsidian, RTK routing, local vault c
 
 Codex sessions can have Serena configured in the repo while exposing no callable Serena MCP tools. Treat that as tool unavailability, not as application failure: say it once, use `rtk pnpm workflow:codex -- "<task text>"` for local routing if a concrete task remains, and only edit Serena workflow surfaces when the user asked for Serena maintenance.
 
-Repo-side health and live-tool mounting are separate. `rtk pnpm workflow:serena:check` can prove that `.serena/project.yml`, required Serena cards, read-only mode, gitignore hygiene, compact answer budgets, and route-classifier behavior are coherent. It does not prove that the current Codex session has mounted live Serena MCP tools; if the repo check is healthy and live tools are still absent, the remaining action is outside this repository.
+Repo-side health and live-tool mounting are separate. `rtk pnpm workflow:serena:check` can prove that `.serena/project.yml`, required Serena cards, memory-write mode, gitignore hygiene, compact answer budgets, and route-classifier behavior are coherent. It does not prove that the current Codex session has mounted live Serena MCP tools; if the repo check is healthy and live tools are still absent, the remaining action is outside this repository.
 When activating live Serena, always target the absolute project root `C:\dev\InkRoute`; do not activate a parent directory, symlink, temp checkout, generated bundle, or `docs/ai/repomix-summary.xml` context.
 When repo-side health is coherent but Codex still exposes no callable Serena tools, stop repo churn and repair the host integration instead: attach or restart the Serena MCP server for this project and retry activation. On this Windows workstation, prefer the absolute host launcher `C:\Users\domin\.local\bin\serena.exe` with explicit startup/tool timeouts instead of a bare PATH-dependent `serena` command.
 
@@ -150,7 +150,7 @@ Use the shorter scorecard when the route is still fuzzy:
 
 | Tool | Admit only when | Reject when |
 | --- | --- | --- |
-| Serena | Owner, exported references, or direct call-site blast radius is unknown. | The file, route, gap row, helper, assertion, package script, or CI seam is already named. |
+| Serena (gated) | Owner, exported references, or direct call-site blast radius is unknown. | The file, route, gap row, helper, assertion, package script, or CI seam is already named. |
 | Obsidian | A prior accepted InkRoute decision changes the implementation or review. | The question is current source, test, tracker, diff, branch, CI, provider, or runtime state. |
 | RTK | Current repo evidence is needed. | The action would mutate secrets, providers, production infra, or run validation without approval. |
 | DeepSeek-Claude | Substantial backend implementation needs delegation and Codex can review it. | Frontend/aesthetic work, secrets, provider settings, production infra, or unbounded research is involved. |
@@ -397,7 +397,7 @@ Use this when work starts to sprawl:
 
 ## Serena optimization
 
-Serena should answer narrow routing questions only. It is configured read-only in this repo, so edits should happen through Codex patching tools or RTK-scoped repo commands.
+Serena should answer narrow routing questions and write onboarding/maintenance memories only. Do not use Serena source-editing tools in this repo; source edits should happen through Codex patching tools or RTK-scoped repo commands.
 
 - owner file and exported symbol for an unknown route, service, model, helper, or runtime seam
 - direct references for a changed exported contract
@@ -511,7 +511,7 @@ Do not ask Serena to reconfirm files already named by the row, failing check, or
 2. Use one Serena references lookup only if changing an exported/shared contract.
 3. Patch tenant/auth/RBAC checks before persistence changes.
 4. Add or update the narrowest test/static assertion that locks the behavior.
-5. Keep frontend styling, provider settings, production infrastructure, secrets, and legal copy untouched unless explicitly approved.
+5. Keep frontend styling, provider settings, production infrastructure, secrets, and pending legal copy untouched unless explicitly approved.
 
 ## Query pack
 

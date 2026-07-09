@@ -234,6 +234,7 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     expect(gapTracker).toContain("persistDeploymentToolingRun upsert seam");
     expect(gapTracker).toContain("deploymentToolingBlockerOwnerContract");
     expect(gapTracker).toContain("buildDeploymentToolingRuntimeRedactedBlockerOwnerPacket");
+    expect(gapTracker).toContain("GAP-113 deployment tooling artifact hardening now redacts repository/branch/PR/reviewer/CODEOWNER selectors");
   });
 
   it("classifies GAP-113 evidence as blocked until deployment tooling execution proof is captured", () => {
@@ -430,6 +431,11 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
       deployUrl: "https://inkroute-dashboard.example.com/deployment?tenant=tenant_demo",
       approvalPayload: { approvedByEmail: "owner@example.com", phone: "+1 555 444 2222" },
       blockerOwners: ["owner_123", "artist@example.com"],
+      repositoryEvidence: "repo:dominator509/InkRoute",
+      branchEvidence: "branch:production/deployment-tooling",
+      pullRequestEvidence: "pr_deployment_tooling",
+      reviewerEvidence: "reviewer_deployment_owner",
+      codeownerEvidence: "CODEOWNER:deployment-platform-team",
       nested: {
         authorization: "Bearer deployment-secret-token",
         providerResourceId: "deployment_abc123",
@@ -450,9 +456,19 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     expect(serialized).not.toContain("Bearer deployment-secret-token");
     expect(serialized).not.toContain("tenant_demo");
     expect(serialized).not.toContain("deployment_abc123");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("branch:production/deployment-tooling");
+    expect(serialized).not.toContain("pr_deployment_tooling");
+    expect(serialized).not.toContain("reviewer_deployment_owner");
+    expect(serialized).not.toContain("CODEOWNER:deployment-platform-team");
     expect(review.containsUnredactedSensitiveValues).toBe(false);
     expect(review.redactions).toEqual(
       expect.arrayContaining([
+        "[REDACTED_BRANCH_SELECTOR]",
+        "[REDACTED_CODEOWNER_SELECTOR]",
+        "[REDACTED_PR_SELECTOR]",
+        "[REDACTED_REPOSITORY_SELECTOR]",
+        "[REDACTED_REVIEWER_SELECTOR]",
         "authorization",
         "blockerOwners",
         "ciRunUrl",

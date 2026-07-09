@@ -268,7 +268,9 @@ const missingFrom = (actual: readonly string[] | undefined, required: readonly s
   return required.filter((entry) => !actualSet.has(entry));
 };
 
-const sensitiveMobileApiArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|auth|authorization|idempotency|request|replay|offline|device|api|audit|role|member|email|phone|medical|payment)/i;
+const sensitiveMobileApiArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|auth|authorization|idempotency|request|replay|offline|device|api|audit|role|member|email|phone|medical|payment|artifact|path|ci|workflow|run|evidence|id|key)/i;
+const sensitiveMobileApiArtifactValue =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token)[A-Za-z0-9_-]*|(?:tenant|client|user|member|role|session|refresh|auth|authorization|idempotency|request|replay|offline|device|api|audit|provider|artifact|workflow|ci|run|evidence|mobile)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactMobileApiArtifactValue = (
   value: unknown,
@@ -292,6 +294,13 @@ const redactMobileApiArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && sensitiveMobileApiArtifactValue.test(value)) {
+    sensitiveMobileApiArtifactValue.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(sensitiveMobileApiArtifactValue, "[REDACTED]");
+  }
+
+  sensitiveMobileApiArtifactValue.lastIndex = 0;
   return value;
 };
 

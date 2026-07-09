@@ -312,6 +312,15 @@ describe("workspace required checks runtime contract", () => {
       },
       mergeBlockLog: "blocked owner@example.com with token github_pat_1234567890ABCDEFGHIJKLMNOP",
       ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/27171288295",
+      workspaceAuditOutput: "workspace audit failed for user_private_123",
+      prGapDiffPayload: { branchName: "feature/private-gap" },
+      failingPrMergeBlockProof: "merge blocked run_private_123",
+      codeownersReviewBody: "review from owner_private_123",
+      rawGitHubPayload: { repository: "private/repo" },
+      neutralWorkspaceTrace: "workspace_audit_01HZYXZYXZYXZYXZYXZYXZYXZ blocked gap_diff_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCheckTrace: "required_check_01HZYXZYXZYXZYXZYXZYXZYXZ failed workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralReviewerTrace: "reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ approved codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralArtifactTrace: "workspace diff stored reports/workspace/private-gap-diff.patch",
     };
 
     expect(buildRedactedWorkspaceRequiredChecksArtifact(artifact)).toEqual({
@@ -320,6 +329,15 @@ describe("workspace required checks runtime contract", () => {
       branchProtectionSettings: "[REDACTED]",
       mergeBlockLog: "blocked [REDACTED] with token [REDACTED]",
       ciRunUrl: "[REDACTED]",
+      workspaceAuditOutput: "[REDACTED]",
+      prGapDiffPayload: "[REDACTED]",
+      failingPrMergeBlockProof: "[REDACTED]",
+      codeownersReviewBody: "[REDACTED]",
+      rawGitHubPayload: "[REDACTED]",
+      neutralWorkspaceTrace: "[REDACTED] blocked [REDACTED]",
+      neutralCheckTrace: "[REDACTED] failed workflow [REDACTED]",
+      neutralReviewerTrace: "[REDACTED] approved [REDACTED]",
+      neutralArtifactTrace: "workspace diff stored [REDACTED]",
     });
 
     const review = buildWorkspaceRequiredChecksArtifactReview(artifact);
@@ -333,8 +351,23 @@ describe("workspace required checks runtime contract", () => {
         "branchProtectionSettings",
         "mergeBlockLog",
         "ciRunUrl",
+        "workspaceAuditOutput",
+        "prGapDiffPayload",
+        "failingPrMergeBlockProof",
+        "codeownersReviewBody",
+        "rawGitHubPayload",
+        "neutralWorkspaceTrace",
+        "neutralCheckTrace",
+        "neutralReviewerTrace",
+        "neutralArtifactTrace",
       ]),
     );
+    expect(JSON.stringify(review.artifact)).not.toContain("workspace_audit_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("gap_diff_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("reports/workspace/private-gap-diff.patch");
     expect(review.requiredExternalEvidence).toContain("Required-check evidence logs reviewed as redacted and secret-free.");
     expect(bundle.status).toBe("redacted-evidence-bundle-ready");
     expect(bundle.artifactPath).toBe("coverage/workspace-required-checks-redacted-evidence-bundle.json");

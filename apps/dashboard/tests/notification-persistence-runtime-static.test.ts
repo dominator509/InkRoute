@@ -157,6 +157,13 @@ describe("dashboard notification persistence runtime contract", () => {
     expect(preferenceRouteSource).toContain("tx.notificationSuppression.upsert");
     expect(preferenceRouteSource).toContain("tx.auditLog.create");
     expect(preferenceRouteSource).toContain("tx.idempotencyKey.update");
+    expect(preferenceRouteSource).toContain("destinationHashOnly");
+    expect(preferenceRouteSource).toContain("clientResponseAllowlisted: true");
+    expect(preferenceRouteSource).toContain("rawDestinationStored: false");
+    expect(preferenceRouteSource).toContain("clientContactFieldsEchoed: false");
+    expect(preferenceRouteSource).toContain("rawDestinationEchoed: false");
+    expect(preferenceRouteSource).not.toContain("client: { ...result.client");
+    expect(preferenceRouteSource).not.toContain("destinationStored");
     expect(preferenceRouteSource).toContain("rawDestinationStoredInResult: false");
     expect(preferenceRouteSource).toContain("providerWebhookReplayed: false");
     expect(preferenceRouteSource).toContain("liveStopEnforced: false");
@@ -234,6 +241,10 @@ describe("dashboard notification persistence runtime contract", () => {
         auditActorEmail: "artist@example.test",
         publicStatus: "queued",
       },
+      safeNote:
+        "evidence_notification_persistence_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/notification-persistence/private-proof.json",
+      safeDeliveryPath: "test-results/notification-persistence-runtime/private-delivery.json",
+      safeProviderRun: "notification_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
     });
 
     expect(redacted.secretSafe).toBe(true);
@@ -243,6 +254,9 @@ describe("dashboard notification persistence runtime contract", () => {
       "notificationDestinationHash",
       "providerHandoffPayload",
       "nested.auditActorEmail",
+      "safeNote",
+      "safeDeliveryPath",
+      "safeProviderRun",
     ]);
     expect(redacted.artifact).toEqual({
       tenantId: "[redacted]",
@@ -254,7 +268,21 @@ describe("dashboard notification persistence runtime contract", () => {
         auditActorEmail: "[redacted]",
         publicStatus: "queued",
       },
+      safeDeliveryPath: "[redacted]",
+      safeProviderRun: "[redacted]",
     });
+    expect(JSON.stringify(redacted.artifact)).not.toContain(
+      "evidence_notification_persistence_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.artifact)).not.toContain(
+      "artifacts/notification-persistence/private-proof.json",
+    );
+    expect(JSON.stringify(redacted.artifact)).not.toContain(
+      "test-results/notification-persistence-runtime/private-delivery.json",
+    );
+    expect(JSON.stringify(redacted.artifact)).not.toContain(
+      "notification_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
 
     const review = buildNotificationPersistenceArtifactReview({
       publicSummary: "safe notification persistence artifact",

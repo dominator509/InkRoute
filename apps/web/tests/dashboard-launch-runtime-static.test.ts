@@ -403,6 +403,23 @@ describe("dashboard launch runtime contract", () => {
       persistence: {
         databaseUrl: "postgres://inkroute:secret@example.neon.tech/inkroute",
       },
+      seededTenantData: {
+        bookingRequestId: "booking_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      },
+      mutationAuditPayload: {
+        rawBody: "updated client_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      },
+      rbacCrossTenantDenial: "denied tenant_01HZYXZYXZYXZYXZYXZYXZYXZ access to user_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      playwrightSmokeTracePath: "test-results/dashboard-launch-runtime/trace.zip",
+      renderedRouteHtml: "<main data-tenant='tenant_01HZYXZYXZYXZYXZYXZYXZYXZ'>Private dashboard</main>",
+      loadingEmptyErrorStateScreenshots: ["test-results/dashboard-launch-runtime/error.png"],
+      neutralPersistenceTrace: "dashboard_persistence_01HZYXZYXZYXZYXZYXZYXZYXZ stored postgresql://tenant_demo:secret@db.example.com/inkroute",
+      neutralArtifactTrace: "dashboard_trace_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/dashboard-launch/private-trace.zip",
+      repository: "repo:dominator509/InkRoute",
+      branch: "branch:production/dashboard-launch",
+      pullRequest: "pr_dashboard_launch",
+      reviewer: "reviewer_dashboard_owner",
+      codeowner: "CODEOWNER:dashboard-platform-team",
     };
 
     expect(buildRedactedDashboardLaunchArtifact(artifact)).toEqual({
@@ -416,6 +433,19 @@ describe("dashboard launch runtime contract", () => {
       persistence: {
         databaseUrl: "[REDACTED]",
       },
+      seededTenantData: "[REDACTED]",
+      mutationAuditPayload: "[REDACTED]",
+      rbacCrossTenantDenial: "[REDACTED] access to [REDACTED]",
+      playwrightSmokeTracePath: "[REDACTED]",
+      renderedRouteHtml: "[REDACTED]",
+      loadingEmptyErrorStateScreenshots: "[REDACTED]",
+      neutralPersistenceTrace: "[REDACTED] stored [REDACTED]",
+      neutralArtifactTrace: "[REDACTED] wrote [REDACTED]",
+      repository: "[REDACTED]",
+      branch: "[REDACTED]",
+      pullRequest: "[REDACTED]",
+      reviewer: "[REDACTED]",
+      codeowner: "[REDACTED]",
     });
 
     const review = buildDashboardLaunchArtifactReview(artifact);
@@ -428,8 +458,24 @@ describe("dashboard launch runtime contract", () => {
         "providerAuth.tenantId",
         "providerAuth.sessionToken",
         "persistence.databaseUrl",
+        "seededTenantData",
+        "mutationAuditPayload",
+        "rbacCrossTenantDenial",
+        "playwrightSmokeTracePath",
+        "renderedRouteHtml",
+        "loadingEmptyErrorStateScreenshots",
+        "neutralPersistenceTrace",
+        "neutralArtifactTrace",
+        "repository",
+        "branch",
+        "pullRequest",
+        "reviewer",
+        "codeowner",
       ]),
     );
+    expect(JSON.stringify(review.artifact)).not.toContain("repo:dominator509/InkRoute");
+    expect(JSON.stringify(review.artifact)).not.toContain("pr_dashboard_launch");
+    expect(JSON.stringify(review.artifact)).not.toContain("CODEOWNER:dashboard-platform-team");
     expect(review.requiredExternalEvidence).toBe(dashboardLaunchRequiredExternalEvidence);
   });
 });

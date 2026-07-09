@@ -136,6 +136,12 @@ describe("dashboard travel publish contract", () => {
     expect(routeSource).toContain('export const runtime = "nodejs"');
     expect(routeSource).toContain("travel:write");
     expect(routeSource).toContain("TRAVEL_PUBLISH_BLOCKED");
+    expect(routeSource).toContain("plan: buildSafeTravelPublishPlanResponse(plan)");
+    expect(routeSource).toContain("rawIdempotencyKeyEchoed: false");
+    expect(routeSource).toContain("rawStopPayloadEchoed: false");
+    expect(routeSource).toContain("rawWaitlistClientIdsEchoed: false");
+    expect(routeSource).toContain("rawRevalidationTagsEchoed: false");
+    expect(routeSource).not.toMatch(/^\s+plan,\s*$/m);
     expect(routeSource).toContain("database-persisted");
     expect(routeSource).toContain("TravelSchedule");
     expect(routeSource).toContain("auditLog.create");
@@ -175,6 +181,8 @@ describe("dashboard travel publish contract", () => {
     expect(travelCityRouteSource).toContain("tx.idempotencyKey.update");
     expect(travelCityRouteSource).toContain("rawLocationStoredInResult: false");
     expect(travelCityRouteSource).toContain("publicCacheRevalidated: false");
+    expect(travelCityRouteSource).toContain("travelCityResponseAllowlisted: true");
+    expect(travelCityRouteSource).not.toContain("...result.travelCity");
     expect(travelCityRouteSource).toContain("idempotencyKeyId");
     expect(travelCityRouteSource).toContain("idempotencyReplay");
     expect(travelCityRouteSource).toContain("idempotency-backed");
@@ -193,6 +201,8 @@ describe("dashboard travel publish contract", () => {
     expect(travelScheduleRouteSource).toContain("rawNotesStoredInResult: false");
     expect(travelScheduleRouteSource).toContain("publicCacheRevalidated: false");
     expect(travelScheduleRouteSource).toContain("notificationFanoutQueued: true");
+    expect(travelScheduleRouteSource).toContain("travelScheduleResponseAllowlisted: true");
+    expect(travelScheduleRouteSource).not.toContain("...result.travelSchedule");
     expect(travelScheduleRouteSource).toContain("notificationProviderExecution");
     expect(travelScheduleRouteSource).toContain("provider sends, worker execution, and integration tests remain evidence-gated");
     expect(travelScheduleRouteSource).toContain("idempotencyKeyId");

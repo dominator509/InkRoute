@@ -1,270 +1,10 @@
 {
-  "generatedAt": "2026-06-22T00:13:10.015Z",
+  "generatedAt": "2026-07-09T14:40:03.137Z",
   "source": "GAP-124 documentation audit quality",
-  "status": "fail",
+  "status": "pass",
   "markdownFilesChecked": 161,
-  "routeReferencesChecked": 88,
-  "findings": [
-    {
-      "status": "fail",
-      "rule": "legal-readiness-language",
-      "sourcePath": "AGENTS.md",
-      "line": 164,
-      "message": "Legal readiness claim lacks pending/gated/evidence qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "ARCHITECTURE.md",
-      "line": 148,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "legal-readiness-language",
-      "sourcePath": "ARCHITECTURE.md",
-      "line": 225,
-      "message": "Legal readiness claim lacks pending/gated/evidence qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "ARCHITECTURE.md",
-      "line": 276,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
-      "line": 7,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
-      "line": 66,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "legal-readiness-language",
-      "sourcePath": "DATABASE_SCHEMA.md",
-      "line": 116,
-      "message": "Legal readiness claim lacks pending/gated/evidence qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "deployment/CI_CD_RUNBOOK.md",
-      "line": 16,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "legal-readiness-language",
-      "sourcePath": "deployment/CI_CD_RUNBOOK.md",
-      "line": 41,
-      "message": "Legal readiness claim lacks pending/gated/evidence qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "DEPLOYMENT.md",
-      "line": 14,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "DEPLOYMENT.md",
-      "line": 75,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "DEPLOYMENT.md",
-      "line": 94,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "legal-readiness-language",
-      "sourcePath": "DEPLOYMENT.md",
-      "line": 127,
-      "message": "Legal readiness claim lacks pending/gated/evidence qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "DEPLOYMENT.md",
-      "line": 128,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "DEPLOYMENT.md",
-      "line": 144,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "line": 138,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "legal-readiness-language",
-      "sourcePath": "docs/ai/SERENA_OBSIDIAN_WORKFLOW.md",
-      "line": 491,
-      "message": "Legal readiness claim lacks pending/gated/evidence qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "legal-readiness-language",
-      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
-      "line": 37,
-      "message": "Legal readiness claim lacks pending/gated/evidence qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
-      "line": 109,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
-      "line": 5,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
-      "line": 60,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "docs/phases/PHASE_9_NOTIFICATIONS_MESSAGING.md",
-      "line": 26,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "ENVIRONMENT_VARIABLES.md",
-      "line": 83,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "ENVIRONMENT_VARIABLES.md",
-      "line": 91,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
-      "line": 26,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
-      "line": 27,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "HANDOFF_TO_CLAUDE_CODE.md",
-      "line": 30,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "PRODUCT_REQUIREMENTS.md",
-      "line": 76,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "PRODUCT_REQUIREMENTS.md",
-      "line": 131,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "legal-readiness-language",
-      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
-      "line": 66,
-      "message": "Legal readiness claim lacks pending/gated/evidence qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "legal-readiness-language",
-      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
-      "line": 145,
-      "message": "Legal readiness claim lacks pending/gated/evidence qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "ROADMAP.md",
-      "line": 151,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "ROADMAP.md",
-      "line": 191,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "ROADMAP.md",
-      "line": 285,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "legal-readiness-language",
-      "sourcePath": "SEO_PLAN.md",
-      "line": 73,
-      "message": "Legal readiness claim lacks pending/gated/evidence qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "provider-readiness-language",
-      "sourcePath": "SEO_PLAN.md",
-      "line": 118,
-      "message": "Provider readiness claim lacks blocked/gated/evidence/sandbox qualifier."
-    },
-    {
-      "status": "fail",
-      "rule": "legal-readiness-language",
-      "sourcePath": "spec/retrofit/kit/PROJECT_STATE.md",
-      "line": 18,
-      "message": "Legal readiness claim lacks pending/gated/evidence qualifier."
-    }
-  ],
+  "routeReferencesChecked": 117,
+  "findings": [],
   "routeReferences": [
     {
       "sourcePath": "API_CONTRACTS.md",
@@ -280,6 +20,26 @@
       "sourcePath": "API_CONTRACTS.md",
       "raw": "/api/public/:tenantSlug/messages",
       "routePath": "/api/public/:tenantSlug/messages"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/public/:tenantSlug/contact",
+      "routePath": "/api/public/:tenantSlug/contact"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/public/:tenantSlug/analytics",
+      "routePath": "/api/public/:tenantSlug/analytics"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/public/:tenantSlug/preferences",
+      "routePath": "/api/public/:tenantSlug/preferences"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/public/:tenantSlug/unsubscribe",
+      "routePath": "/api/public/:tenantSlug/unsubscribe"
     },
     {
       "sourcePath": "API_CONTRACTS.md",
@@ -303,6 +63,11 @@
     },
     {
       "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/clients",
+      "routePath": "/api/clients"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
       "raw": "/api/clients/:clientId",
       "routePath": "/api/clients/:clientId"
     },
@@ -313,13 +78,53 @@
     },
     {
       "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/clients/:clientId",
+      "routePath": "/api/clients/:clientId"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
       "raw": "/api/portfolio",
       "routePath": "/api/portfolio"
     },
     {
       "sourcePath": "API_CONTRACTS.md",
-      "raw": "/api/error-reports",
-      "routePath": "/api/error-reports"
+      "raw": "/api/portfolio/:portfolioId",
+      "routePath": "/api/portfolio/:portfolioId"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/portfolio",
+      "routePath": "/api/portfolio"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/portfolio/[portfolioId]/images",
+      "routePath": "/api/portfolio/[portfolioId]/images"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/travel",
+      "routePath": "/api/travel"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/travel/:travelScheduleId",
+      "routePath": "/api/travel/:travelScheduleId"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/calendar",
+      "routePath": "/api/calendar"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/payments",
+      "routePath": "/api/payments"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/payments/:paymentId",
+      "routePath": "/api/payments/:paymentId"
     },
     {
       "sourcePath": "API_CONTRACTS.md",
@@ -330,6 +135,21 @@
       "sourcePath": "API_CONTRACTS.md",
       "raw": "/api/error-reports",
       "routePath": "/api/error-reports"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/observability/release-incidents",
+      "routePath": "/api/observability/release-incidents"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/observability/github-issues",
+      "routePath": "/api/observability/github-issues"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/releases",
+      "routePath": "/api/releases"
     },
     {
       "sourcePath": "API_CONTRACTS.md",
@@ -343,8 +163,38 @@
     },
     {
       "sourcePath": "API_CONTRACTS.md",
+      "raw": "POST /api/feature-flags",
+      "routePath": "/api/feature-flags"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/settings",
+      "routePath": "/api/settings"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/settings",
+      "routePath": "/api/settings"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
       "raw": "/api/messages",
       "routePath": "/api/messages"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/messages",
+      "routePath": "/api/messages"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/messages",
+      "routePath": "/api/messages"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "/api/reviews",
+      "routePath": "/api/reviews"
     },
     {
       "sourcePath": "API_CONTRACTS.md",
@@ -368,8 +218,18 @@
     },
     {
       "sourcePath": "API_CONTRACTS.md",
+      "raw": "POST /api/messages/privacy",
+      "routePath": "/api/messages/privacy"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
       "raw": "GET /api/public/[tenantSlug]/notification-previews",
       "routePath": "/api/public/[tenantSlug]/notification-previews"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "GET /api/templates",
+      "routePath": "/api/templates"
     },
     {
       "sourcePath": "API_CONTRACTS.md",
@@ -394,6 +254,11 @@
     {
       "sourcePath": "API_CONTRACTS.md",
       "raw": "POST /api/releases",
+      "routePath": "/api/releases"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "raw": "PATCH /api/releases",
       "routePath": "/api/releases"
     },
     {
@@ -520,6 +385,11 @@
       "sourcePath": "docs/ai/API_CONTRACTS.md",
       "raw": "/api/public/[tenantSlug]/upload-policy",
       "routePath": "/api/public/[tenantSlug]/upload-policy"
+    },
+    {
+      "sourcePath": "docs/ai/API_CONTRACTS.md",
+      "raw": "/api/releases",
+      "routePath": "/api/releases"
     },
     {
       "sourcePath": "docs/ai/API_CONTRACTS.md",
@@ -693,8 +563,23 @@
     },
     {
       "sourcePath": "ROADMAP.md",
+      "raw": "/api/public/[tenantSlug]/portfolio",
+      "routePath": "/api/public/[tenantSlug]/portfolio"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "raw": "/api/public/[tenantSlug]/waitlists",
+      "routePath": "/api/public/[tenantSlug]/waitlists"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
       "raw": "POST /api/public/[tenantSlug]/booking-requests",
       "routePath": "/api/public/[tenantSlug]/booking-requests"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "raw": "/api/metrics",
+      "routePath": "/api/metrics"
     },
     {
       "sourcePath": "ROADMAP.md",

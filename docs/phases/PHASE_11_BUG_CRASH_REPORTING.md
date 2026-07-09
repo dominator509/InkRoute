@@ -106,7 +106,7 @@ Updated:
 
 ## Scaffolded only
 
-- Live Sentry SDK capture.
+- Live Sentry SDK capture (blocked without Sentry provider setup).
 - Next.js source-map upload.
 - React Native/Expo source-map/debug-symbol upload.
 - OpenTelemetry exporter.

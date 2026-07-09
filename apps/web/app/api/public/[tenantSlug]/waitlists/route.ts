@@ -8,12 +8,13 @@ import {
   publicContentNoStoreHeaders,
   resolvePublicTenantScope,
 } from "../../../../../lib/publicContentApi";
-import { checkRateLimit, getClientIp, persistWaitlistSignupMessage } from "../../../../../lib/localRuntimeState";
+import { checkRateLimit, getClientIpFromHeaders, persistWaitlistSignupMessage } from "../../../../../lib/localRuntimeState";
 
 export const runtime = "nodejs";
 
-type DbWaitlistResult = {
-  client: { id: string; email: string; preferredName: string };
+type DbWaitlistPersistedResult = {
+  status: "persisted";
+  client: { id: string };
   travelCity: { id: string; slug: string; city: string; region: string; waitlistEnabled: boolean };
   idempotency: { id: string; key: string };
   thread: { id: string; subject: string };
@@ -23,6 +24,18 @@ type DbWaitlistResult = {
   handoff: { id: string; state: string };
   audit: { id: string };
 };
+
+type DbWaitlistReplayResult = {
+  status: "replayed";
+  travelCity: { id: string; slug: string; city: string; region: string; waitlistEnabled: boolean };
+};
+
+type DbWaitlistConflictResult = {
+  status: "idempotency_conflict";
+};
+
+type DbWaitlistResult = DbWaitlistPersistedResult | DbWaitlistReplayResult | DbWaitlistConflictResult;
+type DbWaitlistCreatedResult = Exclude<DbWaitlistResult, DbWaitlistConflictResult | DbWaitlistReplayResult>;
 
 function normalizeTenantSlug(value: string): string {
   return decodeURIComponent(value).toLowerCase().trim();
@@ -50,6 +63,31 @@ function destinationHash(value: string) {
   return createHash("sha256").update(value.toLowerCase().trim()).digest("hex");
 }
 
+function hashWaitlistRequest(tenantId: string, input: WaitlistSignupInput, normalizedEmail: string) {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        tenantId,
+        citySlug: input.citySlug,
+        clientEmail: normalizedEmail,
+        phonePresent: Boolean(input.phone),
+        clientName: input.clientName.trim(),
+        preferredStyle: input.preferredStyle ?? null,
+        placement: input.placement ?? null,
+        sizeEstimate: input.sizeEstimate ?? null,
+        notes: input.notes ?? null,
+        marketingOptIn: input.marketingOptIn,
+        smsOptIn: input.smsOptIn,
+        policyAccepted: input.policyAccepted,
+      }),
+    )
+    .digest("hex");
+}
+
+function idempotencyStorageFingerprint(value: string) {
+  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
+}
+
 function buildWaitlistBody(input: WaitlistSignupInput): string {
   return [
     `${input.clientName} joined the ${input.citySlug} travel waitlist.`,
@@ -64,23 +102,104 @@ function buildWaitlistBody(input: WaitlistSignupInput): string {
     .join("\n");
 }
 
-async function persistWaitlistSignupToDatabase(tenantId: string, input: WaitlistSignupInput, idempotencyKey: string): Promise<DbWaitlistResult> {
+function buildWaitlistResponseProjection() {
+  return {
+    rawContactFieldsEchoed: false,
+    maskedContactEchoed: false,
+    clientEmailSelectedFromDatabase: false,
+    clientNameSelectedFromDatabase: false,
+    rawDestinationEchoed: false,
+    destinationHashEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    tenantIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+    rawWaitlistBodyEchoed: false,
+    redactedPayloadEchoed: false,
+  };
+}
+
+function buildSafeWaitlistDatabaseResponse(persisted: DbWaitlistPersistedResult | DbWaitlistReplayResult) {
+  if (persisted.status === "replayed") {
+    return {
+      waitlist: {
+        citySlug: persisted.travelCity.slug,
+        city: persisted.travelCity.city,
+        region: persisted.travelCity.region,
+        waitlistEnabled: persisted.travelCity.waitlistEnabled,
+      },
+      receipt: {
+        idempotencyReplayed: true,
+        duplicateSideEffectsCreated: false,
+        clientPersisted: true,
+        messageThreadPersisted: true,
+        auditPersisted: true,
+        idempotencyPersisted: true,
+        notificationDispatchDeferred: true,
+      },
+      responseProjection: buildWaitlistResponseProjection(),
+    };
+  }
+
+  return {
+    waitlist: {
+      citySlug: persisted.travelCity.slug,
+      city: persisted.travelCity.city,
+      region: persisted.travelCity.region,
+      waitlistEnabled: persisted.travelCity.waitlistEnabled,
+    },
+    receipt: {
+      idempotencyReplayed: false,
+      duplicateSideEffectsCreated: false,
+      clientPersisted: true,
+      messageThreadPersisted: true,
+      messageStatus: persisted.message.status,
+      notificationStatus: persisted.notification.status,
+      notificationType: persisted.notification.type,
+      deliveryStatus: persisted.delivery.status,
+      providerHandoffState: persisted.handoff.state,
+      auditPersisted: true,
+      idempotencyPersisted: true,
+    },
+    responseProjection: buildWaitlistResponseProjection(),
+  };
+}
+
+function buildSafeWaitlistLocalFallbackMessage(local: ReturnType<typeof persistWaitlistSignupMessage>) {
+  return {
+    status: local.status,
+    channel: local.channel,
+    responseProjection: {
+      localMessageIdEchoed: false,
+      redactedPayloadEchoed: false,
+      rawContactFieldsEchoed: false,
+      rawWaitlistBodyEchoed: false,
+    },
+  };
+}
+
+async function persistWaitlistSignupToDatabase(
+  tenantId: string,
+  input: WaitlistSignupInput,
+  idempotencyKey: string,
+  requestHash: string,
+): Promise<DbWaitlistResult> {
+  type DbWaitlistIdempotencyResult = { id: string; key: string; status: string; requestHash: string | null };
   const prismaRuntime = prisma as unknown as {
     $transaction: <T>(callback: (tx: {
-      travelCity: { findFirst: (options: Record<string, unknown>) => Promise<DbWaitlistResult["travelCity"] | null> };
+      travelCity: { findFirst: (options: Record<string, unknown>) => Promise<DbWaitlistCreatedResult["travelCity"] | null> };
       client: {
-        upsert: (options: Record<string, unknown>) => Promise<DbWaitlistResult["client"]>;
+        upsert: (options: Record<string, unknown>) => Promise<DbWaitlistCreatedResult["client"]>;
       };
       idempotencyKey: {
-        upsert: (options: Record<string, unknown>) => Promise<DbWaitlistResult["idempotency"]>;
-        update: (options: Record<string, unknown>) => Promise<DbWaitlistResult["idempotency"]>;
+        upsert: (options: Record<string, unknown>) => Promise<DbWaitlistIdempotencyResult>;
+        update: (options: Record<string, unknown>) => Promise<DbWaitlistCreatedResult["idempotency"]>;
       };
-      messageThread: { create: (options: Record<string, unknown>) => Promise<DbWaitlistResult["thread"]> };
-      message: { create: (options: Record<string, unknown>) => Promise<DbWaitlistResult["message"]> };
-      notification: { create: (options: Record<string, unknown>) => Promise<DbWaitlistResult["notification"]> };
-      notificationDelivery: { create: (options: Record<string, unknown>) => Promise<DbWaitlistResult["delivery"]> };
-      notificationProviderHandoff: { create: (options: Record<string, unknown>) => Promise<DbWaitlistResult["handoff"]> };
-      auditLog: { create: (options: Record<string, unknown>) => Promise<DbWaitlistResult["audit"]> };
+      messageThread: { create: (options: Record<string, unknown>) => Promise<DbWaitlistCreatedResult["thread"]> };
+      message: { create: (options: Record<string, unknown>) => Promise<DbWaitlistCreatedResult["message"]> };
+      notification: { create: (options: Record<string, unknown>) => Promise<DbWaitlistCreatedResult["notification"]> };
+      notificationDelivery: { create: (options: Record<string, unknown>) => Promise<DbWaitlistCreatedResult["delivery"]> };
+      notificationProviderHandoff: { create: (options: Record<string, unknown>) => Promise<DbWaitlistCreatedResult["handoff"]> };
+      auditLog: { create: (options: Record<string, unknown>) => Promise<DbWaitlistCreatedResult["audit"]> };
     }) => Promise<T>) => Promise<T>;
   };
 
@@ -93,6 +212,34 @@ async function persistWaitlistSignupToDatabase(tenantId: string, input: Waitlist
     });
     if (!travelCity) {
       throw new Error("WAITLIST_CITY_NOT_FOUND");
+    }
+
+    const idempotency = await tx.idempotencyKey.upsert({
+      where: { tenantId_scope_key: { tenantId, scope: "public-waitlist", key: idempotencyKey } },
+      create: {
+        tenantId,
+        scope: "public-waitlist",
+        key: idempotencyKey,
+        status: "pending",
+        requestHash,
+        metadata: toJsonValue({
+          route: "/api/public/[tenantSlug]/waitlists",
+          citySlug: input.citySlug,
+          emailHash,
+          requestHash,
+          rawPayloadStored: false,
+        }),
+      },
+      update: {},
+      select: { id: true, key: true, status: true, requestHash: true },
+    });
+
+    if (idempotency.requestHash !== requestHash) {
+      return { status: "idempotency_conflict" };
+    }
+
+    if (idempotency.status === "completed") {
+      return { status: "replayed", travelCity };
     }
 
     const client = await tx.client.upsert({
@@ -115,33 +262,7 @@ async function persistWaitlistSignupToDatabase(tenantId: string, input: Waitlist
         marketingOptIn: input.marketingOptIn,
         smsOptIn: input.smsOptIn,
       },
-      select: { id: true, email: true, preferredName: true },
-    });
-
-    const idempotency = await tx.idempotencyKey.upsert({
-      where: { tenantId_scope_key: { tenantId, scope: "public-waitlist", key: idempotencyKey } },
-      create: {
-        tenantId,
-        scope: "public-waitlist",
-        key: idempotencyKey,
-        status: "claimed",
-        metadata: toJsonValue({
-          route: "/api/public/[tenantSlug]/waitlists",
-          citySlug: input.citySlug,
-          emailHash,
-          rawPayloadStored: false,
-        }),
-      },
-      update: {
-        metadata: toJsonValue({
-          route: "/api/public/[tenantSlug]/waitlists",
-          citySlug: input.citySlug,
-          emailHash,
-          replayObserved: true,
-          rawPayloadStored: false,
-        }),
-      },
-      select: { id: true, key: true },
+      select: { id: true },
     });
 
     const thread = await tx.messageThread.create({
@@ -201,15 +322,17 @@ async function persistWaitlistSignupToDatabase(tenantId: string, input: Waitlist
         channel: "in_app",
         provider: "internal-dashboard",
         state: "queued",
-        idempotencyKey: idempotency.key,
+        idempotencyKey: idempotencyStorageFingerprint(idempotency.key),
         destinationHash: emailHash,
         sanitizedPayload: toJsonValue({
           route: "/api/public/[tenantSlug]/waitlists",
           citySlug: input.citySlug,
-          clientId: client.id,
-          messageId: message.id,
           bodyPreview: "[redacted-waitlist-body]",
           emailHash,
+          clientPersisted: true,
+          messagePersisted: true,
+          internalPersistenceIdsStored: false,
+          rawIdempotencyKeyStored: false,
           providerDispatchDeferred: true,
         }),
       },
@@ -225,12 +348,14 @@ async function persistWaitlistSignupToDatabase(tenantId: string, input: Waitlist
         metadata: toJsonValue({
           route: "/api/public/[tenantSlug]/waitlists",
           citySlug: input.citySlug,
-          clientId: client.id,
-          messageId: message.id,
-          notificationId: notification.id,
-          deliveryId: delivery.id,
-          handoffId: handoff.id,
-          idempotencyKeyId: idempotency.id,
+          clientPersisted: true,
+          messagePersisted: true,
+          notificationPersisted: true,
+          deliveryPersisted: true,
+          providerHandoffPersisted: true,
+          idempotencyPersisted: true,
+          internalPersistenceIdsStored: false,
+          requestHash,
           redactedFields: ["client.email", "message.body", "destinationHash"],
           rawPayloadStored: false,
           gapIds: ["GAP-010", "GAP-026", "GAP-061", "GAP-064"],
@@ -244,20 +369,35 @@ async function persistWaitlistSignupToDatabase(tenantId: string, input: Waitlist
       data: {
         status: "completed",
         result: toJsonValue({
-          clientId: client.id,
-          threadId: thread.id,
-          messageId: message.id,
-          notificationId: notification.id,
-          deliveryId: delivery.id,
-          handoffId: handoff.id,
-          auditId: audit.id,
+          requestHash,
+          idempotencyReplayed: false,
+          duplicateSideEffectsCreated: false,
+          waitlist: {
+            citySlug: travelCity.slug,
+            city: travelCity.city,
+            region: travelCity.region,
+            waitlistEnabled: travelCity.waitlistEnabled,
+          },
+          receipt: {
+            clientPersisted: true,
+            messageThreadPersisted: true,
+            messageStatus: message.status,
+            notificationStatus: notification.status,
+            notificationType: notification.type,
+            deliveryStatus: delivery.status,
+            providerHandoffState: handoff.state,
+            auditPersisted: true,
+            idempotencyPersisted: true,
+            internalPersistenceIdsStored: false,
+          },
+          responseProjection: buildWaitlistResponseProjection(),
           rawPayloadStored: false,
         }),
       },
       select: { id: true, key: true },
     });
 
-    return { client, travelCity, idempotency, thread, message, notification, delivery, handoff, audit };
+    return { status: "persisted", client, travelCity, idempotency, thread, message, notification, delivery, handoff, audit };
   });
 }
 
@@ -289,7 +429,7 @@ export async function POST(request: Request, context: { params: Promise<{ tenant
     );
   }
 
-  const clientIp = getClientIp(Object.fromEntries(request.headers.entries()));
+  const clientIp = getClientIpFromHeaders(request.headers);
   const rateLimit = checkRateLimit("public-message-submit", normalizedTenantSlug, `${clientIp}:${tenant.tenantId}:waitlist`);
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -328,36 +468,40 @@ export async function POST(request: Request, context: { params: Promise<{ tenant
   try {
     if (tenant.source === "database") {
       const normalizedEmail = parsed.data.clientEmail.toLowerCase().trim();
+      const requestHash = hashWaitlistRequest(tenant.tenantId, parsed.data, normalizedEmail);
       const idempotencyKey =
         request.headers.get("idempotency-key") ??
-        `public-waitlist:${tenant.tenantId}:${parsed.data.citySlug}:${destinationHash(normalizedEmail)}:${parsed.data.policyAccepted}`;
-      const persisted = await persistWaitlistSignupToDatabase(tenant.tenantId, parsed.data, idempotencyKey);
+        `public-waitlist:${requestHash}`;
+      const persisted = await persistWaitlistSignupToDatabase(tenant.tenantId, parsed.data, idempotencyKey, requestHash);
+      if (persisted.status === "idempotency_conflict") {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: {
+              code: "IDEMPOTENCY_CONFLICT",
+              message: "Idempotency key was already used for a different waitlist signup payload.",
+            },
+            responseProjection: {
+              waitlistIdempotencyConflictResponseAllowlisted: true,
+              idempotencyKeyIdEchoed: false,
+              rawIdempotencyKeyEchoed: false,
+              rawIdempotencyResultEchoed: false,
+            },
+            productionBoundary: buildWaitlistBoundary(),
+            gapIds: ["GAP-010", "GAP-026", "GAP-061", "GAP-064"],
+          },
+          { status: 409, headers: publicContentNoStoreHeaders },
+        );
+      }
+
       return NextResponse.json(
         {
           ok: true,
           data: {
-            tenantSlug: normalizedTenantSlug,
-            tenantId: tenant.tenantId,
+            tenantScope: { routeTenantSlugReceived: true, tenantSlugEchoed: false },
             source: tenant.source,
             persistence: "database",
-            waitlist: {
-              citySlug: persisted.travelCity.slug,
-              city: persisted.travelCity.city,
-              region: persisted.travelCity.region,
-              waitlistEnabled: persisted.travelCity.waitlistEnabled,
-            },
-            client: {
-              id: persisted.client.id,
-              emailMasked: persisted.client.email.replace(/^(.).+(@.+)$/, "$1***$2"),
-              preferredName: persisted.client.preferredName,
-            },
-            thread: persisted.thread,
-            message: persisted.message,
-            notification: persisted.notification,
-            delivery: persisted.delivery,
-            providerHandoff: persisted.handoff,
-            auditId: persisted.audit.id,
-            idempotencyKeyId: persisted.idempotency.id,
+            ...buildSafeWaitlistDatabaseResponse(persisted),
             boundary: "Waitlist signup persisted tenant-scoped client, message-thread, message, notification, delivery, provider-handoff, idempotency, and audit intent rows; live provider delivery remains gated.",
             gapIds: ["GAP-010", "GAP-026", "GAP-061", "GAP-064"],
           },
@@ -371,11 +515,11 @@ export async function POST(request: Request, context: { params: Promise<{ tenant
       {
         ok: true,
         data: {
-          tenantSlug: normalizedTenantSlug,
-          tenantId: tenant.tenantId,
+          tenantScope: { routeTenantSlugReceived: true, tenantSlugEchoed: false },
           source: tenant.source,
           persistence: "local-fallback",
-          message: { id: local.id, status: local.status, channel: local.channel, redactedPayload: local.redactedPayload },
+          message: buildSafeWaitlistLocalFallbackMessage(local),
+          responseProjection: buildWaitlistResponseProjection(),
           boundary: "Local fallback stores a redacted waitlist message intent only; production requires DB-backed client/message/notification persistence.",
           productionBoundary: buildWaitlistBoundary(),
           gapIds: ["GAP-010", "GAP-026", "GAP-061", "GAP-064"],
@@ -412,11 +556,11 @@ export async function POST(request: Request, context: { params: Promise<{ tenant
       {
         ok: true,
         data: {
-          tenantSlug: normalizedTenantSlug,
-          tenantId: tenant.tenantId,
+          tenantScope: { routeTenantSlugReceived: true, tenantSlugEchoed: false },
           source: "local-fallback",
           persistence: "local-fallback",
-          message: { id: local.id, status: local.status, channel: local.channel, redactedPayload: local.redactedPayload },
+          message: buildSafeWaitlistLocalFallbackMessage(local),
+          responseProjection: buildWaitlistResponseProjection(),
           boundary: "Database unavailable; local fallback stores a redacted waitlist message intent only.",
           productionBoundary: buildWaitlistBoundary(),
           gapIds: ["GAP-010", "GAP-026", "GAP-061", "GAP-064"],

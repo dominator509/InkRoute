@@ -169,6 +169,14 @@ describe("mobile crash runtime contract", () => {
         clientPhone: "555-0100",
         publicSummary: "mobile crash evidence captured",
       },
+      safeNote:
+        "evidence_mobile_crash_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/mobile-crash/private-proof.json",
+      safeCrashPath: "test-results/mobile-crash-runtime/private-forced-crash.json",
+      safeSentryRun: "sentry_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_mobile_crash",
+      reviewerHandle: "reviewer_mobile_crash_owner",
+      codeownerSelector: "CODEOWNER:mobile-platform-team",
     };
 
     const redacted = buildRedactedMobileCrashArtifact(artifact);
@@ -178,6 +186,13 @@ describe("mobile crash runtime contract", () => {
       "sourceMapUrl",
       "deviceCrashPayload",
       "nested.clientPhone",
+      "safeNote",
+      "safeCrashPath",
+      "safeSentryRun",
+      "repositorySelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
     ]);
     expect(redacted.redactedArtifact).toMatchObject({
       sentryDsn: "[REDACTED]",
@@ -188,7 +203,29 @@ describe("mobile crash runtime contract", () => {
         clientPhone: "[REDACTED]",
         publicSummary: "mobile crash evidence captured",
       },
+      safeCrashPath: "[REDACTED]",
+      safeSentryRun: "[REDACTED]",
+      repositorySelector: "[REDACTED]",
+      pullRequestSelector: "[REDACTED]",
+      reviewerHandle: "[REDACTED]",
+      codeownerSelector: "[REDACTED]",
     });
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "evidence_mobile_crash_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "artifacts/mobile-crash/private-proof.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "test-results/mobile-crash-runtime/private-forced-crash.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "sentry_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain("repo:dominator509/InkRoute");
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain("pr_mobile_crash");
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain("reviewer_mobile_crash_owner");
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain("CODEOWNER:mobile-platform-team");
 
     const review = buildMobileCrashArtifactReview({
       publicSummary: "safe mobile crash evidence",

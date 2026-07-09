@@ -371,6 +371,14 @@ describe("GAP-120 launch operations runtime wiring", () => {
       monitoringDashboardUrl: "https://sentry.example.com/org/inkroute/project",
       approvalPayload: { approvedBy: "ops@example.com" },
       ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/123456",
+      onCallScheduleExport: "primary owner@example.com backup backup@example.com for run_123",
+      alertRoutingTranscript: "PagerDuty webhook https://hooks.provider.example.com/alert routed incident_abc123",
+      privacyRequestDrillReport: "privacy request drill included customer@example.com and tenant_demo",
+      communicationsTemplateApproval: "approved launch email template by comms@example.com",
+      ciArtifactPath: "coverage/launch-operations/raw-ci-log.json",
+      neutralRepositoryTrace:
+        "repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      stackTrace: "Error: launch operations leaked support payload",
       nested: {
         authorization: "Bearer launch-ops-token",
         incidentId: "incident_abc123",
@@ -391,6 +399,17 @@ describe("GAP-120 launch operations runtime wiring", () => {
     expect(serialized).not.toContain("github.com/dominator509");
     expect(serialized).not.toContain("Bearer launch-ops-token");
     expect(serialized).not.toContain("incident_abc123");
+    expect(serialized).not.toContain("backup@example.com");
+    expect(serialized).not.toContain("PagerDuty webhook");
+    expect(serialized).not.toContain("customer@example.com");
+    expect(serialized).not.toContain("comms@example.com");
+    expect(serialized).not.toContain("raw-ci-log.json");
+    expect(serialized).not.toContain("repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("support payload");
     expect(review.containsUnredactedSensitiveValues).toBe(false);
     expect(review.redactions).toEqual(
       expect.arrayContaining([
@@ -400,6 +419,7 @@ describe("GAP-120 launch operations runtime wiring", () => {
         "ciRunUrl",
         "incidentId",
         "monitoringDashboardUrl",
+        "neutralRepositoryTrace",
         "onCallPager",
         "ownerContact",
         "supportTranscript",

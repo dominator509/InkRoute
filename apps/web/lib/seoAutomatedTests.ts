@@ -174,7 +174,7 @@ export interface SeoAutomatedArtifactReview {
 }
 
 const seoAutomatedSensitiveKeyPattern =
-  /(?:authorization|clientsecret|credential|cookie|email|password|phone|private|secret|token|trace|workflowtoken)/i;
+  /(?:artifacturl|authorization|canonical|ciurl|clientsecret|commandoutput|credential|crawl|cookie|email|failure|html|linkedgap|metadata|pagecontent|password|phone|private|provider|route|secret|summary|testoutput|token|trace|url|workflowtoken)/i;
 const seoAutomatedEmailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const seoAutomatedPhonePattern = /\+?\d[\d ().-]{7,}\d/g;
 const seoAutomatedTokenPattern = /\b(?:bearer|ghp|github_pat|sk|ya29)[A-Za-z0-9._:-]{8,}\b/gi;

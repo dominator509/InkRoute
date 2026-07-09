@@ -1,5 +1,5 @@
 ﻿import { NextResponse, type NextRequest } from "next/server";
-import type { MessagingPrivacyAction, MessagingRole } from "@inkroute/notifications";
+import type { MessagingPrivacyAction, MessagingPrivacyPlan, MessagingRole } from "@inkroute/notifications";
 import { assertPermission, resolveDashboardActor } from "../../dashboardAuth";
 import {
   buildMessagingPrivacyPlanFromRequest,
@@ -30,6 +30,60 @@ function parseRole(value: unknown): MessagingRole {
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
+function buildSafeMessagingPrivacyPlanResponse(plan: MessagingPrivacyPlan) {
+  return {
+    status: plan.status,
+    action: plan.action,
+    role: plan.role,
+    visibleFields: plan.visibleFields,
+    redactionFindings: plan.redactionFindings,
+    requiredWrites: plan.requiredWrites,
+    requiredControls: plan.requiredControls,
+    blockers: plan.blockers,
+    bodyRedacted: plan.bodyRedacted ?? false,
+    retentionDays: plan.retentionDays ?? null,
+    deleteRequestedAtPresent: Boolean(plan.deleteRequestedAt),
+    attachmentPolicyApproved: plan.attachmentPolicyApproved ?? false,
+    exportIncludesProviderPayloads: plan.exportIncludesProviderPayloads ?? false,
+    exportIncludesPrivateUrls: plan.exportIncludesPrivateUrls ?? false,
+    spamScorePresent: typeof plan.spamScore === "number",
+    rateLimitAllowed: plan.rateLimitAllowed ?? null,
+    idempotencyKeyPresent: Boolean(plan.idempotencyKey),
+    rawBodyEchoed: false,
+    rawAttachmentUrlEchoed: false,
+    rawThreadIdEchoed: false,
+    rawMessageIdEchoed: false,
+    rawActorIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    tenantIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafeMessagingPrivacyContractResponse() {
+  return {
+    runtimeReadiness: messagingPrivacyContract.runtimeReadiness,
+    requiredRepositoryMethods: messagingPrivacyContract.requiredRepositoryMethods,
+    plans: {
+      redactPlan: buildSafeMessagingPrivacyPlanResponse(messagingPrivacyContract.redactPlan),
+      authorizeViewPlan: buildSafeMessagingPrivacyPlanResponse(messagingPrivacyContract.authorizeViewPlan),
+      exportPlan: buildSafeMessagingPrivacyPlanResponse(messagingPrivacyContract.exportPlan),
+      deletePlan: buildSafeMessagingPrivacyPlanResponse(messagingPrivacyContract.deletePlan),
+      retentionPlan: buildSafeMessagingPrivacyPlanResponse(messagingPrivacyContract.retentionPlan),
+      moderationPlan: buildSafeMessagingPrivacyPlanResponse(messagingPrivacyContract.moderationPlan),
+    },
+    rawContractPlansEchoed: false,
+    rawBodyEchoed: false,
+    rawAttachmentUrlEchoed: false,
+    rawThreadIdEchoed: false,
+    rawMessageIdEchoed: false,
+    rawActorIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    tenantIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
@@ -41,7 +95,19 @@ export async function GET(request: NextRequest) {
   if (tenantId !== actor.tenantId) {
     return NextResponse.json({ ok: false, error: { code: "TENANT_MISMATCH", message: "Cannot inspect messaging privacy for another tenant." } }, { status: 403, headers: noStoreHeaders });
   }
-  return NextResponse.json({ ok: true, tenantId, contract: messagingPrivacyContract, gapIds: ["GAP-068"] }, { headers: noStoreHeaders });
+  return NextResponse.json(
+    {
+      ok: true,
+      tenantScope: { actorTenantMatched: true },
+      contract: buildSafeMessagingPrivacyContractResponse(),
+      responseProjection: {
+        tenantIdEchoed: false,
+        internalPersistenceIdsEchoed: false,
+      },
+      gapIds: ["GAP-068"],
+    },
+    { headers: noStoreHeaders },
+  );
 }
 
 export async function POST(request: NextRequest) {
@@ -71,7 +137,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         ok: false,
-        tenantId,
         error: {
           code: "MESSAGING_PRIVACY_ROLE_MISMATCH",
           message: messagingPrivacyRoleMismatchBlocker,
@@ -88,7 +153,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         ok: false,
-        tenantId,
         error: {
           code: "MESSAGING_PRIVACY_ROLE_FORBIDDEN",
           message: "Authenticated dashboard actor role is not allowed to perform this messaging privacy action.",
@@ -126,14 +190,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         ok: false,
-        tenantId,
         error: {
           code: "MESSAGING_PRIVACY_WORKFLOW_PERSISTENCE_NOT_CONFIGURED",
           message:
             "Production messaging privacy mutations require durable MessagePrivacyEvent, MessageAuditLog, IdempotencyKey, export/delete/retention workflow, moderation, and attachment authorization persistence; local-contract fallback responses are disabled.",
           gapIds: ["GAP-068"],
         },
-        plan,
+        plan: buildSafeMessagingPrivacyPlanResponse(plan),
         requiredRepositoryMethods: messagingPrivacyContract.requiredRepositoryMethods,
         rolePolicy: messagingPrivacyActionRolePolicy,
         productionBoundary: {
@@ -151,8 +214,12 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(
     {
       ok: plan.status === "ready",
-      tenantId,
-      plan,
+      tenantScope: { actorTenantMatched: true },
+      plan: buildSafeMessagingPrivacyPlanResponse(plan),
+      responseProjection: {
+        tenantIdEchoed: false,
+        internalPersistenceIdsEchoed: false,
+      },
       requiredRepositoryMethods: messagingPrivacyContract.requiredRepositoryMethods,
       rolePolicy: messagingPrivacyActionRolePolicy,
       gapIds: ["GAP-068"],

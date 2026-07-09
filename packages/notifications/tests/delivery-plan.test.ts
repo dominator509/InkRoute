@@ -948,9 +948,22 @@ describe("notification delivery planning", () => {
     expect(message.writes.map((write) => write.model)).toEqual(["Message", "MessageThread", "NotificationAuditLog", "IdempotencyKey"]);
     expect(message.writes.find((write) => write.model === "NotificationAuditLog")?.payload).toMatchObject({
       action: "append_message",
-      threadId: "thread_001",
-      messageId: "message_001",
+      threadIdHash: expect.any(String),
+      messageIdHash: expect.any(String),
+      clientIdHash: expect.any(String),
+      actorIdHash: expect.any(String),
+      idempotencyKeyHash: expect.any(String),
+      rawThreadIdStored: false,
+      rawMessageIdStored: false,
+      rawClientIdStored: false,
+      rawActorIdStored: false,
+      rawIdempotencyKeyStored: false,
     });
+    expect(message.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("threadId");
+    expect(message.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("messageId");
+    expect(message.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("clientId");
+    expect(message.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("actorId");
+    expect(message.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("idempotencyKey");
   });
 
   it("plans notification delivery persistence, status transitions, and read-state writes", () => {
@@ -992,8 +1005,33 @@ describe("notification delivery planning", () => {
 
     expect(delivery.writes.map((write) => write.model)).toEqual(["NotificationDelivery", "NotificationAuditLog", "IdempotencyKey"]);
     expect(delivery.writes.find((write) => write.model === "NotificationDelivery")?.payload.destinationHash).toMatch(/^masked_/);
+    expect(delivery.writes.find((write) => write.model === "NotificationAuditLog")?.payload).toMatchObject({
+      action: "record_delivery",
+      notificationIdHash: expect.any(String),
+      deliveryIdHash: expect.any(String),
+      destinationHashPresent: true,
+      destinationHashHash: expect.any(String),
+      idempotencyKeyHash: expect.any(String),
+      rawNotificationIdStored: false,
+      rawDeliveryIdStored: false,
+      rawDestinationHashStored: false,
+      rawIdempotencyKeyStored: false,
+    });
+    expect(delivery.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("notificationId");
+    expect(delivery.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("deliveryId");
+    expect(delivery.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("destinationHash");
+    expect(delivery.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("idempotencyKey");
     expect(statusUpdate.writes.map((write) => write.model)).toEqual(["NotificationDelivery", "NotificationAuditLog", "IdempotencyKey"]);
     expect(readState.writes.map((write) => write.model)).toEqual(["NotificationReadState", "MessageThread", "NotificationAuditLog", "IdempotencyKey"]);
+    expect(readState.writes.find((write) => write.model === "NotificationAuditLog")?.payload).toMatchObject({
+      action: "mark_thread_read",
+      threadIdHash: expect.any(String),
+      clientIdHash: expect.any(String),
+      idempotencyKeyHash: expect.any(String),
+      rawThreadIdStored: false,
+      rawClientIdStored: false,
+      rawIdempotencyKeyStored: false,
+    });
     expect(readState.requiredControls).toBe(notificationPersistenceRequiredControls);
   });
 
@@ -1469,6 +1507,15 @@ describe("notification delivery planning", () => {
     expect(issued.status).toBe("ready");
     expect(issued.tokenHash).toBe(buildPreferenceTokenHash(token));
     expect(issued.writes.map((write) => write.model)).toEqual(["PreferenceToken", "NotificationAuditLog", "IdempotencyKey"]);
+    expect(issued.writes.find((write) => write.model === "NotificationAuditLog")?.payload).toMatchObject({
+      action: "issue_preference_token",
+      tokenHashPresent: true,
+      tokenHashHash: expect.any(String),
+      rawTokenHashStored: false,
+      rawIdempotencyKeyStored: false,
+    });
+    expect(issued.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("tokenHash");
+    expect(issued.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("idempotencyKey");
     expect(unsubscribe.status).toBe("ready");
     expect(unsubscribe.writes.map((write) => write.model)).toEqual(["ClientNotificationPreference", "SuppressionListEntry", "NotificationAuditLog", "IdempotencyKey"]);
     expect(unsubscribe.writes.find((write) => write.model === "SuppressionListEntry")?.payload).toMatchObject({
@@ -1476,6 +1523,18 @@ describe("notification delivery planning", () => {
       marketingOptIn: false,
       transactionalAllowed: true,
     });
+    expect(unsubscribe.writes.find((write) => write.model === "NotificationAuditLog")?.payload).toMatchObject({
+      action: "unsubscribe_email",
+      emailHashPresent: true,
+      emailHashHash: expect.any(String),
+      tokenHashPresent: true,
+      tokenHashHash: expect.any(String),
+      rawEmailHashStored: false,
+      rawTokenHashStored: false,
+      rawIdempotencyKeyStored: false,
+    });
+    expect(unsubscribe.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("emailHash");
+    expect(unsubscribe.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("tokenHash");
   });
 
   it("plans SMS STOP and START preference mutations with legal consent gates", () => {
@@ -1507,6 +1566,16 @@ describe("notification delivery planning", () => {
 
     expect(stop.status).toBe("ready");
     expect(stop.writes.map((write) => write.model)).toEqual(["ClientNotificationPreference", "SuppressionListEntry", "NotificationAuditLog", "IdempotencyKey"]);
+    expect(stop.writes.find((write) => write.model === "NotificationAuditLog")?.payload).toMatchObject({
+      action: "record_sms_stop",
+      phoneHashPresent: true,
+      phoneHashHash: expect.any(String),
+      tokenHashPresent: true,
+      rawPhoneHashStored: false,
+      rawTokenHashStored: false,
+    });
+    expect(stop.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("phoneHash");
+    expect(stop.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("tokenHash");
     expect(start.status).toBe("ready");
     expect(start.writes.map((write) => write.model)).toEqual(["ClientNotificationPreference", "NotificationAuditLog", "IdempotencyKey"]);
   });

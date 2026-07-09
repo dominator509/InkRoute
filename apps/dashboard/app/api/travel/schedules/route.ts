@@ -21,13 +21,55 @@ function hashIdempotencySubject(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function resultTravelScheduleId(result: unknown): string | null {
-  if (!result || typeof result !== "object" || !("travelScheduleId" in result)) {
-    return null;
-  }
+function buildTravelScheduleResponseProjection() {
+  return {
+    travelScheduleResponseAllowlisted: true,
+    travelScheduleIdEchoed: false,
+    tenantIdEchoed: false,
+    artistIdEchoed: false,
+    travelCityIdEchoed: false,
+    studioIdEchoed: false,
+    auditIdEchoed: false,
+    notificationJobIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
 
-  const value = (result as { travelScheduleId?: unknown }).travelScheduleId;
-  return typeof value === "string" && value.length > 0 ? value : null;
+function buildSafeTravelScheduleResponse(result: {
+  status: "created" | "replayed";
+  travelSchedule: {
+    title: string;
+    startsAt: Date;
+    endsAt: Date;
+    timezone: string;
+    bookingStatus: string;
+    guestSpotUrl: string | null;
+    publicNotes: string | null;
+    createdAt: Date;
+  };
+}) {
+  return {
+    responseProjection: buildTravelScheduleResponseProjection(),
+    travelSchedule: {
+      title: result.travelSchedule.title,
+      startsAt: result.travelSchedule.startsAt.toISOString(),
+      endsAt: result.travelSchedule.endsAt.toISOString(),
+      timezone: result.travelSchedule.timezone,
+      bookingStatus: result.travelSchedule.bookingStatus,
+      guestSpotUrl: result.travelSchedule.guestSpotUrl,
+      publicNotes: result.travelSchedule.publicNotes,
+      createdAt: result.travelSchedule.createdAt.toISOString(),
+    },
+    persistenceReceipt: {
+      travelSchedulePersisted: true,
+      auditPersisted: result.status === "created",
+      idempotencyPersisted: true,
+      idempotencyReplay: result.status === "replayed",
+      notificationJobQueued: result.status === "created",
+    },
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -87,13 +129,14 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
           error: {
             code: "PROVIDER_TRAVEL_SCHEDULE_PERSISTENCE_NOT_CONFIGURED",
             message: "Production travel schedule creation requires DB-backed dashboard auth, tenant-scoped TravelSchedule persistence, and AuditLog rows; local fallback mutations are disabled.",
             gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-046", "GAP-047"],
           },
           productionBoundary: { localTravelScheduleMutationFallbackDisabled: true },
+          responseProjection: buildTravelScheduleResponseProjection(),
         },
         { status: 503, headers: noStoreHeaders },
       );
@@ -103,11 +146,12 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         error: {
           code: "DATABASE_REQUIRED",
           message: "Travel schedule creation requires database-backed dashboard auth so TravelSchedule and AuditLog rows can be persisted.",
         },
+        responseProjection: buildTravelScheduleResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-046", "GAP-047"],
       },
       { status: 409, headers: noStoreHeaders },
@@ -151,10 +195,15 @@ export async function POST(request: NextRequest) {
         },
         select: { id: true, status: true, result: true },
       });
-      const replayTravelScheduleId = idempotency.status === "completed" ? resultTravelScheduleId(idempotency.result) : null;
-      if (replayTravelScheduleId) {
+      if (idempotency.status === "completed") {
         const travelSchedule = await tx.travelSchedule.findFirst({
-          where: { id: replayTravelScheduleId, tenantId },
+          where: {
+            tenantId,
+            artistId: input.artistId,
+            travelCityId: input.travelCityId,
+            title: input.title,
+            startsAt: new Date(input.startsAt),
+          },
           select: {
             id: true,
             tenantId: true,
@@ -235,11 +284,13 @@ export async function POST(request: NextRequest) {
           entityId: travelSchedule.id,
           metadata: {
             source: "dashboard-api",
-            artistId: travelSchedule.artistId,
-            travelCityId: travelSchedule.travelCityId,
+            artistMatched: true,
+            travelCityMatched: true,
             bookingStatus: travelSchedule.bookingStatus,
             hasInternalNotes: internalNotes !== undefined,
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
           },
         },
         select: { id: true, createdAt: true },
@@ -278,13 +329,14 @@ export async function POST(request: NextRequest) {
         data: {
           status: "completed",
           result: toJsonValue({
-            travelScheduleId: travelSchedule.id,
-            auditId: audit.id,
-            notificationJobId: notificationJob.id,
+            travelSchedulePersisted: true,
+            auditLogged: true,
+            notificationFanoutIntentPersisted: true,
             created: true,
             rawNotesStoredInResult: false,
             publicCacheRevalidated: false,
             notificationFanoutQueued: true,
+            internalPersistenceIdsStored: false,
           }),
         },
       });
@@ -303,18 +355,9 @@ export async function POST(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         persistence: "database",
-        travelSchedule: {
-          ...result.travelSchedule,
-          startsAt: result.travelSchedule.startsAt.toISOString(),
-          endsAt: result.travelSchedule.endsAt.toISOString(),
-          createdAt: result.travelSchedule.createdAt.toISOString(),
-        },
-        auditId: result.status === "created" ? result.audit.id : null,
-        notificationJob: result.status === "created" ? result.notificationJob : null,
-        idempotencyKeyId: result.idempotency.id,
-        idempotencyReplay: result.status === "replayed",
+        ...buildSafeTravelScheduleResponse(result),
         gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-046", "GAP-047"],
         boundary: "Dashboard travel schedule creation is tenant-scoped, no-store, idempotency-backed, audited, and queues a local NotificationJob fanout intent; public cache/SEO, provider sends, worker execution, and integration tests remain evidence-gated.",
       },
@@ -326,8 +369,9 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
           error: { code: "DATABASE_UNAVAILABLE", message: "Travel schedule creation requires the dashboard database connection." },
+          responseProjection: buildTravelScheduleResponseProjection(),
           gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-046", "GAP-047"],
         },
         { status: 503, headers: noStoreHeaders },

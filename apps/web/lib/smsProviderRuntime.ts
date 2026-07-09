@@ -197,7 +197,7 @@ export const buildSmsProviderExecutionPlan = (): SmsProviderExecutionPlan => ({
 });
 
 const smsProviderPrivateArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|sms|twilio|signature|webhook|payload|phone|destination|suppression|stop|help|thread|consent|quiet|delivery|event|artifact|customer|medical|payment)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|sms|twilio|signature|webhook|payload|phone|destination|suppression|stop|help|thread|consent|quiet|delivery|event|artifact|customer|medical|payment|repository|repo|branch|pull|pr|reviewer|codeowner)/i;
 
 const redactSmsProviderArtifactValue = (
   value: unknown,

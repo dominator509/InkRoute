@@ -252,7 +252,7 @@ export interface AgentExecutionLedgerRuntimeArtifactReview {
 }
 
 const sensitiveAgentExecutionKeyPattern =
-  /(token|secret|password|authorization|cookie|env|provider|projectId|resourceId|transcript|command|stdout|stderr|diff|patch|evidence|artifactUrl|ciRunUrl|tenantId|userId|runId|email|phone|apiKey)/i;
+  /(token|secret|password|authorization|cookie|env|provider|projectId|resourceId|transcript|command|stdout|stderr|diff|patch|evidence|artifact|artifactUrl|ci|ciRun|ciRunUrl|tenantId|userId|runId|email|phone|apiKey|changedFiles|fileMatrix|remainingGap|gapTracker|trackerUpdate|secretSafety|externalResult|import|queue|ledger|parity|handoff|actor|reviewer|repository|branch|pr|pullrequest|codeowner|metadata|raw|request|response|log|output|path|url|uri|database|dsn|stack|error)/i;
 
 const sensitiveAgentExecutionStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
@@ -260,7 +260,9 @@ const sensitiveAgentExecutionStringPatterns: readonly [RegExp, string][] = [
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
   [/\b(?:sk|pk|rk|ghp|gho|ghu|ghs|whsec)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
-  [/\b(?:tenant|user|project|provider|artifact|run|task)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+  [/postgres(?:ql)?:\/\/[^\s"'<>]+/gi, "[REDACTED_DSN]"],
+  [/\b(?:tenant|user|actor|agent|task|project|provider|artifact|run|result|queue|ledger|gap|handoff|workflow|ci|commit|repository|branch|pr|pullrequest|reviewer|codeowner|changed|file|transcript|diff|patch|import|evidence)_[A-Za-z0-9_.-]+\b/gi, "[REDACTED_ID]"],
+  [/\b(?:coverage|artifacts|test-results|reports|diffs|docs)\/[A-Za-z0-9_./-]{6,}\b/gi, "[REDACTED_ARTIFACT_PATH]"],
 ];
 
 export function buildAgentExecutionLedgerRuntimeEvidenceDecision(

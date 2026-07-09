@@ -409,7 +409,11 @@ describe("mobile support helpers", () => {
       "device restart and airplane-mode reconnect evidence",
     ]);
     expect(buildOfflineSyncAuditEvent(item, decision!, "2026-06-08T01:05:00.000Z")).toMatchObject({
+      itemIdHash: expect.any(String),
+      rawItemIdEchoed: false,
       decision: "blocked_unencrypted",
+      idempotencyKeyHash: expect.any(String),
+      rawIdempotencyKeyEchoed: false,
       sensitive: true,
       redactedDetail: "Sensitive offline payload redacted.",
     });
@@ -470,6 +474,17 @@ describe("mobile support helpers", () => {
       "X-InkRoute-Tenant": "tenant_001",
       "X-Request-Id": "req_001",
       "Idempotency-Key": "mobile_booking_patch_001",
+    });
+    expect(plan.headerProof).toMatchObject({
+      authorizationHeaderAttached: true,
+      tenantHeaderAttached: true,
+      requestIdHeaderAttached: true,
+      idempotencyHeaderAttached: true,
+      rawAuthorizationHeaderEchoed: false,
+      rawAccessTokenEchoed: false,
+      rawTenantIdEchoed: false,
+      rawRequestIdEchoed: false,
+      rawIdempotencyKeyEchoed: false,
     });
   });
 
@@ -577,6 +592,20 @@ describe("mobile support helpers", () => {
       requiredEvidence: ["provider-backed booking lifecycle execution proof"],
     });
     expect(contract.requiredHeaders).toEqual(["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"]);
+    expect(contract.metadata).toMatchObject({
+      tenantScopeRequired: true,
+      bookingIdRequired: true,
+      requestIdRequired: true,
+      rawTenantIdEchoed: false,
+      rawBookingIdEchoed: false,
+      rawRequestIdEchoed: false,
+      idempotencyKeyRequired: true,
+      rawIdempotencyKeyEchoed: false,
+    });
+    expect(contract.metadata).not.toHaveProperty("tenantId");
+    expect(contract.metadata).not.toHaveProperty("bookingId");
+    expect(contract.metadata).not.toHaveProperty("requestId");
+    expect(contract.metadata).not.toHaveProperty("idempotencyKey");
 
     const unsafe = buildMobileBookingLifecycleActionContract({
       tenantId: "",
@@ -633,6 +662,21 @@ describe("mobile support helpers", () => {
       requiredEvidence: ["provider-backed travel publish execution proof"],
     });
     expect(contract.requiredHeaders).toEqual(["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"]);
+    expect(contract.metadata).toMatchObject({
+      tenantScopeRequired: true,
+      travelScheduleIdRequired: true,
+      citySlugValidated: true,
+      requestIdRequired: true,
+      rawTenantIdEchoed: false,
+      rawTravelScheduleIdEchoed: false,
+      rawRequestIdEchoed: false,
+      idempotencyKeyRequired: true,
+      rawIdempotencyKeyEchoed: false,
+    });
+    expect(contract.metadata).not.toHaveProperty("tenantId");
+    expect(contract.metadata).not.toHaveProperty("travelScheduleId");
+    expect(contract.metadata).not.toHaveProperty("requestId");
+    expect(contract.metadata).not.toHaveProperty("idempotencyKey");
 
     const unsafe = buildMobileTravelPublishContract({
       tenantId: "",

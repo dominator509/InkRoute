@@ -6,6 +6,7 @@ import {
   buildBookingContactRuntimeEvidencePlan,
   buildBookingProviderHandoffRuntimeEvidencePlan,
   buildBookingProviderFailurePlan,
+  buildRedactedBookingLifecycleEvidenceArtifact,
   buildDashboardMutationPlan,
   buildDashboardMutationExecutionEvidencePlan,
   buildDashboardMutationRuntimeReadinessPlan,
@@ -127,6 +128,32 @@ describe("booking readiness", () => {
       entityId: "booking_001",
       idempotencyKey: "transition_001",
     });
+  });
+
+  it("redacts GAP-035 booking lifecycle evidence artifacts before retained handoff", () => {
+    const redacted = buildRedactedBookingLifecycleEvidenceArtifact({
+      tenantId: "tenant_private_123456",
+      bookingRequestId: "booking_private_123456",
+      actorId: "artist_private_123456",
+      idempotencyKey: "transition_private_123456",
+      providerToken: "provider_token_private_123456",
+      medicalNote: "medical: private condition",
+      artifactPath: "coverage/private-booking-lifecycle.json",
+      ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/private",
+      safeTransition: "submitted to accepted",
+    });
+    const serialized = JSON.stringify(redacted);
+
+    expect(serialized).not.toContain("tenant_private_123456");
+    expect(serialized).not.toContain("booking_private_123456");
+    expect(serialized).not.toContain("artist_private_123456");
+    expect(serialized).not.toContain("transition_private_123456");
+    expect(serialized).not.toContain("provider_token_private_123456");
+    expect(serialized).not.toContain("medical: private condition");
+    expect(serialized).not.toContain("coverage/private-booking-lifecycle.json");
+    expect(serialized).not.toContain("/actions/runs/private");
+    expect(serialized).toContain("submitted to accepted");
+    expect(serialized).toContain("[REDACTED_BOOKING_LIFECYCLE_PRIVATE_VALUE]");
   });
 
   it("refuses invalid or unauditable booking transition plans", () => {
