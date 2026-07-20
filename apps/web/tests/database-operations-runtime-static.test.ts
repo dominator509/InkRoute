@@ -39,6 +39,7 @@ describe("GAP-117 database operations runtime wiring", () => {
       "pnpm deploy:verify-database-ops",
       "pnpm db:generate",
       "pnpm --filter @inkroute/db db:validate",
+      "pnpm db:migrate",
       "database migration dry-run",
       "database generated SQL review",
       "database staging migration apply",
@@ -111,7 +112,7 @@ describe("GAP-117 database operations runtime wiring", () => {
 
   it("keeps readiness blocked until provider DB, Prisma lifecycle, migration, backup, tenant isolation, branch promotion, and safety proof exists", () => {
     expect(databaseOperationsRuntimeReadiness.status).toBe("blocked");
-    expect(databaseOperationsRuntimeReadiness.missingCommands).toEqual(["pnpm db:migrate"]);
+    expect(databaseOperationsRuntimeReadiness.missingCommands).toEqual([]);
     expect(databaseOperationsRuntimeReadiness.missingScripts).toEqual([]);
     expect(databaseOperationsRuntimeReadiness.missingChecks).toEqual(
       expect.arrayContaining(["staging-branch-provisioned", "migration-dry-run", "backup-restore-drill", "branch-promotion"])
@@ -233,6 +234,7 @@ describe("GAP-117 database operations runtime wiring", () => {
       ciDatabaseOperationsArtifactsCaptured: false,
       requiredCommandsRun: databaseOperationsRuntimeCommands.filter(
         (command) =>
+          command !== "pnpm db:migrate" &&
           command !== "database migration dry-run" &&
           command !== "database generated SQL review" &&
           command !== "database staging migration apply" &&
@@ -265,6 +267,7 @@ describe("GAP-117 database operations runtime wiring", () => {
         "Capture branch promotion approval.",
         "Capture production data-safety review.",
         "Capture CI database-operations artifacts.",
+        "Required command not recorded: pnpm db:migrate",
         "Required command not recorded: database migration dry-run",
         "Required command not recorded: database generated SQL review",
         "Required command not recorded: database staging migration apply",
@@ -324,6 +327,7 @@ describe("GAP-117 database operations runtime wiring", () => {
 
     expect(plan.localCommands).toBe(databaseOperationsRuntimeLocalCommands);
     expect(plan.externalCommands).toBe(databaseOperationsRuntimeExternalCommands);
+    expect(plan.externalCommands).toContain("pnpm db:migrate");
     expect(plan.localArtifacts).toBe(databaseOperationsRuntimeLocalArtifacts);
     expect(plan.externalArtifacts).toBe(databaseOperationsRuntimeExternalArtifacts);
     expect(plan.localArtifacts).toEqual(

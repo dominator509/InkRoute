@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import {
   buildSecurityMiddlewareRuntimeReadinessPlan,
   buildSecurityRuntimeEnforcementPlan,
@@ -248,6 +250,10 @@ export type SecurityMiddlewareArtifactReview = {
   retainedExternalGates: readonly string[];
 };
 
+function hashSecurityMiddlewareSelector(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
 const securityMiddlewareSensitivePatterns = [
   /(csrf[_-]?token['":=\s]+)[^"',\s}]+/gi,
   /(session[_-]?id['":=\s]+)[^"',\s}]+/gi,
@@ -410,6 +416,15 @@ export async function persistSecurityMiddlewareEvidence(
     signedWebhookBypassReviewed: input.signedWebhookBypassReviewed,
     artifactObjectKey: input.artifactObjectKey,
   }) as Record<string, unknown>;
+  const metadata = {
+    ...redactedMetadata,
+    tenantIdHash: hashSecurityMiddlewareSelector(input.tenantId),
+    routePatternHash: hashSecurityMiddlewareSelector(input.routePattern),
+    artifactObjectKeyHash: input.artifactObjectKey ? hashSecurityMiddlewareSelector(input.artifactObjectKey) : null,
+    rawTenantIdStored: false,
+    rawRoutePatternStored: false,
+    rawArtifactObjectKeyStored: false,
+  };
 
   const evidence = await client.securityMiddlewareEvidence.create({
     data: {
@@ -427,7 +442,7 @@ export async function persistSecurityMiddlewareEvidence(
       sameSiteSessionBoundVerified: input.sameSiteSessionBoundVerified,
       signedWebhookBypassReviewed: input.signedWebhookBypassReviewed,
       ...(input.artifactObjectKey ? { artifactObjectKey: input.artifactObjectKey } : {}),
-      redactedMetadata,
+      redactedMetadata: metadata,
     },
   });
   const evidenceId =
@@ -441,7 +456,7 @@ export async function persistSecurityMiddlewareEvidence(
       action: "security.middleware.evidence.persisted",
       entityType: "SecurityMiddlewareEvidence",
       entityId: evidenceId,
-      metadata: redactedMetadata,
+      metadata,
     },
   });
 

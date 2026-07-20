@@ -376,6 +376,14 @@ describe("GAP-097 private storage signed URL contract", () => {
     expect(serialized).toContain('"action":"private_storage.signed_url.created"');
     expect(serialized).not.toContain("private/tenant_demo/reference/fileasset_demo.jpg");
     expect(serialized).not.toContain("https://");
+    expect(serialized).toContain("signedUrlHash");
+    expect(serialized).toContain("tenantIdHash");
+    expect(serialized).toContain("fileAssetIdHash");
+    expect(serialized).toContain("issuedByUserIdHash");
+    expect(serialized).toContain("recipientUserIdHash");
+    expect(serialized).toContain("objectKeyHash");
+    expect(serialized).toContain("rawObjectKeyStored");
+    expect(serialized).toContain("rawRecipientUserIdStored");
   });
 
   it("redacts GAP-097 signed URL and provider artifacts before review", () => {

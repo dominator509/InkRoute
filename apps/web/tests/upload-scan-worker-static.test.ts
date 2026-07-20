@@ -363,6 +363,12 @@ describe("GAP-096 upload scan worker static contract", () => {
     expect(JSON.stringify(writes)).toContain('"entityType":"FileAsset"');
     expect(JSON.stringify(writes)).toContain('"action":"upload.scan_verdict"');
     expect(JSON.stringify(writes)).not.toContain("private/tenant_demo/portfolio/fileasset_clean.jpg");
+    expect(JSON.stringify(writes)).toContain("tenantIdHash");
+    expect(JSON.stringify(writes)).toContain("fileAssetIdHash");
+    expect(JSON.stringify(writes)).toContain("objectKeyHash");
+    expect(JSON.stringify(writes)).toContain("rawTenantIdStored");
+    expect(JSON.stringify(writes)).toContain("rawFileAssetIdStored");
+    expect(JSON.stringify(writes)).toContain("rawObjectKeyStored");
   });
 
   it("redacts GAP-096 scanner and storage artifacts before review", () => {

@@ -40,6 +40,8 @@ describe("dashboard privacy request route static contract", () => {
     expect(routeSource).toContain("actorUserIdHash: hashPrivacyRequestSelector(input.actor.actorUserId)");
     expect(routeSource).toContain("requesterEmailEchoed: false");
     expect(routeSource).toContain("rawPayloadEchoed: false");
+    expect(routeSource).toContain("clientIdHash: requestInput.clientId ? hashPrivacyRequestSelector(requestInput.clientId) : null");
+    expect(routeSource).toContain("rawClientIdStored: false");
     expect(routeSource).toContain("checkDashboardMutationRateLimit");
     expect(routeSource).toContain("getClientIpFromAllowlistedHeaders");
     expect(routeSource).toContain("JSON.stringify([actor.tenantId, actor.actorUserId, getClientIpFromAllowlistedHeaders(request)])");

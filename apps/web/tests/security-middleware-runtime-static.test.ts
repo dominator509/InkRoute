@@ -324,6 +324,12 @@ describe("GAP-102 security middleware runtime contract", () => {
     expect(serialized).toContain('"entityType":"SecurityMiddlewareEvidence"');
     expect(serialized).toContain('"action":"security.middleware.evidence.persisted"');
     expect(serialized).not.toContain("redacted-dashboard-smoke.json");
+    expect(serialized).toContain("tenantIdHash");
+    expect(serialized).toContain("routePatternHash");
+    expect(serialized).toContain("artifactObjectKeyHash");
+    expect(serialized).toContain("rawTenantIdStored");
+    expect(serialized).toContain("rawRoutePatternStored");
+    expect(serialized).toContain("rawArtifactObjectKeyStored");
   });
 
   it("redacts GAP-102 CSRF, cookie, session, webhook, and artifact evidence before review", () => {

@@ -280,6 +280,8 @@ export async function POST(request: NextRequest) {
               requestType: privacyRequest.requestType,
               status: privacyRequest.status,
               clientLinked: Boolean(requestInput.clientId),
+              clientIdHash: requestInput.clientId ? hashPrivacyRequestSelector(requestInput.clientId) : null,
+              rawClientIdStored: false,
               legalHold: privacyRequest.legalHold,
               redaction: "redactRecord",
               workerDispatchQueued: false,

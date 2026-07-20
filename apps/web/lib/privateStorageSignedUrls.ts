@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import {
   buildPrivateStorageAccessPlan,
   buildPrivateStorageRuntimeReadinessPlan,
@@ -299,6 +301,10 @@ export type PrivateStorageSignedUrlArtifactReview = {
   retainedExternalGates: readonly string[];
 };
 
+function hashPrivateStorageSignedUrlSelector(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
 const privateStorageSignedUrlSecretPatterns = [
   /(s3[_-]?(?:secret|access)?[_-]?key['":=\s]+)[^"',\s}]+/gi,
   /(supabase[_-]?(?:service[_-]?role[_-]?key|url)['":=\s]+)[^"',\s}]+/gi,
@@ -445,7 +451,7 @@ export async function persistPrivateStorageSignedUrlGrant(
   const expiresAt = new Date(input.grant.expiresAt);
   const revokedAt = input.grant.revokedAt ? new Date(input.grant.revokedAt) : undefined;
   const auditAction = revokedAt ? "private_storage.signed_url.revoked" : "private_storage.signed_url.created";
-  const metadata = buildRedactedPrivateStorageSignedUrlArtifact({
+  const redactedMetadata = buildRedactedPrivateStorageSignedUrlArtifact({
     operation: input.grant.operation,
     scope: input.grant.scope,
     bucket: input.grant.bucket,
@@ -456,6 +462,20 @@ export async function persistPrivateStorageSignedUrlGrant(
     revokeReason: input.grant.revokeReason,
     rawSignedUrlStored: false,
   }) as Record<string, unknown>;
+  const metadata = {
+    ...redactedMetadata,
+    ...(signedUrlHash ? { signedUrlHash } : {}),
+    tenantIdHash: hashPrivateStorageSignedUrlSelector(input.grant.tenantId),
+    fileAssetIdHash: hashPrivateStorageSignedUrlSelector(input.grant.fileAssetId),
+    issuedByUserIdHash: hashPrivateStorageSignedUrlSelector(input.grant.issuedByUserId),
+    recipientUserIdHash: input.grant.recipientUserId ? hashPrivateStorageSignedUrlSelector(input.grant.recipientUserId) : null,
+    objectKeyHash: hashPrivateStorageSignedUrlSelector(input.grant.objectKey),
+    rawTenantIdStored: false,
+    rawFileAssetIdStored: false,
+    rawIssuedByUserIdStored: false,
+    rawRecipientUserIdStored: false,
+    rawObjectKeyStored: false,
+  };
 
   const updated = await client.fileAsset.updateMany({
     where: {
