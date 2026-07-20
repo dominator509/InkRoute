@@ -1,4 +1,7 @@
-import { buildDatabaseOperationsRuntimeReadinessPlan } from "@inkroute/deployment";
+import {
+  buildDatabaseOperationsRuntimeReadinessPlan,
+  databaseOperationsRuntimeRequiredCommands,
+} from "@inkroute/deployment";
 
 export type DatabaseOperationsRuntimeStatus =
   | "wired"
@@ -83,23 +86,7 @@ export const databaseOperationsRuntimeProofFiles = [
   "testing/manifests/unit-test-manifest.json"
 ] as const;
 
-export const databaseOperationsRuntimeCommands = [
-  "pnpm deploy:verify-database-ops",
-  "pnpm db:generate",
-  "pnpm --filter @inkroute/db db:validate",
-  "pnpm db:migrate",
-  "database migration dry-run",
-  "database generated SQL review",
-  "database staging migration apply",
-  "pnpm db:seed",
-  "database seed policy verification",
-  "database destructive SQL scan",
-  "database backup/restore drill",
-  "database tenant-isolation smoke",
-  "database branch promotion approval",
-  "database production data-safety review",
-  "capture CI database-operations artifacts"
-] as const;
+export const databaseOperationsRuntimeCommands = databaseOperationsRuntimeRequiredCommands;
 
 export const databaseOperationsRuntimeLocalCommands = [
   "pnpm deploy:verify-database-ops",
