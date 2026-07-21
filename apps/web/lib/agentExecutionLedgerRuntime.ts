@@ -252,7 +252,7 @@ export interface AgentExecutionLedgerRuntimeArtifactReview {
 }
 
 const sensitiveAgentExecutionKeyPattern =
-  /(token|secret|password|authorization|cookie|env|provider|projectId|resourceId|transcript|command|stdout|stderr|diff|patch|evidence|artifact|artifactUrl|ci|ciRun|ciRunUrl|tenantId|userId|runId|email|phone|apiKey|changedFiles|fileMatrix|remainingGap|gapTracker|trackerUpdate|secretSafety|externalResult|import|queue|ledger|parity|handoff|actor|reviewer|repository|branch|pr|pullrequest|codeowner|metadata|raw|request|response|log|output|path|url|uri|database|dsn|stack|error)/i;
+  /(token|secret|password|authorization|cookie|env|provider|projectId|resourceId|transcript|command|stdout|stderr|diff|patch|evidence|artifact|artifactUrl|ci|ciRun|ciRunUrl|tenantId|userId|runId|email|phone|apiKey|changedFiles|fileMatrix|remainingGap|gapTracker|trackerUpdate|secretSafety|externalResult|import|queue|ledger|parity|handoff|actor|reviewer|repository|branch|pr|pullrequest|codeowner|metadata|raw|request|response|log|output|path|url|uri|database|dsn|stack|error|neutralAgentTrace)/i;
 
 const sensitiveAgentExecutionStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],

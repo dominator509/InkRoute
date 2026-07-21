@@ -125,10 +125,10 @@ describe("agent execution ledger runtime contract", () => {
 
   it("reports GAP-119 as blocked until completed redacted agent results are imported", () => {
     expect(agentExecutionLedgerRuntimeReadiness.status).toBe("blocked");
-    expect(agentExecutionLedgerRuntimeReadiness.missingTaskIds).toEqual([]);
-    expect(agentExecutionLedgerRuntimeReadiness.unknownTaskIds).toEqual([]);
-    expect(agentExecutionLedgerRuntimeReadiness.duplicateTaskIds).toEqual([]);
-    expect(agentExecutionLedgerRuntimeReadiness.incompleteTaskIds).toEqual([...agentExecutionLedgerTaskIds]);
+    expect(agentExecutionLedgerRuntimeReadiness.missingExecutionTaskIds).toEqual([]);
+    expect(agentExecutionLedgerRuntimeReadiness.unknownExecutionTaskIds).toEqual([]);
+    expect(agentExecutionLedgerRuntimeReadiness.duplicateExecutionTaskIds).toEqual([]);
+    expect(agentExecutionLedgerRuntimeReadiness.incompleteExecutionTaskIds).toEqual([...agentExecutionLedgerTaskIds]);
     expect(agentExecutionLedgerRuntimeReadiness.requiredCommands).toBe(agentExecutionLedgerRuntimeCommands);
     expect(agentExecutionLedgerRuntimeReadiness.requiredEvidence).toBe(agentExecutionLedgerRuntimeArtifactPaths);
     expect(agentExecutionLedgerRuntimeReadiness.blockers).toContain(
@@ -152,8 +152,8 @@ describe("agent execution ledger runtime contract", () => {
     expect(ciWorkflow).toContain("agent-execution-ledger-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-agent-execution-ledger-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/agentExecutionLedgerRuntime.ts");
-    expect(gapTracker).toContain("Agent execution ledger evidence classifier wired and external execution proof gated");
-    expect(gapTracker).toContain("GAP-119 is agent-execution-ledger-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Agent execution ledger evidence classifier and agentExecutionLedgerRequiredCommands identity wiring");
+    expect(gapTracker).toContain("GAP-119 is agent-execution-ledger-runtime-matrix wired with split ledger verification");
     expect(gapTracker).toContain("buildAgentExecutionLedgerRuntimeExecutionPlan");
     expect(gapTracker).toContain("agentExecutionLedgerRuntimeExecutionPolicy");
     expect(gapTracker).toContain("agentExecutionLedgerRuntimeRequiredExternalEvidence");
