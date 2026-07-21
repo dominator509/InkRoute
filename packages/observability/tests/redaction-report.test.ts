@@ -331,11 +331,11 @@ describe("observability redaction and triage", () => {
       traceId: "4bf92f3577b34da6a3ce929d0e0e4736",
       spanId: "00f067aa0ba902b7",
       route: "/api/webhooks/stripe",
-      tenantId: "tenant_telemetry",
-      errorFingerprint: report.fingerprint,
+     errorFingerprint: report.fingerprint,
       stackHash: report.stackHash,
       severity: "critical",
     });
+    expect("tenantId" in plan.logRecord).toBe(false);
     expect(plan.propagationHeaders["x-request-id"]).toBe("req-payment-1");
     expect(plan.propagationHeaders.traceparent).toContain("4bf92f3577b34da6a3ce929d0e0e4736");
     expect(JSON.stringify(plan.logRecord.attributes)).not.toContain("avery@example.com");
@@ -743,8 +743,10 @@ describe("observability redaction and triage", () => {
 
     expect(plan.status).toBe("ready");
     expect(plan.incidentStatus).toBe("rollback_required");
-    expect(plan.releaseTags).toMatchObject({ release: "release-2026.06.08.1", environment: "production", tenantId: "tenant_release" });
-    expect(plan.dashboardFilters).toMatchObject({ release: "release-2026.06.08.1", environment: "production", tenantId: "tenant_release" });
+    expect(plan.releaseTags).toMatchObject({ release: "release-2026.06.08.1", environment: "production" });
+    expect("tenantId" in plan.releaseTags).toBe(false);
+    expect(plan.dashboardFilters).toMatchObject({ release: "release-2026.06.08.1", environment: "production" });
+    expect("tenantId" in plan.dashboardFilters).toBe(false);
     expect(plan.linkedReports).toHaveLength(1);
     expect(plan.linkedReports[0]).toMatchObject({
       fingerprint: matchingReport.fingerprint,
