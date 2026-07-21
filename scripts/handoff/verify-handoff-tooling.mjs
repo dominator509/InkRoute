@@ -55,6 +55,8 @@ const ledger = readJson(join(root, "docs/handoff/manifests/agent-execution-ledge
 if (!Array.isArray(queue.tasks) || queue.tasks.length === 0) failures.push("Agent execution queue must contain tasks.");
 if (!Array.isArray(ledger.executions) || ledger.executions.length !== queue.tasks.length) failures.push("Agent execution ledger must contain one execution entry per queue task.");
 
+const reportArtifactsCaptured = manifest.status === "verified_redacted";
+
 if (manifest.status !== "tooling_contract_not_executed" && manifest.status !== "verified_redacted") {
   failures.push(`Unsupported handoff tooling readiness status ${manifest.status}.`);
 }
@@ -69,5 +71,6 @@ console.log(JSON.stringify({
   requiredScriptCount: manifest.requiredScripts.length,
   requiredReportCount: manifest.requiredReports.length,
   queueTaskCount: queue.tasks.length,
+  reportArtifactsCaptured,
   status: manifest.status
 }, null, 2));

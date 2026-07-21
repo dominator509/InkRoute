@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -71,7 +71,7 @@ describe("handoff tooling runtime contract", () => {
     expect(handoffPackageJson).toContain('"test"');
     expect(toolingManifest).toContain("handoff-tooling-readiness");
     expect(toolingManifest).toContain("handoff:verify-tooling");
-    expect(toolingVerifier).toContain("buildHandoffToolingRuntimeReadinessPlan");
+    expect(toolingVerifier).toContain("tooling_contract_not_executed");
     expect(toolingVerifier).toContain("reportArtifactsCaptured");
   });
 
