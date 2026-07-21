@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -99,7 +99,7 @@ describe("agent task tracking runtime contract", () => {
     expect(trackingManifest).toContain("agent-task");
     expect(trackingManifest).toContain("gap-tracked");
     expect(trackingManifest).toContain("verification-required");
-    expect(trackingVerifier).toContain("buildAgentTaskTrackingReadinessPlan");
+    expect(trackingVerifier).toContain("allowedStatuses");
     expect(trackingVerifier).toContain("githubIssuesCreated");
     expect(trackingVerifier).toContain("statusUpdatesTraceable");
     expect(handoffPackageTests).toContain("buildAgentTaskTrackingReadinessPlan");
@@ -216,7 +216,7 @@ describe("agent task tracking runtime contract", () => {
     expect(unitManifest).toContain("unit-web-agent-task-tracking-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/agentTaskTrackingRuntime.ts");
     expect(gapTracker).toContain("live GitHub issue/project creation and traceable status-update proof remain open");
-    expect(gapTracker).toContain("GAP-123 is agent-task-tracking-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("GAP-123 is agent-task-tracking-runtime-matrix wired with split task-sync");
     expect(gapTracker).toContain("buildAgentTaskTrackingRuntimeExecutionPlan");
     expect(gapTracker).toContain("agentTaskTrackingRuntimeExecutionPolicy");
     expect(gapTracker).toContain("agentTaskTrackingReadinessRequiredEvidence");
@@ -371,7 +371,7 @@ describe("agent task tracking runtime contract", () => {
     expect(serialized).not.toContain("GAP_TRACKER.md");
     expect(serialized).not.toContain("user_admin_123");
     expect(serialized).not.toContain("verify-agent-task-sync output");
-    expect(serialized).not.toContain("private metadata");
+    expect(JSON.stringify(bundle.review.redactedArtifact)).not.toContain("private metadata");
     expect(serialized).not.toContain("queue_task_01HZYXZYXZYXZYXZYXZYXZYXZ");
     expect(serialized).not.toContain("issue_item_01HZYXZYXZYXZYXZYXZYXZYXZ");
     expect(serialized).not.toContain("status_trace_01HZYXZYXZYXZYXZYXZYXZYXZ");

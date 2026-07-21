@@ -1,4 +1,5 @@
-﻿import {
+import {
+  agentTaskTrackingRequiredCommands,
   agentTaskTrackingRequiredEvidence as agentTaskTrackingPackageRequiredEvidence,
   buildAgentTaskTrackingReadinessPlan,
 } from "@inkroute/handoff";
@@ -88,17 +89,7 @@ export const agentTaskTrackingDefaultLabels = [
   "verification-required",
 ] as const;
 
-export const agentTaskTrackingRuntimeCommands = [
-  "pnpm handoff:verify-task-sync",
-  "gh issue create or GitHub issue automation",
-  "GitHub Project item sync",
-  "link redacted issue/project labels from handoff docs",
-  "link tracking evidence from GAP_TRACKER rows",
-  "trace status updates between queue, issues/projects, ledger, and gap tracker",
-  "pnpm handoff:verify-ledger",
-  "pnpm handoff:audit",
-  "capture CI agent task tracking artifacts",
-] as const;
+export const agentTaskTrackingRuntimeCommands = agentTaskTrackingRequiredCommands;
 
 export const agentTaskTrackingRuntimeLocalCommands = [
   "pnpm handoff:verify-task-sync",
