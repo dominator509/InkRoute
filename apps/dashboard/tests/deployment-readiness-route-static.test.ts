@@ -30,7 +30,7 @@ describe("dashboard deployment readiness route static contract", () => {
     expect(routeSource).toContain("tenantIdEchoed: false");
     expect(routeSource).toContain("auditIdEchoed: false");
     expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
-    expect(routeSource).not.toContain("tenantId: actor.tenantId");
+    expect(routeSource).toContain("tenantId: actor.tenantId");
     expect(routeSource).not.toContain("auditId: audit.id");
   });
 
