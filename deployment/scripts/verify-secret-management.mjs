@@ -29,6 +29,7 @@ const audit = readJson(auditPath);
 const envContract = readJson(envContractPath);
 const envExample = existsSync(envExamplePath) ? readFileSync(envExamplePath, "utf8") : "";
 const failures = [];
+const forbiddenEvidenceExamples = audit.redactionPolicy?.forbiddenEvidenceExamples;
 const productionSecrets = envContract.filter((item) => item.requiredForProduction && item.secret).map((item) => item.name);
 const auditSecrets = Array.isArray(audit.secrets) ? audit.secrets : [];
 const auditSecretNames = new Set(auditSecrets.map((item) => item.name));
@@ -46,6 +47,7 @@ for (const item of auditSecrets) {
 }
 
 if (audit.redactionPolicy?.secretValuesAllowedInGit !== false) failures.push("Secret audit redaction policy must forbid secret values in git.");
+if (!Array.isArray(forbiddenEvidenceExamples) || forbiddenEvidenceExamples.length === 0) failures.push("Secret audit redaction policy must declare forbidden evidence examples.");
 if (!audit.rotationPolicy?.requiresMaskedCiLogProof) failures.push("Secret audit rotation policy must require masked CI log proof.");
 if (!audit.rotationPolicy?.requiresProviderAuditLogReference) failures.push("Secret audit rotation policy must require provider audit-log references.");
 

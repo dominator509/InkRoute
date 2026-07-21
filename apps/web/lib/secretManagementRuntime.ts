@@ -370,6 +370,9 @@ function redactSecretManagementString(value: string, redactions: Set<string>): s
 
 function redactSecretManagementValue(value: unknown, redactions: Set<string>, key?: string): unknown {
   if (key && sensitiveSecretManagementKeyPattern.test(key)) {
+    if (typeof value === "string") {
+      redactSecretManagementString(value, redactions);
+    }
     redactions.add(key);
     return `[REDACTED_${key.replace(/[^A-Za-z0-9]/g, "_").toUpperCase()}]`;
   }
