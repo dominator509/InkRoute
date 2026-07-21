@@ -97,7 +97,8 @@ describe("deployment launch evidence runtime contract", () => {
     expect(dashboardDeploymentPage).toContain("DeploymentReadinessActionPanel");
     expect(deploymentReadinessActionPanel).toContain('fetch("/api/deployment/readiness"');
     expect(deploymentReadinessActionPanel).toContain("Request readiness review");
-    expect(dashboardReadinessTest).toContain("secret-name-only redaction metadata");
+    expect(dashboardReadinessTest).toContain("redactedFields");
+    expect(dashboardReadinessTest).toContain("without exposing secret values");
     expect(deploymentDocs).toContain("Deployment");
     expect(releaseGovernanceWorkflow).toContain("workflow_dispatch");
   });
