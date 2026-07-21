@@ -125,6 +125,7 @@ export const providerEnvironmentRuntimeLocalArtifacts = [
   "coverage/provider-environment-runtime.json",
   "coverage/provider-environment-verifier.json",
   "coverage/provider-redacted-handoff-labels.json",
+  "coverage/provider-redacted-handoff-packet.json",
   "test-results/provider-environment-runtime",
 ] as const satisfies readonly ProviderEnvironmentRuntimeArtifact[];
 
@@ -229,7 +230,7 @@ export interface ProviderEnvironmentRuntimeRedactedHandoffPacket {
 }
 
 const sensitiveProviderEnvironmentKeyPattern =
-  /(token|secret|password|authorization|cookie|env|databaseUrl|dbUrl|provider|projectId|resourceId|ciRunUrl|deployUrl|previewUrl|stagingUrl|productionUrl|sentry|eas|github|bucket|secretStore|tenantId|userId|runId|email|phone|raw|payload|body|stack|error|log|output|transcript|database|dsn|migration|storage|acl|source.?map|protection|handoff|artifact|label|smoke|strict|verifier|url|uri|repository|repo|branch|pull|pr|reviewer|codeowner)/i;
+  /(token|secret|password|authorization|cookie|env|databaseUrl|dbUrl|provider|projectId|resourceId|ciRunUrl|deployUrl|previewUrl|stagingUrl|productionUrl|sentry|eas|github|bucket|secretStore|tenantId|userId|runId|email|phone|raw|payload|body|stack|error|log|output|transcript|database|dsn|migration|storage|acl|source.?map|protection|handoff|artifact|label|smoke|strict|verifier|url|uri|repository|repo|branch|pull|pr|reviewer|codeowner|neutralCiTrace)/i;
 
 const sensitiveProviderEnvironmentStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
@@ -392,6 +393,9 @@ function redactProviderEnvironmentString(value: string, redactions: Set<string>)
 
 function redactProviderEnvironmentValue(value: unknown, redactions: Set<string>, key?: string): unknown {
   if (key && sensitiveProviderEnvironmentKeyPattern.test(key)) {
+    if (typeof value === "string") {
+      redactProviderEnvironmentString(value, redactions);
+    }
     redactions.add(key);
     return `[REDACTED_${key.replace(/[^A-Za-z0-9]/g, "_").toUpperCase()}]`;
   }
