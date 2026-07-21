@@ -176,7 +176,7 @@ describe("Phase 16 handoff plan", () => {
     expect(plan.missingExecutionTaskIds).toEqual(["task-b"]);
     expect(plan.unknownExecutionTaskIds).toEqual(["unknown-task"]);
     expect(plan.incompleteExecutionTaskIds).toEqual(expect.arrayContaining(["task-a:assignedAgent", "task-a", "task-a:GAP-119"]));
-    expect(plan.unsafeEvidenceFields).toContain("task-a:5");
+    expect(plan.unsafeEvidenceFields).toContain("task-a:evidenceArtifacts:0");
     expect(plan.requiredCommands).toBe(agentExecutionLedgerRequiredCommands);
     expect(plan.requiredEvidence).toBe(agentExecutionLedgerRequiredEvidence);
     expect(plan.blockers).toContain("Every Phase 16 queue task must have an execution ledger entry.");
@@ -387,7 +387,7 @@ describe("Phase 16 handoff plan", () => {
         `${tasks[0]!.id}:issueUrl`,
       ]),
     );
-    expect(plan.unsafeTrackingFields).toContain(`${tasks[0]!.id}:10`);
+    expect(plan.unsafeTrackingFields).toContain(`${tasks[0]!.id}:projectItemUrl`);
     expect(plan.requiredCommands).toBe(agentTaskTrackingRequiredCommands);
     expect(plan.requiredEvidence).toBe(agentTaskTrackingRequiredEvidence);
     expect(plan.blockers).toContain("GitHub issues must be created for every queued agent task.");
