@@ -210,7 +210,7 @@ export const secretManagementRuntimeExternalCommands = [
 ] as const satisfies readonly SecretManagementRuntimeCommand[];
 
 const sensitiveSecretManagementKeyPattern =
-  /(token|secret|password|authorization|cookie|env|databaseUrl|dbUrl|directUrl|provider|projectId|resourceId|ciRunUrl|auditLog|secretStore|maskedLog|tenantId|userId|runId|email|phone|value|raw|payload|body|stack|error|log|output|transcript|database|dsn|strict|verifier|scan|rotation|tabletop|incident|dualControl|cadence|artifact|label|destination|reference|commit|diff|finding|repository|repo|branch|pull|pr|reviewer|codeowner)/i;
+  /(token|secret|password|authorization|cookie|env|databaseUrl|dbUrl|directUrl|provider|projectId|resourceId|ciRunUrl|auditLog|secretStore|maskedLog|tenantId|userId|runId|email|phone|value|raw|payload|body|stack|error|log|output|transcript|database|dsn|strict|verifier|scan|rotation|tabletop|incident|dualControl|cadence|artifact|label|destination|reference|commit|diff|finding|repository|repo|branch|pull|pr|reviewer|codeowner|neutralStoreTrace|neutralCiTrace)/i;
 
 const sensitiveSecretManagementStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
