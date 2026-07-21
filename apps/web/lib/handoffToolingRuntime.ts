@@ -1,4 +1,4 @@
-﻿import { buildHandoffToolingRuntimeReadinessPlan } from "@inkroute/handoff";
+﻿import { buildHandoffToolingRuntimeReadinessPlan, handoffToolingRuntimeRequiredCommands } from "@inkroute/handoff";
 
 export type HandoffToolingRuntimeStatus =
   | "wired"
@@ -53,18 +53,7 @@ export const handoffToolingRequiredRootScripts = [
   "handoff:all",
 ] as const;
 
-export const handoffToolingRuntimeCommands = [
-  "pnpm install",
-  "pnpm --filter @inkroute/handoff typecheck",
-  "pnpm --filter @inkroute/handoff test",
-  "pnpm handoff:verify-docs",
-  "pnpm handoff:audit",
-  "pnpm handoff:next",
-  "pnpm handoff:verify-ledger",
-  "pnpm handoff:verify-tooling",
-  "pnpm handoff:verify-task-sync",
-  "pnpm handoff:all",
-] as const;
+export const handoffToolingRuntimeCommands = handoffToolingRuntimeRequiredCommands;
 
 export const handoffToolingRuntimeLocalCommands = [
   "pnpm handoff:verify-docs",

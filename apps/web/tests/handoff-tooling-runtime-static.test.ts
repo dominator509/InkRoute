@@ -125,8 +125,8 @@ describe("handoff tooling runtime contract", () => {
     expect(ciWorkflow).toContain("handoff-tooling-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-handoff-tooling-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/handoffToolingRuntime.ts");
-    expect(gapTracker).toContain("Handoff tooling evidence classifier wired and runtime artifact proof gated");
-    expect(gapTracker).toContain("GAP-121 is handoff-tooling-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Handoff tooling evidence classifier and handoffToolingRuntimeRequiredCommands identity wiring");
+    expect(gapTracker).toContain("GAP-121 is handoff-tooling-runtime-matrix wired with split dependency install");
     expect(gapTracker).toContain("buildHandoffToolingRuntimeExecutionPlan");
     expect(gapTracker).toContain("handoffToolingRuntimeExecutionPolicy");
     expect(gapTracker).toContain("handoffToolingRuntimeRequiredExternalEvidence");
