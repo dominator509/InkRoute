@@ -590,7 +590,8 @@ export const buildDeploymentLaunchEvidenceDecision = (
   };
 };
 
-export const deploymentLaunchEvidenceRuntimeReadiness = buildDeploymentLaunchEvidencePlan({
+export const deploymentLaunchEvidenceRuntimeReadiness = {
+  ...buildDeploymentLaunchEvidencePlan({
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
   deploymentTestsPassed: false,
   deploymentTypecheckPassed: false,
@@ -613,7 +614,9 @@ export const deploymentLaunchEvidenceRuntimeReadiness = buildDeploymentLaunchEvi
   deploymentRollbackTestPassed: false,
   launchEvidencePacketCaptured: false,
   providerArtifactsSecretSafe: false,
-});
+  }),
+  requiredEvidence: deploymentLaunchEvidenceFlags,
+} as const;
 
 
 

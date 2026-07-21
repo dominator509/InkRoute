@@ -93,7 +93,7 @@ describe("deployment launch evidence runtime contract", () => {
     expect(deploymentTests).toContain("buildDeploymentLaunchEvidencePlan");
     expect(dashboardReadinessRoute).toContain("release:read");
     expect(dashboardReadinessRoute).toContain("no-store");
-    expect(dashboardReadinessRoute).toContain("AuditLog");
+    expect(dashboardReadinessRoute).toContain("prisma.auditLog.create");
     expect(dashboardDeploymentPage).toContain("DeploymentReadinessActionPanel");
     expect(deploymentReadinessActionPanel).toContain('fetch("/api/deployment/readiness"');
     expect(deploymentReadinessActionPanel).toContain("Request readiness review");
