@@ -164,6 +164,7 @@ export type DeploymentToolingRuntimeExecutionPolicy = {
   readonly productionApprovalMustRemainHumanGated: true;
   readonly ciProviderRequiredForDeploymentReports: true;
   readonly providerEnvironmentRequiredForPersistence: true;
+  readonly externalEvidenceRequired: typeof deploymentToolingRuntimeRequiredExternalEvidence;
 };
 
 export const deploymentToolingRuntimeExecutionPolicy: DeploymentToolingRuntimeExecutionPolicy = {
@@ -173,6 +174,7 @@ export const deploymentToolingRuntimeExecutionPolicy: DeploymentToolingRuntimeEx
   productionApprovalMustRemainHumanGated: true,
   ciProviderRequiredForDeploymentReports: true,
   providerEnvironmentRequiredForPersistence: true,
+  externalEvidenceRequired: deploymentToolingRuntimeRequiredExternalEvidence,
 };
 
 export type DeploymentToolingRuntimeArtifact = (typeof deploymentToolingRuntimeArtifactPaths)[number];
@@ -328,7 +330,7 @@ const sensitiveDeploymentToolingStringPatterns: readonly [RegExp, string][] = [
   [/\b(?:sk|pk|rk|whsec)_(?:live|test)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
   [/\brepo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\b/gi, "[REDACTED_REPOSITORY_SELECTOR]"],
   [/\bbranch:[A-Za-z0-9_./-]+\b/gi, "[REDACTED_BRANCH_SELECTOR]"],
-  [/\bpr[_:#-]?[A-Za-z0-9_.-]+\b/gi, "[REDACTED_PR_SELECTOR]"],
+  [/\bpr[_:#-][A-Za-z0-9_.-]+\b/gi, "[REDACTED_PR_SELECTOR]"],
   [/\breviewer[_:@-]?[A-Za-z0-9_.-]+\b/gi, "[REDACTED_REVIEWER_SELECTOR]"],
   [/\bCODEOWNER:[A-Za-z0-9_.@/-]+\b/g, "[REDACTED_CODEOWNER_SELECTOR]"],
   [/\b(?:tenant|user|owner|deployment|run|approval)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
@@ -412,6 +414,9 @@ function redactDeploymentToolingString(value: string, redactions: Set<string>): 
 
 function redactDeploymentToolingValue(value: unknown, redactions: Set<string>, key?: string): unknown {
   if (key && sensitiveDeploymentToolingKeyPattern.test(key)) {
+    if (typeof value === "string") {
+      redactDeploymentToolingString(value, redactions);
+    }
     redactions.add(key);
     return `[REDACTED_${key.replace(/[^A-Za-z0-9]/g, "_").toUpperCase()}]`;
   }

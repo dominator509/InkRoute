@@ -73,7 +73,9 @@ describe("dashboard deployment readiness route", () => {
     expect(body.operation).toBe("request-rollback-plan");
     expect(body.operationResult.status).toBe("preflight-only");
     expect(body.operationResult.boundary).toContain("execution remains outside this API");
-    expect(body.requestId).toBe("rollback-preview-001");
+    expect(body.requestIdReceived).toBe(true);
+    expect(body.rawRequestIdEchoed).toBe(false);
+    expect(body.requestId).toBeUndefined();
     expect(body.plan.environment).toBe("preview");
   });
 

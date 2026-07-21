@@ -421,6 +421,7 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
       productionApprovalMustRemainHumanGated: true,
       ciProviderRequiredForDeploymentReports: true,
       providerEnvironmentRequiredForPersistence: true,
+      externalEvidenceRequired: deploymentToolingRuntimeRequiredExternalEvidence,
     });
   });
 

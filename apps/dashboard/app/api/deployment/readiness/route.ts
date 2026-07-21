@@ -304,8 +304,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const auditLogModel = prisma.auditLog as { create: (args: unknown) => Promise<{ id: string }> };
-    const audit = await auditLogModel.create({
+
+    await prisma.auditLog.create({
       data: {
         tenantId,
         actorUserId: actor.actorUserId,
@@ -421,8 +421,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const auditLogModel = prisma.auditLog as { create: (args: unknown) => Promise<{ id: string }> };
-    const audit = await auditLogModel.create({
+
+    await prisma.auditLog.create({
       data: {
         tenantId: actor.tenantId,
         actorUserId: actor.actorUserId,
