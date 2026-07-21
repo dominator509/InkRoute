@@ -1,4 +1,4 @@
-import { buildAgentExecutionLedgerReadinessPlan } from "@inkroute/handoff";
+import { agentExecutionLedgerRequiredCommands, buildAgentExecutionLedgerReadinessPlan } from "@inkroute/handoff";
 import type { AgentTarget } from "@inkroute/handoff";
 
 export type AgentExecutionLedgerRuntimeStatus =
@@ -103,21 +103,7 @@ export const agentExecutionLedgerRuntimeProofFiles = [
   "testing/manifests/unit-test-manifest.json",
 ] as const;
 
-export const agentExecutionLedgerRuntimeCommands = [
-  "pnpm handoff:verify-ledger",
-  "pnpm handoff:audit",
-  "pnpm handoff:verify-docs",
-  "pnpm handoff:next",
-  "agent task command plans from docs/handoff/manifests/agent-execution-queue.json",
-  "capture redacted agent command transcripts",
-  "record agent changed-files matrix",
-  "capture provider evidence labels",
-  "record remaining gaps and risks",
-  "complete agent execution secret-safety review",
-  "update GAP_TRACKER rows with execution evidence",
-  "external Codex/Jules/Claude/local execution result import",
-  "capture CI agent execution ledger artifacts",
-] as const;
+export const agentExecutionLedgerRuntimeCommands = agentExecutionLedgerRequiredCommands;
 
 export const agentExecutionLedgerRuntimeLocalCommands = [
   "pnpm handoff:verify-ledger",
