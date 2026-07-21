@@ -1,4 +1,7 @@
-﻿import { buildDeploymentLaunchEvidencePlan } from "@inkroute/deployment";
+﻿import {
+  buildDeploymentLaunchEvidencePlan,
+  deploymentLaunchEvidenceRequiredCommands,
+} from "@inkroute/deployment";
 
 export type DeploymentLaunchEvidenceRuntimeStatus =
   | "wired"
@@ -135,22 +138,7 @@ export async function persistDeploymentLaunchEvidenceRun(
   });
 }
 
-export const deploymentLaunchEvidenceRuntimeCommands = [
-  "pnpm --filter @inkroute/deployment typecheck",
-  "pnpm --filter @inkroute/deployment test",
-  "pnpm deploy:verify-provider-envs",
-  "pnpm deploy:verify-secrets",
-  "pnpm deploy:verify-database-ops",
-  "pnpm deploy:verify-mobile",
-  "Vercel preview deployment smoke",
-  "production deployment dry run",
-  "EAS preview build",
-  "mobile OTA rollback test",
-  "deployment rollback drill",
-  "GitHub protected environment approval proof",
-  "Sentry release/source-map upload proof",
-  "pnpm deploy:verify-launch-evidence",
-] as const;
+export const deploymentLaunchEvidenceRuntimeCommands = deploymentLaunchEvidenceRequiredCommands;
 
 export const deploymentLaunchEvidenceArtifactPaths = [
   "coverage/deployment-launch-evidence-runtime.json",

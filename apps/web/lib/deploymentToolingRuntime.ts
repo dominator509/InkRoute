@@ -1,4 +1,7 @@
-import { buildDeploymentToolingRuntimeVerificationPlan } from "@inkroute/deployment";
+import {
+  buildDeploymentToolingRuntimeVerificationPlan,
+  deploymentToolingRuntimeVerificationRequiredCommands,
+} from "@inkroute/deployment";
 
 export type DeploymentToolingRuntimeStatus =
   | "wired"
@@ -129,22 +132,7 @@ export const deploymentToolingRuntimeProofFiles = [
   ".github/workflows/ci.yml",
 ] as const;
 
-export const deploymentToolingRuntimeCommands = [
-  "pnpm install --frozen-lockfile",
-  "pnpm --filter @inkroute/deployment typecheck",
-  "pnpm --filter @inkroute/deployment test",
-  "pnpm test:unit -- apps/web/tests/dashboard-deployment-readiness-route.test.ts",
-  "pnpm deploy:check-env",
-  "pnpm deploy:checklist",
-  "pnpm deploy:gaps",
-  "pnpm --filter @inkroute/dashboard build",
-  "dashboard deployment page smoke",
-  "dashboard deployment readiness API smoke",
-  "verify rollback preflight remains non-mutating",
-  "verify production approval boundary remains blocked without required evidence",
-  "capture CI deployment reports",
-  "capture deployment blocker-owner artifact"
-] as const;
+export const deploymentToolingRuntimeCommands = deploymentToolingRuntimeVerificationRequiredCommands;
 
 export const deploymentToolingRuntimeLocalCommands = [
   "pnpm --filter @inkroute/deployment typecheck",

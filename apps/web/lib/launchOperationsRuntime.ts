@@ -1,4 +1,7 @@
-import { buildLaunchOperationsRuntimeReadinessPlan } from "@inkroute/deployment";
+import {
+  buildLaunchOperationsRuntimeReadinessPlan,
+  launchOperationsRuntimeRequiredCommands,
+} from "@inkroute/deployment";
 import type { LaunchOperationCheckId } from "@inkroute/deployment";
 
 export type LaunchOperationsRuntimeStatus =
@@ -95,20 +98,7 @@ export const launchOperationsRuntimeProofFiles = [
   "testing/manifests/unit-test-manifest.json"
 ] as const;
 
-export const launchOperationsRuntimeCommands = [
-  "pnpm deploy:verify-ops",
-  "assign named primary and backup launch operations owners",
-  "verify launch operations on-call coverage",
-  "alert routing test",
-  "incident drill",
-  "rollback drill",
-  "privacy export/delete drill",
-  "support escalation drill",
-  "production monitoring dashboard review",
-  "communications template approval",
-  "capture explicit launch operations approval",
-  "capture CI launch-operations artifacts"
-] as const;
+export const launchOperationsRuntimeCommands = launchOperationsRuntimeRequiredCommands;
 
 export const launchOperationsRuntimeLocalCommands = ["pnpm deploy:verify-ops"] as const;
 export const launchOperationsRuntimeExternalCommands = launchOperationsRuntimeCommands.filter(

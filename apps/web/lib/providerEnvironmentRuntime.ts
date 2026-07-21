@@ -1,4 +1,7 @@
-﻿import { buildProviderEnvironmentRuntimeReadinessPlan } from "@inkroute/deployment";
+﻿import {
+  buildProviderEnvironmentRuntimeReadinessPlan,
+  providerEnvironmentRuntimeRequiredCommands,
+} from "@inkroute/deployment";
 import type { ProviderEnvironmentSurface } from "@inkroute/deployment";
 
 export type ProviderEnvironmentRuntimeStatus =
@@ -86,19 +89,7 @@ export const providerEnvironmentRuntimeProofFiles = [
   "testing/manifests/unit-test-manifest.json",
 ] as const;
 
-export const providerEnvironmentRuntimeCommands = [
-  "pnpm deploy:verify-provider-envs",
-  "pnpm deploy:check-env:strict",
-  "provider web/dashboard route smoke",
-  "provider database migration dry-run",
-  "provider storage private ACL smoke",
-  "eas build --profile preview",
-  "sentry release/source-map smoke",
-  "github environment protection audit",
-  "verify provider secret-store destinations",
-  "record redacted provider evidence labels",
-  "capture provider environment CI artifacts"
-] as const;
+export const providerEnvironmentRuntimeCommands = providerEnvironmentRuntimeRequiredCommands;
 
 export const providerEnvironmentRuntimeRequiredExternalEvidence = [
   "Preview, staging, and production provider project proof must be captured outside Codex with raw project IDs redacted.",

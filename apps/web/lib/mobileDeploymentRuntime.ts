@@ -1,4 +1,7 @@
-﻿import { buildMobileDeploymentRuntimeReadinessPlan } from "@inkroute/deployment";
+﻿import {
+  buildMobileDeploymentRuntimeReadinessPlan,
+  mobileDeploymentRuntimeRequiredCommands,
+} from "@inkroute/deployment";
 
 export type MobileDeploymentRuntimeStatus =
   | "wired"
@@ -85,23 +88,7 @@ export const mobileDeploymentRuntimeProofFiles = [
   "testing/manifests/unit-test-manifest.json",
 ] as const;
 
-export const mobileDeploymentRuntimeCommands = [
-  "pnpm deploy:verify-mobile",
-  "eas build --profile development",
-  "eas build --profile preview --platform ios",
-  "eas build --profile preview --platform android",
-  "eas build --profile production --platform ios",
-  "eas build --profile production --platform android",
-  "eas update --channel preview",
-  "mobile device QA checklist",
-  "mobile push token smoke",
-  "mobile synthetic crash capture",
-  "OTA rollback rehearsal",
-  "verify native signing credentials outside source control",
-  "review App Store Connect and Google Play readiness labels",
-  "record redacted mobile build artifact labels",
-  "capture CI mobile deployment artifacts"
-] as const;
+export const mobileDeploymentRuntimeCommands = mobileDeploymentRuntimeRequiredCommands;
 
 export const mobileDeploymentRuntimeRequiredExternalEvidence = [
   "EAS build, OTA update, and rollback artifacts must be captured outside Codex with build URLs, tokens, and project IDs redacted.",

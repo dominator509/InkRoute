@@ -1,4 +1,7 @@
-﻿import { buildSecretManagementRuntimeReadinessPlan } from "@inkroute/deployment";
+﻿import {
+  buildSecretManagementRuntimeReadinessPlan,
+  secretManagementRuntimeRequiredCommands,
+} from "@inkroute/deployment";
 
 export type SecretManagementRuntimeStatus =
   | "wired"
@@ -89,17 +92,7 @@ export const secretManagementRuntimeProofFiles = [
   "testing/manifests/unit-test-manifest.json",
 ] as const;
 
-export const secretManagementRuntimeCommands = [
-  "pnpm deploy:verify-secrets",
-  "pnpm deploy:check-env:strict",
-  "committed secret scan",
-  "provider secret-store audit",
-  "masked CI log review",
-  "provider audit-log reference capture",
-  "document secret rotation cadence and dual-control policy",
-  "incident rotation tabletop",
-  "capture CI secret-management artifacts"
-] as const;
+export const secretManagementRuntimeCommands = secretManagementRuntimeRequiredCommands;
 
 export const secretManagementRuntimeRequiredExternalEvidence = [
   "Strict environment checks must run only in approved secret-backed environments and retain redacted labels only.",
