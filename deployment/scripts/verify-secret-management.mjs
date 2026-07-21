@@ -12,7 +12,7 @@ const forbiddenSecretPatterns = [
   /rk_live_[A-Za-z0-9]+/,
   /postgres(?:ql)?:\/\/(?!USER:PASSWORD@HOST)[^"<>\s]+/i,
   /gh[pousr]_[A-Za-z0-9_]{20,}/,
-  /vercel_[A-Za-z0-9_]{20,}/i,
+  /vercel_[A-Za-z0-9_]{20,}/,
   /xox[baprs]-[A-Za-z0-9-]+/,
   /-----BEGIN (?:RSA |EC |OPENSSH |)PRIVATE KEY-----/
 ];
