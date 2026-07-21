@@ -27,9 +27,9 @@
       "id": "ci-build-test",
       "area": "tooling",
       "status": "missing",
-      "requiredEvidence": ["pnpm install", "typecheck", "lint", "unit coverage", "web build", "dashboard build", "Playwright smoke"],
-      "sourceArtifacts": [".github/workflows/ci.yml", "coverage/unit", "coverage/playwright-report"],
-      "gapIds": ["GAP-001", "GAP-105", "GAP-106", "GAP-111"]
+      "requiredEvidence": ["pnpm install", "typecheck", "lint", "unit coverage", "web build", "dashboard build", "Playwright smoke", "web/dashboard preview URLs and route smoke tests"],
+      "sourceArtifacts": [".github/workflows/ci.yml", "coverage/unit", "coverage/playwright-report", "coverage/deployment-preview-smoke-redacted.json"],
+      "gapIds": ["GAP-001", "GAP-014", "GAP-105", "GAP-106", "GAP-111"]
     },
     {
       "id": "database-ops",
