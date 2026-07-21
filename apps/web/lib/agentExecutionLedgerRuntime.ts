@@ -518,7 +518,8 @@ export const agentExecutionLedgerRunPersistenceContract: AgentExecutionLedgerRun
   ],
 };
 
-export const agentExecutionLedgerRuntimeReadiness = buildAgentExecutionLedgerReadinessPlan({
+export const agentExecutionLedgerRuntimeReadiness = {
+  ...buildAgentExecutionLedgerReadinessPlan({
   queueTasks: agentExecutionLedgerTaskIds.map((id, index) => {
     const target = agentExecutionLedgerTargets[index] ?? "Local terminal";
     return {
@@ -551,5 +552,7 @@ export const agentExecutionLedgerRuntimeReadiness = buildAgentExecutionLedgerRea
   handoffAuditPassed: false,
   gapTrackerUpdated: false,
   externalAgentResultsImported: false,
-});
+  }),
+  requiredEvidence: agentExecutionLedgerRuntimeArtifactPaths,
+} as const;
 
