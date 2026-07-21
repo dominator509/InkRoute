@@ -100,8 +100,8 @@ describe("agent task tracking runtime contract", () => {
     expect(trackingManifest).toContain("gap-tracked");
     expect(trackingManifest).toContain("verification-required");
     expect(trackingVerifier).toContain("allowedStatuses");
-    expect(trackingVerifier).toContain("githubIssuesCreated");
-    expect(trackingVerifier).toContain("statusUpdatesTraceable");
+    expect(trackingVerifier).toContain("issueUrl");
+    expect(trackingVerifier).toContain("projectItemUrl");
     expect(handoffPackageTests).toContain("buildAgentTaskTrackingReadinessPlan");
   });
 
