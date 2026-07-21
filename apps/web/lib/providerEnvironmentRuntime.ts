@@ -138,6 +138,7 @@ export const providerEnvironmentRuntimeExternalArtifacts = [
   "coverage/provider-sentry-release-smoke-redacted.json",
   "coverage/provider-github-environment-protection-redacted.json",
   "coverage/provider-secret-store-destinations-redacted.json",
+  "coverage/provider-redacted-handoff-packet.json",
   "coverage/provider-environment-ci-run-redacted.json",
 ] as const satisfies readonly ProviderEnvironmentRuntimeArtifact[];
 
@@ -241,7 +242,7 @@ const sensitiveProviderEnvironmentStringPatterns: readonly [RegExp, string][] = 
   [/\b(?:sk|pk|rk|whsec)_(?:live|test)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
   [/\brepo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\b/gi, "[REDACTED_REPOSITORY_SELECTOR]"],
   [/\bbranch:[A-Za-z0-9_./-]+\b/gi, "[REDACTED_BRANCH_SELECTOR]"],
-  [/\bpr[_:#-]?[A-Za-z0-9_.-]+\b/gi, "[REDACTED_PR_SELECTOR]"],
+  [/\bpr[_:#-][A-Za-z0-9_.-]+\b/gi, "[REDACTED_PR_SELECTOR]"],
   [/\breviewer[_:@-]?[A-Za-z0-9_.-]+\b/gi, "[REDACTED_REVIEWER_SELECTOR]"],
   [/\bCODEOWNER:[A-Za-z0-9_.@/-]+\b/g, "[REDACTED_CODEOWNER_SELECTOR]"],
   [/\b(?:tenant|user|project|provider|bucket|run|env|eas|sentry|gh|github|vercel|neon|supabase|render|resource|secret|workflow|ci|commit|deployment|preview|staging|production|source.?map|release)_[A-Za-z0-9_.-]+\b/gi, "[REDACTED_ID]"],
