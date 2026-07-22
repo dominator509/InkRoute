@@ -182,7 +182,7 @@ describe("observability launch runtime contract", () => {
     expect(dashboardErrorReportRoute).toContain("tx.auditLog.create");
     expect(dashboardErrorReportTest).toContain("redactMetadataValue");
     expect(webGlobalError).toContain("GlobalError");
-    expect(dashboardGlobalError).toContain("ErrorBoundary");
+    expect(dashboardGlobalError).toContain("GlobalError");
     expect(mobileStatusScreen).toContain("Crash reporting");
   });
 
