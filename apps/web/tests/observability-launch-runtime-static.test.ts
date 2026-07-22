@@ -179,7 +179,7 @@ describe("observability launch runtime contract", () => {
     expect(observabilitySource).toContain("buildObservabilityLaunchEvidencePlan");
     expect(observabilityTests).toContain("buildObservabilityLaunchEvidencePlan");
     expect(dashboardErrorReportRoute).toContain("error:read");
-    expect(dashboardErrorReportRoute).toContain("AuditLog");
+    expect(dashboardErrorReportRoute).toContain("tx.auditLog.create");
     expect(dashboardErrorReportTest).toContain("metadata redaction");
     expect(webGlobalError).toContain("ErrorBoundary");
     expect(dashboardGlobalError).toContain("ErrorBoundary");
