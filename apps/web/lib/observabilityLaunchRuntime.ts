@@ -689,7 +689,7 @@ export const buildObservabilityLaunchEvidenceDecision = (
     requiredCommands: observabilityLaunchRuntimeCommands,
     requiredArtifacts: observabilityLaunchArtifactPaths,
     requiredControls: observabilityLaunchRuntimeControls,
-    requiredEvidence: observabilityLaunchRequiredEvidence,
+    requiredEvidence: observabilityLaunchRunPersistenceContract.evidenceBooleans,
     blockers,
   };
 };
