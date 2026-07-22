@@ -269,7 +269,7 @@ export const mobileCrashRuntimeMatrix = [
   },
 ] as const satisfies readonly MobileCrashRuntimeMatrixEntry[];
 
-export const mobileCrashRuntimeReadiness = buildMobileCrashRuntimeReadinessPlan({
+const mobileCrashPackageReadiness = buildMobileCrashRuntimeReadinessPlan({
   packageScripts: ["test", "typecheck"],
   observabilityTestsPassed: false,
   observabilityTypecheckPassed: false,
@@ -289,6 +289,11 @@ export const mobileCrashRuntimeReadiness = buildMobileCrashRuntimeReadinessPlan(
   offlineCrashBufferingVerified: false,
   noPiiProviderPayloadVerified: false,
 });
+
+export const mobileCrashRuntimeReadiness = {
+  ...mobileCrashPackageReadiness,
+  requiredEvidence: mobileCrashEvidenceFlags,
+};
 
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
   const actualSet = new Set(actual ?? []);
