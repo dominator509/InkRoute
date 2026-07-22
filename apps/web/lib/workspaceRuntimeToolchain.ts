@@ -1,5 +1,6 @@
-﻿import {
+import {
   buildWorkspaceRuntimeToolchainReadinessPlan,
+  workspaceRuntimeToolchainRequiredCommands,
   workspaceRuntimeToolchainRequiredEvidence as workspaceRuntimeToolchainPackageRequiredEvidence,
 } from "@inkroute/workspace";
 
@@ -91,17 +92,7 @@ export const workspaceRuntimeToolchainRunPersistenceContract: WorkspaceRuntimeTo
   ],
 };
 
-export const workspaceRuntimeToolchainCommands = [
-  "pnpm --filter @inkroute/workspace typecheck",
-  "pnpm --filter @inkroute/workspace test",
-  "pnpm workspace:toolchain",
-  "pnpm workspace:all",
-  "pnpm install",
-  "pnpm --filter @inkroute/web build",
-  "pnpm --filter @inkroute/dashboard build",
-  "GitHub Actions Phase 18 workspace runtime readiness job",
-  "runtime readiness report keeps production blockers visible",
-] as const;
+export const workspaceRuntimeToolchainCommands = workspaceRuntimeToolchainRequiredCommands;
 
 export const workspaceRuntimeToolchainGeneratedReports = [
   "docs/workspace/manifests/workspace-import-audit.json",
