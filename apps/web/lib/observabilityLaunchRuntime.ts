@@ -1,4 +1,4 @@
-import { buildObservabilityLaunchEvidencePlan } from "@inkroute/observability";
+import { buildObservabilityLaunchEvidencePlan, observabilityLaunchRequiredEvidence } from "@inkroute/observability";
 
 export type ObservabilityLaunchRuntimeStatus =
   | "wired"
@@ -689,7 +689,7 @@ export const buildObservabilityLaunchEvidenceDecision = (
     requiredCommands: observabilityLaunchRuntimeCommands,
     requiredArtifacts: observabilityLaunchArtifactPaths,
     requiredControls: observabilityLaunchRuntimeControls,
-    requiredEvidence: observabilityLaunchRunPersistenceContract.evidenceBooleans,
+    requiredEvidence: observabilityLaunchRequiredEvidence,
     blockers,
   };
 };
@@ -727,7 +727,7 @@ export const observabilityLaunchRuntimeReadiness = {
   ...observabilityLaunchPackageReadiness,
   requiredCommands: observabilityLaunchRuntimeCommands,
   requiredControls: observabilityLaunchRuntimeControls,
-  requiredEvidence: observabilityLaunchRunPersistenceContract.evidenceBooleans,
+  requiredEvidence: observabilityLaunchRequiredEvidence,
 };
 
 
