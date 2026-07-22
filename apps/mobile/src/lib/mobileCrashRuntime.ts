@@ -1,4 +1,4 @@
-﻿import { buildMobileCrashRuntimeReadinessPlan } from "@inkroute/observability";
+import { buildMobileCrashRuntimeReadinessPlan, mobileCrashRuntimeRequiredCommands } from "@inkroute/observability";
 
 export type MobileCrashRuntimeStatus =
   | "wired"
@@ -16,14 +16,7 @@ export interface MobileCrashRuntimeMatrixEntry {
   readonly status: MobileCrashRuntimeStatus;
 }
 
-export const mobileCrashRuntimeCommands = [
-  "pnpm --filter @inkroute/observability typecheck",
-  "pnpm --filter @inkroute/observability test",
-  "pnpm --filter @inkroute/mobile typecheck",
-  "Expo simulator forced crash smoke test",
-  "Expo physical-device forced crash smoke test",
-  "Sentry source-map/debug-symbol resolution check",
-] as const;
+export const mobileCrashRuntimeCommands = mobileCrashRuntimeRequiredCommands;
 
 export const mobileCrashArtifactPaths = [
   "coverage/mobile-crash-runtime.json",

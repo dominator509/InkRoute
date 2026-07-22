@@ -18,7 +18,8 @@ describe("mobile crash static contract", () => {
     expect(crashSource).toContain("buildObservabilityReportDraft");
     expect(crashSource).toContain('source: "mobile"');
     expect(crashSource).toContain('runtime: "react-native"');
-    expect(crashSource).toContain("requestId: context.requestId");
+    expect(crashSource).toContain('requestIdHash: buildMobileCrashSelectorHash("mobile-crash-request", context.requestId)');
+    expect(crashSource).toContain("rawRequestIdStored: false");
     expect(crashSource).toContain("buildMobileCrashReportDraft");
     expect(crashSource).toContain("buildMobileCrashCaptureContract");
   });
@@ -68,7 +69,7 @@ describe("mobile crash static contract", () => {
     expect(screenSource).toContain("mobileCrashCapturePreview.contract.localFallbackReady");
     expect(screenSource).toContain("Crash capture contract");
     expect(screenSource).toContain("Phase 11 contract");
-    expect(screenSource).toContain("fallback reporter");
+    expect(screenSource).toContain("fallback ready");
     expect(screenSource).toContain("forced crash proof pending");
     expect(screenSource).not.toContain("Phase 11 scaffold");
   });
@@ -77,7 +78,7 @@ describe("mobile crash static contract", () => {
     expect(demoSource).toContain("Mobile fallback crash capture is wired; live Sentry Expo capture remains credential-gated");
     expect(mobilePackageSource).toContain("MobileCrashCaptureContract");
     expect(mobilePackageSource).toContain("package-backed sanitized fallback/offline-buffer crash reporter contract is wired");
-    expect(mobilePackageSource).toContain("Sentry credentials, Expo runtime capture, and simulator/device proof remain gated");
+    expect(mobilePackageSource).toContain("no-PII provider payload proof");
     expect(demoSource).not.toContain("Expo mobile crash capture is scaffolded but not connected to Sentry");
     expect(mobilePackageSource).not.toContain("Sentry or fallback crash capture is documented but not wired into Expo runtime");
   });
