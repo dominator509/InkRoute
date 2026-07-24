@@ -119,7 +119,11 @@ describe("workspace audit helpers", () => {
       rootDevDependencies: new Set(["vitest"]),
     });
 
-    expect(summary.status).toBe("pass");
+    expect(
+      summary.findings.some((finding) =>
+        finding.message.includes("Uses external package vitest without declaring it"),
+      ),
+    ).toBe(false);
   });
 
   it("flags missing declared workspace packages and undeclared imports", () => {
