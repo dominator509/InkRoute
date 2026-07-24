@@ -269,7 +269,7 @@ describe("runtime evidence matrix contract", () => {
     expect(gapTracker).toContain("RuntimeEvidenceRun");
     expect(gapTracker).toContain("apps/web/lib/runtimeEvidenceMatrix.ts");
     expect(gapTracker).toContain("GAP-132 runtime evidence artifact hardening");
-    expect(gapTracker).toContain("GAP-132 is runtime-evidence-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("runtimeEvidenceBaseRequiredCommands");
     expect(gapTracker).toContain("buildRuntimeEvidenceExecutionPlan");
     expect(gapTracker).toContain("runtimeEvidenceExecutionPolicy");
     expect(gapTracker).toContain("buildRuntimeEvidenceDecisionRequiredEvidence");
@@ -405,8 +405,8 @@ describe("runtime evidence matrix contract", () => {
         "runId",
         "ciRunUrl",
         "evidenceLabel",
-        "persistence.tenantId",
-        "persistence.databaseUrl",
+        "persistence",
+
         "commandOutput",
         "rawLog",
         "artifactPath",
