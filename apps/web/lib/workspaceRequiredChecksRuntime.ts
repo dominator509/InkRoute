@@ -1,6 +1,7 @@
-﻿import {
+import {
   buildWorkspaceRequiredChecksReadinessPlan,
   workspaceRequiredChecksRequiredEvidence as workspaceRequiredChecksPackageRequiredEvidence,
+  workspaceRequiredChecksRequiredCommands,
 } from "@inkroute/workspace";
 
 export type WorkspaceRequiredChecksRuntimeStatus =
@@ -91,16 +92,7 @@ export const workspaceRequiredChecksRunPersistenceContract: WorkspaceRequiredChe
   ],
 };
 
-export const workspaceRequiredChecksCommands = [
-  "pnpm workspace:required-checks",
-  "pnpm workspace:all",
-  "pnpm quality:required-checks",
-  "GitHub Actions CI / quality",
-  "GitHub branch protection required-check review",
-  "Failing workspace-audit PR merge-block proof",
-  "PR GAP tracker diff evidence merge-block proof",
-  "required-check evidence logs redacted and secret-free",
-] as const;
+export const workspaceRequiredChecksCommands = workspaceRequiredChecksRequiredCommands;
 
 export const workspaceRequiredBranchProtectionChecks = [
   "CI / quality",
