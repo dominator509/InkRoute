@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -108,7 +108,7 @@ describe("workspace runtime toolchain contract", () => {
     expect(workspacePackageJson).toContain('"test"');
     expect(toolchainContract).toContain("workspace-toolchain-readiness");
     expect(toolchainContract).toContain("workspace:all");
-    expect(toolchainVerifier).toContain("buildWorkspaceRuntimeToolchainReadinessPlan");
+    expect(toolchainVerifier).toContain("workspace-toolchain-readiness-contract.json");
     expect(workspaceTests).toContain("buildWorkspaceRuntimeToolchainReadinessPlan");
   });
 
@@ -233,7 +233,7 @@ describe("workspace runtime toolchain contract", () => {
     expect(gapTracker).toContain("WorkspaceRuntimeToolchainRun");
     expect(gapTracker).toContain("apps/web/lib/workspaceRuntimeToolchain.ts");
     expect(gapTracker).toContain("live package typecheck/test, workspace commands, install/build, CI, and artifact proof remain open");
-    expect(gapTracker).toContain("GAP-130 is workspace-runtime-toolchain-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("GAP-130 workspace runtime toolchain artifact hardening");
     expect(gapTracker).toContain("buildWorkspaceRuntimeToolchainExecutionPlan");
     expect(gapTracker).toContain("workspaceRuntimeToolchainExecutionPolicy");
     expect(gapTracker).toContain("workspaceRuntimeToolchainReadinessRequiredEvidence");
@@ -343,7 +343,7 @@ describe("workspace runtime toolchain contract", () => {
     expect(buildRedactedWorkspaceRuntimeToolchainArtifact(artifact)).toEqual({
       runId: "[REDACTED]",
       ciRunUrl: "[REDACTED]",
-      installOutput: "resolved for [REDACTED] using token [REDACTED]",
+      installOutput: "[REDACTED]",
       persistence: {
         tenantId: "[REDACTED]",
         databaseUrl: "[REDACTED]",
