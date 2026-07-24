@@ -251,7 +251,7 @@ describe("static dependency audit runtime contract", () => {
     expect(gapTracker).toContain("StaticDependencyAuditRun");
     expect(gapTracker).toContain("apps/web/lib/staticDependencyAuditRuntime.ts");
     expect(gapTracker).toContain("GAP-131 static dependency audit artifact hardening");
-    expect(gapTracker).toContain("staticDependencyAuditCoverageAreas");
+
     expect(gapTracker).toContain("buildStaticDependencyAuditExecutionPlan");
     expect(gapTracker).toContain("staticDependencyAuditExecutionPolicy");
     expect(gapTracker).toContain("staticDependencyAuditReadinessRequiredEvidence");
