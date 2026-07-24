@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -120,7 +120,8 @@ describe("runtime evidence matrix contract", () => {
     expect(runtimeEvidenceContract).toContain("pnpm install");
     expect(runtimeEvidenceContract).toContain("pnpm quality:all");
     expect(runtimeEvidenceManifest).toContain("runtime-evidence");
-    expect(runtimeEvidenceVerifier).toContain("buildRuntimeEvidenceReadinessPlan");
+    expect(runtimeEvidenceVerifier).toContain("runtime-evidence-contract.json");
+    expect(runtimeEvidenceVerifier).toContain("missingRequiredEvidence");
     expect(workspaceTests).toContain("buildRuntimeEvidenceReadinessPlan");
   });
 
@@ -267,7 +268,7 @@ describe("runtime evidence matrix contract", () => {
     expect(unitManifest).toContain("RuntimeEvidenceRun Prisma model and app row contract");
     expect(gapTracker).toContain("RuntimeEvidenceRun");
     expect(gapTracker).toContain("apps/web/lib/runtimeEvidenceMatrix.ts");
-    expect(gapTracker).toContain("live install, workspace, handoff, quality, typecheck, unit, build, CI, redacted evidence labels, persisted run rows, and artifact proof remain gated with production blockers visible");
+    expect(gapTracker).toContain("GAP-132 runtime evidence artifact hardening");
     expect(gapTracker).toContain("GAP-132 is runtime-evidence-matrix wired with evidence classifier");
     expect(gapTracker).toContain("buildRuntimeEvidenceExecutionPlan");
     expect(gapTracker).toContain("runtimeEvidenceExecutionPolicy");
@@ -377,10 +378,8 @@ describe("runtime evidence matrix contract", () => {
       runId: "[REDACTED]",
       ciRunUrl: "[REDACTED]",
       evidenceLabel: "[REDACTED]",
-      persistence: {
-        tenantId: "[REDACTED]",
-        databaseUrl: "[REDACTED]",
-      },
+      persistence: "[REDACTED]",
+
       commandOutput: "[REDACTED]",
       rawLog: "[REDACTED]",
       artifactPath: "[REDACTED]",
