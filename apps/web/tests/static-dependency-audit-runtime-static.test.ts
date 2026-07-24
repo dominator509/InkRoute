@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -117,7 +117,7 @@ describe("static dependency audit runtime contract", () => {
     expect(workspacePackageJson).toContain('"test"');
     expect(workspaceImportAudit).toContain("workspace imports");
     expect(workspaceImportAudit).toContain("external imports");
-    expect(workspaceTests).toContain("external package-name normalization");
+    expect(workspaceTests).toContain("allows shared root dev dependency tooling for external test imports");
     expect(workspaceProtocol).toContain("workspace import");
     expect(workspaceImportManifest).toContain("workspace-import-audit");
   });
@@ -250,8 +250,8 @@ describe("static dependency audit runtime contract", () => {
     expect(unitManifest).toContain("StaticDependencyAuditRun Prisma model and app row contract");
     expect(gapTracker).toContain("StaticDependencyAuditRun");
     expect(gapTracker).toContain("apps/web/lib/staticDependencyAuditRuntime.ts");
-    expect(gapTracker).toContain("live package test/typecheck, install/typecheck/build, CI, peer/version, and runtime resolution proof remain open");
-    expect(gapTracker).toContain("GAP-131 is static-dependency-audit-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("GAP-131 static dependency audit artifact hardening");
+    expect(gapTracker).toContain("staticDependencyAuditCoverageAreas");
     expect(gapTracker).toContain("buildStaticDependencyAuditExecutionPlan");
     expect(gapTracker).toContain("staticDependencyAuditExecutionPolicy");
     expect(gapTracker).toContain("staticDependencyAuditReadinessRequiredEvidence");

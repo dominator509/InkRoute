@@ -1,4 +1,4 @@
-﻿export type StaticDependencyAuditRuntimeStatus =
+export type StaticDependencyAuditRuntimeStatus =
   | "wired"
   | "locally-verified"
   | "runtime-resolution-gated"
@@ -465,7 +465,7 @@ export function buildStaticDependencyAuditEvidenceDecision(
 }
 
 const sensitiveStaticDependencyKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|repository|repo|branch|pull|pr|reviewer|codeowner|registry|package|artifact|path|file|lock|lockfile|manifest|tree|dependency|peer|version|install|typecheck|build|resolution|workspace|runtime|ci|workflow|run|commit|report|output|stdout|stderr|transcript|payload|evidence|review)$/iu;
+  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|repository|repo|branch|pull|pr|reviewer|codeowner|registry|package|artifact|path|file|lock|lockfile|manifest|tree|dependency|peer|version|install|typecheck|build|resolution|workspace|runtime|ci|workflow|run|commit|report|output|stdout|stderr|transcript|payload|evidence|review|persistence|selector|proof|excerpt)$/iu;
 const sensitiveStaticDependencyValuePattern =
   /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:tenant|user|account|run|commit|workflow|ci|artifact|registry|package|dependency|workspace|runtime|build|install|peer|version|branch|repository|repo|pull|pr|reviewer|codeowner|lock|manifest)[-_:/]?[A-Za-z0-9_.-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
