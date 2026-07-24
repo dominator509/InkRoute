@@ -183,7 +183,7 @@ describe("observability launch runtime contract", () => {
     expect(dashboardErrorReportTest).toContain("redactMetadataValue");
     expect(webGlobalError).toContain("GlobalError");
     expect(dashboardGlobalError).toContain("GlobalError");
-    expect(mobileStatusScreen).toContain("Crash reporting");
+    expect(mobileStatusScreen).toContain("Crash capture contract");
   });
 
   it("keeps observability runtime blockers explicit until provider evidence exists", () => {
