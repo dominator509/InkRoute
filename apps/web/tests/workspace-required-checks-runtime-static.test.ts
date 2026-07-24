@@ -109,7 +109,8 @@ describe("workspace required checks runtime contract", () => {
     expect(rootPackageJson).toContain('"quality:required-checks"');
     expect(requiredChecksContract).toContain("workspace:required-checks");
     expect(requiredChecksContract).toContain("requiredBranchProtectionChecks");
-    expect(requiredChecksVerifier).toContain("buildWorkspaceRequiredChecksReadinessPlan");
+    expect(requiredChecksVerifier).toContain("workspace-required-checks-contract.json");
+    expect(requiredChecksVerifier).toContain("requiredPrEnforcementTerms");
     expect(workspaceTests).toContain("buildWorkspaceRequiredChecksReadinessPlan");
     expect(qualityRequiredChecksContract).toContain("required-checks");
   });
