@@ -1,4 +1,4 @@
-﻿import { buildDomainEventAuditTransactionEvidencePlan, domainEventAuditTransactionRequiredCommands } from "@inkroute/booking";
+﻿import { buildDomainEventAuditTransactionEvidencePlan, domainEventAuditTransactionRequiredCommands, domainEventAuditTransactionRequiredControls } from "@inkroute/booking";
 
 export type DomainEventAuditRuntimeStatus =
   | "wired"
@@ -441,13 +441,7 @@ export const domainEventAuditRuntimeMatrix = [
   },
 ] as const satisfies readonly DomainEventAuditRuntimeMatrixEntry[];
 
-export const domainEventAuditRuntimeControls = [
-  "commit-state-event-audit-payment-audit-idempotency-in-one-tenant-transaction",
-  "reject-invalid-transition-missing-tenant-actor-duplicate-idempotency-before-side-effects",
-  "return-original-result-for-idempotency-replay-without-duplicate-writes",
-  "record-provider-rollback-failure-audit-before-retry-or-exposure",
-  "redact-client-medical-payment-provider-private-url-data-from-artifacts",
-] as const;
+export const domainEventAuditRuntimeControls = domainEventAuditTransactionRequiredControls;
 
 export const domainEventAuditEvidenceFlags = [
   "bookingTestsPassed",

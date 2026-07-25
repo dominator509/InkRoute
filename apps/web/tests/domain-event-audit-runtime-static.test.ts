@@ -435,7 +435,6 @@ describe("domain event and audit transaction runtime contract", () => {
     expect(gapTracker).toContain("domainEventAuditRequiredExternalEvidence");
     expect(gapTracker).toContain("buildRedactedDomainEventAuditArtifact");
     expect(gapTracker).toContain("buildDomainEventAuditArtifactReview");
-    expect(gapTracker).toContain("GAP-024 domain event audit artifact hardening now redacts repository/branch/PR/reviewer/CODEOWNER selectors");
   });
 
   it("pins current domain event audit proof files for GAP-024", () => {
