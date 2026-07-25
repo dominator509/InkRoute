@@ -77,7 +77,7 @@ describe("database integration test plan", () => {
     expect(schema).toContain("@@unique([tenantId, userId])");
     expect(schema).toContain("@@index([tenantId, status, createdAt])");
     expect(schema).toContain("model AuditLog");
-    expect(schema).toContain("actorId");
+    expect(schema).toContain("actorUserId");
     expect(schema).toContain("entityType");
     expect(schema).toContain("entityId");
   });

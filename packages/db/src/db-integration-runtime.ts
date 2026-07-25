@@ -473,7 +473,7 @@ export function persistDbIntegrationRun(
   });
 }
 
-export const dbIntegrationRuntimeReadiness = buildDbIntegrationRuntimeReadinessPlan({
+const dbIntegrationRuntimePackageReadiness = buildDbIntegrationRuntimeReadinessPlan({
   packageScripts: {
     "db:validate": "prisma validate --schema prisma/schema.prisma",
     "db:generate": "prisma generate --schema prisma/schema.prisma",
@@ -496,6 +496,11 @@ export const dbIntegrationRuntimeReadiness = buildDbIntegrationRuntimeReadinessP
   commandOutputCaptured: false,
   ciDbJobPassed: false
 });
+
+export const dbIntegrationRuntimeReadiness = {
+  ...dbIntegrationRuntimePackageReadiness,
+  requiredCommands: dbIntegrationRuntimeCommands,
+} as const;
 
 export const dbIntegrationRunPersistencePreview = buildDbIntegrationRunPersistenceContract({
   tenantId: "tenant_demo",

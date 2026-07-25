@@ -78,9 +78,10 @@ describe("GAP-107 DB integration runtime wiring", () => {
     for (const script of ["db:validate", "db:generate", "db:migrate", "db:seed", "db:verify-seed"]) {
       expect(packageJson).toContain(`"${script}"`);
     }
-    for (const command of dbIntegrationRuntimeCommands.slice(0, 5)) {
+    for (const command of dbIntegrationRuntimeCommands.slice(0, 4)) {
       expect(dbManifest).toContain(command);
     }
+    expect(dbManifest).toContain("pnpm db:verify-seed");
     expect(dbManifest).toContain("db-prisma-schema-lifecycle");
     expect(dbManifest).toContain("db-tenant-isolation");
     expect(dbManifest).toContain("db-workflow-audit");
@@ -179,7 +180,7 @@ describe("GAP-107 DB integration runtime wiring", () => {
     expect(ciWorkflow).toContain("coverage/db-command-transcript-redacted.log");
     expect(ciWorkflow).toContain("test-results/db-integration-runtime");
     expect(unitManifest).toContain("unit-db-integration-runtime-static");
-    expect(unitManifest).toContain("DbIntegrationRun Prisma model and app row contract are wired");
+    expect(unitManifest).toContain("DbIntegrationRun Prisma model/app row contract are wired");
     expect(gapTracker).toContain("packages/db/src/db-integration-runtime.ts");
     expect(gapTracker).toContain("DB integration evidence classifier wired and Postgres proof gated");
     expect(gapTracker).toContain("GAP-107 is db-integration-runtime-matrix wired with evidence classifier");
