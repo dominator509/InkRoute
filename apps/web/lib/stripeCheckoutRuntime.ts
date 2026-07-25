@@ -1,4 +1,9 @@
-import { buildStripeCheckoutRouteRuntimeReadinessPlan } from "@inkroute/payments";
+import {
+  buildStripeCheckoutRouteRuntimeReadinessPlan,
+  stripeCheckoutRouteRuntimeRequiredEvidence,
+} from "@inkroute/payments";
+
+export { stripeCheckoutRouteRuntimeRequiredEvidence };
 
 export type StripeCheckoutRuntimeStatus =
   | "wired"
