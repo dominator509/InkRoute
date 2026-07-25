@@ -445,7 +445,7 @@ export const liveStripePaymentsRuntimeMatrix = [
   },
 ] as const satisfies readonly LiveStripePaymentsRuntimeMatrixEntry[];
 
-export const liveStripePaymentsRuntimeReadiness = buildLiveStripePaymentsReadinessPlan({
+const liveStripePaymentsPackageReadiness = buildLiveStripePaymentsReadinessPlan({
   packageScripts: {
     typecheck: "tsc --noEmit",
     test: "vitest run --passWithNoTests",
@@ -471,7 +471,7 @@ export const liveStripePaymentsRuntimeReadiness = buildLiveStripePaymentsReadine
 });
 
 export function buildLiveStripePaymentsDecisionRequiredEvidence(
-  readinessEvidence: typeof liveStripePaymentsRuntimeReadiness.requiredEvidence,
+  readinessEvidence: typeof liveStripePaymentsPackageReadiness.requiredEvidence,
 ): LiveStripePaymentsRequiredEvidence {
   return [
     ...readinessEvidence,
@@ -481,14 +481,20 @@ export function buildLiveStripePaymentsDecisionRequiredEvidence(
 }
 
 export type LiveStripePaymentsRequiredEvidence = readonly [
-  ...typeof liveStripePaymentsRuntimeReadiness.requiredEvidence,
+  ...typeof liveStripePaymentsPackageReadiness.requiredEvidence,
   "LiveStripePaymentsRun row with command, readiness area, artifact, Stripe configuration, and lifecycle evidence matrices.",
   "Artifact bundle proving payments package checks, payment routes, Stripe config, real Checkout writes, webhook lifecycle, DB reconciliation, refunds/disputes, Stripe CLI, booking-to-paid E2E, CI evidence, and secret-safe artifacts.",
 ];
 
 export const liveStripePaymentsRequiredEvidence = buildLiveStripePaymentsDecisionRequiredEvidence(
-  liveStripePaymentsRuntimeReadiness.requiredEvidence,
+  liveStripePaymentsPackageReadiness.requiredEvidence,
 );
+
+export const liveStripePaymentsRuntimeReadiness = {
+  ...liveStripePaymentsPackageReadiness,
+  requiredCommands: liveStripePaymentsRuntimeCommands,
+  requiredEvidence: liveStripePaymentsRequiredEvidence,
+} as const;
 
 export function buildLiveStripePaymentsEvidenceDecision(
   input: LiveStripePaymentsEvidenceInput,

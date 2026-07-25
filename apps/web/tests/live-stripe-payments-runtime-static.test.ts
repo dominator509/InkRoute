@@ -189,7 +189,7 @@ describe("live Stripe payments runtime contract", () => {
     expect(paymentsSource).toContain("buildLiveStripePaymentsReadinessPlan");
     expect(paymentsSource).toContain("verifyStripeWebhookSignature");
     expect(paymentsTests).toContain("buildLiveStripePaymentsReadinessPlan");
-    expect(paymentRoutesTest).toContain("Stripe-Signature");
+    expect(paymentRoutesTest).toContain("stripe-signature");
     expect(stripeWebhookRoute).toContain("verifyStripeWebhookSignature");
     expect(dashboardPaymentReadTest).toContain("PaymentAuditLog");
   });
@@ -465,7 +465,7 @@ describe("live Stripe payments runtime contract", () => {
       reconciliationTrace: "Matched [REDACTED] via [REDACTED]",
       webhookHeader: "[REDACTED]",
       refundDisputeTrace: "[REDACTED] disputed by [REDACTED]",
-      commandOutput: "workflow [REDACTED] passed payments:test",
+      commandOutput: "[REDACTED]",
       repository: "[REDACTED]",
       branch: "[REDACTED]",
       pullRequest: "[REDACTED]",
