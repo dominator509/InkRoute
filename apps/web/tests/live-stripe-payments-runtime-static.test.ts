@@ -191,7 +191,7 @@ describe("live Stripe payments runtime contract", () => {
     expect(paymentsTests).toContain("buildLiveStripePaymentsReadinessPlan");
     expect(paymentRoutesTest).toContain("stripe-signature");
     expect(stripeWebhookRoute).toContain("verifyStripeWebhookSignature");
-    expect(dashboardPaymentReadTest).toContain("PaymentAuditLog");
+    expect(dashboardPaymentReadTest).toContain("tx.paymentAuditLog.create");
   });
 
   it("keeps live provider blockers explicit until real Stripe evidence exists", () => {

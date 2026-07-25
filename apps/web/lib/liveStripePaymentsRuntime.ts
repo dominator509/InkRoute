@@ -471,13 +471,19 @@ const liveStripePaymentsPackageReadiness = buildLiveStripePaymentsReadinessPlan(
 });
 
 export function buildLiveStripePaymentsDecisionRequiredEvidence(
-  readinessEvidence: typeof liveStripePaymentsPackageReadiness.requiredEvidence,
+  readinessEvidence:
+    | typeof liveStripePaymentsPackageReadiness.requiredEvidence
+    | LiveStripePaymentsRequiredEvidence,
 ): LiveStripePaymentsRequiredEvidence {
-  return [
-    ...readinessEvidence,
-    "LiveStripePaymentsRun row with command, readiness area, artifact, Stripe configuration, and lifecycle evidence matrices.",
-    "Artifact bundle proving payments package checks, payment routes, Stripe config, real Checkout writes, webhook lifecycle, DB reconciliation, refunds/disputes, Stripe CLI, booking-to-paid E2E, CI evidence, and secret-safe artifacts.",
-  ];
+  const persistenceEvidence = "LiveStripePaymentsRun row with command, readiness area, artifact, Stripe configuration, and lifecycle evidence matrices." as const;
+  const artifactEvidence = "Artifact bundle proving payments package checks, payment routes, Stripe config, real Checkout writes, webhook lifecycle, DB reconciliation, refunds/disputes, Stripe CLI, booking-to-paid E2E, CI evidence, and secret-safe artifacts." as const;
+  const evidence = readinessEvidence as readonly string[];
+
+  if (evidence.includes(persistenceEvidence) && evidence.includes(artifactEvidence)) {
+    return readinessEvidence as LiveStripePaymentsRequiredEvidence;
+  }
+
+  return [...readinessEvidence, persistenceEvidence, artifactEvidence] as LiveStripePaymentsRequiredEvidence;
 }
 
 export type LiveStripePaymentsRequiredEvidence = readonly [
