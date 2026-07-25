@@ -119,7 +119,7 @@ describe("static dependency audit runtime contract", () => {
     expect(workspaceImportAudit).toContain("external imports");
     expect(workspaceTests).toContain("allows shared root dev dependency tooling for external test imports");
     expect(workspaceProtocol).toContain("Workspace imports from `@inkroute/*`");
-    expect(workspaceImportManifest).toContain("workspace-import-audit");
+    expect(workspaceImportManifest).toContain("Phase 18 workspace runtime readiness");
   });
 
   it("preserves the verified static audit result while runtime resolution remains gated", () => {
