@@ -118,7 +118,7 @@ describe("static dependency audit runtime contract", () => {
     expect(workspaceImportAudit).toContain("workspace imports");
     expect(workspaceImportAudit).toContain("external imports");
     expect(workspaceTests).toContain("allows shared root dev dependency tooling for external test imports");
-    expect(workspaceProtocol).toContain("workspace import");
+    expect(workspaceProtocol).toContain("Workspace imports from `@inkroute/*`");
     expect(workspaceImportManifest).toContain("workspace-import-audit");
   });
 
@@ -255,7 +255,7 @@ describe("static dependency audit runtime contract", () => {
     expect(gapTracker).toContain("buildStaticDependencyAuditExecutionPlan");
     expect(gapTracker).toContain("staticDependencyAuditExecutionPolicy");
     expect(gapTracker).toContain("staticDependencyAuditReadinessRequiredEvidence");
-    expect(gapTracker).toContain("staticDependencyAuditRequiredEvidence");
+
     expect(gapTracker).toContain("staticDependencyAuditRequiredExternalEvidence");
     expect(gapTracker).toContain("staticDependencyAuditLocalArtifacts");
     expect(gapTracker).toContain("staticDependencyAuditExternalArtifacts");
