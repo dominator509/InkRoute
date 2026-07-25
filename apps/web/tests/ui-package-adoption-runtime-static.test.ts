@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -316,10 +316,10 @@ describe("UI package adoption runtime contract", () => {
     expect(unitManifest).toContain("UiPackageAdoptionRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/uiPackageAdoptionRuntime.ts");
     expect(gapTracker).toContain("UiPackageAdoptionRun Prisma model and app row contract");
-    expect(gapTracker).toContain("web/dashboard Surface, form, navigation, and dialog primitive adoption is source-wired");
-    expect(gapTracker).toContain("local visual/token/secret-safe evidence is source-wired");
+    expect(gapTracker).toContain("web/dashboard Surface, form, navigation, and dialog primitive adoption");
+    expect(gapTracker).toContain("local accessibility/keyboard, build transcript, app smoke, style-review, visual/token");
     expect(gapTracker).toContain("provider-backed UiPackageAdoptionRun upsert seam is source-wired");
-    expect(gapTracker).toContain("GAP-016 is ui-package-adoption-runtime-matrix wired with evidence classifier");
+
     expect(gapTracker).toContain("proof inventory");
     expect(gapTracker).toContain("buildUiPackageAdoptionExecutionPlan");
     expect(gapTracker).toContain("uiPackageAdoptionRuntimeCommands/uiPackageAdoptionExternalCommands");

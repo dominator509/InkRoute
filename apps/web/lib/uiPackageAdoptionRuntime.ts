@@ -1,4 +1,4 @@
-﻿import { buildUiPackageAdoptionEvidencePlan } from "@inkroute/ui";
+import { buildUiPackageAdoptionEvidencePlan } from "@inkroute/ui";
 
 export type UiPackageAdoptionRuntimeStatus =
   | "wired"
@@ -446,7 +446,7 @@ export const persistUiPackageAdoptionRun = async (
   });
 };
 
-export const uiPackageAdoptionRuntimeReadiness = buildUiPackageAdoptionEvidencePlan({
+const uiPackageAdoptionPackageReadiness = buildUiPackageAdoptionEvidencePlan({
   packageScripts: ["test", "typecheck"],
   uiTypecheckPassed: false,
   uiTestsPassed: false,
@@ -468,6 +468,9 @@ export const uiPackageAdoptionRuntimeReadiness = buildUiPackageAdoptionEvidenceP
   secretSafeArtifactsCaptured: true,
 });
 
-
-
-
+export const uiPackageAdoptionRuntimeReadiness = {
+  ...uiPackageAdoptionPackageReadiness,
+  requiredCommands: uiPackageAdoptionRuntimeCommands,
+  requiredControls: uiPackageAdoptionRuntimeControls,
+  requiredEvidence: uiPackageAdoptionEvidenceFlags,
+};
