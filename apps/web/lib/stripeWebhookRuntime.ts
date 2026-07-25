@@ -281,7 +281,7 @@ export const stripeWebhookRuntimeMatrix = [
   },
 ] as const satisfies readonly StripeWebhookRuntimeMatrixEntry[];
 
-export const stripeWebhookRuntimeReadiness = buildStripeWebhookRuntimeReadinessPlan({
+const stripeWebhookPackageReadiness = buildStripeWebhookRuntimeReadinessPlan({
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
   paymentsTestsPassed: false,
   paymentsTypecheckPassed: false,
@@ -311,6 +311,11 @@ export const stripeWebhookRuntimeReadiness = buildStripeWebhookRuntimeReadinessP
   unknownEventsLoggedAndIgnored: true,
   stripeCliReplayVerified: false,
 });
+
+export const stripeWebhookRuntimeReadiness = {
+  ...stripeWebhookPackageReadiness,
+  requiredCommands: stripeWebhookRuntimeCommands,
+} as const;
 
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
   const actualSet = new Set(actual ?? []);

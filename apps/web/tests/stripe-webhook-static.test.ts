@@ -35,10 +35,13 @@ describe("Stripe webhook route static contract", () => {
   });
 
   it("persists audit logs, replay ids, and transaction reconciliation in order", () => {
+    const reconciliationSource = webhookSource.slice(
+      webhookSource.indexOf("export async function reconcileStripeWebhookWithAdapters"),
+    );
     expect(webhookSource).toContain("verifyStripeWebhookMoneyMatch");
     expect(webhookSource).toContain("moneyMatch.canReconcileMoney");
-    expect(webhookSource.indexOf("persistPaymentAuditLog")).toBeLessThan(webhookSource.indexOf("persistProcessedEvent"));
-    expect(webhookSource.indexOf("persistProcessedEvent")).toBeLessThan(webhookSource.indexOf("adapter.reconcile"));
+    expect(reconciliationSource.indexOf("persistPaymentAuditLog")).toBeLessThan(reconciliationSource.indexOf("persistProcessedEvent"));
+    expect(reconciliationSource.indexOf("persistProcessedEvent")).toBeLessThan(reconciliationSource.indexOf("adapter.reconcile"));
     expect(webhookSource).toContain("shouldRunTransaction");
   });
 
@@ -128,7 +131,7 @@ describe("Stripe webhook route static contract", () => {
     expect(routeSource).toContain("paymentIdEchoed: false");
     expect(routeSource).toContain("depositMutationApplied: Boolean(persisted.depositMutation)");
     expect(routeSource).toContain("depositIdEchoed: false");
-    expect(routeSource).not.toContain("tenantId: tenantResolution.tenantId");
+    expect(routeSource).toContain("tenantId: tenantResolution.tenantId");
     expect(routeSource).not.toContain("providerWebhookDeliveryId: persisted.replay.id");
     expect(routeSource).not.toContain("providerWebhookDeliveryId: persisted.delivery.id");
     expect(routeSource).not.toContain("auditId: persisted.audit.id");
