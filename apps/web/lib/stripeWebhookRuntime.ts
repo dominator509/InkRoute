@@ -312,10 +312,10 @@ const stripeWebhookPackageReadiness = buildStripeWebhookRuntimeReadinessPlan({
   stripeCliReplayVerified: false,
 });
 
-export const stripeWebhookRuntimeReadiness = {
-  ...stripeWebhookPackageReadiness,
-  requiredCommands: stripeWebhookRuntimeCommands,
-} as const;
+
+
+export const stripeWebhookRuntimeRequiredEvidence =
+  stripeWebhookRuntimeReadiness.requiredEvidence;
 
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
   const actualSet = new Set(actual ?? []);
