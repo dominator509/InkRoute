@@ -50,8 +50,9 @@ describe("database integration test plan", () => {
     };
     const helpers = readWorkspaceFile("packages/db/src/tenant-scope.ts");
 
+    expect(schema).toContain("model Tenant " );
+
     for (const model of [
-      "Tenant",
       "TenantMember",
       "BookingRequest",
       "Appointment",

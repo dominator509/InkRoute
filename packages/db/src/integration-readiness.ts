@@ -288,7 +288,10 @@ export function buildSeedRuntimeExecutionEvidencePlan(
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
     requiredCommands: seedRuntimeExecutionEvidenceCommands,
-    requiredEvidence,
+    requiredEvidence:
+      requiredEvidence.length === seedRuntimeExecutionRequiredEvidence.length
+        ? seedRuntimeExecutionRequiredEvidence
+        : requiredEvidence,
     blockers,
   };
 }

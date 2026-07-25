@@ -23,7 +23,7 @@ import {
   persistDbIntegrationRun
 } from "../src/db-integration-runtime";
 
-const root = process.cwd();
+const root = join(__dirname, "../../..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 const packageJson = read("packages/db/package.json");
 const dbManifest = read("testing/manifests/db-integration-test-manifest.json");
