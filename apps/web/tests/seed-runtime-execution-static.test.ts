@@ -101,7 +101,7 @@ describe("seed runtime execution contract", () => {
     expect(seedRuntimeEvidenceWriter).toContain("coverage/seed-production-provider-ban.json");
     expect(seedRuntimeEvidenceWriter).toContain("coverage/seed-command-transcript-redacted.log");
     expect(seedRuntimeEvidenceWriter).toContain("productionProviderCredentialsUsed: false");
-    expect(seedDocs).toContain("Seed readiness");
+    expect(seedDocs).toContain("Seed Readiness");
     expect(integrationReadiness).toContain("buildSeedRuntimeExecutionEvidencePlan");
     expect(dbTests).toContain("buildSeedRuntimeExecutionEvidencePlan");
   });
@@ -311,7 +311,7 @@ describe("seed runtime execution contract", () => {
     expect(gapTracker).toContain("apps/web/lib/seedRuntimeExecution.ts");
     expect(gapTracker).toContain("SeedRuntimeExecutionRun Prisma model and app row contract");
     expect(gapTracker).toContain("SeedRuntimeExecutionRun upsert seam is source-wired");
-    expect(gapTracker).toContain("GAP-018 is seed-runtime-execution-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("GAP-018 | Phase 2 | Seed/demo data | Seed runtime execution readiness");
     expect(gapTracker).toContain("proof inventory");
     expect(gapTracker).toContain("buildSeedRuntimeExecutionPlan");
     expect(gapTracker).toContain("seedRuntimeExecutionLocalCommands/seedRuntimeExecutionExternalCommands");

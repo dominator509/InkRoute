@@ -469,7 +469,7 @@ export const persistSeedRuntimeExecutionRun = async (
   });
 };
 
-export const seedRuntimeExecutionReadiness = buildSeedRuntimeExecutionEvidencePlan({
+const seedRuntimeExecutionPackageReadiness = buildSeedRuntimeExecutionEvidencePlan({
   packageScripts: {
     "db:validate": "prisma validate --schema prisma/schema.prisma",
     "db:generate": "prisma generate --schema prisma/schema.prisma",
@@ -496,6 +496,12 @@ export const seedRuntimeExecutionReadiness = buildSeedRuntimeExecutionEvidencePl
   commandEvidenceCaptured: true,
   ciOrCleanCheckoutEvidenceCaptured: true,
 });
+
+export const seedRuntimeExecutionReadiness = {
+  ...seedRuntimeExecutionPackageReadiness,
+  requiredCommands: seedRuntimeExecutionCommands,
+  requiredEvidence: seedRuntimeExecutionEvidenceFlags,
+} as const;
 
 
 
