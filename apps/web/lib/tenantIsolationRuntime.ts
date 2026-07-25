@@ -495,7 +495,7 @@ export const buildTenantIsolationEvidenceDecision = (
   };
 };
 
-export const tenantIsolationRuntimeReadiness = buildTenantIsolationRepositoryEvidencePlan({
+const tenantIsolationPackageReadiness = buildTenantIsolationRepositoryEvidencePlan({
   packageScripts: ["test", "typecheck", "db:validate", "db:generate", "db:migrate", "db:seed"],
   dbTypecheckPassed: false,
   dbTestsPassed: false,
@@ -514,6 +514,13 @@ export const tenantIsolationRuntimeReadiness = buildTenantIsolationRepositoryEvi
   ciEvidenceCaptured: false,
   secretSafeArtifactsCaptured: false,
 });
+
+export const tenantIsolationRuntimeReadiness = {
+  ...tenantIsolationPackageReadiness,
+  requiredCommands: tenantIsolationRuntimeCommands,
+  requiredControls: tenantIsolationRuntimeControls,
+  requiredEvidence: tenantIsolationEvidenceFlags,
+} as const;
 
 
 
