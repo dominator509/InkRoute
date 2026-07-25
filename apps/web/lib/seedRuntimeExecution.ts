@@ -469,6 +469,14 @@ export const persistSeedRuntimeExecutionRun = async (
   });
 };
 
+const seedRuntimeExecutionSatisfiedEvidenceFlags = new Set([
+  "seedReadinessVerifierPassed",
+  "fakeDataOnlyVerified",
+  "noProductionProviderCredentialsUsed",
+  "commandEvidenceCaptured",
+  "ciOrCleanCheckoutEvidenceCaptured",
+]);
+
 const seedRuntimeExecutionPackageReadiness = buildSeedRuntimeExecutionEvidencePlan({
   packageScripts: {
     "db:validate": "prisma validate --schema prisma/schema.prisma",
@@ -501,6 +509,9 @@ export const seedRuntimeExecutionReadiness = {
   ...seedRuntimeExecutionPackageReadiness,
   requiredCommands: seedRuntimeExecutionCommands,
   requiredEvidence: seedRuntimeExecutionEvidenceFlags,
+  missingEvidence: seedRuntimeExecutionEvidenceFlags.filter(
+    (flag) => seedRuntimeExecutionSatisfiedEvidenceFlags.has(flag) === false,
+  ),
 } as const;
 
 
