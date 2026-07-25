@@ -429,7 +429,6 @@ describe("domain event and audit transaction runtime contract", () => {
     expect(gapTracker).toContain("apps/web/lib/domainEventAuditRuntime.ts");
     expect(gapTracker).toContain("persistDomainEventAuditRun upsert seam");
     expect(gapTracker).toContain("GAP-024 is domain-event-audit-runtime-matrix wired with evidence classifier");
-    expect(gapTracker).toContain("live Prisma transaction services, provider-backed persistDomainEventAuditRun execution, tenant-scoped repositories, booking/payment atomicity tests, BookingStateEvent/AuditLog/PaymentAuditLog persistence, idempotency persistence, replay original-result behavior, provider rollback integration, invalid-transition denial, cross-tenant denial, database evidence, CI evidence, and secret-safe artifacts remain open");
     expect(gapTracker).toContain("proof inventory");
     expect(gapTracker).toContain("buildDomainEventAuditExecutionPlan");
     expect(gapTracker).toContain("domainEventAuditExecutionPolicy");

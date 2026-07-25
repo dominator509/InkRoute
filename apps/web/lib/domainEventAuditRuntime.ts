@@ -1,4 +1,4 @@
-﻿import { buildDomainEventAuditTransactionEvidencePlan } from "@inkroute/booking";
+﻿import { buildDomainEventAuditTransactionEvidencePlan, domainEventAuditTransactionRequiredCommands } from "@inkroute/booking";
 
 export type DomainEventAuditRuntimeStatus =
   | "wired"
@@ -326,17 +326,7 @@ export async function executeDomainEventAuditLifecycleTransaction(
   });
 }
 
-export const domainEventAuditRuntimeCommands = [
-  "pnpm --filter @inkroute/booking typecheck",
-  "pnpm --filter @inkroute/booking test",
-  "pnpm --filter @inkroute/payments typecheck",
-  "pnpm --filter @inkroute/payments test",
-  "booking/payment lifecycle Prisma transaction integration tests",
-  "booking/payment idempotency replay integration tests",
-  "provider failure rollback integration tests",
-  "cross-tenant lifecycle mutation denial tests",
-  "GitHub Actions domain event/audit transaction evidence job",
-] as const;
+export const domainEventAuditRuntimeCommands = domainEventAuditTransactionRequiredCommands;
 
 export const domainEventAuditArtifactPaths = [
   "coverage/domain-event-audit-runtime.json",
