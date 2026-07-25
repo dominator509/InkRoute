@@ -296,7 +296,7 @@ describe("Prisma lifecycle runtime contract", () => {
     expect(gapTracker).toContain(
       "live non-production Postgres provisioning, Prisma validate/generate/migrate, SQL review, seed, drift, production URL guard proof, command evidence, CI evidence, provider-backed persistPrismaLifecycleRun execution, and artifact proof remain gated",
     );
-    expect(gapTracker).toContain("GAP-002 is prisma-lifecycle-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("GAP-002 | Gap | Prisma lifecycle proof matrix needs durable DB lifecycle evidence");
   });
 
   it("pins current Prisma lifecycle runtime proof files for GAP-002", () => {

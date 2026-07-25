@@ -379,7 +379,7 @@ export const prismaLifecycleRuntimeMatrix = [
   },
 ] as const satisfies readonly PrismaLifecycleRuntimeMatrixEntry[];
 
-export const prismaLifecycleReadiness = buildPrismaSchemaLifecycleReadinessPlan({
+const prismaLifecyclePackageReadiness = buildPrismaSchemaLifecycleReadinessPlan({
   packageScripts: {
     "db:validate": "prisma validate --schema prisma/schema.prisma",
     "db:generate": "prisma generate --schema prisma/schema.prisma",
@@ -406,6 +406,11 @@ export const prismaLifecycleReadiness = buildPrismaSchemaLifecycleReadinessPlan(
   commandEvidenceCaptured: false,
   ciEvidenceCaptured: false,
 });
+
+export const prismaLifecycleReadiness = {
+  ...prismaLifecyclePackageReadiness,
+  requiredCommands: prismaLifecycleCommands,
+} as const;
 
 export const prismaLifecycleReadinessRequiredEvidence = prismaLifecycleReadiness.requiredEvidence;
 
@@ -633,6 +638,7 @@ export function buildPrismaLifecycleRedactedEvidenceBundle(
       "password",
       "authorization",
       "actor",
+      "email",
       "tenant",
       "log",
       "output",
