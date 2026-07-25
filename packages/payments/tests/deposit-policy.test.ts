@@ -76,7 +76,9 @@ describe("payment policy engine", () => {
     });
     expect(draft.metadata).not.toHaveProperty("tenantId");
     expect(draft.metadata).not.toHaveProperty("bookingRequestId");
-    expect(draft.idempotencyKey).toContain("tenant_demo:booking_demo:15000:usd");
+    expect(draft.idempotencyKey).toMatch(/^deposit:[a-f0-9]{64}$/);
+    expect(draft.idempotencyKey).not.toContain("tenant_demo");
+    expect(draft.idempotencyKey).not.toContain("booking_demo");
   });
 
   it("builds local mock checkout session identifiers without exposing raw idempotency scope", async () => {
@@ -160,7 +162,9 @@ describe("payment policy engine", () => {
 
     expect(readiness.status).toBe("ready");
     expect(readiness.canCallStripe).toBe(true);
-    expect(readiness.draft.idempotencyKey).toBe("deposit:tenant_demo:booking_demo:15000:usd");
+    expect(readiness.draft.idempotencyKey).toMatch(/^deposit:[a-f0-9]{64}$/);
+    expect(readiness.draft.idempotencyKey).not.toContain("tenant_demo");
+    expect(readiness.draft.idempotencyKey).not.toContain("booking_demo");
     expect(readiness.requiredControls).toBe(stripeCheckoutExecutionRequiredControls);
     expect(readiness.blockers).toEqual([]);
   });
@@ -231,7 +235,8 @@ describe("payment policy engine", () => {
     expect(paid.shouldReconcile).toBe(true);
     expect(paid.action).toBe("deposit_paid");
     expect(paid.targetStatus).toBe("paid");
-    expect(paid.idempotencyKey).toBe("stripe-webhook:evt_paid_001");
+    expect(paid.idempotencyKey).toMatch(/^stripe-webhook:[a-f0-9]{64}$/);
+    expect(paid.idempotencyKey).not.toContain("evt_paid_001");
     expect(paid.requiredChecks.some((check) => check.includes("Stripe-Signature"))).toBe(true);
 
     const replay = buildStripeWebhookReconciliationPlan({
