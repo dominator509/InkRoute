@@ -1,4 +1,4 @@
-﻿import { buildDomainEventAuditTransactionEvidencePlan, domainEventAuditTransactionRequiredCommands, domainEventAuditTransactionRequiredControls } from "@inkroute/booking";
+﻿import { buildDomainEventAuditTransactionEvidencePlan, domainEventAuditTransactionRequiredCommands } from "@inkroute/booking";
 
 export type DomainEventAuditRuntimeStatus =
   | "wired"
@@ -441,7 +441,13 @@ export const domainEventAuditRuntimeMatrix = [
   },
 ] as const satisfies readonly DomainEventAuditRuntimeMatrixEntry[];
 
-export const domainEventAuditRuntimeControls = domainEventAuditTransactionRequiredControls;
+export const domainEventAuditRuntimeControls = [
+  "commit-state-event-audit-payment-audit-idempotency-in-one-tenant-transaction",
+  "reject-invalid-transition-missing-tenant-actor-duplicate-idempotency-before-side-effects",
+  "return-original-result-for-idempotency-replay-without-duplicate-writes",
+  "record-provider-rollback-failure-audit-before-retry-or-exposure",
+  "redact-client-medical-payment-provider-private-url-data-from-artifacts",
+] as const;
 
 export const domainEventAuditEvidenceFlags = [
   "bookingTestsPassed",
@@ -659,7 +665,7 @@ export const buildDomainEventAuditEvidenceDecision = (
   };
 };
 
-export const domainEventAuditRuntimeReadiness = buildDomainEventAuditTransactionEvidencePlan({
+const domainEventAuditPackageReadiness = buildDomainEventAuditTransactionEvidencePlan({
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
   bookingTestsPassed: false,
   bookingTypecheckPassed: false,
@@ -682,5 +688,9 @@ export const domainEventAuditRuntimeReadiness = buildDomainEventAuditTransaction
   secretSafeArtifactsCaptured: false,
 });
 
-
-
+export const domainEventAuditRuntimeReadiness = {
+  ...domainEventAuditPackageReadiness,
+  requiredCommands: domainEventAuditRuntimeCommands,
+  requiredControls: domainEventAuditRuntimeControls,
+  requiredEvidence: domainEventAuditEvidenceFlags,
+} as const;
