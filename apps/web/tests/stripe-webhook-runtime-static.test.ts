@@ -141,7 +141,7 @@ describe("Stripe webhook runtime contract", () => {
     expect(stripeWebhookRuntimeReadiness.missingSupportedEvents).toEqual([]);
     expect(stripeWebhookRuntimeReadiness.requiredCommands).toBe(stripeWebhookRuntimeCommands);
     expect(stripeWebhookRuntimeReadiness.requiredEvidence).toBe(stripeWebhookRuntimeRequiredEvidence);
-    expect(stripeWebhookRuntimeReadiness.requiredEvidence).not.toContain(
+    expect(stripeWebhookRuntimeReadiness.requiredEvidence).toContain(
       "supported event reconciliation tests for success, failure, expiration, refund, dispute, and mismatch cases",
     );
     expect(stripeWebhookRuntimeReadiness.requiredEvidence).not.toContain(
@@ -153,6 +153,9 @@ describe("Stripe webhook runtime contract", () => {
     expect(stripeWebhookRuntimeReadiness.blockers).not.toContain("Stripe event replay protection must persist provider event ids.");
     expect(stripeWebhookRuntimeReadiness.blockers).not.toContain(
       "Webhook reconciliation writes must run in one tenant-scoped transaction.",
+    );
+    expect(stripeWebhookRuntimeReadiness.blockers).toContain(
+      "Supported payment/refund/dispute events must fetch or verify provider objects before reconciliation.",
     );
     expect(stripeWebhookRuntimeReadiness.blockers).toContain("Stripe CLI replay tests must verify success, failure, expiration, refund, dispute, invalid signature, and replay behavior.");
   });
