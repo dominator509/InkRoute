@@ -446,8 +446,7 @@ export const persistUiPackageAdoptionRun = async (
   });
 };
 
-const uiPackageAdoptionPackageReadiness = buildUiPackageAdoptionEvidencePlan({
-  packageScripts: ["test", "typecheck"],
+const uiPackageAdoptionReadinessEvidence = {
   uiTypecheckPassed: false,
   uiTestsPassed: false,
   exportedPrimitivesCovered: true,
@@ -466,6 +465,11 @@ const uiPackageAdoptionPackageReadiness = buildUiPackageAdoptionEvidencePlan({
   noStyleRegressionAccepted: true,
   designTokensDocumented: true,
   secretSafeArtifactsCaptured: true,
+} as const satisfies Record<UiPackageAdoptionEvidenceFlag, boolean>;
+
+const uiPackageAdoptionPackageReadiness = buildUiPackageAdoptionEvidencePlan({
+  packageScripts: ["test", "typecheck"],
+  ...uiPackageAdoptionReadinessEvidence,
 });
 
 export const uiPackageAdoptionRuntimeReadiness = {
@@ -473,4 +477,7 @@ export const uiPackageAdoptionRuntimeReadiness = {
   requiredCommands: uiPackageAdoptionRuntimeCommands,
   requiredControls: uiPackageAdoptionRuntimeControls,
   requiredEvidence: uiPackageAdoptionEvidenceFlags,
+  missingEvidence: uiPackageAdoptionEvidenceFlags.filter(
+    (flag) => !uiPackageAdoptionReadinessEvidence[flag],
+  ),
 };

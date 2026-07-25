@@ -318,7 +318,7 @@ describe("UI package adoption runtime contract", () => {
     expect(gapTracker).toContain("UiPackageAdoptionRun Prisma model and app row contract");
     expect(gapTracker).toContain("web/dashboard Surface, form, navigation, and dialog primitive adoption");
     expect(gapTracker).toContain("local accessibility/keyboard, build transcript, app smoke, style-review, visual/token");
-    expect(gapTracker).toContain("provider-backed UiPackageAdoptionRun upsert seam is source-wired");
+    expect(gapTracker).toContain("provider-backed persistUiPackageAdoptionRun upsert seam is source-wired");
 
     expect(gapTracker).toContain("proof inventory");
     expect(gapTracker).toContain("buildUiPackageAdoptionExecutionPlan");
