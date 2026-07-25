@@ -314,6 +314,11 @@ const stripeWebhookPackageReadiness = buildStripeWebhookRuntimeReadinessPlan({
 
 
 
+export const stripeWebhookRuntimeReadiness = {
+  ...stripeWebhookPackageReadiness,
+  requiredCommands: stripeWebhookRuntimeCommands,
+} as const;
+
 export const stripeWebhookRuntimeRequiredEvidence =
   stripeWebhookRuntimeReadiness.requiredEvidence;
 
