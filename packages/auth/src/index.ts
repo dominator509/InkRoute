@@ -1274,6 +1274,7 @@ export interface DomainAuthorizationRouteEvidenceInput {
   crossTenantDenialTestsPassed: boolean;
   fieldRedactionRouteTestsPassed: boolean;
   authorizationAuditRowsPersisted: boolean;
+  authorizationAuditRowsSigned?: boolean;
   csrfSessionBindingTestsPassed: boolean;
   sessionRevocationTestsPassed: boolean;
   providerBackedSessionTestsPassed: boolean;
@@ -1343,6 +1344,7 @@ export function buildDomainAuthorizationRouteEvidencePlan(
   if (!input.crossTenantDenialTestsPassed) blockers.push("Cross-tenant dashboard/API/server-action denial tests must pass.");
   if (!input.fieldRedactionRouteTestsPassed) blockers.push("Field authorization/redaction route tests must pass before serialization.");
   if (!input.authorizationAuditRowsPersisted) blockers.push("Authorization allow/deny route decisions must persist redacted AuditLog rows.");
+  if (!input.authorizationAuditRowsSigned) blockers.push("Authorization AuditLog allow/deny rows must include signed redacted audit payload evidence.");
   if (!input.csrfSessionBindingTestsPassed) blockers.push("Cookie-authenticated mutating route tests must prove CSRF tokens bind to the active session.");
   if (!input.sessionRevocationTestsPassed) blockers.push("Guarded route tests must prove revoked sessions are denied.");
   if (!input.providerBackedSessionTestsPassed) blockers.push("Provider-backed session tests must pass for guarded route context.");
@@ -1358,7 +1360,7 @@ export function buildDomainAuthorizationRouteEvidencePlan(
   if (!input.routeRoleMatrixTestsPassed || !input.customRoleRouteTestsPassed || !input.crossTenantDenialTestsPassed) {
     requiredEvidence.push(domainAuthorizationRouteRequiredEvidence[2]);
   }
-  if (!input.fieldRedactionRouteTestsPassed || !input.authorizationAuditRowsPersisted) {
+  if (!input.fieldRedactionRouteTestsPassed || !input.authorizationAuditRowsPersisted || !input.authorizationAuditRowsSigned) {
     requiredEvidence.push(domainAuthorizationRouteRequiredEvidence[3]);
   }
   if (!input.csrfSessionBindingTestsPassed || !input.sessionRevocationTestsPassed) {
