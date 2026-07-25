@@ -1,4 +1,7 @@
-import { buildProviderSessionStoreReadinessPlan } from "@inkroute/auth";
+import {
+  buildProviderSessionStoreReadinessPlan,
+  providerSessionCallbackContract,
+} from "@inkroute/auth";
 
 export type ProviderSessionRuntimeStatus =
   | "wired"
@@ -599,20 +602,20 @@ export const providerSessionRuntimeMatrix = [
     status: "smoke-gated",
   },
   {
-    id: "redacted-evidence-bundle",
-    command: "retain redacted provider auth/session evidence bundle",
-    artifact: "coverage/provider-session-redacted-evidence-bundle.json",
-    status: "provider-gated",
-  },
-  {
     id: "mobile-revocation-smoke",
     command: "mobile session storage/revocation smoke tests",
     artifact: "coverage/provider-session-mobile-revocation-smoke.json",
     status: "smoke-gated",
   },
+  {
+    id: "redacted-evidence-bundle",
+    command: "retain redacted provider auth/session evidence bundle",
+    artifact: "coverage/provider-session-redacted-evidence-bundle.json",
+    status: "provider-gated",
+  },
 ] as const satisfies readonly ProviderSessionRuntimeMatrixEntry[];
 
-export const providerSessionRuntimeReadiness = buildProviderSessionStoreReadinessPlan({
+const providerSessionPackageReadiness = buildProviderSessionStoreReadinessPlan({
   packageScripts: {
     typecheck: "tsc --noEmit",
     test: "vitest run --passWithNoTests",
@@ -634,6 +637,11 @@ export const providerSessionRuntimeReadiness = buildProviderSessionStoreReadines
   crossTenantSmokeTestsPassed: false,
   commandEvidenceCaptured: false,
 });
+
+export const providerSessionRuntimeReadiness = {
+  ...providerSessionPackageReadiness,
+  requiredCommands: providerSessionRuntimeCommands,
+} as const;
 
 export function buildProviderSessionDecisionRequiredEvidence(
   readinessEvidence: typeof providerSessionRuntimeReadiness.requiredEvidence,

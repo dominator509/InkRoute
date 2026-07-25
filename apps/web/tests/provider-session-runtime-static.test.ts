@@ -452,7 +452,7 @@ describe("provider session runtime contract", () => {
     expect(gapTracker).toContain("buildProviderSessionDecisionRequiredEvidence");
     expect(gapTracker).toContain("providerSessionRequiredEvidence");
     expect(gapTracker).toContain("providerSessionExecutionPolicy");
-    expect(gapTracker).toContain("Provider session runtime identity assertions pin exported commands, controls, artifacts, proof files, required external evidence, and decision evidence helpers");
+    expect(gapTracker).toContain("Provider session runtime identity assertions pin exported commands, controls, artifacts, proof files, required external evidence, redacted bundle helper, and decision evidence helpers");
     expect(gapTracker).toContain("providerSessionRequiredExternalEvidence");
     expect(gapTracker).toContain("buildProviderSessionRedactedEvidenceBundle");
     expect(gapTracker).toContain("providerSessionSurfaceContract");
@@ -566,8 +566,8 @@ describe("provider session runtime contract", () => {
       tenantIsolationSmokeOutput: "[REDACTED]",
       ciArtifactPath: "[REDACTED]",
       safeSummary: "provider session proof captured",
-      neutralProviderTrace: "[REDACTED] mapped [REDACTED]",
-      neutralSubjectTrace: "[REDACTED] mapped [REDACTED]",
+      neutralProviderTrace: "[REDACTED]",
+      neutralSubjectTrace: "[REDACTED]",
       neutralArtifactLocation: "[REDACTED]",
       neutralDatabaseLocation: "[REDACTED]",
     });
