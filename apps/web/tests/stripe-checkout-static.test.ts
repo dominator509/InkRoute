@@ -34,14 +34,17 @@ describe("Stripe Checkout route static contract", () => {
   });
 
   it("persists idempotency and audit before provider session creation", () => {
+    const executionSource = checkoutSource.slice(
+      checkoutSource.indexOf("export async function executeStripeCheckoutWithAdapters"),
+    );
     expect(checkoutSource).toContain("verifyStripeDepositAuthorization");
     expect(checkoutSource).toContain("authorization.canCreateCheckout");
-    expect(checkoutSource.indexOf("verifyStripeDepositAuthorization")).toBeLessThan(checkoutSource.indexOf("persistIdempotencyKey"));
-    expect(checkoutSource.indexOf('phase: "before_provider_call"')).toBeLessThan(checkoutSource.indexOf("persistIdempotencyKey"));
-    expect(checkoutSource.indexOf("persistIdempotencyKey")).toBeLessThan(checkoutSource.indexOf("createCheckoutSession"));
-    expect(checkoutSource.indexOf('action: "checkout_session_requested"')).toBeLessThan(checkoutSource.indexOf("createCheckoutSession"));
-    expect(checkoutSource.indexOf('phase: "after_provider_call"')).toBeGreaterThan(checkoutSource.indexOf("createCheckoutSession"));
-    expect(checkoutSource.indexOf("persistProviderSession")).toBeGreaterThan(checkoutSource.indexOf("createCheckoutSession"));
+    expect(executionSource.indexOf("verifyStripeDepositAuthorization")).toBeLessThan(executionSource.indexOf("persistIdempotencyKey"));
+    expect(executionSource.indexOf('phase: "before_provider_call"')).toBeLessThan(executionSource.indexOf("persistIdempotencyKey"));
+    expect(executionSource.indexOf("persistIdempotencyKey")).toBeLessThan(executionSource.indexOf("createCheckoutSession"));
+    expect(executionSource.indexOf('action: "checkout_session_requested"')).toBeLessThan(executionSource.indexOf("createCheckoutSession"));
+    expect(executionSource.indexOf('phase: "after_provider_call"')).toBeGreaterThan(executionSource.indexOf("createCheckoutSession"));
+    expect(executionSource.indexOf("persistProviderSession")).toBeGreaterThan(executionSource.indexOf("createCheckoutSession"));
   });
 
   it("allowlists public deposit idempotency replay fields before responding", () => {

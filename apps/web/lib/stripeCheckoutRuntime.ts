@@ -272,7 +272,7 @@ export const stripeCheckoutRuntimeMatrix = [
   },
 ] as const satisfies readonly StripeCheckoutRuntimeMatrixEntry[];
 
-export const stripeCheckoutRuntimeReadiness = buildStripeCheckoutRouteRuntimeReadinessPlan({
+const stripeCheckoutPackageReadiness = buildStripeCheckoutRouteRuntimeReadinessPlan({
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
   paymentsTestsPassed: false,
   paymentsTypecheckPassed: false,
@@ -294,6 +294,11 @@ export const stripeCheckoutRuntimeReadiness = buildStripeCheckoutRouteRuntimeRea
   webhookReconciliationVerified: false,
   stripeTestModeCheckoutVerified: false,
 });
+
+export const stripeCheckoutRuntimeReadiness = {
+  ...stripeCheckoutPackageReadiness,
+  requiredCommands: stripeCheckoutRuntimeCommands,
+} as const;
 
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
   const actualSet = new Set(actual ?? []);
