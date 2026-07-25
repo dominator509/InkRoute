@@ -738,6 +738,7 @@ describe("auth authorization helpers", () => {
       crossTenantDenialTestsPassed: true,
       fieldRedactionRouteTestsPassed: true,
       authorizationAuditRowsPersisted: true,
+      authorizationAuditRowsSigned: true,
       csrfSessionBindingTestsPassed: true,
       sessionRevocationTestsPassed: true,
       providerBackedSessionTestsPassed: true,
