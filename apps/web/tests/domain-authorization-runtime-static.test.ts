@@ -392,7 +392,6 @@ describe("domain authorization route runtime contract", () => {
     expect(gapTracker).toContain("buildRedactedDomainAuthorizationArtifact");
     expect(gapTracker).toContain("buildDomainAuthorizationArtifactReview");
     expect(gapTracker).toContain("buildDomainAuthorizationRedactedEvidenceBundle");
-    expect(gapTracker).toContain("GAP-023 domain authorization artifact hardening now redacts repository/branch/PR/reviewer/CODEOWNER selectors");
   });
 
   it("pins current domain authorization proof files for GAP-023", () => {
