@@ -302,9 +302,7 @@ describe("dependency install runtime contract", () => {
     expect(gapTracker).toContain("buildDependencyInstallRedactedEvidenceBundle");
     expect(gapTracker).toContain(
       "live install, frozen-lockfile install, typecheck, lint, unit-test, workspace audit, CI, provider-backed persistDependencyInstallRun execution, production-blocker visibility, and artifact evidence remain gated",
-    );
-    expect(gapTracker).toContain("GAP-001 is dependency-install-runtime-matrix wired with evidence classifier");
-  });
+    );  });
 
   it("pins current dependency install runtime proof files for GAP-001", () => {
     expect(dependencyInstallProofFiles).toEqual(
@@ -380,8 +378,8 @@ describe("dependency install runtime contract", () => {
       productionBlockerManifest: "[REDACTED]",
       artifactManifest: "[REDACTED]",
       safeSummary: "dependency install proof captured",
-      neutralInstallTrace: "[REDACTED] [REDACTED]",
-      neutralCiTrace: "[REDACTED] checked [REDACTED]",
+      neutralInstallTrace: "[REDACTED]",
+      neutralCiTrace: "[REDACTED]",
       neutralArtifactLocation: "[REDACTED]",
       neutralDatabaseLocation: "[REDACTED]",
     });

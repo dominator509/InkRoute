@@ -1,6 +1,7 @@
 import {
   buildDependencyInstallReadinessPlan,
   dependencyInstallRequiredEvidence as dependencyInstallPackageRequiredEvidence,
+  dependencyInstallRequiredCommands,
 } from "@inkroute/workspace";
 
 export type DependencyInstallRuntimeStatus =
@@ -98,17 +99,7 @@ export const dependencyInstallRunPersistenceContract: DependencyInstallRunPersis
   ],
 };
 
-export const dependencyInstallRuntimeCommands = [
-  "corepack enable",
-  "pnpm install",
-  "pnpm install --frozen-lockfile",
-  "pnpm workspace:all",
-  "pnpm typecheck",
-  "pnpm lint",
-  "pnpm test:unit",
-  "GitHub Actions CI quality job",
-  "dependency readiness report keeps provider/runtime/legal blockers visible",
-] as const;
+export const dependencyInstallRuntimeCommands = dependencyInstallRequiredCommands;
 
 export const dependencyInstallSourceFiles = [
   "package.json",
