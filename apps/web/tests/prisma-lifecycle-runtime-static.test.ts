@@ -378,8 +378,8 @@ describe("Prisma lifecycle runtime contract", () => {
       destructiveResetGuardReport: "[REDACTED]",
       seedExecutionManifest: "[REDACTED]",
       safeSummary: "Prisma lifecycle proof captured",
-      neutralMigrationTrace: "[REDACTED] updated [REDACTED]",
-      neutralCiTrace: "[REDACTED] checked [REDACTED]",
+      neutralMigrationTrace: "[REDACTED]",
+      neutralCiTrace: "[REDACTED]",
       neutralArtifactLocation: "[REDACTED]",
       neutralGuardTrace: "[REDACTED] blocked [REDACTED]",
     });
