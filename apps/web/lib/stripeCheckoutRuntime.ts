@@ -1,9 +1,4 @@
-import {
-  buildStripeCheckoutRouteRuntimeReadinessPlan,
-  stripeCheckoutRouteRuntimeRequiredEvidence,
-} from "@inkroute/payments";
-
-export { stripeCheckoutRouteRuntimeRequiredEvidence };
+import { buildStripeCheckoutRouteRuntimeReadinessPlan } from "@inkroute/payments";
 
 export type StripeCheckoutRuntimeStatus =
   | "wired"
@@ -304,6 +299,9 @@ export const stripeCheckoutRuntimeReadiness = {
   ...stripeCheckoutPackageReadiness,
   requiredCommands: stripeCheckoutRuntimeCommands,
 } as const;
+
+export const stripeCheckoutRouteRuntimeRequiredEvidence =
+  stripeCheckoutRuntimeReadiness.requiredEvidence;
 
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
   const actualSet = new Set(actual ?? []);
