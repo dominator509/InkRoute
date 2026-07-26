@@ -120,7 +120,8 @@ describe("dashboard privacy runtime contract", () => {
     expect(formActionPanel).toContain("private upload retention, and attorney-reviewed copy remain evidence-gated");
     expect(formReadRouteTest).toContain("archive-only form metadata write seam");
     expect(privacyRouteTest).toContain("DASHBOARD_PRIVACY_REQUEST_PERSISTENCE_NOT_CONFIGURED");
-    expect(privacyRouteTest).toContain("Persist PrivacyRequest row + case notes");
+    expect(privacyRouteTest).toContain("persistedPrivacyRequestStoreConfigured: true");
+    expect(privacyRouteTest).toContain("auditLogPersistencePassed: true");
     expect(trustRouteTest).toContain("tenant and role gates");
   });
 

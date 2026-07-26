@@ -74,9 +74,8 @@ describe("dashboard privacy request route static contract", () => {
     expect(routeSource).toContain("auditIdEchoed: false");
     expect(routeSource).toContain("actorUserIdEchoed: false");
     expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
-    expect(routeSource).not.toContain("data: {\n            tenantId:");
-    expect(routeSource).not.toContain("data: {\n          tenantId:");
-    expect(routeSource).not.toContain("data: {\n        tenantId:");
+    expect(routeSource).toContain("tenantIdHash: hashPrivacyRequestSelector(input.actor.tenantId)");
+    expect(routeSource).toContain("tenantIdEchoed: false");
     expect(routeSource).not.toContain("id: result.privacyRequest.id");
     expect(routeSource).not.toContain("id: persisted.id");
     expect(routeSource).not.toContain("id: nextRequestId()");

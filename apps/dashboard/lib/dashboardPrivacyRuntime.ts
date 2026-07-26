@@ -1,4 +1,7 @@
-﻿import { buildDashboardPrivacyWorkflowEvidencePlan } from "@inkroute/security";
+﻿import {
+  buildDashboardPrivacyWorkflowEvidencePlan,
+  dashboardPrivacyWorkflowEvidenceRequiredCommands,
+} from "@inkroute/security";
 
 export type DashboardPrivacyRuntimeStatus =
   | "wired"
@@ -24,20 +27,7 @@ export const dashboardPrivacySurfaces = [
   "file_asset",
 ] as const;
 
-export const dashboardPrivacyRuntimeCommands = [
-  "pnpm --filter @inkroute/security typecheck",
-  "pnpm --filter @inkroute/security test",
-  "pnpm --filter @inkroute/dashboard typecheck",
-  "pnpm --filter @inkroute/dashboard build",
-  "dashboard privacy route/API tests",
-  "persisted dashboard export workflow tests",
-  "persisted dashboard delete/anonymize workflow tests",
-  "private file deletion integration tests",
-  "dashboard privacy AuditLog persistence tests",
-  "dashboard sanitized log/error evidence sweep",
-  "legal/product dashboard privacy approval review",
-  "GitHub Actions dashboard privacy evidence job",
-] as const;
+export const dashboardPrivacyRuntimeCommands = dashboardPrivacyWorkflowEvidenceRequiredCommands;
 
 export const dashboardPrivacyArtifactPaths = [
   "coverage/dashboard-privacy-runtime.json",
