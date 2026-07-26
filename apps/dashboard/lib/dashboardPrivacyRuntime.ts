@@ -1,6 +1,7 @@
 ﻿import {
   buildDashboardPrivacyWorkflowEvidencePlan,
   dashboardPrivacyWorkflowEvidenceRequiredCommands,
+  dashboardPrivacyWorkflowEvidenceRequiredEvidence,
 } from "@inkroute/security";
 
 export type DashboardPrivacyRuntimeStatus =
@@ -141,7 +142,7 @@ export const dashboardPrivacyRuntimeMatrix = [
   },
 ] as const satisfies readonly DashboardPrivacyRuntimeMatrixEntry[];
 
-export const dashboardPrivacyRuntimeReadiness = buildDashboardPrivacyWorkflowEvidencePlan({
+const dashboardPrivacyRuntimePlan = buildDashboardPrivacyWorkflowEvidencePlan({
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
   securityTestsPassed: false,
   securityTypecheckPassed: false,
@@ -161,6 +162,11 @@ export const dashboardPrivacyRuntimeReadiness = buildDashboardPrivacyWorkflowEvi
   ciEvidenceCaptured: false,
   secretSafeArtifactsCaptured: false,
 });
+
+export const dashboardPrivacyRuntimeReadiness = {
+  ...dashboardPrivacyRuntimePlan,
+  requiredEvidence: dashboardPrivacyWorkflowEvidenceRequiredEvidence,
+};
 
 export const dashboardPrivacyEvidenceFlags = [
   "securityTestsPassed",
