@@ -14,7 +14,7 @@ export default function SeoManagerPage() {
       <DashboardPageHeader
         eyebrow="SEO engine"
         title="City, style, schema, sitemap, and attribution control center"
-        description="Preview the Phase 10 SEO engine for city pages, tattoo style pages, canonical metadata, structured data, internal links, sitemap entries, image SEO, Search Console setup, and publish revalidation boundaries. Tenant-scoped SEO read APIs now exist; publishing/provider actions remain gated."
+        description="Preview the Phase 10 SEO engine for city pages, tattoo style pages, canonical metadata, structured data, internal links, sitemap entries, image SEO, Search Console setup, and publish revalidation boundaries. Tenant-scoped SEO read APIs now exist. SEO reads now have authenticated tenant-scoped dashboard APIs; publishing/provider actions and Search Console credentials remain gated."
       />
 
       <section className="metric-grid">

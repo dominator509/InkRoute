@@ -222,8 +222,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const portfolioItemModel = tx.portfolioItem as { findMany: (args: unknown) => Promise<PortfolioListRow[]> };
-      const rows = await portfolioItemModel.findMany({
+      const rows = await tx.portfolioItem.findMany({
         where: { tenantId },
         orderBy: [{ isFeatured: "desc" }, { updatedAt: "desc" }],
         take: limit,

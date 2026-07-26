@@ -103,8 +103,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const reviewModel = tx.review as { findMany: (args: unknown) => Promise<ReviewQueueItem[]> };
-      const rows = await reviewModel.findMany({
+      const rows = await tx.review.findMany({
         where: {
           tenantId,
           ...(statusFilter ? { status: statusFilter } : {}),

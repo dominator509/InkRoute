@@ -163,8 +163,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const paymentModel = tx.payment as { findMany: (args: unknown) => Promise<PaymentListRow[]> };
-      const rows = await paymentModel.findMany({
+      const rows = await tx.payment.findMany({
         where: { tenantId },
         orderBy: { createdAt: "desc" },
         take: limit,

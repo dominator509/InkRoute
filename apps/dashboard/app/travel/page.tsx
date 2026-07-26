@@ -10,7 +10,7 @@ export default function TravelScheduleManagerPage() {
       <DashboardPageHeader
         eyebrow="Nomad Mode"
         title="Travel schedule manager"
-        description="Manage city stops, guest spots, waitlists, flash availability, calendar blocks, and public schedule revalidation. Tenant-scoped redacted travel read APIs now exist; publish mutations and provider sync remain gated."
+        description="Manage city stops, guest spots, waitlists, flash availability, calendar blocks, and public schedule revalidation. Tenant-scoped redacted travel read APIs now exist. Travel reads now use redacted dashboard APIs; publish mutations queue provider sync only when credentials exist."
       />
 
       <section className="grid three">

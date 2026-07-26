@@ -20,7 +20,7 @@ export default function PaymentsPage() {
       <DashboardPageHeader
         eyebrow="Payments and deposits"
         title="Deposit protection"
-        description="Deposit policy estimates, checkout-session drafts, refund/no-show decisions, receipts, webhook interpretation, and audit boundaries. Tenant-scoped redacted payment read APIs now exist; Stripe write actions are still credential-gated."
+        description="Deposit policy estimates, checkout-session drafts, refund/no-show decisions, receipts, webhook interpretation, and audit boundaries. Tenant-scoped redacted payment read APIs now exist. Payment reads now have redacted dashboard APIs; Stripe credentials are still required for write actions."
       />
 
       <section className="metric-grid">

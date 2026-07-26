@@ -1,4 +1,8 @@
-﻿import { buildDashboardRepositoryRouteEvidencePlan, dashboardDataCollections } from "@inkroute/config";
+﻿import {
+  buildDashboardRepositoryRouteEvidencePlan,
+  dashboardDataCollections,
+  dashboardRepositoryRouteRequiredCommands,
+} from "@inkroute/config";
 
 export type DashboardDataLayerRuntimeStatus =
   | "wired"
@@ -14,17 +18,7 @@ export interface DashboardDataLayerRuntimeMatrixEntry {
   readonly status: DashboardDataLayerRuntimeStatus;
 }
 
-export const dashboardDataLayerRuntimeCommands = [
-  "pnpm --filter @inkroute/config typecheck",
-  "pnpm --filter @inkroute/config test",
-  "pnpm --filter @inkroute/dashboard typecheck",
-  "pnpm --filter @inkroute/dashboard build",
-  "seeded database dashboard route smoke",
-  "dashboard repository/API tenant-isolation tests",
-  "dashboard repository/API RBAC and redaction tests",
-  "dashboard sensitive-read AuditLog persistence tests",
-  "GitHub Actions dashboard data repository evidence job",
-] as const;
+export const dashboardDataLayerRuntimeCommands = dashboardRepositoryRouteRequiredCommands;
 
 export const dashboardDataLayerArtifactPaths = [
   "coverage/dashboard-data-layer-runtime.json",

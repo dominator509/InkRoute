@@ -268,7 +268,7 @@ export async function GET(request: NextRequest) {
   try {
     const result = await prisma.$transaction(async (tx) => {
       const [cityPages, stylePages, redirects] = await Promise.all([
-        (tx.seoCityPage as { findMany: (args: unknown) => Promise<SeoCityPageRow[]> }).findMany({
+        tx.seoCityPage.findMany({
           where: { tenantId },
           orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
           take: limit,
@@ -289,7 +289,7 @@ export async function GET(request: NextRequest) {
             featuredPortfolio: { select: { title: true, slug: true, isPublic: true } },
           },
         }),
-        (tx.seoStylePage as { findMany: (args: unknown) => Promise<SeoStylePageRow[]> }).findMany({
+        tx.seoStylePage.findMany({
           where: { tenantId },
           orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
           take: limit,
@@ -308,7 +308,7 @@ export async function GET(request: NextRequest) {
             featuredPortfolio: { select: { title: true, slug: true, isPublic: true } },
           },
         }),
-        (tx.seoRedirect as { findMany: (args: unknown) => Promise<SeoRedirectRow[]> }).findMany({
+        tx.seoRedirect.findMany({
           where: { tenantId },
           orderBy: { updatedAt: "desc" },
           take: limit,
