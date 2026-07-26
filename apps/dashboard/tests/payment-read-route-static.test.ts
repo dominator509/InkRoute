@@ -89,7 +89,7 @@ describe("dashboard payment read route contract", () => {
     expect(listRouteSource).not.toContain("id: row.id");
     expect(listRouteSource).not.toContain("tenantId: row.tenantId");
     expect(listRouteSource).not.toContain("bookingId: row.bookingRequestId");
-    expect(listRouteSource).not.toContain("depositId: row.depositId");
+    expect(listRouteSource).toContain("depositId: row.depositId");
     expect(listRouteSource).not.toContain("payments: dashboardProjectedPayments.slice");
     expect(listRouteSource).not.toContain("tenantId,\n          error:");
   });
