@@ -1,6 +1,7 @@
 import {
   buildDashboardLaunchEvidencePlan,
   dashboardLaunchEvidenceRequiredCommands,
+  dashboardLaunchEvidenceRequiredEvidence,
 } from "@inkroute/auth";
 
 export { dashboardLaunchEvidenceRequiredCommands as dashboardBuildRuntimeReadinessRequiredCommands };
@@ -138,7 +139,7 @@ export const dashboardBuildRuntimeMatrix = [
   },
 ] as const satisfies readonly DashboardBuildRuntimeMatrixEntry[];
 
-export const dashboardBuildRuntimeReadiness = buildDashboardLaunchEvidencePlan({
+const dashboardBuildRuntimePlan = buildDashboardLaunchEvidencePlan({
   packageScripts: {
     typecheck: "tsc --noEmit",
     build: "next build",
@@ -162,6 +163,11 @@ export const dashboardBuildRuntimeReadiness = buildDashboardLaunchEvidencePlan({
   ciEvidenceCaptured: false,
   dashboardArtifactsSecretSafe: false,
 });
+
+export const dashboardBuildRuntimeReadiness = {
+  ...dashboardBuildRuntimePlan,
+  requiredEvidence: dashboardLaunchEvidenceRequiredEvidence,
+};
 
 export const dashboardBuildRuntimeEvidenceFlags = [
   "dependenciesInstalled",
