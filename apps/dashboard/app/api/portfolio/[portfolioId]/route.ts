@@ -172,10 +172,7 @@ export async function GET(request: NextRequest, context: PortfolioDetailRouteCon
 
     try {
     const result = await prisma.$transaction(async (tx) => {
-      const portfolioItemModel = tx.portfolioItem as {
-        findFirst: (args: unknown) => Promise<PortfolioDetailRow | null>;
-      };
-      const row = await portfolioItemModel.findFirst({
+      const row = await tx.portfolioItem.findFirst({
         where: { id: portfolioId, tenantId },
         select: {
           id: true,

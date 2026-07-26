@@ -156,8 +156,7 @@ export async function GET(request: NextRequest, context: PaymentDetailRouteConte
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const paymentModel = tx.payment as { findFirst: (args: unknown) => Promise<(PaymentDetailRow & { bookingRequest: PaymentDetailBookingRequestRow | null; refunds: PaymentDetailRefundRow[] }) | null> };
-      const row = await paymentModel.findFirst({
+      const row = await tx.payment.findFirst({
         where: { id: paymentId, tenantId },
         select: {
           id: true,

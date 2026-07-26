@@ -2,6 +2,7 @@
   buildDashboardRepositoryRouteEvidencePlan,
   dashboardDataCollections,
   dashboardRepositoryRouteRequiredCommands,
+  dashboardRepositoryRouteRequiredEvidence,
 } from "@inkroute/config";
 
 export type DashboardDataLayerRuntimeStatus =
@@ -139,7 +140,7 @@ export const dashboardDataLayerRuntimeMatrix = [
   },
 ] as const satisfies readonly DashboardDataLayerRuntimeMatrixEntry[];
 
-export const dashboardDataLayerRuntimeReadiness = buildDashboardRepositoryRouteEvidencePlan({
+const dashboardDataLayerPackageReadiness = buildDashboardRepositoryRouteEvidencePlan({
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
   configTestsPassed: false,
   configTypecheckPassed: false,
@@ -158,6 +159,12 @@ export const dashboardDataLayerRuntimeReadiness = buildDashboardRepositoryRouteE
   ciEvidenceCaptured: false,
   secretSafeArtifactsCaptured: false,
 });
+
+export const dashboardDataLayerRuntimeReadiness = {
+  ...dashboardDataLayerPackageReadiness,
+  requiredCommands: dashboardDataLayerRuntimeCommands,
+  requiredEvidence: dashboardRepositoryRouteRequiredEvidence,
+} as const;
 
 export const dashboardDataLayerEvidenceFlags = [
   "configTestsPassed",
