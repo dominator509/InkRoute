@@ -139,7 +139,7 @@ export const dashboardBuildRuntimeMatrix = [
   },
 ] as const satisfies readonly DashboardBuildRuntimeMatrixEntry[];
 
-const dashboardBuildRuntimePlan = buildDashboardLaunchEvidencePlan({
+const dashboardBuildRuntimeInput = {
   packageScripts: {
     typecheck: "tsc --noEmit",
     build: "next build",
@@ -162,10 +162,13 @@ const dashboardBuildRuntimePlan = buildDashboardLaunchEvidencePlan({
   loadingEmptyErrorStatesVerified: false,
   ciEvidenceCaptured: false,
   dashboardArtifactsSecretSafe: false,
-});
+} as const;
+
+const dashboardBuildRuntimePlan = buildDashboardLaunchEvidencePlan(dashboardBuildRuntimeInput);
 
 export const dashboardBuildRuntimeReadiness = {
   ...dashboardBuildRuntimePlan,
+  ...dashboardBuildRuntimeInput,
   requiredEvidence: dashboardLaunchEvidenceRequiredEvidence,
 };
 
