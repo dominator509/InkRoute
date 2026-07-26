@@ -481,7 +481,7 @@ export const publicWebLaunchRuntimeMatrix = [
   },
 ] as const satisfies readonly PublicWebLaunchRuntimeMatrixEntry[];
 
-export const publicWebLaunchRuntimeReadiness = buildPublicWebLaunchEvidencePlan({
+const publicWebLaunchPackageReadiness = buildPublicWebLaunchEvidencePlan({
   packageScripts: {
     typecheck: "next typegen && tsc --noEmit",
     build: "next build",
@@ -508,25 +508,46 @@ export const publicWebLaunchRuntimeReadiness = buildPublicWebLaunchEvidencePlan(
   launchArtifactsSecretSafe: false,
 });
 
-export function buildPublicWebLaunchDecisionRequiredEvidence(
-  readinessEvidence: typeof publicWebLaunchRuntimeReadiness.requiredEvidence,
-): PublicWebLaunchRequiredEvidence {
-  return [
-    ...readinessEvidence,
-    "PublicWebLaunchRun row with command, readiness area, artifact, provider route, runtime SEO, and legal route review matrices.",
-    "Artifact bundle proving web typecheck/build/tests, route smoke, desktop/mobile Playwright, axe, Lighthouse, provider/database routes, media derivatives, runtime SEO, legal route review, CI evidence, and secret-safe launch artifacts.",
-  ];
-}
+const publicWebLaunchPersistenceEvidence =
+  "PublicWebLaunchRun row with command, readiness area, artifact, provider route, runtime SEO, and legal route review matrices.";
+const publicWebLaunchArtifactBundleEvidence =
+  "Artifact bundle proving web typecheck/build/tests, route smoke, desktop/mobile Playwright, axe, Lighthouse, provider/database routes, media derivatives, runtime SEO, legal route review, CI evidence, and secret-safe launch artifacts.";
 
 export type PublicWebLaunchRequiredEvidence = readonly [
-  ...typeof publicWebLaunchRuntimeReadiness.requiredEvidence,
-  "PublicWebLaunchRun row with command, readiness area, artifact, provider route, runtime SEO, and legal route review matrices.",
-  "Artifact bundle proving web typecheck/build/tests, route smoke, desktop/mobile Playwright, axe, Lighthouse, provider/database routes, media derivatives, runtime SEO, legal route review, CI evidence, and secret-safe launch artifacts.",
+  ...typeof publicWebLaunchPackageReadiness.requiredEvidence,
+  typeof publicWebLaunchPersistenceEvidence,
+  typeof publicWebLaunchArtifactBundleEvidence,
 ];
 
+export function buildPublicWebLaunchDecisionRequiredEvidence(
+  readinessEvidence:
+    | typeof publicWebLaunchPackageReadiness.requiredEvidence
+    | PublicWebLaunchRequiredEvidence,
+): PublicWebLaunchRequiredEvidence {
+  const evidence = readinessEvidence as readonly string[];
+  if (
+    evidence.includes(publicWebLaunchPersistenceEvidence) &&
+    evidence.includes(publicWebLaunchArtifactBundleEvidence)
+  ) {
+    return readinessEvidence as PublicWebLaunchRequiredEvidence;
+  }
+
+  return [
+    ...readinessEvidence,
+    publicWebLaunchPersistenceEvidence,
+    publicWebLaunchArtifactBundleEvidence,
+  ] as PublicWebLaunchRequiredEvidence;
+}
+
 export const publicWebLaunchRequiredEvidence = buildPublicWebLaunchDecisionRequiredEvidence(
-  publicWebLaunchRuntimeReadiness.requiredEvidence,
+  publicWebLaunchPackageReadiness.requiredEvidence,
 );
+
+export const publicWebLaunchRuntimeReadiness = {
+  ...publicWebLaunchPackageReadiness,
+  requiredCommands: publicWebLaunchRuntimeCommands,
+  requiredEvidence: publicWebLaunchRequiredEvidence,
+} as const;
 
 export function buildPublicWebLaunchEvidenceDecision(
   input: PublicWebLaunchEvidenceInput,
@@ -598,9 +619,9 @@ export function buildPublicWebLaunchEvidenceDecision(
 }
 
 const sensitivePublicWebLaunchKeyPattern =
-  /(account|artifact|authorization|branch|canonical|client|cookie|customer|database|derivative|domain|dsn|email|html|id|jsonld|key|legal|media|password|phone|placeholder|provider|repository|repo|pull|pr|reviewer|codeowner|route|screenshot|secret|tenant|token|uri|url|user|request|response|payload|body|raw|local|fallback|static|demo|portfolio|booking|contact|error|sitemap|robots|lighthouse|axe|playwright|trace|video|command|typecheck|build|test|output|stdout|stderr|log|ci|workflow|run|commit)$/iu;
+  /(placeholderAssetDisposition|repositorySelector|account|artifact|authorization|branch|canonical|client|cookie|customer|database|derivative|domain|dsn|email|html|id|jsonld|key|legal|media|password|phone|placeholder|provider|repository|repo|pull|pr|reviewer|codeowner|route|screenshot|secret|tenant|token|uri|url|user|request|response|payload|body|raw|local|fallback|static|demo|portfolio|booking|contact|error|sitemap|robots|lighthouse|axe|playwright|trace|video|command|typecheck|build|test|output|stdout|stderr|log|ci|workflow|run|commit)$/iu;
 const sensitivePublicWebLaunchValuePattern =
-  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:tenant|client|customer|booking|contact|portfolio|media|derivative|placeholder|route|sitemap|canonical|jsonld|lighthouse|playwright|axe|artifact|workflow|ci|run|commit|repository|repo|branch|pull|pr|reviewer|codeowner)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:private|public|static|demo|placeholder)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
+  /(repo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+|https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:tenant|client|customer|booking|contact|portfolio|media|derivative|placeholder|route|sitemap|canonical|jsonld|lighthouse|playwright|axe|artifact|workflow|ci|run|commit|repository|repo|branch|pull|pr|reviewer|codeowner)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:private|public|static|demo|placeholder)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactPublicWebLaunchString = (value: string): string =>
   value.replace(sensitivePublicWebLaunchValuePattern, "[REDACTED]");
