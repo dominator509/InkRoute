@@ -134,7 +134,7 @@ describe("tenant dashboard data projections", () => {
     expect(plan.missingRouteWiring).toContain("clients");
     expect(plan.requiredCommands).toBe(dashboardDataRuntimeRequiredCommands);
     expect(plan.requiredEvidence).toBe(dashboardDataRuntimeRequiredEvidence);
-    expect(plan.blockers).toContain("Repository-backed dashboard route wiring is required for: clients, payments, appointments, portfolio, travel, seo, templates, errors, releases, settings.");
+    expect(plan.blockers).toContain("Repository-backed dashboard route wiring is required for: clients, appointments, payments, portfolio, travel, seo, templates, errors, releases, settings.");
     expect(plan.blockers).not.toContain("Dashboard routes are not wired to repository loaders for: clients, payments, appointments, portfolio, travel, seo, templates, errors, releases, settings.");
     expect(plan.blockers).toContain("Dashboard route data dependencies must no longer read static demo arrays for production surfaces.");
   });
