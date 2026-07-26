@@ -71,7 +71,7 @@ describe("dashboard payment read route contract", () => {
     expect(detailRouteSource).not.toContain("bookingId: result.row.bookingRequestId");
     expect(detailRouteSource).not.toContain("depositId: result.row.depositId");
     expect(detailRouteSource).not.toContain("id: refund.id");
-    expect(detailRouteSource).not.toContain("tenantId,\n          paymentId");
+    expect(detailRouteSource).not.toContain("paymentId: result.row.id");
     expect(detailRouteSource).not.toContain("tenantId,\n        persistence");
 
     expect(listRouteSource).toContain("function buildSafePaymentListRecord");
