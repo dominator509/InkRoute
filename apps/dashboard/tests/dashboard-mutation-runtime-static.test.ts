@@ -33,6 +33,7 @@ describe("dashboard mutation runtime contract", () => {
   const messageActionPanel = readRepoFile("apps/dashboard/components/MessageActionPanel.tsx");
   const notificationPersistenceTest = readRepoFile("apps/dashboard/tests/notification-persistence-static.test.ts");
   const notificationQueueRoute = readRepoFile("apps/dashboard/app/api/notifications/queue/route.ts");
+  const notificationPreviewRoute = readRepoFile("apps/dashboard/app/api/notifications/preview/route.ts");
   const calendarHoldRoute = readRepoFile("apps/dashboard/app/api/calendar/holds/route.ts");
   const availabilityPersistenceTest = readRepoFile("apps/dashboard/tests/availability-persistence-static.test.ts");
   const availabilityRoute = readRepoFile("apps/dashboard/app/api/availability/route.ts");

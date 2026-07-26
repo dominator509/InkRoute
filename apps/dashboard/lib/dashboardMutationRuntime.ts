@@ -1,6 +1,7 @@
 ﻿import {
   buildDashboardMutationExecutionEvidencePlan,
   dashboardMutationExecutionRequiredCommands,
+  dashboardMutationExecutionRequiredEvidence,
   type DashboardMutationAction,
 } from "@inkroute/booking";
 
@@ -166,7 +167,7 @@ export const dashboardMutationRuntimeMatrix = [
   },
 ] as const satisfies readonly DashboardMutationRuntimeMatrixEntry[];
 
-export const dashboardMutationRuntimeReadiness = buildDashboardMutationExecutionEvidencePlan({
+const dashboardMutationPackageReadiness = buildDashboardMutationExecutionEvidencePlan({
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
   bookingTestsPassed: false,
   bookingTypecheckPassed: false,
@@ -234,6 +235,12 @@ export const dashboardMutationRuntimeReadiness = buildDashboardMutationExecution
   ciEvidenceCaptured: false,
   secretSafeArtifactsCaptured: false,
 });
+
+export const dashboardMutationRuntimeReadiness = {
+  ...dashboardMutationPackageReadiness,
+  requiredCommands: dashboardMutationRuntimeCommands,
+  requiredEvidence: dashboardMutationExecutionRequiredEvidence,
+} as const;
 
 export const dashboardMutationEvidenceFlags = [
   "bookingTestsPassed",
