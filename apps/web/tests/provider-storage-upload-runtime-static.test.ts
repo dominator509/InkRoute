@@ -259,7 +259,7 @@ describe("provider storage upload runtime contract", () => {
     expect(uploadRoute).toContain("localDraftEchoed: false");
     expect(uploadRouteTest).toContain("secure-upload-intents");
     expect(uploadRouteTest).toContain('response.headers.get("Cache-Control")).toBe("no-store")');
-    expect(portfolioReadTest).toContain("storage-key redaction");
+    expect(portfolioReadTest).toContain("objectKeySelectedFromDatabase: false");
   });
 
   it("keeps provider storage blockers explicit until object storage evidence exists", () => {
