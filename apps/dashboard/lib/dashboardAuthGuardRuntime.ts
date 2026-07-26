@@ -1,5 +1,6 @@
 import {
   buildDashboardAuthGuardEvidencePlan,
+  dashboardAuthGuardRequiredCommands,
   dashboardAuthGuardRequiredControls,
 } from "@inkroute/auth";
 
@@ -39,20 +40,7 @@ export const dashboardAuthGuardRouteMethodPermissionContract = {
   routeOverrideRequiredForMixedPermissionRoutes: true,
 } as const satisfies DashboardAuthGuardRouteMethodPermissionContract;
 
-export const dashboardAuthGuardRuntimeCommands = [
-  "pnpm --filter @inkroute/auth typecheck",
-  "pnpm --filter @inkroute/auth test",
-  "pnpm --filter @inkroute/dashboard typecheck",
-  "pnpm --filter @inkroute/dashboard build",
-  "dashboard middleware auth guard tests",
-  "dashboard protected layout auth guard tests",
-  "dashboard API auth guard tests",
-  "browser dashboard login/logout smoke",
-  "browser dashboard tenant-switch smoke",
-  "browser dashboard cross-tenant denial smoke",
-  "auth AuditLog persistence tests",
-  "GitHub Actions dashboard auth guard evidence job",
-] as const;
+export const dashboardAuthGuardRuntimeCommands = dashboardAuthGuardRequiredCommands;
 
 export const dashboardAuthGuardReadinessAreas = [
   "provider-backed-dashboard-session",
