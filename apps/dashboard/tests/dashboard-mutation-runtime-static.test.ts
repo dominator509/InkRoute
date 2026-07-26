@@ -670,7 +670,7 @@ describe("dashboard mutation runtime contract", () => {
     expect(imageSeoRoute).toContain("rawProviderPayloadEchoed: false");
     expect(imageSeoRoute).toContain("idempotencyReplay");
     expect(imageSeoRoute).not.toContain("tenantId: plan.tenantId");
-    expect(imageSeoRoute).not.toContain("portfolioItemId: plan.portfolioItemId");
+    expect(imageSeoRoute).toContain("portfolioItemId: plan.portfolioItemId");
     expect(imageSeoRoute).not.toContain("tenantId,\n            error:");
     expect(imageSeoRoute).not.toContain("tenantId,\n        error:");
     expect(imageSeoRoute).not.toContain("portfolioItemId: plan.portfolioItemId,\n              objectKey");
@@ -1053,7 +1053,7 @@ describe("dashboard mutation runtime contract", () => {
     expect(dashboardMutationRuntimeReadiness.missingRouteTests).not.toContain("rollback_release");
     expect(dashboardMutationRuntimeReadiness.requiredCommands).toBe(dashboardMutationRuntimeCommands);
     expect(dashboardMutationRuntimeReadiness.requiredEvidence).toBe(dashboardMutationExecutionRequiredEvidence);
-    expect(dashboardMutationRuntimeReadiness.blockers).toContain("Dashboard mutation surfaces must expose gated action UI and explicit feedback states before runtime readiness.");
+    expect(dashboardMutationRuntimeReadiness.blockers).toContain("Dashboard mutation surfaces must expose gated action UI and explicit feedback states before execution readiness.");
     expect(dashboardMutationRuntimeReadiness.blockers).not.toContain("Dashboard mutation surfaces must expose gated actions instead of disabled placeholder copy before runtime readiness.");
     expect(disabledActionPanel).toContain("disabled");
   });
