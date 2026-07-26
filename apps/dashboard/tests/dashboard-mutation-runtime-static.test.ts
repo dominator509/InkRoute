@@ -253,7 +253,7 @@ describe("dashboard mutation runtime contract", () => {
     expect(bookingStateRoute).toContain('return "create_deposit_session"');
     expect(bookingStateRoute).toContain('return "mark_deposit_paid"');
     expect(bookingStateRoute).toContain('return "confirm_appointment"');
-    expect(bookingStateRouteTest).toContain("persists booking status, state event, and audit log");
+    expect(bookingStateRouteTest).toContain("persists booking status, idempotency, state event, and audit log in one tenant-scoped transaction");
     expect(messageRoute).toContain("buildDashboardMessagePersistencePlan");
     expect(messageRoute).toContain("export async function POST");
     expect(messageRoute).toContain("providerHandoffPersisted: true");

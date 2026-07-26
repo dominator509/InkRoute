@@ -1,4 +1,8 @@
-﻿import { buildDashboardMutationExecutionEvidencePlan, type DashboardMutationAction } from "@inkroute/booking";
+﻿import {
+  buildDashboardMutationExecutionEvidencePlan,
+  dashboardMutationExecutionRequiredCommands,
+  type DashboardMutationAction,
+} from "@inkroute/booking";
 
 export type DashboardMutationRuntimeStatus =
   | "wired"
@@ -32,18 +36,7 @@ export const dashboardMutationActions = [
   "update_settings",
 ] as const satisfies readonly DashboardMutationAction[];
 
-export const dashboardMutationRuntimeCommands = [
-  "pnpm --filter @inkroute/booking typecheck",
-  "pnpm --filter @inkroute/booking test",
-  "pnpm --filter @inkroute/dashboard typecheck",
-  "pnpm --filter @inkroute/dashboard build",
-  "dashboard mutation server-action/API route tests",
-  "dashboard mutation Prisma transaction tests",
-  "dashboard mutation tenant-isolation and RBAC tests",
-  "provider mutation rollback/retry tests",
-  "dashboard mutation UI feedback-state tests",
-  "GitHub Actions dashboard mutation execution evidence job",
-] as const;
+export const dashboardMutationRuntimeCommands = dashboardMutationExecutionRequiredCommands;
 
 export const dashboardMutationArtifactPaths = [
   "coverage/dashboard-mutation-runtime.json",
