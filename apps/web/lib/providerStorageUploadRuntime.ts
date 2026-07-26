@@ -549,7 +549,7 @@ export const providerStorageUploadRuntimeMatrix = [
   },
 ] as const satisfies readonly ProviderStorageUploadRuntimeMatrixEntry[];
 
-export const providerStorageUploadRuntimeReadiness = buildProviderStorageUploadReadinessPlan({
+const providerStorageUploadPackageReadiness = buildProviderStorageUploadReadinessPlan({
   packageScripts: ["typecheck", "test"],
   securityTestsPassed: false,
   securityTypecheckPassed: false,
@@ -580,24 +580,36 @@ export const providerStorageUploadRuntimeReadiness = buildProviderStorageUploadR
 });
 
 export function buildProviderStorageUploadDecisionRequiredEvidence(
-  readinessEvidence: typeof providerStorageUploadRuntimeReadiness.requiredEvidence,
+  readinessEvidence:
+    | typeof providerStorageUploadPackageReadiness.requiredEvidence
+    | ProviderStorageUploadRequiredEvidence,
 ): ProviderStorageUploadRequiredEvidence {
-  return [
-    ...readinessEvidence,
-    "ProviderStorageUploadRun row with command, readiness area, artifact, provider configuration, bucket policy, and scan/derivative matrices.",
-    "Artifact bundle proving provider config, private bucket ACL, derivative policy, signed URLs, transactional persistence, scan/derivative worker, private-original denial, tenant isolation, retention, CI evidence, and secret-safe artifacts.",
-  ];
+  const persistenceEvidence = "ProviderStorageUploadRun row with command, readiness area, artifact, provider configuration, bucket policy, and scan/derivative matrices." as const;
+  const artifactEvidence = "Artifact bundle proving provider config, private bucket ACL, derivative policy, signed URLs, transactional persistence, scan/derivative worker, private-original denial, tenant isolation, retention, CI evidence, and secret-safe artifacts." as const;
+  const evidence = readinessEvidence as readonly string[];
+
+  if (evidence.includes(persistenceEvidence) && evidence.includes(artifactEvidence)) {
+    return readinessEvidence as ProviderStorageUploadRequiredEvidence;
+  }
+
+  return [...readinessEvidence, persistenceEvidence, artifactEvidence] as ProviderStorageUploadRequiredEvidence;
 }
 
 export type ProviderStorageUploadRequiredEvidence = readonly [
-  ...typeof providerStorageUploadRuntimeReadiness.requiredEvidence,
+  ...typeof providerStorageUploadPackageReadiness.requiredEvidence,
   "ProviderStorageUploadRun row with command, readiness area, artifact, provider configuration, bucket policy, and scan/derivative matrices.",
   "Artifact bundle proving provider config, private bucket ACL, derivative policy, signed URLs, transactional persistence, scan/derivative worker, private-original denial, tenant isolation, retention, CI evidence, and secret-safe artifacts.",
 ];
 
 export const providerStorageUploadRequiredEvidence = buildProviderStorageUploadDecisionRequiredEvidence(
-  providerStorageUploadRuntimeReadiness.requiredEvidence,
+  providerStorageUploadPackageReadiness.requiredEvidence,
 );
+
+export const providerStorageUploadRuntimeReadiness = {
+  ...providerStorageUploadPackageReadiness,
+  requiredCommands: providerStorageUploadRuntimeCommands,
+  requiredEvidence: providerStorageUploadRequiredEvidence,
+} as const;
 
 export function buildProviderStorageUploadEvidenceDecision(
   input: ProviderStorageUploadEvidenceInput,

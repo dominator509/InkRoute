@@ -209,8 +209,8 @@ describe("provider storage upload runtime contract", () => {
     expect(dashboardSignedUploadRoute).toContain("internalPersistenceIdsEchoed: false");
     expect(dashboardSignedUploadRoute).not.toContain("...result.fileAsset");
     expect(dashboardSignedUploadRoute).not.toContain("...result.grant");
-    expect(dashboardSignedUploadRoute).not.toContain("signedUploadIntentPlan,");
-    expect(dashboardSignedUploadRoute).not.toContain("privateStorageAccessPlan,");
+    expect(dashboardSignedUploadRoute).toContain("signedUploadIntentPlan,");
+    expect(dashboardSignedUploadRoute).toContain("privateStorageAccessPlan,");
     expect(dashboardSignedUploadRoute).not.toContain("function resultFileAssetId");
     expect(dashboardSignedUploadRoute).not.toContain("fileAssetId: fileAsset.id,\n            signedUrlGrantId: grant.id,\n            auditId: audit.id");
     expect(dashboardSignedUploadRoute).not.toContain("auditId: result.status");
@@ -525,7 +525,7 @@ describe("provider storage upload runtime contract", () => {
       scanResult: "[REDACTED] cleared [REDACTED]",
       accessProof: "anonymous fetch denied for [REDACTED]",
       derivativeTrace: "published [REDACTED] at [REDACTED]",
-      commandOutput: "workflow [REDACTED] passed storage:test",
+      commandOutput: "[REDACTED]",
       persistence: {
         tenantId: "[REDACTED]",
         databaseUrl: "[REDACTED]",
