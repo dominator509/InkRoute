@@ -43,6 +43,7 @@ describe("dashboard auth guard runtime contract", () => {
       "pnpm --filter @inkroute/dashboard typecheck",
       "pnpm --filter @inkroute/dashboard build",
       "dashboard middleware auth guard tests",
+      "dashboard route-method permission mapping contract tests",
       "dashboard protected layout auth guard tests",
       "dashboard API auth guard tests",
       "browser dashboard login/logout smoke",
