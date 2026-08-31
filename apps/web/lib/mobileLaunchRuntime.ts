@@ -1,5 +1,7 @@
 ﻿import { buildMobileLaunchEvidencePlan } from "@inkroute/mobile-support";
 
+import { mobileLaunchEvidenceRequiredCommands as canonicalMobileLaunchRuntimeCommands } from "@inkroute/mobile-support";
+
 export type MobileLaunchRuntimeStatus =
   | "wired"
   | "expo-gated"
@@ -126,18 +128,7 @@ export const mobileLaunchRunPersistenceContract: MobileLaunchRunPersistenceContr
   ],
 };
 
-export const mobileLaunchRuntimeCommands = [
-  "pnpm --filter @inkroute/mobile-support typecheck",
-  "pnpm --filter @inkroute/mobile-support test",
-  "pnpm --filter @inkroute/mobile typecheck",
-  "pnpm --filter @inkroute/mobile test",
-  "pnpm --filter @inkroute/mobile ios",
-  "pnpm --filter @inkroute/mobile android",
-  "eas build --profile preview --platform all",
-  "eas update --channel preview",
-  "manual physical-device QA for auth/api/offline/push/upload/crash/OTA/accessibility",
-  "GitHub Actions mobile launch evidence job",
-] as const;
+export const mobileLaunchRuntimeCommands = canonicalMobileLaunchRuntimeCommands;
 
 export const mobileLaunchReadinessAreas = [
   "mobile-support-typecheck-test",
@@ -529,7 +520,7 @@ export const mobileLaunchRuntimeMatrix = [
   },
 ] as const satisfies readonly MobileLaunchRuntimeMatrixEntry[];
 
-export const mobileLaunchRuntimeReadiness = buildMobileLaunchEvidencePlan({
+const mobileLaunchRuntimeReadinessPlan = buildMobileLaunchEvidencePlan({
   packageScripts: {
     typecheck: "expo customize tsconfig && tsc --noEmit",
     test: "vitest run",
@@ -560,7 +551,7 @@ export const mobileLaunchRuntimeReadiness = buildMobileLaunchEvidencePlan({
 });
 
 export function buildMobileLaunchDecisionRequiredEvidence(
-  readinessEvidence: typeof mobileLaunchRuntimeReadiness.requiredEvidence,
+  readinessEvidence: typeof mobileLaunchRuntimeReadinessPlan.requiredEvidence,
 ): MobileLaunchRequiredEvidence {
   return [
     ...readinessEvidence,
@@ -570,14 +561,20 @@ export function buildMobileLaunchDecisionRequiredEvidence(
 }
 
 export type MobileLaunchRequiredEvidence = readonly [
-  ...typeof mobileLaunchRuntimeReadiness.requiredEvidence,
+  ...typeof mobileLaunchRuntimeReadinessPlan.requiredEvidence,
   "MobileLaunchRun row with command, readiness area, artifact, device QA, provider QA, and EAS runtime matrices.",
   "Artifact bundle proving mobile-support/app checks, Expo runtime, iOS/Android smoke, EAS preview build/update, auth/API/push/offline/upload/crash/OTA/accessibility QA, physical-device QA, CI evidence, and secret-safe artifacts.",
 ];
 
 export const mobileLaunchRequiredEvidence = buildMobileLaunchDecisionRequiredEvidence(
-  mobileLaunchRuntimeReadiness.requiredEvidence,
+  mobileLaunchRuntimeReadinessPlan.requiredEvidence,
 );
+
+export const mobileLaunchRuntimeReadiness = {
+  ...mobileLaunchRuntimeReadinessPlan,
+  requiredCommands: mobileLaunchRuntimeCommands,
+  requiredEvidence: mobileLaunchRequiredEvidence,
+};
 
 export function buildMobileLaunchEvidenceDecision(input: MobileLaunchEvidenceInput): MobileLaunchEvidenceDecision {
   const coveredReadinessAreas = new Set(input.coveredReadinessAreas);
