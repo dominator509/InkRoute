@@ -553,11 +553,15 @@ const mobileLaunchRuntimeReadinessPlan = buildMobileLaunchEvidencePlan({
 export function buildMobileLaunchDecisionRequiredEvidence(
   readinessEvidence: typeof mobileLaunchRuntimeReadinessPlan.requiredEvidence,
 ): MobileLaunchRequiredEvidence {
-  return [
-    ...readinessEvidence,
-    "MobileLaunchRun row with command, readiness area, artifact, device QA, provider QA, and EAS runtime matrices.",
-    "Artifact bundle proving mobile-support/app checks, Expo runtime, iOS/Android smoke, EAS preview build/update, auth/API/push/offline/upload/crash/OTA/accessibility QA, physical-device QA, CI evidence, and secret-safe artifacts.",
+  const existingEvidence = new Set(readinessEvidence as readonly string[]);
+  const persistenceEvidence = "MobileLaunchRun row with command, readiness area, artifact, device QA, provider QA, and EAS runtime matrices.";
+  const artifactEvidence = "Artifact bundle proving mobile-support/app checks, Expo runtime, iOS/Android smoke, EAS preview build/update, auth/API/push/offline/upload/crash/OTA/accessibility QA, physical-device QA, CI evidence, and secret-safe artifacts.";
+  const additionalEvidence = [
+    ...(existingEvidence.has(persistenceEvidence) ? [] : [persistenceEvidence]),
+    ...(existingEvidence.has(artifactEvidence) ? [] : [artifactEvidence]),
   ];
+
+  return [...readinessEvidence, ...additionalEvidence] as MobileLaunchRequiredEvidence;
 }
 
 export type MobileLaunchRequiredEvidence = readonly [
